@@ -1,13 +1,9 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
 import { THEME } from '@tonconnect/ui-react';
-import { Gem, Sun, Moon, ChevronDown, Check, Circle } from 'lucide-react';
+import { Gem, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 // import { DeployPage } from './pages/DeployPage';
 import { ManagePage } from './pages/ManagePage';
@@ -23,7 +19,7 @@ const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
 export const useTheme = () => useContext(ThemeContext);
 
 export default function App() {
-  const { page, network, address, go, setTestnet, setAddress } = useRouter();
+  const { network, address, setAddress } = useRouter();
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('jm-theme');
     return saved === 'light' ? 'light' : 'dark';
@@ -65,11 +61,11 @@ export default function App() {
               </div>
               BrotherHood
             </div>
-            <nav
+            {/* <nav
               className="flex gap-0.5 p-0.75 h-10 rounded-full items-center max-sm:h-9"
               style={{ background: theme === 'light' ? '#F0F1F3' : '#19191B' }}
             >
-              {/* <Button
+              <Button
                 variant="ghost"
                 size="sm"
                 className={`rounded-full px-4 h-8.5 text-[15px] font-bold max-sm:h-7.5 max-sm:px-3.5 max-sm:text-[13px] hover:bg-transparent ${page === 'create'
@@ -81,7 +77,7 @@ export default function App() {
                 onClick={() => go('create')}
               >
                 Create
-              </Button> */}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -95,7 +91,7 @@ export default function App() {
               >
                 Manage
               </Button>
-            </nav>
+            </nav> */}
           </div>
           <div className="flex items-center gap-2.5">
             <Button
@@ -115,11 +111,11 @@ export default function App() {
                 <Moon className="size-4.5" />
               )}
             </Button>
-            <NetworkDropdown
+            {/* <NetworkDropdown
               network={network}
               setTestnet={setTestnet}
               theme={theme}
-            />
+            /> */}
             <TonConnectButton />
           </div>
         </header>
@@ -140,61 +136,61 @@ export default function App() {
   );
 }
 
-function NetworkDropdown({
-  network,
-  setTestnet,
-  theme,
-}: {
-  network: 'mainnet' | 'testnet';
-  setTestnet: (testnet: boolean) => void;
-  theme: Theme;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="rounded-full h-10 px-3 gap-1.5 text-[15px] font-bold max-sm:h-9 max-sm:text-sm max-sm:px-2.5"
-          style={{
-            background: theme === 'light' ? '#F0F1F3' : '#19191B',
-            color: theme === 'light' ? 'var(--foreground)' : '#fff',
-          }}
-        >
-          <Circle
-            className="size-2 fill-current"
-            style={{
-              color:
-                network === 'testnet' ? 'var(--warning)' : 'var(--success)',
-            }}
-          />
-          {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
-          <ChevronDown className="size-3 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-45 rounded-xl p-2">
-        <DropdownMenuItem
-          className="rounded-xl px-3.5 py-3 text-[15px] font-medium gap-2.5 cursor-pointer"
-          onClick={() => setTestnet(false)}
-        >
-          <Circle
-            className="size-2 fill-current"
-            style={{ color: 'var(--success)' }}
-          />
-          Mainnet
-          {network === 'mainnet' && <Check className="size-4 ml-auto" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="rounded-xl px-3.5 py-3 text-[15px] font-medium gap-2.5 cursor-pointer"
-          onClick={() => setTestnet(true)}
-        >
-          <Circle
-            className="size-2 fill-current"
-            style={{ color: 'var(--warning)' }}
-          />
-          Testnet
-          {network === 'testnet' && <Check className="size-4 ml-auto" />}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+// function NetworkDropdown({
+//   network,
+//   setTestnet,
+//   theme,
+// }: {
+//   network: 'mainnet' | 'testnet';
+//   setTestnet: (testnet: boolean) => void;
+//   theme: Theme;
+// }) {
+//   return (
+//     <DropdownMenu>
+//       <DropdownMenuTrigger asChild>
+//         <Button
+//           variant="ghost"
+//           className="rounded-full h-10 px-3 gap-1.5 text-[15px] font-bold max-sm:h-9 max-sm:text-sm max-sm:px-2.5"
+//           style={{
+//             background: theme === 'light' ? '#F0F1F3' : '#19191B',
+//             color: theme === 'light' ? 'var(--foreground)' : '#fff',
+//           }}
+//         >
+//           <Circle
+//             className="size-2 fill-current"
+//             style={{
+//               color:
+//                 network === 'testnet' ? 'var(--warning)' : 'var(--success)',
+//             }}
+//           />
+//           {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
+//           <ChevronDown className="size-3 opacity-50" />
+//         </Button>
+//       </DropdownMenuTrigger>
+//       <DropdownMenuContent align="end" className="min-w-45 rounded-xl p-2">
+//         <DropdownMenuItem
+//           className="rounded-xl px-3.5 py-3 text-[15px] font-medium gap-2.5 cursor-pointer"
+//           onClick={() => setTestnet(false)}
+//         >
+//           <Circle
+//             className="size-2 fill-current"
+//             style={{ color: 'var(--success)' }}
+//           />
+//           Mainnet
+//           {network === 'mainnet' && <Check className="size-4 ml-auto" />}
+//         </DropdownMenuItem>
+//         <DropdownMenuItem
+//           className="rounded-xl px-3.5 py-3 text-[15px] font-medium gap-2.5 cursor-pointer"
+//           onClick={() => setTestnet(true)}
+//         >
+//           <Circle
+//             className="size-2 fill-current"
+//             style={{ color: 'var(--warning)' }}
+//           />
+//           Testnet
+//           {network === 'testnet' && <Check className="size-4 ml-auto" />}
+//         </DropdownMenuItem>
+//       </DropdownMenuContent>
+//     </DropdownMenu>
+//   );
+// }

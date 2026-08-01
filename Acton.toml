@@ -10,7 +10,7 @@ acton = "1.1.0"
 [contracts.FossFi]
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
-depends = ["FossFiWallet"]
+# depends = ["FossFiWallet"] // to keep init code unchanged
 
 [contracts.FossFiWallet]
 display-name = "FossFiWallet Child"
