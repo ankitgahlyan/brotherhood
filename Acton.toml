@@ -1,0 +1,56 @@
+[package]
+name = "fossfi"
+description = "FOSSFI Jetton"
+version = "0.1.0"
+license = "ISC"
+
+[toolchain]
+acton = "1.1.0"
+
+[contracts.FossFi]
+display-name = "FossFi Parent"
+src = "contracts/src/fossFi/FossFi.tolk"
+depends = ["FossFiWallet"]
+
+[contracts.FossFiWallet]
+display-name = "FossFiWallet Child"
+src = "contracts/src/fossFi/FossFiWallet.tolk"
+depends = []
+
+[test]
+# ui = true
+# ui-port = 12345
+# fork-net = "testnet"
+# fork-block-number = 72776090
+
+[wrappers.tolk]
+# output-dir = "tests/generated-wrappers"
+# generate-test = true
+# test-output-dir = "tests/generated-tests"
+
+[wrappers.typescript]
+# output-dir = "./wrappers-ts"
+
+[fmt]
+width = 100
+ignore = []
+
+[scripts]
+deploy-emulation = "acton script contracts/scripts/deploy.tolk"
+deploy-testnet = "acton script contracts/scripts/deploy.tolk --net testnet"
+jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"
+jetton-change-metadata = "acton script contracts/scripts/change-metadata.tolk"
+jetton-claim-admin = "acton script contracts/scripts/claim-admin.tolk"
+jetton-info = "acton script contracts/scripts/info.tolk"
+jetton-mint = "acton script contracts/scripts/mint.tolk"
+jetton-transfer = "acton script contracts/scripts/transfer.tolk"
+
+[import-mappings]
+acton = ".acton"
+contracts = "contracts/src"
+gen = "gen"
+tests = "contracts/tests"
+wrappers = "contracts/wrappers"
+
+# Check full Acton.toml reference and all available keys:
+# https://ton-blockchain.github.io/acton/docs/acton-toml

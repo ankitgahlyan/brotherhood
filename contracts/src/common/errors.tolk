@@ -1,0 +1,44 @@
+enum Errors {
+    BalanceError = 47
+    NotEnoughGas = 48
+    InvalidMessage = 49
+    // InvalidMessage = 0xFFFF
+    InvalidOp = 72
+    NotOwner = 73
+    NotValidWallet = 74
+    WrongWorkchain = 333
+
+    IncorrectSender = 700
+    AccountTerminated = 701
+    AccountInactive = 702
+    InsufficientGasSent = 703
+    ReservedInternal = 704
+    // st UPGRADE_WALLET  = 705
+    NoPendingRequest = 706
+    CantUnfollowReported = 707
+    IncorrectReceiver = 708
+    InsufficientBalance = 709
+    AlreadyReported = 710
+    AccountNotReported = 711
+    // st NOT_AUTHORIZED  = 712
+    // st AMOUNT_EXCEEDS_MBRP  = 715
+    NotFollowing = 717
+    //ower Cleared by confirmRequestInternal bounce? TODO
+    ConnectionExists = 719
+    NotFriend = 720
+    NotInvitor = 721
+    AlreadyInvited = 723
+    UnauthorizedBurn = 724
+    MintClosed = 730
+    NoVotesAvailable = 731
+    NotVotedYet = 732
+    Upgrade = 733
+    WaitMore = 735
+    NotCloseFriend = 736
+    AlreadyVouched = 737
+    ProvideCoordinates = 738
+    InvalidFwdPayload = 739
+    InviteFirst = 740
+    AlreadyReportedForOtherReason = 741
+    MaxConnections = 250 // coz accClosing contract can send only approx 250 msg once
+}

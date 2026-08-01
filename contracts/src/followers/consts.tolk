@@ -1,0 +1,1 @@
+const ALREADY_FOLLOWING: int = 750
