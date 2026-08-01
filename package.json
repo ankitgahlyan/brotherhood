@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "acton build && vite build",
+    "build": "vite build",
+    "build:all": "acton build && vite build",
     "dev": "vite",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
