@@ -16,7 +16,7 @@ export const QrScanner: FC<QrScannerProps> = ({
 }) => {
   const scanLockRef = useRef(false);
   // ref to hold scanner instance synchronously
-  const qrScannerRef = useRef<Html5Qrcode>(undefined);
+  const qrScannerRef = useRef<Html5Qrcode | null>(null);
   // const [qrScanner, setQRScanner] = useState<Html5Qrcode>();
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [cameraIndex, setCameraIndex] = useState(1);
@@ -28,6 +28,7 @@ export const QrScanner: FC<QrScannerProps> = ({
   useEffect(() => {
     if (!isVisible) {
       resetScanner();
+      return;
     }
   }, [isVisible, resetScanner]);
 
@@ -44,16 +45,38 @@ export const QrScanner: FC<QrScannerProps> = ({
     [onScan],
   );
 
-  useEffect(() => {
-    if (!isVisible) return;
-    initializeQRScanner();
-  }, [isVisible]);
+  const stopQRScanner = useCallback(
+    async (shouldClose = true) => {
+      if (!qrScannerRef.current) return;
 
-  if (!isVisible) {
-    return null;
-  }
+      try {
+        await qrScannerRef.current.stop();
+        if (shouldClose) {
+          onClose();
+        }
+      } catch (err: unknown) {
+        console.error('Error stopping QR scanner:', err);
+      }
+    },
+    [onClose],
+  );
 
-  async function initializeQRScanner() {
+  const onScanSuccess = useCallback(
+    (qrCodeMessage: string) => {
+      let address = qrCodeMessage.trim();
+
+      const tonTransferMatch = address.match(/ton:\/\/transfer\/(.+)/);
+      if (tonTransferMatch) {
+        address = tonTransferMatch[1];
+      }
+
+      handleBarCodeScanned({ data: address });
+      stopQRScanner();
+    },
+    [handleBarCodeScanned, stopQRScanner],
+  );
+
+  const initializeQRScanner = useCallback(async () => {
     if (!qrScannerRef.current) {
       qrScannerRef.current = new Html5Qrcode('qr');
     }
@@ -75,42 +98,33 @@ export const QrScanner: FC<QrScannerProps> = ({
     } catch (err: unknown) {
       console.error('QR Scanner initialization failed:', err);
     }
-  }
+  }, [onScanSuccess]);
 
-  function onScanSuccess(qrCodeMessage: string) {
-    let address = qrCodeMessage.trim();
+  useEffect(() => {
+    if (!isVisible) return;
 
-    // Extract address from ton://transfer/ prefix if present
-    const tonTransferMatch = address.match(/ton:\/\/transfer\/(.+)/);
-    if (tonTransferMatch) {
-      address = tonTransferMatch[1];
-    }
+    initializeQRScanner();
+    return () => {
+      stopQRScanner(false);
+    };
+  }, [isVisible, initializeQRScanner, stopQRScanner]);
 
-    // Update the bound value
-    handleBarCodeScanned({ data: address });
-    stopQRScanner();
-  }
-
-  async function stopQRScanner() {
-    try {
-      await qrScannerRef.current!.stop();
-      onClose();
-    } catch (err: unknown) {
-      console.error('Error stopping QR scanner:', err);
-    }
+  if (!isVisible) {
+    return null;
   }
 
   async function flipCamera() {
-    // if (!qrScannerRef.current || cameras.length < 2) return;
+    if (!qrScannerRef.current || cameras.length < 2) return;
+
     const next = (cameraIndex + 1) % cameras.length;
     setCameraIndex(next);
     try {
-      await qrScannerRef.current!.stop();
+      await qrScannerRef.current.stop();
     } catch (err: unknown) {
       console.error('Error stopping QR scanner before flipping camera:', err);
     }
     try {
-      await qrScannerRef.current!.start(
+      await qrScannerRef.current.start(
         cameras[next].id,
         undefined,
         onScanSuccess,

@@ -1,4 +1,12 @@
-## Agent Guidance
+## Agent Skills
+
+### Issue tracker
+
+GitHub Issues are the issue tracker for this repository. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This repository uses a single-context layout for domain documentation. See `docs/agents/domain.md`.
 
 - Use `acton` skill for Acton CLI, Tolk, wrappers, tests, scripts, deployment, and `Acton.toml` tasks.
 - Treat the contracts under `contracts/src/` as the source of truth, especially `fossFi/fossFi.tolk`, `fossFi/fossFiWallet.tolk`, `fossFi/storage.tolk`, `common/messages.tolk`, and `common/errors.tolk`.

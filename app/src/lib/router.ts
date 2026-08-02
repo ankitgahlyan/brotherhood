@@ -22,7 +22,9 @@ function normalizePath(pathname: string): string {
 function parseRoute(): Route {
   const params = new URLSearchParams(window.location.search);
   const redirectPath = params.get('p');
-  const routeTarget = redirectPath ? new URL(redirectPath, 'https://example.com') : null;
+  const routeTarget = redirectPath
+    ? new URL(redirectPath, 'https://example.com')
+    : null;
   const path = normalizePath(routeTarget?.pathname ?? window.location.pathname);
   const routeParams = routeTarget?.searchParams ?? params;
   const isTestnet = routeParams.get('testnet') === 'true';

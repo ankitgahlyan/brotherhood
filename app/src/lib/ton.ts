@@ -1,7 +1,7 @@
 import { TonClient } from '@ton/ton';
 import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
-import { DEFAULT_JETTON_TESTNET } from '@/pages/ManagePage';
+import { FI_ADDRESS } from '@/pages/ManagePage';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 // import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 
@@ -44,17 +44,17 @@ export async function getWalletAddress( // todo: calc offchain
   // get from local storage
   if (
     localStorage.getItem(
-      'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+      'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
     ) != null
   ) {
     return Address.parse(
       localStorage.getItem(
-        'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+        'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
       )!,
     );
   } else {
     const client = getTonClient('testnet');
-    const minterAddress = Address.parse(DEFAULT_JETTON_TESTNET);
+    const minterAddress = Address.parse(FI_ADDRESS);
     const result = await client.runMethod(minterAddress, 'get_wallet_address', [
       {
         type: 'slice',
@@ -64,7 +64,7 @@ export async function getWalletAddress( // todo: calc offchain
     const addr = result.stack.readAddress();
     // store to localstorage to avoid multiple calls to getWalletAddress for the same address
     localStorage.setItem(
-      'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+      'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
       addr.toString(),
     );
     return addr;
@@ -141,13 +141,11 @@ async function fetchWithRetry(
   throw new Error('Max retries exceeded');
 }
 
-export async function fetchJettonMaster(
-  network: Network,
-  address: string,
-): Promise<JettonMasterInfo> {
+export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
+  const network = 'testnet';
   const base = toncenterV3[network];
   const res = await fetchWithRetry(
-    `${base}/jetton/masters?address=${encodeURIComponent(address)}&limit=1&offset=0`,
+    `${base}/jetton/masters?address=${encodeURIComponent(FI_ADDRESS)}&limit=1&offset=0`,
     { headers: toncenterApiHeaders(network) },
   );
   if (!res.ok) throw new Error(`Toncenter API error: ${res.status}`);

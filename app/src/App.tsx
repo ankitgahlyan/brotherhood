@@ -4,9 +4,7 @@ import { THEME } from '@tonconnect/ui-react';
 import { Gem, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {} from '@/components/ui/dropdown-menu';
-// import { DeployPage } from './pages/DeployPage';
 import { ManagePage } from './pages/ManagePage';
-import { useRouter } from './lib/router';
 
 type Theme = 'dark' | 'light';
 
@@ -18,7 +16,7 @@ const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
 export const useTheme = () => useContext(ThemeContext);
 
 export default function App() {
-  const { network, address, setAddress } = useRouter();
+  // const { network, address, setAddress } = useRouter();
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('jm-theme');
     return saved === 'light' ? 'light' : 'dark';
@@ -123,11 +121,7 @@ export default function App() {
           {/* {page === 'create' ? (
             <DeployPage network={network} />
           ) : ( */}
-          <ManagePage
-            network={network}
-            initialAddress={address}
-            onAddressChange={setAddress}
-          />
+          <ManagePage />
           {/* // )} */}
         </main>
       </div>

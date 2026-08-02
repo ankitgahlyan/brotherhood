@@ -1,1 +1,9 @@
 wrappers-ts/
+.agents
+.acton
+.git
+contracts
+docs
+gen
+node_modules
+wrappers-ts

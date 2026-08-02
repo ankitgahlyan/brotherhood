@@ -17,6 +17,11 @@ display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = []
 
+[contracts.Lottery]
+display-name = "Lottery"
+src = "contracts/src/lottery/lottery.tolk"
+depends = []
+
 [test]
 # ui = true
 # ui-port = 12345

@@ -42,10 +42,8 @@ import { useTheme } from '../App';
 import { InputScan } from '@/components/input-scan';
 import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
-const DEFAULT_JETTON_MAINNET =
-  'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
-export const DEFAULT_JETTON_TESTNET =
-  'kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT'; // FI Address
+const network = 'testnet';
+export const FI_ADDRESS = 'kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT';
 const ZERO_ADDRESS =
   '0:0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -55,12 +53,6 @@ function tryParseAddress(raw: string): Address | null {
   } catch {
     return null;
   }
-}
-
-interface Props {
-  network: 'mainnet' | 'testnet';
-  initialAddress: string | null;
-  onAddressChange: (address: string) => void;
 }
 
 interface JettonInfo {
@@ -73,20 +65,9 @@ interface JettonInfo {
 type ManageTab = 'transfer' | 'burn' | 'admin' | 'invite' | 'vote' | 'destroy';
 // type ManageAdminTab = 'mint' | 'upgrade';
 
-export function ManagePage({
-  network,
-  initialAddress,
-  onAddressChange,
-}: Props) {
+export function ManagePage() {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
-
-  const defaultAddr =
-    network === 'testnet' ? DEFAULT_JETTON_TESTNET : DEFAULT_JETTON_MAINNET;
-  const [contractAddr] = useState(
-    // const [contractAddr, setContractAddrRaw] = useState(
-    initialAddress || defaultAddr,
-  );
 
   // function setContractAddr(addr: string) {
   //   setContractAddrRaw(addr);
@@ -115,29 +96,18 @@ export function ManagePage({
   const { theme } = useTheme();
 
   const loadJettonInfo = useCallback(async () => {
-    if (!contractAddr.trim()) {
-      setStatus({ type: 'error', message: 'Enter a contract address' });
-      return;
-    }
-
     setLoading(true);
     setStatus(null);
     setJettonInfo(null);
 
     try {
-      const data = await fetchJettonMaster(network, contractAddr.trim());
+      const data = await fetchJettonMaster();
       setJettonInfo({
         totalSupply: data.totalSupply,
         mintable: data.mintable,
         adminAddress: data.adminAddress,
         metadata: data.metadata,
       });
-
-      // fetch wallet state
-      if (isConnected) {
-        // setBalance(await fetchWalletBalance(network, contractAddr.trim(), ownerAddress!))
-        setFiWalletState(await getFiWalletState(ownerAddress!));
-      }
     } catch (err) {
       const msg = getErrorMessage(err);
       if (
@@ -145,10 +115,10 @@ export function ManagePage({
         msg.includes('-13') ||
         msg.includes('unable to execute')
       ) {
-        const otherNet = network === 'mainnet' ? 'Testnet' : 'Mainnet';
         setStatus({
           type: 'error',
-          message: `Contract not found on ${network === 'mainnet' ? 'Mainnet' : 'Testnet'}. Make sure the address is correct or try switching to ${otherNet}.`,
+          message:
+            'Contract not found on testnet. Make sure the address is correct or try switching to otherNetwork.',
         });
       } else {
         setStatus({
@@ -160,27 +130,41 @@ export function ManagePage({
       setLoading(false);
       setStatus((prev) => (prev?.type === 'info' ? null : prev));
     }
-  }, [contractAddr, network, ownerAddress, isConnected]);
+  }, []);
+
+  const loadFiWalletInfo = useCallback(async () => {
+    setLoading(true);
+    setStatus(null);
+    setFiWalletState(null);
+
+    try {
+      setFiWalletState(await getFiWalletState(ownerAddress!));
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setStatus({
+        type: 'error',
+        message: msg || 'Failed to load jetton data',
+      });
+    } finally {
+      setLoading(false);
+      setStatus((prev) => (prev?.type === 'info' ? null : prev));
+    }
+  }, [ownerAddress]);
 
   useEffect(() => {
-    if (contractAddr.trim()) {
-      onAddressChange(contractAddr.trim());
-      loadJettonInfo();
-    }
+    loadJettonInfo();
     // Reload only when the network changes; address changes are handled via the input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [network]);
+  }, []);
+
+  useEffect(() => {
+    loadFiWalletInfo();
+  }, [isConnected, loadFiWalletInfo]);
 
   const isAdmin =
     jettonInfo && ownerAddress && jettonInfo.adminAddress
       ? jettonInfo.adminAddress.equals(ownerAddress)
       : false;
-
-  useEffect(() => {
-    if (!isAdmin && tab === 'admin') {
-      setTab('vote');
-    }
-  }, [isAdmin, tab]);
 
   const decimals = parseInt(jettonInfo?.metadata?.decimals || '9') || 9;
   const visibleTabs: ManageTab[] = isAdmin
@@ -309,7 +293,7 @@ export function ManagePage({
                 {isAdmin && (
                   <TabsContent value="admin" className="mt-5">
                     <AdminTab
-                      contractAddr={contractAddr}
+                      contractAddr={FI_ADDRESS}
                       info={jettonInfo}
                       isAdmin={isAdmin}
                       isConnected={isConnected}
@@ -335,7 +319,7 @@ export function ManagePage({
         network={network}
         loading={loading}
         error={!jettonInfo && status?.type === 'error' ? status.message : null}
-        contractAddr={contractAddr}
+        contractAddr={FI_ADDRESS}
       />
     </div>
   );

@@ -11,6 +11,14 @@ import "utils"
 // import "@stdlib/tvm-dicts"
 // import "@stdlib/tvm-lowlevel"
 
+contract Lottery {
+    author: "zeta"
+    version: "0.1.0"
+    description: "Decentralized Lottery Contract"
+    storage: LotteryStorage
+    incomingMessages: AllowedMessageToLottery
+}
+
 type AllowedMessageToLottery = EnterLottery | DrawWinner
 
 // ============================================================================
@@ -26,13 +34,13 @@ fun onInternalMessage(in: InMessage) {
             // correct sender
             assert (in.senderAddress == storage.owner) throw 700; // todo: incorrectSender
 
-            // Deadline check
-            assert (blockchain.now() <= storage.revealDeadline) throw 201;
-
-            // todo: fixme make every hour
             if (storage.revealDeadline == 0) {
                 storage.revealDeadline = blockchain.now() + REVEAL_DEADLINE_SECONDS;
+            } else {
+                assert (blockchain.now() <= storage.revealDeadline) throw 201;
             }
+
+            assert (msg.amount == storage.entryAmount) throw 202;
 
             // add if not already entered
             if (!storage.participants.exists(msg.sender)) {
@@ -41,7 +49,7 @@ fun onInternalMessage(in: InMessage) {
                 storage.participantCount += 1;
             }
 
-            storage.prizePool += ENTRY_FEE;
+            storage.prizePool += msg.amount;
             val addrHash = msg.sender.toCell().hash();
             storage.randomSeed ^= addrHash;
         }
@@ -49,6 +57,7 @@ fun onInternalMessage(in: InMessage) {
         DrawWinner => {
             // Phase check
             assert (blockchain.now() > storage.revealDeadline) throw 400;
+            assert (storage.participantCount > 0) throw 401;
 
             // Select winner
             val winner = selectWinner(
@@ -70,7 +79,7 @@ fun onInternalMessage(in: InMessage) {
             prizeMsg.send(SEND_MODE_REGULAR | SEND_MODE_IGNORE_ERRORS); // todo:
 
             // Reset storage for new lottery
-            storage.participants = createEmptyMap();
+            storage.participants = [];
             storage.prizePool = 0;
             storage.participantCount = 0;
             storage.randomSeed = 0;
@@ -102,4 +111,20 @@ get fun isParticipant(addr: address): bool {
 get fun getDeadline(): int32 {
     val storage = lazy LotteryStorage.load();
     return storage.revealDeadline;
+}
+
+get fun getCurrentPhase(): int8 {
+    val storage = lazy LotteryStorage.load();
+    if (storage.revealDeadline == 0) {
+        return PHASE_ENTRY;
+    }
+    if (blockchain.now() <= storage.revealDeadline) {
+        return PHASE_REVEAL;
+    }
+    return PHASE_COMPLETE;
+}
+
+get fun getPrizePool(): coins {
+    val storage = lazy LotteryStorage.load();
+    return storage.prizePool;
 }
