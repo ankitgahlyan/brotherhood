@@ -8,11 +8,25 @@ interface Route {
   address: string | null;
 }
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+function normalizePath(pathname: string): string {
+  if (basePath && basePath !== '/' && pathname.startsWith(basePath)) {
+    const stripped = pathname.slice(basePath.length);
+    return stripped.startsWith('/') ? stripped : `/${stripped}`;
+  }
+
+  return pathname.startsWith('/') ? pathname : `/${pathname}`;
+}
+
 function parseRoute(): Route {
-  const path = window.location.pathname;
   const params = new URLSearchParams(window.location.search);
-  const isTestnet = params.get('testnet') === 'true';
-  const address = params.get('address') || null;
+  const redirectPath = params.get('p');
+  const routeTarget = redirectPath ? new URL(redirectPath, 'https://example.com') : null;
+  const path = normalizePath(routeTarget?.pathname ?? window.location.pathname);
+  const routeParams = routeTarget?.searchParams ?? params;
+  const isTestnet = routeParams.get('testnet') === 'true';
+  const address = routeParams.get('address') || null;
 
   if (path === '/manage') return { page: 'manage', isTestnet, address };
   return { page: 'create', isTestnet, address: null };
@@ -24,7 +38,9 @@ function buildUrl(page: Page, testnet: boolean, address?: string | null) {
   if (testnet) params.set('testnet', 'true');
   if (page === 'manage' && address) params.set('address', address);
   const search = params.toString();
-  return search ? `${path}?${search}` : path;
+  const url = search ? `${path}?${search}` : path;
+
+  return basePath && basePath !== '/' ? `${basePath}${url}` : url;
 }
 
 function push(url: string) {
