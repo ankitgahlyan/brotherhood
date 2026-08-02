@@ -42,8 +42,16 @@ export async function getWalletAddress( // todo: calc offchain
   ownerAddress: Address,
 ): Promise<Address> {
   // get from local storage
-  if (localStorage.getItem('fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString()) != null) {
-    return Address.parse(localStorage.getItem('fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString())!);
+  if (
+    localStorage.getItem(
+      'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+    ) != null
+  ) {
+    return Address.parse(
+      localStorage.getItem(
+        'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+      )!,
+    );
   } else {
     const client = getTonClient('testnet');
     const minterAddress = Address.parse(DEFAULT_JETTON_TESTNET);
@@ -55,7 +63,10 @@ export async function getWalletAddress( // todo: calc offchain
     ]);
     const addr = result.stack.readAddress();
     // store to localstorage to avoid multiple calls to getWalletAddress for the same address
-    localStorage.setItem('fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(), addr.toString());
+    localStorage.setItem(
+      'fiWalletAddress_' + DEFAULT_JETTON_TESTNET + ownerAddress.toString(),
+      addr.toString(),
+    );
     return addr;
   }
 
@@ -92,7 +103,6 @@ export async function getWalletAddress( // todo: calc offchain
   //   }.calculateAddress();
 
   //   return calcAddr;
-
 }
 
 export interface JettonMasterInfo {

@@ -6,7 +6,11 @@ import {
 } from '@tonconnect/ui-react';
 import { Address, fromNano, toNano } from '@ton/core';
 import { Search, AlertCircle, Wallet, Lock } from 'lucide-react';
-import { getWalletAddress, fetchJettonMaster, getFiWalletState } from '../lib/ton';
+import {
+  getWalletAddress,
+  fetchJettonMaster,
+  getFiWalletState,
+} from '../lib/ton';
 import type { JettonMetadata } from '../lib/jettonContent';
 import {
   buildMintBody,
@@ -25,10 +29,7 @@ import {
 } from '../lib/deploy';
 import { getErrorMessage, isCancelledTransactionError } from '../lib/errors';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,7 +40,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { StatusAlert, PreviewRow, NetworkBadge } from './DeployPage';
 import { useTheme } from '../App';
 import { InputScan } from '@/components/input-scan';
-import { FiWalletStore } from '@wrappers/FossFiWallet.gen'
+import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
 const DEFAULT_JETTON_MAINNET =
   'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
@@ -83,7 +84,7 @@ export function ManagePage({
   const defaultAddr =
     network === 'testnet' ? DEFAULT_JETTON_TESTNET : DEFAULT_JETTON_MAINNET;
   const [contractAddr] = useState(
-  // const [contractAddr, setContractAddrRaw] = useState(
+    // const [contractAddr, setContractAddrRaw] = useState(
     initialAddress || defaultAddr,
   );
 
@@ -94,7 +95,9 @@ export function ManagePage({
   //   setStatus(null);
   // }
   const [jettonInfo, setJettonInfo] = useState<JettonInfo | null>(null);
-  const [fiWalletState, setFiWalletState] = useState<FiWalletStore | null>(null);
+  const [fiWalletState, setFiWalletState] = useState<FiWalletStore | null>(
+    null,
+  );
   // const [balance, setBalance] = useState<bigint | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -135,7 +138,6 @@ export function ManagePage({
         // setBalance(await fetchWalletBalance(network, contractAddr.trim(), ownerAddress!))
         setFiWalletState(await getFiWalletState(ownerAddress!));
       }
-      
     } catch (err) {
       const msg = getErrorMessage(err);
       if (
@@ -433,7 +435,10 @@ function JettonInfoCard({
 
         <Separator className="my-4" />
 
-        <PreviewRow label="Balance" value={`${fromNano(userBalance || 0)} ${symbol}`} />
+        <PreviewRow
+          label="Balance"
+          value={`${fromNano(userBalance || 0)} ${symbol}`}
+        />
         {/* <PreviewRow label="Balance" value={userBalance!.toString()} /> */}
         <PreviewRow
           label="Supply"
@@ -773,9 +778,7 @@ function TransferTab({
         forwardTonAmount: toNano('0.001'),
       });
 
-      const walletAddr = await getWalletAddress(
-        ownerAddress,
-      );
+      const walletAddr = await getWalletAddress(ownerAddress);
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 300,
@@ -930,10 +933,7 @@ function InviteTab({
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Recipient Address
         </Label>
-        <InputScan 
-        toAddr={toAddr}
-        setToAddr={setToAddr}
-        />
+        <InputScan toAddr={toAddr} setToAddr={setToAddr} />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -998,13 +998,13 @@ function VoteTab({
     try {
       const body = positive
         ? buildVoteBody({
-          transferRecipient: recipientAddr,
-          sendExcessesTo: owner,
-        })
+            transferRecipient: recipientAddr,
+            sendExcessesTo: owner,
+          })
         : buildUnvoteBody({
-          transferRecipient: recipientAddr,
-          sendExcessesTo: owner,
-        });
+            transferRecipient: recipientAddr,
+            sendExcessesTo: owner,
+          });
       // const client = getTonClient(network);
       const walletAddr = await getWalletAddress(
         // client,
@@ -1026,7 +1026,9 @@ function VoteTab({
 
       setStatus({
         type: 'success',
-        message: positive ? 'Vote transaction sent!' : 'Unvote transaction sent!',
+        message: positive
+          ? 'Vote transaction sent!'
+          : 'Unvote transaction sent!',
       });
       setToAddr('');
     } catch (err) {
@@ -1153,18 +1155,18 @@ function DestroyTab({
   return (
     <div className="space-y-4.5">
       <Button
-          className="h-12 rounded-full text-[15px] font-bold"
-          disabled={loading}
-          onClick={() => sendDestroy()}
-        >
-          {loading ? (
-            <>
-              <span className="spinner" /> Sending Txn...
-            </>
-          ) : (
-            'Destroy Account'
-          )}
-        </Button>
+        className="h-12 rounded-full text-[15px] font-bold"
+        disabled={loading}
+        onClick={() => sendDestroy()}
+      >
+        {loading ? (
+          <>
+            <span className="spinner" /> Sending Txn...
+          </>
+        ) : (
+          'Destroy Account'
+        )}
+      </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}
     </div>
   );
@@ -1406,7 +1408,10 @@ function AdminTab({
           },
         ],
       });
-      setStatus({ type: 'success', message: 'Approve upgrade transaction sent!' });
+      setStatus({
+        type: 'success',
+        message: 'Approve upgrade transaction sent!',
+      });
       setTimeout(onSuccess, 5000);
     } catch (err) {
       setStatus({
@@ -1438,7 +1443,10 @@ function AdminTab({
           },
         ],
       });
-      setStatus({ type: 'success', message: 'Reject upgrade transaction sent!' });
+      setStatus({
+        type: 'success',
+        message: 'Reject upgrade transaction sent!',
+      });
       setTimeout(onSuccess, 5000);
     } catch (err) {
       setStatus({

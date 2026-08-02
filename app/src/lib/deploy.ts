@@ -12,7 +12,12 @@ import {
   ApproveUpgrade,
   RejectUpgrade,
 } from '@wrappers/FossFi.gen';
-import { AskToBurn, AskToTransfer, Destroy, OthersActions } from '@wrappers/FossFiWallet.gen';
+import {
+  AskToBurn,
+  AskToTransfer,
+  Destroy,
+  OthersActions,
+} from '@wrappers/FossFiWallet.gen';
 import { buildOnchainMetadata, type JettonMetadata } from './jettonContent';
 
 export function parseUnits(amount: string, decimals: number): bigint {
@@ -158,7 +163,12 @@ export function buildInviteBody(params: {
   forwardPayload?: string;
   queryId?: bigint;
 }): Cell {
-  const { transferRecipient, sendExcessesTo, forwardPayload = '', queryId = 0n } = params;
+  const {
+    transferRecipient,
+    sendExcessesTo,
+    forwardPayload = '',
+    queryId = 0n,
+  } = params;
   return OthersActions.toCell(
     OthersActions.create({
       queryId,
@@ -211,9 +221,7 @@ export function buildUnvoteBody(params: {
 }
 
 export function buildDestroyBody(): Cell {
-  return Destroy.toCell(
-    Destroy.create(),
-  );
+  return Destroy.toCell(Destroy.create());
 }
 
 export function buildTopUpTonsBody(): Cell {

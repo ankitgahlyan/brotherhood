@@ -3,8 +3,7 @@ import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
 import { THEME } from '@tonconnect/ui-react';
 import { Gem, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-} from '@/components/ui/dropdown-menu';
+import {} from '@/components/ui/dropdown-menu';
 // import { DeployPage } from './pages/DeployPage';
 import { ManagePage } from './pages/ManagePage';
 import { useRouter } from './lib/router';
@@ -13,7 +12,7 @@ type Theme = 'dark' | 'light';
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
   theme: 'dark',
-  toggle: () => { },
+  toggle: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);

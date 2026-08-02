@@ -5,6 +5,7 @@ A secure decentralized lottery implementation using the **commit-reveal scheme**
 ## Overview
 
 This lottery contract implements a multi-phase lottery system that uses participant addresses as part of the commitment scheme, ensuring:
+
 - **Cryptographic security**: No single party can predict or manipulate the outcome
 - **Validator resistance**: Even validators cannot determine the winner in advance
 - **Fair randomness**: Combines secrets from all participants using XOR
@@ -22,6 +23,7 @@ Commitment = Hash(Secret + ParticipantAddress)
 ```
 
 This ensures:
+
 1. Each participant's commitment is unique
 2. Participants cannot copy each other's commitments
 3. Addresses add entropy to the final random seed
@@ -29,23 +31,27 @@ This ensures:
 ### Four Phases
 
 #### 1. **Entry Phase** (PHASE_ENTRY)
+
 - Participants pay the entry fee (1 TON) to join
 - Minimum 3 participants required
 - Automatically advances to Commit phase when minimum is reached
 
 #### 2. **Commit Phase** (PHASE_COMMIT)
+
 - Each participant submits `Hash(Secret + Address)`
 - 1-hour deadline for all commits
 - Participants generate a random 256-bit secret off-chain
 - Automatically advances to Reveal phase when all participants commit
 
 #### 3. **Reveal Phase** (PHASE_REVEAL)
+
 - Participants reveal their original secrets
 - Contract verifies: `Hash(RevealedSecret + Address) == StoredCommitment`
 - 1-hour deadline for reveals
 - Anyone can call `DrawWinner` after deadline or when all reveal
 
 #### 4. **Complete Phase** (PHASE_COMPLETE)
+
 - Winner is determined by: `(XOR of all secrets and addresses) % participantCount`
 - Winner claims prize (95% of pool, 5% to owner)
 - Contract resets for next lottery
@@ -53,17 +59,20 @@ This ensures:
 ## Security Features
 
 ### Against User Manipulation
+
 - ✅ **Commitment binding**: Cannot change secret after commit
 - ✅ **Address-based uniqueness**: Each participant has unique commitment
 - ✅ **Reveal verification**: Must provide exact secret used in commitment
 
 ### Against Validator Manipulation
+
 - ✅ **Multi-party randomness**: No single party controls the outcome
 - ✅ **XOR combination**: All secrets contribute equally to randomness
 - ✅ **Address mixing**: Adds blockchain state to entropy
 - ✅ **Timing resistance**: Validators cannot predict based on block time
 
 ### Failure Handling
+
 - ⚠️ **Partial reveals**: If not all participants reveal, owner can trigger refund
 - ⚠️ **Minimum reveals**: Requires at least 2 reveals for security
 - ⚠️ **Deadlines**: Automatic progression prevents infinite waiting
@@ -71,6 +80,7 @@ This ensures:
 ## Message Types
 
 ### 1. MsgEnterLottery (0x11111111)
+
 ```tolk
 {
     queryId: uint64
@@ -79,6 +89,7 @@ This ensures:
 ```
 
 ### 2. MsgSubmitCommitment (0x22222222)
+
 ```tolk
 {
     queryId: uint64,
@@ -87,6 +98,7 @@ This ensures:
 ```
 
 **How to generate commitment:**
+
 ```javascript
 // Off-chain (JavaScript example)
 const secret = crypto.randomBytes(32); // 256-bit random
@@ -94,6 +106,7 @@ const commitment = sha256(concat(secret, yourAddress));
 ```
 
 ### 3. MsgRevealCommitment (0x33333333)
+
 ```tolk
 {
     queryId: uint64,
@@ -102,6 +115,7 @@ const commitment = sha256(concat(secret, yourAddress));
 ```
 
 ### 4. MsgDrawWinner (0x44444444)
+
 ```tolk
 {
     queryId: uint64
@@ -110,6 +124,7 @@ const commitment = sha256(concat(secret, yourAddress));
 ```
 
 ### 5. MsgClaimPrize (0x55555555)
+
 ```tolk
 {
     queryId: uint64
@@ -118,6 +133,7 @@ const commitment = sha256(concat(secret, yourAddress));
 ```
 
 ### 6. MsgRefund (0x66666666)
+
 ```tolk
 {
     queryId: uint64
@@ -169,6 +185,7 @@ get getDeadlines() -> (int32, int32)
 ### For Contract Owner
 
 1. **Deploy contract** with initial storage:
+
 ```tolk
 {
     owner: <your_address>,
@@ -205,26 +222,26 @@ const OWNER_FEE_PERCENT: int = 5;              // 5% commission
 
 ## Error Codes
 
-| Code | Description |
-|------|-------------|
-| 100  | Not in entry phase |
-| 101  | Insufficient entry fee |
-| 102  | Already entered |
-| 200  | Not in commit phase |
-| 201  | Commit deadline passed |
-| 202  | Not a participant |
-| 203  | Already committed |
-| 300  | Not in reveal phase |
-| 301  | Reveal deadline passed |
+| Code | Description                               |
+| ---- | ----------------------------------------- |
+| 100  | Not in entry phase                        |
+| 101  | Insufficient entry fee                    |
+| 102  | Already entered                           |
+| 200  | Not in commit phase                       |
+| 201  | Commit deadline passed                    |
+| 202  | Not a participant                         |
+| 203  | Already committed                         |
+| 300  | Not in reveal phase                       |
+| 301  | Reveal deadline passed                    |
 | 302  | Invalid reveal (doesn't match commitment) |
-| 400  | Cannot draw winner yet |
+| 400  | Cannot draw winner yet                    |
 | 401  | Not enough reveals or deadline not passed |
-| 402  | Need at least 2 reveals for security |
-| 500  | Not in complete phase |
-| 501  | Winner not determined |
-| 502  | Only winner can claim |
-| 600  | Only owner can refund |
-| 601  | Cannot refund completed lottery |
+| 402  | Need at least 2 reveals for security      |
+| 500  | Not in complete phase                     |
+| 501  | Winner not determined                     |
+| 502  | Only winner can claim                     |
+| 600  | Only owner can refund                     |
+| 601  | Cannot refund completed lottery           |
 
 ## Gas Optimization
 
@@ -259,11 +276,11 @@ const OWNER_FEE_PERCENT: int = 5;              // 5% commission
 
 ## Comparison with Other Methods
 
-| Method | Speed | Security | Complexity |
-|--------|-------|----------|------------|
-| `randomize_lt()` | Fast | Low | Low |
-| Block skipping | Medium | Medium | Medium |
-| **Commit-reveal** | Slow | **High** | High |
+| Method            | Speed  | Security | Complexity |
+| ----------------- | ------ | -------- | ---------- |
+| `randomize_lt()`  | Fast   | Low      | Low        |
+| Block skipping    | Medium | Medium   | Medium     |
+| **Commit-reveal** | Slow   | **High** | High       |
 
 This implementation is recommended for **high-value lotteries** where security is paramount.
 

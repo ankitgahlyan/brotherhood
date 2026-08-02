@@ -77,7 +77,7 @@ export function useRouter() {
 
   return {
     page: route.page,
-    network: ('testnet') as 'mainnet' | 'testnet',
+    network: 'testnet' as 'mainnet' | 'testnet',
     // network: (route.isTestnet ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet',
     address: route.address,
     go,
