@@ -159,7 +159,7 @@ export function ManagePage() {
 
   useEffect(() => {
     loadFiWalletInfo();
-  }, [isConnected, loadFiWalletInfo]);
+  }, [isConnected]);
 
   const isAdmin =
     jettonInfo && ownerAddress && jettonInfo.adminAddress
