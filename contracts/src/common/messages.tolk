@@ -241,6 +241,13 @@ struct (0x0000001e) TriggerDecay {
     sender: address
 }
 
+struct (0x0000001f) BuyCredit {
+    queryId: uint64
+    jettonAmount: coins
+    transferRecipient: address // the issuer whose Personal Token is being bought
+    sendExcessesTo: address?
+}
+
 struct IdInfo {
     username: string
     lattitude: string

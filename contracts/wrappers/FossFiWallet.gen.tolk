@@ -103,6 +103,24 @@ fun FossFiWallet.sendAskToBurn(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendBuyCredit(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    transferRecipient: address,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: BuyCredit { queryId, jettonAmount, transferRecipient, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFiWallet.sendAuthorityAction(
     self,
     from: address,

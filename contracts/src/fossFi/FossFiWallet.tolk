@@ -13,6 +13,7 @@ import "@contracts/fossFi/consts"
 type AllowedMessageToWallet =
     | AskToTransfer
     | AskToBurn
+    | BuyCredit
     | AuthorityAction
     | ChangeId
     | InternalTransferStep
@@ -361,19 +362,18 @@ fun onInternalMessage(in: InMessage): void {
                         jettonAmount: msg.jettonAmount,
                         version: 0,
                         transferredAsCredit: true,
-                        transferInitiator: createAddressNone().castToInternal(), // doesn't matter
+                        transferInitiator: msg.transferInitiator, // the buyer
                         sendExcessesTo: null,
                         forwardTonAmount: ton("0.0001"),
-                        forwardPayload: msg.forwardPayload,
+                        forwardPayload: beginCell().storeMaybeRef(null).endCell().beginParse(),
                     }.toCell(),
                 };
-                val outMsg = createMessage({
+                createMessage({
                     bounce: BounceMode.NoBounce,
                     value: ton("0.1"),
                     dest: trustedAddrs.personalJettonMinter!, // fails if not set
-                    body: mintBody,
-                });
-                outMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                    body: mintBody.toCell(),
+                }).send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
             }
 
             notifyOwner(
@@ -444,6 +444,42 @@ fun onInternalMessage(in: InMessage): void {
             ); // return;
         },
 
+        BuyCredit => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (
+                msg.transferRecipient.getWorkchain() == MY_WORKCHAIN
+            ) throw Errors.WrongWorkchain;
+            checkAmountIsEnoughToTransfer(in.valueCoins, 0, in.originalForwardFee);
+            // no self-credit
+            assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
+            store.jettonBalance -= msg.jettonAmount;
+
+            val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
+            contract.getStorageDuePayment();
+            reserveGramsOnBalance(
+                max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
+                RESERVE_MODE_AT_MOST,
+            );
+            val transferMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.transferRecipient.getAddrFiWallet(), // issuer's account
+                value: 0,
+                body: InternalTransferStep {
+                    queryId: msg.queryId,
+                    jettonAmount: msg.jettonAmount,
+                    version: store.version,
+                    transferredAsCredit: true, // land in the issuer wallet as a loan, triggers its personal-token mint
+                    transferInitiator: addrs.owner,
+                    sendExcessesTo: msg.sendExcessesTo,
+                    forwardTonAmount: 0,
+                    forwardPayload: createEmptySlice(),
+                },
+            });
+            transferMsg.send(
+                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        },
+
         Payback => {
             assert (
                 in.senderAddress == trustedAddrs.personalJettonMinter!
@@ -466,7 +502,8 @@ fun onInternalMessage(in: InMessage): void {
                     forwardPayload: createEmptySlice(),
                 },
             });
-            transferMsg.send(SEND_MODE_REGULAR | SEND_MODE_IGNORE_ERRORS);
+            // carry the Payback message value so the buyer's wallet can afford the transfer
+            transferMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         },
 
         InternalInvite => {

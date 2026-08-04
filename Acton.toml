@@ -22,6 +22,16 @@ display-name = "Lottery"
 src = "contracts/src/lottery/lottery.tolk"
 depends = []
 
+[contracts.PersonalMinter]
+display-name = "Personal Token Minter"
+src = "contracts/src/personalMinter/personal.tolk"
+depends = ["PersonalWallet"]
+
+[contracts.PersonalWallet]
+display-name = "Personal Token Wallet"
+src = "contracts/src/personalMinter/personalWallet.tolk"
+depends = []
+
 [test]
 # ui = true
 # ui-port = 12345
