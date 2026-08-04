@@ -4,6 +4,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS } from '@/pages/ManagePage';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { Personal } from '@wrappers/Personal.gen';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 // import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 
 export type Network = 'mainnet' | 'testnet';
@@ -239,4 +240,16 @@ export async function getPersonalWalletAddress(
   return getTonClient('testnet')
     .open(Personal.fromAddress(personalMinter))
     .getWalletAddress(owner);
+}
+
+// The raw balance (nano) a buyer holds on the given Personal Token minter.
+export async function getPersonalWalletBalance(
+  personalMinter: Address,
+  owner: Address,
+): Promise<bigint> {
+  const walletAddr = await getPersonalWalletAddress(personalMinter, owner);
+  const state = await getTonClient('testnet')
+    .open(PersonalWallet.fromAddress(walletAddr))
+    .getWalletData();
+  return state.jettonBalance;
 }

@@ -19,6 +19,7 @@ import {
   getCircle,
   getPersonalMinterForIssuer,
   getPersonalWalletAddress,
+  getPersonalWalletBalance,
 } from '../lib/ton';
 import type { JettonMetadata } from '../lib/jettonContent';
 import {
@@ -1401,6 +1402,48 @@ function CreditTab({
     type: string;
     message: string;
   } | null>(null);
+  const [personalBalance, setPersonalBalance] = useState<bigint | null>(null);
+  const [personalBalanceError, setPersonalBalanceError] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!ownerAddress) return;
+    const issuerAddr = tryParseAddress(paybackIssuer);
+    if (!issuerAddr) {
+      setPersonalBalance(null);
+      setPersonalBalanceError(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const minter = await getPersonalMinterForIssuer(issuerAddr);
+        if (!minter) {
+          if (!cancelled) {
+            setPersonalBalance(null);
+            setPersonalBalanceError(
+              'This issuer has no Personal Token minter deployed',
+            );
+          }
+          return;
+        }
+        const balance = await getPersonalWalletBalance(minter, ownerAddress);
+        if (!cancelled) {
+          setPersonalBalance(balance);
+          setPersonalBalanceError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setPersonalBalance(null);
+          setPersonalBalanceError('Could not read your Personal Token balance');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paybackIssuer, ownerAddress]);
 
   if (!isConnected) return <WalletRequired />;
 
@@ -1583,6 +1626,15 @@ function CreditTab({
           <p className="text-xs text-muted-foreground">
             Burn your Personal Token; the issuer returns the FI loan.
           </p>
+          {personalBalance !== null && (
+            <p className="text-xs text-muted-foreground">
+              Your Personal Token balance on this issuer:{' '}
+              <span className="font-semibold">{fromNano(personalBalance)}</span>
+            </p>
+          )}
+          {personalBalanceError && (
+            <p className="text-xs text-destructive">{personalBalanceError}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
