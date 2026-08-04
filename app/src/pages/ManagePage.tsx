@@ -17,6 +17,8 @@ import {
   fetchJettonMaster,
   getFiWalletState,
   getCircle,
+  getPersonalMinterForIssuer,
+  getPersonalWalletAddress,
 } from '../lib/ton';
 import type { JettonMetadata } from '../lib/jettonContent';
 import {
@@ -26,6 +28,7 @@ import {
   buildBurnBody,
   buildTransferBody,
   buildInviteBody,
+  buildBuyCreditBody,
   buildVoteBody,
   buildUnvoteBody,
   buildTopUpTonsBody,
@@ -70,7 +73,8 @@ interface JettonInfo {
   metadata: Partial<JettonMetadata>;
 }
 
-type ManageTab = 'transfer' | 'burn' | 'admin' | 'invite' | 'vote' | 'destroy';
+type ManageTab =
+  'transfer' | 'burn' | 'credit' | 'admin' | 'invite' | 'vote' | 'destroy';
 // type ManageAdminTab = 'mint' | 'upgrade';
 
 export function ManagePage() {
@@ -213,8 +217,8 @@ export function ManagePage() {
 
   const decimals = parseInt(jettonInfo?.metadata?.decimals || '9') || 9;
   const visibleTabs: ManageTab[] = isAdmin
-    ? ['admin', 'transfer', 'burn', 'invite', 'vote', 'destroy']
-    : ['invite', 'vote', 'transfer', 'burn'];
+    ? ['admin', 'credit', 'transfer', 'burn', 'invite', 'vote', 'destroy']
+    : ['credit', 'invite', 'vote', 'transfer', 'burn'];
 
   function formatAmount(amount: bigint): string {
     const divisor = 10n ** BigInt(decimals);
@@ -259,6 +263,15 @@ export function ManagePage() {
                 </TabsList>
                 <TabsContent value="transfer" className="mt-5">
                   <TransferTab
+                    decimals={decimals}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="credit" className="mt-5">
+                  <CreditTab
                     decimals={decimals}
                     isConnected={isConnected}
                     network={network}
@@ -1362,6 +1375,242 @@ function DestroyTab({
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}
+    </div>
+  );
+}
+
+function CreditTab({
+  decimals,
+  isConnected,
+  network,
+  tonConnectUI,
+  ownerAddress,
+}: {
+  decimals: number;
+  isConnected: boolean;
+  network: 'mainnet' | 'testnet';
+  tonConnectUI: TonConnectUI;
+  ownerAddress: Address | null;
+}) {
+  const [buyIssuer, setBuyIssuer] = useState('');
+  const [buyAmount, setBuyAmount] = useState('');
+  const [paybackIssuer, setPaybackIssuer] = useState('');
+  const [paybackAmount, setPaybackAmount] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{
+    type: string;
+    message: string;
+  } | null>(null);
+
+  if (!isConnected) return <WalletRequired />;
+
+  async function handleBuyCredit(e: FormEvent) {
+    e.preventDefault();
+    if (!ownerAddress) return;
+
+    const issuerAddr = tryParseAddress(buyIssuer);
+    if (!issuerAddr) {
+      setStatus({ type: 'error', message: 'Invalid issuer address' });
+      return;
+    }
+    const amountParsed = parseFloat(buyAmount);
+    if (isNaN(amountParsed) || amountParsed <= 0) {
+      setStatus({ type: 'error', message: 'Enter a valid amount' });
+      return;
+    }
+
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Confirm in your wallet...' });
+
+    try {
+      const body = buildBuyCreditBody({
+        transferRecipient: issuerAddr,
+        amount: parseUnits(buyAmount.trim(), decimals),
+        responseAddress: ownerAddress,
+      });
+      const walletAddr = await getWalletAddress(ownerAddress);
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        network: network === 'mainnet' ? '-239' : '-3',
+        messages: [
+          {
+            address: walletAddr.toString(),
+            amount: toNano('1.5').toString(),
+            payload: body.toBoc().toString('base64'),
+          },
+        ],
+      });
+
+      setStatus({
+        type: 'success',
+        message:
+          'Buy transaction sent! The issuer mints your Personal Token on receipt.',
+      });
+      setBuyAmount('');
+      setBuyIssuer('');
+    } catch (err) {
+      setStatus({
+        type: 'error',
+        message: isCancelledTransactionError(err)
+          ? 'Transaction cancelled'
+          : getErrorMessage(err) || 'Buy failed',
+      });
+    } finally {
+      setLoading(false);
+      setStatus((prev) => (prev?.type === 'info' ? null : prev));
+    }
+  }
+
+  async function handlePayback(e: FormEvent) {
+    e.preventDefault();
+    if (!ownerAddress) return;
+
+    const issuerAddr = tryParseAddress(paybackIssuer);
+    if (!issuerAddr) {
+      setStatus({ type: 'error', message: 'Invalid issuer address' });
+      return;
+    }
+    const amountParsed = parseFloat(paybackAmount);
+    if (isNaN(amountParsed) || amountParsed <= 0) {
+      setStatus({ type: 'error', message: 'Enter a valid amount' });
+      return;
+    }
+
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Confirm in your wallet...' });
+
+    try {
+      const personalMinter = await getPersonalMinterForIssuer(issuerAddr);
+      if (!personalMinter) {
+        setStatus({
+          type: 'error',
+          message: 'This issuer has no Personal Token minter deployed',
+        });
+        return;
+      }
+      const personalWallet = await getPersonalWalletAddress(
+        personalMinter,
+        ownerAddress,
+      );
+      // burning with sendExcessesTo set triggers the issuer's payback leg
+      const body = buildBurnBody(
+        parseUnits(paybackAmount.trim(), decimals),
+        ownerAddress,
+      );
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        network: network === 'mainnet' ? '-239' : '-3',
+        messages: [
+          {
+            address: personalWallet.toString(),
+            amount: toNano('0.6').toString(),
+            payload: body.toBoc().toString('base64'),
+          },
+        ],
+      });
+
+      setStatus({
+        type: 'success',
+        message:
+          'Payback transaction sent! Burning your Personal Token returns the FI loan.',
+      });
+      setPaybackAmount('');
+      setPaybackIssuer('');
+    } catch (err) {
+      setStatus({
+        type: 'error',
+        message: isCancelledTransactionError(err)
+          ? 'Transaction cancelled'
+          : getErrorMessage(err) || 'Payback failed',
+      });
+    } finally {
+      setLoading(false);
+      setStatus((prev) => (prev?.type === 'info' ? null : prev));
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleBuyCredit} className="space-y-4.5">
+        <h3 className="text-base font-semibold">Buy Credit</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Issuer Address
+          </Label>
+          <InputScan toAddr={buyIssuer} setToAddr={setBuyIssuer} />
+          <p className="text-xs text-muted-foreground">
+            Lend FI to an issuer and receive their Personal Token as credit.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Amount (FI)
+          </Label>
+          <Input
+            type="text"
+            placeholder="100"
+            value={buyAmount}
+            onChange={(e) => setBuyAmount(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+        <Button
+          className="w-full h-12 rounded-full text-[15px] font-bold"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="spinner" /> Buying credit...
+            </>
+          ) : (
+            'Buy Credit'
+          )}
+        </Button>
+        {status && <StatusAlert type={status.type} message={status.message} />}
+      </form>
+
+      <Separator />
+
+      <form onSubmit={handlePayback} className="space-y-4.5">
+        <h3 className="text-base font-semibold">Pay Back</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Issuer Address
+          </Label>
+          <InputScan toAddr={paybackIssuer} setToAddr={setPaybackIssuer} />
+          <p className="text-xs text-muted-foreground">
+            Burn your Personal Token; the issuer returns the FI loan.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Amount (Personal Tokens)
+          </Label>
+          <Input
+            type="text"
+            placeholder="100"
+            value={paybackAmount}
+            onChange={(e) => setPaybackAmount(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+        <Button
+          variant="destructive"
+          className="w-full h-12 rounded-full text-[15px] font-bold"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="spinner" /> Paying back...
+            </>
+          ) : (
+            'Pay Back'
+          )}
+        </Button>
+        {status && <StatusAlert type={status.type} message={status.message} />}
+      </form>
     </div>
   );
 }

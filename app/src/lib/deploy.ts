@@ -15,6 +15,7 @@ import {
 import {
   AskToBurn,
   AskToTransfer,
+  BuyCredit,
   Destroy,
   OthersActions,
 } from '@wrappers/FossFiWallet.gen';
@@ -178,6 +179,23 @@ export function buildInviteBody(params: {
       customPayload: null,
       forwardTonAmount: 0n,
       forwardPayload,
+    }),
+  );
+}
+
+export function buildBuyCreditBody(params: {
+  transferRecipient: Address;
+  amount: bigint;
+  responseAddress: Address;
+  queryId?: bigint;
+}): Cell {
+  const { transferRecipient, amount, responseAddress, queryId = 0n } = params;
+  return BuyCredit.toCell(
+    BuyCredit.create({
+      queryId,
+      jettonAmount: amount,
+      transferRecipient,
+      sendExcessesTo: responseAddress,
     }),
   );
 }

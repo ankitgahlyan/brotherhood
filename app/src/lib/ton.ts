@@ -3,6 +3,7 @@ import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS } from '@/pages/ManagePage';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { Personal } from '@wrappers/Personal.gen';
 // import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 
 export type Network = 'mainnet' | 'testnet';
@@ -206,7 +207,9 @@ export async function fetchWalletBalance(ownerAddress: Address) {
 }
 
 export async function getFiWalletState(owner: Address) {
-  return getTonClient('testnet').open(FossFiWallet.fromAddress(await getWalletAddress(owner))).getWalletDataAll();
+  return getTonClient('testnet')
+    .open(FossFiWallet.fromAddress(await getWalletAddress(owner)))
+    .getWalletDataAll();
 }
 
 export async function getCircle(invitedList: Address[]) {
@@ -215,4 +218,25 @@ export async function getCircle(invitedList: Address[]) {
     client.open(FossFiWallet.fromAddress(addr)).getWalletDataAll(),
   );
   return Promise.all(promises);
+}
+
+// The Personal Token minter an issuer pointed its FI wallet at, or null if none.
+export async function getPersonalMinterForIssuer(
+  issuerOwner: Address,
+): Promise<Address | null> {
+  const issuerWalletAddr = await getWalletAddress(issuerOwner);
+  const state = await getTonClient('testnet')
+    .open(FossFiWallet.fromAddress(issuerWalletAddr))
+    .getWalletDataAll();
+  return state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
+}
+
+// The Personal Token wallet a buyer owns on the given minter.
+export async function getPersonalWalletAddress(
+  personalMinter: Address,
+  owner: Address,
+): Promise<Address> {
+  return getTonClient('testnet')
+    .open(Personal.fromAddress(personalMinter))
+    .getWalletAddress(owner);
 }
