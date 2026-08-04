@@ -48,7 +48,7 @@ fun FossFi.sendMint(
     val forwardPayload = beginCell().storeMaybeRef(customPayload).endCell().beginParse();
     val outMessage = createMessage({
         bounce: false,
-        value: totalTonAmount + ton("0.015"),
+        value: totalTonAmount + ton("0.1"), // fee buffer covers wallet init-state forward fee
         dest: self.address,
         body: MintNewJettons {
             queryId: 0,

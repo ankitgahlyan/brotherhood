@@ -222,12 +222,14 @@ fun onInternalMessage(in: InMessage): void {
                     ) throw Errors.IncorrectReceiver;                                                  // no self-voting
                     val candidate = msg.transferRecipient.getAddrFiWallet();
                     store.votes = 0;
-                    maps
+                    var social = lazy maps.social.load();
+                    social
                         .votedFor
                         .set(
                             candidate,
                             10,
                         );                                                                             // store to unVoteLater + total votes sent
+                    maps.social = social.toCell();
 
                     val votingMsg = createMessage({
                         bounce: BounceMode.NoBounce, // todo: ok?
@@ -248,8 +250,10 @@ fun onInternalMessage(in: InMessage): void {
                 // claim votes back
                 ton("0.12") => {
                     val candidate = msg.transferRecipient.getAddrFiWallet();
-                    val exists = maps.votedFor.deleteAndGetDeleted(candidate);
+                    var social = lazy maps.social.load();
+                    val exists = social.votedFor.deleteAndGetDeleted(candidate);
                     assert (exists.isFound) throw Errors.NotVotedYet;
+                    maps.social = social.toCell();
                     store.votes += exists.loadValue();
 
                     val votingMsg = createMessage({
@@ -654,18 +658,56 @@ fun onInternalMessage(in: InMessage): void {
 
         UnFollow => {
             assert (in.senderAddress == addrs.owner) throw Errors.IncorrectSender;
-            // todo: fixme: check fees
-            // todo: implement via minter as proxy
-            // createMessage({
-            //     bounce: BounceMode.Only256BitsOfBody, // for fees back
-            //     value: 0,
-            //     dest: msg.followee.getAddrFiWallet(),
-            //     body: UnFollowInternal {
-            //         queryId: msg.queryId,
-            //         follow: msg.follow,
-            //         sender: addrs.owner,
-            //     },
-            // }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+            idActionChecks(store); // active + not Under Review
+            assert (msg.followee != addrs.owner) throw Errors.IncorrectReceiver;
+
+            val target = msg.followee.getAddrFiWallet();
+            var social = lazy maps.social.load();
+            if (msg.follow) {
+                // follow: mint FI for the link and record it (reversible)
+                assert (!social.followings.get(target).isFound) throw Errors.ConnectionExists;
+                social.followings.set(target, FOLLOW_MINT_AMOUNT);
+                maps.social = social.toCell();
+                store.jettonBalance += FOLLOW_MINT_AMOUNT;
+
+                val mintMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: NotifyMinter {
+                        queryId: msg.queryId != 0 ? msg.queryId : 1, // nonzero = MINT in minter
+                        jettonAmount: FOLLOW_MINT_AMOUNT,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: null,
+                    },
+                });
+                mintMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            } else {
+                // unfollow: burn exactly what the link minted; shortfall fails cleanly here
+                val link = social.followings.get(target);
+                assert (link.isFound) throw Errors.NotFollowing;
+                assert (store.jettonBalance >= FOLLOW_MINT_AMOUNT) throw Errors.BalanceError;
+                social.followings.delete(target);
+                maps.social = social.toCell();
+                store.jettonBalance -= FOLLOW_MINT_AMOUNT;
+
+                val burnMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: NotifyMinter {
+                        queryId: 0, // zero = BURN in minter
+                        jettonAmount: FOLLOW_MINT_AMOUNT,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: null,
+                    },
+                });
+                burnMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            }
         },
 
         UnFollowInternal => {

@@ -85,17 +85,16 @@ fun onInternalMessage(in: InMessage): void {
             // determine whether MINT or BURN
             msg.queryId != 0 ? store.totalSupply += msg.jettonAmount : store.totalSupply -= msg.jettonAmount;
 
-            if (msg.sendExcessesTo == null) {
-                return;
+            // sendExcessesTo null: still persist the supply change (bottom save runs)
+            if (msg.sendExcessesTo != null) {
+                val excessesMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: msg.sendExcessesTo,
+                    value: 0,
+                    body: ReturnExcessesBack { queryId: msg.queryId },
+                });
+                excessesMsg.send(SEND_MODE_IGNORE_ERRORS | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
             }
-
-            val excessesMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: msg.sendExcessesTo,
-                value: 0,
-                body: ReturnExcessesBack { queryId: msg.queryId },
-            });
-            excessesMsg.send(SEND_MODE_IGNORE_ERRORS | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
         RequestWalletAddress => {

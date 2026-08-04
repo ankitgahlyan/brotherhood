@@ -18,7 +18,7 @@ get fun `test bounce: minter restores supply on internal_transfer bounce`() {
 
     val mintMsg = createMessage({
         bounce: false,
-        value: ton("0.315"),
+        value: ton("0.5"),
         dest: minter.address,
         body: MintNewJettons {
             queryId: 0,

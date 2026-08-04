@@ -63,7 +63,7 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     val heavyMaps = Maps {
         invited: invitedMap,
         allowances: allowancesMap,
-        votedFor: votedForMap,
+        social: SocialMaps { votedFor: votedForMap, followings: invitedMap }.toCell(),
         reportInfo: ReportInfo {
             reports: reportsMap,
             tosBreach: false,

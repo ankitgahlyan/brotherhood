@@ -180,7 +180,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
             maps: Maps {
                 allowances: [],
                 invited: [],
-                votedFor: [],
+                social: SocialMaps { votedFor: [], followings: [] }.toCell(),
                 reportInfo: ReportInfo { reports: [] }.toCell(),
             }.toCell(), // todo: learn how to set it default
             timestamps: TimeStamps {}.toCell(),
