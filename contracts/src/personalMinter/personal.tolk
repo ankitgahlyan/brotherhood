@@ -18,42 +18,56 @@ type AllowedMessageToMinter =
 type AllowedBounced = InternalTransferStep | Payback
 
 fun onBouncedMessage(in: InMessageBounced) {
-    in.bouncedBody.skipBouncedPrefix();
-    // process only mint bounces; on other messages, an exception will be thrown, it's okay
-    val msg = lazy AllowedBounced.fromSlice(in.bouncedBody);
+    // The minter sends bouncable messages with two different bounce modes:
+    //  - the MintNewJettons deploy (an InternalTransferStep) uses Only256BitsOfBody,
+    //    so its bounced body is "0xffffffff" + the first 256 bits of the body;
+    //  - the Payback message uses RichBounceOnlyRootCell, so its bounced body is a
+    //    RichBounceBody (prefix 0xfffffffe) whose originalBody holds the Payback.
+    // Detect the format by the first 32 bits instead of parsing blindly.
+    if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
+        val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
+        val payback = lazy Payback.fromSlice(rich.originalBody.beginParse());
 
-    match (msg) {
-        InternalTransferStep => {
-            var storage = lazy PriStore.load();
-            storage.totalSupply -= msg.jettonAmount;
-            storage.save();
-        }
+        var store = lazy PriStore.load();
+        store.totalSupply += payback.amount;
+        store.save();
 
-        Payback => {
-            var store = lazy PriStore.load();
-            store.totalSupply += msg.amount;
-            store.save();
+        createMessage({
+            bounce: BounceMode.NoBounce,
+            value: 0,
+            dest: calcAddrPriWallet(
+                payback.sender,
+                store.adminAddress,
+                contract.getAddress(),
+                store.jettonWalletCode,
+            ),
+            body: InternalTransferStep {
+                queryId: payback.queryId,
+                jettonAmount: payback.amount,
+                version: 0,
+                transferredAsCredit: false,
+                transferInitiator: payback.sender, // or deployer or minter
+                sendExcessesTo: null,
+                forwardTonAmount: 0,
+                forwardPayload: createEmptySlice(),
+            },
+        }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+    } else {
+        // process only mint bounces; on other messages, an exception will be thrown, it's okay
+        in.bouncedBody.skipBouncedPrefix();
+        val msg = lazy AllowedBounced.fromSlice(in.bouncedBody);
 
-            createMessage({
-                bounce: BounceMode.NoBounce,
-                value: 0,
-                dest: calcAddrPriWallet(
-                    msg.sender,
-                    store.adminAddress,
-                    contract.getAddress(),
-                    store.jettonWalletCode,
-                ),
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.amount,
-                    version: 0,
-                    transferredAsCredit: false,
-                    transferInitiator: msg.sender, // or deployer or minter
-                    sendExcessesTo: null,
-                    forwardTonAmount: 0,
-                    forwardPayload: createEmptySlice(),
-                },
-            }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        match (msg) {
+            InternalTransferStep => {
+                var storage = lazy PriStore.load();
+                storage.totalSupply -= msg.jettonAmount;
+                storage.save();
+            }
+
+            Payback => {
+                // unreachable: Payback bounces arrive as RichBounceBody (handled above)
+                throw Errors.InvalidMessage;
+            }
         }
     }
 }

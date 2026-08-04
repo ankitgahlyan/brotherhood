@@ -265,6 +265,62 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
     expect(personalSupply(pm)).toEqual(loan);
 }
 
+get fun `test personal token: payback unwinds when the issuer cannot cover the loan`() {
+    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+
+    val loan = ton("100");
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: ton("1.5") },
+    );
+
+    // the issuer spends all its FI, so it can no longer cover the payback
+    val issuerFiAfterBuy = issuerWallet.getJettonBalance(); // 1 + loan
+    val burnIssuer = issuerWallet.sendAskToBurn(
+        notDeployer.address,
+        0,
+        issuerFiAfterBuy,
+        notDeployer.address,
+        null,
+        { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
+    );
+    expect(burnIssuer).toHaveSuccessfulTx<AskToBurn>({
+        from: notDeployer.address,
+        to: issuerWallet.address,
+    });
+    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+
+    val buyerFiAfterBuy = buyerWallet.getJettonBalance();
+    val supplyBefore = personalSupply(pm);
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+
+    // the buyer tries to pay back; the issuer bounces the Payback, unwinding the burn
+    val res = sendPayback(deployer.address, buyerPriWallet, loan);
+    expect(res).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+
+    // the buyer keeps their Personal Token and gets no FI; supply is restored
+    expect(res).toHaveFailedTx<Payback>({
+        from: pm.address,
+        to: issuerWallet.address,
+        exitCode: Errors.InsufficientBalance,
+    });
+    expect(res).toHaveBouncedTx({
+        from: issuerWallet.address,
+        to: pm.address,
+    });
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+    expect(personalSupply(pm)).toEqual(supplyBefore);
+    expect(buyerWallet.getJettonBalance()).toEqual(buyerFiAfterBuy);
+    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+}
+
 fun personalBalanceOf(pm: Personal, owner: address): coins {
     return personalWalletForOwner(pm, owner).getWalletData().jettonBalance;
 }
