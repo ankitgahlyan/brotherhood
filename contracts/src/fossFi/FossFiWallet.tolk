@@ -485,8 +485,8 @@ fun onInternalMessage(in: InMessage): void {
                 in.senderAddress == trustedAddrs.personalJettonMinter!
             ) throw Errors.IncorrectSender;
 
-            assert (msg.amount < store.jettonBalance) throw Errors.InsufficientBalance;
-            store.jettonBalance -= msg.amount; // goes to -ve if required
+            assert (msg.amount <= store.jettonBalance) throw Errors.InsufficientBalance;
+            store.jettonBalance -= msg.amount;
 
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,

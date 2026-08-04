@@ -321,6 +321,51 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
     expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
 }
 
+get fun `test personal token: payback succeeds when the issuer holds exactly the loan`() {
+    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+
+    val loan = ton("100");
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: ton("1.5") },
+    );
+
+    // the issuer spends its 1 FI activation bonus, holding exactly the loan
+    val burnIssuer = issuerWallet.sendAskToBurn(
+        notDeployer.address,
+        0,
+        ton("1"),
+        notDeployer.address,
+        null,
+        { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
+    );
+    expect(burnIssuer).toHaveSuccessfulTx<AskToBurn>({
+        from: notDeployer.address,
+        to: issuerWallet.address,
+    });
+    expect(issuerWallet.getJettonBalance()).toEqual(loan);
+
+    val buyerFiBefore = buyerWallet.getJettonBalance();
+    val supplyBefore = personalSupply(pm);
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+
+    // the buyer repays the full loan; the issuer can cover it exactly
+    val res = sendPayback(deployer.address, buyerPriWallet, loan);
+    expect(res).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(ton("0"));
+    expect(personalSupply(pm)).toEqual(supplyBefore - loan);
+    expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
+    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+}
+
 fun personalBalanceOf(pm: Personal, owner: address): coins {
     return personalWalletForOwner(pm, owner).getWalletData().jettonBalance;
 }
