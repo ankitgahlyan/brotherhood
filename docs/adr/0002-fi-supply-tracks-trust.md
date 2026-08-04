@@ -1,3 +1,0 @@
-# FI supply tracks human trust, not fixed issuance
-
-FI is minted only through social growth (accepted invites, follows) and recurring weekly claims, and is burned through lifetime decay, unfollows, and account closure. There is no fixed issuance schedule and no issuance reserved for capital. Supply is therefore a measure of how much trust exists in the network, and it converges toward zero for accounts whose members age out. This was chosen over a conventional fixed-supply token because BrotherHood's goal is consensus and territory, not monetary value; it is hard to reverse once the minting and burning rules are live, and it surprises readers who expect standard jetton tokenomics.
