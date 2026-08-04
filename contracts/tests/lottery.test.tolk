@@ -48,7 +48,7 @@ get fun `test lottery: deploy contract and accept correct entry fee`() {
     val lotteryAddress = deployLotteryContract(deployer.address, ENTRY_FEE);
 
     val enterResult = net.send(
-        player.address,
+        deployer.address, // entries are routed through the minter (owner)
         createMessage({
             bounce: true,
             value: ENTRY_FEE,
@@ -58,7 +58,7 @@ get fun `test lottery: deploy contract and accept correct entry fee`() {
     );
 
     expect(enterResult).toHaveSuccessfulTx<EnterLottery>({
-        from: player.address,
+        from: deployer.address,
         to: lotteryAddress,
     });
 }
@@ -69,7 +69,7 @@ get fun `test lottery: reject entry with incorrect amount`() {
     val lotteryAddress = deployLotteryContract(deployer.address, ENTRY_FEE);
 
     val badResult = net.send(
-        player.address,
+        deployer.address, // entries are routed through the minter (owner)
         createMessage({
             bounce: true,
             value: ton("1"),
@@ -79,7 +79,7 @@ get fun `test lottery: reject entry with incorrect amount`() {
     );
 
     expect(badResult).toHaveFailedTx<EnterLottery>({
-        from: player.address,
+        from: deployer.address,
         to: lotteryAddress,
         exitCode: 202,
     });

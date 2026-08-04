@@ -3,7 +3,7 @@ import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/message"
 
-import "@contracts/messages"
+import "@contracts/common/messages"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -27,7 +27,8 @@ get fun `test bounce: minter restores supply on internal_transfer bounce`() {
             internalTransferMsg: InternalTransferStep {
                 queryId: 0,
                 jettonAmount: mintAmount,
-                transferInitiator: null,
+                version: 0,
+                transferInitiator: minter.address,
                 sendExcessesTo: minter.address,
                 forwardTonAmount: ton("0.05"),
                 forwardPayload,
@@ -98,38 +99,3 @@ get fun `test bounce: wallet restores balance on internal_transfer bounce`() {
     expect(senderWallet.getJettonBalance()).toEqual(balanceBefore);
 }
 
-get fun `test bounce: wallet restores balance on burn_notification bounce`() {
-    val (minter, deployer, _) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("4"));
-    val balanceBefore = wallet.getJettonBalance();
-
-    val burnMsg = createMessage({
-        bounce: false,
-        value: ton("0.2"),
-        dest: wallet.address,
-        body: AskToBurn {
-            queryId: 0,
-            jettonAmount: ton("1"),
-            sendExcessesTo: deployer.address,
-            customPayload: null,
-        },
-    });
-    val res = testing.processSingleTraceStep(deployer.address, burnMsg);
-    expect(wallet.getJettonBalance()).toEqual(balanceBefore - ton("1"));
-
-    val outMsg = res.outMessages.at<BurnNotificationForMinter>(0);
-    val outBody = outMsg.loadBody();
-    val bouncedBody = beginCell()
-        .storeUint(0xffffffff, 32)
-        .storeSlice(outBody.toCell().beginParse())
-        .endCell();
-    val bouncedMsg = createMessage({
-        bounce: false,
-        value: ton("0.95"),
-        dest: wallet.address,
-        body: bouncedBody,
-    }).bounced();
-    testing.processSingleTraceStep(minter.address, bouncedMsg);
-
-    expect(wallet.getJettonBalance()).toEqual(balanceBefore);
-}

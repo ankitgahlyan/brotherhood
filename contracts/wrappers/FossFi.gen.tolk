@@ -14,16 +14,21 @@ import "@contracts/lottery/messages"
 struct FossFi {
     address: address
     stateInit: ContractState? = null
+    toShard: AddressShardingOptions? = null
 }
 
 /// Creates a contract wrapper instance from the storage data
-fun FossFi.fromStorage(storage: FiStore, toShard: AddressShardingOptions? = null): FossFi {
+fun FossFi.fromStorage(
+    storage: FiStore,
+    toShard: AddressShardingOptions? = null,
+    workchain: int8 = BASECHAIN,
+): FossFi {
     val stateInit = ContractState {
         code: build("FossFi"),
         data: storage.toCell(),
     };
-    val address = AutoDeployAddress { stateInit, toShard }.calculateAddress();
-    return FossFi { address, stateInit };
+    val address = AutoDeployAddress { workchain, stateInit, toShard }.calculateAddress();
+    return FossFi { address, stateInit, toShard };
 }
 
 /// Creates a contract wrapper instance from the address
@@ -39,7 +44,11 @@ fun FossFi.deploy(self, from: address, config: SendParams = {}): SendResultList 
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
-        dest: { stateInit: self.stateInit },
+        dest: {
+            workchain: self.address.getWorkchain(),
+            stateInit: self.stateInit,
+            toShard: self.toShard,
+        },
     });
     return net.send(from, genericMsg);
 }

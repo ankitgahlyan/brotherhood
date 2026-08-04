@@ -58,6 +58,7 @@ struct TimeStamps {
     accountInit: uint32 = 0
     lastInvite: uint32 = 0
     lastClaim: uint32 = 0
+    lastDecay: uint32 = 0
 }
 
 struct FiWalletStore {

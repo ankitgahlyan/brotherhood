@@ -15,19 +15,21 @@ import "@contracts/lottery/messages"
 struct FossFiWallet {
     address: address
     stateInit: ContractState? = null
+    toShard: AddressShardingOptions? = null
 }
 
 /// Creates a contract wrapper instance from the storage data
 fun FossFiWallet.fromStorage(
     storage: FiWalletStore,
     toShard: AddressShardingOptions? = null,
+    workchain: int8 = BASECHAIN,
 ): FossFiWallet {
     val stateInit = ContractState {
         code: build("FossFiWallet"),
         data: storage.toCell(),
     };
-    val address = AutoDeployAddress { stateInit, toShard }.calculateAddress();
-    return FossFiWallet { address, stateInit };
+    val address = AutoDeployAddress { workchain, stateInit, toShard }.calculateAddress();
+    return FossFiWallet { address, stateInit, toShard };
 }
 
 /// Creates a contract wrapper instance from the address
@@ -43,7 +45,11 @@ fun FossFiWallet.deploy(self, from: address, config: SendParams = {}): SendResul
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
-        dest: { stateInit: self.stateInit },
+        dest: {
+            workchain: self.address.getWorkchain(),
+            stateInit: self.stateInit,
+            toShard: self.toShard,
+        },
     });
     return net.send(from, genericMsg);
 }
@@ -418,6 +424,91 @@ fun FossFiWallet.sendDestroy(self, from: address, config: SendParams = {}): Send
         value: config.value,
         dest: self.address,
         body: Destroy {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendSetAllowance(
+    self,
+    from: address,
+    queryId: uint64,
+    grantee: address,
+    amount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SetAllowance { queryId, grantee, amount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendSpendAllowance(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: coins,
+    receiver: address,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SpendAllowance { queryId, amount, receiver, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendAskGoldCoinsTransfer(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: uint32,
+    receiver: address,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AskGoldCoinsTransfer { queryId, amount, receiver, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendInternalGoldCoinsTransfer(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: uint32,
+    transferInitiator: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: InternalGoldCoinsTransfer { queryId, amount, transferInitiator },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendTriggerDecay(
+    self,
+    from: address,
+    sender: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: TriggerDecay { sender },
     });
     return net.send(from, genericMsg);
 }

@@ -30,7 +30,7 @@ get fun `test wallet: kitchenSink`() {
         null,
         DEFAULT_FORWARD_TON_AMOUNT,
         "username@lat,long",
-        { value: DEFAULT_TRANSFER_MSG_VALUE }, // todo: bounce?
+        { value: ton("1") }, // todo: bounce?
     );
     invite.giveName("inviteMsg");
 
@@ -77,7 +77,8 @@ get fun `test wallet: kitchenSink`() {
     val minterDataAll = minter.getJettonDataAll();
     expect(minterDataAll.currentRequest!.newUpgrade.walletUpgrade).toBeTrue();
 
-    // testing.setNow(10000); // 1000 seconds from now
+    val time = testing.getNow();
+    // testing.setNow(time + 1000); // 1000 seconds from now
 
     // val approveReq = minter.sendApproveUpgrade(deployer.address);
     // println(approveReq);
@@ -89,11 +90,11 @@ get fun `test wallet: kitchenSink`() {
     // expect(senderWallet.getWalletDataAll().version).toEqual(1);
 
     // send HotUpgrade
-    // val newFiCode = build("fossFi");
+    // val newFiCode = build("FossFi");
     val sendHotUpgrade = minter.sendHotUpgrade(
         deployer.address,
         null,
-        build("fossFi"),
+        build("FossFi"),
     );
     sendHotUpgrade.giveName("HotUpgrade");
 
@@ -106,11 +107,11 @@ get fun `test wallet: kitchenSink`() {
 get fun `test : hotUpgrade`() {
     val (minter, deployer, _) = setupTest();
     // send HotUpgrade
-    // val newFiCode = build("fossFi");
+    // val newFiCode = build("FossFi");
     val sendHotUpgrade = minter.sendHotUpgrade(
         deployer.address,
         null,
-        build("fossFi"),
+        build("FossFi"),
     );
     sendHotUpgrade.giveName("HotUpgrade");
 
@@ -154,7 +155,10 @@ get fun `test wallet: owner can send jettons`() {
     val (minter, deployer, notDeployer) = setupTest();
     val transferAmount = ton("5");
     val senderWallet = mintTo(minter, deployer, deployer.address, ton("20"));
-    val receiverWallet = userWallet(minter, notDeployer.address);
+    // minted 20 on top of the 1 baseline => 21; activate receiver via invite (mints 999 to inviter)
+    val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
+    // sender: 21 + 999 = 1020; receiver active with 1
+    expect(senderWallet.getJettonBalance()).toEqual(ton("1020"));
 
     val res = senderWallet.sendTransfer(
         deployer.address,
@@ -171,8 +175,8 @@ get fun `test wallet: owner can send jettons`() {
         to: senderWallet.address,
     });
 
-    expect(senderWallet.getJettonBalance()).toEqual(ton("15"));
-    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount);
+    expect(senderWallet.getJettonBalance()).toEqual(ton("1015"));
+    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount + ton("1"));
 }
 
 get fun `test wallet: non-owner cannot send jettons`() {
@@ -251,7 +255,7 @@ get fun `test wallet: zero forward ton means no transfer notification`() {
 get fun `test wallet: transfer notification should preserve forward payload`() {
     val (minter, deployer, notDeployer) = setupTest();
     val senderWallet = mintTo(minter, deployer, deployer.address, ton("2"));
-    val receiverWallet = userWallet(minter, notDeployer.address);
+    val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
     val sentAmount = ton("0.5");
     val forwardPayload = beginCell().storeUint(0x1234567890abcdef, 128).endCell();
 
@@ -298,9 +302,10 @@ get fun `test wallet: transfer notification should preserve forward payload`() {
     }
 }
 
-get fun `test wallet: transfer to undeployed recipient wallet should still work`() {
+get fun `test wallet: transfer to inactive recipient bounces and restores sender`() {
     val (minter, deployer, _) = setupTest();
     val senderWallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val balanceBefore = senderWallet.getJettonBalance();
     val recipientOwner = randomAddress();
     val recipientWallet = userWallet(minter, recipientOwner);
     val sentAmount = ton("0.5");
@@ -316,18 +321,19 @@ get fun `test wallet: transfer to undeployed recipient wallet should still work`
         null,
     );
 
-    expect(res).toHaveAllSuccessfulTxs();
     expect(res).toHaveSuccessfulTx<AskToTransfer>({
         from: deployer.address,
         to: senderWallet.address,
     });
-    expect(recipientWallet.getJettonBalance()).toEqual(sentAmount);
+    expect(recipientWallet.getJettonBalance()).toEqual(0);
+    expect(senderWallet.getJettonBalance()).toEqual(balanceBefore);
 }
 
 get fun `test wallet: owner can burn jettons`() {
     val (minter, deployer, _) = setupTest();
     val burnAmount = ton("3");
     val wallet = mintTo(minter, deployer, deployer.address, ton("10"));
+    val balanceBefore = wallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
     val res = wallet.sendAskToBurn(
@@ -343,7 +349,7 @@ get fun `test wallet: owner can burn jettons`() {
         to: wallet.address,
     });
 
-    expect(wallet.getJettonBalance()).toEqual(ton("7"));
+    expect(wallet.getJettonBalance()).toEqual(balanceBefore - burnAmount);
     expect(minter.getTotalSupply()).toEqual(supplyBefore - burnAmount);
 }
 
@@ -371,7 +377,7 @@ get fun `test wallet: non-owner cannot burn jettons`() {
     expect(minter.getTotalSupply()).toEqual(supplyBefore);
 }
 
-get fun `test wallet: cannot burn more jettons than balance`() {
+get fun `test wallet: cannot burn more than balance`() {
     val (minter, deployer, _) = setupTest();
     val wallet = mintTo(minter, deployer, deployer.address, ton("1"));
     val balanceBefore = wallet.getJettonBalance();

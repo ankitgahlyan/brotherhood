@@ -8,3 +8,6 @@ const ACTIVATION_WAIT: int = 604800 // 1 WEEK
 const INVITE_WAIT: int = 14400 // 4 HOURS
 const MAX_CLAIM_PERIOD: int = 63072000 // 2 YEARS
 const CLOSURE_WAIT: int = 86400 // 1 day
+const DECAY_MONTH_SECONDS: int = 2592000 // 30 days
+const DECAY_MONTHS_TOTAL: int = 120 // ~10 years
+const WEEKLY_CLAIM_AMOUNT: coins = ton("11111")

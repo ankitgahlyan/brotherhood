@@ -211,6 +211,36 @@ struct (0x00000019) ProvideState {
     state: cell
 }
 
+struct (0x0000001a) SetAllowance {
+    queryId: uint64
+    grantee: address
+    amount: coins
+}
+
+struct (0x0000001b) SpendAllowance {
+    queryId: uint64
+    amount: coins
+    receiver: address
+    sendExcessesTo: address?
+}
+
+struct (0x0000001c) AskGoldCoinsTransfer {
+    queryId: uint64
+    amount: uint32
+    receiver: address
+    sendExcessesTo: address?
+}
+
+struct (0x0000001d) InternalGoldCoinsTransfer {
+    queryId: uint64
+    amount: uint32
+    transferInitiator: address
+}
+
+struct (0x0000001e) TriggerDecay {
+    sender: address
+}
+
 struct IdInfo {
     username: string
     lattitude: string

@@ -8,6 +8,7 @@ import "@contracts/lottery/storage"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@gen/FossFiWallet.code"
+import "@contracts/common/fees-management"
 
 type AllowedMessageToMinter =
     | MintNewJettons
@@ -26,12 +27,34 @@ type AllowedMessageToMinter =
     | ApproveUpgrade
     | Destroy
 
+type BounceOpToHandle =
+    | InternalTransferStep
+    | TopUpTons
+
 contract FossFi {
     author: "zeta"
     version: "0.1.0"
     description: "minter contract for fossFi with personal token, voting, invite system and more"
     storage: FiStore
     incomingMessages: AllowedMessageToMinter
+}
+
+fun onBouncedMessage(in: InMessageBounced): void {
+    in.bouncedBody.skipBouncedPrefix();
+    val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
+    var store = lazy FiStore.load();
+
+    match (msg) {
+        InternalTransferStep => {
+            // minted supply that never landed (or was sent back) is restored
+            store.totalSupply -= msg.jettonAmount;
+        }
+
+        TopUpTons => {
+            store.totalSupply -= ton("1");
+        }
+    }
+    store.save();
 }
 
 fun onInternalMessage(in: InMessage): void {
@@ -99,7 +122,38 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         MintNewJettons => {
-            assert (false) throw Errors.IncorrectReceiver; // just for fun/standard
+            // assert (false) throw Errors.IncorrectReceiver; // just for fun/standard
+            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
+
+            val internalTransferMsg = lazy msg
+                .internalTransferMsg
+                .load({ throwIfOpcodeDoesNotMatch: Errors.InvalidOp });
+            val forwardTonAmount = internalTransferMsg.forwardTonAmount;
+            internalTransferMsg.forwardPayload.checkIsCorrectTlbEither();
+
+            checkAmountIsEnoughToTransfer(msg.tonAmount, forwardTonAmount, in.originalForwardFee);
+
+            store.totalSupply += internalTransferMsg.jettonAmount;
+
+            reserveGramsOnBalance(
+                ton("0.01"),
+                RESERVE_MODE_EXACT_AMOUNT,
+            );
+
+            val jettonWalletCode = fossFiWalletCompiledCode();
+            val deployMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: calcDeployFiWallet(
+                    msg.mintRecipient,
+                    store.adminAddress,
+                    contract.getAddress(),
+                    jettonWalletCode,
+                ),
+                value: msg.tonAmount,
+                body: msg.internalTransferMsg,
+            });
+            deployMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
 
         ChangeMinterAdmin => {

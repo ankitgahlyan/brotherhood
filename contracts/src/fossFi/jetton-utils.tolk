@@ -125,7 +125,7 @@ fun enterLottery(sender: address, dest: address, amount: coins) {
 fun sendExcesses(queryId: uint64, inValue: coins, to: address) {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
     contract.getStorageDuePayment();
-    reserveToncoinsOnBalance(
+    reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
         RESERVE_MODE_AT_MOST,
     );

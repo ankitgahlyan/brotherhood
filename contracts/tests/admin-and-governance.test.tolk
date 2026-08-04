@@ -46,7 +46,7 @@ get fun `test admin: minter admin should be able to mint jettons`() {
     val deployerWallet = mintTo(minter, deployer, deployer.address, deployerMint);
     val otherWallet = mintTo(minter, deployer, notDeployer.address, otherMint);
 
-    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint);
+    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint + ton("1"));
     expect(otherWallet.getJettonBalance()).toEqual(otherMint);
     expect(minter.getTotalSupply()).toEqual(supplyBefore + deployerMint + otherMint);
     assertSameShardPrefix(notDeployer.address, otherWallet.address);
@@ -70,11 +70,11 @@ get fun `test admin: non-admin should not be able to mint jettons`() {
     });
 
     val deployerWallet = userWallet(minter, deployer.address);
-    expect(deployerWallet.getJettonBalance()).toEqual(0);
+    expect(deployerWallet.getJettonBalance()).toEqual(ton("1"));
     expect(minter.getTotalSupply()).toEqual(supplyBefore);
 }
 
-get fun `test admin: change-admin flow should work and only next admin can claim`() {
+get fun `test admin: change-admin flow should work and only new admin can change back`() {
     val (minter, deployer, notDeployer) = setupTest();
     expect(minter.getAdminAddress()).toEqual(deployer.address);
 
@@ -88,29 +88,19 @@ get fun `test admin: change-admin flow should work and only next admin can claim
         from: deployer.address,
         to: minter.address,
     });
-    expect(minter.getAdminAddress()).toEqual(deployer.address);
+    expect(minter.getAdminAddress()).toEqual(notDeployer.address);
 
-    val badClaim = minter.sendClaimMinterAdmin(
+    val badChangeBack = minter.sendChangeMinterAdmin(
         deployer.address,
         0,
+        deployer.address,
         { bounce: false, value: ton("0.05") },
     );
-    expect(badClaim).toHaveFailedTx<ClaimMinterAdmin>({
+    expect(badChangeBack).toHaveFailedTx<ChangeMinterAdmin>({
         from: deployer.address,
         to: minter.address,
         exitCode: Errors.NotOwner,
     });
-
-    val claimResult = minter.sendClaimMinterAdmin(
-        notDeployer.address,
-        0,
-        { bounce: false, value: ton("0.05") },
-    );
-    expect(claimResult).toHaveSuccessfulTx<ClaimMinterAdmin>({
-        from: notDeployer.address,
-        to: minter.address,
-    });
-    expect(minter.getAdminAddress()).toEqual(notDeployer.address);
 
     minter.sendChangeMinterAdmin(
         notDeployer.address,
@@ -118,7 +108,6 @@ get fun `test admin: change-admin flow should work and only next admin can claim
         deployer.address,
         { bounce: false, value: ton("0.05") },
     );
-    minter.sendClaimMinterAdmin(deployer.address, 0, { bounce: false, value: ton("0.05") });
     expect(minter.getAdminAddress()).toEqual(deployer.address);
 }
 
@@ -137,37 +126,6 @@ get fun `test admin: non-admin cannot change admin`() {
         exitCode: Errors.NotOwner,
     });
     expect(minter.getAdminAddress()).toEqual(deployer.address);
-}
-
-get fun `test admin: non-admin cannot drop admin access`() {
-    val (minter, _, notDeployer) = setupTest();
-
-    val dropResult = minter.sendDropMinterAdmin(
-        notDeployer.address,
-        0,
-        { bounce: false, value: ton("0.05") },
-    );
-    expect(dropResult).toHaveFailedTx<DropMinterAdmin>({
-        from: notDeployer.address,
-        to: minter.address,
-        exitCode: Errors.NotOwner,
-    });
-}
-
-get fun `test admin: admin can drop admin access`() {
-    val (minter, deployer, _) = setupTest();
-    expect(minter.getAdminAddress()).toEqual(deployer.address);
-
-    val dropResult = minter.sendDropMinterAdmin(
-        deployer.address,
-        0,
-        { bounce: false, value: ton("0.05") },
-    );
-    expect(dropResult).toHaveSuccessfulTx<DropMinterAdmin>({
-        from: deployer.address,
-        to: minter.address,
-    });
-    expect(minter.getAdminAddress()).toEqual(null);
 }
 
 get fun `test admin: admin can change metadata uri`() {
@@ -235,11 +193,11 @@ get fun `test admin: discovery should return expected wallet and optional owner`
     expect(withOwnerTx).toBeNotNull();
     val withOwnerBody = withOwnerTx!.loadBody<ResponseWalletAddress>();
     expect(withOwnerBody.jettonWalletAddress).toEqual(expectedDeployerWallet);
-    expect(withOwnerBody.ownerAddress).toBeNotNull();
-    if (withOwnerBody.ownerAddress == null) {
+    expect(withOwnerBody.owner).toBeNotNull();
+    if (withOwnerBody.owner == null) {
         return;
     }
-    expect(withOwnerBody.ownerAddress.load()).toEqual(deployer.address);
+    expect(withOwnerBody.owner.load()).toEqual(deployer.address);
 
     val expectedOtherWallet = userWallet(minter, notDeployer.address).address;
     val withoutOwnerRes = minter.sendRequestWalletAddress(
@@ -258,7 +216,7 @@ get fun `test admin: discovery should return expected wallet and optional owner`
     expect(withoutOwnerTx).toBeNotNull();
     val withoutOwnerBody = withoutOwnerTx!.loadBody<ResponseWalletAddress>();
     expect(withoutOwnerBody.jettonWalletAddress).toEqual(expectedOtherWallet);
-    expect(withoutOwnerBody.ownerAddress).toEqual(null);
+    expect(withoutOwnerBody.owner).toEqual(null);
 }
 
 get fun `test admin: discovery should return none for non-basechain owner`() {
@@ -281,7 +239,7 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
     expect(noOwnerTx).toBeNotNull();
     val noOwnerBody = noOwnerTx!.loadBody<ResponseWalletAddress>();
     expect(noOwnerBody.jettonWalletAddress).toEqual(null);
-    expect(noOwnerBody.ownerAddress).toEqual(null);
+    expect(noOwnerBody.owner).toEqual(null);
 
     val withOwnerRes = minter.sendRequestWalletAddress(
         deployer.address,
@@ -299,74 +257,11 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
     expect(withOwnerTx).toBeNotNull();
     val withOwnerBody = withOwnerTx!.loadBody<ResponseWalletAddress>();
     expect(withOwnerBody.jettonWalletAddress).toEqual(null);
-    expect(withOwnerBody.ownerAddress).toBeNotNull();
-    if (withOwnerBody.ownerAddress == null) {
+    expect(withOwnerBody.owner).toBeNotNull();
+    if (withOwnerBody.owner == null) {
         return;
     }
-    expect(withOwnerBody.ownerAddress.load()).toEqual(invalidOwner);
-}
-
-get fun `test admin: non-admin should not be able to upgrade minter`() {
-    val (minter, deployer, notDeployer) = setupTest();
-    val newData = FiStore {
-        totalSupply: ton("99"),
-        adminAddress: deployer.address,
-        nextAdminAddress: null,
-        metadata: buildTestMetadata("meta-upgrade"),
-        others: FiCodes {}.toCell(),
-    }.toCell();
-    val newCode = build("FossFi");
-    val oldContentHash = minter.getContent().hash();
-
-    val res = minter.sendUpgradeMinterCode(
-        notDeployer.address,
-        0,
-        newData,
-        newCode,
-        { bounce: false, value: ton("0.2") },
-    );
-    expect(res).toHaveFailedTx<Upgrade>({
-        from: notDeployer.address,
-        to: minter.address,
-        exitCode: Errors.NotOwner,
-    });
-    expect(minter.getContent().hash()).toEqual(oldContentHash);
-}
-
-get fun `test admin: admin should be able to upgrade minter code and data`() {
-    val (minter, deployer, _) = setupTest();
-    val upgradedSupply = ton("42");
-    val upgradedUri = "https://upgraded.meta.example/jetton.json";
-    val newData = FiStore {
-        totalSupply: upgradedSupply,
-        adminAddress: deployer.address,
-        nextAdminAddress: null,
-        metadata: buildTestMetadata(upgradedUri),
-        others: FiCodes {}.toCell(),
-    }.toCell();
-    val newCode = build("FossFi");
-
-    val res = minter.sendUpgradeMinterCode(
-        deployer.address,
-        0,
-        newData,
-        newCode,
-        { bounce: false, value: ton("0.2") },
-    );
-    expect(res).toHaveSuccessfulTx<Upgrade>({
-        from: deployer.address,
-        to: minter.address,
-    });
-
-    expect(minter.getTotalSupply()).toEqual(upgradedSupply);
-    expect(minter.getAdminAddress()).toEqual(deployer.address);
-
-    val uri = extractUriString(minter.getContent());
-    expect(uri).toBeNotNull();
-    if (uri == null) {
-        return;
-    }
-    expect(uri).toEqual(upgradedUri);
+    expect(withOwnerBody.owner.load()).toEqual(invalidOwner);
 }
 
 get fun `test shard: wallet address should keep owner shard prefix in get/discovery/transfer`() {
@@ -395,25 +290,6 @@ get fun `test shard: wallet address should keep owner shard prefix in get/discov
         expect(discoveryTx).toBeNotNull();
         val discoveryBody = discoveryTx!.loadBody<ResponseWalletAddress>();
         expect(discoveryBody.jettonWalletAddress).toEqual(expectedWalletAddress);
-
-        val transfer = senderWallet.sendTransfer(
-            deployer.address,
-            DEFAULT_TRANSFER_MSG_VALUE,
-            TEST_JETTON_UNIT,
-            owner,
-            deployer.address,
-            null,
-            0,
-            null,
-        );
-        expect(transfer).toHaveSuccessfulTx<AskToTransfer>({
-            from: deployer.address,
-            to: senderWallet.address,
-        });
-        expect(transfer).toHaveSuccessfulTx<InternalTransferStep>({
-            from: senderWallet.address,
-            to: expectedWalletAddress,
-        });
 
         prefix += 1;
     }

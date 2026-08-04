@@ -26,6 +26,11 @@ type AllowedMessageToLottery = EnterLottery | DrawWinner
 // ============================================================================
 
 fun onInternalMessage(in: InMessage) {
+    // ignore empty bodies (e.g. plain deploys)
+    if (in.body.isEmpty()) {
+        return;
+    }
+
     val msg = AllowedMessageToLottery.fromSlice(in.body);
     var storage = lazy LotteryStorage.load();
 
@@ -85,10 +90,6 @@ fun onInternalMessage(in: InMessage) {
             storage.randomSeed = 0;
             storage.revealDeadline = 0;
         }
-        // else => {
-        //     // Reject unkblockchain.nown messages
-        //     assert(in.body.isEmpty()) throw 0xFFFF;
-        // }
     }
 
     storage.save();

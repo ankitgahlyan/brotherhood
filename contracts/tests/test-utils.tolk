@@ -98,6 +98,31 @@ fun userWallet(minter: FossFi, userAddress: address): FossFiWallet {
     return FossFiWallet { address };
 }
 
+fun activateUser(
+    minter: FossFi,
+    inviterWallet: FossFiWallet,
+    inviterOwner: Treasury,
+    invitee: address,
+): FossFiWallet {
+    val invite = inviterWallet.sendOthersActions(
+        inviterOwner.address,
+        0,
+        ton("0.1"), // invite
+        invitee,
+        inviterOwner.address,
+        null,
+        DEFAULT_FORWARD_TON_AMOUNT,
+        "user@lat,long",
+        { value: ton("1") },
+    );
+    expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
+        from: inviterWallet.address,
+        to: userWallet(minter, invitee).address,
+    });
+    expect(invite).toHaveAllSuccessfulTxs();
+    return userWallet(minter, invitee);
+}
+
 fun walletStateInit(storage: FiWalletStore): ContractState {
     return ContractState {
         code: build("FossFiWallet"),
@@ -244,6 +269,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
 fun mintTo(minter: FossFi, admin: Treasury, recipient: address, amount: coins): FossFiWallet {
     val supplyBefore = minter.getTotalSupply();
     val wallet = userWallet(minter, recipient);
+    val balanceBefore = wallet.getJettonBalance();
 
     val mintResult = minter.sendMint(admin.address, recipient, amount, ton("0.05"), ton("0.3"));
     expect(mintResult).toHaveSuccessfulTx<MintNewJettons>({
@@ -251,7 +277,7 @@ fun mintTo(minter: FossFi, admin: Treasury, recipient: address, amount: coins): 
         to: minter.address,
     });
 
-    expect(wallet.getJettonBalance()).toEqual(amount);
+    expect(wallet.getJettonBalance()).toEqual(balanceBefore + amount);
     expect(minter.getTotalSupply()).toEqual(supplyBefore + amount);
     return wallet;
 }

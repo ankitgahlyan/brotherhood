@@ -31,6 +31,11 @@ type AllowedMessageToWallet =
     | UnFollow
     | UnFollowInternal
     | Destroy
+    | SetAllowance
+    | SpendAllowance
+    | AskGoldCoinsTransfer
+    | InternalGoldCoinsTransfer
+    | TriggerDecay
 
 type BounceOpToHandle =
     | EnterLottery
@@ -38,6 +43,7 @@ type BounceOpToHandle =
     | InternalInvite
     | VotingAction
     | UnFollowInternal
+    | InternalGoldCoinsTransfer
 
 // type BounceRich = InternalInvite
 // global store: FiWalletStore = lazy FiWalletStore.load();
@@ -57,6 +63,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
     val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
     var store = lazy FiWalletStore.load();
     var restoreAmount: coins = 0;
+    var restoreGoldCoins: uint32 = 0;
     match (msg) {
         EnterLottery => {
             restoreAmount = LOTTERY_ENTRY_AMT;
@@ -81,10 +88,14 @@ fun onBouncedMessage(in: InMessageBounced): void {
         UnFollowInternal => {
             restoreAmount = -MBRP_AMOUNT;
         }
+
+        InternalGoldCoinsTransfer => {
+            restoreGoldCoins = msg.amount;
+        }
     }
 
-    // todo: need? to burnForce for async reasons
     store.jettonBalance += restoreAmount;
+    store.goldCoins += restoreGoldCoins;
     store.save(); // todo learn: where to call this
 }
 
@@ -133,7 +144,7 @@ fun onInternalMessage(in: InMessage): void {
                     ) throw Errors.WaitMore;
 
                     // todo: votingPower based mint continue after 2 years
-                    val claimAmount = ton("11111") + (ton("1") * store.receivedVotes);
+                    val claimAmount = WEEKLY_CLAIM_AMOUNT;
 
                     store.jettonBalance += claimAmount;
                     time.lastClaim = now;
@@ -399,35 +410,12 @@ fun onInternalMessage(in: InMessage): void {
 
             // no self-transfer
             // normal txn
-            // todo: fixed fees for now. use subscription based instead that'll be like credit score
-            var burnAmount = 0;
-            if (store.txnCount > 100) {
-                store.txnCount = 0;
-                burnAmount = ton("101");
-                val notifyMinterMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: trustedAddrs.minterAddr,
-                    value: ton("0.01"),
-                    body: NotifyMinter {
-                        queryId: 0, // to inform about BURN
-                        jettonAmount: burnAmount,
-                        burnInitiator: addrs.owner,
-                        sendExcessesTo: msg.sendExcessesTo,
-                    },
-                });
-                notifyMinterMsg.send(
-                    SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                );
-            } else {
-                store.txnCount += 1;
-            }
-
-            assert (store.jettonBalance >= msg.jettonAmount + burnAmount) throw Errors.BalanceError;
-            store.jettonBalance -= msg.jettonAmount + burnAmount;
+            assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
+            store.jettonBalance -= msg.jettonAmount;
 
             val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
             contract.getStorageDuePayment();
-            reserveToncoinsOnBalance(
+            reserveGramsOnBalance(
                 max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
                 RESERVE_MODE_AT_MOST,
             );
@@ -614,7 +602,26 @@ fun onInternalMessage(in: InMessage): void {
         },
 
         AskToBurn => {
-            assert (false) throw Errors.InvalidMessage; // not allowed
+            // assert (false) throw Errors.InvalidMessage; // not allowed
+            checkAmountIsEnoughToBurn(in.valueCoins);
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
+            store.jettonBalance -= msg.jettonAmount;
+
+            val notifyMinterMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: NotifyMinter {
+                    queryId: msg.queryId,
+                    jettonAmount: msg.jettonAmount,
+                    burnInitiator: addrs.owner,
+                    sendExcessesTo: msg.sendExcessesTo,
+                },
+            });
+            notifyMinterMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
         },
 
         TopUpTons => {
@@ -685,9 +692,119 @@ fun onInternalMessage(in: InMessage): void {
             // todo: full invite chain destroy
         },
 
+        SetAllowance => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            if (msg.amount == 0) {
+                maps.allowances.delete(msg.grantee);
+            } else {
+                maps.allowances.set(msg.grantee, msg.amount);
+            }
+        },
+
+        SpendAllowance => {
+            val granted = maps.allowances.get(in.senderAddress);
+            assert (granted.isFound) throw Errors.NotFollowing;
+            val remaining = granted.loadValue();
+            assert (remaining >= msg.amount) throw Errors.InsufficientBalance;
+            assert (store.jettonBalance >= msg.amount) throw Errors.BalanceError;
+
+            checkAmountIsEnoughToTransfer(in.valueCoins, 0, in.originalForwardFee);
+
+            if (remaining == msg.amount) {
+                maps.allowances.delete(in.senderAddress);
+            } else {
+                maps.allowances.set(in.senderAddress, remaining - msg.amount);
+            }
+            store.jettonBalance -= msg.amount;
+
+            val transferMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.receiver.getAddrFiWallet(),
+                value: 0,
+                body: InternalTransferStep {
+                    queryId: msg.queryId,
+                    jettonAmount: msg.amount,
+                    version: store.version,
+                    transferredAsCredit: false,
+                    transferInitiator: addrs.owner,
+                    sendExcessesTo: msg.sendExcessesTo,
+                    forwardTonAmount: 0,
+                    forwardPayload: createEmptySlice(),
+                },
+            });
+            transferMsg.send(
+                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        },
+
+        AskGoldCoinsTransfer => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (msg.amount > 0) throw Errors.IncorrectReceiver;
+            assert (store.goldCoins >= msg.amount) throw Errors.BalanceError;
+            store.goldCoins -= msg.amount;
+
+            val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
+            contract.getStorageDuePayment();
+            reserveGramsOnBalance(
+                max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
+                RESERVE_MODE_AT_MOST,
+            );
+            val transferMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.receiver.getAddrFiWallet(),
+                value: 0,
+                body: InternalGoldCoinsTransfer {
+                    queryId: msg.queryId,
+                    amount: msg.amount,
+                    transferInitiator: addrs.owner,
+                },
+            });
+            transferMsg.send(
+                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        },
+
+        InternalGoldCoinsTransfer => {
+            checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
+            store.goldCoins += msg.amount;
+            sendExcesses(msg.queryId, in.valueCoins, in.senderAddress);
+        },
+
+        TriggerDecay => {
+            // keeper-triggered, no sender auth: burning another's decayed balance is harmless
+            val now = blockchain.now();
+            if (time.lastDecay == 0) {
+                time.lastDecay = now;
+            } else {
+                val months = (now - time.lastDecay) / DECAY_MONTH_SECONDS;
+                if (months > 0) {
+                    val monthly = max(ton("1"), store.jettonBalance / DECAY_MONTHS_TOTAL);
+                    val burnAmount = min(store.jettonBalance, monthly * months);
+                    if (burnAmount > 0) {
+                        store.jettonBalance -= burnAmount;
+                        val notifyMinterMsg = createMessage({
+                            bounce: BounceMode.NoBounce,
+                            dest: trustedAddrs.minterAddr,
+                            value: 0,
+                            body: NotifyMinter {
+                                queryId: 0, // to inform about BURN
+                                jettonAmount: burnAmount,
+                                burnInitiator: addrs.owner,
+                                sendExcessesTo: null,
+                            },
+                        });
+                        notifyMinterMsg.send(
+                            SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                            SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                        );
+                    }
+                    time.lastDecay += months * DECAY_MONTH_SECONDS;
+                }
+            }
+        },
+
         // for migration to other network states
-        RequestState => {
-            assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
+        RequestState => {            assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
 
             val stateMsg = createMessage({
                 bounce: BounceMode.NoBounce,

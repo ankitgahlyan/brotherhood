@@ -4,14 +4,15 @@ import "@contracts/common/errors"
 
 // Storage costs
 // these constants are used to estimate storage fee (how much we should pay for storing a wallet contract);
-// actual storage state (desired value of these constants) is printed to console in StateInit.spec.ts
+// actual storage state (desired value of these constants) is printed to console by the bench test in
+// contracts/tests/bench-fees.test.tolk
 
-const STORAGE_SIZE_MAX_WALLET_BITS = 1026
-const STORAGE_SIZE_MAX_WALLET_CELLS = 3
-const STORAGE_SIZE_INIT_STATE_WALLET_BITS = 812
-const STORAGE_SIZE_INIT_STATE_WALLET_CELLS = 3
+const STORAGE_SIZE_MAX_WALLET_BITS = 56000 // measured max ≈ 55847, rounded up
+const STORAGE_SIZE_MAX_WALLET_CELLS = 112 // measured max = 109, rounded up
+const STORAGE_SIZE_INIT_STATE_WALLET_BITS = 56200 // measured init ≈ 56129, rounded up
+const STORAGE_SIZE_INIT_STATE_WALLET_CELLS = 112 // measured init = 110, rounded up
 
-const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 754 // body = 32+64+124+(3+8+256)+(3+8+256)
+const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 674 // NotifyMinter body, measured in bench-fees.test.tolk
 const MESSAGE_SIZE_BURN_NOTIFICATION_CELLS = 1 // body always in ref
 
 const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // 5 years
@@ -21,10 +22,10 @@ const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // 5 years
 // they must be absolutely equal to consumed gas; if not, tests fail;
 // actual consumed gas (desired value of these constants) is printed to console after tests run
 
-const GAS_CONSUMPTION_JETTON_TRANSFER = 6327
-const GAS_CONSUMPTION_JETTON_RECEIVE = 7443
-const GAS_CONSUMPTION_BURN_REQUEST = 4254
-const GAS_CONSUMPTION_BURN_NOTIFICATION = 4071
+const GAS_CONSUMPTION_JETTON_TRANSFER = 19726 // measured in bench-fees.test.tolk
+const GAS_CONSUMPTION_JETTON_RECEIVE = 10340
+const GAS_CONSUMPTION_BURN_REQUEST = 13701
+const GAS_CONSUMPTION_BURN_NOTIFICATION = 10927
 
 // SAFETY: Uses TVM's read-only GETPRECOMPILEDGAS primitive; callers handle `null` fallback safely.
 fun getPrecompiledGasConsumption(): int?
