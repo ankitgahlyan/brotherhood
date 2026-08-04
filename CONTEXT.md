@@ -100,7 +100,7 @@ _Avoid_: Admin action, moderation
 **Active** — the operational state of an Account that can take actions.
 _Avoid_: Verified, live
 
-**Suspension** — a temporary, reversible state of an Account, set by its Inviter, Upstream Inviter, or an Authority. Softest inactive state; it can be re-activated.
+**Suspension** — a temporary, reversible state of an Account, set by its Inviter, Upstream Inviter(invitor0), or an Authority. Softest inactive state; it can be re-activated.
 _Avoid_: Freeze, ban, block
 
 **Under Review** — an Account's state while an active Report with insufficient backing prevents it from acting. Distinct from Suspension (reversible by intent) and Closure (permanent).
