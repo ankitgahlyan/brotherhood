@@ -1,4 +1,10 @@
-import { useState, useCallback, useEffect, type FormEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  type FormEvent,
+} from 'react';
 import {
   useTonConnectUI,
   useTonWallet,
@@ -10,6 +16,7 @@ import {
   getWalletAddress,
   fetchJettonMaster,
   getFiWalletState,
+  getCircle,
 } from '../lib/ton';
 import type { JettonMetadata } from '../lib/jettonContent';
 import {
@@ -41,6 +48,7 @@ import { StatusAlert, PreviewRow, NetworkBadge } from './DeployPage';
 import { useTheme } from '../App';
 import { InputScan } from '@/components/input-scan';
 import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import { WalletSelector } from '@/components/wallet-selector';
 
 const network = 'testnet';
 export const FI_ADDRESS = 'kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT';
@@ -79,8 +87,9 @@ export function ManagePage() {
   const [fiWalletState, setFiWalletState] = useState<FiWalletStore | null>(
     null,
   );
-  // const [balance, setBalance] = useState<bigint | null>(null);
-
+  const [circleFiWalletState, setCircleFiWalletState] = useState<
+    FiWalletStore[] | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<ManageTab>('vote');
   const [status, setStatus] = useState<{
@@ -88,9 +97,11 @@ export function ManagePage() {
     message: string;
   } | null>(null);
 
-  const ownerAddress = wallet?.account?.address
-    ? Address.parse(wallet.account.address)
-    : null;
+  const rawOwnerAddress = wallet?.account?.address ?? null;
+  const ownerAddress = useMemo(
+    () => (rawOwnerAddress ? Address.parse(rawOwnerAddress) : null),
+    [rawOwnerAddress],
+  );
 
   const isConnected = !!wallet;
   const { theme } = useTheme();
@@ -133,12 +144,17 @@ export function ManagePage() {
   }, []);
 
   const loadFiWalletInfo = useCallback(async () => {
+    if (!ownerAddress) {
+      setFiWalletState(null);
+      setCircleFiWalletState(null);
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
-    setFiWalletState(null);
 
     try {
-      setFiWalletState(await getFiWalletState(ownerAddress!));
+      setFiWalletState(await getFiWalletState(ownerAddress));
     } catch (err) {
       const msg = getErrorMessage(err);
       setStatus({
@@ -151,15 +167,44 @@ export function ManagePage() {
     }
   }, [ownerAddress]);
 
+  const loadCircleFiWalletInfo = useCallback(async () => {
+    if (!fiWalletState) {
+      setCircleFiWalletState(null);
+      return;
+    }
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      setCircleFiWalletState(
+        await getCircle(fiWalletState.maps.ref.invited.keys()),
+      );
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setStatus({
+        type: 'error',
+        message: msg || 'Failed to load jetton data',
+      });
+    } finally {
+      setLoading(false);
+      setStatus((prev) => (prev?.type === 'info' ? null : prev));
+    }
+  }, [fiWalletState]);
+
   useEffect(() => {
     loadJettonInfo();
     // Reload only when the network changes; address changes are handled via the input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [FI_ADDRESS]);
 
   useEffect(() => {
     loadFiWalletInfo();
-  }, [isConnected]);
+  }, [loadFiWalletInfo]);
+
+  useEffect(() => {
+    loadCircleFiWalletInfo();
+  }, [loadCircleFiWalletInfo]);
 
   const isAdmin =
     jettonInfo && ownerAddress && jettonInfo.adminAddress
@@ -186,44 +231,6 @@ export function ManagePage() {
   return (
     <div className="grid grid-cols-[1fr_320px] gap-5 items-start max-md:grid-cols-1">
       <div className="space-y-4.5">
-        {/* <Card>
-          <CardHeader>
-            <CardTitle className="text-xl tracking-tight">
-              Manage Jetton
-            </CardTitle>
-            <CardDescription>
-              Enter a Jetton minter contract address
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2.5">
-              <Input
-                type="text"
-                placeholder="0Q... or 0:..."
-                value={contractAddr}
-                onChange={(e) => setContractAddr(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && loadJettonInfo()}
-              />
-              <Button
-                className="rounded-full shrink-0 min-w-20"
-                style={{ background: '#0098EA' }}
-                onClick={loadJettonInfo}
-                disabled={loading}
-              >
-                {loading ? <span className="spinner" /> : 'Load'}
-              </Button>
-            </div>
-
-            {status && !jettonInfo && status.type !== 'error' && (
-              <StatusAlert
-                type={status.type}
-                message={status.message}
-                className="mt-4"
-              />
-            )}
-          </CardContent>
-        </Card> */}
-
         {jettonInfo && (
           <Card>
             <CardContent>
@@ -310,17 +317,74 @@ export function ManagePage() {
         )}
       </div>
 
-      <JettonInfoCard
-        userBalance={fiWalletState?.jettonBalance || 0n}
-        info={jettonInfo}
-        decimals={decimals}
-        formatAmount={formatAmount}
-        isAdmin={isAdmin}
-        network={network}
-        loading={loading}
-        error={!jettonInfo && status?.type === 'error' ? status.message : null}
-        contractAddr={FI_ADDRESS}
-      />
+      <div className="space-y-4">
+        <JettonInfoCard
+          userBalance={fiWalletState?.jettonBalance || 0n}
+          info={jettonInfo}
+          decimals={decimals}
+          formatAmount={formatAmount}
+          isAdmin={isAdmin}
+          network={network}
+          loading={loading}
+          error={
+            !jettonInfo && status?.type === 'error' ? status.message : null
+          }
+          contractAddr={FI_ADDRESS}
+        />
+        <FiWalletInfoCard
+          fiWalletState={fiWalletState}
+          tokenSymbol={jettonInfo?.metadata?.symbol || 'FI'}
+          loading={loading}
+          error={
+            !fiWalletState && status?.type === 'error' ? status.message : null
+          }
+          isConnected={isConnected}
+          network={network}
+        />
+        {circleFiWalletState && circleFiWalletState.length > 0 && (
+          <Card className="sticky top-20 max-md:static">
+            <CardContent className="space-y-0">
+              <div className="flex items-center gap-3.5 mb-5">
+                <div className="size-14 rounded-full bg-[#0098EA]/10 flex items-center justify-center">
+                  <Lock className="size-7 text-[#0098EA]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-lg font-bold tracking-tight truncate">
+                    Circle Members
+                  </div>
+                  <div className="font-mono text-[13px] font-semibold text-[#0098EA]">
+                    Invited FI Wallets
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-4" />
+              <div className="space-y-2.5">
+                {circleFiWalletState.map((fiWallet, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center py-2"
+                  >
+                    <span className="font-mono text-[13px] font-semibold text-right max-w-[65%] truncate">
+                      <AddressLink
+                        address={fiWallet.addresses.ref.owner.toString({
+                          bounceable: true,
+                          testOnly: network === 'testnet',
+                        })}
+                        network={network}
+                      />
+                    </span>
+                    <span className="font-mono text-[13px] font-semibold text-right">
+                      {fromNano(fiWallet.jettonBalance || 0n)}{' '}
+                      {jettonInfo?.metadata?.symbol || 'FI'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <NetworkBadge network={network} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
@@ -499,6 +563,159 @@ function JettonInfoCard({
   );
 }
 
+function FiWalletInfoCard({
+  fiWalletState,
+  tokenSymbol,
+  loading,
+  error,
+  isConnected,
+  network,
+}: {
+  fiWalletState: FiWalletStore | null;
+  tokenSymbol: string;
+  loading: boolean;
+  error: string | null;
+  isConnected: boolean;
+  network: 'mainnet' | 'testnet';
+}) {
+  if (loading) {
+    return (
+      <Card className="sticky top-20 max-md:static">
+        <CardContent className="flex items-center justify-center min-h-50">
+          <span className="spinner" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="sticky top-20 max-md:static">
+        <CardContent className="flex items-center justify-center min-h-50">
+          <EmptyState
+            icon={<AlertCircle className="size-8" />}
+            title="Wallet state unavailable"
+            description={error}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <Card className="sticky top-20 max-md:static">
+        <CardContent className="flex items-center justify-center min-h-50">
+          <EmptyState
+            icon={<Wallet className="size-8" />}
+            title="Wallet not connected"
+            description="Connect your wallet to inspect the FI wallet state"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!fiWalletState) {
+    return (
+      <Card className="sticky top-20 max-md:static">
+        <CardContent className="flex items-center justify-center min-h-50">
+          <EmptyState
+            icon={<Search className="size-8" />}
+            title="No wallet state"
+            description="The FI wallet state is still loading or unavailable"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="sticky top-20 max-md:static">
+      <CardContent className="space-y-0">
+        <div className="flex items-center gap-3.5 mb-5">
+          <div className="size-14 rounded-full bg-[#0098EA]/10 flex items-center justify-center">
+            <Wallet className="size-7 text-[#0098EA]" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-lg font-bold tracking-tight truncate">
+              FI Wallet
+            </div>
+            <div className="font-mono text-[13px] font-semibold text-[#0098EA]">
+              Wallet state
+            </div>
+          </div>
+        </div>
+
+        <Separator className="my-4" />
+
+        <PreviewRow
+          label="Balance"
+          value={`${fromNano(fiWalletState.jettonBalance || 0n)} ${tokenSymbol}`}
+        />
+        <PreviewRow
+          label="Gold Coins"
+          value={String(fiWalletState.goldCoins ?? 0)}
+        />
+        <PreviewRow label="ID" value={fiWalletState.id || '—'} />
+        <PreviewRow
+          label="Txn Count"
+          value={String(fiWalletState.txnCount ?? 0)}
+        />
+        <PreviewRow label="Status" value={String(fiWalletState.status ?? 0)} />
+        <PreviewRow
+          label="Votes"
+          value={`${fiWalletState.votes ?? 0}/${fiWalletState.receivedVotes ?? 0}`}
+        />
+        <PreviewRow
+          label="Connections"
+          value={String(fiWalletState.connections ?? 0)}
+        />
+        <PreviewRow
+          label="Active"
+          value={fiWalletState.active ? 'Yes' : 'No'}
+          valueClassName={
+            fiWalletState.active
+              ? 'text-[var(--success)]'
+              : 'text-[var(--warning)]'
+          }
+        />
+        <PreviewRow
+          label="Mintable"
+          value={fiWalletState.mintable ? 'Yes' : 'No'}
+          valueClassName={
+            fiWalletState.mintable
+              ? 'text-[var(--success)]'
+              : 'text-[var(--warning)]'
+          }
+        />
+        <PreviewRow
+          label="Authority"
+          value={fiWalletState.isAuthorityAccount ? 'Yes' : 'No'}
+        />
+        <PreviewRow
+          label="Credit Need"
+          value={`${fromNano(fiWalletState.creditNeed || 0n)} TON`}
+        />
+        <PreviewRow
+          label="Debt"
+          value={`${fromNano(fiWalletState.debt || 0n)} TON`}
+        />
+        <PreviewRow
+          label="Fees"
+          value={`${fromNano(fiWalletState.accumulatedFees || 0n)} TON`}
+        />
+        <PreviewRow
+          label="Version"
+          value={`${fiWalletState.version ?? 0}/${fiWalletState.storeVersion ?? 0}`}
+        />
+
+        <NetworkBadge network={network} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function shortenAddress(addr: string): string {
   if (addr.length <= 12) return addr;
   return addr.slice(0, 4) + '...' + addr.slice(-4);
@@ -555,20 +772,13 @@ function EmptyState({
   );
 }
 
-function WalletRequired({ tonConnectUI }: { tonConnectUI: TonConnectUI }) {
+function WalletRequired() {
   return (
     <EmptyState
       icon={<Wallet className="size-8" />}
       title="Wallet not connected"
       description="Connect your wallet to perform this action"
-      action={
-        <Button
-          className="rounded-full max-w-55 mx-auto"
-          onClick={() => tonConnectUI.openModal()}
-        >
-          Connect Wallet
-        </Button>
-      }
+      action={<WalletSelector className="rounded-full max-w-55 mx-auto" />}
     />
   );
 }
@@ -610,7 +820,7 @@ function MintTab({
     message: string;
   } | null>(null);
 
-  if (!isConnected) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!isConnected) return <WalletRequired />;
   if (!isAdmin) return <AdminRequired />;
 
   async function handleMint(e: FormEvent) {
@@ -733,7 +943,7 @@ function TransferTab({
     message: string;
   } | null>(null);
 
-  if (!isConnected) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!isConnected) return <WalletRequired />;
 
   async function handleTransfer(e: FormEvent) {
     e.preventDefault();
@@ -852,7 +1062,7 @@ function InviteTab({
     message: string;
   } | null>(null);
 
-  if (!ownerAddress) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!ownerAddress) return <WalletRequired />;
 
   async function handleInvite(e: FormEvent) {
     e.preventDefault();
@@ -967,7 +1177,7 @@ function VoteTab({
     message: string;
   } | null>(null);
 
-  if (!ownerAddress) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!ownerAddress) return <WalletRequired />;
   const owner = ownerAddress;
 
   async function sendVote(positive: boolean) {
@@ -1091,7 +1301,7 @@ function DestroyTab({
     message: string;
   } | null>(null);
 
-  if (!ownerAddress) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!ownerAddress) return <WalletRequired />;
   const owner = ownerAddress;
 
   async function sendDestroy() {
@@ -1178,7 +1388,7 @@ function BurnTab({
     message: string;
   } | null>(null);
 
-  if (!isConnected) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!isConnected) return <WalletRequired />;
 
   async function handleBurn(e: FormEvent) {
     e.preventDefault();
@@ -1301,7 +1511,7 @@ function AdminTab({
   );
   const [newImage, setNewImage] = useState(info.metadata.image || '');
 
-  if (!isConnected) return <WalletRequired tonConnectUI={tonConnectUI} />;
+  if (!isConnected) return <WalletRequired />;
   if (!isAdmin) return <AdminRequired />;
 
   async function handleChangeAdmin(e: FormEvent) {

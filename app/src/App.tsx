@@ -1,9 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
+import { useTonConnectUI, TonConnectButton } from '@tonconnect/ui-react';
 import { THEME } from '@tonconnect/ui-react';
 import { Gem, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {} from '@/components/ui/dropdown-menu';
 import { ManagePage } from './pages/ManagePage';
 
 type Theme = 'dark' | 'light';
@@ -31,7 +30,6 @@ export default function App() {
         theme: theme === 'light' ? THEME.LIGHT : THEME.DARK,
       },
       analytics: { mode: 'off' },
-      // manifestUrl: 'https://fossfiat.netlify.app/tonconnect-manifest.json',
       actionsConfiguration: {
         twaReturnUrl: 'https://t.me/fossfiBot',
       },
@@ -113,6 +111,7 @@ export default function App() {
               setTestnet={setTestnet}
               theme={theme}
             /> */}
+            {/* <WalletSelector className="rounded-full h-10 px-3 gap-2.5 text-[15px] font-bold max-sm:h-9 max-sm:text-sm max-sm:px-2.5" /> */}
             <TonConnectButton />
           </div>
         </header>

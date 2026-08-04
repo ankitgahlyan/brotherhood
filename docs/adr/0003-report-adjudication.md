@@ -1,0 +1,3 @@
+# Reports are Authority-adjudicated with member backing
+
+A Report only becomes actionable once a minimum number of Members back it (sybil-resistance), after which the Authority adjudicates and may close the Account. A reported Account cannot take actions until resolved. This rejects both pure authority discretion (no backing → single accuser can disable anyone) and fully adversarial adjudication (disputers vs reporters) in favor of a middle path: members gate, Authority decides. It was a real trade-off because adversarial adjudication had already been sketched in the contract's `ReportInfo` (`reporterCount`, `disputerCount`); it is hard to reverse once report flows and thresholds are live.

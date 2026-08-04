@@ -1,7 +1,7 @@
 import { QrCode } from 'lucide-react';
 import { Input } from './ui/input';
 import { QrScanner } from './QrScanner';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 function InputScan({
   toAddr,
@@ -13,6 +13,17 @@ function InputScan({
   // loading: boolean;
 }) {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
+
+  const handleClose = useCallback(() => setIsScannerVisible(false), []);
+
+  const handleScan = useCallback(
+    (data: string) => {
+      if (!data) return;
+      setToAddr(data.trim());
+      setIsScannerVisible(false);
+    },
+    [setToAddr],
+  );
 
   return (
     <div className="flex">
@@ -32,12 +43,8 @@ function InputScan({
       </button>
       <QrScanner
         isVisible={isScannerVisible}
-        onClose={() => setIsScannerVisible(false)}
-        onScan={(data: string) => {
-          if (!data) return;
-          setToAddr(data.trim());
-          setIsScannerVisible(false);
-        }}
+        onClose={handleClose}
+        onScan={handleScan}
       />
     </div>
   );

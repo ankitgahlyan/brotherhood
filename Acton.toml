@@ -1,11 +1,11 @@
 [package]
 name = "fossfi"
-description = "FOSSFI Jetton"
+description = "FossFi (FOSS Finance) Network State Contracts"
 version = "0.1.0"
 license = "ISC"
 
 [toolchain]
-acton = "1.1.0"
+acton = "trunk"
 
 [contracts.FossFi]
 display-name = "FossFi Parent"

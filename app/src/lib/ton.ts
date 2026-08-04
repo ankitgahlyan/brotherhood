@@ -206,10 +206,13 @@ export async function fetchWalletBalance(ownerAddress: Address) {
 }
 
 export async function getFiWalletState(owner: Address) {
-  const fiWAddr = await getWalletAddress(owner);
+  return getTonClient('testnet').open(FossFiWallet.fromAddress(await getWalletAddress(owner))).getWalletDataAll();
+}
+
+export async function getCircle(invitedList: Address[]) {
   const client = getTonClient('testnet');
-  // const result = await client.runMethod(fiWAddr, 'get_wallet_data_all');
-  // const state = result.stack
-  const fiWContr = client.open(FossFiWallet.fromAddress(fiWAddr));
-  return fiWContr.getWalletDataAll();
+  const promises = invitedList.map((addr) =>
+    client.open(FossFiWallet.fromAddress(addr)).getWalletDataAll(),
+  );
+  return Promise.all(promises);
 }
