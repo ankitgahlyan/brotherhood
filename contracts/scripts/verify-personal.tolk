@@ -154,4 +154,28 @@ fun main() {
     } else {
         println("VERIFY_FAIL: personal token mint did not match the loan");
     }
+
+    // 5. payback: the buyer burns their personal tokens and the FI loan returns
+    val burnBody = AskToBurn {
+        queryId: 0,
+        jettonAmount: loan,
+        sendExcessesTo: deployer,
+        customPayload: null,
+    }.toCell();
+    val burnRes = PersonalWallet.fromAddress(buyerPersonalWallet).sendAny(
+        deployer,
+        burnBody,
+        { value: ton("0.6") },
+    );
+    burnRes.waitForFirstTransaction();
+
+    val buyerFiFinal = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
+    val issuerFiFinal = FossFiWallet.fromAddress(issuerWallet).getJettonBalance();
+    val personalAfter = PersonalWallet.fromAddress(buyerPersonalWallet).getWalletData().jettonBalance;
+    println("AFTER_PAYBACK BUYER_FI={} ISSUER_FI={} PERSONAL={}", buyerFiFinal, issuerFiFinal, personalAfter);
+    if (buyerFiFinal == buyerFiBefore && issuerFiFinal == issuerFiBefore && personalAfter == 0) {
+        println("VERIFY_OK: payback returned the loan and burned the personal tokens");
+    } else {
+        println("VERIFY_FAIL: payback did not unwind the loan");
+    }
 }
