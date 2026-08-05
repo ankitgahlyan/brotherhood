@@ -53,6 +53,8 @@ ignore = []
 [scripts]
 deploy-emulation = "acton script contracts/scripts/deploy.tolk"
 deploy-testnet = "acton script contracts/scripts/deploy.tolk --net testnet"
+deploy-personal = "acton script contracts/scripts/deploy-personal.tolk"
+verify-personal = "acton script contracts/scripts/verify-personal.tolk"
 jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"
 jetton-change-metadata = "acton script contracts/scripts/change-metadata.tolk"
 jetton-claim-admin = "acton script contracts/scripts/claim-admin.tolk"
