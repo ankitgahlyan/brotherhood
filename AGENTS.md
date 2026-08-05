@@ -15,4 +15,5 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `app/` aligned with contract changes.
 - Prefer this validation loop when feasible: `acton build`, `acton test`, `npm run typecheck`, `npm run build`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
+- For the Personal Token issuer onboarding flow, verify with `acton run verify-personal` (emulates deploy + wallet pointer + buy credit) before proposing a real `acton run deploy-personal`.
 - When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `npm run`, or the existing project config.
