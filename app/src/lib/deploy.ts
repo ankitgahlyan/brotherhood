@@ -15,9 +15,12 @@ import {
 import {
   AskToBurn,
   AskToTransfer,
+  ActInvite,
+  ActSetPersonalJettonMinter,
+  ActUnvote,
+  ActVote,
   BuyCredit,
   Destroy,
-  OthersActions,
   SetAllowance,
   SpendAllowance,
 } from '@wrappers/FossFiWallet.gen';
@@ -149,23 +152,15 @@ export async function buildPersonalMinterDeploy(params: {
   return { contractAddress, stateInit };
 }
 
-// The ton("0.777") OthersActions signal that points the issuer's FI wallet
+// The ActSetPersonalJettonMinter signal that points the issuer's FI wallet
 // at its Personal Token minter.
 export function buildPointPersonalMinterBody(params: {
   personalMinter: Address;
-  sendExcessesTo: Address;
-  queryId?: bigint;
 }): Cell {
-  const { personalMinter, sendExcessesTo, queryId = 0n } = params;
-  return OthersActions.toCell(
-    OthersActions.create({
-      queryId,
-      jettonAmount: toNano('0.777'),
+  const { personalMinter } = params;
+  return ActSetPersonalJettonMinter.toCell(
+    ActSetPersonalJettonMinter.create({
       transferRecipient: personalMinter,
-      sendExcessesTo,
-      customPayload: null,
-      forwardTonAmount: 0n,
-      forwardPayload: '',
     }),
   );
 }
@@ -221,25 +216,15 @@ export function buildTransferBody(params: {
 
 export function buildInviteBody(params: {
   transferRecipient: Address;
-  sendExcessesTo: Address;
-  forwardPayload?: string;
+  id?: string;
   queryId?: bigint;
 }): Cell {
-  const {
-    transferRecipient,
-    sendExcessesTo,
-    forwardPayload = '',
-    queryId = 0n,
-  } = params;
-  return OthersActions.toCell(
-    OthersActions.create({
+  const { transferRecipient, id = '', queryId = 0n } = params;
+  return ActInvite.toCell(
+    ActInvite.create({
       queryId,
-      jettonAmount: toNano('0.1'),
       transferRecipient,
-      sendExcessesTo,
-      customPayload: null,
-      forwardTonAmount: 0n,
-      forwardPayload,
+      id,
     }),
   );
 }
@@ -263,38 +248,22 @@ export function buildBuyCreditBody(params: {
 
 export function buildVoteBody(params: {
   transferRecipient: Address;
-  sendExcessesTo: Address;
-  queryId?: bigint;
 }): Cell {
-  const { transferRecipient, sendExcessesTo, queryId = 0n } = params;
-  return OthersActions.toCell(
-    OthersActions.create({
-      queryId,
-      jettonAmount: toNano('0.11'),
+  const { transferRecipient } = params;
+  return ActVote.toCell(
+    ActVote.create({
       transferRecipient,
-      sendExcessesTo,
-      customPayload: null,
-      forwardTonAmount: 0n,
-      forwardPayload: '',
     }),
   );
 }
 
 export function buildUnvoteBody(params: {
   transferRecipient: Address;
-  sendExcessesTo: Address;
-  queryId?: bigint;
 }): Cell {
-  const { transferRecipient, sendExcessesTo, queryId = 0n } = params;
-  return OthersActions.toCell(
-    OthersActions.create({
-      queryId,
-      jettonAmount: toNano('0.12'),
+  const { transferRecipient } = params;
+  return ActUnvote.toCell(
+    ActUnvote.create({
       transferRecipient,
-      sendExcessesTo,
-      customPayload: null,
-      forwardTonAmount: 0n,
-      forwardPayload: '',
     }),
   );
 }

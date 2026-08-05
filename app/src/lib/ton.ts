@@ -1,13 +1,13 @@
 import { TonClient } from '@ton/ton';
 import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
-import { FI_ADDRESS } from '@/pages/ManagePage';
+import { FI_ADDRESS, network, type Network } from '@/lib/config';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { Personal } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 // import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 
-export type Network = 'mainnet' | 'testnet';
+export type { Network } from '@/lib/config';
 
 export const queryClient = new QueryClient();
 
@@ -55,7 +55,7 @@ export async function getWalletAddress( // todo: calc offchain
       )!,
     );
   } else {
-    const client = getTonClient('testnet');
+    const client = getTonClient(network);
     const minterAddress = Address.parse(FI_ADDRESS);
     const result = await client.runMethod(minterAddress, 'get_wallet_address', [
       {
@@ -144,7 +144,6 @@ async function fetchWithRetry(
 }
 
 export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
-  const network = 'testnet';
   const base = toncenterV3[network];
   const res = await fetchWithRetry(
     `${base}/jetton/masters?address=${encodeURIComponent(FI_ADDRESS)}&limit=1&offset=0`,
@@ -191,10 +190,10 @@ export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
 
 export async function fetchWalletBalance(ownerAddress: Address) {
   const walletAddr = await getWalletAddress(ownerAddress);
-  const base = toncenterV3['testnet'];
+  const base = toncenterV3[network];
   const res = await fetchWithRetry(
     `${base}/jetton/wallets?address=${encodeURIComponent(walletAddr.toString())}&limit=1&offset=0`,
-    { headers: toncenterApiHeaders('testnet') },
+    { headers: toncenterApiHeaders(network) },
   );
   if (!res.ok) throw new Error(`Toncenter API error: ${res.status}`);
 
@@ -208,7 +207,7 @@ export async function fetchWalletBalance(ownerAddress: Address) {
 }
 
 export async function getFiWalletState(owner: Address) {
-  return getTonClient('testnet')
+  return getTonClient(network)
     .open(FossFiWallet.fromAddress(await getWalletAddress(owner)))
     .getWalletDataAll();
 }
@@ -232,7 +231,7 @@ export function listAllowances(state: {
 }
 
 export async function getCircle(invitedList: Address[]) {
-  const client = getTonClient('testnet');
+  const client = getTonClient(network);
   const promises = invitedList.map((addr) =>
     client.open(FossFiWallet.fromAddress(addr)).getWalletDataAll(),
   );
@@ -244,7 +243,7 @@ export async function getPersonalMinterForIssuer(
   issuerOwner: Address,
 ): Promise<Address | null> {
   const issuerWalletAddr = await getWalletAddress(issuerOwner);
-  const state = await getTonClient('testnet')
+  const state = await getTonClient(network)
     .open(FossFiWallet.fromAddress(issuerWalletAddr))
     .getWalletDataAll();
   return state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
@@ -255,7 +254,7 @@ export async function getPersonalWalletAddress(
   personalMinter: Address,
   owner: Address,
 ): Promise<Address> {
-  return getTonClient('testnet')
+  return getTonClient(network)
     .open(Personal.fromAddress(personalMinter))
     .getWalletAddress(owner);
 }
@@ -266,7 +265,7 @@ export async function getPersonalWalletBalance(
   owner: Address,
 ): Promise<bigint> {
   const walletAddr = await getPersonalWalletAddress(personalMinter, owner);
-  const state = await getTonClient('testnet')
+  const state = await getTonClient(network)
     .open(PersonalWallet.fromAddress(walletAddr))
     .getWalletData();
   return state.jettonBalance;
