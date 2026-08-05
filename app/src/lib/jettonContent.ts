@@ -1,4 +1,10 @@
-import { beginCell, Cell, Dictionary } from '@ton/core';
+import {
+  beginCell,
+  Cell,
+  Dictionary,
+  type Builder,
+  type Slice,
+} from '@ton/core';
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
 const SNAKE_DATA_PREFIX = 0x00;
@@ -49,6 +55,26 @@ function makeSnakeCell(data: Buffer): Cell {
   return cell!;
 }
 
+// Tolk `storeString` is TVM STREF: the string is stored as a ref to a snake
+// cell (127-byte chunks). Replicate that snake (no 0x prefix byte here).
+function stringSnakeCell(data: string): Cell {
+  const bytes = Buffer.from(data, 'utf-8');
+  if (bytes.length <= 127) {
+    return beginCell().storeBuffer(bytes).endCell();
+  }
+  const chunks: Buffer[] = [];
+  for (let i = 0; i < bytes.length; i += 127) {
+    chunks.push(bytes.subarray(i, Math.min(i + 127, bytes.length)));
+  }
+  let cell = beginCell()
+    .storeBuffer(chunks[chunks.length - 1]!)
+    .endCell();
+  for (let i = chunks.length - 2; i >= 0; i--) {
+    cell = beginCell().storeBuffer(chunks[i]!).storeRef(cell).endCell();
+  }
+  return cell;
+}
+
 export interface JettonMetadata {
   name: string;
   symbol: string;
@@ -79,6 +105,47 @@ export async function buildOnchainMetadata(
     const keyHash = await sha256(key);
     const valueCell = makeSnakeCell(Buffer.from(value, 'utf-8'));
     dict.set(keyHash, valueCell);
+  }
+
+  return beginCell()
+    .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
+    .storeDict(dict)
+    .endCell();
+}
+
+// Builds onchain jetton content byte-identical to the Tolk contracts'
+// buildJettonMetadataCell (OnchainMetadataReply): always 5 keys, each value
+// stored as ref( 0x00 + ref(snake string) ). Verified byte-for-byte against
+// Tolk for short, long (multi-chunk snake), and empty strings.
+export async function buildTolkOnchainMetadata(
+  metadata: JettonMetadata,
+): Promise<Cell> {
+  const stringPrefixed0x = {
+    serialize(self: string, b: Builder): void {
+      b.storeRef(
+        beginCell()
+          .storeUint(SNAKE_DATA_PREFIX, 8)
+          .storeRef(stringSnakeCell(self))
+          .endCell(),
+      );
+    },
+    parse(s: Slice): string {
+      return s.loadStringRefTail();
+    },
+  };
+  const dict = Dictionary.empty(Dictionary.Keys.BigUint(256), stringPrefixed0x);
+
+  const entries: [string, string][] = [
+    ['name', metadata.name],
+    ['symbol', metadata.symbol],
+    ['description', metadata.description ?? ''],
+    ['image', metadata.image ?? ''],
+    ['decimals', metadata.decimals],
+  ];
+
+  for (const [key, value] of entries) {
+    const keyHash = await sha256(key);
+    dict.set(BigInt('0x' + keyHash.toString('hex')), value);
   }
 
   return beginCell()

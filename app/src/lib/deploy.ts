@@ -21,7 +21,11 @@ import {
 } from '@wrappers/FossFiWallet.gen';
 import { Personal } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
-import { buildOnchainMetadata, type JettonMetadata } from './jettonContent';
+import {
+  buildOnchainMetadata,
+  buildTolkOnchainMetadata,
+  type JettonMetadata,
+} from './jettonContent';
 
 export function parseUnits(amount: string, decimals: number): bigint {
   const [whole = '', fracRaw = ''] = amount.split('.');
@@ -114,12 +118,14 @@ export async function buildChangeContentBody(
 // Deploy a Personal Token minter backed by the issuer's FI wallet.
 // PriStore layout: totalSupply (coins), fiJettonAddress, adminAddress,
 // jettonWalletCode (cell -> ref), metadataUri (cell? -> maybeRef).
+// The metadata cell uses the Tolk-exact OnchainMetadataReply layout so a
+// frontend-deployed minter is byte-identical to one from the Tolk scripts.
 export async function buildPersonalMinterDeploy(params: {
   issuerWallet: Address;
   adminAddress: Address;
   metadata: JettonMetadata;
 }) {
-  const content = await buildOnchainMetadata(params.metadata);
+  const content = await buildTolkOnchainMetadata(params.metadata);
 
   const data = beginCell()
     .storeCoins(0n)
