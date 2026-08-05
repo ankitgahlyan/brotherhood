@@ -162,6 +162,54 @@ export const ForwardPayloadRemainder = {
 }
 
 /**
+ > struct JettonWalletDataReply {
+ >     jettonBalance: coins
+ >     ownerAddress: address
+ >     minterAddress: address
+ >     jettonWalletCode: cell
+ > }
+ */
+export interface JettonWalletDataReply {
+    readonly $: 'JettonWalletDataReply'
+    jettonBalance: coins
+    ownerAddress: c.Address
+    minterAddress: c.Address
+    jettonWalletCode: c.Cell
+}
+
+export const JettonWalletDataReply = {
+    create(args: {
+        jettonBalance: coins
+        ownerAddress: c.Address
+        minterAddress: c.Address
+        jettonWalletCode: c.Cell
+    }): JettonWalletDataReply {
+        return {
+            $: 'JettonWalletDataReply',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): JettonWalletDataReply {
+        return {
+            $: 'JettonWalletDataReply',
+            jettonBalance: s.loadCoins(),
+            ownerAddress: s.loadAddress(),
+            minterAddress: s.loadAddress(),
+            jettonWalletCode: s.loadRef(),
+        }
+    },
+    store(self: JettonWalletDataReply, b: c.Builder): void {
+        b.storeCoins(self.jettonBalance);
+        b.storeAddress(self.ownerAddress);
+        b.storeAddress(self.minterAddress);
+        b.storeRef(self.jettonWalletCode);
+    },
+    toCell(self: JettonWalletDataReply): c.Cell {
+        return makeCellFrom<JettonWalletDataReply>(self, JettonWalletDataReply.store);
+    }
+}
+
+/**
  > struct (0b0) PayloadInline {
  >     value: RemainingBitsAndRefs
  > }
@@ -468,54 +516,6 @@ export const NotifyMinter = {
 }
 
 /**
- > struct JettonWalletDataReply {
- >     jettonBalance: coins
- >     ownerAddress: address
- >     minterAddress: address
- >     jettonWalletCode: cell
- > }
- */
-export interface JettonWalletDataReply {
-    readonly $: 'JettonWalletDataReply'
-    jettonBalance: coins
-    ownerAddress: c.Address
-    minterAddress: c.Address
-    jettonWalletCode: c.Cell
-}
-
-export const JettonWalletDataReply = {
-    create(args: {
-        jettonBalance: coins
-        ownerAddress: c.Address
-        minterAddress: c.Address
-        jettonWalletCode: c.Cell
-    }): JettonWalletDataReply {
-        return {
-            $: 'JettonWalletDataReply',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): JettonWalletDataReply {
-        return {
-            $: 'JettonWalletDataReply',
-            jettonBalance: s.loadCoins(),
-            ownerAddress: s.loadAddress(),
-            minterAddress: s.loadAddress(),
-            jettonWalletCode: s.loadRef(),
-        }
-    },
-    store(self: JettonWalletDataReply, b: c.Builder): void {
-        b.storeCoins(self.jettonBalance);
-        b.storeAddress(self.ownerAddress);
-        b.storeAddress(self.minterAddress);
-        b.storeRef(self.jettonWalletCode);
-    },
-    toCell(self: JettonWalletDataReply): c.Cell {
-        return makeCellFrom<JettonWalletDataReply>(self, JettonWalletDataReply.store);
-    }
-}
-
-/**
  > struct PriWalletStore {
  >     jettonBalance: coins
  >     owner: address
@@ -603,7 +603,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECDgEAA1UAART/APSkE/S88sgLAQIBYgIDAr7Q7aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDtRND6ACD6SPpIMfpIMATXLCC8aijM4w/IWPoCzsntVAQFAgEgDA0C6jUE0z/6ANMKMfpI+lD6APiSUAnHBY5J+JLtRND6ADH6SDH6SPpIMPgqJsjPhCD6UhP6UvpSyXgmVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSt9RY6AmlhBIUHZfBeMNIm6SbCLjDgYHAl7XLCB8U/UsjqPXLCLK+D3kjhcxMwLXLCabkKxkMZEymIQPA8cAE/L04uMNAeMNAQgJAFbIz5HNi0JyJc8LP1AE+gIS+lIWzsnIz4UIF/pSUAT6AnHPC2oVzMmAEfsAAG74J28Q+Jeh+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOE8s/yYEAgvsAAMI1+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBNM/+gD6UDBTQb7yr1FBocjPke92X3oTyz8B+gIV+lIS+lTJyM+FiBP6UnHPC24SzMmAUPsAAf41BNM/+gD6SPpQ9AH6ACD0BAFukTCR0eIj+kQw8tFN+Jf4k3D4OiNyceME+DkgboFNDiLjBCFugShkWAPjBFAjqCWggHCCANuIcPg8oAFw+DagAXD4NqCAcIIA2sCCEAlmAYBw+DegvPKw+JIqxwXy4ElTdL7yr1F0ocgh+gInCgH8zxbJ7VT4kiTHBVNJxwWxjjdbNDQ1+JL4klAExwVYbeMEyM+R73ZfehLLP1AE+gL6UhL6VMnIz4WIEvpScc8LbszJgFD7ANsx4DjtRND6ADH6SDH6SPpIMPgqJcjPhCD6UhP6UvpSyXjIz5BeNRRmGMs/UAb6As+IAEAa+lISCwB4+lQB+gIVzsnIz4mIAVRyc8jPg8sEz4WgzMz5FoT3sAaACyXXJDQTzhTL94EVDc8LeRXMEswTzMmAUPsAACO/2BdqJofQB9JH0kGP0kGHwVQAHb63Z2omh9AH0kfSR9JGjA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDwEAA2IAART/APSkE/S88sgLAQIBYgIDAr7Q7aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDtRND6ACD6SPpIMfpIMATXLCC8aijM4w/IWPoCzsntVAQFAgEgDQ4C6jUE0z/6ANMKMfpI+lD6APiSUAnHBY5J+JLtRND6ADH6SDH6SPpIMPgqJsjPhCD6UhP6UvpSyXgmVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSt9RY6AmlhBIUHZfBeMNIm6SbCLjDgYHAl7XLCB8U/UsjqPXLCLK+D3kjhcxMwLXLCabkKxkMZEymIQPA8cAE/L04uMNAeMNAQgJAFbIz5HNi0JyJc8LP1AE+gIS+lIWzsnIz4UIF/pSUAT6AnHPC2oVzMmAEfsAAG74l/gnbxCi+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOE8s/yYEAgvsAAMI1+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBNM/+gD6UDBTQb7yr1FBocjPke92X3oTyz8B+gIV+lIS+lTJyM+FiBP6UnHPC24SzMmAUPsAAf41BNM/+gD6SPpQ9AH6ACD0BAFukTCR0eIj+kQw8tFN+Jf4k3D4OiNyceME+DkgboFNDiLjBCFugShkWAPjBFAjqCWggHCCANuIcPg8oAFw+DagAXD4NqCAcIIA2sCCEAlmAYBw+DegvPKw+JIqxwXy4ElTdL7yr1F0ocgh+gInCgH+zxbJ7VT4kiTHBVNJxwWxjjdbNDQ1+JL4klAExwVYbeMEyM+R73ZfehLLP1AE+gL6UhL6VMnIz4WIEvpScc8LbszJgFD7ANsx4DjtRND6ADH6SDH6SPpIMPgqJcjPhCD6UhP6UvpSyXgpbrOUOYsICd/Iz5BeNRRmGMs/UAb6AgsBhonPFhr6UhL6VAH6AhXOycjPiYgBVHJzyM+DywTPhaDMzPkWhPewBoALJdckNBPOFMv3gRUNzwt5FcwSzBPMyYBQ+wAMAAMAEAAjv9gXaiaH0AfSR9JBj9JBh8FUAB2+t2dqJofQB9JH0kfSRow=');
 
     static Errors = {
         'Errors.BalanceError': 47,

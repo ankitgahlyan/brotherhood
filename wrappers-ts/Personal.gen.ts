@@ -224,6 +224,85 @@ export const ForwardPayloadRemainder = {
 }
 
 /**
+ > struct JettonDataReply {
+ >     totalSupply: int
+ >     mintable: bool
+ >     adminAddress: address?
+ >     jettonContent: Cell<OnchainMetadataReply>
+ >     jettonWalletCode: cell
+ > }
+ */
+export interface JettonDataReply {
+    readonly $: 'JettonDataReply'
+    totalSupply: bigint
+    mintable: boolean
+    adminAddress: c.Address | null
+    jettonContent: CellRef<OnchainMetadataReply>
+    jettonWalletCode: c.Cell
+}
+
+export const JettonDataReply = {
+    create(args: {
+        totalSupply: bigint
+        mintable: boolean
+        adminAddress: c.Address | null
+        jettonContent: CellRef<OnchainMetadataReply>
+        jettonWalletCode: c.Cell
+    }): JettonDataReply {
+        return {
+            $: 'JettonDataReply',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): JettonDataReply {
+        throw new Error(`Can't unpack 'JettonDataReply' from cell, because 'JettonDataReply.totalSupply' is 'int' (not int32/uint64/etc.)`);
+    },
+    store(self: JettonDataReply, b: c.Builder): void {
+        throw new Error(`Can't pack 'JettonDataReply' to cell, because 'self.totalSupply' is 'int' (not int32/uint64/etc.)`);
+    },
+    toCell(self: JettonDataReply): c.Cell {
+        return makeCellFrom<JettonDataReply>(self, JettonDataReply.store);
+    }
+}
+
+/**
+ > struct (0x00) OnchainMetadataReply {
+ >     contentDict: map<uint256, string_prefixed0x>
+ > }
+ */
+export interface OnchainMetadataReply {
+    readonly $: 'OnchainMetadataReply'
+    contentDict: c.Dictionary<uint256, string_prefixed0x>
+}
+
+export const OnchainMetadataReply = {
+    PREFIX: 0x00,
+
+    create(args: {
+        contentDict: c.Dictionary<uint256, string_prefixed0x>
+    }): OnchainMetadataReply {
+        return {
+            $: 'OnchainMetadataReply',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): OnchainMetadataReply {
+        loadAndCheckPrefix(s, 0x00, 8, 'OnchainMetadataReply');
+        return {
+            $: 'OnchainMetadataReply',
+            contentDict: c.Dictionary.load<uint256, string_prefixed0x>(c.Dictionary.Keys.BigUint(256), createDictionaryValue<string_prefixed0x>(string_prefixed0x.fromSlice, string_prefixed0x.store), s),
+        }
+    },
+    store(self: OnchainMetadataReply, b: c.Builder): void {
+        b.storeUint(0x00, 8);
+        b.storeDict<uint256, string_prefixed0x>(self.contentDict, c.Dictionary.Keys.BigUint(256), createDictionaryValue<string_prefixed0x>(string_prefixed0x.fromSlice, string_prefixed0x.store));
+    },
+    toCell(self: OnchainMetadataReply): c.Cell {
+        return makeCellFrom<OnchainMetadataReply>(self, OnchainMetadataReply.store);
+    }
+}
+
+/**
  > struct (0b0) PayloadInline {
  >     value: RemainingBitsAndRefs
  > }
@@ -480,85 +559,6 @@ export const Payback = {
 }
 
 /**
- > struct JettonDataReply {
- >     totalSupply: int
- >     mintable: bool
- >     adminAddress: address?
- >     jettonContent: Cell<OnchainMetadataReply>
- >     jettonWalletCode: cell
- > }
- */
-export interface JettonDataReply {
-    readonly $: 'JettonDataReply'
-    totalSupply: bigint
-    mintable: boolean
-    adminAddress: c.Address | null
-    jettonContent: CellRef<OnchainMetadataReply>
-    jettonWalletCode: c.Cell
-}
-
-export const JettonDataReply = {
-    create(args: {
-        totalSupply: bigint
-        mintable: boolean
-        adminAddress: c.Address | null
-        jettonContent: CellRef<OnchainMetadataReply>
-        jettonWalletCode: c.Cell
-    }): JettonDataReply {
-        return {
-            $: 'JettonDataReply',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): JettonDataReply {
-        throw new Error(`Can't unpack 'JettonDataReply' from cell, because 'JettonDataReply.totalSupply' is 'int' (not int32/uint64/etc.)`);
-    },
-    store(self: JettonDataReply, b: c.Builder): void {
-        throw new Error(`Can't pack 'JettonDataReply' to cell, because 'self.totalSupply' is 'int' (not int32/uint64/etc.)`);
-    },
-    toCell(self: JettonDataReply): c.Cell {
-        return makeCellFrom<JettonDataReply>(self, JettonDataReply.store);
-    }
-}
-
-/**
- > struct (0x00) OnchainMetadataReply {
- >     contentDict: map<uint256, string_prefixed0x>
- > }
- */
-export interface OnchainMetadataReply {
-    readonly $: 'OnchainMetadataReply'
-    contentDict: c.Dictionary<uint256, string_prefixed0x>
-}
-
-export const OnchainMetadataReply = {
-    PREFIX: 0x00,
-
-    create(args: {
-        contentDict: c.Dictionary<uint256, string_prefixed0x>
-    }): OnchainMetadataReply {
-        return {
-            $: 'OnchainMetadataReply',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): OnchainMetadataReply {
-        loadAndCheckPrefix(s, 0x00, 8, 'OnchainMetadataReply');
-        return {
-            $: 'OnchainMetadataReply',
-            contentDict: c.Dictionary.load<uint256, string_prefixed0x>(c.Dictionary.Keys.BigUint(256), createDictionaryValue<string_prefixed0x>(string_prefixed0x.fromSlice, string_prefixed0x.store), s),
-        }
-    },
-    store(self: OnchainMetadataReply, b: c.Builder): void {
-        b.storeUint(0x00, 8);
-        b.storeDict<uint256, string_prefixed0x>(self.contentDict, c.Dictionary.Keys.BigUint(256), createDictionaryValue<string_prefixed0x>(string_prefixed0x.fromSlice, string_prefixed0x.store));
-    },
-    toCell(self: OnchainMetadataReply): c.Cell {
-        return makeCellFrom<OnchainMetadataReply>(self, OnchainMetadataReply.store);
-    }
-}
-
-/**
  > type string_prefixed0x = string
  */
 export type string_prefixed0x = string
@@ -614,7 +614,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Personal implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEQEAA/wAART/APSkE/S88sgLAQIBYgIDA9bQ+JGOviDXCx+CEP////664wLTHzHXLCC8aijMntcsIAAAAEwxkvIx4PI/4e1E0AHTPzH6ADAB+gACocgB+gLOye1U4CDtRND6APpI+kjU9AUF1ywj3uy+9OMPyFAD+gL6UvpSEsz0AMntVAQFBgIBIA0OAv7XLCf////08r/XTNDtRNAB1ywgAAAATPK/0z/6APpIMAP6ACD6SDH6SNdMUTSgyAH6AhLOye1U+CglyM+EIPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG2LCMjPkF41FGYVyz9QA/oCic8WBwgA5DYF0z/6APpI+lAw+JL4KFM2yM+EIBL6UvpS+lLJeFO0VBMyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSlFioQZukl8Djh/Iz4WIUlD6Us+EEHH6AnnPC4UTyz8B+gL6UsmAUPsA4gMo1ywhY7XLnI8J1ywjIVvoPOMP4w0JCgsAAwAQADYU+lL6VM+EIM7JyM+FCBL6UnHPC27MyYBC+wAB+jb4kiPHBfiSI8cFsfLivAXTPzH6SPoA10wi+kQw8tFNINDXLCC8aijM8rHTPzH6ANMKMfpIMfpQMfoA9AQBbpEwkdHi+JNw+DohcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gToIBwggDbiHD4PKACcPg2EqABcPg2oIBwDAD01ywjKA+apI4QNviSWMcF8uK8BNM/MfpIMI5e1ywmXDFIFJ01NfiSIccF8uK8A9dMjkXXLCEoRrNUjiQ2+JIjxwXy4rwF0wox+kgx9AT0BSBukTCS+wTiIG6RMJLtVOKOFNcsJpuQrGQxkTWYhA8GxwAW8vTi4gPiA+IA4DYF0z/6SNcKAJUgyPpSyZFt4m0i+kQwkTKONzD4KFMkyM+EIBL6UvpS+lLJeFQxkcjPg8sEz4WgzMz5FoT3sBOAC1AE1yTIz4oAQM4Sy/fPUAHi+JLIz4UI+lKCENFzVADPC44Tyz/6VPQAyYBQ+wAAyoIA2sCCEAlmAYBw+DegI7nysBagggiYloBw+wL4KFM0yM+EIBL6UvpS+lLJeCnIz4mIAVRzEsjPg8sEz4WgzMz5FoT3sAeACyTXJDMSzhXL91AD+gKBFQ3PC3UTzMwUzMmAEfsAABu+nW9qJofQB9JH0kGADAICcQ8QAIWtvPaiaH0AGP0kGP0ka6Z8FBHkZ8IQfSkJ/SkJfSlkvCiRZGfB5YJnwtBmZnyLQnvYCUAFqAHrkmRnxQAgZ2X756hAACWvFvaiaH0AfSQY/SRqegK/oYnA');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEAEAA/8AART/APSkE/S88sgLAQIBYgIDA9bQ+JGOviDXCx+CEP////664wLTHzHXLCC8aijMntcsIAAAAEwxkvIx4PI/4e1E0AHTPzH6ADAB+gACocgB+gLOye1U4CDtRND6APpI+kjU9AUF1ywj3uy+9OMPyFAD+gL6UvpSEsz0AMntVAQFBgIBIAwNAf7XLCf////08r/XTNDtRNAB1ywgAAAATPK/0z/6APpIMAP6ACD6SDH6SNdMUTSgyAH6AhLOye1U+CglyM+EIPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG1tIG6zkzCLCN/Iz5BeNRRmFcs/BwDkNgXTP/oA+kj6UDD4kvgoUzbIz4QgEvpS+lL6Usl4U7RUEzLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBKUWKhBm6SXwOOH8jPhYhSUPpSz4QQcfoCec8LhRPLPwH6AvpSyYBQ+wDiAyjXLCFjtcucjwnXLCMhW+g84w/jDQgJCgBGUAP6As+IAEAU+lL6VM+EIM7JyM+FCBL6UnHPC27MyYBC+wAB+jb4kiPHBfiSI8cFsfLivAXTPzH6SPoA10wi+kQw8tFNINDXLCC8aijM8rHTPzH6ANMKMfpIMfpQMfoA9AQBbpEwkdHi+JNw+DohcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gToIBwggDbiHD4PKACcPg2EqABcPg2oIBwCwD01ywjKA+apI4QNviSWMcF8uK8BNM/MfpIMI5e1ywmXDFIFJ01NfiSIccF8uK8A9dMjkXXLCEoRrNUjiQ2+JIjxwXy4rwF0wox+kgx9AT0BSBukTCS+wTiIG6RMJLtVOKOFNcsJpuQrGQxkTWYhA8GxwAW8vTi4gPiA+IA4DYF0z/6SNcKAJUgyPpSyZFt4m0i+kQwkTKONzD4KFMkyM+EIBL6UvpS+lLJeFQxkcjPg8sEz4WgzMz5FoT3sBOAC1AE1yTIz4oAQM4Sy/fPUAHi+JLIz4UI+lKCENFzVADPC44Tyz/6VPQAyYBQ+wAAyoIA2sCCEAlmAYBw+DegI7nysBagggiYloBw+wL4KFM0yM+EIBL6UvpS+lLJeCnIz4mIAVRzEsjPg8sEz4WgzMz5FoT3sAeACyTXJDMSzhXL91AD+gKBFQ3PC3UTzMwUzMmAEfsAABu+nW9qJofQB9JH0kGADAICcQ4PAIWtvPaiaH0AGP0kGP0ka6Z8FBHkZ8IQfSkJ/SkJfSlkvCiRZGfB5YJnwtBmZnyLQnvYCUAFqAHrkmRnxQAgZ2X756hAACWvFvaiaH0AfSQY/SRqegK/oYnA');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
