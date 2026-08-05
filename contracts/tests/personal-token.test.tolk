@@ -44,16 +44,10 @@ fun pointIssuerAtPersonalMinter(
     owner: address,
     personalMinter: address,
 ): SendResultList {
-    return issuer.sendOthersActions(
+    return issuer.sendActSetPersonalJettonMinter(
         owner,
-        0,
-        ton("0.777"),
         personalMinter,
-        owner,
-        null,
-        DEFAULT_FORWARD_TON_AMOUNT,
-        "",
-        { value: ton("0.6") }, // must exceed the > ton("0.5") OthersActions gate
+        { value: ton("0.6") }, // must exceed the > ton("0.5") owner-action gate
     );
 }
 

@@ -1,6 +1,7 @@
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/fossFi/storage"
 import "FossFi.gen"
 import "FossFiWallet.gen"
@@ -54,15 +55,14 @@ fun FossFi.sendMint(
             queryId: 0,
             mintRecipient: recipient,
             tonAmount: totalTonAmount,
-            internalTransferMsg: InternalTransferStep {
-                queryId: 0,
+            internalTransferMsg: makeInternalTransferStep(
+                0,
                 jettonAmount,
-                version: 0,
-                transferInitiator: self.address,
-                sendExcessesTo: self.address,
+                self.address,
+                self.address, // sendExcessesTo
                 forwardTonAmount,
                 forwardPayload,
-            }.toCell(),
+            ),
         },
     });
     return net.send(from, outMessage);

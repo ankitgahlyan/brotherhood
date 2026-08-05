@@ -61,6 +61,16 @@ fun checkCorrectSenderInternal(sender: address, owner: address) {
     }
 }
 
+// shared guard for all owner-initiated "Act*" actions
+fun checkOwnerAction(senderAddress: address, valueCoins: coins, owner: address) {
+    assert (senderAddress == owner) throw Errors.NotOwner;
+    assert (valueCoins > ton("0.5")) throw Errors.NotEnoughGas;
+}
+
+fun checkActionRecipient(recipient: address) {
+    assert (recipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
+}
+
 fun idActionChecks(store: FiWalletStore) {
     val reports = lazy store.maps.load();
     val reportInfo = lazy reports.reportInfo.load();
@@ -123,12 +133,7 @@ fun enterLottery(sender: address, dest: address, amount: coins) {
 }
 
 fun sendExcesses(queryId: uint64, inValue: coins, to: address) {
-    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
-    reserveGramsOnBalance(
-        max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
-        RESERVE_MODE_AT_MOST,
-    );
+    reserveForBalance(inValue);
 
     val outMsg = createMessage({
         bounce: BounceMode.NoBounce,

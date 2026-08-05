@@ -21,14 +21,10 @@ get fun `test wallet: kitchenSink`() {
 
     expect(senderWallet.getJettonBalance()).toEqual(ton("1"));
 
-    val invite = senderWallet.sendOthersActions(
+    val invite = senderWallet.sendActInvite(
         deployer.address,
         0,
-        ton("0.1"),                            // invite
         notDeployer.address,
-        deployer.address,
-        null,
-        DEFAULT_FORWARD_TON_AMOUNT,
         "username@lat,long",
         { value: ton("1") }, // todo: bounce?
     );

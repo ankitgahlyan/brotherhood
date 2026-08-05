@@ -1,6 +1,7 @@
 import "@stdlib/gas-payments"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/common/sharding"
 import "@contracts/common/errors"
 import "@contracts/fossFi/storage"
@@ -57,12 +58,7 @@ fun onInternalMessage(in: InMessage) {
             }
 
             if (msg.sendExcessesTo != null) {
-                val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
-                contract.getStorageDuePayment();
-                reserveToncoinsOnBalance(
-                    max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
-                    RESERVE_MODE_AT_MOST,
-                );
+                reserveForBalance(in.valueCoins);
 
                 val excessesMsg = createMessage({
                     bounce: BounceMode.NoBounce,
@@ -119,15 +115,14 @@ fun onInternalMessage(in: InMessage) {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: autoAddrPriWallet(msg.transferRecipient),
                 value: 0,
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.jettonAmount,
-                    version: 0,
-                    transferInitiator: storage.owner,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    forwardTonAmount: msg.forwardTonAmount,
-                    forwardPayload: msg.forwardPayload,
-                },
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.jettonAmount,
+                    storage.owner,
+                    msg.sendExcessesTo,
+                    msg.forwardTonAmount,
+                    msg.forwardPayload,
+                ),
             });
             deployMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,

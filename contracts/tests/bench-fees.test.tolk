@@ -10,6 +10,7 @@ import "@acton/types/transaction"
 import "@gen/FossFiWallet.code"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/fossFi/storage"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -131,17 +132,15 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     }.toCell();
     val (trCells, trBits, _) = transferBody.calculateSizeStrict(4096);
 
-    val internalTransferBody = InternalTransferStep {
-        queryId: 1,
-        jettonAmount: ton("100"),
-        version: 1,
-        transferredAsCredit: false,
-        transferInitiator: deployer.address,
-        sendExcessesTo: deployer.address,
-        forwardTonAmount: DEFAULT_FORWARD_TON_AMOUNT,
-        forwardPayload: makeRichForwardPayload(),
-    }.toCell();
-    val (inTrCells, inTrBits, _) = internalTransferBody.calculateSizeStrict(4096);
+    val internalTransferBody = makeInternalTransferStep(
+        1,
+        ton("100"),
+        deployer.address,
+        deployer.address, // sendExcessesTo
+        DEFAULT_FORWARD_TON_AMOUNT,
+        makeRichForwardPayload(),
+        1, // version
+    );    val (inTrCells, inTrBits, _) = internalTransferBody.calculateSizeStrict(4096);
 
     val burnBody = AskToBurn {
         queryId: 1,

@@ -4,6 +4,7 @@ import "@acton/testing/expect"
 
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -137,15 +138,14 @@ get fun `test validation: wallet should reject internal transfer from unauthoriz
         bounce: true,
         value: DEFAULT_TRANSFER_MSG_VALUE,
         dest: wallet.address,
-        body: InternalTransferStep {
-            queryId: 0,
-            jettonAmount: ton("0.01"),
-            version: 0,
-            transferInitiator: deployer.address,
-            sendExcessesTo: deployer.address,
-            forwardTonAmount: DEFAULT_FORWARD_TON_AMOUNT,
-            forwardPayload: makeTinyForwardPayload(),
-        },
+        body: makeInternalTransferStep(
+            0,
+            ton("0.01"),
+            deployer.address,
+            deployer.address, // sendExcessesTo
+            DEFAULT_FORWARD_TON_AMOUNT,
+            makeTinyForwardPayload(),
+        ),
     });
     val res = net.send(notDeployer.address, outMessage);
     expect(res).toHaveFailedTx<InternalTransferStep>({

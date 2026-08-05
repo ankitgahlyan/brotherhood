@@ -12,23 +12,11 @@ fun main() {
         "JETTON_TRANSFER_RECIPIENT",
         "Enter transfer recipient",
     );
-    val transferAmount = promptJettonCoins(
-        "JETTON_TRANSFER_AMOUNT",
-        "Enter transfer amount",
-        JETTON_DEFAULT_TRANSFER_AMOUNT,
-    );
 
     val senderWallet = FossFiWallet { address: minter.getWalletAddress(sender) };
-    // val res = senderWallet.sendTransferPayloadInline(
-    val res = senderWallet.sendOthersActions(
+    val res = senderWallet.sendActVote(
         sender,
-        111,
-        transferAmount,
         recipient,
-        sender,
-        null,
-        1,
-        "from_script",
         { value: ton("0.55") },
     );
     res.waitForFirstTransaction();

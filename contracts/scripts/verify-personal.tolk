@@ -40,14 +40,10 @@ fun mintTo(minter: FossFi, from: address, recipient: address, amount: coins): ad
 }
 
 fun activateIssuer(minter: FossFi, inviterWallet: address, inviterOwner: address, issuer: address): address {
-    val invite = FossFiWallet.fromAddress(inviterWallet).sendOthersActions(
+    val invite = FossFiWallet.fromAddress(inviterWallet).sendActInvite(
         inviterOwner,
         0,
-        ton("0.1"),
         issuer,
-        inviterOwner,
-        null,
-        ton("0.05"),
         "user@lat,long",
         { value: ton("1") },
     );
@@ -98,15 +94,9 @@ fun main() {
     net.send(deployer, deployMsg).waitForFirstTransaction();
     println("PERSONAL_MINTER={}", pmAddress);
 
-    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendOthersActions(
+    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendActSetPersonalJettonMinter(
         issuerOwner,
-        0,
-        ton("0.777"),
         pmAddress,
-        issuerOwner,
-        null,
-        ton("0.05"),
-        "",
         { value: ton("0.6") },
     );
     pointRes.waitForFirstTransaction();

@@ -81,7 +81,8 @@ fun onInternalMessage(in: InMessage) {
                     winner,
                 },
             });
-            prizeMsg.send(SEND_MODE_REGULAR | SEND_MODE_IGNORE_ERRORS); // todo:
+            // forward the pot so the minter can mint + deploy the winner's wallet
+            prizeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
 
             // Reset storage for new lottery
             storage.participants = [];

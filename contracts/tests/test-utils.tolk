@@ -11,6 +11,7 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 
@@ -104,14 +105,10 @@ fun activateUser(
     inviterOwner: Treasury,
     invitee: address,
 ): FossFiWallet {
-    val invite = inviterWallet.sendOthersActions(
+    val invite = inviterWallet.sendActInvite(
         inviterOwner.address,
         0,
-        ton("0.1"), // invite
         invitee,
-        inviterOwner.address,
-        null,
-        DEFAULT_FORWARD_TON_AMOUNT,
         "user@lat,long",
         { value: ton("1") },
     );
@@ -195,15 +192,14 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
                 bounce: true,
                 value: ton("0.3"),
                 dest: wallet.address,
-                body: InternalTransferStep {
-                    queryId: 0,
-                    jettonAmount: initialBalance,
-                    version: 0,                       // todo: need fix?
-                    transferInitiator: owner.address, // todo:
-                    sendExcessesTo: null,
-                    forwardTonAmount: 0,
-                    forwardPayload: makeTinyForwardPayload(),
-                },
+                body: makeInternalTransferStep(
+                    0,
+                    initialBalance,
+                    owner.address, // todo:
+                    null,
+                    0,
+                    makeTinyForwardPayload(),
+                ),
             }),
         );
         expect(topUp).toHaveSuccessfulTx<InternalTransferStep>({

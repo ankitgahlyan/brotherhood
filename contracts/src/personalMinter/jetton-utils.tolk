@@ -34,7 +34,7 @@ fun calcDeployPriMinter(
     };
 
     return {
-        workchain: BASECHAIN,
+        workchain: MY_WORKCHAIN,
         stateInit: {
             code: jettonMinterCode,
             data: emptyPriMinterStore.toCell(),

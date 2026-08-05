@@ -2,6 +2,7 @@ import "@stdlib/gas-payments"
 import "@stdlib/tvm-lowlevel"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/common/sharding"
 import "@contracts/common/errors"
 import "@contracts/followers/messages"
@@ -19,7 +20,7 @@ type AllowedMessageToWallet =
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
-    | OthersActions // for future use of new features without upgrade
+    | ActAction // owner-initiated actions (invite, vote, claim, lottery, destroy, ...)
     | Payback
     | RequestState
     | RequestUpgradeCode
@@ -121,219 +122,221 @@ fun onInternalMessage(in: InMessage): void {
             store.id = msg.newId;
         },
 
-        OthersActions => {
-            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
-            // assert (false, 0); // todo what it does?
-            // msg.forwardPayload.checkIsCorrectTLBEither();
+        ActClaimWeeklyGrant => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            // todo: maybe mint all on init?
+            // claim weekly grant
+            val now = blockchain.now();
             assert (
-                msg.transferRecipient.getWorkchain() == MY_WORKCHAIN
-            ) throw Errors.WrongWorkchain;
-            assert(in.valueCoins > ton("0.5"), Errors.NotEnoughGas); // todo : bench and update
+                now > (time.accountInit + ACTIVATION_WAIT)
+            ) throw Errors.WaitMore;                                                   // claim starts after a week
+            assert (
+                // for 2 years, weekly 11,111 tokens can be claimed
+                (now < MAX_CLAIM_PERIOD + time.accountInit) &&
+                (now > ACTIVATION_WAIT + time.lastClaim)
+            ) throw Errors.WaitMore;
 
-            match (msg.jettonAmount) {
-                ton("0.101") => {
-                    // todo: maybe mint all on init?
-                    // claim weekly grant
-                    val now = blockchain.now();
-                    assert (
-                        now > (time.accountInit + ACTIVATION_WAIT)
-                    ) throw Errors.WaitMore;                                                   // claim starts after a week
-                    assert (
-                        // for 2 years, weekly 11,111 tokens can be claimed
-                        (now < MAX_CLAIM_PERIOD + time.accountInit) &&
-                        (now > ACTIVATION_WAIT + time.lastClaim)
-                    ) throw Errors.WaitMore;
+            // todo: votingPower based mint continue after 2 years
+            val claimAmount = WEEKLY_CLAIM_AMOUNT;
 
-                    // todo: votingPower based mint continue after 2 years
-                    val claimAmount = WEEKLY_CLAIM_AMOUNT;
+            store.jettonBalance += claimAmount;
+            time.lastClaim = now;
+            // inform minter about new tokens mint
+            val notifyMinterMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: NotifyMinter {
+                    queryId: msg.queryId, // to inform about MINT
+                    jettonAmount: claimAmount,
+                    burnInitiator: addrs.owner,
+                    sendExcessesTo: msg.sendExcessesTo,
+                },
+            });
+            notifyMinterMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
 
-                    store.jettonBalance += claimAmount;
-                    time.lastClaim = now;
-                    // inform minter about new tokens mint
-                    val notifyMinterMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        dest: trustedAddrs.minterAddr,
-                        value: 0,
-                        body: NotifyMinter {
-                            queryId: msg.queryId, // to inform about MINT
-                            jettonAmount: claimAmount,
-                            burnInitiator: addrs.owner,
-                            sendExcessesTo: msg.sendExcessesTo,
-                        },
-                    });
-                    notifyMinterMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                    );
-                }
+        ActInvite => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            // todo: ensure enough fees sent only in vulnerable msg calls (at sending side)
+            // active, !reported
+            idActionChecks(store);
+            val now = blockchain.now();
+            assert (
+                ((now > (time.lastInvite + INVITE_WAIT)) &
+                (now > (time.accountInit + ACTIVATION_WAIT))) |
+                (in.senderAddress == addrs.treasury)
+            ) throw Errors.WaitMore;                                                                                                                                        // invite every 4 hours, spam protection
+            assert (store.connections < 11) throw Errors.MaxConnections;
+            store.connections += 1;
+            time.lastInvite = now;
+            // todo: need incoming ton value to be 10 for spam protection
+            // assert (in.valueCoins >= ton("10")) throw Errors.InsufficientGasSent;
 
-                ton("0.1") => {
-                    // todo: ensure enough fees sent only in vulnerable msg calls (at sending side)
-                    // active, !reported
-                    idActionChecks(store);
-                    val now = blockchain.now();
-                    assert (
-                        ((now > (time.lastInvite + INVITE_WAIT)) &
-                        (now > (time.accountInit + ACTIVATION_WAIT))) |
-                        (in.senderAddress == addrs.treasury)
-                    ) throw Errors.WaitMore;                                                                                                                                        // invite every 4 hours, spam protection
-                    assert (store.connections < 11) throw Errors.MaxConnections;
-                    store.connections += 1;
-                    time.lastInvite = now;
-                    // todo: need incoming ton value to be 10 for spam protection
-                    // assert (in.valueCoins >= ton("10")) throw Errors.InsufficientGasSent;
+            // jettonAddrs are saved for easy bounceHandling 
+            maps.invited.set(msg.transferRecipient.getAddrFiWallet(), ton("999"));
+            // 1 goes to invitee
+            store.jettonBalance += MBRP_AMOUNT - ton("1");
 
-                    // jettonAddrs are saved for easy bounceHandling 
-                    maps.invited.set(msg.transferRecipient.getAddrFiWallet(), ton("999"));
-                    // 1 goes to invitee
-                    store.jettonBalance += MBRP_AMOUNT - ton("1");
+            val inviteInternal = createMessage({
+                bounce: BounceMode.Only256BitsOfBody, // 
+                dest: calcDeployFiWallet(
+                    msg.transferRecipient,
+                    addrs.treasury,
+                    trustedAddrs.minterAddr,
+                    addrs.baseFiWalletCode,
+                ),
+                // deploy in invite + standalone for idLess accounts
+                value: 0,
+                body: InternalInvite {
+                    queryId: msg.queryId,
+                    version: store.version,
+                    sender: addrs.owner,
+                    invitor: nomins.invitor!, // todo null for dead?
+                    currentWalletCode: contract.getCode(),
+                    currentStorage: null,
+                    id: msg.id,
+                },
+            });
+            inviteInternal.send(
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL |
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
+            );
+        }
 
-                    val inviteInternal = createMessage({
-                        bounce: BounceMode.Only256BitsOfBody, // 
-                        dest: calcDeployFiWallet(
-                            msg.transferRecipient,
-                            addrs.treasury,
-                            trustedAddrs.minterAddr,
-                            addrs.baseFiWalletCode,
-                        ),
-                        // deploy in invite + standalone for idLess accounts
-                        value: 0,
-                        body: InternalInvite {
-                            queryId: msg.queryId,
-                            version: store.version,
-                            sender: addrs.owner,
-                            invitor: nomins.invitor!, // todo null for dead?
-                            currentWalletCode: contract.getCode(),
-                            currentStorage: null,
-                            id: msg.forwardPayload,
-                        },
-                    });
-                    inviteInternal.send(
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL |
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
-                    );
-                }
+        // voting
+        ActVote => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            // check if votingPower exists
+            assert (store.votes != 0) throw Errors.NoVotesAvailable;
+            assert (
+                msg.transferRecipient != in.senderAddress
+            ) throw Errors.IncorrectReceiver;                                                  // no self-voting
+            val candidate = msg.transferRecipient.getAddrFiWallet();
+            store.votes = 0;
+            var social = lazy maps.social.load();
+            social
+                .votedFor
+                .set(
+                    candidate,
+                    10,
+                );                                                                             // store to unVoteLater + total votes sent
+            maps.social = social.toCell();
 
-                // voting
-                ton("0.11") => {
-                    // check if votingPower exists
-                    assert (store.votes != 0) throw Errors.NoVotesAvailable;
-                    assert (
-                        msg.transferRecipient != in.senderAddress
-                    ) throw Errors.IncorrectReceiver;                                                  // no self-voting
-                    val candidate = msg.transferRecipient.getAddrFiWallet();
-                    store.votes = 0;
-                    var social = lazy maps.social.load();
-                    social
-                        .votedFor
-                        .set(
-                            candidate,
-                            10,
-                        );                                                                             // store to unVoteLater + total votes sent
-                    maps.social = social.toCell();
+            val votingMsg = createMessage({
+                bounce: BounceMode.NoBounce, // todo: ok?
+                dest: candidate,
+                value: 0,
+                body: VotingAction {
+                    // positiveVote: true, // default
+                    // count: 10, // default
+                    sender: addrs.owner,
+                },
+            });
+            votingMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
 
-                    val votingMsg = createMessage({
-                        bounce: BounceMode.NoBounce, // todo: ok?
-                        dest: candidate,
-                        value: 0,
-                        body: VotingAction {
-                            // positiveVote: true, // default
-                            // count: 10, // default
-                            sender: addrs.owner,
-                        },
-                    });
-                    votingMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                    );
-                }
+        // claim votes back
+        ActUnvote => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            val candidate = msg.transferRecipient.getAddrFiWallet();
+            var social = lazy maps.social.load();
+            val exists = social.votedFor.deleteAndGetDeleted(candidate);
+            assert (exists.isFound) throw Errors.NotVotedYet;
+            maps.social = social.toCell();
+            store.votes += exists.loadValue();
 
-                // claim votes back
-                ton("0.12") => {
-                    val candidate = msg.transferRecipient.getAddrFiWallet();
-                    var social = lazy maps.social.load();
-                    val exists = social.votedFor.deleteAndGetDeleted(candidate);
-                    assert (exists.isFound) throw Errors.NotVotedYet;
-                    maps.social = social.toCell();
-                    store.votes += exists.loadValue();
+            val votingMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: candidate,
+                value: 0,
+                body: VotingAction {
+                    positiveVote: false,
+                    sender: addrs.owner,
+                },
+            });
+            votingMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
 
-                    val votingMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        dest: candidate,
-                        value: 0,
-                        body: VotingAction {
-                            positiveVote: false,
-                            sender: addrs.owner,
-                        },
-                    });
-                    votingMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                    );
-                }
+        ActDeactivate => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            // just use single for both txn
+            msg
+                .transferRecipient
+                .deActivate(
+                    0,
+                    store,
+                ); // todo fixme when implementing native ui then use jettonAddrs directly
+        }
 
-                ton("0.23") => {
-                    // just use single for both txn
-                    msg
-                        .transferRecipient
-                        .deActivate(
-                            msg.jettonAmount,
-                            store,
-                        ); // todo fixme when implementing native ui then use jettonAddrs directly
-                }
+        ActRequestUpgrade => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            // todo: fixme redundant
+            requestUpgrade(
+                trustedAddrs.minterAddr,
+                addrs.owner,
+                store.version,
+            );
+        }
 
-                ton("0.999") => {
-                    // todo: fixme redundant
-                    requestUpgrade(
-                        trustedAddrs.minterAddr,
-                        addrs.owner,
-                        store.version,
-                    );
-                }
+        ActDispatchAuthorityAction => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            // send AuthorityAction
+            assert (
+                store.isAuthorityAccount || in.senderAddress == addrs.treasury
+            ) throw Errors.IncorrectSender;
 
-                ton("0.404") => {
-                    // send AuthorityAction
-                    assert (
-                        store.isAuthorityAccount || in.senderAddress == addrs.treasury
-                    ) throw Errors.IncorrectSender;
+            val authorityMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.transferRecipient.getAddrFiWallet(),
+                value: 0,
+                body: AuthorityAction { sender: addrs.owner },
+            });
+            authorityMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
 
-                    val authorityMsg = createMessage({
-                        bounce: BounceMode.Only256BitsOfBody,
-                        dest: msg.transferRecipient.getAddrFiWallet(),
-                        value: 0,
-                        body: AuthorityAction { sender: addrs.owner },
-                    });
-                    authorityMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                    );
-                }
+        // todo: implement
+        ActJoinLottery => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            store.jettonBalance -= LOTTERY_ENTRY_AMT; // todo: fixme check all deductions
+            enterLottery(
+                addrs.owner,
+                trustedAddrs.minterAddr,
+                LOTTERY_ENTRY_AMT,
+            );                                        // todo: fixme: use lottery addr
+        }
 
-                // todo: implement
-                ton("0.99") => {
-                    store.jettonBalance -= LOTTERY_ENTRY_AMT; // todo: fixme check all deductions
-                    enterLottery(
-                        addrs.owner,
-                        trustedAddrs.minterAddr,
-                        LOTTERY_ENTRY_AMT,
-                    );                                        // todo: fixme: use lottery addr
-                }
+        // todo: implement
+        ActSetPersonalJettonMinter => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            checkActionRecipient(msg.transferRecipient);
+            if (trustedAddrs.personalJettonMinter == null) {
+                trustedAddrs.personalJettonMinter = msg.transferRecipient;
+            } // else ignore
+        }
 
-                // todo: implement
-                ton("0.777") => {
-                    if (trustedAddrs.personalJettonMinter == null) {
-                        trustedAddrs.personalJettonMinter = msg.transferRecipient;
-                    } // else ignore
-                }
-
-                ton("0.888") => {
-                    // fixme: assert balance is as much as claimed
-                    destroyContract(in.senderAddress);
-                }
-
-                else => {}
-            }
-        },
+        ActDestroyAccount => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            // fixme: assert balance is as much as claimed
+            destroyContract(in.senderAddress);
+        }
 
         InternalTransferStep => {
             checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
@@ -356,24 +359,25 @@ fun onInternalMessage(in: InMessage): void {
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
                     mintRecipient: msg.transferInitiator,
-                    tonAmount: ton("0.1"), // todo: need for deployment
-                    internalTransferMsg: InternalTransferStep {
-                        queryId: msg.queryId,
-                        jettonAmount: msg.jettonAmount,
-                        version: 0,
-                        transferredAsCredit: true,
-                        transferInitiator: msg.transferInitiator, // the buyer
-                        sendExcessesTo: null,
-                        forwardTonAmount: ton("0.0001"),
-                        forwardPayload: beginCell().storeMaybeRef(null).endCell().beginParse(),
-                    }.toCell(),
+                    tonAmount: ton("0.1"),
+                    internalTransferMsg: makeInternalTransferStep(
+                        msg.queryId,
+                        msg.jettonAmount,
+                        msg.transferInitiator, // the buyer
+                        null,                  // sendExcessesTo
+                        ton("0.0001"),
+                        beginCell().storeMaybeRef(null).endCell().beginParse(),
+                        0,   // version
+                        true // transferredAsCredit
+                    ),
                 };
-                createMessage({
+                val mintMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     value: ton("0.1"),
                     dest: trustedAddrs.personalJettonMinter!, // fails if not set
                     body: mintBody.toCell(),
-                }).send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                });
+                mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
             }
 
             notifyOwner(
@@ -417,26 +421,20 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
-            val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
-            contract.getStorageDuePayment();
-            reserveGramsOnBalance(
-                max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
-                RESERVE_MODE_AT_MOST,
-            );
+            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(), // only id accounts allowed
                 value: 0,
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.jettonAmount,
-                    version: store.version,
-                    transferredAsCredit: false, // for now only mint can set this true, can be used for future features like credit system etc.
-                    transferInitiator: addrs.owner,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    forwardTonAmount: msg.forwardTonAmount,
-                    forwardPayload: msg.forwardPayload,
-                },
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.jettonAmount,
+                    addrs.owner,
+                    msg.sendExcessesTo,
+                    msg.forwardTonAmount,
+                    msg.forwardPayload,
+                    store.version,
+                ),
             });
             // safety
             transferMsg.send(
@@ -454,29 +452,24 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
-            val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
-            contract.getStorageDuePayment();
-            reserveGramsOnBalance(
-                max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
-                RESERVE_MODE_AT_MOST,
-            );
+            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(), // issuer's account
                 value: 0,
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.jettonAmount,
-                    version: store.version,
-                    transferredAsCredit: true, // land in the issuer wallet as a loan, triggers its personal-token mint
-                    transferInitiator: addrs.owner,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    forwardTonAmount: 0,
-                    forwardPayload: createEmptySlice(),
-                },
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.jettonAmount,
+                    addrs.owner,
+                    msg.sendExcessesTo,
+                    0,
+                    createEmptySlice(),
+                    store.version,
+                    true, // transferredAsCredit: land in the issuer wallet as a loan, triggers its personal-token mint
+                ),
             });
             transferMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         },
 
@@ -492,15 +485,15 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.sender.getAddrFiWallet(), // only id accounts allowed
                 value: 0,
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.amount,
-                    version: store.version,
-                    transferInitiator: addrs.owner,
-                    sendExcessesTo: null,
-                    forwardTonAmount: 0,
-                    forwardPayload: createEmptySlice(),
-                },
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.amount,
+                    addrs.owner,
+                    null,
+                    0,
+                    createEmptySlice(),
+                    store.version,
+                ),
             });
             // carry the Payback message value so the buyer's wallet can afford the transfer
             transferMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
@@ -574,15 +567,15 @@ fun onInternalMessage(in: InMessage): void {
                     bounce: BounceMode.Only256BitsOfBody,
                     dest: in.senderAddress, // to authority
                     value: 0,
-                    body: InternalTransferStep {
-                        queryId: 0,
-                        jettonAmount: store.jettonBalance,              // all coins
-                        version: store.version,
-                        transferInitiator: addrs.owner,
-                        sendExcessesTo: addrs.owner,
-                        forwardTonAmount: 0,
-                        forwardPayload: "authorityFreeze".beginParse(), // todo
-                    },
+                    body: makeInternalTransferStep(
+                        0,
+                        store.jettonBalance, // all coins
+                        addrs.owner,
+                        addrs.owner,                        // sendExcessesTo
+                        0,
+                        "authorityFreeze".beginParse(),     // todo
+                        store.version,
+                    ),
                 });
                 transferMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
@@ -800,19 +793,18 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.receiver.getAddrFiWallet(),
                 value: 0,
-                body: InternalTransferStep {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.amount,
-                    version: store.version,
-                    transferredAsCredit: false,
-                    transferInitiator: addrs.owner,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    forwardTonAmount: 0,
-                    forwardPayload: createEmptySlice(),
-                },
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.amount,
+                    addrs.owner,
+                    msg.sendExcessesTo,
+                    0,
+                    createEmptySlice(),
+                    store.version,
+                ),
             });
             transferMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         },
 
@@ -822,12 +814,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.goldCoins >= msg.amount) throw Errors.BalanceError;
             store.goldCoins -= msg.amount;
 
-            val toLeaveOnBalance = contract.getOriginalBalance() - in.valueCoins +
-            contract.getStorageDuePayment();
-            reserveGramsOnBalance(
-                max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
-                RESERVE_MODE_AT_MOST,
-            );
+            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.receiver.getAddrFiWallet(),
@@ -839,7 +826,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             transferMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         },
 

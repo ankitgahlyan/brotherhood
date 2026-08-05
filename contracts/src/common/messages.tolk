@@ -1,4 +1,34 @@
+import "@stdlib/strings"
+
 type ForwardPayloadRemainder = RemainingBitsAndRefs
+
+// Jetton replies (shared by the FossFi and Personal Token minters/wallets)
+struct JettonWalletDataReply {
+    jettonBalance: coins
+    ownerAddress: address
+    minterAddress: address
+    jettonWalletCode: cell
+}
+
+struct JettonDataReply {
+    totalSupply: int
+    mintable: bool
+    adminAddress: address?
+    jettonContent: Cell<OnchainMetadataReply>
+    jettonWalletCode: cell
+}
+
+// struct (0x00) OnchainMetadataReply {
+//     contentDict: map<uint256, Cell<SnakeDataReply>>
+// }
+
+struct (0x00) SnakeDataReply {
+    string: string
+}
+
+struct (0x00) OnchainMetadataReply {
+    contentDict: map<uint256, string_prefixed0x>
+}
 
 struct (0b0) PayloadInline {
     value: RemainingBitsAndRefs
@@ -190,16 +220,54 @@ struct (0x00000015) CustomPayloadMsg {
     queryId: uint64
 }
 
-struct (0x00000016) OthersActions {
+struct (0x00000020) ActInvite {
     queryId: uint64
-    jettonAmount: coins
     transferRecipient: address
-    sendExcessesTo: address?
-    customPayload: cell?
-    forwardTonAmount: coins
-    // @abi.clientType(PayloadInline | PayloadInRef)
-    forwardPayload: string
+    id: string
 }
+
+struct (0x00000021) ActClaimWeeklyGrant {
+    queryId: uint64
+    sendExcessesTo: address?
+}
+
+struct (0x00000022) ActVote {
+    transferRecipient: address
+}
+
+struct (0x00000023) ActUnvote {
+    transferRecipient: address
+}
+
+struct (0x00000024) ActDeactivate {
+    transferRecipient: address
+}
+
+struct (0x00000025) ActRequestUpgrade {}
+
+struct (0x00000026) ActDispatchAuthorityAction {
+    transferRecipient: address
+}
+
+struct (0x00000027) ActJoinLottery {}
+
+struct (0x00000028) ActSetPersonalJettonMinter {
+    transferRecipient: address
+}
+
+struct (0x00000029) ActDestroyAccount {}
+
+type ActAction =
+    | ActClaimWeeklyGrant
+    | ActInvite
+    | ActVote
+    | ActUnvote
+    | ActDeactivate
+    | ActRequestUpgrade
+    | ActDispatchAuthorityAction
+    | ActJoinLottery
+    | ActSetPersonalJettonMinter
+    | ActDestroyAccount
 
 struct (0x00000017) ChangeId {
     newId: string

@@ -1,5 +1,4 @@
 import "@contracts/common/messages"
-import "@stdlib/strings"
 
 struct NomInAddrs {
     nominee: address? = null
@@ -116,31 +115,4 @@ fun FiWalletStore.load(): FiWalletStore {
 
 fun FiWalletStore.save(self): void {
     contract.setData(self.toCell());
-}
-
-struct JettonWalletDataReply {
-    jettonBalance: coins
-    ownerAddress: address
-    minterAddress: address
-    jettonWalletCode: cell
-}
-
-struct JettonDataReply {
-    totalSupply: int
-    mintable: bool
-    adminAddress: address?
-    jettonContent: Cell<OnchainMetadataReply>
-    jettonWalletCode: cell
-}
-
-// struct (0x00) OnchainMetadataReply {
-//     contentDict: map<uint256, Cell<SnakeDataReply>>
-// }
-
-struct (0x00) SnakeDataReply {
-    string: string
-}
-
-struct (0x00) OnchainMetadataReply {
-    contentDict: map<uint256, string_prefixed0x>
 }

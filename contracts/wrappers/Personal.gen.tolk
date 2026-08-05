@@ -6,7 +6,7 @@
 import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/testing/assert"
-import "@contracts/fossFi/storage"
+import "@contracts/common/messages"
 import "@contracts/personalMinter/personal"
 
 struct Personal {

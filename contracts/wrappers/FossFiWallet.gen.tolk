@@ -227,31 +227,148 @@ fun FossFiWallet.sendInternalDeActivate(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendOthersActions(
+fun FossFiWallet.sendActClaimWeeklyGrant(
     self,
     from: address,
     queryId: uint64,
-    jettonAmount: coins,
-    transferRecipient: address,
     sendExcessesTo: address?,
-    customPayload: cell?,
-    forwardTonAmount: coins,
-    forwardPayload: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: OthersActions {
-            queryId,
-            jettonAmount,
-            transferRecipient,
-            sendExcessesTo,
-            customPayload,
-            forwardTonAmount,
-            forwardPayload,
-        },
+        body: ActClaimWeeklyGrant { queryId, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActInvite(
+    self,
+    from: address,
+    queryId: uint64,
+    transferRecipient: address,
+    id: string,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActInvite { queryId, transferRecipient, id },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActVote(
+    self,
+    from: address,
+    transferRecipient: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActVote { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActUnvote(
+    self,
+    from: address,
+    transferRecipient: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActUnvote { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActDeactivate(
+    self,
+    from: address,
+    transferRecipient: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActDeactivate { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActRequestUpgrade(
+    self,
+    from: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActRequestUpgrade {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActDispatchAuthorityAction(
+    self,
+    from: address,
+    transferRecipient: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActDispatchAuthorityAction { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActJoinLottery(self, from: address, config: SendParams = {}): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActJoinLottery {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActSetPersonalJettonMinter(
+    self,
+    from: address,
+    transferRecipient: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActSetPersonalJettonMinter { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActDestroyAccount(
+    self,
+    from: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActDestroyAccount {},
     });
     return net.send(from, genericMsg);
 }

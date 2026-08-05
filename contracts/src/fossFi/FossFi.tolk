@@ -1,5 +1,6 @@
 import "@stdlib/tvm-lowlevel"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/common/sharding"
 import "@contracts/common/errors"
 import "@contracts/fossFi/consts"
@@ -291,8 +292,33 @@ fun onInternalMessage(in: InMessage): void {
                     others.lotteryCode!,
                 ).calculateAddress()
             ) throw Errors.IncorrectSender;
-            // todo:
-            // send using InternalTransfer/Mint
+
+            // mint the prize to the winner (mirrors MintNewJettons)
+            store.totalSupply += msg.amt;
+
+            reserveGramsOnBalance(
+                ton("0.01"),
+                RESERVE_MODE_EXACT_AMOUNT,
+            );
+
+            val jettonWalletCode = fossFiWalletCompiledCode();
+            val deployMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: calcDeployFiWallet(
+                    msg.winner,
+                    store.adminAddress,
+                    contract.getAddress(),
+                    jettonWalletCode,
+                ),
+                value: in.valueCoins, // lottery forwards its pot to fund the mint
+                body: makeInternalTransferStep(
+                    0,               // queryId
+                    msg.amt,         // jettonAmount
+                    contract.getAddress(), // transferInitiator (minter mints)
+                    contract.getAddress(), // sendExcessesTo
+                ),
+            });
+            deployMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
 
         HotUpgrade => {

@@ -66,16 +66,10 @@ fun main() {
     val deployRes = net.send(deployer.address, deployMsg);
     deployRes.waitForFirstTransaction();
 
-    // point the issuer's FI wallet at the Personal Token minter (ton("0.777") signal)
-    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendOthersActions(
+    // point the issuer's FI wallet at the Personal Token minter (ActSetPersonalJettonMinter signal)
+    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendActSetPersonalJettonMinter(
         issuerOwner,
-        0,
-        ton("0.777"),
         pmAddress,
-        issuerOwner,
-        null,
-        ton("0.05"),
-        "",
         { value: ton("0.6") },
     );
     pointRes.waitForFirstTransaction();

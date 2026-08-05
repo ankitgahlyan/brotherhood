@@ -1,5 +1,6 @@
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@contracts/common/sharding"
 import "@contracts/common/errors"
 import "@contracts/fossFi/storage"
@@ -41,16 +42,11 @@ fun onBouncedMessage(in: InMessageBounced) {
                 contract.getAddress(),
                 store.jettonWalletCode,
             ),
-            body: InternalTransferStep {
-                queryId: payback.queryId,
-                jettonAmount: payback.amount,
-                version: 0,
-                transferredAsCredit: false,
-                transferInitiator: payback.sender, // or deployer or minter
-                sendExcessesTo: null,
-                forwardTonAmount: 0,
-                forwardPayload: createEmptySlice(),
-            },
+            body: makeInternalTransferStep(
+                payback.queryId,
+                payback.amount,
+                payback.sender, // or deployer or minter
+            ),
         }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
     } else {
         // process only mint bounces; on other messages, an exception will be thrown, it's okay

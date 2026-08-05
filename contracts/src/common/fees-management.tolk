@@ -40,6 +40,19 @@ fun calculateJettonWalletMinStorageFee(): coins {
     );
 }
 
+// Reserves TON on the balance so that after an outgoing message forwards `inValue`,
+// the contract still keeps enough to cover its storage; unifies the inline
+// reserveGramsOnBalance(..., RESERVE_MODE_AT_MOST) pattern used across the
+// minter and wallet transfer handlers.
+fun reserveForBalance(inValue: coins): void {
+    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
+        contract.getStorageDuePayment();
+    reserveGramsOnBalance(
+        max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
+        RESERVE_MODE_AT_MOST,
+    );
+}
+
 fun forwardInitStateOverhead(): coins {
     return calculateForwardFeeWithoutLumpPrice(
         MY_WORKCHAIN,

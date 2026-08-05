@@ -4,6 +4,7 @@ import "@acton/testing/expect"
 import "@acton/types/message"
 
 import "@contracts/common/messages"
+import "@contracts/common/internal-transfer"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -24,15 +25,14 @@ get fun `test bounce: minter restores supply on internal_transfer bounce`() {
             queryId: 0,
             mintRecipient: deployer.address,
             tonAmount: ton("0.3"),
-            internalTransferMsg: InternalTransferStep {
-                queryId: 0,
-                jettonAmount: mintAmount,
-                version: 0,
-                transferInitiator: minter.address,
-                sendExcessesTo: minter.address,
-                forwardTonAmount: ton("0.05"),
+            internalTransferMsg: makeInternalTransferStep(
+                0,
+                mintAmount,
+                minter.address,
+                minter.address, // sendExcessesTo
+                ton("0.05"),
                 forwardPayload,
-            }.toCell(),
+            ),
         },
     });
 
