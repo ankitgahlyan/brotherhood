@@ -18,6 +18,8 @@ import {
   BuyCredit,
   Destroy,
   OthersActions,
+  SetAllowance,
+  SpendAllowance,
 } from '@wrappers/FossFiWallet.gen';
 import { Personal } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
@@ -311,4 +313,25 @@ export function buildApproveUpgradeBody(): Cell {
 
 export function buildRejectUpgradeBody(): Cell {
   return RejectUpgrade.toCell(RejectUpgrade.create());
+}
+
+export function buildSetAllowanceBody(params: {
+  grantee: Address;
+  amount: bigint;
+  queryId?: bigint;
+}): Cell {
+  const { grantee, amount, queryId = 0n } = params;
+  return SetAllowance.toCell(SetAllowance.create({ queryId, grantee, amount }));
+}
+
+export function buildSpendAllowanceBody(params: {
+  amount: bigint;
+  receiver: Address;
+  sendExcessesTo: Address;
+  queryId?: bigint;
+}): Cell {
+  const { amount, receiver, sendExcessesTo, queryId = 0n } = params;
+  return SpendAllowance.toCell(
+    SpendAllowance.create({ queryId, amount, receiver, sendExcessesTo }),
+  );
 }

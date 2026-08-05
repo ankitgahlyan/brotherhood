@@ -213,6 +213,24 @@ export async function getFiWalletState(owner: Address) {
     .getWalletDataAll();
 }
 
+export interface AllowanceEntry {
+  grantee: Address;
+  amount: bigint;
+}
+
+// The allowances a wallet has granted, as a stable array (sorted by address).
+export function listAllowances(state: {
+  maps: {
+    ref: { allowances: import('@ton/core').Dictionary<Address, bigint> };
+  };
+}): AllowanceEntry[] {
+  const entries = state.maps.ref.allowances;
+  return entries
+    .keys()
+    .map((grantee) => ({ grantee, amount: entries.get(grantee)! }))
+    .sort((a, b) => a.grantee.toString().localeCompare(b.grantee.toString()));
+}
+
 export async function getCircle(invitedList: Address[]) {
   const client = getTonClient('testnet');
   const promises = invitedList.map((addr) =>
