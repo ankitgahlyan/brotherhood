@@ -1,4 +1,3 @@
-import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -266,7 +265,7 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
 
 get fun `test shard: wallet address should keep owner shard prefix in get/discovery/transfer`() {
     val (minter, deployer, _) = setupTest();
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("100"));
+    val _senderWallet = mintTo(minter, deployer, deployer.address, ton("100"));
 
     var prefix = 0;
     while (prefix < 32) {

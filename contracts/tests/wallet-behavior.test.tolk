@@ -73,7 +73,7 @@ get fun `test wallet: kitchenSink`() {
     val minterDataAll = minter.getJettonDataAll();
     expect(minterDataAll.currentRequest!.newUpgrade.walletUpgrade).toBeTrue();
 
-    val time = testing.getNow();
+    val _time = testing.getNow();
     // testing.setNow(time + 1000); // 1000 seconds from now
 
     // val approveReq = minter.sendApproveUpgrade(deployer.address);

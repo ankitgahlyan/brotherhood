@@ -1,4 +1,5 @@
 import "@stdlib/strings"
+import "@acton/build"
 import "@acton/env"
 import "@acton/fmt"
 import "@acton/io"
@@ -8,6 +9,7 @@ import "@acton/emulation/scripts"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
+import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
 
 const FI_ADDRESS = "kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT"
@@ -48,12 +50,12 @@ fun promptJettonString(envName: string, message: string, default: string): strin
     return prompt(message, "", default);
 }
 
-fun promptJettonAddress(envName: string, message: string, default: address): address {
+fun promptJettonAddress(envName: string, message: string): address {
     val fromEnv = env<address>(envName);
     if (fromEnv != null) {
         return fromEnv;
     }
-    return parseAddress(prompt(message, "", format("{}", default)));
+    return parseAddress(prompt(message, "", format("{}")));
 }
 
 fun promptJettonAddressRequired(envName: string, message: string): address {
@@ -125,7 +127,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         adminAddress: admin,
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
-            lotteryCode: null,
+            lotteryCode: build("Lottery"),
             latestFiWalletCode: null,
             c: null,
             d: null,

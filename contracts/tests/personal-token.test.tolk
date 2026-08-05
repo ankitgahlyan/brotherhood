@@ -2,7 +2,6 @@ import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
-import "@acton/types/transaction"
 
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -12,8 +11,6 @@ import "@wrappers/utils"
 import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
-import "@contracts/fossFi/consts"
-import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
 
 import "test-utils"
@@ -81,7 +78,7 @@ fun setupPersonalScenario(): (FossFi, Treasury, Treasury, FossFiWallet, FossFiWa
 }
 
 get fun `test personal token: buying moves buyer FI to issuer and mints the Personal Token`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     val buyerFiBefore = buyerWallet.getJettonBalance();
@@ -110,7 +107,7 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
 }
 
 get fun `test personal token: cannot buy more FI than the buyer holds`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, _issuerWallet, _pm) = setupPersonalScenario();
 
     val res = buyerWallet.sendBuyCredit(
         deployer.address,
@@ -128,7 +125,7 @@ get fun `test personal token: cannot buy more FI than the buyer holds`() {
 }
 
 get fun `test personal token: lending leaves balances and supply stable while held`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -171,7 +168,7 @@ fun sendPayback(
 }
 
 get fun `test personal token: payback burns the loan and returns FI to the buyer`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -202,7 +199,7 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
 }
 
 get fun `test personal token: partial payback returns FI for the repaid amount only`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -233,7 +230,7 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
 }
 
 get fun `test personal token: cannot pay back more than the buyer holds`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, _issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -260,7 +257,7 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
 }
 
 get fun `test personal token: payback unwinds when the issuer cannot cover the loan`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -316,7 +313,7 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
 }
 
 get fun `test personal token: payback succeeds when the issuer holds exactly the loan`() {
-    val (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(

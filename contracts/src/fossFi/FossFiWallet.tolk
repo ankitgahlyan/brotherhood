@@ -1,4 +1,3 @@
-import "@stdlib/gas-payments"
 import "@stdlib/tvm-lowlevel"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"

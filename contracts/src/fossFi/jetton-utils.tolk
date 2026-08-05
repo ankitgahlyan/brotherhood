@@ -1,4 +1,3 @@
-import "@stdlib/gas-payments"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"

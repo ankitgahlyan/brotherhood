@@ -5,9 +5,7 @@ import "@acton/tlb/either"
 import "@acton/tlb/maybe"
 import "@acton/types/transaction"
 
-import "@contracts/common/fees-management"
 import "@contracts/common/messages"
-import "@contracts/fossFi/storage"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -57,7 +55,7 @@ get fun `test state: wallet storage and init-state bounds should match fee const
     if (state == null) {
         return;
     }
-    val (accountCells, accountBits, _) = state!.toCell().calculateSizeStrict(4096);
+    val (accountCells, accountBits, _) = state.toCell().calculateSizeStrict(4096);
     expect(accountBits).toBeGreater(0);
     expect(accountCells).toBeGreater(0);
 
