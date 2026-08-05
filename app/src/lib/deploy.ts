@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, toNano } from '@ton/core';
+import { Address, beginCell, Cell, storeStateInit, toNano } from '@ton/core';
 import {
   FossFi,
   MintNewJettons,
@@ -19,6 +19,8 @@ import {
   Destroy,
   OthersActions,
 } from '@wrappers/FossFiWallet.gen';
+import { Personal } from '@wrappers/Personal.gen';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import { buildOnchainMetadata, type JettonMetadata } from './jettonContent';
 
 export function parseUnits(amount: string, decimals: number): bigint {
@@ -106,6 +108,57 @@ export async function buildChangeContentBody(
   const content = await buildOnchainMetadata(metadata);
   return ChangeMinterMetadata.toCell(
     ChangeMinterMetadata.create({ queryId, newMetadata: content }),
+  );
+}
+
+// Deploy a Personal Token minter backed by the issuer's FI wallet.
+// PriStore layout: totalSupply (coins), fiJettonAddress, adminAddress,
+// jettonWalletCode (cell -> ref), metadataUri (cell? -> maybeRef).
+export async function buildPersonalMinterDeploy(params: {
+  issuerWallet: Address;
+  adminAddress: Address;
+  metadata: JettonMetadata;
+}) {
+  const content = await buildOnchainMetadata(params.metadata);
+
+  const data = beginCell()
+    .storeCoins(0n)
+    .storeAddress(params.issuerWallet)
+    .storeAddress(params.adminAddress)
+    .storeRef(PersonalWallet.CodeCell)
+    .storeMaybeRef(content)
+    .endCell();
+
+  const stateInit = {
+    code: Personal.CodeCell,
+    data,
+  };
+  const contractAddress = new Address(
+    0,
+    beginCell().store(storeStateInit(stateInit)).endCell().hash(),
+  );
+
+  return { contractAddress, stateInit };
+}
+
+// The ton("0.777") OthersActions signal that points the issuer's FI wallet
+// at its Personal Token minter.
+export function buildPointPersonalMinterBody(params: {
+  personalMinter: Address;
+  sendExcessesTo: Address;
+  queryId?: bigint;
+}): Cell {
+  const { personalMinter, sendExcessesTo, queryId = 0n } = params;
+  return OthersActions.toCell(
+    OthersActions.create({
+      queryId,
+      jettonAmount: toNano('0.777'),
+      transferRecipient: personalMinter,
+      sendExcessesTo,
+      customPayload: null,
+      forwardTonAmount: 0n,
+      forwardPayload: '',
+    }),
   );
 }
 
