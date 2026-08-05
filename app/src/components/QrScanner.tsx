@@ -140,7 +140,7 @@ export const QrScanner: FC<QrScannerProps> = ({
       {/* <!-- QR Scanner Overlay --> */}
       {isVisible && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
           onClick={(e) => {
             e.stopPropagation();
             // close when clicking outside inner container
@@ -150,37 +150,48 @@ export const QrScanner: FC<QrScannerProps> = ({
           }}
         >
           <div
-            className="relative w-full max-w-sm"
+            className="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-2xl page-enter"
             onClick={(e) => {
               e.stopPropagation(); // prevent clicks inside from reaching page
             }}
           >
             <div className="space-y-4">
-              <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    stopQRScanner();
-                  }}
-                  className="text-white"
-                >
-                  Close
-                </button>
-                {cameras.length > 1 && (
+              <div className="flex items-center justify-between">
+                <div className="font-display text-sm font-semibold">
+                  Scan QR code
+                </div>
+                <div className="flex items-center gap-2">
+                  {cameras.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        flipCamera();
+                      }}
+                      className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent"
+                    >
+                      Flip Camera
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      flipCamera();
+                      stopQRScanner();
                     }}
-                    className="text-white"
+                    className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent"
                   >
-                    Flip Camera
+                    Close
                   </button>
-                )}
+                </div>
               </div>
-              <div id="qr" className="w-full h-full rounded-lg"></div>
+              <div className="rounded-xl bg-black p-1.5">
+                <div
+                  id="qr"
+                  className="w-full h-full rounded-lg"
+                  style={{ filter: 'invert(1)' }}
+                />
+              </div>
             </div>
           </div>
         </div>

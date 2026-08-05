@@ -26,20 +26,22 @@ function InputScan({
   );
 
   return (
-    <div className="flex">
+    <div className="flex items-center gap-2">
       <Input
         type="text"
         placeholder="EQA..."
         value={toAddr}
         onChange={(e) => setToAddr(e.target.value)}
         // disabled={loading}
+        className="flex-1"
       />
       <button
         type="button"
         onClick={() => setIsScannerVisible(true)}
-        className={'p-1'}
+        aria-label="Scan QR code"
+        className="shrink-0 size-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center transition-colors hover:bg-accent active:scale-95"
       >
-        <QrCode />
+        <QrCode className="size-4.5" />
       </button>
       <QrScanner
         isVisible={isScannerVisible}

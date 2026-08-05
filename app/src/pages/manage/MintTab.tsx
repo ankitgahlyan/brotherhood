@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Coins } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 
 export function MintTab({
@@ -35,8 +36,10 @@ export function MintTab({
 }) {
   const [toAddr, setToAddr] = useState('');
   const [amount, setAmount] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!isConnected) return <WalletRequired />;
   if (!isAdmin) return <AdminRequired />;
@@ -109,6 +112,7 @@ export function MintTab({
         />
       </div>
       <Button
+        variant="brand"
         className="w-full h-12 rounded-full text-[15px] font-bold"
         disabled={loading}
       >
@@ -117,7 +121,10 @@ export function MintTab({
             <span className="spinner" /> Minting...
           </>
         ) : (
-          'Mint Tokens'
+          <>
+            <Coins className="size-4" />
+            Mint Tokens
+          </>
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}

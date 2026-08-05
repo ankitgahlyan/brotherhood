@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useTonConnectUI, TonConnectButton } from '@tonconnect/ui-react';
 import { THEME } from '@tonconnect/ui-react';
-import { Gem, Sun, Moon } from 'lucide-react';
+import { Diamond, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ManagePage } from './pages/ManagePage';
 
@@ -41,20 +41,24 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
       <div className="min-h-full flex flex-col">
+        <div className="grid-background" aria-hidden="true" />
         <header
-          className="flex items-center justify-between px-7 h-15 border-b sticky top-0 z-50 max-sm:px-4 max-sm:h-auto max-sm:flex-wrap max-sm:gap-2.5 max-sm:py-3"
+          className="glass flex items-center justify-between px-7 h-15 border-b sticky top-0 z-50 max-sm:px-4 max-sm:h-auto max-sm:flex-wrap max-sm:gap-2.5 max-sm:py-3"
           style={{
-            background: theme === 'light' ? '#fff' : '#08080A',
             borderBottomColor:
-              theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+              theme === 'light'
+                ? 'rgba(0,0,0,0.08)'
+                : 'rgba(255,255,255,0.08)',
           }}
         >
           <div className="flex items-center gap-6 max-sm:gap-2.5 max-sm:w-full max-sm:justify-between">
-            <div className="flex items-center gap-2.5 text-[17px] font-bold max-sm:text-[15px]">
-              <div className="w-8 h-8 bg-[#0098EA] rounded-[9px] flex items-center justify-center text-white max-sm:w-7 max-sm:h-7 max-sm:rounded-[7px]">
-                <Gem className="size-4 max-sm:size-3.5" />
+            <div className="flex items-center gap-2.5 text-[17px] font-bold max-sm:text-[15px] font-display">
+              <div className="w-8 h-8 bg-brand-gradient rounded-[9px] flex items-center justify-center text-white shadow-[0_4px_14px_-4px_rgba(229,77,94,0.6)] max-sm:w-7 max-sm:h-7 max-sm:rounded-[7px]">
+                <Diamond className="size-4 max-sm:size-3.5" />
               </div>
-              BrotherHood
+              <span>
+                Brother<span className="text-gradient">Hood</span>
+              </span>
             </div>
             {/* <nav
               className="flex gap-0.5 p-0.75 h-10 rounded-full items-center max-sm:h-9"
@@ -92,11 +96,7 @@ export default function App() {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full size-10 max-sm:size-9"
-              style={{
-                background: theme === 'light' ? '#F0F1F3' : '#19191B',
-                color: theme === 'light' ? 'var(--foreground)' : '#fff',
-              }}
+              className="rounded-full size-10 max-sm:size-9 bg-secondary"
               onClick={toggle}
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
             >
@@ -116,7 +116,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 max-w-240 w-full mx-auto px-6 pt-9 pb-15 max-sm:px-4 max-sm:pt-6 max-sm:pb-12">
+        <main className="flex-1 max-w-240 w-full mx-auto px-6 pt-9 pb-15 max-sm:px-4 max-sm:pt-6 max-sm:pb-12 page-enter">
           {/* {page === 'create' ? (
             <DeployPage network={network} />
           ) : ( */}

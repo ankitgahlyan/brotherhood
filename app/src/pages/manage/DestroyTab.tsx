@@ -4,6 +4,7 @@ import { buildDestroyBody } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import { WalletRequired, type Network } from './common';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusAlert } from '../DeployPage';
 
@@ -16,8 +17,10 @@ export function DestroyTab({
   tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
 }) {
-  const { sendTransaction, loading, status } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!ownerAddress) return <WalletRequired />;
   const owner = ownerAddress;
@@ -47,6 +50,7 @@ export function DestroyTab({
   return (
     <div className="space-y-4.5">
       <Button
+        variant="brand"
         className="h-12 rounded-full text-[15px] font-bold"
         disabled={loading}
         onClick={() => sendDestroy()}
@@ -56,7 +60,10 @@ export function DestroyTab({
             <span className="spinner" /> Sending Txn...
           </>
         ) : (
-          'Destroy Account'
+          <>
+            <Trash2 className="size-4" />
+            Destroy Account
+          </>
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}

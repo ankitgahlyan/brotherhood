@@ -1,10 +1,29 @@
 import { useMemo, useState } from 'react';
 import { Address, fromNano } from '@ton/core';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
-import { Search, AlertCircle, Wallet, Lock } from 'lucide-react';
+import {
+  Search,
+  AlertCircle,
+  Wallet,
+  Lock,
+  Send,
+  Sparkles,
+  CreditCard,
+  Flame,
+  UserPlus,
+  KeyRound,
+  Vote,
+  Ban,
+  Shield,
+  type LucideIcon,
+} from 'lucide-react';
 import { getErrorMessage } from '../../lib/errors';
 import { network, FI_ADDRESS } from '@/lib/config';
-import { useJettonMaster, useFiWalletState, useCircle } from '../../lib/queries';
+import {
+  useJettonMaster,
+  useFiWalletState,
+  useCircle,
+} from '../../lib/queries';
 import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -12,7 +31,6 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PreviewRow, NetworkBadge } from '../DeployPage';
-import { useTheme } from '../../App';
 import {
   AddressLink,
   EmptyState,
@@ -41,6 +59,18 @@ type ManageTab =
   | 'allowance';
 // type ManageAdminTab = 'mint' | 'upgrade';
 
+const TAB_ICONS: Record<ManageTab, LucideIcon> = {
+  transfer: Send,
+  burn: Flame,
+  credit: CreditCard,
+  admin: Shield,
+  invite: UserPlus,
+  vote: Vote,
+  destroy: Ban,
+  issue: Sparkles,
+  allowance: KeyRound,
+};
+
 export function ManagePage() {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
@@ -61,8 +91,7 @@ export function ManagePage() {
 
   const jettonInfo: JettonInfo | null = jettonInfoQuery.data ?? null;
   const fiWalletState: FiWalletStore | null = fiWalletStateQuery.data ?? null;
-  const circleFiWalletState: FiWalletStore[] | null =
-    circleQuery.data ?? null;
+  const circleFiWalletState: FiWalletStore[] | null = circleQuery.data ?? null;
   const loading =
     jettonInfoQuery.isLoading ||
     fiWalletStateQuery.isLoading ||
@@ -78,7 +107,6 @@ export function ManagePage() {
   const [tab, setTab] = useState<ManageTab>('vote');
 
   const isConnected = !!wallet;
-  const { theme } = useTheme();
 
   const isAdmin =
     jettonInfo && ownerAddress && jettonInfo.adminAddress
@@ -98,7 +126,16 @@ export function ManagePage() {
         'vote',
         'destroy',
       ]
-    : ['issue', 'credit', 'allowance', 'invite', 'vote', 'transfer', 'burn'];
+    : [
+        'issue',
+        'credit',
+        'allowance',
+        'invite',
+        'vote',
+        'transfer',
+        'burn',
+        'destroy',
+      ];
 
   function formatAmount(amount: bigint): string {
     const divisor = 10n ** BigInt(decimals);
@@ -124,21 +161,20 @@ export function ManagePage() {
                   setTab(v as ManageTab);
                 }}
               >
-                <TabsList
-                  className="w-full h-10 rounded-full p-0.75"
-                  style={{
-                    background: theme === 'light' ? '#F0F1F3' : '#222224',
-                  }}
-                >
-                  {visibleTabs.map((t) => (
-                    <TabsTrigger
-                      key={t}
-                      value={t}
-                      className="flex-1 h-8.5 rounded-full text-[13px] font-bold uppercase tracking-wider text-[#9a9a9f] hover:text-foreground data-[state=active]:bg-[#0098EA] data-[state=active]:text-white"
-                    >
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </TabsTrigger>
-                  ))}
+                <TabsList className="w-full h-10 rounded-full p-0.75 gap-0.5 overflow-x-auto snap-x snap-mandatory max-md:justify-start max-md:flex-nowrap max-md:scrollbar-none">
+                  {visibleTabs.map((t) => {
+                    const Icon = TAB_ICONS[t];
+                    return (
+                      <TabsTrigger
+                        key={t}
+                        value={t}
+                        className="flex-1 h-8.5 rounded-full text-[13px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground data-[state=active]:bg-brand-gradient data-[state=active]:text-white data-[state=active]:shadow-[0_4px_14px_-4px_rgba(229,77,94,0.6)] max-md:flex-none max-md:min-w-fit max-md:px-4 max-md:snap-start"
+                      >
+                        <Icon className="size-4 max-md:hidden" />
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
                 <TabsContent value="transfer" className="mt-5">
                   <TransferTab
@@ -251,14 +287,14 @@ export function ManagePage() {
           <Card className="sticky top-20 max-md:static">
             <CardContent className="space-y-0">
               <div className="flex items-center gap-3.5 mb-5">
-                <div className="size-14 rounded-full bg-[#0098EA]/10 flex items-center justify-center">
-                  <Lock className="size-7 text-[#0098EA]" />
+                <div className="size-14 rounded-full bg-violet-500/15 flex items-center justify-center">
+                  <Lock className="size-7 text-violet-500" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-lg font-bold tracking-tight truncate">
+                  <div className="font-display text-lg font-bold tracking-tight truncate">
                     Circle Members
                   </div>
-                  <div className="font-mono text-[13px] font-semibold text-[#0098EA]">
+                  <div className="font-mono text-[13px] font-semibold text-primary">
                     Invited FI Wallets
                   </div>
                 </div>
@@ -360,40 +396,85 @@ function JettonInfoCard({
   const name = info.metadata.name || 'Unknown Token';
   const initial = symbol.charAt(0).toUpperCase();
   const imageUrl = info.metadata.image || '';
+  const formattedBalance = formatAmount(userBalance || 0n);
 
   return (
-    <Card className="sticky top-20 max-md:static">
-      <CardContent className="space-y-0">
-        <div className="flex items-center gap-3.5 mb-5">
-          <Avatar className="size-14 border-2 border-border">
-            {imageUrl && !imgError ? (
-              <AvatarImage
-                src={imageUrl}
-                alt={name}
-                onError={() => setImgError(true)}
+    <Card className="sticky top-20 max-md:static overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-4 pb-0">
+        <span className="terminal-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          brotherhood — {symbol}
+        </span>
+      </div>
+      <CardContent className="space-y-0 relative">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-56 pointer-events-none"
+          style={{
+            backgroundImage: 'var(--gradient-soft)',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-56 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(45% 60% at 88% 0%, rgba(168,85,247,0.22), transparent 70%), radial-gradient(50% 60% at 4% 100%, rgba(229,77,94,0.18), transparent 70%)',
+          }}
+        />
+        <div className="relative">
+          <div className="flex items-center gap-3.5 mb-5">
+            <div className="relative">
+              <Avatar className="size-14 border-2 border-white/30 shadow-lg">
+                {imageUrl && !imgError ? (
+                  <AvatarImage
+                    src={imageUrl}
+                    alt={name}
+                    onError={() => setImgError(true)}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-primary text-white text-xl font-extrabold">
+                  {initial}
+                </AvatarFallback>
+              </Avatar>
+              <span
+                aria-hidden="true"
+                className="absolute -inset-1.5 rounded-full border border-primary/40"
               />
-            ) : null}
-            <AvatarFallback className="bg-[#0098EA] text-white text-xl font-extrabold">
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <div className="text-lg font-bold tracking-tight truncate">
-              {name}
+              <span
+                aria-hidden="true"
+                className="absolute -inset-3 rounded-full border border-primary/20"
+              />
             </div>
-            <div className="font-mono text-[13px] font-semibold text-[#0098EA]">
-              ${symbol}
+            <div className="min-w-0">
+              <div className="font-display text-lg font-bold tracking-tight truncate">
+                {name}
+              </div>
+              <div className="font-mono text-[13px] font-semibold text-primary">
+                ${symbol}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="mb-5">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Your Balance
+            </div>
+            <div className="font-display text-3xl font-bold tracking-tight mt-1">
+              {formattedBalance}{' '}
+              <span className="text-xl font-semibold text-muted-foreground">
+                {symbol}
+              </span>
             </div>
           </div>
         </div>
 
-        <Separator className="my-4" />
-
-        <PreviewRow
-          label="Balance"
-          value={`${fromNano(userBalance || 0)} ${symbol}`}
-        />
-        {/* <PreviewRow label="Balance" value={userBalance!.toString()} /> */}
         <PreviewRow
           label="Supply"
           value={`${formatAmount(info.totalSupply)} ${symbol}`}
@@ -403,9 +484,7 @@ function JettonInfoCard({
         <PreviewRow
           label="Mintable"
           value={info.mintable ? 'Yes' : 'No'}
-          valueClassName={
-            info.mintable ? 'text-[var(--success)]' : 'text-[var(--warning)]'
-          }
+          valueClassName={info.mintable ? 'text-success' : 'text-warning'}
         />
         <div className="flex justify-between items-center py-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -444,7 +523,7 @@ function JettonInfoCard({
               href={`https://verifier.ton.org/${contractAddr.trim()}?testnet=`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#0098EA] hover:underline"
+              className="text-primary hover:underline"
             >
               View on Verifier
             </a>
@@ -540,14 +619,14 @@ function FiWalletInfoCard({
     <Card className="sticky top-20 max-md:static">
       <CardContent className="space-y-0">
         <div className="flex items-center gap-3.5 mb-5">
-          <div className="size-14 rounded-full bg-[#0098EA]/10 flex items-center justify-center">
-            <Wallet className="size-7 text-[#0098EA]" />
+          <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Wallet className="size-7 text-primary" />
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold tracking-tight truncate">
+            <div className="font-display text-lg font-bold tracking-tight truncate">
               FI Wallet
             </div>
-            <div className="font-mono text-[13px] font-semibold text-[#0098EA]">
+            <div className="font-mono text-[13px] font-semibold text-primary">
               Wallet state
             </div>
           </div>
@@ -581,18 +660,14 @@ function FiWalletInfoCard({
           label="Active"
           value={fiWalletState.active ? 'Yes' : 'No'}
           valueClassName={
-            fiWalletState.active
-              ? 'text-[var(--success)]'
-              : 'text-[var(--warning)]'
+            fiWalletState.active ? 'text-success' : 'text-warning'
           }
         />
         <PreviewRow
           label="Mintable"
           value={fiWalletState.mintable ? 'Yes' : 'No'}
           valueClassName={
-            fiWalletState.mintable
-              ? 'text-[var(--success)]'
-              : 'text-[var(--warning)]'
+            fiWalletState.mintable ? 'text-success' : 'text-warning'
           }
         />
         <PreviewRow

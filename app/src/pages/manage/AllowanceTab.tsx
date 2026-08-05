@@ -10,6 +10,7 @@ import { getWalletAddress, listAllowances } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import { tryParseAddress, WalletRequired, type Network } from './common';
 import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import { KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,8 +40,10 @@ export function AllowanceTab({
   const [spendWallet, setSpendWallet] = useState('');
   const [spendAmount, setSpendAmount] = useState('');
   const [spendReceiver, setSpendReceiver] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!isConnected) return <WalletRequired />;
   if (!ownerAddress) return <WalletRequired />;
@@ -199,6 +202,7 @@ export function AllowanceTab({
         <div className="flex gap-2">
           <Button
             type="submit"
+            variant="brand"
             className="flex-1 h-12 rounded-full text-[15px] font-bold"
             disabled={loading}
           >
@@ -207,7 +211,10 @@ export function AllowanceTab({
                 <span className="spinner" /> Sending...
               </>
             ) : (
-              'Grant Allowance'
+              <>
+                <KeyRound className="size-4" />
+                Grant Allowance
+              </>
             )}
           </Button>
           <Button
@@ -254,6 +261,7 @@ export function AllowanceTab({
         </div>
         <Button
           type="submit"
+          variant="brand"
           className="w-full h-12 rounded-full text-[15px] font-bold"
           disabled={loading}
         >
@@ -262,7 +270,10 @@ export function AllowanceTab({
               <span className="spinner" /> Sending...
             </>
           ) : (
-            'Spend from Allowance'
+            <>
+              <ShieldCheck className="size-4" />
+              Spend from Allowance
+            </>
           )}
         </Button>
       </form>

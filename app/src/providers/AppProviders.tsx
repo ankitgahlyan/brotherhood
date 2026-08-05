@@ -4,29 +4,30 @@ import { TonConnectUIProvider, THEME } from '@tonconnect/ui-react';
 
 import { queryClient } from '../lib/ton';
 
-const manifestUrl = 'https://ankitgahlyan.github.io/brotherhood/tonconnect-manifest.json';
+const manifestUrl =
+  'https://ankitgahlyan.github.io/brotherhood/tonconnect-manifest.json';
 // 'https://ton-blockchain.github.io/acton/tonconnect-manifest.json';
 
 const darkColors = {
   background: {
-    primary: '#19191B',
-    secondary: '#19191B',
-    segment: '#19191B',
-    tint: '#19191B',
+    primary: '#0B0E14',
+    secondary: '#111520',
+    segment: '#1C2230',
+    tint: '#111520',
     qr: '#FFFFFF',
   },
-  connectButton: { background: '#0098EA', foreground: '#FFFFFF' },
+  connectButton: { background: '#E54D5E', foreground: '#FFFFFF' },
 };
 
 const lightColors = {
   background: {
     primary: '#FFFFFF',
-    secondary: '#F0F1F3',
+    secondary: '#F0F0F5',
     segment: '#FFFFFF',
-    tint: '#F0F1F3',
-    qr: '#F0F1F3',
+    tint: '#F0F0F5',
+    qr: '#F0F0F5',
   },
-  connectButton: { background: '#0098EA', foreground: '#FFFFFF' },
+  connectButton: { background: '#E54D5E', foreground: '#FFFFFF' },
 };
 
 function readInitialTheme() {

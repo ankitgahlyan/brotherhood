@@ -5,6 +5,7 @@ import { buildTransferBody, parseUnits } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import { tryParseAddress, WalletRequired, type Network } from './common';
+import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,8 +26,10 @@ export function TransferTab({
 }) {
   const [toAddr, setToAddr] = useState('');
   const [amount, setAmount] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!isConnected) return <WalletRequired />;
 
@@ -99,6 +102,7 @@ export function TransferTab({
         />
       </div>
       <Button
+        variant="brand"
         className="w-full h-12 rounded-full text-[15px] font-bold"
         disabled={loading}
       >
@@ -107,7 +111,10 @@ export function TransferTab({
             <span className="spinner" /> Transferring...
           </>
         ) : (
-          'Transfer Tokens'
+          <>
+            <Send className="size-4" />
+            Transfer Tokens
+          </>
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}

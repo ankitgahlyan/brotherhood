@@ -1,7 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Address, fromNano, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
-import { buildBuyCreditBody, buildBurnBody, parseUnits } from '../../lib/deploy';
+import {
+  buildBuyCreditBody,
+  buildBurnBody,
+  parseUnits,
+} from '../../lib/deploy';
 import {
   getWalletAddress,
   getPersonalMinterForIssuer,
@@ -15,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { InputScan } from '@/components/input-scan';
+import { Banknote, Undo2 } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 
 export function CreditTab({
@@ -34,8 +39,10 @@ export function CreditTab({
   const [buyAmount, setBuyAmount] = useState('');
   const [paybackIssuer, setPaybackIssuer] = useState('');
   const [paybackAmount, setPaybackAmount] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
   const [personalBalance, setPersonalBalance] = useState<bigint | null>(null);
   const [personalBalanceError, setPersonalBalanceError] = useState<
     string | null
@@ -175,7 +182,7 @@ export function CreditTab({
   return (
     <div className="space-y-6">
       <form onSubmit={handleBuyCredit} className="space-y-4.5">
-        <h3 className="text-base font-semibold">Buy Credit</h3>
+        <h3 className="font-display text-base font-semibold">Buy Credit</h3>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Issuer Address
@@ -198,6 +205,7 @@ export function CreditTab({
           />
         </div>
         <Button
+          variant="brand"
           className="w-full h-12 rounded-full text-[15px] font-bold"
           disabled={loading}
         >
@@ -206,7 +214,10 @@ export function CreditTab({
               <span className="spinner" /> Buying credit...
             </>
           ) : (
-            'Buy Credit'
+            <>
+              <Banknote className="size-4" />
+              Buy Credit
+            </>
           )}
         </Button>
         {status && <StatusAlert type={status.type} message={status.message} />}
@@ -215,7 +226,7 @@ export function CreditTab({
       <Separator />
 
       <form onSubmit={handlePayback} className="space-y-4.5">
-        <h3 className="text-base font-semibold">Pay Back</h3>
+        <h3 className="font-display text-base font-semibold">Pay Back</h3>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Issuer Address
@@ -256,7 +267,10 @@ export function CreditTab({
               <span className="spinner" /> Paying back...
             </>
           ) : (
-            'Pay Back'
+            <>
+              <Undo2 className="size-4" />
+              Pay Back
+            </>
           )}
         </Button>
         {status && <StatusAlert type={status.type} message={status.message} />}

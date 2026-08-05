@@ -22,6 +22,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import {
+  PenLine,
+  ArrowRightLeft,
+  Coins,
+  Check,
+  X,
+} from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 import { MintTab } from './MintTab';
 
@@ -45,8 +52,10 @@ export function AdminTab({
   onSuccess: () => void;
 }) {
   const [newAdmin, setNewAdmin] = useState(ZERO_ADDRESS);
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   const [newName, setNewName] = useState(info.metadata.name || '');
   const [newSymbol, setNewSymbol] = useState(info.metadata.symbol || '');
@@ -159,7 +168,7 @@ export function AdminTab({
   return (
     <div className="space-y-0">
       <div className="space-y-4.5">
-        <h3 className="text-base font-semibold">Mint Tokens</h3>
+        <h3 className="font-display text-base font-semibold">Mint Tokens</h3>
         <MintTab
           contractAddr={contractAddr}
           decimals={decimals}
@@ -175,7 +184,9 @@ export function AdminTab({
       <Separator className="my-6" />
 
       <form onSubmit={handleUpdateContent} className="space-y-4.5">
-        <h3 className="text-base font-semibold">Update Metadata</h3>
+        <h3 className="font-display text-base font-semibold">
+          Update Metadata
+        </h3>
         <div className="grid grid-cols-2 gap-3.5 max-sm:grid-cols-1">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -222,6 +233,7 @@ export function AdminTab({
           />
         </div>
         <Button
+          variant="brand"
           className="w-full h-12 rounded-full text-[15px] font-bold"
           disabled={loading}
         >
@@ -230,7 +242,10 @@ export function AdminTab({
               <span className="spinner" /> Updating...
             </>
           ) : (
-            'Update Metadata'
+            <>
+              <PenLine className="size-4" />
+              Update Metadata
+            </>
           )}
         </Button>
       </form>
@@ -238,7 +253,7 @@ export function AdminTab({
       <Separator className="my-6" />
 
       <form onSubmit={handleChangeAdmin} className="space-y-4.5">
-        <h3 className="text-base font-semibold">Transfer Admin</h3>
+        <h3 className="font-display text-base font-semibold">Transfer Admin</h3>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             New Admin Address
@@ -264,7 +279,10 @@ export function AdminTab({
               <span className="spinner" /> Transferring...
             </>
           ) : (
-            'Transfer Admin Rights'
+            <>
+              <ArrowRightLeft className="size-4" />
+              Transfer Admin Rights
+            </>
           )}
         </Button>
       </form>
@@ -272,9 +290,10 @@ export function AdminTab({
       <Separator className="my-6" />
 
       <div className="space-y-4.5">
-        <h3 className="text-base font-semibold">Admin Actions</h3>
+        <h3 className="font-display text-base font-semibold">Admin Actions</h3>
         <div className="grid grid-cols-3 gap-3.5 max-sm:grid-cols-1">
           <Button
+            variant="brand"
             className="h-12 rounded-full text-[15px] font-bold"
             disabled={loading}
             onClick={handleTopUpTons}
@@ -284,10 +303,14 @@ export function AdminTab({
                 <span className="spinner" /> Top Up...
               </>
             ) : (
-              'Top Up Tons'
+              <>
+                <Coins className="size-4" />
+                Top Up Tons
+              </>
             )}
           </Button>
           <Button
+            variant="brand"
             className="h-12 rounded-full text-[15px] font-bold"
             disabled={loading}
             onClick={handleApproveUpgrade}
@@ -297,7 +320,10 @@ export function AdminTab({
                 <span className="spinner" /> Approving...
               </>
             ) : (
-              'Approve Upgrade'
+              <>
+                <Check className="size-4" />
+                Approve Upgrade
+              </>
             )}
           </Button>
           <Button
@@ -311,7 +337,10 @@ export function AdminTab({
                 <span className="spinner" /> Rejecting...
               </>
             ) : (
-              'Reject Upgrade'
+              <>
+                <X className="size-4" />
+                Reject Upgrade
+              </>
             )}
           </Button>
         </div>

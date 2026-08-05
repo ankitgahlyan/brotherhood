@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputScan } from '@/components/input-scan';
+import { UserPlus } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 
 export function InviteTab({
@@ -22,8 +23,10 @@ export function InviteTab({
 }) {
   const [toAddr, setToAddr] = useState('');
   const [inviteId, setInviteId] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!ownerAddress) return <WalletRequired />;
 
@@ -92,6 +95,7 @@ export function InviteTab({
         </p>
       </div>
       <Button
+        variant="brand"
         className="w-full h-12 rounded-full text-[15px] font-bold"
         disabled={loading}
       >
@@ -100,7 +104,10 @@ export function InviteTab({
             <span className="spinner" /> Sending invite...
           </>
         ) : (
-          'Send Invite'
+          <>
+            <UserPlus className="size-4" />
+            Send Invite
+          </>
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}

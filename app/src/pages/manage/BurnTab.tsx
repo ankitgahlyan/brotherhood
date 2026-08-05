@@ -5,6 +5,7 @@ import { buildBurnBody, parseUnits } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import { WalletRequired, type Network } from './common';
+import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,8 +27,10 @@ export function BurnTab({
   onSuccess: () => void;
 }) {
   const [amount, setAmount] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!isConnected) return <WalletRequired />;
 
@@ -95,7 +98,10 @@ export function BurnTab({
             <span className="spinner" /> Burning...
           </>
         ) : (
-          'Burn Tokens'
+          <>
+            <Flame className="size-4" />
+            Burn Tokens
+          </>
         )}
       </Button>
       {status && <StatusAlert type={status.type} message={status.message} />}

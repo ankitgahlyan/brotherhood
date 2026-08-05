@@ -43,7 +43,7 @@ export function AddressLink({
       target="_blank"
       rel="noopener noreferrer"
       title={address}
-      className="text-[#0098EA] hover:underline"
+      className="text-primary hover:underline"
     >
       {shortenAddress(address)}
     </a>

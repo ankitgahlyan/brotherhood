@@ -5,6 +5,7 @@ import { buildVoteBody, buildUnvoteBody } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import { tryParseAddress, WalletRequired, type Network } from './common';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +21,10 @@ export function VoteTab({
   ownerAddress: Address | null;
 }) {
   const [toAddr, setToAddr] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
 
   if (!ownerAddress) return <WalletRequired />;
   const owner = ownerAddress;
@@ -79,6 +82,7 @@ export function VoteTab({
       </div>
       <div className="grid grid-cols-2 gap-3.5 max-sm:grid-cols-1">
         <Button
+          variant="brand"
           className="h-12 rounded-full text-[15px] font-bold"
           disabled={loading}
           onClick={() => sendVote(true)}
@@ -88,7 +92,10 @@ export function VoteTab({
               <span className="spinner" /> Sending vote...
             </>
           ) : (
-            'Vote'
+            <>
+              <ThumbsUp className="size-4" />
+              Vote
+            </>
           )}
         </Button>
         <Button
@@ -102,7 +109,10 @@ export function VoteTab({
               <span className="spinner" /> Sending unvote...
             </>
           ) : (
-            'Unvote'
+            <>
+              <ThumbsDown className="size-4" />
+              Unvote
+            </>
           )}
         </Button>
       </div>

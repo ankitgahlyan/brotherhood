@@ -32,8 +32,10 @@ export function IssueTokenTab({
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [issuerAddr, setIssuerAddr] = useState('');
-  const { sendTransaction, loading, status, setStatus } =
-    useSendFiTransaction(tonConnectUI, network);
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
+    tonConnectUI,
+    network,
+  );
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
 
   if (!ownerAddress) return <WalletRequired />;
@@ -123,7 +125,9 @@ export function IssueTokenTab({
   return (
     <div className="space-y-6">
       <form onSubmit={handleIssue} className="space-y-4.5">
-        <h3 className="text-base font-semibold">Create Personal Token</h3>
+        <h3 className="font-display text-base font-semibold">
+          Create Personal Token
+        </h3>
         <div className="grid grid-cols-2 gap-3.5 max-sm:grid-cols-1">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -204,6 +208,7 @@ export function IssueTokenTab({
         </p>
 
         <Button
+          variant="brand"
           className="w-full h-12 rounded-full text-[15px] font-bold"
           disabled={loading}
         >
