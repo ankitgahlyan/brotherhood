@@ -6,6 +6,7 @@ import "@acton/io"
 import "@acton/prompts"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@gen/PersonalWallet.code"
 import "@contracts/common/messages"
@@ -142,5 +143,15 @@ fun main() {
         println("VERIFY_OK: buy credit moved the loan to the issuer");
     } else {
         println("VERIFY_FAIL: balances did not move as expected");
+    }
+
+    // 4. the buyer should hold the minted personal tokens on the issuer's minter
+    val buyerPersonalWallet = net.runGetMethod<address>(pmAddress, "get_wallet_address", [deployer]);
+    val personalBalance = PersonalWallet.fromAddress(buyerPersonalWallet).getWalletData().jettonBalance;
+    println("BUYER_PERSONAL_BALANCE={}", personalBalance);
+    if (personalBalance == loan) {
+        println("VERIFY_OK: buyer received the loan in personal tokens");
+    } else {
+        println("VERIFY_FAIL: personal token mint did not match the loan");
     }
 }
