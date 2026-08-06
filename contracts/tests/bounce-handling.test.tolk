@@ -3,12 +3,12 @@ import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/message"
 
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
 import "test-utils"
 
 get fun `test bounce: minter restores supply on internal_transfer bounce`() {
@@ -98,4 +98,3 @@ get fun `test bounce: wallet restores balance on internal_transfer bounce`() {
 
     expect(senderWallet.getJettonBalance()).toEqual(balanceBefore);
 }
-

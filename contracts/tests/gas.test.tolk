@@ -4,12 +4,12 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@contracts/common/errors"
-import "@contracts/common/fees-management"
-import "@contracts/common/messages"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/errors"
+import "@contracts/common/fees-management"
+import "@contracts/common/messages"
 import "test-utils"
 
 get fun `test gas: transfer minimal value edge`() {

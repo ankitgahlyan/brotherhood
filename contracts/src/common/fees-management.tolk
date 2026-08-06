@@ -1,6 +1,6 @@
 import "@stdlib/gas-payments"
-import "sharding"
 import "@contracts/common/errors"
+import "sharding"
 
 // Storage costs
 // these constants are used to estimate storage fee (how much we should pay for storing a wallet contract);
@@ -46,7 +46,7 @@ fun calculateJettonWalletMinStorageFee(): coins {
 // minter and wallet transfer handlers.
 fun reserveForBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-        contract.getStorageDuePayment();
+    contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
         RESERVE_MODE_AT_MOST,

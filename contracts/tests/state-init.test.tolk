@@ -5,11 +5,11 @@ import "@acton/tlb/either"
 import "@acton/tlb/maybe"
 import "@acton/types/transaction"
 
-import "@contracts/common/messages"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/messages"
 import "test-utils"
 
 const MAX_JETTON_VALUE = ton("100000")

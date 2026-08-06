@@ -3,12 +3,12 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
+import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
-import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 import "@contracts/personalMinter/storage"
@@ -28,7 +28,10 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         code: build("PersonalMinter"),
         data: priStore.toCell(),
     };
-    val address = AutoDeployAddress { workchain: BASECHAIN, stateInit }.calculateAddress();
+    val address = AutoDeployAddress {
+        workchain: BASECHAIN,
+        stateInit,
+    }.calculateAddress();
     val pm = Personal { address, stateInit };
     val res = pm.deploy(admin, { value: ton("1") });
     expect(res).toHaveSuccessfulDeploy({ to: address });
@@ -56,7 +59,14 @@ fun personalWalletForOwner(pm: Personal, owner: address): PersonalWallet {
     return PersonalWallet.fromAddress(pm.getWalletAddress(owner));
 }
 
-fun setupPersonalScenario(): (FossFi, Treasury, Treasury, FossFiWallet, FossFiWallet, Personal) {
+fun setupPersonalScenario(): (
+    FossFi,
+    Treasury,
+    Treasury,
+    FossFiWallet,
+    FossFiWallet,
+    Personal,
+) {
     val (minter, deployer, notDeployer) = setupTest();
 
     // buyer: the treasury wallet (funded with FI to lend)
@@ -74,11 +84,25 @@ fun setupPersonalScenario(): (FossFi, Treasury, Treasury, FossFiWallet, FossFiWa
     val pm = deployPersonalMinter(issuerWallet.address, notDeployer.address);
     pointIssuerAtPersonalMinter(issuerWallet, notDeployer.address, pm.address);
 
-    return (minter, deployer, notDeployer, buyerWallet, issuerWallet, pm);
+    return (
+        minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    );
 }
 
 get fun `test personal token: buying moves buyer FI to issuer and mints the Personal Token`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     val buyerFiBefore = buyerWallet.getJettonBalance();
@@ -107,7 +131,14 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
 }
 
 get fun `test personal token: cannot buy more FI than the buyer holds`() {
-    val (_minter, deployer, notDeployer, buyerWallet, _issuerWallet, _pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        _issuerWallet,
+        _pm,
+    ) = setupPersonalScenario();
 
     val res = buyerWallet.sendBuyCredit(
         deployer.address,
@@ -125,7 +156,14 @@ get fun `test personal token: cannot buy more FI than the buyer holds`() {
 }
 
 get fun `test personal token: lending leaves balances and supply stable while held`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -168,7 +206,14 @@ fun sendPayback(
 }
 
 get fun `test personal token: payback burns the loan and returns FI to the buyer`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -199,7 +244,14 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
 }
 
 get fun `test personal token: partial payback returns FI for the repaid amount only`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -230,7 +282,14 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
 }
 
 get fun `test personal token: cannot pay back more than the buyer holds`() {
-    val (_minter, deployer, notDeployer, buyerWallet, _issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -257,7 +316,14 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
 }
 
 get fun `test personal token: payback unwinds when the issuer cannot cover the loan`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(
@@ -313,7 +379,14 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
 }
 
 get fun `test personal token: payback succeeds when the issuer holds exactly the loan`() {
-    val (_minter, deployer, notDeployer, buyerWallet, issuerWallet, pm) = setupPersonalScenario();
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
 
     val loan = ton("100");
     buyerWallet.sendBuyCredit(

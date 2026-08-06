@@ -1,7 +1,7 @@
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
-import "@contracts/common/messages"
 import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
 import "FossFi.gen"
 import "FossFiWallet.gen"
 

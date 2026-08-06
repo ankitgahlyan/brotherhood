@@ -6,14 +6,14 @@ import "@acton/types/big_array"
 import "@acton/types/transaction"
 
 import "@gen/FossFiWallet.code"
-import "@contracts/common/fees-management"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
-import "@contracts/fossFi/storage"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/fees-management"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
+import "@contracts/fossFi/storage"
 import "test-utils"
 
 fun maxGasOnAccount(res: SendResultList, account: address): int {
@@ -62,7 +62,10 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     val heavyMaps = Maps {
         invited: invitedMap,
         allowances: allowancesMap,
-        social: SocialMaps { votedFor: votedForMap, followings: invitedMap }.toCell(),
+        social: SocialMaps {
+            votedFor: votedForMap,
+            followings: invitedMap,
+        }.toCell(),
         reportInfo: ReportInfo {
             reports: reportsMap,
             tosBreach: false,
@@ -90,7 +93,12 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         mintable: true,
         version: 1,
         storeVersion: 1,
-        timestamps: TimeStamps { accountInit: 1000, lastInvite: 1000, lastClaim: 1000, lastDecay: 1000 }.toCell(),
+        timestamps: TimeStamps {
+            accountInit: 1000,
+            lastInvite: 1000,
+            lastClaim: 1000,
+            lastDecay: 1000,
+        }.toCell(),
         addresses: Addresses {
             owner: deployer.address,
             treasury: deployer.address,
@@ -137,8 +145,9 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         deployer.address, // sendExcessesTo
         DEFAULT_FORWARD_TON_AMOUNT,
         makeRichForwardPayload(),
-        1, // version
-    );    val (inTrCells, inTrBits, _) = internalTransferBody.calculateSizeStrict(4096);
+        1,                // version
+    );
+    val (inTrCells, inTrBits, _) = internalTransferBody.calculateSizeStrict(4096);
 
     val burnBody = AskToBurn {
         queryId: 1,
@@ -157,18 +166,48 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     val (nmCells, nmBits, _) = notifyMinterBody.calculateSizeStrict(4096);
 
     println("=== FEES-MGMT CONSTANT BENCH ===");
-    println("STORAGE_SIZE_MAX_WALLET_BITS  := "); println(storeBits); println(" (const="); println(STORAGE_SIZE_MAX_WALLET_BITS); println(")");
-    println("STORAGE_SIZE_MAX_WALLET_CELLS  := "); println(storeCells); println(" (const="); println(STORAGE_SIZE_MAX_WALLET_CELLS); println(")");
-    println("STORAGE_SIZE_INIT_STATE_BITS   := "); println(initBits); println(" (const="); println(STORAGE_SIZE_INIT_STATE_WALLET_BITS); println(")");
-    println("STORAGE_SIZE_INIT_STATE_CELLS  := "); println(initCells); println(" (const="); println(STORAGE_SIZE_INIT_STATE_WALLET_CELLS); println(")");
-    println("AskToTransfer BITS             := "); println(trBits); println(" CELLS := "); println(trCells);
-    println("InternalTransferStep BITS      := "); println(inTrBits); println(" CELLS := "); println(inTrCells);
-    println("AskToBurn BITS                 := "); println(burnBits); println(" CELLS := "); println(burnCells);
-    println("NotifyMinter BITS              := "); println(nmBits); println(" CELLS := "); println(nmCells);
+    println("STORAGE_SIZE_MAX_WALLET_BITS  := ");
+    println(storeBits);
+    println(" (const=");
+    println(STORAGE_SIZE_MAX_WALLET_BITS);
+    println(")");
+    println("STORAGE_SIZE_MAX_WALLET_CELLS  := ");
+    println(storeCells);
+    println(" (const=");
+    println(STORAGE_SIZE_MAX_WALLET_CELLS);
+    println(")");
+    println("STORAGE_SIZE_INIT_STATE_BITS   := ");
+    println(initBits);
+    println(" (const=");
+    println(STORAGE_SIZE_INIT_STATE_WALLET_BITS);
+    println(")");
+    println("STORAGE_SIZE_INIT_STATE_CELLS  := ");
+    println(initCells);
+    println(" (const=");
+    println(STORAGE_SIZE_INIT_STATE_WALLET_CELLS);
+    println(")");
+    println("AskToTransfer BITS             := ");
+    println(trBits);
+    println(" CELLS := ");
+    println(trCells);
+    println("InternalTransferStep BITS      := ");
+    println(inTrBits);
+    println(" CELLS := ");
+    println(inTrCells);
+    println("AskToBurn BITS                 := ");
+    println(burnBits);
+    println(" CELLS := ");
+    println(burnCells);
+    println("NotifyMinter BITS              := ");
+    println(nmBits);
+    println(" CELLS := ");
+    println(nmCells);
 
     val computedMinStorage = calculateJettonWalletMinStorageFee();
-    println("calculateJettonWalletMinStorageFee() := "); println(computedMinStorage);
-    println("forwardInitStateOverhead() := "); println(forwardInitStateOverhead());
+    println("calculateJettonWalletMinStorageFee() := ");
+    println(computedMinStorage);
+    println("forwardInitStateOverhead() := ");
+    println(forwardInitStateOverhead());
 
     // ---- real gas consumption per flow ----
     val senderWallet = mintTo(minter, deployer, deployer.address, ton("5"));
@@ -185,13 +224,23 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         DEFAULT_FORWARD_TON_AMOUNT,
         makeRichCustomPayload(),
     );
-    println("gas AskToTransfer (JETTON_TRANSFER)   := "); println(maxGasOnAccount(transferRes, senderWallet.address));
+    println("gas AskToTransfer (JETTON_TRANSFER)   := ");
+    println(maxGasOnAccount(transferRes, senderWallet.address));
 
-    println("gas InternalTransferStep (JETTON_RECEIVE) := "); println(maxGasOnAccount(transferRes, destWallet.address));
+    println("gas InternalTransferStep (JETTON_RECEIVE) := ");
+    println(maxGasOnAccount(transferRes, destWallet.address));
 
-    val burnRes = senderWallet.sendBurn(deployer.address, ton("1"), ton("1"), deployer.address, null);
-    println("gas AskToBurn (BURN_REQUEST)         := "); println(maxGasOnAccount(burnRes, senderWallet.address));
-    println("gas NotifyMinter (BURN_NOTIFICATION) := "); println(maxGasOnAccount(burnRes, minter.address));
+    val burnRes = senderWallet.sendBurn(
+        deployer.address,
+        ton("1"),
+        ton("1"),
+        deployer.address,
+        null,
+    );
+    println("gas AskToBurn (BURN_REQUEST)         := ");
+    println(maxGasOnAccount(burnRes, senderWallet.address));
+    println("gas NotifyMinter (BURN_NOTIFICATION) := ");
+    println(maxGasOnAccount(burnRes, minter.address));
 
     expect(true).toEqual(true);
 }

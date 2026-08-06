@@ -2,13 +2,13 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@contracts/common/errors"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/errors"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
 import "test-utils"
 
 get fun `test validation: malformed forward payload should be rejected`() {

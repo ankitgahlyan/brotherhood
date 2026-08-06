@@ -1,7 +1,7 @@
+import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
-import "@contracts/common/errors"
 import "@contracts/lottery/messages"
 import "storage"
 
@@ -25,7 +25,10 @@ fun calcDeployFiWallet(
         maps: Maps {
             allowances: [],
             invited: [],
-            social: SocialMaps { votedFor: [], followings: [] }.toCell(),
+            social: SocialMaps {
+                votedFor: [],
+                followings: [],
+            }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),
         }.toCell(), // todo: learn how to set it default
         timestamps: TimeStamps {}.toCell(),
