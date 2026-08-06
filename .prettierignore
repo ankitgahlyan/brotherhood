@@ -7,3 +7,4 @@ docs
 gen
 node_modules
 wrappers-ts
+src/routeTree.gen.ts

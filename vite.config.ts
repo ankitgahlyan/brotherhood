@@ -46,6 +46,35 @@ const pwaManifest: Partial<ManifestOptions> = {
   ],
 };
 
+// Split heavy vendor modules into cacheable chunks (see
+// https://rolldown.rs/reference/OutputOptions.codeSplitting). Group order
+// matters: the first matching group claims a module. Only applied to the
+// client bundle; the SSR/Cloudflare Workers build stays monolithic.
+const codeSplittingGroups: Array<{
+  name: string;
+  test: RegExp;
+}> = [
+  { name: 'react', test: /node_modules[\\/](?:react|react-dom)(?:[\\/]|$)/ },
+  {
+    name: 'react-router',
+    test: /node_modules[\\/]@tanstack[\\/](?:react-router|router-core|router-utils|history)(?:[\\/]|$)/,
+  },
+  {
+    name: 'tanstack-query',
+    test: /node_modules[\\/]@tanstack[\\/](?:react-query|query-core)(?:[\\/]|$)/,
+  },
+  {
+    name: 'tanstack-store',
+    test: /node_modules[\\/]@tanstack[\\/](?:react-store|store)(?:[\\/]|$)/,
+  },
+  { name: 'ton-sdk', test: /node_modules[\\/]@ton[\\/]/ },
+  { name: 'tonconnect', test: /node_modules[\\/]@tonconnect[\\/]/ },
+  { name: 'radix-ui', test: /node_modules[\\/]@radix-ui[\\/]/ },
+  { name: 'floating-ui', test: /node_modules[\\/]@floating-ui[\\/]/ },
+  { name: 'lucide-react', test: /node_modules[\\/]lucide-react[\\/]/ },
+  { name: 'zod', test: /node_modules[\\/]zod(?:[\\/]|$)/ },
+];
+
 export default defineConfig({
   base,
   root: projectRoot,
@@ -90,5 +119,18 @@ export default defineConfig({
       allow: ['.', path.resolve(projectRoot, 'wrappers-ts')],
     },
     port: 3000,
+  },
+  environments: {
+    client: {
+      build: {
+        rolldownOptions: {
+          output: {
+            codeSplitting: {
+              groups: codeSplittingGroups,
+            },
+          },
+        },
+      },
+    },
   },
 });

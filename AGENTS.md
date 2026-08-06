@@ -50,8 +50,10 @@ The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the me
 
 - `tsr generate` will not emit the `@tanstack/react-start` `Register` augmentation because this router uses `createTanStackRouter` (no `createStart`). It lives in `src/start-router-register.ts` (eslint-disabled, mirrors TanStack's generated block). Don't delete it — `/api/chat`'s `server.handlers` option stops typechecking without it.
 - `vite-plugin-pwa` only injects `manifest.webmanifest` in this multi-env build; `public/sw.js` is hand-authored. Cache name is `brotherhood-pwa-*`.
+- `src/routeTree.gen.ts` is regenerated non-prettier-style on every `vite build`, so it's prettier-ignored and `tsr generate`-overwritten.
 - `vite preview` is hijacked by the Cloudflare Vite plugin into SSR/Workers mode (raw assets 404 there). For static verification serve `dist/client` directly.
 - `.dev.vars` is copied into `dist/server` at build (dev keys only; never commit real secrets).
 - On Cloudflare Workers, module-scope `process.env` is undefined — read env vars inside the handler.
+- Client chunks are split via `build` `environments.client.rolldownOptions.output.codeSplitting` groups (react, react-router, tanstack-query, tanstack-store, ton-sdk, tonconnect, radix-ui, floating-ui, lucide-react, zod). SSR build stays monolithic.
 
-**Next steps:** validate chunk-splitting (build warns on >500 kB chunks, esp. `@ton/ton`/`@tonconnect`), add a chat UI consumer for `/api/chat`, review `git status`/PR.
+**Next steps:** add a chat UI consumer for `/api/chat`, review `git status`/PR.
