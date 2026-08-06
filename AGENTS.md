@@ -15,11 +15,11 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Use `acton` skill for Acton CLI, Tolk, wrappers, tests, scripts, deployment, and `Acton.toml` tasks.
 - Use `tolk` skill for tolk smart contracts related tasks.
 - Use `ton-blockchain` skill for ton blockchain related tasks.
-- Treat the contracts under `contracts/src/` as the source of truth, especially `fossFi/fossFi.tolk`, `fossFi/fossFiWallet.tolk`, `fossFi/storage.tolk`, `personalMinter/personal.tolk`, `personalMinter/personalWallet.tolk`, `common/messages.tolk`, and `common/errors.tolk`.
+- Treat the contracts under `contracts/src/` as the source of truth.
 - Treat the minter and wallet contracts as a coupled system. Keep storage, message formats, tests, wrappers, TypeScript wrappers, scripts, and frontend flows consistent across both sides.
-- Treat `wrappers-ts/FossFi.gen.ts`, `wrappers-ts/FossFiWallet.gen.ts`, `wrappers-ts/Personal.gen.ts`, and `wrappers-ts/PersonalWallet.gen.ts` as generated output. Prefer regenerating them from the contract ABI instead of hand-editing them when the ABI changes.
+- Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them from the contract ABI instead of hand-editing them when the ABI changes.
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `app/` aligned with contract changes.
-- Prefer this validation loop when feasible: `acton build`, `acton test`, `npm run typecheck`, `npm run build`.
+- Prefer this validation loop when feasible: `acton fmt`, `acton check`, `acton build`, `acton test`, `npm run typecheck`, `npm run build`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
 - For the Personal Token issuer onboarding flow, verify with `acton run verify-personal` (emulates deploy + wallet pointer + buy credit) before proposing a real `acton run deploy-personal`.
 - When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `npm run`, or the existing project config.
