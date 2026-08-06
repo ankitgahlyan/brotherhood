@@ -5,7 +5,19 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'build', 'node_modules'] },
+  {
+    ignores: [
+      'dist',
+      'dist-ssr',
+      'build',
+      'node_modules',
+      '.wrangler',
+      '.tanstack',
+      'scripts',
+      'public',
+      'src/routeTree.gen.ts',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

@@ -1,10 +1,8 @@
 # Jetton App Template
 
-This project was generated from Acton's `jetton` template with
-TypeScript app scaffold enabled. It includes a jetton minter contract,
-a jetton wallet contract, Tolk tests and wrappers under `contracts/`,
-generated TypeScript wrappers in `wrappers-ts/`, and a Vite-based React
-app in `app/`.
+Jetton minter + wallet smart contracts on TON (Tolk, built with Acton), with a
+TanStack Start frontend that manages the token: issue, transfer, burn, invite,
+vote and administer TEP-74 tokens.
 
 ## Layout
 
@@ -14,7 +12,10 @@ app in `app/`.
   `acton wrapper` and used by tests and scripts.
 - `contracts/scripts` contains deployment and management scripts.
 - `wrappers-ts/` contains generated TypeScript wrappers consumed by the app.
-- `app/` contains the React + Vite frontend with TON Connect wallet integration.
+- `src/` contains the TanStack Start frontend: React Router routes in
+  `src/routes/`, domain pages in `src/pages/`, and shared domain logic in
+  `src/lib/`. `src/routes/api.chat.ts` is a Start server route (OpenRouter
+  proxy). Deep-linkable state lives in the URL (e.g. Manage tab = `?tab=`).
 - `package.json`, `tsconfig.json`, and `vite.config.ts` configure the app toolchain.
 - `package-lock.json` pins the npm dependency tree for reproducible installs.
 
@@ -27,16 +28,21 @@ npm ci
 ## Commands
 
 ```bash
+npm run dev          # vite dev on :3000 (Cloudflare dev runtime)
+npm run generate-routes   # tsr generate (routeTree.gen.ts)
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint --max-warnings 0
+npm run fmt:check    # prettier --check
+npm run build:ghpages  # vite build + copy index.html -> dist/client/404.html
+npm run build:workers  # vite build for Cloudflare Workers (SSR)
+npm run deploy:pages   # vite build && wrangler pages deploy dist/client
+npm run deploy:workers # vite build && wrangler deploy
+
 acton build
 acton test
-npm run test
-npm run build
-npm run typecheck
-npm run fmt:check
-npm run dev
 ```
 
-## Scripts
+## Scripts (contracts)
 
 - `acton script contracts/scripts/deploy.tolk` — deploys the jetton minter and prints minter/admin wallet info.
 - `acton script contracts/scripts/mint.tolk` — mints jettons to a recipient.
@@ -49,6 +55,30 @@ npm run dev
 The same scripts are available through generated aliases such as
 `acton run jetton-mint` and `acton run jetton-info`.
 
+## Environment
+
+Copy `.env.example` to `.env` for local development values. See `.dev.vars`
+for Cloudflare dev/Workers keys. Key variables:
+
+- `VITE_BASE` — Vite `base` and Router `basepath`. Default `/brotherhood/`
+  (GitHub Pages project site). Keep in sync with `src/router.tsx` and
+  `vite.config.ts`.
+- `TONCENTER_MAINNET_API_KEY` / `TONCENTER_TESTNET_API_KEY` — Toncenter API
+  keys (optional; exposed to the browser as `VITE_`/`TONCENTER_*`).
+- `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` — used by the `/api/chat` Start
+  server route (OpenRouter via `@tanstack/ai-openai`). Server-only: bind as
+  Cloudflare Workers secrets/vars; never expose to the client.
+
+## Deployment
+
+Static-first. `.github/workflows/pages.yml` runs `npm run build:ghpages` and
+uploads `dist/client` to GitHub Pages. Cloudflare is optional:
+
+- `npm run deploy:pages` — Cloudflare Pages (static `dist/client`).
+- `npm run deploy:workers` — Cloudflare Workers SSR via `wrangler.jsonc`.
+  Server routes (`/api/chat`) only run on a server runtime (dev or Workers);
+  on a pure static host they 404.
+
 ## Notes
 
 - `acton build` compiles the contracts using `contracts/src/JettonMinter.tolk` and `contracts/src/FossFiWallet.tolk`.
@@ -56,7 +86,6 @@ The same scripts are available through generated aliases such as
   the Tolk wrappers under `contracts/wrappers/`.
 - `acton wrapper JettonMinter --ts` and `acton wrapper FossFiWallet --ts`
   regenerate the TypeScript wrappers under `wrappers-ts/`.
-- `npm run build` runs the contract build and the frontend build.
 - `npm run test` is a placeholder dApp test script; use `acton test` for Tolk
   integration tests.
 - `.github/workflows/contracts.yml` runs `acton build`, `acton fmt --check`,

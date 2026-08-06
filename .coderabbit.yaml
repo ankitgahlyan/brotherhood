@@ -1,0 +1,38 @@
+# CodeRabbit: AI code review configuration.
+# Installed as a GitHub App: https://github.com/apps/coderabbit
+# Enable per-repo (Settings → Code quality → CodeRabbit) after installing.
+
+language: en-US
+early_access: false
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base: main
+    ignored_files:
+      - 'dist/**'
+      - 'node_modules/**'
+      - 'public/**'
+      - '*.gen.ts'
+  path_instructions:
+    - path: src/lib/db.ts
+      instructions: >-
+        This code opens a browser-only OPFS/WA-SQLite database and must never
+        be statically imported from server/prerender code—only via dynamic
+        import() inside client effects.
+    - path: src/routes/api.chat.ts
+      instructions: >-
+        Server route handler. Reads secrets only inside the handler; calling
+        process.env at module scope is undefined under Cloudflare Workers. Do
+        not expose API keys to the client.
+chat:
+  auto_reply: true
+security:
+  check_potential_secrets: true
+  check_data_at_risk: true

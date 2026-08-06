@@ -34,3 +34,13 @@ global.libraries.toml
 
 # coverage
 lcov.info
+
+# TanStack / Cloudflare build artifacts
+dist-ssr
+.wrangler
+.dev.vars
+.tanstack
+.output
+.vinxi
+__unconfig*
+todos.json
