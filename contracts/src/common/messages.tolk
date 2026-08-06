@@ -327,3 +327,8 @@ struct CurrentRequest {
     newUpgrade: Upgrade
     timestamp: uint32
 }
+
+struct AdminHandoff {
+    newAdminAddress: address
+    timestamp: uint32
+}

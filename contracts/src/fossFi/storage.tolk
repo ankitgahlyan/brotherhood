@@ -27,13 +27,15 @@ struct FiCodes {
     totalAccounts: uint33 = 0
     lotteryCode: cell? = null
     latestFiWalletCode: cell? = null
-    c: cell? = null
-    d: cell? = null
+    currentRequest: Cell<CurrentRequest>? = null
 }
 
 struct SocialMaps {
     votedFor: map<address, uint4>   // todo: what struct to use
-    followings: map<address, coins> // directional social link; value = FI minted for the link, burnt on unfollow
+    followings: map<
+        address,
+        coins,
+    >                               // directional social link; value = FI minted for the link, burnt on unfollow
     // followers: map<address, coins> // added on closure (#24) so a closing Account can notify its followers
 }
 
@@ -95,8 +97,7 @@ struct FiStore {
     totalSupply: coins = 0
     walletVersion: uint10 = 0
     adminAddress: address // todo: implement: use dao address
-    nextAdminAddress: address? = null
-    currentRequest: CurrentRequest? = null
+    adminHandoff: Cell<AdminHandoff>? = null
     metadata: cell
     others: Cell<FiCodes>
 }

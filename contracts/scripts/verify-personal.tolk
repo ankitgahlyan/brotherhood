@@ -1,12 +1,12 @@
 import "@acton/build"
+import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
-import "@acton/io"
+import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
-import "@gen/PersonalWallet.code"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
@@ -23,7 +23,7 @@ fun deployTestMinter(admin: address): FossFi {
             image: "",
             decimals: "9",
         }),
-        nextAdminAddress: null,
+        adminHandoff: null,
         others: FiCodes {}.toCell(),
     });
     val res = minter.sendDeploy(admin, { value: ton("10") });
@@ -37,14 +37,21 @@ fun mintTo(minter: FossFi, from: address, recipient: address, amount: coins): ad
     return minter.getWalletAddress(recipient);
 }
 
-fun activateIssuer(minter: FossFi, inviterWallet: address, inviterOwner: address, issuer: address): address {
-    val invite = FossFiWallet.fromAddress(inviterWallet).sendActInvite(
-        inviterOwner,
-        0,
-        issuer,
-        "user@lat,long",
-        { value: ton("1") },
-    );
+fun activateIssuer(
+    minter: FossFi,
+    inviterWallet: address,
+    inviterOwner: address,
+    issuer: address,
+): address {
+    val invite = FossFiWallet
+        .fromAddress(inviterWallet)
+        .sendActInvite(
+            inviterOwner,
+            0,
+            issuer,
+            "user@lat,long",
+            { value: ton("1") },
+        );
     invite.waitForFirstTransaction();
     return minter.getWalletAddress(issuer);
 }
@@ -78,7 +85,10 @@ fun main() {
         code: build("PersonalMinter"),
         data: priStore.toCell(),
     };
-    val pmAddress = AutoDeployAddress { workchain: BASECHAIN, stateInit }.calculateAddress();
+    val pmAddress = AutoDeployAddress {
+        workchain: BASECHAIN,
+        stateInit,
+    }.calculateAddress();
 
     val deployMsg = createMessage({
         bounce: false,
@@ -92,11 +102,13 @@ fun main() {
     net.send(deployer, deployMsg).waitForFirstTransaction();
     println("PERSONAL_MINTER={}", pmAddress);
 
-    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendActSetPersonalJettonMinter(
-        issuerOwner,
-        pmAddress,
-        { value: ton("0.6") },
-    );
+    val pointRes = FossFiWallet
+        .fromAddress(issuerWallet)
+        .sendActSetPersonalJettonMinter(
+            issuerOwner,
+            pmAddress,
+            { value: ton("0.6") },
+        );
     pointRes.waitForFirstTransaction();
 
     val walletData = FossFiWallet.fromAddress(issuerWallet).getWalletDataAll();
@@ -113,14 +125,16 @@ fun main() {
     val buyerFiBefore = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
     val issuerFiBefore = FossFiWallet.fromAddress(issuerWallet).getJettonBalance();
 
-    val buyerRes = FossFiWallet.fromAddress(buyerWallet).sendBuyCredit(
-        deployer,
-        0,
-        loan,
-        issuerOwner,
-        deployer,
-        { value: ton("1.5") },
-    );
+    val buyerRes = FossFiWallet
+        .fromAddress(buyerWallet)
+        .sendBuyCredit(
+            deployer,
+            0,
+            loan,
+            issuerOwner,
+            deployer,
+            { value: ton("1.5") },
+        );
     buyerRes.waitForFirstTransaction();
 
     val buyerFiAfter = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
@@ -134,8 +148,15 @@ fun main() {
     }
 
     // 4. the buyer should hold the minted personal tokens on the issuer's minter
-    val buyerPersonalWallet = net.runGetMethod<address>(pmAddress, "get_wallet_address", [deployer]);
-    val personalBalance = PersonalWallet.fromAddress(buyerPersonalWallet).getWalletData().jettonBalance;
+    val buyerPersonalWallet = net.runGetMethod<address>(
+        pmAddress,
+        "get_wallet_address",
+        [deployer],
+    );
+    val personalBalance = PersonalWallet
+        .fromAddress(buyerPersonalWallet)
+        .getWalletData()
+        .jettonBalance;
     println("BUYER_PERSONAL_BALANCE={}", personalBalance);
     if (personalBalance == loan) {
         println("VERIFY_OK: buyer received the loan in personal tokens");
@@ -150,17 +171,27 @@ fun main() {
         sendExcessesTo: deployer,
         customPayload: null,
     }.toCell();
-    val burnRes = PersonalWallet.fromAddress(buyerPersonalWallet).sendAny(
-        deployer,
-        burnBody,
-        { value: ton("0.6") },
-    );
+    val burnRes = PersonalWallet
+        .fromAddress(buyerPersonalWallet)
+        .sendAny(
+            deployer,
+            burnBody,
+            { value: ton("0.6") },
+        );
     burnRes.waitForFirstTransaction();
 
     val buyerFiFinal = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
     val issuerFiFinal = FossFiWallet.fromAddress(issuerWallet).getJettonBalance();
-    val personalAfter = PersonalWallet.fromAddress(buyerPersonalWallet).getWalletData().jettonBalance;
-    println("AFTER_PAYBACK BUYER_FI={} ISSUER_FI={} PERSONAL={}", buyerFiFinal, issuerFiFinal, personalAfter);
+    val personalAfter = PersonalWallet
+        .fromAddress(buyerPersonalWallet)
+        .getWalletData()
+        .jettonBalance;
+    println(
+        "AFTER_PAYBACK BUYER_FI={} ISSUER_FI={} PERSONAL={}",
+        buyerFiFinal,
+        issuerFiFinal,
+        personalAfter,
+    );
     if (buyerFiFinal == buyerFiBefore && issuerFiFinal == issuerFiBefore && personalAfter == 0) {
         println("VERIFY_OK: payback returned the loan and burned the personal tokens");
     } else {

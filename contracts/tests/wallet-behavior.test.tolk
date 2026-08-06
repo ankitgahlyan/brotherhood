@@ -71,7 +71,9 @@ get fun `test wallet: kitchenSink`() {
 
     // upg.waitForTrace();
     val minterDataAll = minter.getJettonDataAll();
-    expect(minterDataAll.currentRequest!.newUpgrade.walletUpgrade).toBeTrue();
+    expect(
+        minterDataAll.others.load().currentRequest!.load().newUpgrade.walletUpgrade,
+    ).toBeTrue();
 
     val _time = testing.getNow();
     // testing.setNow(time + 1000); // 1000 seconds from now
@@ -82,7 +84,7 @@ get fun `test wallet: kitchenSink`() {
     //     from: deployer.address,
     //     to: minter.address,
     // });
-    // expect(minter.getJettonDataAll().currentRequest).toBeNull();
+    // expect(minter.getJettonDataAll().others.load().currentRequest).toBeNull();
     // expect(senderWallet.getWalletDataAll().version).toEqual(1);
 
     // send HotUpgrade
@@ -134,7 +136,10 @@ get fun `test : addrs r same`() {
         maps: Maps {
             allowances: [],
             invited: [],
-            social: SocialMaps { votedFor: [], followings: [] }.toCell(),
+            social: SocialMaps {
+                votedFor: [],
+                followings: [],
+            }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),
         }.toCell(), // todo: learn how to set it default
         timestamps: TimeStamps {}.toCell(),

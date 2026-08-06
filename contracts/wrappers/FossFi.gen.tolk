@@ -127,6 +127,36 @@ fun FossFi.sendChangeMinterAdmin(
     return net.send(from, genericMsg);
 }
 
+fun FossFi.sendClaimMinterAdmin(
+    self,
+    from: address,
+    queryId: uint64,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ClaimMinterAdmin { queryId },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendDropMinterAdmin(
+    self,
+    from: address,
+    queryId: uint64,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DropMinterAdmin { queryId },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFi.sendChangeMinterMetadata(
     self,
     from: address,

@@ -50,12 +50,15 @@ fun promptJettonString(envName: string, message: string, default: string): strin
     return prompt(message, "", default);
 }
 
-fun promptJettonAddress(envName: string, message: string): address {
+fun promptJettonAddress(envName: string, message: string, default: address? = null): address {
     val fromEnv = env<address>(envName);
     if (fromEnv != null) {
         return fromEnv;
     }
-    return parseAddress(prompt(message, "", format("{}")));
+    if (default != null) {
+        return parseAddress(prompt(message, "", format("{}", default)));
+    }
+    return parseAddress(prompt(message, "", ""));
 }
 
 fun promptJettonAddressRequired(envName: string, message: string): address {
@@ -123,14 +126,12 @@ fun promptJettonMinterStorage(admin: address): FiStore {
             JETTON_DEFAULT_INITIAL_SUPPLY,
         ),
         walletVersion: 0,
-        currentRequest: null,
         adminAddress: admin,
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
             lotteryCode: build("Lottery"),
             latestFiWalletCode: null,
-            c: null,
-            d: null,
+            currentRequest: null,
         }.toCell(),
     };
 }

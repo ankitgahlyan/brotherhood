@@ -10,8 +10,8 @@ import "@gen/FossFiWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
-import "@contracts/common/messages"
 import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 
@@ -177,7 +177,10 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
             maps: Maps {
                 allowances: [],
                 invited: [],
-                social: SocialMaps { votedFor: [], followings: [] }.toCell(),
+                social: SocialMaps {
+                    votedFor: [],
+                    followings: [],
+                }.toCell(),
                 reportInfo: ReportInfo { reports: [] }.toCell(),
             }.toCell(), // todo: learn how to set it default
             timestamps: TimeStamps {}.toCell(),
@@ -250,7 +253,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         totalSupply: initialSupply,
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
-        nextAdminAddress: null,
+        adminHandoff: null,
         others: FiCodes {}.toCell(),
     });
 

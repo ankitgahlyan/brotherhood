@@ -8,11 +8,11 @@ import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 
 import "@contracts/fossFi/consts"
+import "@contracts/fossFi/storage"
+
 import "@contracts/lottery/consts"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
-import "@contracts/fossFi/storage"
-
 import "test-utils"
 
 // Realistic absolute time past the reveal deadline. Must be a future
@@ -34,7 +34,7 @@ fun deployLotteryContract(owner: address, entryAmount: coins): address {
                 prizePool: 0,
                 randomSeed: 0,
             }.toCell(),
-        }
+        },
     };
 
     val lotteryAddress = init.calculateAddress();
@@ -67,7 +67,10 @@ get fun `test lottery: deploy contract and accept correct entry fee`() {
             bounce: true,
             value: LOTTERY_ENTRY_AMT,
             dest: lotteryAddress,
-            body: EnterLottery { sender: player.address, amount: LOTTERY_ENTRY_AMT },
+            body: EnterLottery {
+                sender: player.address,
+                amount: LOTTERY_ENTRY_AMT,
+            },
         }),
     );
 
@@ -88,7 +91,10 @@ get fun `test lottery: reject entry with incorrect amount`() {
             bounce: true,
             value: ton("1"),
             dest: lotteryAddress,
-            body: EnterLottery { sender: player.address, amount: ton("1") },
+            body: EnterLottery {
+                sender: player.address,
+                amount: ton("1"),
+            },
         }),
     );
 
@@ -108,7 +114,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         totalSupply: 0,
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
-        nextAdminAddress: null,
+        adminHandoff: null,
         others: FiCodes { lotteryCode: build("Lottery") }.toCell(),
     });
 
@@ -136,7 +142,10 @@ get fun `test lottery: draw winner mints FI to the winner`() {
             bounce: true,
             value: LOTTERY_ENTRY_AMT,
             dest: lottery.address,
-            body: EnterLottery { sender: winner.address, amount: LOTTERY_ENTRY_AMT },
+            body: EnterLottery {
+                sender: winner.address,
+                amount: LOTTERY_ENTRY_AMT,
+            },
         }),
     );
     expect(enterResult).toHaveSuccessfulTx<EnterLottery>({

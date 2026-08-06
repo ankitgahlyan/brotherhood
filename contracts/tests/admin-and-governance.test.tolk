@@ -10,6 +10,7 @@ import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 import "test-utils"
 
@@ -20,7 +21,7 @@ get fun `test admin: deploy should create minter without bounce`() {
         totalSupply: 0,
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
-        nextAdminAddress: null,
+        adminHandoff: null,
         others: FiCodes {}.toCell(),
     });
 
@@ -73,10 +74,12 @@ get fun `test admin: non-admin should not be able to mint jettons`() {
     expect(minter.getTotalSupply()).toEqual(supplyBefore);
 }
 
-get fun `test admin: change-admin flow should work and only new admin can change back`() {
+get fun `test admin: proposed admin claims after the 1-week window and can then change back`() {
+    testing.setNow(1_800_000_000);
     val (minter, deployer, notDeployer) = setupTest();
     expect(minter.getAdminAddress()).toEqual(deployer.address);
 
+    // propose notDeployer as next admin; admin does not change yet
     val changeResult = minter.sendChangeMinterAdmin(
         deployer.address,
         0,
@@ -87,27 +90,129 @@ get fun `test admin: change-admin flow should work and only new admin can change
         from: deployer.address,
         to: minter.address,
     });
-    expect(minter.getAdminAddress()).toEqual(notDeployer.address);
+    expect(minter.getAdminAddress()).toEqual(deployer.address);
 
-    val badChangeBack = minter.sendChangeMinterAdmin(
+    // a new proposal cannot overwrite a pending one
+    val redundantPropose = minter.sendChangeMinterAdmin(
         deployer.address,
         0,
         deployer.address,
         { bounce: false, value: ton("0.05") },
     );
-    expect(badChangeBack).toHaveFailedTx<ChangeMinterAdmin>({
+    expect(redundantPropose).toHaveFailedTx<ChangeMinterAdmin>({
         from: deployer.address,
         to: minter.address,
-        exitCode: Errors.NotOwner,
+        exitCode: Errors.WaitMore,
     });
 
+    // someone who is not the proposed admin cannot claim
+    val wrongClaimer = minter.sendClaimMinterAdmin(
+        deployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(wrongClaimer).toHaveFailedTx<ClaimMinterAdmin>({
+        from: deployer.address,
+        to: minter.address,
+        exitCode: Errors.IncorrectSender,
+    });
+
+    // the proposed admin cannot claim before the 1-week window elapses
+    val earlyClaim = minter.sendClaimMinterAdmin(
+        notDeployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(earlyClaim).toHaveFailedTx<ClaimMinterAdmin>({
+        from: notDeployer.address,
+        to: minter.address,
+        exitCode: Errors.WaitMore,
+    });
+
+    // after the window, the proposed admin can claim and become admin
+    testing.setNow(1_800_000_000 + ADMIN_HANDOVER_WAIT + 1);
+    val lateClaim = minter.sendClaimMinterAdmin(
+        notDeployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(lateClaim).toHaveSuccessfulTx<ClaimMinterAdmin>({
+        from: notDeployer.address,
+        to: minter.address,
+    });
+    expect(minter.getAdminAddress()).toEqual(notDeployer.address);
+
+    // the new admin can now propose a handoff back to the old admin
     minter.sendChangeMinterAdmin(
         notDeployer.address,
         0,
         deployer.address,
         { bounce: false, value: ton("0.05") },
     );
+    testing.setNow(1_800_000_000 + 2 * ADMIN_HANDOVER_WAIT + 2);
+    minter.sendClaimMinterAdmin(
+        deployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
     expect(minter.getAdminAddress()).toEqual(deployer.address);
+}
+
+get fun `test admin: current admin can drop a pending handoff within the window`() {
+    testing.setNow(1_800_000_000);
+    val (minter, deployer, notDeployer) = setupTest();
+
+    minter.sendChangeMinterAdmin(
+        deployer.address,
+        0,
+        notDeployer.address,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(minter.getAdminAddress()).toEqual(deployer.address);
+
+    // the current admin drops the pending handoff, keeping admin
+    val dropResult = minter.sendDropMinterAdmin(
+        deployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(dropResult).toHaveSuccessfulTx<DropMinterAdmin>({
+        from: deployer.address,
+        to: minter.address,
+    });
+    expect(minter.getAdminAddress()).toEqual(deployer.address);
+
+    // the dropped-appointee cannot claim (no pending handoff)
+    val droppedClaim = minter.sendClaimMinterAdmin(
+        notDeployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(droppedClaim).toHaveFailedTx<ClaimMinterAdmin>({
+        from: notDeployer.address,
+        to: minter.address,
+        exitCode: Errors.WaitMore,
+    });
+
+    // a fresh proposal replaces the cleared slot
+    val rePropose = minter.sendChangeMinterAdmin(
+        deployer.address,
+        0,
+        notDeployer.address,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(rePropose).toHaveSuccessfulTx<ChangeMinterAdmin>({
+        from: deployer.address,
+        to: minter.address,
+    });
+
+    testing.setNow(1_800_000_000 + ADMIN_HANDOVER_WAIT + 1);
+    minter.sendClaimMinterAdmin(
+        notDeployer.address,
+        0,
+        { bounce: false, value: ton("0.05") },
+    );
+    expect(minter.getAdminAddress()).toEqual(notDeployer.address);
 }
 
 get fun `test admin: non-admin cannot change admin`() {

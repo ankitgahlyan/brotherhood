@@ -1,21 +1,23 @@
 import "@stdlib/tvm-lowlevel"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
-import "@contracts/common/sharding"
+import "@gen/FossFiWallet.code"
 import "@contracts/common/errors"
+import "@contracts/common/fees-management"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
+import "@contracts/common/sharding"
 import "@contracts/fossFi/consts"
-import "@contracts/lottery/messages"
-import "@contracts/lottery/storage"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
-import "@gen/FossFiWallet.code"
-import "@contracts/common/fees-management"
+import "@contracts/lottery/messages"
+import "@contracts/lottery/storage"
 
 type AllowedMessageToMinter =
     | MintNewJettons
     | NotifyMinter
     | RequestWalletAddress
     | ChangeMinterAdmin
+    | ClaimMinterAdmin
+    | DropMinterAdmin
     | ChangeMinterMetadata
     | TopUpTons
     | InformMinterInviteInternal
@@ -84,7 +86,9 @@ fun onInternalMessage(in: InMessage): void {
             assertCorrectSender(in.senderAddress, msg.burnInitiator, store.adminAddress);
 
             // determine whether MINT or BURN
-            msg.queryId != 0 ? store.totalSupply += msg.jettonAmount : store.totalSupply -= msg.jettonAmount;
+            msg.queryId != 0
+                ? store.totalSupply += msg.jettonAmount
+                : store.totalSupply -= msg.jettonAmount;
 
             // sendExcessesTo null: still persist the supply change (bottom save runs)
             if (msg.sendExcessesTo != null) {
@@ -94,7 +98,9 @@ fun onInternalMessage(in: InMessage): void {
                     value: 0,
                     body: ReturnExcessesBack { queryId: msg.queryId },
                 });
-                excessesMsg.send(SEND_MODE_IGNORE_ERRORS | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+                excessesMsg.send(
+                    SEND_MODE_IGNORE_ERRORS | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
+                );
             }
         }
 
@@ -158,7 +164,34 @@ fun onInternalMessage(in: InMessage): void {
 
         ChangeMinterAdmin => {
             assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
-            store.adminAddress = msg.newAdminAddress;
+            // a handoff is already pending; the current admin must drop it first
+            assert (store.adminHandoff == null) throw Errors.WaitMore;
+
+            store.adminHandoff = AdminHandoff {
+                newAdminAddress: msg.newAdminAddress,
+                timestamp: blockchain.now(),
+            }.toCell();
+        }
+
+        DropMinterAdmin => {
+            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assert (store.adminHandoff != null) throw Errors.WaitMore;
+
+            store.adminHandoff = null;
+        }
+
+        ClaimMinterAdmin => {
+            // the proposed next admin must claim it themselves
+            assert (store.adminHandoff != null) throw Errors.WaitMore;
+            val handoff = store.adminHandoff.load();
+            assert (in.senderAddress == handoff.newAdminAddress) throw Errors.IncorrectSender;
+            // can only be claimed after the 1-week reject window elapses
+            assert (
+                handoff.timestamp + ADMIN_HANDOVER_WAIT < blockchain.now()
+            ) throw Errors.WaitMore;
+
+            store.adminAddress = handoff.newAdminAddress;
+            store.adminHandoff = null;
         }
 
         ChangeMinterMetadata => {
@@ -168,29 +201,33 @@ fun onInternalMessage(in: InMessage): void {
 
         Upgrade => {
             assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
-            assert (store.currentRequest == null) throw Errors.WaitMore;
+            assert (others.currentRequest == null) throw Errors.WaitMore;
 
-            store.currentRequest = { newUpgrade: msg, timestamp: blockchain.now() };
+            others.currentRequest = CurrentRequest {
+                newUpgrade: msg,
+                timestamp: blockchain.now(),
+            }.toCell();
         }
 
         RejectUpgrade => {
             assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
-            assert (store.currentRequest != null) throw Errors.WaitMore; // todo: better error code
+            assert (others.currentRequest != null) throw Errors.WaitMore; // todo: better error code
 
-            store.currentRequest = null;
+            others.currentRequest = null;
         }
 
         ApproveUpgrade => {
             assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
             // todo: redundant check (why would admin do this?)
-            assert (store.currentRequest != null) throw Errors.WaitMore;
+            assert (others.currentRequest != null) throw Errors.WaitMore;
+            val currentRequest = others.currentRequest.load();
             // testnetOnly, wait period is over
-            assert (store.currentRequest.timestamp + 1 < blockchain.now()) throw Errors.WaitMore;
+            assert (currentRequest.timestamp + 1 < blockchain.now()) throw Errors.WaitMore;
 
-            val code = store.currentRequest.newUpgrade.newCode;
-            val data = store.currentRequest.newUpgrade.newData;
+            val code = currentRequest.newUpgrade.newCode;
+            val data = currentRequest.newUpgrade.newData;
 
-            match (store.currentRequest.newUpgrade.walletUpgrade) {
+            match (currentRequest.newUpgrade.walletUpgrade) {
                 true => {
                     // for jettonWallet of FOSSFIAT/MINT
                     store.walletVersion += 1;
@@ -199,7 +236,10 @@ fun onInternalMessage(in: InMessage): void {
                     val upgradeMsg = createMessage({
                         bounce: BounceMode.NoBounce,
                         value: 0,
-                        dest: getAutoAddress(in.senderAddress, store.adminAddress).calculateAddress(),
+                        dest: getAutoAddress(
+                            in.senderAddress,
+                            store.adminAddress,
+                        ).calculateAddress(),
                         body: Upgrade {
                             walletVersion: store.walletVersion,
                             sender: store.adminAddress, // or use contract.getAddress()
@@ -224,7 +264,7 @@ fun onInternalMessage(in: InMessage): void {
                 }
             }
 
-            store.currentRequest = null;
+            others.currentRequest = null;
         }
 
         RequestUpgradeCode => {
@@ -312,8 +352,8 @@ fun onInternalMessage(in: InMessage): void {
                 ),
                 value: in.valueCoins, // lottery forwards its pot to fund the mint
                 body: makeInternalTransferStep(
-                    0,               // queryId
-                    msg.amt,         // jettonAmount
+                    0,                     // queryId
+                    msg.amt,               // jettonAmount
                     contract.getAddress(), // transferInitiator (minter mints)
                     contract.getAddress(), // sendExcessesTo
                 ),
@@ -419,7 +459,7 @@ fun hotUpgradeFiData(_additionalData: cell?) {
         totalSupply: oldStorage.totalSupply + ton("11111"),
         walletVersion: oldStorage.walletVersion,
         adminAddress: oldStorage.adminAddress,
-        currentRequest: oldStorage.currentRequest,
+        adminHandoff: oldStorage.adminHandoff,
         metadata: oldStorage.metadata,
         others: oldStorage.others,
     };

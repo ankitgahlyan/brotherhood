@@ -1,10 +1,10 @@
 import "@acton/build"
+import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
-import "@acton/io"
+import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
-import "@gen/PersonalWallet.code"
 import "@contracts/personalMinter/storage"
 import "utils/common"
 
@@ -50,7 +50,10 @@ fun main() {
         code: build("PersonalMinter"),
         data: priStore.toCell(),
     };
-    val pmAddress = AutoDeployAddress { workchain: BASECHAIN, stateInit }.calculateAddress();
+    val pmAddress = AutoDeployAddress {
+        workchain: BASECHAIN,
+        stateInit,
+    }.calculateAddress();
 
     // deploy the Personal Token minter
     val deployMsg = createMessage({
@@ -66,11 +69,13 @@ fun main() {
     deployRes.waitForFirstTransaction();
 
     // point the issuer's FI wallet at the Personal Token minter (ActSetPersonalJettonMinter signal)
-    val pointRes = FossFiWallet.fromAddress(issuerWallet).sendActSetPersonalJettonMinter(
-        issuerOwner,
-        pmAddress,
-        { value: ton("0.6") },
-    );
+    val pointRes = FossFiWallet
+        .fromAddress(issuerWallet)
+        .sendActSetPersonalJettonMinter(
+            issuerOwner,
+            pmAddress,
+            { value: ton("0.6") },
+        );
     pointRes.waitForFirstTransaction();
 
     println("PERSONAL_MINTER_ADDRESS={}", pmAddress);
