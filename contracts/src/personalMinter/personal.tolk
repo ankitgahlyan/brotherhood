@@ -1,12 +1,12 @@
-import "@contracts/common/fees-management"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
-import "@contracts/common/sharding"
 import "@contracts/common/errors"
+import "@contracts/common/fees-management"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
+import "@contracts/common/sharding"
 import "jetton-utils"
 import "storage"
 
-type AllowedMessageToMinter =
+type AllowedMsgToPersonalMinter =
     | MintNewJettons
     | NotifyMinter
     | RequestWalletAddress
@@ -16,6 +16,14 @@ type AllowedMessageToMinter =
     | TopUpTons
 
 type AllowedBounced = InternalTransferStep | Payback
+
+contract PersonalMinter {
+    author: "zeta"
+    version: "0.1.0"
+    description: "minter contract for personal token of BrotherHood Network"
+    storage: PriStore
+    incomingMessages: AllowedMsgToPersonalMinter
+}
 
 fun onBouncedMessage(in: InMessageBounced) {
     // The minter sends bouncable messages with two different bounce modes:
@@ -32,7 +40,7 @@ fun onBouncedMessage(in: InMessageBounced) {
         store.totalSupply += payback.amount;
         store.save();
 
-        createMessage({
+        val mintMsg = createMessage({
             bounce: BounceMode.NoBounce,
             value: 0,
             dest: calcAddrPriWallet(
@@ -46,7 +54,8 @@ fun onBouncedMessage(in: InMessageBounced) {
                 payback.amount,
                 payback.sender, // or deployer or minter
             ),
-        }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        });
+        mintMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
     } else {
         // process only mint bounces; on other messages, an exception will be thrown, it's okay
         in.bouncedBody.skipBouncedPrefix();
@@ -68,7 +77,7 @@ fun onBouncedMessage(in: InMessageBounced) {
 }
 
 fun onInternalMessage(in: InMessage) {
-    val msg = lazy AllowedMessageToMinter.fromSlice(in.body);
+    val msg = lazy AllowedMsgToPersonalMinter.fromSlice(in.body);
     var storage = lazy PriStore.load();
 
     match (msg) {
@@ -86,7 +95,7 @@ fun onInternalMessage(in: InMessage) {
 
             // now transfer MINTS if payback
             if (msg.sendExcessesTo != null) {
-                createMessage({
+                val paybackMsg = createMessage({
                     bounce: BounceMode.RichBounceOnlyRootCell,
                     value: 0,
                     dest: storage.fiJettonAddress,
@@ -95,7 +104,8 @@ fun onInternalMessage(in: InMessage) {
                         amount: msg.jettonAmount,
                         sender: msg.burnInitiator,
                     },
-                }).send(
+                });
+                paybackMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
             }
@@ -149,7 +159,7 @@ fun onInternalMessage(in: InMessage) {
 
             storage.totalSupply += internalTransferMsg.jettonAmount;
 
-            reserveToncoinsOnBalance(
+            reserveGramsOnBalance(
                 ton("0.01"),
                 RESERVE_MODE_EXACT_AMOUNT,
             ); // reserve for storage fees

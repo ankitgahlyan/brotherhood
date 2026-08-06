@@ -1,14 +1,14 @@
 import "@stdlib/tvm-lowlevel"
-import "@contracts/common/fees-management"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
-import "@contracts/common/sharding"
 import "@contracts/common/errors"
+import "@contracts/common/fees-management"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
+import "@contracts/common/sharding"
 import "@contracts/followers/messages"
-import "@contracts/lottery/messages"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
-import "@contracts/fossFi/consts"
+import "@contracts/lottery/messages"
 
 type AllowedMessageToWallet =
     | AskToTransfer
@@ -119,7 +119,7 @@ fun onInternalMessage(in: InMessage): void {
                 throw Errors.IncorrectSender;
             }
             store.id = msg.newId;
-        },
+        }
 
         ActClaimWeeklyGrant => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
@@ -153,8 +153,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             notifyMinterMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
@@ -202,8 +201,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             inviteInternal.send(
-                SEND_MODE_BOUNCE_ON_ACTION_FAIL |
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
             );
         }
 
@@ -238,8 +236,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             votingMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
@@ -264,8 +261,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             votingMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
@@ -306,8 +302,7 @@ fun onInternalMessage(in: InMessage): void {
                 body: AuthorityAction { sender: addrs.owner },
             });
             authorityMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
@@ -366,8 +361,8 @@ fun onInternalMessage(in: InMessage): void {
                         null,                  // sendExcessesTo
                         ton("0.0001"),
                         beginCell().storeMaybeRef(null).endCell().beginParse(),
-                        0,   // version
-                        true // transferredAsCredit
+                        0,                     // version
+                        true,                  // transferredAsCredit
                     ),
                 };
                 val mintMsg = createMessage({
@@ -391,7 +386,7 @@ fun onInternalMessage(in: InMessage): void {
                 ? msg.sendExcessesTo
                 : msg.transferInitiator;
             sendExcesses(msg.queryId, in.valueCoins, excessesTo);
-        },
+        }
 
         AskToTransfer => {
             // todo: lock transfers initially unless stable
@@ -439,7 +434,7 @@ fun onInternalMessage(in: InMessage): void {
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             ); // return;
-        },
+        }
 
         BuyCredit => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
@@ -470,7 +465,7 @@ fun onInternalMessage(in: InMessage): void {
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
-        },
+        }
 
         Payback => {
             assert (
@@ -496,7 +491,7 @@ fun onInternalMessage(in: InMessage): void {
             });
             // carry the Payback message value so the buyer's wallet can afford the transfer
             transferMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
-        },
+        }
 
         InternalInvite => {
             // assert (store.jettonBalance == ton("1")) throw Errors.AlreadyInvited;
@@ -543,7 +538,7 @@ fun onInternalMessage(in: InMessage): void {
             );
             // send excesses
             // sendExcesses(msg.queryId, in.valueCoins, msg.sender);
-        },
+        }
 
         // both invitor & invitor0 can deactivate
         InternalDeActivate => {
@@ -553,7 +548,7 @@ fun onInternalMessage(in: InMessage): void {
             ) throw Errors.InviteFirst;                                                                                       // throws if invitor0 null
 
             store.active = !store.active;
-        },
+        }
 
         // DeActivate accounts
         AuthorityAction => {
@@ -568,11 +563,11 @@ fun onInternalMessage(in: InMessage): void {
                     value: 0,
                     body: makeInternalTransferStep(
                         0,
-                        store.jettonBalance, // all coins
+                        store.jettonBalance,            // all coins
                         addrs.owner,
-                        addrs.owner,                        // sendExcessesTo
+                        addrs.owner,                    // sendExcessesTo
                         0,
-                        "authorityFreeze".beginParse(),     // todo
+                        "authorityFreeze".beginParse(), // todo
                         store.version,
                     ),
                 });
@@ -580,19 +575,19 @@ fun onInternalMessage(in: InMessage): void {
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
             }
-        },
+        }
 
         // for granular control
         SetStatus => {
             // todo fixme : check correct sender
             store.status = msg.status;
-        },
+        }
 
         RequestUpgradeCode => {
             // todo: need? this check
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             sendUpgrade(in.senderAddress, addrs.owner, store.version);
-        },
+        }
 
         Upgrade => {
             // todo: acc active is checked, need this for upgrades?
@@ -624,7 +619,7 @@ fun onInternalMessage(in: InMessage): void {
                     invitee = invitees.iterateNext(invitee);
                 }
             }
-        },
+        }
 
         VotingAction => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
@@ -632,7 +627,7 @@ fun onInternalMessage(in: InMessage): void {
             if (addrs.owner != addrs.treasury) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
             }
-        },
+        }
 
         AskToBurn => {
             // assert (false) throw Errors.InvalidMessage; // not allowed
@@ -655,7 +650,7 @@ fun onInternalMessage(in: InMessage): void {
             notifyMinterMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
-        },
+        }
 
         TopUpTons => {
             // deploy + just accept tons
@@ -667,7 +662,7 @@ fun onInternalMessage(in: InMessage): void {
                 nomins.invitor = contract.getAddress();
                 nomins.invitor0 = contract.getAddress();
             }
-        },
+        }
 
         TransferNotificationForRecipient => {
             // noNeed2check correctSender in harmless(non state changing) msg
@@ -678,12 +673,12 @@ fun onInternalMessage(in: InMessage): void {
                 msg.jettonAmount,
                 msg.forwardPayload,
             );
-        },
+        }
 
         EnterLottery => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             enterLottery(addrs.owner, trustedAddrs.minterAddr, msg.amount);
-        },
+        }
 
         UnFollow => {
             assert (in.senderAddress == addrs.owner) throw Errors.IncorrectSender;
@@ -737,7 +732,7 @@ fun onInternalMessage(in: InMessage): void {
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
             }
-        },
+        }
 
         UnFollowInternal => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
@@ -752,7 +747,7 @@ fun onInternalMessage(in: InMessage): void {
             //     dest: to,
             //     body: msg,
             // }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
-        },
+        }
 
         // testnetOnly
         Destroy => {
@@ -761,7 +756,7 @@ fun onInternalMessage(in: InMessage): void {
             // todo: assert(store.jettonBalance == store.claimedAmount)
             destroyContract(in.senderAddress);
             // todo: full invite chain destroy
-        },
+        }
 
         SetAllowance => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
@@ -770,7 +765,7 @@ fun onInternalMessage(in: InMessage): void {
             } else {
                 maps.allowances.set(msg.grantee, msg.amount);
             }
-        },
+        }
 
         SpendAllowance => {
             val granted = maps.allowances.get(in.senderAddress);
@@ -805,7 +800,7 @@ fun onInternalMessage(in: InMessage): void {
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
-        },
+        }
 
         AskGoldCoinsTransfer => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
@@ -827,13 +822,13 @@ fun onInternalMessage(in: InMessage): void {
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
-        },
+        }
 
         InternalGoldCoinsTransfer => {
             checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
             store.goldCoins += msg.amount;
             sendExcesses(msg.queryId, in.valueCoins, in.senderAddress);
-        },
+        }
 
         TriggerDecay => {
             // keeper-triggered, no sender auth: burning another's decayed balance is harmless
@@ -841,10 +836,19 @@ fun onInternalMessage(in: InMessage): void {
             if (time.lastDecay == 0) {
                 time.lastDecay = now;
             } else {
-                val months = (now - time.lastDecay) / DECAY_MONTH_SECONDS;
+                val elapsed = now - time.lastDecay;
+                val months = elapsed / DECAY_MONTH_SECONDS;
                 if (months > 0) {
-                    val monthly = max(ton("1"), store.jettonBalance / DECAY_MONTHS_TOTAL);
-                    val burnAmount = min(store.jettonBalance, monthly * months);
+                    // burn proportional to elapsed time: multiply elapsed seconds by the
+                    // total claimed, then divide by the combined period, keeping precision
+                    val burnAmount = min(
+                        store.jettonBalance,
+                        max(
+                            months,
+                            elapsed * ton("1158718") / (DECAY_MONTH_SECONDS * DECAY_MONTHS_TOTAL),
+                        ),
+                    ); // total claimed 1158718 ton approx.
+                    // todo: if balance is less than burnAmount, then burn whatever available and increase debt to be paid later. This is to avoid negative balance and allow for future minting/transfers to cover the debt.
                     if (burnAmount > 0) {
                         store.jettonBalance -= burnAmount;
                         val notifyMinterMsg = createMessage({
@@ -863,21 +867,20 @@ fun onInternalMessage(in: InMessage): void {
                             SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                         );
                     }
-                    time.lastDecay += months * DECAY_MONTH_SECONDS;
+                    time.lastDecay = now - elapsed % DECAY_MONTH_SECONDS;
                 }
             }
-        },
+        }
 
         // for migration to other network states
-        RequestState => {            assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
+        RequestState => {
+            assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
 
             val stateMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: in.senderAddress,
                 value: 0,
-                body: ProvideState {
-                    state: store.toCell(),
-                },
+                body: ProvideState { state: store.toCell() },
             });
             stateMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }

@@ -1,14 +1,22 @@
-import "@contracts/common/fees-management"
-import "@contracts/common/messages"
-import "@contracts/common/internal-transfer"
-import "@contracts/common/sharding"
 import "@contracts/common/errors"
+import "@contracts/common/fees-management"
+import "@contracts/common/internal-transfer"
+import "@contracts/common/messages"
+import "@contracts/common/sharding"
 import "jetton-utils"
 import "storage"
 
-type AllowedMessageToWallet = AskToTransfer | AskToBurn | InternalTransferStep | TopUpTons
+type AllowedMsgToPersonalWallet = AskToTransfer | AskToBurn | InternalTransferStep | TopUpTons
 
 type BounceOpToHandle = InternalTransferStep | NotifyMinter
+
+contract PersonalWallet {
+    author: "zeta"
+    version: "0.1.0"
+    description: "Jetton wallet contract for personal token"
+    storage: PriWalletStore
+    incomingMessages: AllowedMsgToPersonalWallet
+}
 
 fun onBouncedMessage(in: InMessageBounced) {
     in.bouncedBody.skipBouncedPrefix();
@@ -25,7 +33,7 @@ fun onBouncedMessage(in: InMessageBounced) {
 }
 
 fun onInternalMessage(in: InMessage) {
-    val msg = lazy AllowedMessageToWallet.fromSlice(in.body);
+    val msg = lazy AllowedMsgToPersonalWallet.fromSlice(in.body);
     var storage = lazy PriWalletStore.load();
     match (msg) {
         InternalTransferStep => {
@@ -64,6 +72,7 @@ fun onInternalMessage(in: InMessage) {
                     value: 0,
                     body: ReturnExcessesBack { queryId: msg.queryId },
                 });
+                // safety:
                 excessesMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
             }
         }
@@ -91,7 +100,7 @@ fun onInternalMessage(in: InMessage) {
                 (msg.transferRecipient == storage.minterAddress)
             ) {
                 // burn for payback
-                createMessage({
+                val paybackMsg = createMessage({
                     bounce: BounceMode.Only256BitsOfBody,
                     dest: storage.minterAddress,
                     value: 0,
@@ -103,7 +112,8 @@ fun onInternalMessage(in: InMessage) {
                             ? msg.sendExcessesTo
                             : null,
                     },
-                }).send(
+                });
+                paybackMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
 
