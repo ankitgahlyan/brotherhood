@@ -1,7 +1,7 @@
 import { QrCode } from 'lucide-react';
 import { Input } from './ui/input';
 import { QrScanner } from './QrScanner';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 function InputScan({
   toAddr,
@@ -14,16 +14,13 @@ function InputScan({
 }) {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
 
-  const handleClose = useCallback(() => setIsScannerVisible(false), []);
+  const handleClose = () => setIsScannerVisible(false);
 
-  const handleScan = useCallback(
-    (data: string) => {
-      if (!data) return;
-      setToAddr(data.trim());
-      setIsScannerVisible(false);
-    },
-    [setToAddr],
-  );
+  const handleScan = (data: string) => {
+    if (!data) return;
+    setToAddr(data.trim());
+    setIsScannerVisible(false);
+  };
 
   return (
     <div className="flex items-center gap-2">

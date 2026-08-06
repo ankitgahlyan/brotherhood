@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import type { Cell } from '@ton/core';
 import { getErrorMessage, isCancelledTransactionError } from './errors';
@@ -35,8 +35,7 @@ export function useSendFiTransaction(
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<SendStatus | null>(null);
 
-  const sendTransaction = useCallback(
-    async (params: SendFiTransactionParams) => {
+  const sendTransaction = async (params: SendFiTransactionParams) => {
       setLoading(true);
       setStatus({ type: 'info', message: 'Confirm in your wallet...' });
 
@@ -65,9 +64,7 @@ export function useSendFiTransaction(
         setLoading(false);
         setStatus((prev) => (prev?.type === 'info' ? null : prev));
       }
-    },
-    [tonConnectUI, network],
-  );
+    };
 
   return { sendTransaction, loading, status, setStatus };
 }

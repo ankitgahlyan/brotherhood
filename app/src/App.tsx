@@ -25,6 +25,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('jm-theme', theme);
+    // The `uiOptions` property is a public setter (not plain data): assigning it
+    // invokes TonConnect's internal merge + notify path and must be called for
+    // the theme to be applied. React Compiler forbids raw writes to
+    // hook-returned objects, so scope the intentional setter call here.
+    // eslint-disable-next-line react-compiler/react-compiler
     tonConnectUI.uiOptions = {
       uiPreferences: {
         theme: theme === 'light' ? THEME.LIGHT : THEME.DARK,
@@ -46,9 +51,7 @@ export default function App() {
           className="glass flex items-center justify-between px-7 h-15 border-b sticky top-0 z-50 max-sm:px-4 max-sm:h-auto max-sm:flex-wrap max-sm:gap-2.5 max-sm:py-3"
           style={{
             borderBottomColor:
-              theme === 'light'
-                ? 'rgba(0,0,0,0.08)'
-                : 'rgba(255,255,255,0.08)',
+              theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
           }}
         >
           <div className="flex items-center gap-6 max-sm:gap-2.5 max-sm:w-full max-sm:justify-between">

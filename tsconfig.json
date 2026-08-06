@@ -15,8 +15,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "rootDir": ".",
     "types": ["vite/client", "node"],
-    // "baseUrl": ".",
     "paths": {
       "@wrappers/*": ["./wrappers-ts/*"],
       "@/*": ["./app/src/*"]

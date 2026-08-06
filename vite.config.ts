@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -11,7 +12,7 @@ export default defineConfig({
   base: '/brotherhood/',
   envDir: projectRoot,
   envPrefix: ['VITE_', 'TONCENTER_'],
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   resolve: {
     alias: {
       '@wrappers': path.resolve(projectRoot, 'wrappers-ts'),
@@ -21,16 +22,36 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     outDir: '../dist',
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined;
-          if (id.includes('/react/') || id.includes('/react-dom/'))
-            return 'react';
-          if (id.includes('/@ton/ton/') || id.includes('/@ton/core/'))
-            return 'ton-sdk';
-          if (id.includes('/@tonconnect/')) return 'tonconnect';
-          return undefined;
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/]react(?:-dom)?[\\/]/,
+            },
+            {
+              name: 'ton-sdk',
+              test: /node_modules[\\/]@ton[\\/](?:ton|core)[\\/]/,
+            },
+            {
+              name: 'tonconnect',
+              test: /node_modules[\\/]@tonconnect[\\/]/,
+            },
+            {
+              name: (id) => {
+                if (!id.includes('node_modules')) return null;
+                const packages = [
+                  { name: 'html5-qrcode', re: /node_modules[\\/]html5-qrcode[\\/]/ },
+                  { name: 'react-query', re: /node_modules[\\/]@tanstack[\\/]/ },
+                  { name: 'radix-ui', re: /node_modules[\\/]@radix-ui[\\/]/ },
+                  { name: 'floating-ui', re: /node_modules[\\/]@floating-ui[\\/]/ },
+                ];
+                for (const p of packages) if (p.re.test(id)) return p.name;
+                return null;
+              },
+            },
+          ],
         },
       },
     },

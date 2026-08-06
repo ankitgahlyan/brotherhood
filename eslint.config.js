@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import globals from 'globals';
+import reactCompiler from 'eslint-plugin-react-compiler';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
@@ -14,9 +15,11 @@ export default tseslint.config(
     },
     plugins: {
       'react-hooks': reactHooks,
+      'react-compiler': reactCompiler,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      ...reactCompiler.configs.recommended.rules,
     },
   },
 );

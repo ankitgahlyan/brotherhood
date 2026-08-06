@@ -13,7 +13,7 @@
     "lint": "eslint --max-warnings 0 .",
     "lint:fix": "eslint --fix .",
     "test": "echo \"no test specified\" && exit 0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node node_modules/typescript-7/bin/tsc --noEmit --checkers 4"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -42,19 +42,25 @@
     "axios": "^1.15.2"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
     "@eslint/js": "^9.25.0",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "^4.2.4",
+    "@types/babel__core": "^7.20.5",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.0.5",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.25.0",
+    "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.2.4",
-    "typescript": "^5.9.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.0",
+    "typescript-7": "npm:typescript@^7.0.0",
     "typescript-eslint": "^8.30.1",
-    "vite": "^6.4.2"
+    "vite": "^8.2.0"
   }
 }

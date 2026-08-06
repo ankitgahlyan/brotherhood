@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Wallet2, ChevronDown, LogOut, Plug } from 'lucide-react';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import type { WalletInfo } from '@tonconnect/ui';
@@ -64,16 +64,13 @@ export function WalletSelector({
         };
     }, [tonConnectUI]);
 
-    const openWalletSelector = useCallback(
-        async () => {
-            await tonConnectUI.openModal();
-        },
-        [tonConnectUI],
-    );
+    const openWalletSelector = async () => {
+        await tonConnectUI.openModal();
+    };
 
-    const disconnectWallet = useCallback(async () => {
+    const disconnectWallet = async () => {
         await tonConnectUI.disconnect();
-    }, [tonConnectUI]);
+    };
 
     return (
         <DropdownMenu>

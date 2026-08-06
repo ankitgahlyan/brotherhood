@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 type Page = 'create' | 'manage';
 
@@ -72,26 +72,17 @@ export function useRouter() {
     };
   }, []);
 
-  const go = useCallback(
-    (page: Page) => {
-      push(buildUrl(page, route.isTestnet));
-    },
-    [route.isTestnet],
-  );
+  const go = (page: Page) => {
+    push(buildUrl(page, route.isTestnet));
+  };
 
-  const setTestnet = useCallback(
-    (testnet: boolean) => {
-      push(buildUrl(route.page, testnet, route.address));
-    },
-    [route.page, route.address],
-  );
+  const setTestnet = (testnet: boolean) => {
+    push(buildUrl(route.page, testnet, route.address));
+  };
 
-  const setAddress = useCallback(
-    (address: string) => {
-      replace(buildUrl('manage', route.isTestnet, address));
-    },
-    [route.isTestnet],
-  );
+  const setAddress = (address: string) => {
+    replace(buildUrl('manage', route.isTestnet, address));
+  };
 
   return {
     page: route.page,

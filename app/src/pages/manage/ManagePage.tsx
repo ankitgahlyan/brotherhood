@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Address, fromNano } from '@ton/core';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import {
@@ -76,10 +76,7 @@ export function ManagePage() {
   const wallet = useTonWallet();
 
   const rawOwnerAddress = wallet?.account?.address ?? null;
-  const ownerAddress = useMemo(
-    () => (rawOwnerAddress ? Address.parse(rawOwnerAddress) : null),
-    [rawOwnerAddress],
-  );
+  const ownerAddress = rawOwnerAddress ? Address.parse(rawOwnerAddress) : null;
 
   const jettonInfoQuery = useJettonMaster();
   const fiWalletStateQuery = useFiWalletState(ownerAddress);
