@@ -126,7 +126,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(229,77,94,0.3)]">
+      <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(229,77,94,0.3)]">
         <AppProviders>
           <div className="min-h-full flex flex-col">
             <div className="grid-background" aria-hidden="true" />
