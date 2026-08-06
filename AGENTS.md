@@ -46,6 +46,12 @@ The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the me
 
 **Deployment:** Static-first. `.github/workflows/pages.yml` runs `npm run build:ghpages` and uploads `dist/client` to GitHub Pages (works because every route is `ssr: false` and the build prerenders shells + `404.html`). Cloudflare Workers SSR is optional via `npm run deploy:workers` (`wrangler.jsonc`); server routes only run on a server runtime (dev or Workers) and 404 on a static host.
 
+**Testing:** `playwright` is a devDependency for headless checks (browser binary in `~/.cache/ms-playwright`, installed once via `npx playwright install chromium`). `npm run smoke` runs `scripts/smoke-test.mjs` against the dev server (or pass a URL, e.g. against a served `dist/client`). Use it after frontend changes to catch client-side render regressions — especially because routes are `ssr: false` and only the shell is server-rendered.
+
+You have access to local Cloudflare services (KV, R2, D1, Durable Objects, and Workflows) for this app via the Explorer API.
+API endpoint: http://localhost:3000/cdn-cgi/local/explorer/api
+Fetch the OpenAPI schema from API endpoint to discover available operations. Use these endpoints to list, query, and manage local resources during development.
+
 **Gotchas:**
 
 - `tsr generate` will not emit the `@tanstack/react-start` `Register` augmentation because this router uses `createTanStackRouter` (no `createStart`). It lives in `src/start-router-register.ts` (eslint-disabled, mirrors TanStack's generated block). Don't delete it — `/api/chat`'s `server.handlers` option stops typechecking without it.
