@@ -17,7 +17,7 @@ export function getRouter() {
     basepath: import.meta.env.VITE_BASE ?? '/brotherhood/',
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 10 * 60 * 1000,
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient });

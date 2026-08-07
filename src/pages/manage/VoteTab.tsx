@@ -9,6 +9,7 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InputScan } from '@/components/input-scan';
 import { StatusAlert } from '../DeployPage';
 
 export function VoteTab({
@@ -43,12 +44,7 @@ export function VoteTab({
       : buildUnvoteBody({
           transferRecipient: recipientAddr,
         });
-    // const client = getTonClient(network);
-    const walletAddr = await getWalletAddress(
-      // client,
-      // Address.parse(contractAddr),
-      owner,
-    );
+    const walletAddr = await getWalletAddress(owner);
 
     await sendTransaction({
       messages: [
@@ -72,13 +68,7 @@ export function VoteTab({
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Delegate Address
         </Label>
-        <Input
-          type="text"
-          placeholder="0Q..."
-          value={toAddr}
-          onChange={(e) => setToAddr(e.target.value)}
-          disabled={loading}
-        />
+        <InputScan toAddr={toAddr} setToAddr={setToAddr} />
       </div>
       <div className="grid grid-cols-2 gap-3.5 max-sm:grid-cols-1">
         <Button

@@ -34,6 +34,18 @@ function serializeReplacer(_key: string, value: any): any {
       /* pass */
     }
   }
+  if (value && typeof value === 'object' && typeof value.keys === 'function') {
+    try {
+      const keys = value.keys();
+      const entries = keys.map((k: any) => [k, value.get(k)]);
+      return {
+        __type: 'Dictionary',
+        value: entries,
+      };
+    } catch {
+      /* pass */
+    }
+  }
   if (value instanceof Map) {
     return {
       __type: 'Map',
@@ -43,7 +55,7 @@ function serializeReplacer(_key: string, value: any): any {
   return value;
 }
 
-// Custom Reviver for JSON.parse to reconstruct Address and bigint
+// Custom Reviver for JSON.parse to reconstruct Address, bigint, Map, and Dictionary
 function serializeReviver(_key: string, value: any): any {
   if (value && typeof value === 'object' && value.__type) {
     if (value.__type === 'bigint') {
@@ -58,6 +70,24 @@ function serializeReviver(_key: string, value: any): any {
     }
     if (value.__type === 'Map' && Array.isArray(value.value)) {
       return new Map(value.value);
+    }
+    if (value.__type === 'Dictionary' && Array.isArray(value.value)) {
+      const entriesMap = new Map(value.value);
+      const keysList = Array.from(entriesMap.keys());
+      return {
+        keys: () => keysList,
+        get: (key: any) => {
+          const keyStr = key?.toString ? key.toString() : String(key);
+          for (const [k, v] of entriesMap.entries()) {
+            if (k === key || (k?.toString && k.toString() === keyStr)) {
+              return v;
+            }
+          }
+          return entriesMap.get(key);
+        },
+        values: () => Array.from(entriesMap.values()),
+        size: entriesMap.size,
+      };
     }
   }
   return value;

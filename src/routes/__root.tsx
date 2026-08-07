@@ -53,7 +53,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           'BrotherHood — manage the FI Jetton: issue, transfer, burn, invite, vote and administer TEP-74 tokens on TON.',
       },
       {
-        name: 'apple-mobile-web-app-capable',
+        name: 'mobile-web-app-capable',
         content: 'yes',
       },
       {

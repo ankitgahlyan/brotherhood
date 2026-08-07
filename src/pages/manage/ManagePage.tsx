@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Address, fromNano } from '@ton/core';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
@@ -49,33 +49,33 @@ import { DestroyTab } from './DestroyTab';
 import { AdminTab } from './AdminTab';
 
 type ManageTab =
-  | 'transfer'
+  | 'admin'
+  | 'allowance'
   | 'burn'
   | 'credit'
-  | 'admin'
-  | 'invite'
-  | 'vote'
   | 'destroy'
+  | 'invite'
   | 'issue'
-  | 'allowance';
-// type ManageAdminTab = 'mint' | 'upgrade';
+  | 'transfer'
+  | 'vote';
 
 const TAB_ICONS: Record<ManageTab, LucideIcon> = {
-  transfer: Send,
+  admin: Shield,
+  allowance: KeyRound,
   burn: Flame,
   credit: CreditCard,
-  admin: Shield,
-  invite: UserPlus,
-  vote: Vote,
   destroy: Ban,
+  invite: UserPlus,
   issue: Sparkles,
-  allowance: KeyRound,
+  transfer: Send,
+  vote: Vote,
 };
 
 export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
   const navigate = useNavigate();
+  const tabsListRef = useRef<HTMLDivElement>(null);
 
   const rawOwnerAddress = wallet?.account?.address ?? null;
   const ownerAddress = rawOwnerAddress ? Address.parse(rawOwnerAddress) : null;
@@ -103,37 +103,40 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
     ? getErrorMessage(fiWalletStateQuery.error)
     : null;
 
-  const [tab, setTab] = useState<ManageTab>(initialTab);
-
+  const decimals = jettonInfo?.metadata.decimals
+    ? parseInt(jettonInfo.metadata.decimals)
+    : 9;
   const isConnected = !!wallet;
 
+  const adminAddress = jettonInfo?.adminAddress ?? null;
   const isAdmin =
-    jettonInfo && ownerAddress && jettonInfo.adminAddress
-      ? jettonInfo.adminAddress.equals(ownerAddress)
-      : false;
+    !!ownerAddress &&
+    !!adminAddress &&
+    ownerAddress.toString() === adminAddress.toString();
 
-  const decimals = parseInt(jettonInfo?.metadata?.decimals || '9') || 9;
+  const [tab, setTab] = useState<ManageTab>(initialTab);
+
   const visibleTabs: ManageTab[] = isAdmin
     ? [
-        'issue',
         'admin',
-        'credit',
         'allowance',
-        'transfer',
         'burn',
-        'invite',
-        'vote',
+        'credit',
         'destroy',
+        'invite',
+        'issue',
+        'transfer',
+        'vote',
       ]
     : [
-        'issue',
-        'credit',
         'allowance',
-        'invite',
-        'vote',
-        'transfer',
         'burn',
+        'credit',
         'destroy',
+        'invite',
+        'issue',
+        'transfer',
+        'vote',
       ];
 
   // The active tab lives in the URL (?tab=...). If it is not reachable for the
@@ -147,6 +150,21 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
     setTab(next);
     void navigate({ to: '/', search: (prev) => ({ ...prev, tab: next }) });
   }
+
+  // Smoothly scroll selected tab button to center whenever activeTab changes
+  useEffect(() => {
+    if (!tabsListRef.current) return;
+    const activeEl = tabsListRef.current.querySelector<HTMLElement>(
+      '[data-state="active"]',
+    );
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    }
+  }, [activeTab]);
 
   function formatAmount(amount: bigint): string {
     const divisor = 10n ** BigInt(decimals);
@@ -172,7 +190,10 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                   selectTab(v as ManageTab);
                 }}
               >
-                <TabsList className="w-full h-11 rounded-xl p-1 gap-1 overflow-x-auto snap-x snap-mandatory bg-secondary/80 max-md:justify-start max-md:flex-nowrap max-md:scrollbar-none">
+                <TabsList
+                  ref={tabsListRef}
+                  className="w-full h-11 rounded-xl p-1 gap-1 overflow-x-auto snap-x snap-mandatory bg-secondary/80 max-md:justify-start max-md:flex-nowrap max-md:scrollbar-none"
+                >
                   {visibleTabs.map((t) => {
                     const Icon = TAB_ICONS[t];
                     return (
@@ -182,78 +203,13 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                         className="flex-1 h-9 rounded-lg text-[13px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground data-[state=active]:bg-[#ff4e00] data-[state=active]:text-white data-[state=active]:shadow-[0_4px_14px_-3px_rgba(255,78,0,0.5)] transition-all max-md:flex-none max-md:min-w-fit max-md:px-4 max-md:snap-start"
                       >
                         <Icon className="size-4 max-md:hidden" />
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                        {t === 'issue'
+                          ? 'Issue Token'
+                          : t.charAt(0).toUpperCase() + t.slice(1)}
                       </TabsTrigger>
                     );
                   })}
                 </TabsList>
-                <TabsContent value="transfer" className="mt-5">
-                  <TransferTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="issue" className="mt-5">
-                  <IssueTokenTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="credit" className="mt-5">
-                  <CreditTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="burn" className="mt-5">
-                  <BurnTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                    onSuccess={() => jettonInfoQuery.refetch()}
-                  />
-                </TabsContent>
-                <TabsContent value="invite" className="mt-5">
-                  <InviteTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="allowance" className="mt-5">
-                  <AllowanceTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                    fiWalletState={fiWalletState}
-                    onSuccess={() => fiWalletStateQuery.refetch()}
-                  />
-                </TabsContent>
-                <TabsContent value="vote" className="mt-5">
-                  <VoteTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="destroy" className="mt-5">
-                  <DestroyTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
                 {isAdmin && (
                   <TabsContent value="admin" className="mt-5">
                     <AdminTab
@@ -268,6 +224,73 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     />
                   </TabsContent>
                 )}
+                <TabsContent value="allowance" className="mt-5">
+                  <AllowanceTab
+                    decimals={decimals}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    fiWalletState={fiWalletState}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+                <TabsContent value="burn" className="mt-5">
+                  <BurnTab
+                    decimals={decimals}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => jettonInfoQuery.refetch()}
+                  />
+                </TabsContent>
+                <TabsContent value="credit" className="mt-5">
+                  <CreditTab
+                    decimals={decimals}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="destroy" className="mt-5">
+                  <DestroyTab
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="invite" className="mt-5">
+                  <InviteTab
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="issue" className="mt-5">
+                  <IssueTokenTab
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="transfer" className="mt-5">
+                  <TransferTab
+                    decimals={decimals}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
+                <TabsContent value="vote" className="mt-5">
+                  <VoteTab
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                  />
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
