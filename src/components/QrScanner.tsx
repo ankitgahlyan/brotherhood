@@ -188,11 +188,10 @@ export const QrScanner: FC<QrScannerProps> = ({
                   </button>
                 </div>
               </div>
-              <div className="rounded-xl bg-black p-1.5">
+              <div className="rounded-xl bg-black p-1.5 overflow-hidden">
                 <div
                   id="qr"
-                  className="w-full h-full rounded-lg"
-                  style={{ filter: 'invert(1)' }}
+                  className="w-full h-full rounded-lg overflow-hidden"
                 />
               </div>
             </div>
