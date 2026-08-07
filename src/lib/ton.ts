@@ -9,7 +9,18 @@ import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 
 export type { Network } from '@/lib/config';
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 60 * 1000, // 10 minutes: keep data fresh to prevent frequent API calls
+      gcTime: 30 * 60 * 1000, // 30 minutes in memory cache
+      refetchOnWindowFocus: false, // Prevent refetches when switching windows/tabs
+      refetchOnMount: false, // Prevent refetches when re-mounting components if cached
+      refetchOnReconnect: false, // Prevent auto refetching on network reconnect
+      retry: 1, // Limit retries to 1 to prevent spamming
+    },
+  },
+});
 
 const clients: Record<string, TonClient> = {};
 

@@ -12,17 +12,32 @@ import {
 } from './ton';
 import { setContractCache, getContractCache } from './contract-cache';
 
+const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes cache validity
+
 async function cachedQueryFn<T>(
   cacheKey: string,
   fetcher: () => Promise<T>,
+  forceFresh = false,
 ): Promise<T> {
+  if (!forceFresh) {
+    const cached = await getContractCache<T>(cacheKey);
+    if (
+      cached &&
+      cached.data !== null &&
+      cached.data !== undefined &&
+      Date.now() - cached.timestamp < CACHE_MAX_AGE_MS
+    ) {
+      return cached.data;
+    }
+  }
+
   try {
     const data = await fetcher();
     // Asynchronously save to IndexedDB
     setContractCache(cacheKey, data).catch(() => {});
     return data;
   } catch (err) {
-    // Attempt fallback from IndexedDB cache
+    // Attempt fallback from IndexedDB cache even if older
     const cached = await getContractCache<T>(cacheKey);
     if (cached && cached.data !== null && cached.data !== undefined) {
       console.log(`[ContractCache] Serving cached fallback for ${cacheKey}`);
@@ -65,7 +80,13 @@ export function useWalletBalance(ownerAddress: Address | null) {
 }
 
 export function useCircle(invitedList: Address[] | null) {
-  const key = invitedList?.map((a) => a.toString()).join(',') ?? 'none';
+  const key =
+    invitedList && invitedList.length > 0
+      ? invitedList
+          .map((a) => a.toString())
+          .sort()
+          .join(',')
+      : 'none';
   return useQuery({
     queryKey: ['circle', key],
     queryFn: () =>

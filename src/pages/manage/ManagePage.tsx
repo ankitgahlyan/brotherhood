@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Address, fromNano } from '@ton/core';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
@@ -78,15 +78,22 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
   const navigate = useNavigate();
 
   const rawOwnerAddress = wallet?.account?.address ?? null;
-  const ownerAddress = rawOwnerAddress ? Address.parse(rawOwnerAddress) : null;
+  const ownerAddress = useMemo(
+    () => (rawOwnerAddress ? Address.parse(rawOwnerAddress) : null),
+    [rawOwnerAddress],
+  );
 
   const jettonInfoQuery = useJettonMaster();
   const fiWalletStateQuery = useFiWalletState(ownerAddress);
-  const circleQuery = useCircle(
-    fiWalletStateQuery.data
-      ? fiWalletStateQuery.data.maps.ref.invited.keys()
-      : null,
+
+  const invitedList = useMemo(
+    () =>
+      fiWalletStateQuery.data
+        ? fiWalletStateQuery.data.maps.ref.invited.keys()
+        : null,
+    [fiWalletStateQuery.data],
   );
+  const circleQuery = useCircle(invitedList);
 
   const jettonInfo: JettonInfo | null = jettonInfoQuery.data ?? null;
   const fiWalletState: FiWalletStore | null = fiWalletStateQuery.data ?? null;
