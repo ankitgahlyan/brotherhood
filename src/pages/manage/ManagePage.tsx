@@ -172,14 +172,14 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                   selectTab(v as ManageTab);
                 }}
               >
-                <TabsList className="w-full h-10 rounded-full p-0.75 gap-0.5 overflow-x-auto snap-x snap-mandatory max-md:justify-start max-md:flex-nowrap max-md:scrollbar-none">
+                <TabsList className="w-full h-11 rounded-xl p-1 gap-1 overflow-x-auto snap-x snap-mandatory bg-secondary/80 max-md:justify-start max-md:flex-nowrap max-md:scrollbar-none">
                   {visibleTabs.map((t) => {
                     const Icon = TAB_ICONS[t];
                     return (
                       <TabsTrigger
                         key={t}
                         value={t}
-                        className="flex-1 h-8.5 rounded-full text-[13px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground data-[state=active]:bg-brand-gradient data-[state=active]:text-white data-[state=active]:shadow-[0_4px_14px_-4px_rgba(229,77,94,0.6)] max-md:flex-none max-md:min-w-fit max-md:px-4 max-md:snap-start"
+                        className="flex-1 h-9 rounded-lg text-[13px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground data-[state=active]:bg-[#ff4e00] data-[state=active]:text-white data-[state=active]:shadow-[0_4px_14px_-3px_rgba(255,78,0,0.5)] transition-all max-md:flex-none max-md:min-w-fit max-md:px-4 max-md:snap-start"
                       >
                         <Icon className="size-4 max-md:hidden" />
                         {t.charAt(0).toUpperCase() + t.slice(1)}
