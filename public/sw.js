@@ -91,3 +91,16 @@ self.addEventListener('fetch', (event) => {
   }
   event.respondWith(staleWhileRevalidate(event));
 });
+
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+    );
+  }
+});
+

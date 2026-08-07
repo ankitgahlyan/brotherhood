@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Address } from '@ton/core';
 import {
   fetchJettonMaster,
@@ -10,46 +10,78 @@ import {
   getPersonalWalletBalance,
   type JettonMasterInfo,
 } from './ton';
+import { setContractCache, getContractCache } from './contract-cache';
+
+async function cachedQueryFn<T>(
+  cacheKey: string,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  try {
+    const data = await fetcher();
+    // Asynchronously save to IndexedDB
+    setContractCache(cacheKey, data).catch(() => {});
+    return data;
+  } catch (err) {
+    // Attempt fallback from IndexedDB cache
+    const cached = await getContractCache<T>(cacheKey);
+    if (cached && cached.data !== null && cached.data !== undefined) {
+      console.log(`[ContractCache] Serving cached fallback for ${cacheKey}`);
+      return cached.data;
+    }
+    throw err;
+  }
+}
 
 export function useJettonMaster(enabled = true) {
   return useQuery<JettonMasterInfo>({
     queryKey: ['jetton-master'],
-    queryFn: fetchJettonMaster,
+    queryFn: () => cachedQueryFn('jetton-master', fetchJettonMaster),
     enabled,
   });
 }
 
 export function useFiWalletState(ownerAddress: Address | null) {
+  const key = ownerAddress?.toString() ?? 'none';
   return useQuery({
-    queryKey: ['fi-wallet-state', ownerAddress?.toString() ?? 'none'],
-    queryFn: () => getFiWalletState(ownerAddress!),
+    queryKey: ['fi-wallet-state', key],
+    queryFn: () =>
+      cachedQueryFn(`fi-wallet-state:${key}`, () =>
+        getFiWalletState(ownerAddress!),
+      ),
     enabled: !!ownerAddress,
   });
 }
 
 export function useWalletBalance(ownerAddress: Address | null) {
+  const key = ownerAddress?.toString() ?? 'none';
   return useQuery({
-    queryKey: ['wallet-balance', ownerAddress?.toString() ?? 'none'],
-    queryFn: () => fetchWalletBalance(ownerAddress!),
+    queryKey: ['wallet-balance', key],
+    queryFn: () =>
+      cachedQueryFn(`wallet-balance:${key}`, () =>
+        fetchWalletBalance(ownerAddress!),
+      ),
     enabled: !!ownerAddress,
   });
 }
 
 export function useCircle(invitedList: Address[] | null) {
+  const key = invitedList?.map((a) => a.toString()).join(',') ?? 'none';
   return useQuery({
-    queryKey: [
-      'circle',
-      invitedList?.map((a) => a.toString()).join(',') ?? 'none',
-    ],
-    queryFn: () => getCircle(invitedList!),
+    queryKey: ['circle', key],
+    queryFn: () =>
+      cachedQueryFn(`circle:${key}`, () => getCircle(invitedList!)),
     enabled: !!invitedList && invitedList.length > 0,
   });
 }
 
 export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
+  const key = ownerAddress?.toString() ?? 'none';
   return useQuery({
-    queryKey: ['personal-minter', ownerAddress?.toString() ?? 'none'],
-    queryFn: () => getPersonalMinterForIssuer(ownerAddress!),
+    queryKey: ['personal-minter', key],
+    queryFn: () =>
+      cachedQueryFn(`personal-minter:${key}`, () =>
+        getPersonalMinterForIssuer(ownerAddress!),
+      ),
     enabled: !!ownerAddress,
   });
 }
@@ -58,13 +90,13 @@ export function usePersonalWalletAddress(
   personalMinter: Address | null,
   ownerAddress: Address | null,
 ) {
+  const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
   return useQuery({
-    queryKey: [
-      'personal-wallet-address',
-      personalMinter?.toString() ?? 'none',
-      ownerAddress?.toString() ?? 'none',
-    ],
-    queryFn: () => getPersonalWalletAddress(personalMinter!, ownerAddress!),
+    queryKey: ['personal-wallet-address', key],
+    queryFn: () =>
+      cachedQueryFn(`personal-wallet-address:${key}`, () =>
+        getPersonalWalletAddress(personalMinter!, ownerAddress!),
+      ),
     enabled: !!personalMinter && !!ownerAddress,
   });
 }
@@ -73,13 +105,22 @@ export function usePersonalWalletBalance(
   personalMinter: Address | null,
   ownerAddress: Address | null,
 ) {
+  const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
   return useQuery({
-    queryKey: [
-      'personal-wallet-balance',
-      personalMinter?.toString() ?? 'none',
-      ownerAddress?.toString() ?? 'none',
-    ],
-    queryFn: () => getPersonalWalletBalance(personalMinter!, ownerAddress!),
+    queryKey: ['personal-wallet-balance', key],
+    queryFn: () =>
+      cachedQueryFn(`personal-wallet-balance:${key}`, () =>
+        getPersonalWalletBalance(personalMinter!, ownerAddress!),
+      ),
     enabled: !!personalMinter && !!ownerAddress,
   });
+}
+
+export function useRefreshContractQueries() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await queryClient.refetchQueries({
+      type: 'active',
+    });
+  };
 }
