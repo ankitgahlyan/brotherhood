@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, beginCell, storeStateInit, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
@@ -41,7 +41,7 @@ export function IssueTokenTab({
   if (!ownerAddress) return <WalletRequired />;
   const owner = ownerAddress;
 
-  async function handleIssue(e: FormEvent) {
+  async function handleIssue(e: SyntheticEvent) {
     e.preventDefault();
 
     if (!name.trim() || !symbol.trim()) {

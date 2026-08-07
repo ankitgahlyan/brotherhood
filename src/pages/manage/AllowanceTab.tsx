@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
@@ -61,7 +61,7 @@ export function AllowanceTab({
     return `${whole}.${fracStr}`;
   }
 
-  async function handleSetAllowance(e: FormEvent, revoke: boolean) {
+  async function handleSetAllowance(e: SyntheticEvent, revoke: boolean) {
     e.preventDefault();
     const grantee = tryParseAddress(granteeAddr);
     if (!grantee) {
@@ -100,7 +100,7 @@ export function AllowanceTab({
     });
   }
 
-  async function handleSpend(e: FormEvent) {
+  async function handleSpend(e: SyntheticEvent) {
     e.preventDefault();
     const wallet = tryParseAddress(spendWallet);
     if (!wallet) {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
@@ -63,7 +63,7 @@ export function AdminTab({
   if (!isConnected) return <WalletRequired />;
   if (!isAdmin) return <AdminRequired />;
 
-  async function handleChangeAdmin(e: FormEvent) {
+  async function handleChangeAdmin(e: SyntheticEvent) {
     e.preventDefault();
     const adminAddr = tryParseAddress(newAdmin);
     if (!adminAddr) {
@@ -134,7 +134,7 @@ export function AdminTab({
     });
   }
 
-  async function handleUpdateContent(e: FormEvent) {
+  async function handleUpdateContent(e: SyntheticEvent) {
     e.preventDefault();
 
     const body = await buildChangeContentBody({

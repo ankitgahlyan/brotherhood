@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Address, toNano, beginCell, storeStateInit } from '@ton/core';
 import {
@@ -57,7 +57,7 @@ export function DeployPage({ network }: Props) {
 
   const isConnected = !!wallet;
 
-  async function handleDeploy(e: FormEvent) {
+  async function handleDeploy(e: SyntheticEvent) {
     e.preventDefault();
 
     if (!isConnected) {

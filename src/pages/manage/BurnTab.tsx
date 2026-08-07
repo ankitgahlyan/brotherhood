@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildBurnBody, parseUnits } from '../../lib/deploy';
@@ -34,7 +34,7 @@ export function BurnTab({
 
   if (!isConnected) return <WalletRequired />;
 
-  async function handleBurn(e: FormEvent) {
+  async function handleBurn(e: SyntheticEvent) {
     e.preventDefault();
     if (!ownerAddress) return;
 

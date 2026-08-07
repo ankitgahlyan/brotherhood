@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildInviteBody } from '../../lib/deploy';
@@ -30,7 +30,7 @@ export function InviteTab({
 
   if (!ownerAddress) return <WalletRequired />;
 
-  async function handleInvite(e: FormEvent) {
+  async function handleInvite(e: SyntheticEvent) {
     e.preventDefault();
 
     const recipientAddr = tryParseAddress(toAddr);

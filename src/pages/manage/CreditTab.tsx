@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Address, fromNano, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
@@ -88,7 +88,7 @@ export function CreditTab({
 
   if (!isConnected) return <WalletRequired />;
 
-  async function handleBuyCredit(e: FormEvent) {
+  async function handleBuyCredit(e: SyntheticEvent) {
     e.preventDefault();
     if (!ownerAddress) return;
 
@@ -128,7 +128,7 @@ export function CreditTab({
     });
   }
 
-  async function handlePayback(e: FormEvent) {
+  async function handlePayback(e: SyntheticEvent) {
     e.preventDefault();
     if (!ownerAddress) return;
 

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildMintBody, parseUnits } from '../../lib/deploy';
@@ -45,7 +45,7 @@ export function MintTab({
   if (!isConnected) return <WalletRequired />;
   if (!isAdmin) return <AdminRequired />;
 
-  async function handleMint(e: FormEvent) {
+  async function handleMint(e: SyntheticEvent) {
     e.preventDefault();
     if (!ownerAddress) return;
 
