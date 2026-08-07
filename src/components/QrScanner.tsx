@@ -50,12 +50,15 @@ export const QrScanner: FC<QrScannerProps> = ({
       if (!qrScannerRef.current) return;
 
       try {
-        await qrScannerRef.current.stop();
+        if (qrScannerRef.current.isScanning) {
+          await qrScannerRef.current.stop();
+        }
+      } catch {
+        /* Ignore non-critical scanner state errors during unmount or duplicate stop */
+      } finally {
         if (shouldClose) {
           onClose();
         }
-      } catch (err: unknown) {
-        console.error('Error stopping QR scanner:', err);
       }
     },
     [onClose],

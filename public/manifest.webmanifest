@@ -1,23 +1,23 @@
 {
-  "name": "TanStack Mobile PWA",
-  "short_name": "TanStack PWA",
-  "description": "Offline-first, mobile-friendly demo app built with TanStack Start.",
-  "start_url": "/",
+  "name": "BrotherHood PWA",
+  "short_name": "BrotherHood",
+  "description": "BrotherHood — manage the FI Jetton: issue, transfer, burn, invite, vote and administer TEP-74 tokens on TON.",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#e7f3ec",
-  "theme_color": "#173a40",
+  "background_color": "#0b0e14",
+  "theme_color": "#0b0e14",
   "lang": "en",
-  "scope": "/",
+  "scope": "./",
   "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
     {
-      "src": "/icon-512-maskable.png",
+      "src": "icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
-    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ]
 }
