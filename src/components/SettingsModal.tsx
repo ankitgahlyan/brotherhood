@@ -195,8 +195,8 @@ export function SettingsModal({
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            Stores smart contract state and user balances locally so you can view
-            contract details even when offline.
+            Stores smart contract state and user balances locally so you can
+            view contract details even when offline.
           </p>
 
           <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-muted/20 text-xs">
@@ -230,13 +230,16 @@ export function SettingsModal({
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            Caches application pages and static assets locally for offline navigation.
-            Invalidate cache to fetch updated pages if a new app version was deployed.
+            Caches application pages and static assets locally for offline
+            navigation. Invalidate cache to fetch updated pages if a new app
+            version was deployed.
           </p>
 
           <div className="flex flex-col gap-2 bg-muted/30 p-3 rounded-lg border border-muted/20 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Cached Asset Stores:</span>
+              <span className="text-muted-foreground">
+                Cached Asset Stores:
+              </span>
               <span className="font-mono">
                 {swStatus?.cacheNames.length || 0} active cache(s)
               </span>
@@ -256,7 +259,12 @@ export function SettingsModal({
 
         {/* Footer */}
         <div className="flex justify-end pt-2">
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-xs">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-xs"
+          >
             Close
           </Button>
         </div>

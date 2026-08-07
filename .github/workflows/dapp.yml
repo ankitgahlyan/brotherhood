@@ -31,25 +31,24 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Formatter
-        run: npm run fmt:check
+        run: bun run fmt:check
 
       - name: Typecheck
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Build
         env:
           VITE_BASE: /brotherhood/
-        run: npm run build
+        run: bun run build
 
       - name: Test
-        run: npm run test
+        run: bun run test

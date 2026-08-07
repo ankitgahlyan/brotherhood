@@ -34,12 +34,14 @@ export async function getAppCacheStatus(): Promise<AppCacheStatus> {
     };
   }
 
-  const swRegistered = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
-  const swState = 'serviceWorker' in navigator
-    ? navigator.serviceWorker.controller
-      ? navigator.serviceWorker.controller.state
-      : 'no-controller'
-    : 'unsupported';
+  const swRegistered =
+    'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+  const swState =
+    'serviceWorker' in navigator
+      ? navigator.serviceWorker.controller
+        ? navigator.serviceWorker.controller.state
+        : 'no-controller'
+      : 'unsupported';
 
   let cacheNames: string[] = [];
   if ('caches' in window) {

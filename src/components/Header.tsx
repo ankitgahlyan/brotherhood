@@ -102,7 +102,10 @@ export default function Header() {
 
         <div className="flex items-center gap-2">
           {isMounted && !isOnline && (
-            <Badge variant="destructive" className="gap-1 text-[11px] px-2 py-0.5 max-sm:hidden">
+            <Badge
+              variant="destructive"
+              className="gap-1 text-[11px] px-2 py-0.5 max-sm:hidden"
+            >
               <WifiOff className="size-3" /> Offline Mode
             </Badge>
           )}

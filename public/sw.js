@@ -99,8 +99,9 @@ self.addEventListener('message', (event) => {
   }
   if (event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
     );
   }
 });
-

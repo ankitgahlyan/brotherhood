@@ -15,7 +15,11 @@ function serializeReplacer(_key: string, value: any): any {
   if (typeof value === 'bigint') {
     return { __type: 'bigint', value: value.toString() };
   }
-  if (value && typeof value === 'object' && value.constructor?.name === 'Address') {
+  if (
+    value &&
+    typeof value === 'object' &&
+    value.constructor?.name === 'Address'
+  ) {
     return { __type: 'Address', value: (value as Address).toString() };
   }
   if (
@@ -103,16 +107,21 @@ export async function getContractCache<T = any>(
 ): Promise<{ data: T; timestamp: number } | null> {
   try {
     const db = await openDB();
-    const entry = await new Promise<CacheEntry | undefined>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
+    const entry = await new Promise<CacheEntry | undefined>(
+      (resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      },
+    );
 
     if (!entry) return null;
-    const restoredData = JSON.parse(JSON.stringify(entry.data), serializeReviver);
+    const restoredData = JSON.parse(
+      JSON.stringify(entry.data),
+      serializeReviver,
+    );
     return {
       data: restoredData as T,
       timestamp: entry.timestamp,
@@ -152,7 +161,8 @@ export async function getContractCacheStats(): Promise<{
         const entries: CacheEntry[] = req.result || [];
         const count = entries.length;
         const lastUpdated = entries.reduce<number | null>(
-          (latest, e) => (latest === null || e.timestamp > latest ? e.timestamp : latest),
+          (latest, e) =>
+            latest === null || e.timestamp > latest ? e.timestamp : latest,
           null,
         );
         resolve({ count, lastUpdated });

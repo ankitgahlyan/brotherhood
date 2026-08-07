@@ -17,26 +17,26 @@ vote and administer TEP-74 tokens.
   `src/lib/`. `src/routes/api.chat.ts` is a Start server route (OpenRouter
   proxy). Deep-linkable state lives in the URL (e.g. Manage tab = `?tab=`).
 - `package.json`, `tsconfig.json`, and `vite.config.ts` configure the app toolchain.
-- `package-lock.json` pins the npm dependency tree for reproducible installs.
+- `bun.lock` pins the dependency tree for reproducible installs.
 
 ## Install
 
 ```bash
-npm ci
+bun install
 ```
 
 ## Commands
 
 ```bash
-npm run dev          # vite dev on :3000 (Cloudflare dev runtime)
-npm run generate-routes   # tsr generate (routeTree.gen.ts)
-npm run typecheck    # tsc --noEmit
-npm run lint         # eslint --max-warnings 0
-npm run fmt:check    # prettier --check
-npm run build:ghpages  # vite build + copy index.html -> dist/client/404.html
-npm run build:workers  # vite build for Cloudflare Workers (SSR)
-npm run deploy:pages   # vite build && wrangler pages deploy dist/client
-npm run deploy:workers # vite build && wrangler deploy
+bun run dev          # vite dev on :3000 (Cloudflare dev runtime)
+bun run generate-routes   # tsr generate (routeTree.gen.ts)
+bun run typecheck    # tsc --noEmit
+bun run lint         # eslint --max-warnings 0
+bun run fmt:check    # prettier --check
+bun run build:ghpages  # vite build + copy index.html -> dist/client/404.html
+bun run build:workers  # vite build for Cloudflare Workers (SSR)
+bun run deploy:pages   # vite build && wrangler pages deploy dist/client
+bun run deploy:workers # vite build && wrangler deploy
 
 acton build
 acton test
@@ -71,11 +71,11 @@ for Cloudflare dev/Workers keys. Key variables:
 
 ## Deployment
 
-Static-first. `.github/workflows/pages.yml` runs `npm run build:ghpages` and
+Static-first. `.github/workflows/pages.yml` runs `bun run build:ghpages` and
 uploads `dist/client` to GitHub Pages. Cloudflare is optional:
 
-- `npm run deploy:pages` — Cloudflare Pages (static `dist/client`).
-- `npm run deploy:workers` — Cloudflare Workers SSR via `wrangler.jsonc`.
+- `bun run deploy:pages` — Cloudflare Pages (static `dist/client`).
+- `bun run deploy:workers` — Cloudflare Workers SSR via `wrangler.jsonc`.
   Server routes (`/api/chat`) only run on a server runtime (dev or Workers);
   on a pure static host they 404.
 
@@ -86,12 +86,12 @@ uploads `dist/client` to GitHub Pages. Cloudflare is optional:
   the Tolk wrappers under `contracts/wrappers/`.
 - `acton wrapper JettonMinter --ts` and `acton wrapper FossFiWallet --ts`
   regenerate the TypeScript wrappers under `wrappers-ts/`.
-- `npm run test` is a placeholder dApp test script; use `acton test` for Tolk
+- `bun run test` is a placeholder dApp test script; use `acton test` for Tolk
   integration tests.
 - `.github/workflows/contracts.yml` runs `acton build`, `acton fmt --check`,
   `acton check --output-format github`, and `acton test`.
-- `.github/workflows/dapp.yml` runs `npm ci`, `npm run fmt:check`,
-  `npm run typecheck`, `npm run build`, and `npm run test`.
+- `.github/workflows/dapp.yml` runs `bun install --frozen-lockfile`, `bun run fmt:check`,
+  `bun run typecheck`, `bun run build`, and `bun run test`.
 - The app reads blockchain data through Toncenter. Set
   `TONCENTER_TESTNET_API_KEY` and/or `TONCENTER_MAINNET_API_KEY` in a local
   `.env` copied from `.env.example` if you need higher rate limits. Acton CLI
