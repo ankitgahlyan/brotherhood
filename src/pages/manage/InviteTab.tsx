@@ -38,6 +38,10 @@ export function InviteTab({
       setStatus({ type: 'error', message: 'Invalid recipient address' });
       return;
     }
+    if (!inviteId.trim()) {
+      setStatus({ type: 'error', message: 'Invite ID is required' });
+      return;
+    }
     if (!ownerAddress) {
       setStatus({ type: 'error', message: 'Wallet not connected' });
       return;
@@ -47,12 +51,7 @@ export function InviteTab({
       transferRecipient: recipientAddr,
       id: inviteId.trim(),
     });
-    // const client = getTonClient(network);
-    const walletAddr = await getWalletAddress(
-      // client,
-      // Address.parse(contractAddr),
-      ownerAddress,
-    );
+    const walletAddr = await getWalletAddress(ownerAddress);
 
     await sendTransaction({
       messages: [
@@ -81,14 +80,15 @@ export function InviteTab({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Invite ID (optional)
+          Invite ID <span className="text-destructive">*</span>
         </Label>
         <Input
           type="text"
-          placeholder="Invite reference"
+          placeholder="Invite reference ID (required)"
           value={inviteId}
           onChange={(e) => setInviteId(e.target.value)}
           disabled={loading}
+          required
         />
         <p className="text-xs text-muted-foreground">
           This will send an invite message through your wallet contract.

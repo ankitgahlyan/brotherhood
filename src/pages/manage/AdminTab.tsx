@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { InputScan } from '@/components/input-scan';
 import { PenLine, ArrowRightLeft, Coins, Check, X } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 import { MintTab } from './MintTab';
@@ -252,13 +253,7 @@ export function AdminTab({
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             New Admin Address
           </Label>
-          <Input
-            type="text"
-            placeholder="0Q..."
-            value={newAdmin}
-            onChange={(e) => setNewAdmin(e.target.value)}
-            disabled={loading}
-          />
+          <InputScan toAddr={newAdmin} setToAddr={setNewAdmin} />
           <p className="text-xs text-muted-foreground">
             Zero address (0:000...0) revokes admin rights permanently
           </p>

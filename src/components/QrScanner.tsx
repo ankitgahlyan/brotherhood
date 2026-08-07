@@ -84,15 +84,33 @@ export const QrScanner: FC<QrScannerProps> = ({
       qrScannerRef.current = new Html5Qrcode('qr');
     }
 
-    const cams = await Html5Qrcode.getCameras();
-    setCameras(cams);
-    const idx = cams.length > 1 ? 1 : 0;
-    setCameraIndex(idx);
-
     try {
+      const cams = await Html5Qrcode.getCameras();
+      setCameras(cams);
+
+      // Default to back/rear camera (environment facing) on mobile devices
+      let backCamIndex = cams.findIndex((c) =>
+        /back|rear|environment|main|0/i.test(c.label),
+      );
+      if (backCamIndex === -1 && cams.length > 1) {
+        // Rear camera is usually the second device (index 1) or last device on mobile
+        backCamIndex = cams.length - 1;
+      } else if (backCamIndex === -1) {
+        backCamIndex = 0;
+      }
+      setCameraIndex(backCamIndex);
+
+      const cameraConstraint =
+        cams.length > 0 && cams[backCamIndex]
+          ? cams[backCamIndex].id
+          : { facingMode: 'environment' };
+
       await qrScannerRef.current.start(
-        cams[idx].id,
-        undefined,
+        cameraConstraint,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
         onScanSuccess,
         () => {
           // onScanError: Silently ignore QR scanning errors (continuous scanning attempts)

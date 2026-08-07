@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InputScan } from '@/components/input-scan';
 import { Coins } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 
@@ -91,13 +92,7 @@ export function MintTab({
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Recipient Address
         </Label>
-        <Input
-          type="text"
-          placeholder="Leave empty to mint to yourself"
-          value={toAddr}
-          onChange={(e) => setToAddr(e.target.value)}
-          disabled={loading}
-        />
+        <InputScan toAddr={toAddr} setToAddr={setToAddr} />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
