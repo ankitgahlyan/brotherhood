@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "acton": {
+      "source": "ton-blockchain/skills",
+      "sourceType": "github",
+      "skillPath": "acton/SKILL.md",
+      "computedHash": "d3fe16710a3c69ee3b03d59d7429b5b1c051e2724ebbcf27aa49cac7e076cf22"
+    },
     "ask-matt": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -48,6 +54,12 @@
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+    },
+    "func2tolk": {
+      "source": "ton-blockchain/skills",
+      "sourceType": "github",
+      "skillPath": "func2tolk/SKILL.md",
+      "computedHash": "b33a5c41bb5578cc90ba587512bca5d1cae4c320434ec40d39b446ef99eaf152"
     },
     "git-guardrails-claude-code": {
       "source": "mattpocock/skills",
@@ -168,6 +180,18 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
       "computedHash": "0349eee265e7005e667b4543de849672106c46d545e998f37d3319300bb07751"
+    },
+    "tolk": {
+      "source": "ton-blockchain/skills",
+      "sourceType": "github",
+      "skillPath": "tolk/SKILL.md",
+      "computedHash": "278cf100ac08fd70a2b64b9aaa116329b384dfb0cbfe93b857f253fa75cbfc8d"
+    },
+    "ton-blockchain": {
+      "source": "ton-blockchain/skills",
+      "sourceType": "github",
+      "skillPath": "ton-blockchain/SKILL.md",
+      "computedHash": "1c7e2a03d16196f7e3637eb0e187b62f1608f4eada69f45e34fb1478c03a770a"
     },
     "triage": {
       "source": "mattpocock/skills",
