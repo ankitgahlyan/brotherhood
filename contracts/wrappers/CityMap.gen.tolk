@@ -59,13 +59,14 @@ fun CityMap.sendRegisterCityMember(
     ownerAddress: address,
     cityName: string,
     sendExcessesTo: address?,
+    version: uint10,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: RegisterCityMember { queryId, ownerAddress, cityName, sendExcessesTo },
+        body: RegisterCityMember { queryId, ownerAddress, cityName, sendExcessesTo, version },
     });
     return net.send(from, genericMsg);
 }
@@ -77,13 +78,49 @@ fun CityMap.sendUnregisterCityMember(
     ownerAddress: address,
     cityName: string,
     sendExcessesTo: address?,
+    version: uint10,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: UnregisterCityMember { queryId, ownerAddress, cityName, sendExcessesTo },
+        body: UnregisterCityMember { queryId, ownerAddress, cityName, sendExcessesTo, version },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun CityMap.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun CityMap.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
     });
     return net.send(from, genericMsg);
 }
@@ -97,6 +134,10 @@ fun CityMap.sendAny(self, from: address, body: cell, config: SendParams = {}): S
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun CityMap.getVersion(self): uint10 {
+    return net.runGetMethod(self.address, "get_version");
 }
 
 fun CityMap.getCityName(self): string {

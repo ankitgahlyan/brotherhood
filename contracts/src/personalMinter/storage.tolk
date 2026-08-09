@@ -1,19 +1,19 @@
 struct PriWalletStore {
     jettonBalance: coins = 0
+    version: uint10 = 0
     owner: address
     deployer: address
     minterAddress: address
 }
 
 struct PriStore {
-    // not upgradable
     totalSupply: coins = 0
-    // creditRequired: coins = 0
-    // fiFields: Cell<FiFields>
+    version: uint10 = 0
+    walletVersion: uint10 = 0
     fiJettonAddress: address
     adminAddress: address
-    readonly jettonWalletCode: cell
-    metadataUri: cell? = null //Cell<SnakeString>? // to deploy directly from MINT wallet & calc minter addr onchain
+    jettonWalletCode: cell
+    metadataUri: cell? = null
 }
 
 fun PriStore.load(): PriStore {

@@ -6,6 +6,7 @@
 import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/testing/assert"
+import "@contracts/common/messages"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
 
@@ -83,6 +84,41 @@ fun Lottery.sendDrawWinner(
     return net.send(from, genericMsg);
 }
 
+fun Lottery.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Lottery.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun Lottery.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
@@ -92,6 +128,10 @@ fun Lottery.sendAny(self, from: address, body: cell, config: SendParams = {}): S
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun Lottery.getVersion(self): uint10 {
+    return net.runGetMethod(self.address, "getVersion");
 }
 
 fun Lottery.getParticipantCount(self): int32 {

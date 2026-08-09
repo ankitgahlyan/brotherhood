@@ -1,3 +1,4 @@
+import "@stdlib/tvm-lowlevel"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -13,6 +14,8 @@ type AllowedMsgToPersonalMinter =
     | ChangeMinterAdmin
     | ChangeMinterMetadata
     | Upgrade
+    | HotUpgrade
+    | RequestUpgradeCode
     | TopUpTons
 
 type AllowedBounced = InternalTransferStep | Payback
@@ -190,16 +193,54 @@ fun onInternalMessage(in: InMessage) {
             storage.metadataUri = msg.newMetadata;
         }
 
+        HotUpgrade => {
+            assert (
+                (in.senderAddress == storage.fiJettonAddress) |
+                (in.senderAddress == storage.adminAddress)
+            ) throw Errors.IncorrectSender;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: updating continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradePersonalMinterData(msg.additionalData);
+            return;
+        }
+
         Upgrade => {
-            assert (in.senderAddress == storage.fiJettonAddress) throw Errors.IncorrectSender;
-
-            if (msg.newCode != null) {
-                contract.setCodePostponed(msg.newCode);
+            assert (
+                (in.senderAddress == storage.fiJettonAddress) |
+                (in.senderAddress == storage.adminAddress)
+            ) throw Errors.IncorrectSender;
+            if (msg.walletUpgrade) {
+                storage.walletVersion += 1;
+                if (msg.newCode != null) {
+                    storage.jettonWalletCode = msg.newCode;
+                }
+            } else {
+                if (storage.version < msg.walletVersion) {
+                    storage.version = msg.walletVersion;
+                    if (msg.newCode != null) {
+                        contract.setCodePostponed(msg.newCode);
+                        // SAFETY: updating continuation register C3 for new code
+                        setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
+                    }
+                    hotUpgradePersonalMinterData(msg.newData);
+                }
             }
+        }
 
-            if (msg.newData != null) {
-                contract.setData(msg.newData);
-            }
+        RequestUpgradeCode => {
+            val upgradeMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: in.senderAddress,
+                body: Upgrade {
+                    walletUpgrade: true,
+                    walletVersion: storage.walletVersion,
+                    sender: contract.getAddress(),
+                    newCode: storage.jettonWalletCode,
+                },
+            });
+            upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }
 
         TopUpTons => {
@@ -215,10 +256,26 @@ fun onInternalMessage(in: InMessage) {
     storage.save();
 }
 
+fun hotUpgradePersonalMinterData(_additionalData: cell?) {
+    var oldStore = PriStore.load();
+    oldStore.version += 1;
+    oldStore.save();
+}
+
 struct State {
     supply: int
     admin: address
     fiJetton: address
+}
+
+get fun get_version(): uint10 {
+    val storage = lazy PriStore.load();
+    return storage.version;
+}
+
+get fun get_wallet_version(): uint10 {
+    val storage = lazy PriStore.load();
+    return storage.walletVersion;
 }
 
 get fun get_state(): State {

@@ -1,3 +1,4 @@
+import "@stdlib/tvm-lowlevel"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -6,7 +7,14 @@ import "@contracts/common/sharding"
 import "jetton-utils"
 import "storage"
 
-type AllowedMsgToPersonalWallet = AskToTransfer | AskToBurn | InternalTransferStep | TopUpTons
+type AllowedMsgToPersonalWallet =
+    | AskToTransfer
+    | AskToBurn
+    | InternalTransferStep
+    | TopUpTons
+    | HotUpgrade
+    | Upgrade
+    | RequestUpgradeCode
 
 type BounceOpToHandle = InternalTransferStep | NotifyMinter
 
@@ -42,6 +50,19 @@ fun onInternalMessage(in: InMessage) {
                 assert (
                     in.senderAddress == addrPriWallet(msg.transferInitiator)
                 ) throw Errors.NotValidWallet;
+            }
+
+            if (msg.version > storage.version) {
+                val reqMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    value: 0,
+                    dest: storage.minterAddress,
+                    body: RequestUpgradeCode {
+                        sender: contract.getAddress(),
+                        version: storage.version,
+                    },
+                });
+                reqMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
             }
 
             storage.jettonBalance += msg.jettonAmount;
@@ -159,6 +180,43 @@ fun onInternalMessage(in: InMessage) {
             );
         }
 
+        HotUpgrade => {
+            assert (
+                (in.senderAddress == storage.minterAddress) | (in.senderAddress == storage.owner)
+            ) throw Errors.IncorrectSender;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: updating continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradePersonalWalletData(msg.additionalData);
+            return;
+        }
+
+        Upgrade => {
+            assert (in.senderAddress == storage.minterAddress) throw Errors.IncorrectSender;
+            if (storage.version < msg.walletVersion) {
+                storage.version = msg.walletVersion;
+                if (msg.newCode != null) {
+                    contract.setCodePostponed(msg.newCode);
+                    // SAFETY: updating continuation register C3 for new code
+                    setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
+                }
+                hotUpgradePersonalWalletData(msg.newData);
+            }
+        }
+
+        RequestUpgradeCode => {
+            val reqMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: storage.minterAddress,
+                body: RequestUpgradeCode {
+                    sender: contract.getAddress(),
+                    version: storage.version,
+                },
+            });
+            reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        }
+
         TopUpTons => {
             // just accept tons
         }
@@ -170,6 +228,17 @@ fun onInternalMessage(in: InMessage) {
         }
     }
     storage.save();
+}
+
+fun hotUpgradePersonalWalletData(_additionalData: cell?) {
+    var oldStore = PriWalletStore.load();
+    oldStore.version += 1;
+    oldStore.save();
+}
+
+get fun get_version(): uint10 {
+    val storage = lazy PriWalletStore.load();
+    return storage.version;
 }
 
 get fun get_personal_wallet_state(): PriWalletStore {

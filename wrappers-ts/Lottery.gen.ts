@@ -131,8 +131,117 @@ type coins = bigint
 type int8 = bigint
 type int32 = bigint
 
+type uint10 = bigint
 type uint64 = bigint
 type uint256 = bigint
+
+/**
+ > struct (0x00001006) Upgrade {
+ >     walletUpgrade: bool
+ >     walletVersion: uint10
+ >     sender: address
+ >     newData: cell?
+ >     newCode: cell?
+ > }
+ */
+export interface Upgrade {
+    readonly $: 'Upgrade'
+    walletUpgrade: boolean /* = true */
+    walletVersion: uint10
+    sender: c.Address
+    newData: c.Cell | null /* = null */
+    newCode: c.Cell | null /* = null */
+}
+
+export const Upgrade = {
+    PREFIX: 0x00001006,
+
+    create(args: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }): Upgrade {
+        return {
+            $: 'Upgrade',
+            walletUpgrade: true,
+            newData: null,
+            newCode: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Upgrade {
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
+        return {
+            $: 'Upgrade',
+            walletUpgrade: s.loadBoolean(),
+            walletVersion: s.loadUintBig(10),
+            sender: s.loadAddress(),
+            newData: s.loadBoolean() ? s.loadRef() : null,
+            newCode: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: Upgrade, b: c.Builder): void {
+        b.storeUint(0x00001006, 32);
+        b.storeBit(self.walletUpgrade);
+        b.storeUint(self.walletVersion, 10);
+        b.storeAddress(self.sender);
+        storeTolkNullable<c.Cell>(self.newData, b,
+            (v,b) => b.storeRef(v)
+        );
+        storeTolkNullable<c.Cell>(self.newCode, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: Upgrade): c.Cell {
+        return makeCellFrom<Upgrade>(self, Upgrade.store);
+    }
+}
+
+/**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
 
 /**
  > struct (0x00001198) EnterLottery {
@@ -263,6 +372,7 @@ export const DrawWinner = {
 /**
  > struct LotteryStorage {
  >     owner: address
+ >     version: uint10
  >     entryAmount: coins
  >     participants: map<address, ()>
  >     participantCount: int32
@@ -274,6 +384,7 @@ export const DrawWinner = {
 export interface LotteryStorage {
     readonly $: 'LotteryStorage'
     owner: c.Address
+    version: uint10 /* = 0 */
     entryAmount: coins
     participants: c.Dictionary<c.Address, []>
     participantCount: int32 /* = 0 */
@@ -285,6 +396,7 @@ export interface LotteryStorage {
 export const LotteryStorage = {
     create(args: {
         owner: c.Address
+        version?: uint10 /* = 0 */
         entryAmount: coins
         participants: c.Dictionary<c.Address, []>
         participantCount?: int32 /* = 0 */
@@ -294,6 +406,7 @@ export const LotteryStorage = {
     }): LotteryStorage {
         return {
             $: 'LotteryStorage',
+            version: 0n,
             participantCount: 0n,
             revealDeadline: 0n,
             prizePool: 0n,
@@ -305,6 +418,7 @@ export const LotteryStorage = {
         return {
             $: 'LotteryStorage',
             owner: s.loadAddress(),
+            version: s.loadUintBig(10),
             entryAmount: s.loadCoins(),
             participants: c.Dictionary.load<c.Address, []>(c.Dictionary.Keys.Address(), createDictionaryValue<[]>(
                 (s) => [],
@@ -318,6 +432,7 @@ export const LotteryStorage = {
     },
     store(self: LotteryStorage, b: c.Builder): void {
         b.storeAddress(self.owner);
+        b.storeUint(self.version, 10);
         b.storeCoins(self.entryAmount);
         b.storeDict<c.Address, []>(self.participants, c.Dictionary.Keys.Address(), createDictionaryValue<[]>(
             (s) => [],
@@ -372,7 +487,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Lottery implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEAEAAcYAART/APSkE/S88sgLAQIBYgIDAgLPBAUCASAICQLDPiR8kAgxwCRMODXLCAAAIzEl/pI+gCBAIGOEtcsIAAAjNSS8j/h0z9tWYEAguIB0e1E0PpI+gD0BNIf0h/6ANcL/4EAgVAIuuMPA8j6Ulj6AvQAEsofEsofWPoCy//J7VSAGBwBdO2i7fsSqQhwIoEBC/SCb6UykQGOFVMSupRsMdsx4AGkUROBAQv0dG+lMujyw+eAAiviSJscF8uK8IZf4IyK78uDJmDH4I4EOEKAB4lN0uvLgylODgQEL9ApvoTGdyFQglYEBC/RBAqRAE99QB6AHyPpS+RYVsgCGNzf4I1AHvPLhkCXCAPLhkUMF8AHIz5AAAEZmJPoCUAP6AhL6UsnIz4UIUiD6UnHPC27MyYBC+wBtcFRwABA2RBVVIAIBIAoLAgEgDg8CA5XwDA0AIbv4ntRND6SDH6ADH0AdcKH4AD2iz7UTQ+kgx+gAx9AHTHzHXCh8gkjBw4fgjvpFy4HOACmhf7UTQ+kgx+gAx9AWBAQv0Cm+hMYAJ7iK/tRND6SDH6ADH0AdM/MfoAMIACe4cf7UTQ+kgx+gAx9AHTHzHXCh+A==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFAEAAt0AART/APSkE/S88sgLAQIBYgIDAgLPBAUCASAKCwH3O2i7fv4kfJAIMcAkTDg1ywgAACMxJj6SPoAbYEAgY5H1ywgAACM1JfTP21tgQCCjjLXLCAAAIBcl/QE1G2BAIOOHNcsIAAAgDSS8j/h0gAx0wn6SDH0BPQEVQKBAITiEDRBMOIUQzDiAtHtRND6SNMJ+gD0BNIf0h/6AIAYAXTtou37EqkIcCKBAQv0gm+lMpEBjhVTErqUbDHbMeABpFETgQEL9HRvpTLo8sPngAdjXC/+BAIEquo5FODj4kibHBfLivCCX+CMhu/LgyZcw+COBDhCg4lODuvLgylOSgQEL9ApvoTGcyFQgpIEBC/RBAaRY31B4oAjI+lL5FhWy4w4DyPpSEssJAfoCEvQAEsofEsofWPoCy//J7VQHAug7gQCCKbqO5oEAg1AJuo5HEFdfBzL4kljHBfLivCD7BNDtHu1T7UTQ+kjTCfoA9ATSH9If+gDT/9EGpAfI+lIXywlQBPoCEvQAyh/KH1j6Asv/ye1U2zHg+JImxwXy4rxTRrmSNjfjDRA3RWRBMOMNEDdFZggJAIQ0J26RN5kn+wQH0O0e7VPi7UTQ+kjTCfoA9ATSH9If+gDT/9EGpAfI+lIXywlQBPoCEvQAyh/KH1j6Asv/ye1UECQAeDc3N/gjUAa88uGQJcIA8uGRRkXwAcjPkAAARmYk+gJY+gL6UsnIz4UIUkD6UnHPC27MyYBC+wBtcFRwAAIBIAwNAgEgEhMCASAODwAnu/ie1E0PpIMdMJMfoAMfQB1wofgCAekQEQAXtHydqJofSQY64WEwAEOiz7UTQ+kgx0wkx+gAx9AHTHzHXCh8gkjBw4fgjvpFy4HOAC+hf7UTQ+kgx0wkx+gAx9AWBAQv0Cm+hMYALbiK/tRND6SDHTCTH6ADH0AdM/MfoAMIAC24cf7UTQ+kgx0wkx+gAx9AHTHzHXCh+A==');
 
     static Errors = {
     }
@@ -391,6 +506,7 @@ export class Lottery implements c.Contract {
 
     static fromStorage(emptyStorage: {
         owner: c.Address
+        version?: uint10 /* = 0 */
         entryAmount: coins
         participants: c.Dictionary<c.Address, []>
         participantCount?: int32 /* = 0 */
@@ -417,6 +533,23 @@ export class Lottery implements c.Contract {
         queryId: uint64
     }) {
         return DrawWinner.toCell(DrawWinner.create(body));
+    }
+
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfUpgrade(body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }) {
+        return Upgrade.toCell(Upgrade.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -446,6 +579,36 @@ export class Lottery implements c.Contract {
             body: DrawWinner.toCell(DrawWinner.create(body)),
             ...extraOptions
         });
+    }
+
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Upgrade.toCell(Upgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async getVersion(provider: ContractProvider): Promise<uint10> {
+        const r = StackReader.fromGetMethod(1, await provider.get('getVersion', []));
+        return r.readBigInt();
     }
 
     async getParticipantCount(provider: ContractProvider): Promise<int32> {

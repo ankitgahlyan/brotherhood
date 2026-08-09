@@ -127,11 +127,13 @@ class StackReader {
 
 type coins = bigint
 
+type uint10 = bigint
 type uint64 = bigint
 
 /**
  > struct CityMapStore {
  >     cityName: string
+ >     version: uint10
  >     locationAddress: address
  >     members: map<address, bool>
  > }
@@ -139,6 +141,7 @@ type uint64 = bigint
 export interface CityMapStore {
     readonly $: 'CityMapStore'
     cityName: string
+    version: uint10 /* = 0 */
     locationAddress: c.Address
     members: c.Dictionary<c.Address, boolean>
 }
@@ -146,11 +149,13 @@ export interface CityMapStore {
 export const CityMapStore = {
     create(args: {
         cityName: string
+        version?: uint10 /* = 0 */
         locationAddress: c.Address
         members: c.Dictionary<c.Address, boolean>
     }): CityMapStore {
         return {
             $: 'CityMapStore',
+            version: 0n,
             ...args
         }
     },
@@ -158,12 +163,14 @@ export const CityMapStore = {
         return {
             $: 'CityMapStore',
             cityName: s.loadStringRefTail(),
+            version: s.loadUintBig(10),
             locationAddress: s.loadAddress(),
             members: c.Dictionary.load<c.Address, boolean>(c.Dictionary.Keys.Address(), c.Dictionary.Values.Bool(), s),
         }
     },
     store(self: CityMapStore, b: c.Builder): void {
         b.storeStringRefTail(self.cityName);
+        b.storeUint(self.version, 10);
         b.storeAddress(self.locationAddress);
         b.storeDict<c.Address, boolean>(self.members, c.Dictionary.Keys.Address(), c.Dictionary.Values.Bool());
     },
@@ -173,11 +180,162 @@ export const CityMapStore = {
 }
 
 /**
+ > struct (0x00001006) Upgrade {
+ >     walletUpgrade: bool
+ >     walletVersion: uint10
+ >     sender: address
+ >     newData: cell?
+ >     newCode: cell?
+ > }
+ */
+export interface Upgrade {
+    readonly $: 'Upgrade'
+    walletUpgrade: boolean /* = true */
+    walletVersion: uint10
+    sender: c.Address
+    newData: c.Cell | null /* = null */
+    newCode: c.Cell | null /* = null */
+}
+
+export const Upgrade = {
+    PREFIX: 0x00001006,
+
+    create(args: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }): Upgrade {
+        return {
+            $: 'Upgrade',
+            walletUpgrade: true,
+            newData: null,
+            newCode: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Upgrade {
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
+        return {
+            $: 'Upgrade',
+            walletUpgrade: s.loadBoolean(),
+            walletVersion: s.loadUintBig(10),
+            sender: s.loadAddress(),
+            newData: s.loadBoolean() ? s.loadRef() : null,
+            newCode: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: Upgrade, b: c.Builder): void {
+        b.storeUint(0x00001006, 32);
+        b.storeBit(self.walletUpgrade);
+        b.storeUint(self.walletVersion, 10);
+        b.storeAddress(self.sender);
+        storeTolkNullable<c.Cell>(self.newData, b,
+            (v,b) => b.storeRef(v)
+        );
+        storeTolkNullable<c.Cell>(self.newCode, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: Upgrade): c.Cell {
+        return makeCellFrom<Upgrade>(self, Upgrade.store);
+    }
+}
+
+/**
+ > struct (0x00001008) RequestUpgradeCode {
+ >     sender: address
+ >     version: uint10
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    sender: c.Address
+    version: uint10
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        sender: c.Address
+        version: uint10
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            sender: s.loadAddress(),
+            version: s.loadUintBig(10),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.sender);
+        b.storeUint(self.version, 10);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
  > struct (0x000010a6) RegisterCityMember {
  >     queryId: uint64
  >     ownerAddress: address
  >     cityName: string
  >     sendExcessesTo: address?
+ >     version: uint10
  > }
  */
 export interface RegisterCityMember {
@@ -186,6 +344,7 @@ export interface RegisterCityMember {
     ownerAddress: c.Address
     cityName: string
     sendExcessesTo: c.Address | null
+    version: uint10 /* = 0 */
 }
 
 export const RegisterCityMember = {
@@ -196,9 +355,11 @@ export const RegisterCityMember = {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }): RegisterCityMember {
         return {
             $: 'RegisterCityMember',
+            version: 0n,
             ...args
         }
     },
@@ -210,6 +371,7 @@ export const RegisterCityMember = {
             ownerAddress: s.loadAddress(),
             cityName: s.loadStringRefTail(),
             sendExcessesTo: s.loadMaybeAddress(),
+            version: s.loadUintBig(10),
         }
     },
     store(self: RegisterCityMember, b: c.Builder): void {
@@ -218,6 +380,7 @@ export const RegisterCityMember = {
         b.storeAddress(self.ownerAddress);
         b.storeStringRefTail(self.cityName);
         b.storeAddress(self.sendExcessesTo);
+        b.storeUint(self.version, 10);
     },
     toCell(self: RegisterCityMember): c.Cell {
         return makeCellFrom<RegisterCityMember>(self, RegisterCityMember.store);
@@ -230,6 +393,7 @@ export const RegisterCityMember = {
  >     ownerAddress: address
  >     cityName: string
  >     sendExcessesTo: address?
+ >     version: uint10
  > }
  */
 export interface UnregisterCityMember {
@@ -238,6 +402,7 @@ export interface UnregisterCityMember {
     ownerAddress: c.Address
     cityName: string
     sendExcessesTo: c.Address | null
+    version: uint10 /* = 0 */
 }
 
 export const UnregisterCityMember = {
@@ -248,9 +413,11 @@ export const UnregisterCityMember = {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }): UnregisterCityMember {
         return {
             $: 'UnregisterCityMember',
+            version: 0n,
             ...args
         }
     },
@@ -262,6 +429,7 @@ export const UnregisterCityMember = {
             ownerAddress: s.loadAddress(),
             cityName: s.loadStringRefTail(),
             sendExcessesTo: s.loadMaybeAddress(),
+            version: s.loadUintBig(10),
         }
     },
     store(self: UnregisterCityMember, b: c.Builder): void {
@@ -270,6 +438,7 @@ export const UnregisterCityMember = {
         b.storeAddress(self.ownerAddress);
         b.storeStringRefTail(self.cityName);
         b.storeAddress(self.sendExcessesTo);
+        b.storeUint(self.version, 10);
     },
     toCell(self: UnregisterCityMember): c.Cell {
         return makeCellFrom<UnregisterCityMember>(self, UnregisterCityMember.store);
@@ -315,7 +484,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class CityMap implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBCAEAqgABFP8A9KQT9LzyyAsBAgFiAgMA0ND4kfJA7UTQ1PpI9AUD1ywgAACFNI4j+JIixwXy4EnTPzH6SDDIz4NAFIEBC/RBAcjMEvpS9ADJ7VTg1ywgAACFPI4h+JIixwXy4EnTPzH6SDBQA4EBC/RZMAHIzBL6UvQAye1U4PI/AgEgBAUCAW4GBwAZv5U3aiaGoY/SQY+gLAARsYt7UTQ+kgwgAA+xX3tRNDXTIA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDgEAAakAART/APSkE/S88sgLAQIBYgIDBPbQ+JHyQO1E0NTTCfpI9AUE1ywgAACFNI5J+JIixwXy4EnTPzH6SPpQMdcLCSO8jhr4KMjPhQhSMPpSgRAIzwuO+lIjzwsJyXP7AN7Iz4NAFYEBC/RBAsjMywkS+lL0AMntVODXLCAAAIU84wIzMwHXLCAAAIBc4wKJ1ycEBQYHAgEgCAkAjviSIscF8uBJ0z8x+kj6UDHXCwkjvI4a+CjIz4UIUjD6UoEQCM8LjvpSI88LCclz+wDeUASBAQv0WTACyMzLCRL6UvQAye1UAGIx+JJYxwXy4En0BDHXTCD7BNDtHu1T7UTQ1NMJ+kj0BNECpAPIzBPLCRL6UvQAye1UAAgAABAGAJyOSfiSUAPHBfLgSQHTADHTCfpIMfQEMfQFUSG5MY4pIG6RMJgg+wTQ7R7tU+LtRNDU0wn6SPQE0QKkA8jME8sJEvpS9ADJ7VSRMOLg8j8CAVgKCwAfv5U3aiaGoY6YSY/SQY+gLAARtDIdqJoa4WEwAgEgDA0AF7GLe1E0NMJMfpIMIAAPsV97UTQ10yA=');
 
     static Errors = {
         'Errors.NotOwner': 73,
@@ -335,6 +504,7 @@ export class CityMap implements c.Contract {
 
     static fromStorage(emptyStorage: {
         cityName: string
+        version?: uint10 /* = 0 */
         locationAddress: c.Address
         members: c.Dictionary<c.Address, boolean>
     }, deployedOptions?: DeployedAddrOptions) {
@@ -351,6 +521,7 @@ export class CityMap implements c.Contract {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }) {
         return RegisterCityMember.toCell(RegisterCityMember.create(body));
     }
@@ -360,8 +531,26 @@ export class CityMap implements c.Contract {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }) {
         return UnregisterCityMember.toCell(UnregisterCityMember.create(body));
+    }
+
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfUpgrade(body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }) {
+        return Upgrade.toCell(Upgrade.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -377,6 +566,7 @@ export class CityMap implements c.Contract {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -390,12 +580,43 @@ export class CityMap implements c.Contract {
         ownerAddress: c.Address
         cityName: string
         sendExcessesTo: c.Address | null
+        version?: uint10 /* = 0 */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
             body: UnregisterCityMember.toCell(UnregisterCityMember.create(body)),
             ...extraOptions
         });
+    }
+
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Upgrade.toCell(Upgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async getVersion(provider: ContractProvider): Promise<uint10> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
+        return r.readBigInt();
     }
 
     async getCityName(provider: ContractProvider): Promise<string> {

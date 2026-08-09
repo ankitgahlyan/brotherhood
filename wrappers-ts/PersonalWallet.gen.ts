@@ -648,6 +648,70 @@ export const NotifyMinter = {
 }
 
 /**
+ > struct (0x00001006) Upgrade {
+ >     walletUpgrade: bool
+ >     walletVersion: uint10
+ >     sender: address
+ >     newData: cell?
+ >     newCode: cell?
+ > }
+ */
+export interface Upgrade {
+    readonly $: 'Upgrade'
+    walletUpgrade: boolean /* = true */
+    walletVersion: uint10
+    sender: c.Address
+    newData: c.Cell | null /* = null */
+    newCode: c.Cell | null /* = null */
+}
+
+export const Upgrade = {
+    PREFIX: 0x00001006,
+
+    create(args: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }): Upgrade {
+        return {
+            $: 'Upgrade',
+            walletUpgrade: true,
+            newData: null,
+            newCode: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Upgrade {
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
+        return {
+            $: 'Upgrade',
+            walletUpgrade: s.loadBoolean(),
+            walletVersion: s.loadUintBig(10),
+            sender: s.loadAddress(),
+            newData: s.loadBoolean() ? s.loadRef() : null,
+            newCode: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: Upgrade, b: c.Builder): void {
+        b.storeUint(0x00001006, 32);
+        b.storeBit(self.walletUpgrade);
+        b.storeUint(self.walletVersion, 10);
+        b.storeAddress(self.sender);
+        storeTolkNullable<c.Cell>(self.newData, b,
+            (v,b) => b.storeRef(v)
+        );
+        storeTolkNullable<c.Cell>(self.newCode, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: Upgrade): c.Cell {
+        return makeCellFrom<Upgrade>(self, Upgrade.store);
+    }
+}
+
+/**
  > struct (0x00001007) TopUpTons {
  > }
  */
@@ -678,8 +742,95 @@ export const TopUpTons = {
 }
 
 /**
+ > struct (0x00001008) RequestUpgradeCode {
+ >     sender: address
+ >     version: uint10
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    sender: c.Address
+    version: uint10
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        sender: c.Address
+        version: uint10
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            sender: s.loadAddress(),
+            version: s.loadUintBig(10),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.sender);
+        b.storeUint(self.version, 10);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
  > struct PriWalletStore {
  >     jettonBalance: coins
+ >     version: uint10
  >     owner: address
  >     deployer: address
  >     minterAddress: address
@@ -688,6 +839,7 @@ export const TopUpTons = {
 export interface PriWalletStore {
     readonly $: 'PriWalletStore'
     jettonBalance: coins /* = 0 */
+    version: uint10 /* = 0 */
     owner: c.Address
     deployer: c.Address
     minterAddress: c.Address
@@ -696,6 +848,7 @@ export interface PriWalletStore {
 export const PriWalletStore = {
     create(args: {
         jettonBalance?: coins /* = 0 */
+        version?: uint10 /* = 0 */
         owner: c.Address
         deployer: c.Address
         minterAddress: c.Address
@@ -703,6 +856,7 @@ export const PriWalletStore = {
         return {
             $: 'PriWalletStore',
             jettonBalance: 0n,
+            version: 0n,
             ...args
         }
     },
@@ -710,6 +864,7 @@ export const PriWalletStore = {
         return {
             $: 'PriWalletStore',
             jettonBalance: s.loadCoins(),
+            version: s.loadUintBig(10),
             owner: s.loadAddress(),
             deployer: s.loadAddress(),
             minterAddress: s.loadAddress(),
@@ -717,6 +872,7 @@ export const PriWalletStore = {
     },
     store(self: PriWalletStore, b: c.Builder): void {
         b.storeCoins(self.jettonBalance);
+        b.storeUint(self.version, 10);
         b.storeAddress(self.owner);
         b.storeAddress(self.deployer);
         b.storeAddress(self.minterAddress);
@@ -765,7 +921,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECDwEAA2IAART/APSkE/S88sgLAQIBYgIDAr7Q7aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDtRND6ACD6SPpIMfpIMATXLCC8aijM4w/IWPoCzsntVAQFAgEgDQ4C6jUE0z/6ANMKMfpI+lD6APiSUAnHBY5J+JLtRND6ADH6SDH6SPpIMPgqJsjPhCD6UhP6UvpSyXgmVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSt9RY6AmlhBIUHZfBeMNIm6SbCLjDgYHAl7XLCB8U/UsjqPXLCLK+D3kjhcxMwLXLCAAAIA8MZEymIQPA8cAE/L04uMNAeMNAQgJAFbIz5HNi0JyJc8LP1AE+gIS+lIWzsnIz4UIF/pSUAT6AnHPC2oVzMmAEfsAAG74l/gnbxCi+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOE8s/yYEAgvsAAMI1+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBNM/+gD6UDBTQb7yr1FBocjPke92X3oTyz8B+gIV+lIS+lTJyM+FiBP6UnHPC24SzMmAUPsAAf41BNM/+gD6SPpQ9AH6ACD0BAFukTCR0eIj+kQw8tFN+Jf4k3D4OiNyceME+DkgboFNDiLjBCFugShkWAPjBFAjqCWggHCCANuIcPg8oAFw+DagAXD4NqCAcIIA2sCCEAlmAYBw+DegvPKw+JIqxwXy4ElTdL7yr1F0ocgh+gInCgH+zxbJ7VT4kiTHBVNJxwWxjjdbNDQ1+JL4klAExwVYbeMEyM+R73ZfehLLP1AE+gL6UhL6VMnIz4WIEvpScc8LbszJgFD7ANsx4DjtRND6ADH6SDH6SPpIMPgqJcjPhCD6UhP6UvpSyXgpbrOUOYsICd/Iz5BeNRRmGMs/UAb6AgsBhonPFhr6UhL6VAH6AhXOycjPiYgBVHJzyM+DywTPhaDMzPkWhPewBoALJdckNBPOFMv3gRUNzwt5FcwSzBPMyYBQ+wAMAAMAEAAjv9gXaiaH0AfSR9JBj9JBh8FUAB2+t2dqJofQB9JH0kfSRow=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFAEABIgAART/APSkE/S88sgLAQIBYgIDA97Q7aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDtRND6ANMJIPpI+kgx+kgwBdcsILxqKMyPCdcsIHxT9SzjD+MNyFj6AhLLCc7J7VQEBQYCASAQEQH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gloIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysPiSK8cF8uBJU4S+8q9RhKHIIfoCKAcDytcsIsr4PeSPWdcsIAAAgFyORDQ1W/iSWMcF+JJQA8cFErHy4rz0BDHXTCD7BNDtHu1T7UTQ+gDTCfpI+kj6SNEDpMhQBfoCFMsJ+lIS+lL6UsntVNsx4DHXLCAAAIA04w9Z4w0SCgsMA/Y2BdM/+gDTCdMAMfpI+lD6APiSK8cFjk34ku1E0PoAMdMJMfpIMfpI+kgw+ConyM+IAAj6UhP6UvpSyXgnVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSt9RSLyROeMNUXOgKJUQSThfBOMNIm4NDg8C/M8LCSfPFsntVPiSJMcFU0rHBbGON1s0NDQ1+JL4klADxwUBbeMEyM+R73ZfehXLP1j6AvpSEvpUycjPhYgS+lJxzwtuzMmAUPsA2zHgOe1E0PoAMdMJMfpIMfpI+kgw+ColyM+IAAj6UhP6UvpSyXgqbrOUOosICt/Iic8WGAgJAAgXjUUZAJTLP1AG+gLPiABAG/pSEvpUAfoCFs7JyM+JiAFUcoPIz4PLBM+FoMzM+RaE97AHgAsl1yQ0E84Vy/eBFQ3PC3kWzBPMFMzJgFD7AACkNfiSUATHBfLivAPTADHTCfpIMfQEMfQFU0G5jjI0I26RM5kj+wQD0O0e7VPi7UTQ+gDTCfpI+kj6SNEDpMhQBfoCFMsJ+lIS+lL6UsntVJFb4gCC1ywgAACARI4dMDT4KMjPhQgU+lKBEAjPC44T+lIizwsJyYBC+wCOFzQD1ywgAACAPDGRM5iEDwTHABTy9OIS4hIAwjb4l/g5IG6BNYVY4wRxgQKicPg4AXD4NqCBKq9w+DagvPKw+JIhxwXy4EkF0z/6APpQMFNRvvKvUVGhyM+R73ZfehPLPwH6Ahb6UhP6VMnIz4WIFPpScc8LbhPMyYBQ+wAANPgoyM+FCBv6UoEQCM8Ljhr6UifPCwnJc/sAAFLIz5HNi0JyJc8LP1AE+gL6Us7JyM+FCBj6UlAG+gJxzwtqFszJgBH7AAB6kjIzjjf4l/gnbxCi+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOFMs/yYEAgvsA4gIBWBITACG+t2dqJofQBphP0kfSR9JGjAAXtDIdqJofQAY64WEwACm3YF2omh9AGmEmP0kfSQY/SQYfBVA=');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -773,6 +929,7 @@ export class PersonalWallet implements c.Contract {
         'Errors.NotOwner': 73,
         'Errors.NotValidWallet': 74,
         'Errors.WrongWorkchain': 333,
+        'Errors.IncorrectSender': 700,
     }
 
     readonly address: c.Address
@@ -789,6 +946,7 @@ export class PersonalWallet implements c.Contract {
 
     static fromStorage(emptyStorage: {
         jettonBalance?: coins /* = 0 */
+        version?: uint10 /* = 0 */
         owner: c.Address
         deployer: c.Address
         minterAddress: c.Address
@@ -838,6 +996,30 @@ export class PersonalWallet implements c.Contract {
     static createCellOfTopUpTons(body: {
     }) {
         return TopUpTons.toCell(TopUpTons.create());
+    }
+
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfUpgrade(body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }) {
+        return Upgrade.toCell(Upgrade.create(body));
+    }
+
+    static createCellOfRequestUpgradeCode(body: {
+        sender: c.Address
+        version: uint10
+    }) {
+        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -903,11 +1085,53 @@ export class PersonalWallet implements c.Contract {
         });
     }
 
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Upgrade.toCell(Upgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        sender: c.Address
+        version: uint10
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async getVersion(provider: ContractProvider): Promise<uint10> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
+        return r.readBigInt();
+    }
+
     async getPersonalWalletState(provider: ContractProvider): Promise<PriWalletStore> {
-        const r = StackReader.fromGetMethod(4, await provider.get('get_personal_wallet_state', []));
+        const r = StackReader.fromGetMethod(5, await provider.get('get_personal_wallet_state', []));
         return ({
             $: 'PriWalletStore',
             jettonBalance: r.readBigInt(),
+            version: r.readBigInt(),
             owner: r.readSlice().loadAddress(),
             deployer: r.readSlice().loadAddress(),
             minterAddress: r.readSlice().loadAddress(),

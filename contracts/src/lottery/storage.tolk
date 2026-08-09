@@ -4,6 +4,7 @@
 
 struct LotteryStorage {
     owner: address                 // minter
+    version: uint10 = 0
     entryAmount: coins
     participants: map<address, ()> // todo: fixme max participants
     participantCount: int32 = 0

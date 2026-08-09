@@ -162,6 +162,38 @@ fun Personal.sendUpgrade(
     return net.send(from, genericMsg);
 }
 
+fun Personal.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendRequestUpgradeCode(
+    self,
+    from: address,
+    sender: address,
+    version: uint10,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestUpgradeCode { sender, version },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun Personal.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
@@ -181,6 +213,14 @@ fun Personal.sendAny(self, from: address, body: cell, config: SendParams = {}): 
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun Personal.getVersion(self): uint10 {
+    return net.runGetMethod(self.address, "get_version");
+}
+
+fun Personal.getWalletVersion(self): uint10 {
+    return net.runGetMethod(self.address, "get_wallet_version");
 }
 
 fun Personal.getState(self): State {

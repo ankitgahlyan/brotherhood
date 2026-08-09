@@ -273,6 +273,7 @@ struct (0x000010a6) RegisterCityMember {
     ownerAddress: address
     cityName: string
     sendExcessesTo: address?
+    version: uint10 = 0
 }
 
 struct (0x000010a7) UnregisterCityMember {
@@ -280,6 +281,7 @@ struct (0x000010a7) UnregisterCityMember {
     ownerAddress: address
     cityName: string
     sendExcessesTo: address?
+    version: uint10 = 0
 }
 
 // ============================================================================

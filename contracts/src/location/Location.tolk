@@ -1,3 +1,4 @@
+import "@stdlib/tvm-lowlevel"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 import "CityMap"
@@ -5,9 +6,14 @@ import "CityMap"
 type AllowedMessageToLocation =
     | LocationRegisterCity
     | LocationUnregisterCity
+    | HotUpgrade
+    | Upgrade
+    | RequestUpgradeCode
 
 struct LocationStore {
     letterKey: uint8
+    version: uint10 = 0
+    cityMapVersion: uint10 = 0
     minterAddress: address
     cityMapCode: cell
     cities: map<uint256, string>
@@ -58,6 +64,7 @@ fun onInternalMessage(in: InMessage): void {
                     ownerAddress: msg.ownerAddress,
                     cityName: msg.cityName,
                     sendExcessesTo: msg.sendExcessesTo,
+                    version: store.cityMapVersion,
                 },
             });
             forwardMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
@@ -75,11 +82,73 @@ fun onInternalMessage(in: InMessage): void {
                     ownerAddress: msg.ownerAddress,
                     cityName: msg.cityName,
                     sendExcessesTo: msg.sendExcessesTo,
+                    version: store.cityMapVersion,
                 },
             });
             forwardMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
+
+        HotUpgrade => {
+            assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: updating continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradeLocationData(msg.additionalData);
+            return;
+        }
+
+        Upgrade => {
+            assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
+            if (msg.walletUpgrade) {
+                store.cityMapVersion += 1;
+                if (msg.newCode != null) {
+                    store.cityMapCode = msg.newCode;
+                }
+                store.save();
+            } else {
+                if (store.version < msg.walletVersion) {
+                    store.version = msg.walletVersion;
+                    if (msg.newCode != null) {
+                        contract.setCodePostponed(msg.newCode);
+                        // SAFETY: updating continuation register C3 for new code
+                        setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
+                    }
+                    hotUpgradeLocationData(msg.newData);
+                }
+            }
+        }
+
+        RequestUpgradeCode => {
+            val upgradeMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: in.senderAddress,
+                body: Upgrade {
+                    walletUpgrade: true,
+                    walletVersion: store.cityMapVersion,
+                    sender: contract.getAddress(),
+                    newCode: store.cityMapCode,
+                },
+            });
+            upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        }
     }
+}
+
+fun hotUpgradeLocationData(_additionalData: cell?) {
+    var oldStore = LocationStore.fromSlice(contract.getData().beginParse());
+    oldStore.version += 1;
+    oldStore.save();
+}
+
+get fun get_version(): uint10 {
+    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
+    return store.version;
+}
+
+get fun get_city_map_version(): uint10 {
+    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
+    return store.cityMapVersion;
 }
 
 get fun get_letter_key(): uint8 {

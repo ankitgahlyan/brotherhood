@@ -88,6 +88,57 @@ fun Location.sendLocationUnregisterCity(
     return net.send(from, genericMsg);
 }
 
+fun Location.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Location.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Location.sendRequestUpgradeCode(
+    self,
+    from: address,
+    sender: address,
+    version: uint10,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestUpgradeCode { sender, version },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun Location.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
@@ -97,6 +148,14 @@ fun Location.sendAny(self, from: address, body: cell, config: SendParams = {}): 
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun Location.getVersion(self): uint10 {
+    return net.runGetMethod(self.address, "get_version");
+}
+
+fun Location.getCityMapVersion(self): uint10 {
+    return net.runGetMethod(self.address, "get_city_map_version");
 }
 
 fun Location.getLetterKey(self): uint8 {

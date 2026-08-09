@@ -841,6 +841,92 @@ export const TopUpTons = {
 }
 
 /**
+ > struct (0x00001008) RequestUpgradeCode {
+ >     sender: address
+ >     version: uint10
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    sender: c.Address
+    version: uint10
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        sender: c.Address
+        version: uint10
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            sender: s.loadAddress(),
+            version: s.loadUintBig(10),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.sender);
+        b.storeUint(self.version, 10);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
  > struct (0x00001148) Payback {
  >     queryId: uint64
  >     amount: coins
@@ -890,6 +976,8 @@ export const Payback = {
 /**
  > struct PriStore {
  >     totalSupply: coins
+ >     version: uint10
+ >     walletVersion: uint10
  >     fiJettonAddress: address
  >     adminAddress: address
  >     jettonWalletCode: cell
@@ -899,6 +987,8 @@ export const Payback = {
 export interface PriStore {
     readonly $: 'PriStore'
     totalSupply: coins /* = 0 */
+    version: uint10 /* = 0 */
+    walletVersion: uint10 /* = 0 */
     fiJettonAddress: c.Address
     adminAddress: c.Address
     jettonWalletCode: c.Cell
@@ -908,6 +998,8 @@ export interface PriStore {
 export const PriStore = {
     create(args: {
         totalSupply?: coins /* = 0 */
+        version?: uint10 /* = 0 */
+        walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
         jettonWalletCode: c.Cell
@@ -916,6 +1008,8 @@ export const PriStore = {
         return {
             $: 'PriStore',
             totalSupply: 0n,
+            version: 0n,
+            walletVersion: 0n,
             metadataUri: null,
             ...args
         }
@@ -924,6 +1018,8 @@ export const PriStore = {
         return {
             $: 'PriStore',
             totalSupply: s.loadCoins(),
+            version: s.loadUintBig(10),
+            walletVersion: s.loadUintBig(10),
             fiJettonAddress: s.loadAddress(),
             adminAddress: s.loadAddress(),
             jettonWalletCode: s.loadRef(),
@@ -932,6 +1028,8 @@ export const PriStore = {
     },
     store(self: PriStore, b: c.Builder): void {
         b.storeCoins(self.totalSupply);
+        b.storeUint(self.version, 10);
+        b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.fiJettonAddress);
         b.storeAddress(self.adminAddress);
         b.storeRef(self.jettonWalletCode);
@@ -1000,7 +1098,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEAEABAEAART/APSkE/S88sgLAQIBYgIDA9bQ+JGOviDXCx+CEP////664wLTHzHXLCC8aijMntcsIAAAikQxkvIx4PI/4e1E0AHTPzH6ADAB+gACocgB+gLOye1U4CDtRND6APpI+kjU9AUF1ywj3uy+9OMPyFAD+gL6UvpSEsz0AMntVAQFBgIBIAwNAf7XLCf////08r/XTNDtRNAB1ywgAACKRPK/0z/6APpIMAP6ACD6SDH6SNdMUTSgyAH6AhLOye1U+CglyM+EIPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG1tIG6zkzCLCN/Iz5BeNRRmFcs/BwDoNgXTP/oA+kj6UDD4kvgoUzbIz4QgEvpS+lL6Usl4U7RUEzLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBKUWKhBm6SXwOOIcjPhYhSUPpSz4QQcfoCgRFIzwuFE8s/AfoC+lLJgFD7AOIDKNcsIWO1y5SPCdcsIAAAgAzjD+MNCAkKAEZQA/oCz4gAQBT6UvpUz4QgzsnIz4UIEvpScc8LbszJgEL7AAH6NviSI8cF+JIjxwWx8uK8BdM/MfpI+gDXTCL6RDDy0U0g0NcsILxqKMzysdM/MfoA0wox+kgx+lAx+gD0BAFukTCR0eL4k3D4OiFyceME+DkgboFNDiLjBCFugShkWAPjBFAjqBOggHCCANuIcPg8oAJw+DYSoAFw+DaggHALAPTXLCAAAIAUjhA2+JJYxwXy4rwE0z8x+kgwjl7XLCAAAIAsnTU1+JIhxwXy4rwD10yORdcsIAAAgDSOJDb4kiPHBfLivAXTCjH6SDH0BPQFIG6RMJL7BOIgbpEwku1U4o4U1ywgAACAPDGRNZiEDwbHABby9OLiA+ID4gDgNgXTP/pI1woAlSDI+lLJkW3ibSL6RDCRMo43MPgoUyTIz4QgEvpS+lL6Usl4VDGRyM+DywTPhaDMzPkWhPewE4ALUATXJMjPigBAzhLL989QAeL4ksjPhQj6UoIQ0XNUZs8LjhPLP/pU9ADJgFD7AADKggDawIIQCWYBgHD4N6AjufKwFqCCCJiWgHD7AvgoUzTIz4QgEvpS+lL6Usl4KcjPiYgBVHMSyM+DywTPhaDMzPkWhPewB4ALJNckMxLOFcv3UAP6AoEVDc8LdRPMzBTMyYAR+wAAG76db2omh9AH0kfSQYAMAgJxDg8Aha289qJofQAY/SQY/SRrpnwUEeRnwhB9KQn9KQl9KWS8KJFkZ8HlgmfC0GZmfItCe9gJQAWoAeuSZGfFACBnZfvnqEAAJa8W9qJofQB9JBj9JGp6Ar+hicA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFwEABSgAART/APSkE/S88sgLAQIBYgIDA/DQ7aLt+/iRjr4g1wsfghD////+uuMC0x8x1ywgvGoozJ7XLCAAAIpEMZLyMeDyP+HtRNAB0z8x+gAwAfoAAqHIAfoCzsntVOAg7UTQ+gDTCdMJ+kj6SNT0BQfXLCPe7L704w/IUAX6AhPLCcsJ+lL6UhLM9ADJ7VQEBQYCASAPEAL81ywn////9PK/10zQ7UTQAdcsIAAAikTyv9M/+gD6SDAD+gAg0xMx+kgx+kjXTFE0oMgB+gISzsntVPgoJcjPiAAI+lIS+lL6Usl4JVQSMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989QbW0gbrOTMIsI38iJzxYVBwgA6jgH0z/6APpI+lAw+JL4KFM2yM+IAAgS+lL6UvpSyXhT1FQTMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989QxwXy4EpRgqEIbpJfA44hyM+FiFJQ+lLPhBBx+gKBEUjPC4UTyz8B+gL6UsmAUPsA4gNi1ywhY7XLlI8m1ywgAACADI6b1ywgAACAFI4QOPiSWMcF8uK8BtM/MfpIMOMO4w3jDQkKCwAIF41FGQBKyz9QA/oCz4gAQBT6UvpUz4QgzsnIz4UIEvpScc8LbszJgEL7AALy1ywgAACALJ03N/iSIccF8uK8BddMj2DXLCAAAIBcjkwxbDMzM/iSxwX4klADxwUSsfLivPQEMddMIPsE0O0e7VPtRND6ANMJ0wn6SPpI1PQE0QWkyFAH+gIWywkTywn6UvpSEsz0AMntVNsx4NcsIAAAgDTjDwXiBQwNAfo4+JIjxwX4kiPHBbHy4rwH0z8x+kj6ANdMIvpEMPLRTSDQ1ywgvGoozPKx0z8x+gDTCjH6SDH6UDH6APQEAW6RMJHR4viTcPg6IXJx4wT4OSBugU0OIuMEIW6BKGRYA+MEUCOoE6CAcIIA24hw+DygAnD4NhKgAXD4NqCAcA4A4jgH0z/6SNcKAJUgyPpSyZFt4m0i+kQwkTKOODD4KFMkyM+IAAgS+lL6UvpSyXhUMbHIz4PLBM+FoMzM+RaE97ATgAtQBNckyM+KAEDOEsv3z1AB4viSyM+FCPpSghDRc1RmzwuOE8s/+lT0AMmAUPsAANo4+JIjxwX4kiPHBbHy4rwH0gDTCfpIMfQEMfQFApwwA6QjbpEzkzcQJuKOQFNQuY44NSBukTCYIPsE0O0e7VPi7UTQ+gDTCdMJ+kj6SNT0BNEFpMhQB/oCFssJE8sJ+lL6UhLM9ADJ7VSRW+LiAJrXLCAAAIBEji0wN/iS+ChtyM+QAABAGybPCwkS+lL0AFKA9ADJyM+FCBL6UnHPC27MyYBC+wCOFNcsIAAAgDwxkTeYhA8IxwAY8vTi4gDMggDawIIQCWYBgHD4N6AjufKwGKCCCJiWgHD7AvgoUzTIz4gACBL6UvpS+lLJeCvIz4mIAVRzEsjPg8sEz4WgzMz5FoT3sAeACyTXJDMSzhXL91AD+gKBFQ3PC3UTzMwWzMmAEfsAAgFqERICAUgTFAAXsGQ7UTQ+gAx1wsJgACGw63tRND6ANMTMfpI+kgwAYAIBWBUWAB227d2omh9ABjphJjrhYTAAja289qJofQAY6YmY/SQY/SRrpnwUEeRnxAAEfSkJ/SkJfSlkvCiRZGfB5YJnwtBmZnyLQnvYCUAFqAHrkmRnxQAgZ2X756hAACuvFvaiaH0AaYmY/SQY/SRqegK/oYnA');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1024,6 +1122,8 @@ export class PersonalMinter implements c.Contract {
 
     static fromStorage(emptyStorage: {
         totalSupply?: coins /* = 0 */
+        version?: uint10 /* = 0 */
+        walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
         jettonWalletCode: c.Cell
@@ -1085,6 +1185,20 @@ export class PersonalMinter implements c.Contract {
         newCode?: c.Cell | null /* = null */
     }) {
         return Upgrade.toCell(Upgrade.create(body));
+    }
+
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfRequestUpgradeCode(body: {
+        sender: c.Address
+        version: uint10
+    }) {
+        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
     }
 
     static createCellOfTopUpTons(body: {
@@ -1174,6 +1288,28 @@ export class PersonalMinter implements c.Contract {
         });
     }
 
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        sender: c.Address
+        version: uint10
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
+            ...extraOptions
+        });
+    }
+
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -1181,6 +1317,16 @@ export class PersonalMinter implements c.Contract {
             body: TopUpTons.toCell(TopUpTons.create()),
             ...extraOptions
         });
+    }
+
+    async getVersion(provider: ContractProvider): Promise<uint10> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
+        return r.readBigInt();
+    }
+
+    async getWalletVersion(provider: ContractProvider): Promise<uint10> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_wallet_version', []));
+        return r.readBigInt();
     }
 
     async getState(provider: ContractProvider): Promise<State> {

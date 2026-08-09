@@ -1,15 +1,10 @@
-// Decentralized Lottery Contract using Commit-Reveal(noNo evenBetter) Scheme
-// Addresses are used as part of the commitment to ensure uniqueness
-
 import "@stdlib/common"
+import "@stdlib/tvm-lowlevel"
+import "@contracts/common/messages"
 import "consts"
 import "messages"
 import "storage"
 import "utils"
-
-// import "@stdlib/exotic-cells"
-// import "@stdlib/tvm-dicts"
-// import "@stdlib/tvm-lowlevel"
 
 contract Lottery {
     author: "zeta"
@@ -19,7 +14,7 @@ contract Lottery {
     incomingMessages: AllowedMessageToLottery
 }
 
-type AllowedMessageToLottery = EnterLottery | DrawWinner
+type AllowedMessageToLottery = EnterLottery | DrawWinner | HotUpgrade | Upgrade
 
 // ============================================================================
 // MESSAGE HANDLERS
@@ -91,14 +86,47 @@ fun onInternalMessage(in: InMessage) {
             storage.randomSeed = 0;
             storage.revealDeadline = 0;
         }
+
+        HotUpgrade => {
+            assert (in.senderAddress == storage.owner) throw 700;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: updating continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradeLotteryData(msg.additionalData);
+            return;
+        }
+
+        Upgrade => {
+            assert (in.senderAddress == storage.owner) throw 700;
+            if (storage.version < msg.walletVersion) {
+                storage.version = msg.walletVersion;
+                if (msg.newCode != null) {
+                    contract.setCodePostponed(msg.newCode);
+                    // SAFETY: updating continuation register C3 for new code
+                    setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
+                }
+                hotUpgradeLotteryData(msg.newData);
+            }
+        }
     }
 
     storage.save();
 }
 
+fun hotUpgradeLotteryData(_additionalData: cell?) {
+    var oldStore = LotteryStorage.load();
+    oldStore.version += 1;
+    oldStore.save();
+}
+
 // ============================================================================
 // GET METHODS
 // ============================================================================
+
+get fun getVersion(): uint10 {
+    val storage = lazy LotteryStorage.load();
+    return storage.version;
+}
 
 get fun getParticipantCount(): int32 {
     val storage = lazy LotteryStorage.load();
