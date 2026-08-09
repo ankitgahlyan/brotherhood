@@ -109,7 +109,8 @@ fun activateUser(
         inviterOwner.address,
         0,
         invitee,
-        "user@lat,long",
+        "user1",
+        "Tokyo",
         { value: ton("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
@@ -183,6 +184,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
                 }.toCell(),
                 reportInfo: ReportInfo { reports: [] }.toCell(),
             }.toCell(), // todo: learn how to set it default
+            profile: ProfileInfo {}.toCell(),
             timestamps: TimeStamps {}.toCell(),
         },
         owner.address,

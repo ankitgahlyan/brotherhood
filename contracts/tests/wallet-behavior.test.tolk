@@ -25,7 +25,8 @@ get fun `test wallet: kitchenSink`() {
         deployer.address,
         0,
         notDeployer.address,
-        "username@lat,long",
+        "alice",
+        "London",
         { value: ton("1") }, // todo: bounce?
     );
     invite.giveName("inviteMsg");
@@ -142,6 +143,7 @@ get fun `test : addrs r same`() {
             }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),
         }.toCell(), // todo: learn how to set it default
+        profile: ProfileInfo {}.toCell(),
         timestamps: TimeStamps {}.toCell(),
     };
     val calcAddr = AutoDeployAddress {

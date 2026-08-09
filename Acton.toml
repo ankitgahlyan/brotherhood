@@ -10,11 +10,21 @@ acton = "trunk"
 [contracts.FossFi]
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
-depends = ["FossFiWallet"] # comment after deploy to keep init code unchanged
+depends = ["FossFiWallet"]
 
 [contracts.FossFiWallet]
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
+depends = []
+
+[contracts.Location]
+display-name = "Location Aggregator"
+src = "contracts/src/location/Location.tolk"
+depends = ["CityMap"]
+
+[contracts.CityMap]
+display-name = "City Map Index"
+src = "contracts/src/location/CityMap.tolk"
 depends = []
 
 [contracts.Lottery]

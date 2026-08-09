@@ -9,6 +9,7 @@ import "@acton/testing/assert"
 import "@contracts/common/messages"
 import "@contracts/personalMinter/storage"
 
+/// Storage `PriWalletStore` is defined in `@contracts/personalMinter/storage`
 struct PersonalWallet {
     address: address
     stateInit: ContractState? = null
@@ -17,12 +18,13 @@ struct PersonalWallet {
 
 /// Creates a contract wrapper instance from the storage data
 fun PersonalWallet.fromStorage(
+    storage: PriWalletStore,
     toShard: AddressShardingOptions? = null,
     workchain: int8 = BASECHAIN,
 ): PersonalWallet {
     val stateInit = ContractState {
         code: build("PersonalWallet"),
-        data: createEmptyCell(),
+        data: storage.toCell(),
     };
     val address = AutoDeployAddress { workchain, stateInit, toShard }.calculateAddress();
     return PersonalWallet { address, stateInit, toShard };
@@ -46,6 +48,98 @@ fun PersonalWallet.deploy(self, from: address, config: SendParams = {}): SendRes
             stateInit: self.stateInit,
             toShard: self.toShard,
         },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendAskToTransfer(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    transferRecipient: address,
+    sendExcessesTo: address?,
+    customPayload: cell?,
+    forwardTonAmount: coins,
+    forwardPayload: PayloadInline | PayloadInRef,
+    config: SendParams = {},
+): SendResultList {
+    // build body cell manually, because some fields have @abi.clientType
+    val bodyB = beginCell()
+        .storeUint(0x0f8a7ea5, 32)
+        .storeAny(queryId)
+        .storeAny(jettonAmount)
+        .storeAny(transferRecipient)
+        .storeAny(sendExcessesTo)
+        .storeAny(customPayload)
+        .storeAny(forwardTonAmount)
+        .storeAny(forwardPayload);
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AskToTransfer.fromSlice(bodyB.toSlice()),
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendAskToBurn(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    sendExcessesTo: address?,
+    customPayload: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AskToBurn { queryId, jettonAmount, sendExcessesTo, customPayload },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendInternalTransferStep(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    version: uint10,
+    transferredAsCredit: bool,
+    transferInitiator: address,
+    sendExcessesTo: address?,
+    forwardTonAmount: coins,
+    forwardPayload: PayloadInline | PayloadInRef,
+    config: SendParams = {},
+): SendResultList {
+    // build body cell manually, because some fields have @abi.clientType
+    val bodyB = beginCell()
+        .storeUint(0x178d4519, 32)
+        .storeAny(queryId)
+        .storeAny(jettonAmount)
+        .storeAny(version)
+        .storeAny(transferredAsCredit)
+        .storeAny(transferInitiator)
+        .storeAny(sendExcessesTo)
+        .storeAny(forwardTonAmount)
+        .storeAny(forwardPayload);
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: InternalTransferStep.fromSlice(bodyB.toSlice()),
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: TopUpTons {},
     });
     return net.send(from, genericMsg);
 }

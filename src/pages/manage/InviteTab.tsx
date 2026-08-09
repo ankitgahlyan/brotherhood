@@ -22,7 +22,8 @@ export function InviteTab({
   ownerAddress: Address | null;
 }) {
   const [toAddr, setToAddr] = useState('');
-  const [inviteId, setInviteId] = useState('');
+  const [username, setUsername] = useState('');
+  const [city, setCity] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
     tonConnectUI,
     network,
@@ -38,10 +39,6 @@ export function InviteTab({
       setStatus({ type: 'error', message: 'Invalid recipient address' });
       return;
     }
-    if (!inviteId.trim()) {
-      setStatus({ type: 'error', message: 'Invite ID is required' });
-      return;
-    }
     if (!ownerAddress) {
       setStatus({ type: 'error', message: 'Wallet not connected' });
       return;
@@ -49,7 +46,8 @@ export function InviteTab({
 
     const body = buildInviteBody({
       transferRecipient: recipientAddr,
-      id: inviteId.trim(),
+      username: username.trim(),
+      city: city.trim(),
     });
     const walletAddr = await getWalletAddress(ownerAddress);
 
@@ -65,7 +63,8 @@ export function InviteTab({
       fallbackError: 'Invite failed',
       onSuccess: () => {
         setToAddr('');
-        setInviteId('');
+        setUsername('');
+        setCity('');
       },
     });
   }
@@ -80,18 +79,29 @@ export function InviteTab({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Invite ID <span className="text-destructive">*</span>
+          Username
         </Label>
         <Input
           type="text"
-          placeholder="Invite reference ID (required)"
-          value={inviteId}
-          onChange={(e) => setInviteId(e.target.value)}
+          placeholder="Member username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           disabled={loading}
-          required
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          City
+        </Label>
+        <Input
+          type="text"
+          placeholder="City name"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          disabled={loading}
         />
         <p className="text-xs text-muted-foreground">
-          This will send an invite message through your wallet contract.
+          This will send an invite message and register the city in the location index.
         </p>
       </div>
       <Button

@@ -8,7 +8,9 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 import "@contracts/common/messages"
 import "@contracts/personalMinter/personal"
+import "@contracts/personalMinter/storage"
 
+/// Storage `PriStore` is defined in `@contracts/personalMinter/storage`
 struct Personal {
     address: address
     stateInit: ContractState? = null
@@ -17,12 +19,13 @@ struct Personal {
 
 /// Creates a contract wrapper instance from the storage data
 fun Personal.fromStorage(
+    storage: PriStore,
     toShard: AddressShardingOptions? = null,
     workchain: int8 = BASECHAIN,
 ): Personal {
     val stateInit = ContractState {
         code: build("PersonalMinter"),
-        data: createEmptyCell(),
+        data: storage.toCell(),
     };
     val address = AutoDeployAddress { workchain, stateInit, toShard }.calculateAddress();
     return Personal { address, stateInit, toShard };
@@ -46,6 +49,125 @@ fun Personal.deploy(self, from: address, config: SendParams = {}): SendResultLis
             stateInit: self.stateInit,
             toShard: self.toShard,
         },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendMintNewJettons(
+    self,
+    from: address,
+    queryId: uint64,
+    mintRecipient: address,
+    tonAmount: coins,
+    internalTransferMsg: InternalTransferStep,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: MintNewJettons {
+            queryId,
+            mintRecipient,
+            tonAmount,
+            internalTransferMsg: internalTransferMsg.toCell(),
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendNotifyMinter(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    burnInitiator: address,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: NotifyMinter { queryId, jettonAmount, burnInitiator, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendRequestWalletAddress(
+    self,
+    from: address,
+    queryId: uint64,
+    owner: address,
+    includeOwnerAddress: bool,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestWalletAddress { queryId, owner, includeOwnerAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendChangeMinterAdmin(
+    self,
+    from: address,
+    queryId: uint64,
+    newAdminAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ChangeMinterAdmin { queryId, newAdminAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendChangeMinterMetadata(
+    self,
+    from: address,
+    queryId: uint64,
+    newMetadata: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ChangeMinterMetadata { queryId, newMetadata },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: TopUpTons {},
     });
     return net.send(from, genericMsg);
 }

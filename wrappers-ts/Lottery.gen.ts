@@ -135,7 +135,7 @@ type uint64 = bigint
 type uint256 = bigint
 
 /**
- > struct (0x11111111) EnterLottery {
+ > struct (0x00001198) EnterLottery {
  >     sender: address
  >     amount: coins
  > }
@@ -147,7 +147,7 @@ export interface EnterLottery {
 }
 
 export const EnterLottery = {
-    PREFIX: 0x11111111,
+    PREFIX: 0x00001198,
 
     create(args: {
         sender: c.Address
@@ -159,7 +159,7 @@ export const EnterLottery = {
         }
     },
     fromSlice(s: c.Slice): EnterLottery {
-        loadAndCheckPrefix32(s, 0x11111111, 'EnterLottery');
+        loadAndCheckPrefix32(s, 0x00001198, 'EnterLottery');
         return {
             $: 'EnterLottery',
             sender: s.loadAddress(),
@@ -167,7 +167,7 @@ export const EnterLottery = {
         }
     },
     store(self: EnterLottery, b: c.Builder): void {
-        b.storeUint(0x11111111, 32);
+        b.storeUint(0x00001198, 32);
         b.storeAddress(self.sender);
         b.storeCoins(self.amount);
     },
@@ -177,7 +177,7 @@ export const EnterLottery = {
 }
 
 /**
- > struct (0x22222222) LotteryWin {
+ > struct (0x00001199) LotteryWin {
  >     entryAmount: coins
  >     amt: coins
  >     winner: address
@@ -191,7 +191,7 @@ export interface LotteryWin {
 }
 
 export const LotteryWin = {
-    PREFIX: 0x22222222,
+    PREFIX: 0x00001199,
 
     create(args: {
         entryAmount: coins
@@ -204,7 +204,7 @@ export const LotteryWin = {
         }
     },
     fromSlice(s: c.Slice): LotteryWin {
-        loadAndCheckPrefix32(s, 0x22222222, 'LotteryWin');
+        loadAndCheckPrefix32(s, 0x00001199, 'LotteryWin');
         return {
             $: 'LotteryWin',
             entryAmount: s.loadCoins(),
@@ -213,7 +213,7 @@ export const LotteryWin = {
         }
     },
     store(self: LotteryWin, b: c.Builder): void {
-        b.storeUint(0x22222222, 32);
+        b.storeUint(0x00001199, 32);
         b.storeCoins(self.entryAmount);
         b.storeCoins(self.amt);
         b.storeAddress(self.winner);
@@ -224,7 +224,7 @@ export const LotteryWin = {
 }
 
 /**
- > struct (0x44444444) DrawWinner {
+ > struct (0x0000119a) DrawWinner {
  >     queryId: uint64
  > }
  */
@@ -234,7 +234,7 @@ export interface DrawWinner {
 }
 
 export const DrawWinner = {
-    PREFIX: 0x44444444,
+    PREFIX: 0x0000119a,
 
     create(args: {
         queryId: uint64
@@ -245,14 +245,14 @@ export const DrawWinner = {
         }
     },
     fromSlice(s: c.Slice): DrawWinner {
-        loadAndCheckPrefix32(s, 0x44444444, 'DrawWinner');
+        loadAndCheckPrefix32(s, 0x0000119a, 'DrawWinner');
         return {
             $: 'DrawWinner',
             queryId: s.loadUintBig(64),
         }
     },
     store(self: DrawWinner, b: c.Builder): void {
-        b.storeUint(0x44444444, 32);
+        b.storeUint(0x0000119a, 32);
         b.storeUint(self.queryId, 64);
     },
     toCell(self: DrawWinner): c.Cell {
@@ -372,7 +372,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Lottery implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEAEAAcYAART/APSkE/S88sgLAQIBYgIDAgLPBAUCASAICQLDPiR8kAgxwCRMODXLCCIiIiMl/pI+gCBAIGOEtcsIiIiIiSS8j/h0z9tWYEAguIB0e1E0PpI+gD0BNIf0h/6ANcL/4EAgVAIuuMPA8j6Ulj6AvQAEsofEsofWPoCy//J7VSAGBwBdO2i7fsSqQhwIoEBC/SCb6UykQGOFVMSupRsMdsx4AGkUROBAQv0dG+lMujyw+eAAiviSJscF8uK8IZf4IyK78uDJmDH4I4EOEKAB4lN0uvLgylODgQEL9ApvoTGdyFQglYEBC/RBAqRAE99QB6AHyPpS+RYVsgCGNzf4I1AHvPLhkCXCAPLhkUMF8AHIz5CIiIiKJPoCUAP6AhL6UsnIz4UIUiD6UnHPC27MyYBC+wBtcFRwABA2RBVVIAIBIAoLAgEgDg8CA5XwDA0AIbv4ntRND6SDH6ADH0AdcKH4AD2iz7UTQ+kgx+gAx9AHTHzHXCh8gkjBw4fgjvpFy4HOACmhf7UTQ+kgx+gAx9AWBAQv0Cm+hMYAJ7iK/tRND6SDH6ADH0AdM/MfoAMIACe4cf7UTQ+kgx+gAx9AHTHzHXCh+A==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEAEAAcYAART/APSkE/S88sgLAQIBYgIDAgLPBAUCASAICQLDPiR8kAgxwCRMODXLCAAAIzEl/pI+gCBAIGOEtcsIAAAjNSS8j/h0z9tWYEAguIB0e1E0PpI+gD0BNIf0h/6ANcL/4EAgVAIuuMPA8j6Ulj6AvQAEsofEsofWPoCy//J7VSAGBwBdO2i7fsSqQhwIoEBC/SCb6UykQGOFVMSupRsMdsx4AGkUROBAQv0dG+lMujyw+eAAiviSJscF8uK8IZf4IyK78uDJmDH4I4EOEKAB4lN0uvLgylODgQEL9ApvoTGdyFQglYEBC/RBAqRAE99QB6AHyPpS+RYVsgCGNzf4I1AHvPLhkCXCAPLhkUMF8AHIz5AAAEZmJPoCUAP6AhL6UsnIz4UIUiD6UnHPC27MyYBC+wBtcFRwABA2RBVVIAIBIAoLAgEgDg8CA5XwDA0AIbv4ntRND6SDH6ADH0AdcKH4AD2iz7UTQ+kgx+gAx9AHTHzHXCh8gkjBw4fgjvpFy4HOACmhf7UTQ+kgx+gAx9AWBAQv0Cm+hMYAJ7iK/tRND6SDH6ADH0AdM/MfoAMIACe4cf7UTQ+kgx+gAx9AHTHzHXCh+A==');
 
     static Errors = {
     }

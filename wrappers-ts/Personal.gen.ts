@@ -1,5 +1,5 @@
 // AUTO-GENERATED, do not edit
-// It's a TypeScript wrapper for a Personal contract in Tolk.
+// It's a TypeScript wrapper for a PersonalMinter contract in Tolk.
 /* eslint-disable */
 
 import * as c from '@ton/core';
@@ -459,7 +459,106 @@ export const InternalTransferStep = {
 }
 
 /**
- > struct (0xd1735400) ResponseWalletAddress {
+ > struct (0x7bdd97de) NotifyMinter {
+ >     queryId: uint64
+ >     jettonAmount: coins
+ >     burnInitiator: address
+ >     sendExcessesTo: address?
+ > }
+ */
+export interface NotifyMinter {
+    readonly $: 'NotifyMinter'
+    queryId: uint64
+    jettonAmount: coins
+    burnInitiator: c.Address
+    sendExcessesTo: c.Address | null
+}
+
+export const NotifyMinter = {
+    PREFIX: 0x7bdd97de,
+
+    create(args: {
+        queryId: uint64
+        jettonAmount: coins
+        burnInitiator: c.Address
+        sendExcessesTo: c.Address | null
+    }): NotifyMinter {
+        return {
+            $: 'NotifyMinter',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): NotifyMinter {
+        loadAndCheckPrefix32(s, 0x7bdd97de, 'NotifyMinter');
+        return {
+            $: 'NotifyMinter',
+            queryId: s.loadUintBig(64),
+            jettonAmount: s.loadCoins(),
+            burnInitiator: s.loadAddress(),
+            sendExcessesTo: s.loadMaybeAddress(),
+        }
+    },
+    store(self: NotifyMinter, b: c.Builder): void {
+        b.storeUint(0x7bdd97de, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.jettonAmount);
+        b.storeAddress(self.burnInitiator);
+        b.storeAddress(self.sendExcessesTo);
+    },
+    toCell(self: NotifyMinter): c.Cell {
+        return makeCellFrom<NotifyMinter>(self, NotifyMinter.store);
+    }
+}
+
+/**
+ > struct (0x2c76b972) RequestWalletAddress {
+ >     queryId: uint64
+ >     owner: address
+ >     includeOwnerAddress: bool
+ > }
+ */
+export interface RequestWalletAddress {
+    readonly $: 'RequestWalletAddress'
+    queryId: uint64
+    owner: c.Address
+    includeOwnerAddress: boolean
+}
+
+export const RequestWalletAddress = {
+    PREFIX: 0x2c76b972,
+
+    create(args: {
+        queryId: uint64
+        owner: c.Address
+        includeOwnerAddress: boolean
+    }): RequestWalletAddress {
+        return {
+            $: 'RequestWalletAddress',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestWalletAddress {
+        loadAndCheckPrefix32(s, 0x2c76b972, 'RequestWalletAddress');
+        return {
+            $: 'RequestWalletAddress',
+            queryId: s.loadUintBig(64),
+            owner: s.loadAddress(),
+            includeOwnerAddress: s.loadBoolean(),
+        }
+    },
+    store(self: RequestWalletAddress, b: c.Builder): void {
+        b.storeUint(0x2c76b972, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.owner);
+        b.storeBit(self.includeOwnerAddress);
+    },
+    toCell(self: RequestWalletAddress): c.Cell {
+        return makeCellFrom<RequestWalletAddress>(self, RequestWalletAddress.store);
+    }
+}
+
+/**
+ > struct (0xd1735466) ResponseWalletAddress {
  >     queryId: uint64
  >     jettonWalletAddress: address?
  >     owner: Cell<address>?
@@ -473,7 +572,7 @@ export interface ResponseWalletAddress {
 }
 
 export const ResponseWalletAddress = {
-    PREFIX: 0xd1735400,
+    PREFIX: 0xd1735466,
 
     create(args: {
         queryId: uint64
@@ -486,7 +585,7 @@ export const ResponseWalletAddress = {
         }
     },
     fromSlice(s: c.Slice): ResponseWalletAddress {
-        loadAndCheckPrefix32(s, 0xd1735400, 'ResponseWalletAddress');
+        loadAndCheckPrefix32(s, 0xd1735466, 'ResponseWalletAddress');
         return {
             $: 'ResponseWalletAddress',
             queryId: s.loadUintBig(64),
@@ -497,7 +596,7 @@ export const ResponseWalletAddress = {
         }
     },
     store(self: ResponseWalletAddress, b: c.Builder): void {
-        b.storeUint(0xd1735400, 32);
+        b.storeUint(0xd1735466, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.jettonWalletAddress);
         storeTolkNullable<CellRef<c.Address>>(self.owner, b,
@@ -512,7 +611,237 @@ export const ResponseWalletAddress = {
 }
 
 /**
- > struct (0x00000009) Payback {
+ > struct (0x00001001) MintNewJettons {
+ >     queryId: uint64
+ >     mintRecipient: address
+ >     tonAmount: coins
+ >     internalTransferMsg: Cell<InternalTransferStep>
+ > }
+ */
+export interface MintNewJettons {
+    readonly $: 'MintNewJettons'
+    queryId: uint64
+    mintRecipient: c.Address
+    tonAmount: coins
+    internalTransferMsg: CellRef<InternalTransferStep>
+}
+
+export const MintNewJettons = {
+    PREFIX: 0x00001001,
+
+    create(args: {
+        queryId: uint64
+        mintRecipient: c.Address
+        tonAmount: coins
+        internalTransferMsg: CellRef<InternalTransferStep>
+    }): MintNewJettons {
+        return {
+            $: 'MintNewJettons',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): MintNewJettons {
+        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
+        return {
+            $: 'MintNewJettons',
+            queryId: s.loadUintBig(64),
+            mintRecipient: s.loadAddress(),
+            tonAmount: s.loadCoins(),
+            internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+        }
+    },
+    store(self: MintNewJettons, b: c.Builder): void {
+        b.storeUint(0x00001001, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.mintRecipient);
+        b.storeCoins(self.tonAmount);
+        storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+    },
+    toCell(self: MintNewJettons): c.Cell {
+        return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
+    }
+}
+
+/**
+ > struct (0x00001002) ChangeMinterAdmin {
+ >     queryId: uint64
+ >     newAdminAddress: address
+ > }
+ */
+export interface ChangeMinterAdmin {
+    readonly $: 'ChangeMinterAdmin'
+    queryId: uint64
+    newAdminAddress: c.Address
+}
+
+export const ChangeMinterAdmin = {
+    PREFIX: 0x00001002,
+
+    create(args: {
+        queryId: uint64
+        newAdminAddress: c.Address
+    }): ChangeMinterAdmin {
+        return {
+            $: 'ChangeMinterAdmin',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeMinterAdmin {
+        loadAndCheckPrefix32(s, 0x00001002, 'ChangeMinterAdmin');
+        return {
+            $: 'ChangeMinterAdmin',
+            queryId: s.loadUintBig(64),
+            newAdminAddress: s.loadAddress(),
+        }
+    },
+    store(self: ChangeMinterAdmin, b: c.Builder): void {
+        b.storeUint(0x00001002, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.newAdminAddress);
+    },
+    toCell(self: ChangeMinterAdmin): c.Cell {
+        return makeCellFrom<ChangeMinterAdmin>(self, ChangeMinterAdmin.store);
+    }
+}
+
+/**
+ > struct (0x00001005) ChangeMinterMetadata {
+ >     queryId: uint64
+ >     newMetadata: cell
+ > }
+ */
+export interface ChangeMinterMetadata {
+    readonly $: 'ChangeMinterMetadata'
+    queryId: uint64
+    newMetadata: c.Cell
+}
+
+export const ChangeMinterMetadata = {
+    PREFIX: 0x00001005,
+
+    create(args: {
+        queryId: uint64
+        newMetadata: c.Cell
+    }): ChangeMinterMetadata {
+        return {
+            $: 'ChangeMinterMetadata',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeMinterMetadata {
+        loadAndCheckPrefix32(s, 0x00001005, 'ChangeMinterMetadata');
+        return {
+            $: 'ChangeMinterMetadata',
+            queryId: s.loadUintBig(64),
+            newMetadata: s.loadRef(),
+        }
+    },
+    store(self: ChangeMinterMetadata, b: c.Builder): void {
+        b.storeUint(0x00001005, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeRef(self.newMetadata);
+    },
+    toCell(self: ChangeMinterMetadata): c.Cell {
+        return makeCellFrom<ChangeMinterMetadata>(self, ChangeMinterMetadata.store);
+    }
+}
+
+/**
+ > struct (0x00001006) Upgrade {
+ >     walletUpgrade: bool
+ >     walletVersion: uint10
+ >     sender: address
+ >     newData: cell?
+ >     newCode: cell?
+ > }
+ */
+export interface Upgrade {
+    readonly $: 'Upgrade'
+    walletUpgrade: boolean /* = true */
+    walletVersion: uint10
+    sender: c.Address
+    newData: c.Cell | null /* = null */
+    newCode: c.Cell | null /* = null */
+}
+
+export const Upgrade = {
+    PREFIX: 0x00001006,
+
+    create(args: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }): Upgrade {
+        return {
+            $: 'Upgrade',
+            walletUpgrade: true,
+            newData: null,
+            newCode: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Upgrade {
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
+        return {
+            $: 'Upgrade',
+            walletUpgrade: s.loadBoolean(),
+            walletVersion: s.loadUintBig(10),
+            sender: s.loadAddress(),
+            newData: s.loadBoolean() ? s.loadRef() : null,
+            newCode: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: Upgrade, b: c.Builder): void {
+        b.storeUint(0x00001006, 32);
+        b.storeBit(self.walletUpgrade);
+        b.storeUint(self.walletVersion, 10);
+        b.storeAddress(self.sender);
+        storeTolkNullable<c.Cell>(self.newData, b,
+            (v,b) => b.storeRef(v)
+        );
+        storeTolkNullable<c.Cell>(self.newCode, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: Upgrade): c.Cell {
+        return makeCellFrom<Upgrade>(self, Upgrade.store);
+    }
+}
+
+/**
+ > struct (0x00001007) TopUpTons {
+ > }
+ */
+export interface TopUpTons {
+    readonly $: 'TopUpTons'
+}
+
+export const TopUpTons = {
+    PREFIX: 0x00001007,
+
+    create(): TopUpTons {
+        return {
+            $: 'TopUpTons',
+        }
+    },
+    fromSlice(s: c.Slice): TopUpTons {
+        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
+        return {
+            $: 'TopUpTons',
+        }
+    },
+    store(self: TopUpTons, b: c.Builder): void {
+        b.storeUint(0x00001007, 32);
+    },
+    toCell(self: TopUpTons): c.Cell {
+        return makeCellFrom<TopUpTons>(self, TopUpTons.store);
+    }
+}
+
+/**
+ > struct (0x00001148) Payback {
  >     queryId: uint64
  >     amount: coins
  >     sender: address
@@ -526,7 +855,7 @@ export interface Payback {
 }
 
 export const Payback = {
-    PREFIX: 0x00000009,
+    PREFIX: 0x00001148,
 
     create(args: {
         queryId: uint64
@@ -539,7 +868,7 @@ export const Payback = {
         }
     },
     fromSlice(s: c.Slice): Payback {
-        loadAndCheckPrefix32(s, 0x00000009, 'Payback');
+        loadAndCheckPrefix32(s, 0x00001148, 'Payback');
         return {
             $: 'Payback',
             queryId: s.loadUintBig(64),
@@ -548,13 +877,70 @@ export const Payback = {
         }
     },
     store(self: Payback, b: c.Builder): void {
-        b.storeUint(0x00000009, 32);
+        b.storeUint(0x00001148, 32);
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.amount);
         b.storeAddress(self.sender);
     },
     toCell(self: Payback): c.Cell {
         return makeCellFrom<Payback>(self, Payback.store);
+    }
+}
+
+/**
+ > struct PriStore {
+ >     totalSupply: coins
+ >     fiJettonAddress: address
+ >     adminAddress: address
+ >     jettonWalletCode: cell
+ >     metadataUri: cell?
+ > }
+ */
+export interface PriStore {
+    readonly $: 'PriStore'
+    totalSupply: coins /* = 0 */
+    fiJettonAddress: c.Address
+    adminAddress: c.Address
+    jettonWalletCode: c.Cell
+    metadataUri: c.Cell | null /* = null */
+}
+
+export const PriStore = {
+    create(args: {
+        totalSupply?: coins /* = 0 */
+        fiJettonAddress: c.Address
+        adminAddress: c.Address
+        jettonWalletCode: c.Cell
+        metadataUri?: c.Cell | null /* = null */
+    }): PriStore {
+        return {
+            $: 'PriStore',
+            totalSupply: 0n,
+            metadataUri: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PriStore {
+        return {
+            $: 'PriStore',
+            totalSupply: s.loadCoins(),
+            fiJettonAddress: s.loadAddress(),
+            adminAddress: s.loadAddress(),
+            jettonWalletCode: s.loadRef(),
+            metadataUri: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: PriStore, b: c.Builder): void {
+        b.storeCoins(self.totalSupply);
+        b.storeAddress(self.fiJettonAddress);
+        b.storeAddress(self.adminAddress);
+        b.storeRef(self.jettonWalletCode);
+        storeTolkNullable<c.Cell>(self.metadataUri, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: PriStore): c.Cell {
+        return makeCellFrom<PriStore>(self, PriStore.store);
     }
 }
 
@@ -576,7 +962,7 @@ export const string_prefixed0x = {
 }
 
 // ————————————————————————————————————————————
-//    class Personal
+//    class PersonalMinter
 //
 
 interface ExtraSendOptions {
@@ -613,8 +999,8 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
     return new c.Address(options.workchain ?? 0, addrHash);
 }
 
-export class Personal implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEAEAA/8AART/APSkE/S88sgLAQIBYgIDA9bQ+JGOviDXCx+CEP////664wLTHzHXLCC8aijMntcsIAAAAEwxkvIx4PI/4e1E0AHTPzH6ADAB+gACocgB+gLOye1U4CDtRND6APpI+kjU9AUF1ywj3uy+9OMPyFAD+gL6UvpSEsz0AMntVAQFBgIBIAwNAf7XLCf////08r/XTNDtRNAB1ywgAAAATPK/0z/6APpIMAP6ACD6SDH6SNdMUTSgyAH6AhLOye1U+CglyM+EIPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG1tIG6zkzCLCN/Iz5BeNRRmFcs/BwDkNgXTP/oA+kj6UDD4kvgoUzbIz4QgEvpS+lL6Usl4U7RUEzLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBKUWKhBm6SXwOOH8jPhYhSUPpSz4QQcfoCec8LhRPLPwH6AvpSyYBQ+wDiAyjXLCFjtcucjwnXLCMhW+g84w/jDQgJCgBGUAP6As+IAEAU+lL6VM+EIM7JyM+FCBL6UnHPC27MyYBC+wAB+jb4kiPHBfiSI8cFsfLivAXTPzH6SPoA10wi+kQw8tFNINDXLCC8aijM8rHTPzH6ANMKMfpIMfpQMfoA9AQBbpEwkdHi+JNw+DohcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gToIBwggDbiHD4PKACcPg2EqABcPg2oIBwCwD01ywjKA+apI4QNviSWMcF8uK8BNM/MfpIMI5e1ywmXDFIFJ01NfiSIccF8uK8A9dMjkXXLCEoRrNUjiQ2+JIjxwXy4rwF0wox+kgx9AT0BSBukTCS+wTiIG6RMJLtVOKOFNcsJpuQrGQxkTWYhA8GxwAW8vTi4gPiA+IA4DYF0z/6SNcKAJUgyPpSyZFt4m0i+kQwkTKONzD4KFMkyM+EIBL6UvpS+lLJeFQxkcjPg8sEz4WgzMz5FoT3sBOAC1AE1yTIz4oAQM4Sy/fPUAHi+JLIz4UI+lKCENFzVADPC44Tyz/6VPQAyYBQ+wAAyoIA2sCCEAlmAYBw+DegI7nysBagggiYloBw+wL4KFM0yM+EIBL6UvpS+lLJeCnIz4mIAVRzEsjPg8sEz4WgzMz5FoT3sAeACyTXJDMSzhXL91AD+gKBFQ3PC3UTzMwUzMmAEfsAABu+nW9qJofQB9JH0kGADAICcQ4PAIWtvPaiaH0AGP0kGP0ka6Z8FBHkZ8IQfSkJ/SkJfSlkvCiRZGfB5YJnwtBmZnyLQnvYCUAFqAHrkmRnxQAgZ2X756hAACWvFvaiaH0AfSQY/SRqegK/oYnA');
+export class PersonalMinter implements c.Contract {
+    static CodeCell = c.Cell.fromBase64('te6ccgECEAEABAEAART/APSkE/S88sgLAQIBYgIDA9bQ+JGOviDXCx+CEP////664wLTHzHXLCC8aijMntcsIAAAikQxkvIx4PI/4e1E0AHTPzH6ADAB+gACocgB+gLOye1U4CDtRND6APpI+kjU9AUF1ywj3uy+9OMPyFAD+gL6UvpSEsz0AMntVAQFBgIBIAwNAf7XLCf////08r/XTNDtRNAB1ywgAACKRPK/0z/6APpIMAP6ACD6SDH6SNdMUTSgyAH6AhLOye1U+CglyM+EIPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG1tIG6zkzCLCN/Iz5BeNRRmFcs/BwDoNgXTP/oA+kj6UDD4kvgoUzbIz4QgEvpS+lL6Usl4U7RUEzLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBKUWKhBm6SXwOOIcjPhYhSUPpSz4QQcfoCgRFIzwuFE8s/AfoC+lLJgFD7AOIDKNcsIWO1y5SPCdcsIAAAgAzjD+MNCAkKAEZQA/oCz4gAQBT6UvpUz4QgzsnIz4UIEvpScc8LbszJgEL7AAH6NviSI8cF+JIjxwWx8uK8BdM/MfpI+gDXTCL6RDDy0U0g0NcsILxqKMzysdM/MfoA0wox+kgx+lAx+gD0BAFukTCR0eL4k3D4OiFyceME+DkgboFNDiLjBCFugShkWAPjBFAjqBOggHCCANuIcPg8oAJw+DYSoAFw+DaggHALAPTXLCAAAIAUjhA2+JJYxwXy4rwE0z8x+kgwjl7XLCAAAIAsnTU1+JIhxwXy4rwD10yORdcsIAAAgDSOJDb4kiPHBfLivAXTCjH6SDH0BPQFIG6RMJL7BOIgbpEwku1U4o4U1ywgAACAPDGRNZiEDwbHABby9OLiA+ID4gDgNgXTP/pI1woAlSDI+lLJkW3ibSL6RDCRMo43MPgoUyTIz4QgEvpS+lL6Usl4VDGRyM+DywTPhaDMzPkWhPewE4ALUATXJMjPigBAzhLL989QAeL4ksjPhQj6UoIQ0XNUZs8LjhPLP/pU9ADJgFD7AADKggDawIIQCWYBgHD4N6AjufKwFqCCCJiWgHD7AvgoUzTIz4QgEvpS+lL6Usl4KcjPiYgBVHMSyM+DywTPhaDMzPkWhPewB4ALJNckMxLOFcv3UAP6AoEVDc8LdRPMzBTMyYAR+wAAG76db2omh9AH0kfSQYAMAgJxDg8Aha289qJofQAY/SQY/SRrpnwUEeRnwhB9KQn9KQl9KWS8KJFkZ8HlgmfC0GZmfItCe9gJQAWoAeuSZGfFACBnZfvnqEAAJa8W9qJofQB9JBj9JGp6Ar+hicA=');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -633,13 +1019,166 @@ export class Personal implements c.Contract {
     }
 
     static fromAddress(address: c.Address) {
-        return new Personal(address);
+        return new PersonalMinter(address);
+    }
+
+    static fromStorage(emptyStorage: {
+        totalSupply?: coins /* = 0 */
+        fiJettonAddress: c.Address
+        adminAddress: c.Address
+        jettonWalletCode: c.Cell
+        metadataUri?: c.Cell | null /* = null */
+    }, deployedOptions?: DeployedAddrOptions) {
+        const initialState = {
+            code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,
+            data: PriStore.toCell(PriStore.create(emptyStorage)),
+        };
+        const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
+        return new PersonalMinter(address, initialState);
+    }
+
+    static createCellOfMintNewJettons(body: {
+        queryId: uint64
+        mintRecipient: c.Address
+        tonAmount: coins
+        internalTransferMsg: CellRef<InternalTransferStep>
+    }) {
+        return MintNewJettons.toCell(MintNewJettons.create(body));
+    }
+
+    static createCellOfNotifyMinter(body: {
+        queryId: uint64
+        jettonAmount: coins
+        burnInitiator: c.Address
+        sendExcessesTo: c.Address | null
+    }) {
+        return NotifyMinter.toCell(NotifyMinter.create(body));
+    }
+
+    static createCellOfRequestWalletAddress(body: {
+        queryId: uint64
+        owner: c.Address
+        includeOwnerAddress: boolean
+    }) {
+        return RequestWalletAddress.toCell(RequestWalletAddress.create(body));
+    }
+
+    static createCellOfChangeMinterAdmin(body: {
+        queryId: uint64
+        newAdminAddress: c.Address
+    }) {
+        return ChangeMinterAdmin.toCell(ChangeMinterAdmin.create(body));
+    }
+
+    static createCellOfChangeMinterMetadata(body: {
+        queryId: uint64
+        newMetadata: c.Cell
+    }) {
+        return ChangeMinterMetadata.toCell(ChangeMinterMetadata.create(body));
+    }
+
+    static createCellOfUpgrade(body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }) {
+        return Upgrade.toCell(Upgrade.create(body));
+    }
+
+    static createCellOfTopUpTons(body: {
+    }) {
+        return TopUpTons.toCell(TopUpTons.create());
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
             body: c.Cell.EMPTY,
+            ...extraOptions
+        });
+    }
+
+    async sendMintNewJettons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        mintRecipient: c.Address
+        tonAmount: coins
+        internalTransferMsg: CellRef<InternalTransferStep>
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: MintNewJettons.toCell(MintNewJettons.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendNotifyMinter(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        jettonAmount: coins
+        burnInitiator: c.Address
+        sendExcessesTo: c.Address | null
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: NotifyMinter.toCell(NotifyMinter.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendRequestWalletAddress(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        owner: c.Address
+        includeOwnerAddress: boolean
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RequestWalletAddress.toCell(RequestWalletAddress.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendChangeMinterAdmin(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        newAdminAddress: c.Address
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: ChangeMinterAdmin.toCell(ChangeMinterAdmin.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendChangeMinterMetadata(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        newMetadata: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: ChangeMinterMetadata.toCell(ChangeMinterMetadata.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        walletUpgrade?: boolean /* = true */
+        walletVersion: uint10
+        sender: c.Address
+        newData?: c.Cell | null /* = null */
+        newCode?: c.Cell | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Upgrade.toCell(Upgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: TopUpTons.toCell(TopUpTons.create()),
             ...extraOptions
         });
     }

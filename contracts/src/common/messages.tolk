@@ -2,7 +2,10 @@ import "@stdlib/strings"
 
 type ForwardPayloadRemainder = RemainingBitsAndRefs
 
-// Jetton replies (shared by the FossFi and Personal Token minters/wallets)
+// ============================================================================
+// JETTON REPLIES & METADATA (Shared Data Layouts)
+// ============================================================================
+
 struct JettonWalletDataReply {
     jettonBalance: coins
     ownerAddress: address
@@ -17,10 +20,6 @@ struct JettonDataReply {
     jettonContent: Cell<OnchainMetadataReply>
     jettonWalletCode: cell
 }
-
-// struct (0x00) OnchainMetadataReply {
-//     contentDict: map<uint256, Cell<SnakeDataReply>>
-// }
 
 struct (0x00) SnakeDataReply {
     string: string
@@ -37,6 +36,10 @@ struct (0b0) PayloadInline {
 struct (0b1) PayloadInRef {
     value: Cell<RemainingBitsAndRefs>
 }
+
+// ============================================================================
+// STANDARD JETTON OPCODES (TEP-74 & TEP-89 Standards - Unchanged)
+// ============================================================================
 
 struct (0x0f8a7ea5) AskToTransfer {
     queryId: uint64
@@ -62,7 +65,7 @@ struct (0x178d4519) InternalTransferStep {
     jettonAmount: coins
     version: uint10
     transferredAsCredit: bool = false
-    transferInitiator: address // todo: need fix?: is null when minting (not initiated by another wallet)
+    transferInitiator: address
     sendExcessesTo: address?
     forwardTonAmount: coins
     @abi.clientType(PayloadInline | PayloadInRef)
@@ -87,39 +90,57 @@ struct (0x7bdd97de) NotifyMinter {
     sendExcessesTo: address?
 }
 
-struct (0x2c76b973) RequestWalletAddress {
+struct (0x2c76b972) RequestWalletAddress {
     queryId: uint64
     owner: address
     includeOwnerAddress: bool
 }
 
-struct (0xd1735400) ResponseWalletAddress {
+struct (0xd1735466) ResponseWalletAddress {
     queryId: uint64
     jettonWalletAddress: address?
     owner: Cell<address>?
 }
 
-struct (0x642b7d07) MintNewJettons {
+// Forward payload TL-B validation helper
+fun ForwardPayloadRemainder.checkIsCorrectTlbEither(self) {
+    var mutableCopy = self;
+    if (mutableCopy.loadMaybeRef() != null) {
+        mutableCopy.assertEnd();
+    }
+}
+
+// ============================================================================
+// GROUP 1: GOVERNANCE & ADMIN MESSAGES (Range: 0x00001000 - 0x0000104F)
+// Buffer: 50 reserved opcodes for future governance features
+// ============================================================================
+
+struct (0x00001001) MintNewJettons {
     queryId: uint64
     mintRecipient: address
     tonAmount: coins
     internalTransferMsg: Cell<InternalTransferStep>
 }
 
-struct (0x6501f354) ChangeMinterAdmin {
+struct (0x00001002) ChangeMinterAdmin {
     queryId: uint64
     newAdminAddress: address
 }
 
-struct (0xfb88e119) ClaimMinterAdmin {
+struct (0x00001003) ClaimMinterAdmin {
     queryId: uint64
 }
 
-struct (0x7431f221) DropMinterAdmin {
+struct (0x00001004) DropMinterAdmin {
     queryId: uint64
 }
 
-struct (0x2508d66a) Upgrade {
+struct (0x00001005) ChangeMinterMetadata {
+    queryId: uint64
+    newMetadata: cell
+}
+
+struct (0x00001006) Upgrade {
     walletUpgrade: bool = true
     walletVersion: uint10
     sender: address
@@ -127,135 +148,78 @@ struct (0x2508d66a) Upgrade {
     newCode: cell? = null
 }
 
-struct (0xcb862902) ChangeMinterMetadata {
-    queryId: uint64
-    newMetadata: cell // SnakeString
-}
+struct (0x00001007) TopUpTons
 
-struct (0xd372158c) TopUpTons
-
-// "forward payload" is TL/B `(Either Cell ^Cell)`;
-// we want to test, that if ^Cell, no other data exists in a slice
-fun ForwardPayloadRemainder.checkIsCorrectTlbEither(self) {
-    var mutableCopy = self;
-    if (mutableCopy.loadMaybeRef() != null) {
-        // throw "cell underflow" if there is data besides a ref
-        mutableCopy.assertEnd();
-    }
-}
-
-// msg for fossFi contracts ================================================================
-
-struct (0x00000001) InternalInvite {
-    queryId: uint64 = 0
-    version: uint10
-    // id: IdInfo? = null
-    sender: address
-    invitor: address
-    currentWalletCode: cell
-    currentStorage: cell?
-    // @abi.clientType(PayloadInline | PayloadInRef)
-    id: string
-}
-
-struct (0x00000002) InternalDeActivate {}
-
-struct (0x00000003) InternalInviteApproval {
-    sender: address
-}
-
-struct (0x00000004) InformMinterInviteInternal {
-    queryId: uint64
-    sender: address
-    invitor: address
-    // @abi.clientType(PayloadInline | PayloadInRef)
-    id: string
-}
-
-struct (0x00000005) AuthorityAction {
-    sender: address
-}
-
-struct (0x00000006) SetStatus {
-    sender: address
-    status: uint2
-}
-
-struct (0x00000007) TransferByAuthority {
-    amount: coins
-    receiver: address
-    @abi.clientType(PayloadInline | PayloadInRef)
-    forwardPayload: ForwardPayloadRemainder // todo: null?
-}
-
-struct (0x00000008) VotingAction {
-    positiveVote: bool = true
-    count: uint4 = 10
-    sender: address
-}
-
-struct (0x00000009) Payback {
-    queryId: uint64
-    amount: coins
-    sender: address
-}
-
-struct (0x00000010) RequestUpgradeCode {
+struct (0x00001008) RequestUpgradeCode {
     sender: address
     version: uint10
 }
 
-struct (0x00000011) ApproveUpgrade {}
+struct (0x00001009) ApproveUpgrade {}
 
-struct (0x00000012) RejectUpgrade {}
+struct (0x0000100a) RejectUpgrade {}
 
-struct (0x00000013) HotUpgrade {
+struct (0x0000100b) HotUpgrade {
     additionalData: cell?
     code: cell
 }
 
-struct (0x00000014) Destroy {}
-
-struct (0x00000015) CustomPayloadMsg {
+struct (0x0000100c) SetLocationAddresses {
     queryId: uint64
+    locationAddrs: map<uint8, address>
 }
 
-struct (0x00000020) ActInvite {
+struct (0x0000100d) ChangeDaoAddress {
+    queryId: uint64
+    newDaoAddress: address?
+}
+
+// ============================================================================
+// GROUP 2: ACCOUNT LIFECYCLE & ONBOARDING (Range: 0x00001050 - 0x0000109F)
+// Buffer: 50 reserved opcodes for future lifecycle features
+// ============================================================================
+
+struct (0x00001051) ActInvite {
     queryId: uint64
     transferRecipient: address
-    id: string
+    username: string
+    city: string
 }
 
-struct (0x00000021) ActClaimWeeklyGrant {
+struct (0x00001052) InternalInvite {
+    queryId: uint64 = 0
+    version: uint10
+    sender: address
+    invitor: address
+    currentWalletCode: cell
+    currentStorage: cell?
+    username: string
+    city: string
+}
+
+struct (0x00001053) InternalInviteApproval {
+    sender: address
+}
+
+struct (0x00001054) InformMinterInviteInternal {
     queryId: uint64
-    sendExcessesTo: address?
+    sender: address
+    invitor: address
+    username: string
+    city: string
 }
 
-struct (0x00000022) ActVote {
+struct (0x00001055) ActDeactivate {
     transferRecipient: address
 }
 
-struct (0x00000023) ActUnvote {
-    transferRecipient: address
-}
+struct (0x00001056) InternalDeActivate {}
 
-struct (0x00000024) ActDeactivate {
-    transferRecipient: address
-}
+struct (0x00001057) ActRequestUpgrade {}
 
-struct (0x00000025) ActRequestUpgrade {}
+struct (0x00001058) ActDestroyAccount {}
 
-struct (0x00000026) ActDispatchAuthorityAction {
-    transferRecipient: address
-}
-
-struct (0x00000027) ActJoinLottery {}
-
-struct (0x00000028) ActSetPersonalJettonMinter {
-    transferRecipient: address
-}
-
-struct (0x00000029) ActDestroyAccount {}
+struct (0x00001059) Destroy {}
 
 type ActAction =
     | ActClaimWeeklyGrant
@@ -269,53 +233,169 @@ type ActAction =
     | ActSetPersonalJettonMinter
     | ActDestroyAccount
 
-struct (0x00000017) ChangeId {
-    newId: string
+// ============================================================================
+// GROUP 3: PROFILE & LOCATION INDEXING (Range: 0x000010A0 - 0x000010EF)
+// Buffer: 50 reserved opcodes for future location & profile features
+// ============================================================================
+
+struct (0x000010a1) ChangeUsername {
+    newUsername: string
 }
 
-struct (0x00000018) RequestState {}
-
-struct (0x00000019) ProvideState {
-    state: cell
+struct (0x000010a2) ChangeCity {
+    queryId: uint64 = 0
+    newCity: string
 }
 
-struct (0x0000001a) SetAllowance {
+struct (0x000010a3) InformMinterChangeCity {
+    queryId: uint64
+    owner: address
+    oldCity: string
+    newCity: string
+}
+
+struct (0x000010a4) LocationRegisterCity {
+    queryId: uint64
+    ownerAddress: address
+    cityName: string
+    sendExcessesTo: address?
+}
+
+struct (0x000010a5) LocationUnregisterCity {
+    queryId: uint64
+    ownerAddress: address
+    cityName: string
+    sendExcessesTo: address?
+}
+
+struct (0x000010a6) RegisterCityMember {
+    queryId: uint64
+    ownerAddress: address
+    cityName: string
+    sendExcessesTo: address?
+}
+
+struct (0x000010a7) UnregisterCityMember {
+    queryId: uint64
+    ownerAddress: address
+    cityName: string
+    sendExcessesTo: address?
+}
+
+// ============================================================================
+// GROUP 4: SOCIAL, VOTING, & AUTHORITY (Range: 0x000010F0 - 0x0000113F)
+// Buffer: 50 reserved opcodes for future social & governance features
+// ============================================================================
+
+struct (0x000010f1) ActVote {
+    transferRecipient: address
+}
+
+struct (0x000010f2) ActUnvote {
+    transferRecipient: address
+}
+
+struct (0x000010f3) VotingAction {
+    positiveVote: bool = true
+    count: uint4 = 10
+    sender: address
+}
+
+struct (0x000010f4) ActDispatchAuthorityAction {
+    transferRecipient: address
+}
+
+struct (0x000010f5) AuthorityAction {
+    sender: address
+}
+
+struct (0x000010f6) SetStatus {
+    sender: address
+    status: uint2
+}
+
+struct (0x000010f7) TransferByAuthority {
+    amount: coins
+    receiver: address
+    @abi.clientType(PayloadInline | PayloadInRef)
+    forwardPayload: ForwardPayloadRemainder
+}
+
+// ============================================================================
+// GROUP 5: ECONOMY, ALLOWANCES, & CREDIT (Range: 0x00001140 - 0x0000118F)
+// Buffer: 50 reserved opcodes for future financial features
+// ============================================================================
+
+struct (0x00001141) ActClaimWeeklyGrant {
+    queryId: uint64
+    sendExcessesTo: address?
+}
+
+struct (0x00001142) TriggerDecay {
+    sender: address
+}
+
+struct (0x00001143) SetAllowance {
     queryId: uint64
     grantee: address
     amount: coins
 }
 
-struct (0x0000001b) SpendAllowance {
+struct (0x00001144) SpendAllowance {
     queryId: uint64
     amount: coins
     receiver: address
     sendExcessesTo: address?
 }
 
-struct (0x0000001c) AskGoldCoinsTransfer {
+struct (0x00001145) AskGoldCoinsTransfer {
     queryId: uint64
     amount: uint32
     receiver: address
     sendExcessesTo: address?
 }
 
-struct (0x0000001d) InternalGoldCoinsTransfer {
+struct (0x00001146) InternalGoldCoinsTransfer {
     queryId: uint64
     amount: uint32
     transferInitiator: address
 }
 
-struct (0x0000001e) TriggerDecay {
-    sender: address
-}
-
-struct (0x0000001f) BuyCredit {
+struct (0x00001147) BuyCredit {
     queryId: uint64
     jettonAmount: coins
-    transferRecipient: address // the issuer whose Personal Token is being bought
+    transferRecipient: address
     sendExcessesTo: address?
 }
 
+struct (0x00001148) Payback {
+    queryId: uint64
+    amount: coins
+    sender: address
+}
+
+struct (0x00001149) ActSetPersonalJettonMinter {
+    transferRecipient: address
+}
+
+// ============================================================================
+// GROUP 6: MINI-APPS & EXTENSIONS (Range: 0x00001190 - 0x000011DF)
+// Buffer: 50 reserved opcodes for future mini-apps & state extensions
+// ============================================================================
+
+struct (0x00001191) ActJoinLottery {}
+
+struct (0x00001192) RequestState {}
+
+struct (0x00001193) ProvideState {
+    state: cell
+}
+
+struct (0x00001194) CustomPayloadMsg {
+    queryId: uint64
+}
+
+// Auxiliary data structs
 struct IdInfo {
     username: string
     lattitude: string

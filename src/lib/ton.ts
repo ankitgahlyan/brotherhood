@@ -3,7 +3,7 @@ import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from '@/lib/config';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
-import { Personal } from '@wrappers/Personal.gen';
+import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 // import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 
@@ -266,7 +266,7 @@ export async function getPersonalWalletAddress(
   owner: Address,
 ): Promise<Address> {
   return getTonClient(network)
-    .open(Personal.fromAddress(personalMinter))
+    .open(PersonalMinter.fromAddress(personalMinter))
     .getWalletAddress(owner);
 }
 

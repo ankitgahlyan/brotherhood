@@ -31,6 +31,7 @@ fun calcDeployFiWallet(
             }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),
         }.toCell(), // todo: learn how to set it default
+        profile: ProfileInfo {}.toCell(),
         timestamps: TimeStamps {}.toCell(),
     };
 

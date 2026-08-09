@@ -136,17 +136,33 @@ fun FossFiWallet.sendAuthorityAction(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendChangeId(
+fun FossFiWallet.sendChangeUsername(
     self,
     from: address,
-    newId: string,
+    newUsername: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ChangeId { newId },
+        body: ChangeUsername { newUsername },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendChangeCity(
+    self,
+    from: address,
+    queryId: uint64,
+    newCity: string,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ChangeCity { queryId, newCity },
     });
     return net.send(from, genericMsg);
 }
@@ -193,7 +209,8 @@ fun FossFiWallet.sendInternalInvite(
     invitor: address,
     currentWalletCode: cell,
     currentStorage: cell?,
-    id: string,
+    username: string,
+    city: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
@@ -207,7 +224,8 @@ fun FossFiWallet.sendInternalInvite(
             invitor,
             currentWalletCode,
             currentStorage,
-            id,
+            username,
+            city,
         },
     });
     return net.send(from, genericMsg);
@@ -248,14 +266,15 @@ fun FossFiWallet.sendActInvite(
     from: address,
     queryId: uint64,
     transferRecipient: address,
-    id: string,
+    username: string,
+    city: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActInvite { queryId, transferRecipient, id },
+        body: ActInvite { queryId, transferRecipient, username, city },
     });
     return net.send(from, genericMsg);
 }
@@ -667,6 +686,10 @@ fun FossFiWallet.getWalletDataAll(self): FiWalletStore {
     return net.runGetMethod(self.address, "get_wallet_data_all");
 }
 
-fun FossFiWallet.getId(self): string {
-    return net.runGetMethod(self.address, "get_id");
+fun FossFiWallet.getUsername(self): string {
+    return net.runGetMethod(self.address, "get_username");
+}
+
+fun FossFiWallet.getCity(self): string {
+    return net.runGetMethod(self.address, "get_city");
 }

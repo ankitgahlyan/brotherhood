@@ -676,7 +676,8 @@ function FiWalletInfoCard({
           label="Gold Coins"
           value={String(fiWalletState.goldCoins ?? 0)}
         />
-        <PreviewRow label="ID" value={fiWalletState.id || '—'} />
+        <PreviewRow label="Username" value={fiWalletState.profile?.ref?.username || '—'} />
+        <PreviewRow label="City" value={fiWalletState.profile?.ref?.city || '—'} />
         <PreviewRow
           label="Txn Count"
           value={String(fiWalletState.txnCount ?? 0)}

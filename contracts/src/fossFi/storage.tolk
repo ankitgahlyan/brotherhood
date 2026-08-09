@@ -28,6 +28,7 @@ struct FiCodes {
     lotteryCode: cell? = null
     latestFiWalletCode: cell? = null
     currentRequest: Cell<CurrentRequest>? = null
+    locationAddrs: map<uint8, address> = []
 }
 
 struct SocialMaps {
@@ -68,11 +69,15 @@ struct TimeStamps {
     lastDecay: uint32 = 0
 }
 
+struct ProfileInfo {
+    username: string = ""
+    city: string = ""
+}
+
 struct FiWalletStore {
     // todo: nft like store migration after activate/upgrade/ID acc also code upgrade & reverese/killSwitch for normal jettons coz of  
     jettonBalance: coins = 0
     goldCoins: uint32 = 1      // todo: implement: store of value, transferrable
-    id: string = ""            // for future use of offchain id like email/phone/username for social recovery & web2 integrations
     txnCount: uint8 = 0        // for fixed fees burns to counter minting
     status: uint2 = 0          // for granular control
     isAuthorityAccount: bool = false
@@ -88,6 +93,7 @@ struct FiWalletStore {
     version: uint10 = 0
     storeVersion: uint10 = 0
 
+    profile: Cell<ProfileInfo>
     timestamps: Cell<TimeStamps>
     addresses: Cell<Addresses>
     maps: Cell<Maps>
@@ -96,7 +102,8 @@ struct FiWalletStore {
 struct FiStore {
     totalSupply: coins = 0
     walletVersion: uint10 = 0
-    adminAddress: address // todo: implement: use dao address
+    adminAddress: address
+    daoAddress: address? = null
     adminHandoff: Cell<AdminHandoff>? = null
     metadata: cell
     others: Cell<FiCodes>

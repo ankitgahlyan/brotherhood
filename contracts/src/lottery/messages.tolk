@@ -1,18 +1,18 @@
 // ============================================================================
-// MESSAGE OPCODES
+// MESSAGE OPCODES (Group 6 Mini-Apps Range)
 // ============================================================================
 
-struct (0x11111111) EnterLottery {
+struct (0x00001198) EnterLottery {
     sender: address
     amount: coins
 }
 
-struct (0x22222222) LotteryWin {
+struct (0x00001199) LotteryWin {
     entryAmount: coins
     amt: coins
     winner: address
 }
 
-struct (0x44444444) DrawWinner {
+struct (0x0000119a) DrawWinner {
     queryId: uint64
 }

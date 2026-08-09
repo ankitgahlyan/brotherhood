@@ -674,7 +674,7 @@ export const NotifyMinter = {
 }
 
 /**
- > struct (0x642b7d07) MintNewJettons {
+ > struct (0x00001001) MintNewJettons {
  >     queryId: uint64
  >     mintRecipient: address
  >     tonAmount: coins
@@ -690,7 +690,7 @@ export interface MintNewJettons {
 }
 
 export const MintNewJettons = {
-    PREFIX: 0x642b7d07,
+    PREFIX: 0x00001001,
 
     create(args: {
         queryId: uint64
@@ -704,7 +704,7 @@ export const MintNewJettons = {
         }
     },
     fromSlice(s: c.Slice): MintNewJettons {
-        loadAndCheckPrefix32(s, 0x642b7d07, 'MintNewJettons');
+        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
         return {
             $: 'MintNewJettons',
             queryId: s.loadUintBig(64),
@@ -714,7 +714,7 @@ export const MintNewJettons = {
         }
     },
     store(self: MintNewJettons, b: c.Builder): void {
-        b.storeUint(0x642b7d07, 32);
+        b.storeUint(0x00001001, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.mintRecipient);
         b.storeCoins(self.tonAmount);
@@ -726,7 +726,7 @@ export const MintNewJettons = {
 }
 
 /**
- > struct (0x2508d66a) Upgrade {
+ > struct (0x00001006) Upgrade {
  >     walletUpgrade: bool
  >     walletVersion: uint10
  >     sender: address
@@ -744,7 +744,7 @@ export interface Upgrade {
 }
 
 export const Upgrade = {
-    PREFIX: 0x2508d66a,
+    PREFIX: 0x00001006,
 
     create(args: {
         walletUpgrade?: boolean /* = true */
@@ -762,7 +762,7 @@ export const Upgrade = {
         }
     },
     fromSlice(s: c.Slice): Upgrade {
-        loadAndCheckPrefix32(s, 0x2508d66a, 'Upgrade');
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
         return {
             $: 'Upgrade',
             walletUpgrade: s.loadBoolean(),
@@ -773,7 +773,7 @@ export const Upgrade = {
         }
     },
     store(self: Upgrade, b: c.Builder): void {
-        b.storeUint(0x2508d66a, 32);
+        b.storeUint(0x00001006, 32);
         b.storeBit(self.walletUpgrade);
         b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.sender);
@@ -790,7 +790,7 @@ export const Upgrade = {
 }
 
 /**
- > struct (0xd372158c) TopUpTons {
+ > struct (0x00001007) TopUpTons {
  > }
  */
 export interface TopUpTons {
@@ -798,7 +798,7 @@ export interface TopUpTons {
 }
 
 export const TopUpTons = {
-    PREFIX: 0xd372158c,
+    PREFIX: 0x00001007,
 
     create(): TopUpTons {
         return {
@@ -806,13 +806,13 @@ export const TopUpTons = {
         }
     },
     fromSlice(s: c.Slice): TopUpTons {
-        loadAndCheckPrefix32(s, 0xd372158c, 'TopUpTons');
+        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
         return {
             $: 'TopUpTons',
         }
     },
     store(self: TopUpTons, b: c.Builder): void {
-        b.storeUint(0xd372158c, 32);
+        b.storeUint(0x00001007, 32);
     },
     toCell(self: TopUpTons): c.Cell {
         return makeCellFrom<TopUpTons>(self, TopUpTons.store);
@@ -820,14 +820,109 @@ export const TopUpTons = {
 }
 
 /**
- > struct (0x00000001) InternalInvite {
+ > struct (0x00001008) RequestUpgradeCode {
+ >     sender: address
+ >     version: uint10
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    sender: c.Address
+    version: uint10
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        sender: c.Address
+        version: uint10
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            sender: s.loadAddress(),
+            version: s.loadUintBig(10),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.sender);
+        b.storeUint(self.version, 10);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
+ > struct (0x00001051) ActInvite {
+ >     queryId: uint64
+ >     transferRecipient: address
+ >     username: string
+ >     city: string
+ > }
+ */
+export interface ActInvite {
+    readonly $: 'ActInvite'
+    queryId: uint64
+    transferRecipient: c.Address
+    username: string
+    city: string
+}
+
+export const ActInvite = {
+    PREFIX: 0x00001051,
+
+    create(args: {
+        queryId: uint64
+        transferRecipient: c.Address
+        username: string
+        city: string
+    }): ActInvite {
+        return {
+            $: 'ActInvite',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ActInvite {
+        loadAndCheckPrefix32(s, 0x00001051, 'ActInvite');
+        return {
+            $: 'ActInvite',
+            queryId: s.loadUintBig(64),
+            transferRecipient: s.loadAddress(),
+            username: s.loadStringRefTail(),
+            city: s.loadStringRefTail(),
+        }
+    },
+    store(self: ActInvite, b: c.Builder): void {
+        b.storeUint(0x00001051, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.transferRecipient);
+        b.storeStringRefTail(self.username);
+        b.storeStringRefTail(self.city);
+    },
+    toCell(self: ActInvite): c.Cell {
+        return makeCellFrom<ActInvite>(self, ActInvite.store);
+    }
+}
+
+/**
+ > struct (0x00001052) InternalInvite {
  >     queryId: uint64
  >     version: uint10
  >     sender: address
  >     invitor: address
  >     currentWalletCode: cell
  >     currentStorage: cell?
- >     id: string
+ >     username: string
+ >     city: string
  > }
  */
 export interface InternalInvite {
@@ -838,11 +933,12 @@ export interface InternalInvite {
     invitor: c.Address
     currentWalletCode: c.Cell
     currentStorage: c.Cell | null
-    id: string
+    username: string
+    city: string
 }
 
 export const InternalInvite = {
-    PREFIX: 0x00000001,
+    PREFIX: 0x00001052,
 
     create(args: {
         queryId?: uint64 /* = 0 */
@@ -851,7 +947,8 @@ export const InternalInvite = {
         invitor: c.Address
         currentWalletCode: c.Cell
         currentStorage: c.Cell | null
-        id: string
+        username: string
+        city: string
     }): InternalInvite {
         return {
             $: 'InternalInvite',
@@ -860,7 +957,7 @@ export const InternalInvite = {
         }
     },
     fromSlice(s: c.Slice): InternalInvite {
-        loadAndCheckPrefix32(s, 0x00000001, 'InternalInvite');
+        loadAndCheckPrefix32(s, 0x00001052, 'InternalInvite');
         return {
             $: 'InternalInvite',
             queryId: s.loadUintBig(64),
@@ -869,11 +966,12 @@ export const InternalInvite = {
             invitor: s.loadAddress(),
             currentWalletCode: s.loadRef(),
             currentStorage: s.loadBoolean() ? s.loadRef() : null,
-            id: s.loadStringRefTail(),
+            username: s.loadStringRefTail(),
+            city: s.loadStringRefTail(),
         }
     },
     store(self: InternalInvite, b: c.Builder): void {
-        b.storeUint(0x00000001, 32);
+        b.storeUint(0x00001052, 32);
         b.storeUint(self.queryId, 64);
         b.storeUint(self.version, 10);
         b.storeAddress(self.sender);
@@ -882,7 +980,8 @@ export const InternalInvite = {
         storeTolkNullable<c.Cell>(self.currentStorage, b,
             (v,b) => b.storeRef(v)
         );
-        b.storeStringRefTail(self.id);
+        b.storeStringRefTail(self.username);
+        b.storeStringRefTail(self.city);
     },
     toCell(self: InternalInvite): c.Cell {
         return makeCellFrom<InternalInvite>(self, InternalInvite.store);
@@ -890,41 +989,12 @@ export const InternalInvite = {
 }
 
 /**
- > struct (0x00000002) InternalDeActivate {
- > }
- */
-export interface InternalDeActivate {
-    readonly $: 'InternalDeActivate'
-}
-
-export const InternalDeActivate = {
-    PREFIX: 0x00000002,
-
-    create(): InternalDeActivate {
-        return {
-            $: 'InternalDeActivate',
-        }
-    },
-    fromSlice(s: c.Slice): InternalDeActivate {
-        loadAndCheckPrefix32(s, 0x00000002, 'InternalDeActivate');
-        return {
-            $: 'InternalDeActivate',
-        }
-    },
-    store(self: InternalDeActivate, b: c.Builder): void {
-        b.storeUint(0x00000002, 32);
-    },
-    toCell(self: InternalDeActivate): c.Cell {
-        return makeCellFrom<InternalDeActivate>(self, InternalDeActivate.store);
-    }
-}
-
-/**
- > struct (0x00000004) InformMinterInviteInternal {
+ > struct (0x00001054) InformMinterInviteInternal {
  >     queryId: uint64
  >     sender: address
  >     invitor: address
- >     id: string
+ >     username: string
+ >     city: string
  > }
  */
 export interface InformMinterInviteInternal {
@@ -932,17 +1002,19 @@ export interface InformMinterInviteInternal {
     queryId: uint64
     sender: c.Address
     invitor: c.Address
-    id: string
+    username: string
+    city: string
 }
 
 export const InformMinterInviteInternal = {
-    PREFIX: 0x00000004,
+    PREFIX: 0x00001054,
 
     create(args: {
         queryId: uint64
         sender: c.Address
         invitor: c.Address
-        id: string
+        username: string
+        city: string
     }): InformMinterInviteInternal {
         return {
             $: 'InformMinterInviteInternal',
@@ -950,21 +1022,23 @@ export const InformMinterInviteInternal = {
         }
     },
     fromSlice(s: c.Slice): InformMinterInviteInternal {
-        loadAndCheckPrefix32(s, 0x00000004, 'InformMinterInviteInternal');
+        loadAndCheckPrefix32(s, 0x00001054, 'InformMinterInviteInternal');
         return {
             $: 'InformMinterInviteInternal',
             queryId: s.loadUintBig(64),
             sender: s.loadAddress(),
             invitor: s.loadAddress(),
-            id: s.loadStringRefTail(),
+            username: s.loadStringRefTail(),
+            city: s.loadStringRefTail(),
         }
     },
     store(self: InformMinterInviteInternal, b: c.Builder): void {
-        b.storeUint(0x00000004, 32);
+        b.storeUint(0x00001054, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.sender);
         b.storeAddress(self.invitor);
-        b.storeStringRefTail(self.id);
+        b.storeStringRefTail(self.username);
+        b.storeStringRefTail(self.city);
     },
     toCell(self: InformMinterInviteInternal): c.Cell {
         return makeCellFrom<InformMinterInviteInternal>(self, InformMinterInviteInternal.store);
@@ -972,86 +1046,370 @@ export const InformMinterInviteInternal = {
 }
 
 /**
- > struct (0x00000005) AuthorityAction {
- >     sender: address
+ > struct (0x00001055) ActDeactivate {
+ >     transferRecipient: address
  > }
  */
-export interface AuthorityAction {
-    readonly $: 'AuthorityAction'
-    sender: c.Address
+export interface ActDeactivate {
+    readonly $: 'ActDeactivate'
+    transferRecipient: c.Address
 }
 
-export const AuthorityAction = {
-    PREFIX: 0x00000005,
+export const ActDeactivate = {
+    PREFIX: 0x00001055,
 
     create(args: {
-        sender: c.Address
-    }): AuthorityAction {
+        transferRecipient: c.Address
+    }): ActDeactivate {
         return {
-            $: 'AuthorityAction',
+            $: 'ActDeactivate',
             ...args
         }
     },
-    fromSlice(s: c.Slice): AuthorityAction {
-        loadAndCheckPrefix32(s, 0x00000005, 'AuthorityAction');
+    fromSlice(s: c.Slice): ActDeactivate {
+        loadAndCheckPrefix32(s, 0x00001055, 'ActDeactivate');
         return {
-            $: 'AuthorityAction',
-            sender: s.loadAddress(),
+            $: 'ActDeactivate',
+            transferRecipient: s.loadAddress(),
         }
     },
-    store(self: AuthorityAction, b: c.Builder): void {
-        b.storeUint(0x00000005, 32);
-        b.storeAddress(self.sender);
+    store(self: ActDeactivate, b: c.Builder): void {
+        b.storeUint(0x00001055, 32);
+        b.storeAddress(self.transferRecipient);
     },
-    toCell(self: AuthorityAction): c.Cell {
-        return makeCellFrom<AuthorityAction>(self, AuthorityAction.store);
+    toCell(self: ActDeactivate): c.Cell {
+        return makeCellFrom<ActDeactivate>(self, ActDeactivate.store);
     }
 }
 
 /**
- > struct (0x00000006) SetStatus {
- >     sender: address
- >     status: uint2
+ > struct (0x00001056) InternalDeActivate {
  > }
  */
-export interface SetStatus {
-    readonly $: 'SetStatus'
-    sender: c.Address
-    status: uint2
+export interface InternalDeActivate {
+    readonly $: 'InternalDeActivate'
 }
 
-export const SetStatus = {
-    PREFIX: 0x00000006,
+export const InternalDeActivate = {
+    PREFIX: 0x00001056,
 
-    create(args: {
-        sender: c.Address
-        status: uint2
-    }): SetStatus {
+    create(): InternalDeActivate {
         return {
-            $: 'SetStatus',
-            ...args
+            $: 'InternalDeActivate',
         }
     },
-    fromSlice(s: c.Slice): SetStatus {
-        loadAndCheckPrefix32(s, 0x00000006, 'SetStatus');
+    fromSlice(s: c.Slice): InternalDeActivate {
+        loadAndCheckPrefix32(s, 0x00001056, 'InternalDeActivate');
         return {
-            $: 'SetStatus',
-            sender: s.loadAddress(),
-            status: s.loadUintBig(2),
+            $: 'InternalDeActivate',
         }
     },
-    store(self: SetStatus, b: c.Builder): void {
-        b.storeUint(0x00000006, 32);
-        b.storeAddress(self.sender);
-        b.storeUint(self.status, 2);
+    store(self: InternalDeActivate, b: c.Builder): void {
+        b.storeUint(0x00001056, 32);
     },
-    toCell(self: SetStatus): c.Cell {
-        return makeCellFrom<SetStatus>(self, SetStatus.store);
+    toCell(self: InternalDeActivate): c.Cell {
+        return makeCellFrom<InternalDeActivate>(self, InternalDeActivate.store);
     }
 }
 
 /**
- > struct (0x00000008) VotingAction {
+ > struct (0x00001057) ActRequestUpgrade {
+ > }
+ */
+export interface ActRequestUpgrade {
+    readonly $: 'ActRequestUpgrade'
+}
+
+export const ActRequestUpgrade = {
+    PREFIX: 0x00001057,
+
+    create(): ActRequestUpgrade {
+        return {
+            $: 'ActRequestUpgrade',
+        }
+    },
+    fromSlice(s: c.Slice): ActRequestUpgrade {
+        loadAndCheckPrefix32(s, 0x00001057, 'ActRequestUpgrade');
+        return {
+            $: 'ActRequestUpgrade',
+        }
+    },
+    store(self: ActRequestUpgrade, b: c.Builder): void {
+        b.storeUint(0x00001057, 32);
+    },
+    toCell(self: ActRequestUpgrade): c.Cell {
+        return makeCellFrom<ActRequestUpgrade>(self, ActRequestUpgrade.store);
+    }
+}
+
+/**
+ > struct (0x00001058) ActDestroyAccount {
+ > }
+ */
+export interface ActDestroyAccount {
+    readonly $: 'ActDestroyAccount'
+}
+
+export const ActDestroyAccount = {
+    PREFIX: 0x00001058,
+
+    create(): ActDestroyAccount {
+        return {
+            $: 'ActDestroyAccount',
+        }
+    },
+    fromSlice(s: c.Slice): ActDestroyAccount {
+        loadAndCheckPrefix32(s, 0x00001058, 'ActDestroyAccount');
+        return {
+            $: 'ActDestroyAccount',
+        }
+    },
+    store(self: ActDestroyAccount, b: c.Builder): void {
+        b.storeUint(0x00001058, 32);
+    },
+    toCell(self: ActDestroyAccount): c.Cell {
+        return makeCellFrom<ActDestroyAccount>(self, ActDestroyAccount.store);
+    }
+}
+
+/**
+ > struct (0x00001059) Destroy {
+ > }
+ */
+export interface Destroy {
+    readonly $: 'Destroy'
+}
+
+export const Destroy = {
+    PREFIX: 0x00001059,
+
+    create(): Destroy {
+        return {
+            $: 'Destroy',
+        }
+    },
+    fromSlice(s: c.Slice): Destroy {
+        loadAndCheckPrefix32(s, 0x00001059, 'Destroy');
+        return {
+            $: 'Destroy',
+        }
+    },
+    store(self: Destroy, b: c.Builder): void {
+        b.storeUint(0x00001059, 32);
+    },
+    toCell(self: Destroy): c.Cell {
+        return makeCellFrom<Destroy>(self, Destroy.store);
+    }
+}
+
+/**
+ > struct (0x000010a1) ChangeUsername {
+ >     newUsername: string
+ > }
+ */
+export interface ChangeUsername {
+    readonly $: 'ChangeUsername'
+    newUsername: string
+}
+
+export const ChangeUsername = {
+    PREFIX: 0x000010a1,
+
+    create(args: {
+        newUsername: string
+    }): ChangeUsername {
+        return {
+            $: 'ChangeUsername',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeUsername {
+        loadAndCheckPrefix32(s, 0x000010a1, 'ChangeUsername');
+        return {
+            $: 'ChangeUsername',
+            newUsername: s.loadStringRefTail(),
+        }
+    },
+    store(self: ChangeUsername, b: c.Builder): void {
+        b.storeUint(0x000010a1, 32);
+        b.storeStringRefTail(self.newUsername);
+    },
+    toCell(self: ChangeUsername): c.Cell {
+        return makeCellFrom<ChangeUsername>(self, ChangeUsername.store);
+    }
+}
+
+/**
+ > struct (0x000010a2) ChangeCity {
+ >     queryId: uint64
+ >     newCity: string
+ > }
+ */
+export interface ChangeCity {
+    readonly $: 'ChangeCity'
+    queryId: uint64 /* = 0 */
+    newCity: string
+}
+
+export const ChangeCity = {
+    PREFIX: 0x000010a2,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        newCity: string
+    }): ChangeCity {
+        return {
+            $: 'ChangeCity',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeCity {
+        loadAndCheckPrefix32(s, 0x000010a2, 'ChangeCity');
+        return {
+            $: 'ChangeCity',
+            queryId: s.loadUintBig(64),
+            newCity: s.loadStringRefTail(),
+        }
+    },
+    store(self: ChangeCity, b: c.Builder): void {
+        b.storeUint(0x000010a2, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeStringRefTail(self.newCity);
+    },
+    toCell(self: ChangeCity): c.Cell {
+        return makeCellFrom<ChangeCity>(self, ChangeCity.store);
+    }
+}
+
+/**
+ > struct (0x000010a3) InformMinterChangeCity {
+ >     queryId: uint64
+ >     owner: address
+ >     oldCity: string
+ >     newCity: string
+ > }
+ */
+export interface InformMinterChangeCity {
+    readonly $: 'InformMinterChangeCity'
+    queryId: uint64
+    owner: c.Address
+    oldCity: string
+    newCity: string
+}
+
+export const InformMinterChangeCity = {
+    PREFIX: 0x000010a3,
+
+    create(args: {
+        queryId: uint64
+        owner: c.Address
+        oldCity: string
+        newCity: string
+    }): InformMinterChangeCity {
+        return {
+            $: 'InformMinterChangeCity',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): InformMinterChangeCity {
+        loadAndCheckPrefix32(s, 0x000010a3, 'InformMinterChangeCity');
+        return {
+            $: 'InformMinterChangeCity',
+            queryId: s.loadUintBig(64),
+            owner: s.loadAddress(),
+            oldCity: s.loadStringRefTail(),
+            newCity: s.loadStringRefTail(),
+        }
+    },
+    store(self: InformMinterChangeCity, b: c.Builder): void {
+        b.storeUint(0x000010a3, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.owner);
+        b.storeStringRefTail(self.oldCity);
+        b.storeStringRefTail(self.newCity);
+    },
+    toCell(self: InformMinterChangeCity): c.Cell {
+        return makeCellFrom<InformMinterChangeCity>(self, InformMinterChangeCity.store);
+    }
+}
+
+/**
+ > struct (0x000010f1) ActVote {
+ >     transferRecipient: address
+ > }
+ */
+export interface ActVote {
+    readonly $: 'ActVote'
+    transferRecipient: c.Address
+}
+
+export const ActVote = {
+    PREFIX: 0x000010f1,
+
+    create(args: {
+        transferRecipient: c.Address
+    }): ActVote {
+        return {
+            $: 'ActVote',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ActVote {
+        loadAndCheckPrefix32(s, 0x000010f1, 'ActVote');
+        return {
+            $: 'ActVote',
+            transferRecipient: s.loadAddress(),
+        }
+    },
+    store(self: ActVote, b: c.Builder): void {
+        b.storeUint(0x000010f1, 32);
+        b.storeAddress(self.transferRecipient);
+    },
+    toCell(self: ActVote): c.Cell {
+        return makeCellFrom<ActVote>(self, ActVote.store);
+    }
+}
+
+/**
+ > struct (0x000010f2) ActUnvote {
+ >     transferRecipient: address
+ > }
+ */
+export interface ActUnvote {
+    readonly $: 'ActUnvote'
+    transferRecipient: c.Address
+}
+
+export const ActUnvote = {
+    PREFIX: 0x000010f2,
+
+    create(args: {
+        transferRecipient: c.Address
+    }): ActUnvote {
+        return {
+            $: 'ActUnvote',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ActUnvote {
+        loadAndCheckPrefix32(s, 0x000010f2, 'ActUnvote');
+        return {
+            $: 'ActUnvote',
+            transferRecipient: s.loadAddress(),
+        }
+    },
+    store(self: ActUnvote, b: c.Builder): void {
+        b.storeUint(0x000010f2, 32);
+        b.storeAddress(self.transferRecipient);
+    },
+    toCell(self: ActUnvote): c.Cell {
+        return makeCellFrom<ActUnvote>(self, ActUnvote.store);
+    }
+}
+
+/**
+ > struct (0x000010f3) VotingAction {
  >     positiveVote: bool
  >     count: uint4
  >     sender: address
@@ -1065,7 +1423,7 @@ export interface VotingAction {
 }
 
 export const VotingAction = {
-    PREFIX: 0x00000008,
+    PREFIX: 0x000010f3,
 
     create(args: {
         positiveVote?: boolean /* = true */
@@ -1080,7 +1438,7 @@ export const VotingAction = {
         }
     },
     fromSlice(s: c.Slice): VotingAction {
-        loadAndCheckPrefix32(s, 0x00000008, 'VotingAction');
+        loadAndCheckPrefix32(s, 0x000010f3, 'VotingAction');
         return {
             $: 'VotingAction',
             positiveVote: s.loadBoolean(),
@@ -1089,7 +1447,7 @@ export const VotingAction = {
         }
     },
     store(self: VotingAction, b: c.Builder): void {
-        b.storeUint(0x00000008, 32);
+        b.storeUint(0x000010f3, 32);
         b.storeBit(self.positiveVote);
         b.storeUint(self.count, 4);
         b.storeAddress(self.sender);
@@ -1100,173 +1458,123 @@ export const VotingAction = {
 }
 
 /**
- > struct (0x00000009) Payback {
- >     queryId: uint64
- >     amount: coins
- >     sender: address
- > }
- */
-export interface Payback {
-    readonly $: 'Payback'
-    queryId: uint64
-    amount: coins
-    sender: c.Address
-}
-
-export const Payback = {
-    PREFIX: 0x00000009,
-
-    create(args: {
-        queryId: uint64
-        amount: coins
-        sender: c.Address
-    }): Payback {
-        return {
-            $: 'Payback',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): Payback {
-        loadAndCheckPrefix32(s, 0x00000009, 'Payback');
-        return {
-            $: 'Payback',
-            queryId: s.loadUintBig(64),
-            amount: s.loadCoins(),
-            sender: s.loadAddress(),
-        }
-    },
-    store(self: Payback, b: c.Builder): void {
-        b.storeUint(0x00000009, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeCoins(self.amount);
-        b.storeAddress(self.sender);
-    },
-    toCell(self: Payback): c.Cell {
-        return makeCellFrom<Payback>(self, Payback.store);
-    }
-}
-
-/**
- > struct (0x00000010) RequestUpgradeCode {
- >     sender: address
- >     version: uint10
- > }
- */
-export interface RequestUpgradeCode {
-    readonly $: 'RequestUpgradeCode'
-    sender: c.Address
-    version: uint10
-}
-
-export const RequestUpgradeCode = {
-    PREFIX: 0x00000010,
-
-    create(args: {
-        sender: c.Address
-        version: uint10
-    }): RequestUpgradeCode {
-        return {
-            $: 'RequestUpgradeCode',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): RequestUpgradeCode {
-        loadAndCheckPrefix32(s, 0x00000010, 'RequestUpgradeCode');
-        return {
-            $: 'RequestUpgradeCode',
-            sender: s.loadAddress(),
-            version: s.loadUintBig(10),
-        }
-    },
-    store(self: RequestUpgradeCode, b: c.Builder): void {
-        b.storeUint(0x00000010, 32);
-        b.storeAddress(self.sender);
-        b.storeUint(self.version, 10);
-    },
-    toCell(self: RequestUpgradeCode): c.Cell {
-        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
-    }
-}
-
-/**
- > struct (0x00000014) Destroy {
- > }
- */
-export interface Destroy {
-    readonly $: 'Destroy'
-}
-
-export const Destroy = {
-    PREFIX: 0x00000014,
-
-    create(): Destroy {
-        return {
-            $: 'Destroy',
-        }
-    },
-    fromSlice(s: c.Slice): Destroy {
-        loadAndCheckPrefix32(s, 0x00000014, 'Destroy');
-        return {
-            $: 'Destroy',
-        }
-    },
-    store(self: Destroy, b: c.Builder): void {
-        b.storeUint(0x00000014, 32);
-    },
-    toCell(self: Destroy): c.Cell {
-        return makeCellFrom<Destroy>(self, Destroy.store);
-    }
-}
-
-/**
- > struct (0x00000020) ActInvite {
- >     queryId: uint64
+ > struct (0x000010f4) ActDispatchAuthorityAction {
  >     transferRecipient: address
- >     id: string
  > }
  */
-export interface ActInvite {
-    readonly $: 'ActInvite'
-    queryId: uint64
+export interface ActDispatchAuthorityAction {
+    readonly $: 'ActDispatchAuthorityAction'
     transferRecipient: c.Address
-    id: string
 }
 
-export const ActInvite = {
-    PREFIX: 0x00000020,
+export const ActDispatchAuthorityAction = {
+    PREFIX: 0x000010f4,
 
     create(args: {
-        queryId: uint64
         transferRecipient: c.Address
-        id: string
-    }): ActInvite {
+    }): ActDispatchAuthorityAction {
         return {
-            $: 'ActInvite',
+            $: 'ActDispatchAuthorityAction',
             ...args
         }
     },
-    fromSlice(s: c.Slice): ActInvite {
-        loadAndCheckPrefix32(s, 0x00000020, 'ActInvite');
+    fromSlice(s: c.Slice): ActDispatchAuthorityAction {
+        loadAndCheckPrefix32(s, 0x000010f4, 'ActDispatchAuthorityAction');
         return {
-            $: 'ActInvite',
-            queryId: s.loadUintBig(64),
+            $: 'ActDispatchAuthorityAction',
             transferRecipient: s.loadAddress(),
-            id: s.loadStringRefTail(),
         }
     },
-    store(self: ActInvite, b: c.Builder): void {
-        b.storeUint(0x00000020, 32);
-        b.storeUint(self.queryId, 64);
+    store(self: ActDispatchAuthorityAction, b: c.Builder): void {
+        b.storeUint(0x000010f4, 32);
         b.storeAddress(self.transferRecipient);
-        b.storeStringRefTail(self.id);
     },
-    toCell(self: ActInvite): c.Cell {
-        return makeCellFrom<ActInvite>(self, ActInvite.store);
+    toCell(self: ActDispatchAuthorityAction): c.Cell {
+        return makeCellFrom<ActDispatchAuthorityAction>(self, ActDispatchAuthorityAction.store);
     }
 }
 
 /**
- > struct (0x00000021) ActClaimWeeklyGrant {
+ > struct (0x000010f5) AuthorityAction {
+ >     sender: address
+ > }
+ */
+export interface AuthorityAction {
+    readonly $: 'AuthorityAction'
+    sender: c.Address
+}
+
+export const AuthorityAction = {
+    PREFIX: 0x000010f5,
+
+    create(args: {
+        sender: c.Address
+    }): AuthorityAction {
+        return {
+            $: 'AuthorityAction',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): AuthorityAction {
+        loadAndCheckPrefix32(s, 0x000010f5, 'AuthorityAction');
+        return {
+            $: 'AuthorityAction',
+            sender: s.loadAddress(),
+        }
+    },
+    store(self: AuthorityAction, b: c.Builder): void {
+        b.storeUint(0x000010f5, 32);
+        b.storeAddress(self.sender);
+    },
+    toCell(self: AuthorityAction): c.Cell {
+        return makeCellFrom<AuthorityAction>(self, AuthorityAction.store);
+    }
+}
+
+/**
+ > struct (0x000010f6) SetStatus {
+ >     sender: address
+ >     status: uint2
+ > }
+ */
+export interface SetStatus {
+    readonly $: 'SetStatus'
+    sender: c.Address
+    status: uint2
+}
+
+export const SetStatus = {
+    PREFIX: 0x000010f6,
+
+    create(args: {
+        sender: c.Address
+        status: uint2
+    }): SetStatus {
+        return {
+            $: 'SetStatus',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): SetStatus {
+        loadAndCheckPrefix32(s, 0x000010f6, 'SetStatus');
+        return {
+            $: 'SetStatus',
+            sender: s.loadAddress(),
+            status: s.loadUintBig(2),
+        }
+    },
+    store(self: SetStatus, b: c.Builder): void {
+        b.storeUint(0x000010f6, 32);
+        b.storeAddress(self.sender);
+        b.storeUint(self.status, 2);
+    },
+    toCell(self: SetStatus): c.Cell {
+        return makeCellFrom<SetStatus>(self, SetStatus.store);
+    }
+}
+
+/**
+ > struct (0x00001141) ActClaimWeeklyGrant {
  >     queryId: uint64
  >     sendExcessesTo: address?
  > }
@@ -1278,7 +1586,7 @@ export interface ActClaimWeeklyGrant {
 }
 
 export const ActClaimWeeklyGrant = {
-    PREFIX: 0x00000021,
+    PREFIX: 0x00001141,
 
     create(args: {
         queryId: uint64
@@ -1290,7 +1598,7 @@ export const ActClaimWeeklyGrant = {
         }
     },
     fromSlice(s: c.Slice): ActClaimWeeklyGrant {
-        loadAndCheckPrefix32(s, 0x00000021, 'ActClaimWeeklyGrant');
+        loadAndCheckPrefix32(s, 0x00001141, 'ActClaimWeeklyGrant');
         return {
             $: 'ActClaimWeeklyGrant',
             queryId: s.loadUintBig(64),
@@ -1298,7 +1606,7 @@ export const ActClaimWeeklyGrant = {
         }
     },
     store(self: ActClaimWeeklyGrant, b: c.Builder): void {
-        b.storeUint(0x00000021, 32);
+        b.storeUint(0x00001141, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.sendExcessesTo);
     },
@@ -1308,386 +1616,44 @@ export const ActClaimWeeklyGrant = {
 }
 
 /**
- > struct (0x00000022) ActVote {
- >     transferRecipient: address
+ > struct (0x00001142) TriggerDecay {
+ >     sender: address
  > }
  */
-export interface ActVote {
-    readonly $: 'ActVote'
-    transferRecipient: c.Address
+export interface TriggerDecay {
+    readonly $: 'TriggerDecay'
+    sender: c.Address
 }
 
-export const ActVote = {
-    PREFIX: 0x00000022,
+export const TriggerDecay = {
+    PREFIX: 0x00001142,
 
     create(args: {
-        transferRecipient: c.Address
-    }): ActVote {
+        sender: c.Address
+    }): TriggerDecay {
         return {
-            $: 'ActVote',
+            $: 'TriggerDecay',
             ...args
         }
     },
-    fromSlice(s: c.Slice): ActVote {
-        loadAndCheckPrefix32(s, 0x00000022, 'ActVote');
+    fromSlice(s: c.Slice): TriggerDecay {
+        loadAndCheckPrefix32(s, 0x00001142, 'TriggerDecay');
         return {
-            $: 'ActVote',
-            transferRecipient: s.loadAddress(),
+            $: 'TriggerDecay',
+            sender: s.loadAddress(),
         }
     },
-    store(self: ActVote, b: c.Builder): void {
-        b.storeUint(0x00000022, 32);
-        b.storeAddress(self.transferRecipient);
+    store(self: TriggerDecay, b: c.Builder): void {
+        b.storeUint(0x00001142, 32);
+        b.storeAddress(self.sender);
     },
-    toCell(self: ActVote): c.Cell {
-        return makeCellFrom<ActVote>(self, ActVote.store);
+    toCell(self: TriggerDecay): c.Cell {
+        return makeCellFrom<TriggerDecay>(self, TriggerDecay.store);
     }
 }
 
 /**
- > struct (0x00000023) ActUnvote {
- >     transferRecipient: address
- > }
- */
-export interface ActUnvote {
-    readonly $: 'ActUnvote'
-    transferRecipient: c.Address
-}
-
-export const ActUnvote = {
-    PREFIX: 0x00000023,
-
-    create(args: {
-        transferRecipient: c.Address
-    }): ActUnvote {
-        return {
-            $: 'ActUnvote',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ActUnvote {
-        loadAndCheckPrefix32(s, 0x00000023, 'ActUnvote');
-        return {
-            $: 'ActUnvote',
-            transferRecipient: s.loadAddress(),
-        }
-    },
-    store(self: ActUnvote, b: c.Builder): void {
-        b.storeUint(0x00000023, 32);
-        b.storeAddress(self.transferRecipient);
-    },
-    toCell(self: ActUnvote): c.Cell {
-        return makeCellFrom<ActUnvote>(self, ActUnvote.store);
-    }
-}
-
-/**
- > struct (0x00000024) ActDeactivate {
- >     transferRecipient: address
- > }
- */
-export interface ActDeactivate {
-    readonly $: 'ActDeactivate'
-    transferRecipient: c.Address
-}
-
-export const ActDeactivate = {
-    PREFIX: 0x00000024,
-
-    create(args: {
-        transferRecipient: c.Address
-    }): ActDeactivate {
-        return {
-            $: 'ActDeactivate',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ActDeactivate {
-        loadAndCheckPrefix32(s, 0x00000024, 'ActDeactivate');
-        return {
-            $: 'ActDeactivate',
-            transferRecipient: s.loadAddress(),
-        }
-    },
-    store(self: ActDeactivate, b: c.Builder): void {
-        b.storeUint(0x00000024, 32);
-        b.storeAddress(self.transferRecipient);
-    },
-    toCell(self: ActDeactivate): c.Cell {
-        return makeCellFrom<ActDeactivate>(self, ActDeactivate.store);
-    }
-}
-
-/**
- > struct (0x00000025) ActRequestUpgrade {
- > }
- */
-export interface ActRequestUpgrade {
-    readonly $: 'ActRequestUpgrade'
-}
-
-export const ActRequestUpgrade = {
-    PREFIX: 0x00000025,
-
-    create(): ActRequestUpgrade {
-        return {
-            $: 'ActRequestUpgrade',
-        }
-    },
-    fromSlice(s: c.Slice): ActRequestUpgrade {
-        loadAndCheckPrefix32(s, 0x00000025, 'ActRequestUpgrade');
-        return {
-            $: 'ActRequestUpgrade',
-        }
-    },
-    store(self: ActRequestUpgrade, b: c.Builder): void {
-        b.storeUint(0x00000025, 32);
-    },
-    toCell(self: ActRequestUpgrade): c.Cell {
-        return makeCellFrom<ActRequestUpgrade>(self, ActRequestUpgrade.store);
-    }
-}
-
-/**
- > struct (0x00000026) ActDispatchAuthorityAction {
- >     transferRecipient: address
- > }
- */
-export interface ActDispatchAuthorityAction {
-    readonly $: 'ActDispatchAuthorityAction'
-    transferRecipient: c.Address
-}
-
-export const ActDispatchAuthorityAction = {
-    PREFIX: 0x00000026,
-
-    create(args: {
-        transferRecipient: c.Address
-    }): ActDispatchAuthorityAction {
-        return {
-            $: 'ActDispatchAuthorityAction',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ActDispatchAuthorityAction {
-        loadAndCheckPrefix32(s, 0x00000026, 'ActDispatchAuthorityAction');
-        return {
-            $: 'ActDispatchAuthorityAction',
-            transferRecipient: s.loadAddress(),
-        }
-    },
-    store(self: ActDispatchAuthorityAction, b: c.Builder): void {
-        b.storeUint(0x00000026, 32);
-        b.storeAddress(self.transferRecipient);
-    },
-    toCell(self: ActDispatchAuthorityAction): c.Cell {
-        return makeCellFrom<ActDispatchAuthorityAction>(self, ActDispatchAuthorityAction.store);
-    }
-}
-
-/**
- > struct (0x00000027) ActJoinLottery {
- > }
- */
-export interface ActJoinLottery {
-    readonly $: 'ActJoinLottery'
-}
-
-export const ActJoinLottery = {
-    PREFIX: 0x00000027,
-
-    create(): ActJoinLottery {
-        return {
-            $: 'ActJoinLottery',
-        }
-    },
-    fromSlice(s: c.Slice): ActJoinLottery {
-        loadAndCheckPrefix32(s, 0x00000027, 'ActJoinLottery');
-        return {
-            $: 'ActJoinLottery',
-        }
-    },
-    store(self: ActJoinLottery, b: c.Builder): void {
-        b.storeUint(0x00000027, 32);
-    },
-    toCell(self: ActJoinLottery): c.Cell {
-        return makeCellFrom<ActJoinLottery>(self, ActJoinLottery.store);
-    }
-}
-
-/**
- > struct (0x00000028) ActSetPersonalJettonMinter {
- >     transferRecipient: address
- > }
- */
-export interface ActSetPersonalJettonMinter {
-    readonly $: 'ActSetPersonalJettonMinter'
-    transferRecipient: c.Address
-}
-
-export const ActSetPersonalJettonMinter = {
-    PREFIX: 0x00000028,
-
-    create(args: {
-        transferRecipient: c.Address
-    }): ActSetPersonalJettonMinter {
-        return {
-            $: 'ActSetPersonalJettonMinter',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ActSetPersonalJettonMinter {
-        loadAndCheckPrefix32(s, 0x00000028, 'ActSetPersonalJettonMinter');
-        return {
-            $: 'ActSetPersonalJettonMinter',
-            transferRecipient: s.loadAddress(),
-        }
-    },
-    store(self: ActSetPersonalJettonMinter, b: c.Builder): void {
-        b.storeUint(0x00000028, 32);
-        b.storeAddress(self.transferRecipient);
-    },
-    toCell(self: ActSetPersonalJettonMinter): c.Cell {
-        return makeCellFrom<ActSetPersonalJettonMinter>(self, ActSetPersonalJettonMinter.store);
-    }
-}
-
-/**
- > struct (0x00000029) ActDestroyAccount {
- > }
- */
-export interface ActDestroyAccount {
-    readonly $: 'ActDestroyAccount'
-}
-
-export const ActDestroyAccount = {
-    PREFIX: 0x00000029,
-
-    create(): ActDestroyAccount {
-        return {
-            $: 'ActDestroyAccount',
-        }
-    },
-    fromSlice(s: c.Slice): ActDestroyAccount {
-        loadAndCheckPrefix32(s, 0x00000029, 'ActDestroyAccount');
-        return {
-            $: 'ActDestroyAccount',
-        }
-    },
-    store(self: ActDestroyAccount, b: c.Builder): void {
-        b.storeUint(0x00000029, 32);
-    },
-    toCell(self: ActDestroyAccount): c.Cell {
-        return makeCellFrom<ActDestroyAccount>(self, ActDestroyAccount.store);
-    }
-}
-
-/**
- > struct (0x00000017) ChangeId {
- >     newId: string
- > }
- */
-export interface ChangeId {
-    readonly $: 'ChangeId'
-    newId: string
-}
-
-export const ChangeId = {
-    PREFIX: 0x00000017,
-
-    create(args: {
-        newId: string
-    }): ChangeId {
-        return {
-            $: 'ChangeId',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ChangeId {
-        loadAndCheckPrefix32(s, 0x00000017, 'ChangeId');
-        return {
-            $: 'ChangeId',
-            newId: s.loadStringRefTail(),
-        }
-    },
-    store(self: ChangeId, b: c.Builder): void {
-        b.storeUint(0x00000017, 32);
-        b.storeStringRefTail(self.newId);
-    },
-    toCell(self: ChangeId): c.Cell {
-        return makeCellFrom<ChangeId>(self, ChangeId.store);
-    }
-}
-
-/**
- > struct (0x00000018) RequestState {
- > }
- */
-export interface RequestState {
-    readonly $: 'RequestState'
-}
-
-export const RequestState = {
-    PREFIX: 0x00000018,
-
-    create(): RequestState {
-        return {
-            $: 'RequestState',
-        }
-    },
-    fromSlice(s: c.Slice): RequestState {
-        loadAndCheckPrefix32(s, 0x00000018, 'RequestState');
-        return {
-            $: 'RequestState',
-        }
-    },
-    store(self: RequestState, b: c.Builder): void {
-        b.storeUint(0x00000018, 32);
-    },
-    toCell(self: RequestState): c.Cell {
-        return makeCellFrom<RequestState>(self, RequestState.store);
-    }
-}
-
-/**
- > struct (0x00000019) ProvideState {
- >     state: cell
- > }
- */
-export interface ProvideState {
-    readonly $: 'ProvideState'
-    state: c.Cell
-}
-
-export const ProvideState = {
-    PREFIX: 0x00000019,
-
-    create(args: {
-        state: c.Cell
-    }): ProvideState {
-        return {
-            $: 'ProvideState',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ProvideState {
-        loadAndCheckPrefix32(s, 0x00000019, 'ProvideState');
-        return {
-            $: 'ProvideState',
-            state: s.loadRef(),
-        }
-    },
-    store(self: ProvideState, b: c.Builder): void {
-        b.storeUint(0x00000019, 32);
-        b.storeRef(self.state);
-    },
-    toCell(self: ProvideState): c.Cell {
-        return makeCellFrom<ProvideState>(self, ProvideState.store);
-    }
-}
-
-/**
- > struct (0x0000001a) SetAllowance {
+ > struct (0x00001143) SetAllowance {
  >     queryId: uint64
  >     grantee: address
  >     amount: coins
@@ -1701,7 +1667,7 @@ export interface SetAllowance {
 }
 
 export const SetAllowance = {
-    PREFIX: 0x0000001a,
+    PREFIX: 0x00001143,
 
     create(args: {
         queryId: uint64
@@ -1714,7 +1680,7 @@ export const SetAllowance = {
         }
     },
     fromSlice(s: c.Slice): SetAllowance {
-        loadAndCheckPrefix32(s, 0x0000001a, 'SetAllowance');
+        loadAndCheckPrefix32(s, 0x00001143, 'SetAllowance');
         return {
             $: 'SetAllowance',
             queryId: s.loadUintBig(64),
@@ -1723,7 +1689,7 @@ export const SetAllowance = {
         }
     },
     store(self: SetAllowance, b: c.Builder): void {
-        b.storeUint(0x0000001a, 32);
+        b.storeUint(0x00001143, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.grantee);
         b.storeCoins(self.amount);
@@ -1734,7 +1700,7 @@ export const SetAllowance = {
 }
 
 /**
- > struct (0x0000001b) SpendAllowance {
+ > struct (0x00001144) SpendAllowance {
  >     queryId: uint64
  >     amount: coins
  >     receiver: address
@@ -1750,7 +1716,7 @@ export interface SpendAllowance {
 }
 
 export const SpendAllowance = {
-    PREFIX: 0x0000001b,
+    PREFIX: 0x00001144,
 
     create(args: {
         queryId: uint64
@@ -1764,7 +1730,7 @@ export const SpendAllowance = {
         }
     },
     fromSlice(s: c.Slice): SpendAllowance {
-        loadAndCheckPrefix32(s, 0x0000001b, 'SpendAllowance');
+        loadAndCheckPrefix32(s, 0x00001144, 'SpendAllowance');
         return {
             $: 'SpendAllowance',
             queryId: s.loadUintBig(64),
@@ -1774,7 +1740,7 @@ export const SpendAllowance = {
         }
     },
     store(self: SpendAllowance, b: c.Builder): void {
-        b.storeUint(0x0000001b, 32);
+        b.storeUint(0x00001144, 32);
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.amount);
         b.storeAddress(self.receiver);
@@ -1786,7 +1752,7 @@ export const SpendAllowance = {
 }
 
 /**
- > struct (0x0000001c) AskGoldCoinsTransfer {
+ > struct (0x00001145) AskGoldCoinsTransfer {
  >     queryId: uint64
  >     amount: uint32
  >     receiver: address
@@ -1802,7 +1768,7 @@ export interface AskGoldCoinsTransfer {
 }
 
 export const AskGoldCoinsTransfer = {
-    PREFIX: 0x0000001c,
+    PREFIX: 0x00001145,
 
     create(args: {
         queryId: uint64
@@ -1816,7 +1782,7 @@ export const AskGoldCoinsTransfer = {
         }
     },
     fromSlice(s: c.Slice): AskGoldCoinsTransfer {
-        loadAndCheckPrefix32(s, 0x0000001c, 'AskGoldCoinsTransfer');
+        loadAndCheckPrefix32(s, 0x00001145, 'AskGoldCoinsTransfer');
         return {
             $: 'AskGoldCoinsTransfer',
             queryId: s.loadUintBig(64),
@@ -1826,7 +1792,7 @@ export const AskGoldCoinsTransfer = {
         }
     },
     store(self: AskGoldCoinsTransfer, b: c.Builder): void {
-        b.storeUint(0x0000001c, 32);
+        b.storeUint(0x00001145, 32);
         b.storeUint(self.queryId, 64);
         b.storeUint(self.amount, 32);
         b.storeAddress(self.receiver);
@@ -1838,7 +1804,7 @@ export const AskGoldCoinsTransfer = {
 }
 
 /**
- > struct (0x0000001d) InternalGoldCoinsTransfer {
+ > struct (0x00001146) InternalGoldCoinsTransfer {
  >     queryId: uint64
  >     amount: uint32
  >     transferInitiator: address
@@ -1852,7 +1818,7 @@ export interface InternalGoldCoinsTransfer {
 }
 
 export const InternalGoldCoinsTransfer = {
-    PREFIX: 0x0000001d,
+    PREFIX: 0x00001146,
 
     create(args: {
         queryId: uint64
@@ -1865,7 +1831,7 @@ export const InternalGoldCoinsTransfer = {
         }
     },
     fromSlice(s: c.Slice): InternalGoldCoinsTransfer {
-        loadAndCheckPrefix32(s, 0x0000001d, 'InternalGoldCoinsTransfer');
+        loadAndCheckPrefix32(s, 0x00001146, 'InternalGoldCoinsTransfer');
         return {
             $: 'InternalGoldCoinsTransfer',
             queryId: s.loadUintBig(64),
@@ -1874,7 +1840,7 @@ export const InternalGoldCoinsTransfer = {
         }
     },
     store(self: InternalGoldCoinsTransfer, b: c.Builder): void {
-        b.storeUint(0x0000001d, 32);
+        b.storeUint(0x00001146, 32);
         b.storeUint(self.queryId, 64);
         b.storeUint(self.amount, 32);
         b.storeAddress(self.transferInitiator);
@@ -1885,44 +1851,7 @@ export const InternalGoldCoinsTransfer = {
 }
 
 /**
- > struct (0x0000001e) TriggerDecay {
- >     sender: address
- > }
- */
-export interface TriggerDecay {
-    readonly $: 'TriggerDecay'
-    sender: c.Address
-}
-
-export const TriggerDecay = {
-    PREFIX: 0x0000001e,
-
-    create(args: {
-        sender: c.Address
-    }): TriggerDecay {
-        return {
-            $: 'TriggerDecay',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): TriggerDecay {
-        loadAndCheckPrefix32(s, 0x0000001e, 'TriggerDecay');
-        return {
-            $: 'TriggerDecay',
-            sender: s.loadAddress(),
-        }
-    },
-    store(self: TriggerDecay, b: c.Builder): void {
-        b.storeUint(0x0000001e, 32);
-        b.storeAddress(self.sender);
-    },
-    toCell(self: TriggerDecay): c.Cell {
-        return makeCellFrom<TriggerDecay>(self, TriggerDecay.store);
-    }
-}
-
-/**
- > struct (0x0000001f) BuyCredit {
+ > struct (0x00001147) BuyCredit {
  >     queryId: uint64
  >     jettonAmount: coins
  >     transferRecipient: address
@@ -1938,7 +1867,7 @@ export interface BuyCredit {
 }
 
 export const BuyCredit = {
-    PREFIX: 0x0000001f,
+    PREFIX: 0x00001147,
 
     create(args: {
         queryId: uint64
@@ -1952,7 +1881,7 @@ export const BuyCredit = {
         }
     },
     fromSlice(s: c.Slice): BuyCredit {
-        loadAndCheckPrefix32(s, 0x0000001f, 'BuyCredit');
+        loadAndCheckPrefix32(s, 0x00001147, 'BuyCredit');
         return {
             $: 'BuyCredit',
             queryId: s.loadUintBig(64),
@@ -1962,7 +1891,7 @@ export const BuyCredit = {
         }
     },
     store(self: BuyCredit, b: c.Builder): void {
-        b.storeUint(0x0000001f, 32);
+        b.storeUint(0x00001147, 32);
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.jettonAmount);
         b.storeAddress(self.transferRecipient);
@@ -1974,7 +1903,188 @@ export const BuyCredit = {
 }
 
 /**
- > struct (0x00000051) UnFollow {
+ > struct (0x00001148) Payback {
+ >     queryId: uint64
+ >     amount: coins
+ >     sender: address
+ > }
+ */
+export interface Payback {
+    readonly $: 'Payback'
+    queryId: uint64
+    amount: coins
+    sender: c.Address
+}
+
+export const Payback = {
+    PREFIX: 0x00001148,
+
+    create(args: {
+        queryId: uint64
+        amount: coins
+        sender: c.Address
+    }): Payback {
+        return {
+            $: 'Payback',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Payback {
+        loadAndCheckPrefix32(s, 0x00001148, 'Payback');
+        return {
+            $: 'Payback',
+            queryId: s.loadUintBig(64),
+            amount: s.loadCoins(),
+            sender: s.loadAddress(),
+        }
+    },
+    store(self: Payback, b: c.Builder): void {
+        b.storeUint(0x00001148, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.amount);
+        b.storeAddress(self.sender);
+    },
+    toCell(self: Payback): c.Cell {
+        return makeCellFrom<Payback>(self, Payback.store);
+    }
+}
+
+/**
+ > struct (0x00001149) ActSetPersonalJettonMinter {
+ >     transferRecipient: address
+ > }
+ */
+export interface ActSetPersonalJettonMinter {
+    readonly $: 'ActSetPersonalJettonMinter'
+    transferRecipient: c.Address
+}
+
+export const ActSetPersonalJettonMinter = {
+    PREFIX: 0x00001149,
+
+    create(args: {
+        transferRecipient: c.Address
+    }): ActSetPersonalJettonMinter {
+        return {
+            $: 'ActSetPersonalJettonMinter',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ActSetPersonalJettonMinter {
+        loadAndCheckPrefix32(s, 0x00001149, 'ActSetPersonalJettonMinter');
+        return {
+            $: 'ActSetPersonalJettonMinter',
+            transferRecipient: s.loadAddress(),
+        }
+    },
+    store(self: ActSetPersonalJettonMinter, b: c.Builder): void {
+        b.storeUint(0x00001149, 32);
+        b.storeAddress(self.transferRecipient);
+    },
+    toCell(self: ActSetPersonalJettonMinter): c.Cell {
+        return makeCellFrom<ActSetPersonalJettonMinter>(self, ActSetPersonalJettonMinter.store);
+    }
+}
+
+/**
+ > struct (0x00001191) ActJoinLottery {
+ > }
+ */
+export interface ActJoinLottery {
+    readonly $: 'ActJoinLottery'
+}
+
+export const ActJoinLottery = {
+    PREFIX: 0x00001191,
+
+    create(): ActJoinLottery {
+        return {
+            $: 'ActJoinLottery',
+        }
+    },
+    fromSlice(s: c.Slice): ActJoinLottery {
+        loadAndCheckPrefix32(s, 0x00001191, 'ActJoinLottery');
+        return {
+            $: 'ActJoinLottery',
+        }
+    },
+    store(self: ActJoinLottery, b: c.Builder): void {
+        b.storeUint(0x00001191, 32);
+    },
+    toCell(self: ActJoinLottery): c.Cell {
+        return makeCellFrom<ActJoinLottery>(self, ActJoinLottery.store);
+    }
+}
+
+/**
+ > struct (0x00001192) RequestState {
+ > }
+ */
+export interface RequestState {
+    readonly $: 'RequestState'
+}
+
+export const RequestState = {
+    PREFIX: 0x00001192,
+
+    create(): RequestState {
+        return {
+            $: 'RequestState',
+        }
+    },
+    fromSlice(s: c.Slice): RequestState {
+        loadAndCheckPrefix32(s, 0x00001192, 'RequestState');
+        return {
+            $: 'RequestState',
+        }
+    },
+    store(self: RequestState, b: c.Builder): void {
+        b.storeUint(0x00001192, 32);
+    },
+    toCell(self: RequestState): c.Cell {
+        return makeCellFrom<RequestState>(self, RequestState.store);
+    }
+}
+
+/**
+ > struct (0x00001193) ProvideState {
+ >     state: cell
+ > }
+ */
+export interface ProvideState {
+    readonly $: 'ProvideState'
+    state: c.Cell
+}
+
+export const ProvideState = {
+    PREFIX: 0x00001193,
+
+    create(args: {
+        state: c.Cell
+    }): ProvideState {
+        return {
+            $: 'ProvideState',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ProvideState {
+        loadAndCheckPrefix32(s, 0x00001193, 'ProvideState');
+        return {
+            $: 'ProvideState',
+            state: s.loadRef(),
+        }
+    },
+    store(self: ProvideState, b: c.Builder): void {
+        b.storeUint(0x00001193, 32);
+        b.storeRef(self.state);
+    },
+    toCell(self: ProvideState): c.Cell {
+        return makeCellFrom<ProvideState>(self, ProvideState.store);
+    }
+}
+
+/**
+ > struct (0x000010f8) UnFollow {
  >     queryId: uint64
  >     follow: bool
  >     followee: address
@@ -1988,7 +2098,7 @@ export interface UnFollow {
 }
 
 export const UnFollow = {
-    PREFIX: 0x00000051,
+    PREFIX: 0x000010f8,
 
     create(args: {
         queryId: uint64
@@ -2001,7 +2111,7 @@ export const UnFollow = {
         }
     },
     fromSlice(s: c.Slice): UnFollow {
-        loadAndCheckPrefix32(s, 0x00000051, 'UnFollow');
+        loadAndCheckPrefix32(s, 0x000010f8, 'UnFollow');
         return {
             $: 'UnFollow',
             queryId: s.loadUintBig(64),
@@ -2010,7 +2120,7 @@ export const UnFollow = {
         }
     },
     store(self: UnFollow, b: c.Builder): void {
-        b.storeUint(0x00000051, 32);
+        b.storeUint(0x000010f8, 32);
         b.storeUint(self.queryId, 64);
         b.storeBit(self.follow);
         b.storeAddress(self.followee);
@@ -2021,7 +2131,7 @@ export const UnFollow = {
 }
 
 /**
- > struct (0x00000052) UnFollowInternal {
+ > struct (0x000010f9) UnFollowInternal {
  >     queryId: uint64
  >     follow: bool
  >     sender: address
@@ -2035,7 +2145,7 @@ export interface UnFollowInternal {
 }
 
 export const UnFollowInternal = {
-    PREFIX: 0x00000052,
+    PREFIX: 0x000010f9,
 
     create(args: {
         queryId: uint64
@@ -2048,7 +2158,7 @@ export const UnFollowInternal = {
         }
     },
     fromSlice(s: c.Slice): UnFollowInternal {
-        loadAndCheckPrefix32(s, 0x00000052, 'UnFollowInternal');
+        loadAndCheckPrefix32(s, 0x000010f9, 'UnFollowInternal');
         return {
             $: 'UnFollowInternal',
             queryId: s.loadUintBig(64),
@@ -2057,55 +2167,13 @@ export const UnFollowInternal = {
         }
     },
     store(self: UnFollowInternal, b: c.Builder): void {
-        b.storeUint(0x00000052, 32);
+        b.storeUint(0x000010f9, 32);
         b.storeUint(self.queryId, 64);
         b.storeBit(self.follow);
         b.storeAddress(self.sender);
     },
     toCell(self: UnFollowInternal): c.Cell {
         return makeCellFrom<UnFollowInternal>(self, UnFollowInternal.store);
-    }
-}
-
-/**
- > struct (0x11111111) EnterLottery {
- >     sender: address
- >     amount: coins
- > }
- */
-export interface EnterLottery {
-    readonly $: 'EnterLottery'
-    sender: c.Address
-    amount: coins
-}
-
-export const EnterLottery = {
-    PREFIX: 0x11111111,
-
-    create(args: {
-        sender: c.Address
-        amount: coins
-    }): EnterLottery {
-        return {
-            $: 'EnterLottery',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): EnterLottery {
-        loadAndCheckPrefix32(s, 0x11111111, 'EnterLottery');
-        return {
-            $: 'EnterLottery',
-            sender: s.loadAddress(),
-            amount: s.loadCoins(),
-        }
-    },
-    store(self: EnterLottery, b: c.Builder): void {
-        b.storeUint(0x11111111, 32);
-        b.storeAddress(self.sender);
-        b.storeCoins(self.amount);
-    },
-    toCell(self: EnterLottery): c.Cell {
-        return makeCellFrom<EnterLottery>(self, EnterLottery.store);
     }
 }
 
@@ -2460,10 +2528,49 @@ export const TimeStamps = {
 }
 
 /**
+ > struct ProfileInfo {
+ >     username: string
+ >     city: string
+ > }
+ */
+export interface ProfileInfo {
+    readonly $: 'ProfileInfo'
+    username: string /* = "" */
+    city: string /* = "" */
+}
+
+export const ProfileInfo = {
+    create(args: {
+        username?: string /* = "" */
+        city?: string /* = "" */
+    }): ProfileInfo {
+        return {
+            $: 'ProfileInfo',
+            username: "",
+            city: "",
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ProfileInfo {
+        return {
+            $: 'ProfileInfo',
+            username: s.loadStringRefTail(),
+            city: s.loadStringRefTail(),
+        }
+    },
+    store(self: ProfileInfo, b: c.Builder): void {
+        b.storeStringRefTail(self.username);
+        b.storeStringRefTail(self.city);
+    },
+    toCell(self: ProfileInfo): c.Cell {
+        return makeCellFrom<ProfileInfo>(self, ProfileInfo.store);
+    }
+}
+
+/**
  > struct FiWalletStore {
  >     jettonBalance: coins
  >     goldCoins: uint32
- >     id: string
  >     txnCount: uint8
  >     status: uint2
  >     isAuthorityAccount: bool
@@ -2478,6 +2585,7 @@ export const TimeStamps = {
  >     mintable: bool
  >     version: uint10
  >     storeVersion: uint10
+ >     profile: Cell<ProfileInfo>
  >     timestamps: Cell<TimeStamps>
  >     addresses: Cell<Addresses>
  >     maps: Cell<Maps>
@@ -2487,7 +2595,6 @@ export interface FiWalletStore {
     readonly $: 'FiWalletStore'
     jettonBalance: coins /* = 0 */
     goldCoins: uint32 /* = 1 */
-    id: string /* = "" */
     txnCount: uint8 /* = 0 */
     status: uint2 /* = 0 */
     isAuthorityAccount: boolean /* = false */
@@ -2502,6 +2609,7 @@ export interface FiWalletStore {
     mintable: boolean /* = true */
     version: uint10 /* = 0 */
     storeVersion: uint10 /* = 0 */
+    profile: CellRef<ProfileInfo>
     timestamps: CellRef<TimeStamps>
     addresses: CellRef<Addresses>
     maps: CellRef<Maps>
@@ -2511,7 +2619,6 @@ export const FiWalletStore = {
     create(args: {
         jettonBalance?: coins /* = 0 */
         goldCoins?: uint32 /* = 1 */
-        id?: string /* = "" */
         txnCount?: uint8 /* = 0 */
         status?: uint2 /* = 0 */
         isAuthorityAccount?: boolean /* = false */
@@ -2526,6 +2633,7 @@ export const FiWalletStore = {
         mintable?: boolean /* = true */
         version?: uint10 /* = 0 */
         storeVersion?: uint10 /* = 0 */
+        profile: CellRef<ProfileInfo>
         timestamps: CellRef<TimeStamps>
         addresses: CellRef<Addresses>
         maps: CellRef<Maps>
@@ -2534,7 +2642,6 @@ export const FiWalletStore = {
             $: 'FiWalletStore',
             jettonBalance: 0n,
             goldCoins: 1n,
-            id: "",
             txnCount: 0n,
             status: 0n,
             isAuthorityAccount: false,
@@ -2557,7 +2664,6 @@ export const FiWalletStore = {
             $: 'FiWalletStore',
             jettonBalance: s.loadCoins(),
             goldCoins: s.loadUintBig(32),
-            id: s.loadStringRefTail(),
             txnCount: s.loadUintBig(8),
             status: s.loadUintBig(2),
             isAuthorityAccount: s.loadBoolean(),
@@ -2572,6 +2678,7 @@ export const FiWalletStore = {
             mintable: s.loadBoolean(),
             version: s.loadUintBig(10),
             storeVersion: s.loadUintBig(10),
+            profile: loadCellRef<ProfileInfo>(s, ProfileInfo.fromSlice),
             timestamps: loadCellRef<TimeStamps>(s, TimeStamps.fromSlice),
             addresses: loadCellRef<Addresses>(s, Addresses.fromSlice),
             maps: loadCellRef<Maps>(s, Maps.fromSlice),
@@ -2580,7 +2687,6 @@ export const FiWalletStore = {
     store(self: FiWalletStore, b: c.Builder): void {
         b.storeCoins(self.jettonBalance);
         b.storeUint(self.goldCoins, 32);
-        b.storeStringRefTail(self.id);
         b.storeUint(self.txnCount, 8);
         b.storeUint(self.status, 2);
         b.storeBit(self.isAuthorityAccount);
@@ -2595,12 +2701,55 @@ export const FiWalletStore = {
         b.storeBit(self.mintable);
         b.storeUint(self.version, 10);
         b.storeUint(self.storeVersion, 10);
+        storeCellRef<ProfileInfo>(self.profile, b, ProfileInfo.store);
         storeCellRef<TimeStamps>(self.timestamps, b, TimeStamps.store);
         storeCellRef<Addresses>(self.addresses, b, Addresses.store);
         storeCellRef<Maps>(self.maps, b, Maps.store);
     },
     toCell(self: FiWalletStore): c.Cell {
         return makeCellFrom<FiWalletStore>(self, FiWalletStore.store);
+    }
+}
+
+/**
+ > struct (0x00001198) EnterLottery {
+ >     sender: address
+ >     amount: coins
+ > }
+ */
+export interface EnterLottery {
+    readonly $: 'EnterLottery'
+    sender: c.Address
+    amount: coins
+}
+
+export const EnterLottery = {
+    PREFIX: 0x00001198,
+
+    create(args: {
+        sender: c.Address
+        amount: coins
+    }): EnterLottery {
+        return {
+            $: 'EnterLottery',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): EnterLottery {
+        loadAndCheckPrefix32(s, 0x00001198, 'EnterLottery');
+        return {
+            $: 'EnterLottery',
+            sender: s.loadAddress(),
+            amount: s.loadCoins(),
+        }
+    },
+    store(self: EnterLottery, b: c.Builder): void {
+        b.storeUint(0x00001198, 32);
+        b.storeAddress(self.sender);
+        b.storeCoins(self.amount);
+    },
+    toCell(self: EnterLottery): c.Cell {
+        return makeCellFrom<EnterLottery>(self, EnterLottery.store);
     }
 }
 
@@ -2643,7 +2792,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class FossFiWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECXAEAHjEAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAjJAIB1QYHAAesVxhAAvc+JGO2dMfMe1E0HBSAvoA0x/U1gr6APoA+gDWGNMHINQx1DHXTA3XLCCIiIiMmTA6O4ISVAvkAOMOGKBQaaDIUAn6AhjLHxPMzgH6AlAE+gJQA/oCEs4SywfOye1U4CDtRND6ANMf1NMH0wHSAPoA+gD6ANIA0wPTE9MHgCAkC9TtRND6ADHTHzHUMdMKMfoAMfoAMfoAMdMgMdIA1DHXTO1E0NQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMkoyPpSFvpSJM8UE8wUzMltbW1tAcj0AIFYiAOzXLCC8aijMmTs8CdM/MfoAMI5g1ywgAAAADI4YMDoL0PQEMfQEMdQx1DHRgh8XZvW6AAuljjo9DNcsIAAAAESRMI4q1ywgAAAClJkwOYIfFyta8ACOFTsK1ywgAAAA7JLyP+HTPzHXCx8KCeIJ4hCb4gkL4hCbA/7SANIA0wnTCdTU10wi0CLQ+kj6SNTU10zQJtAC0AbTH9Mf0x/XCx8E+kj6UAf0BPQE1A76UPpQ+lAwESXXLCAAAAC8jiJXEVcRVxFXH1ci+JeCEB3NZQC88rD4kivHBZPywrzhDNdMjxTXLCAAAAEM4w8RHxEhER8MER8RHeIOCgsMAfpXEVcRVxFXI/iS+JdRHccF8uBJghAdzWUAvPKw+CMngggJOoCgIbny4t+CC8JnACigIbycgggJOoBQBqAlucMAkjVw4vLi34IgChr7NUYAESFWIaAO0z/6UDDIz5Hvdl96Ess/AREi+gJSwPpSAREhAfpUycjPhQhSQPpScQ0DatcsIAAAAQSPHdcsIAAAARTjDw4RIQ4RFREfERUOERUODhETDg0O4w0NESENDBEfDBETEN4MDg8QAf7I+lQd+lQBER8B+lTJER7I+lIb+lQUzskByMsfE8sfGMsfF8sfyQPI+lIS+lLMAREXAcwTzMkByPQAAREWAfQAARERAcwBERABzsnIARES+gIBERAByx8ezBzLBxrLARjKAFAG+gJQBPoCWPoCygDLA8sTywfKAMoAywnLCRLMIQASzwtuzMmAUPsAAvxXEVcRVxFXI/iS+JdRHccF8uBJghAdzWUAvPKwDfpIMCD6RDDy0U0RFvLi2/iSVhbHBfLSxO1E0NQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMlWG8j6UhZWEQPi1ywgAAABHI9k1ywgAAABJI7T1ywgAAABLI5AMFcQVxBXEFci+JL4l1EcxwXy4EmCEB3NZQC88rCCEAX14QDIz4UIUkD6UgH6AoAQzwuKUrD6UlYRzwsJyXP7AOMODhEhDhDeEM3jDREVESERFeMNERUTFBUB/FcSVxJXJPiS+JdRHscF8uBJghAdzWUAvPKwD9M/+kjXTCH6RDDy0U0REND0AfQB1DHXTNBWFvLivvQB0wAx1wsJwQHy4sb4IwiBOECgKLkpgggJOoCgKbmw+JIuxwWx8uLfVhbBC/Lg+hEWpO1E0NQx1DHXTND6SDH6SNTUMR0B/vpSJM8UE8wUzMltbW1tAcj0APQAyW3I9ABwzws0yQPI9AAS9ADMzMlxyMsjFcyLoAAACgAAAAQAACDPFhLMzBLMyXhRIsjPg8sEz4WgzMz5FoT3sAERFwGACwERGNckyM+KAEDOAREWAcv3z1BwESLQ9ATIz4agVCAzgQEL9EESADbI9ADOycjPhQgS+lKBARrPC5NSsPpSyYBQ+wAD1tcsIAAAATSPWNcsIAAAATyOw9csIAAAAUSOLlcRVxFXEVcj+JL4l1EdxwXy4EmCEB3NZQC88rAN+kgwIPpEMPLRTSJukTKRMOLjDgwRIQwRHxDOEM3jDQ4RIQ4RHxDeEM3jDQwRIQwQzhDNFhcYAv5XEVcRVxFXI/iS+JdRHccF8uBJghAdzWUAvPKwDfpIMCD6RDDy0U1WE/Livu1E0NQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMkmyPpSFvpSJM8UE8wUzMltVhoC/lcRVxFXEVcj+JL4l1EdxwXy4EmCEB3NZQC88rAN+kgwIPpEMPLRTe1E0NQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMkmyPpSFvpSJM8UE8wUzMltbW1tAchWGwP01ywgAAABTI5KMFcQVxBXEFci+JL4l1EcxwXy4EmCEB3NZQC88rD4ksjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wCPnNcsILxqKMyPCdcsIHxT9SzjD+MNDBEhDBDOEM3iDhEhDhDeEM0nKCkAkjBXEFcQVxBXIviS+JdRHMcF8uBJghAdzWUAvPKwER+CElQL5AChghJUC+QAyM+FiFJA+lKCEBERERHPC45SwPpSAfoCyYBQ+wAC/lcRVxFXEVcj+JL4l1EdxwXy4EmCEB3NZQC88rAN+kgwIPpEMPLRTVYbkX+X+JIrxwXDAOLy4rztRNDUMdQx10zQ+kgx+kjU1DHXTND6SPpQMfpQMfQEMdGIcMjLf8ltbW0CyPpU+lT6VMltbW0GyPpSEvpU+lQU9ADJJsj6UhZWGQDw+lIkzxQTzBTMyW1tbW0ByPQA9ADJbcj0AHDPCzTJA8j0ABL0AMzMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeFEiyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1AryM+FiBL6UnXPC476UsmAUPsAANJtbW0ByPQA9ADJbcj0AHDPCzTJA8j0ABL0AMzMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeFEiyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DIz4WI+lJyzwuOyYBQ+wAB/vQA9ADJbcj0AHDPCzTJA8j0ABL0AMzMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeFEiyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1ARItD0BFYjWIEBC/Ri8uLcAcj0ABLOyQHTA9EBERcBoMjPhQgBESMB+lIcAB6BAQrPC5NSsPpSyYBQ+wAC/tdM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMlWHMj6Uhb6UiTPFBPMFMzJbW1tbQHI9AD0AMltyPQAcM8LNMkDyPQAEvQAzMzJccjLIxXMi6AAAAoAAAAEAAAgzxYSzMwSzMl4VhlUEjJWHgL+yM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1CCGOiZCkYAyAH6AkAVgQEL9EERIoIY6JkKRgCgiHDIy3/JbW1tAsj6VPpU+lTJbW1tK8j6UhP6VPpU9ADJVhrI+lJWEQH6UlYQzxQSzMzJbW1tbQHI9AD0AMltyPQAcFYfAfzPCzTJA8j0ABL0AMzMyXHIyyMUzIugAAAKAAAABAAAIM8WEszMzMl4LfgqbVYYVhNWGMjPkAAAAAYayz8Sywn6Uhf6UswV9AABERIBzMnIz4mIAVMkVhTIz4PLBM+FoMzM+RaE97ARGoALVhTXJFcTARESAc4BERgBy/eBFQ0gACLPC3kSzAERFgHMHszJgFD7AAAMEszMye1UAPz0AMltyPQAcM8LNMkDyPQAEvQAzMzJccjLIxXMi6AAAAoAAAAEAAAgzxYSzMwSzMl4USLIz4PLBM+FoMzM+RaE97AUgAtQBdckyM+KAEDOE8v3z1AjxwWVbCHy4r7gMND6SDH6SDHUMdQx1NHQ+kj6UDH6UDH0BDHRxwXy4EoAR7/YF2omh9AGoY6hjrpmh9JGpqGOumaH0kfSgY/SgY+gIY6IDAIBaiUmAA+yjntRNDXTIABVszp7UTQ+gDTH9TTB9MB0gD6APoA+gDSANMD0xPTB9IA0gDTCdMJ1NTU0YAH+VxFXEVcRVyP4kizHBfLgSQ3TP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gloIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysFYlJb7yryoDKNcsIAAAAPyPCdcsIAAAAEzjD+MNLS4vA/5XEVcRVxFXIw3TP/oA0wnSAPpI+lD6ADH4kiPwASRWGLqRNOMOESUkoALjAIIID0JAyM+RzYtCcibPCz9QBfoCUhD6UhPOycjPhQhWEAH6UlAE+gJxzwtqE8zJc/sAViJuswIRIwHjBPiX+CdvEKL4L6CAcIIA2sCCEAlmAYBwWVpbAv4RJSSh+Jf4J28QovgvoIBwggDawIIQCWYBgHD4N7YJcvsC7UTQ1DHUMddM0PpIMfpI1NQx10zQ+kj6UDH6UDH0BDHRiHDIy3/JbW1tAsj6VPpU+lTJbW1tBsj6UhL6VPpUFPQAySnI+lIW+lIkzxQTzBTMyW1tbW0ByPQA9ADJVisB/m3I9ABwzws0yQPI9AAS9ADMzMlxyMsjFcyLoAAACgAAAAQAACDPFhLMzBLMyXhRIsjPg8sEz4WgzMz5FoT3sBWAC1AG1yTIz4oAQM4Uy/fPUFYlbrOWVyWLCBEl38jPkF41FGYWyz9QBPoCVhXPCwnPgVLw+lL6VFj6AgERIgEsACjOycjPhYgS+lJxzwtuzMmBAJD7AAL8VxFXEVcRVyP4kiPHBfLivA3TP/oA+kgwIVYju/LixREiIaHtRNDUMdQx10zQ+kgx+kjU1DHXTND6SPpQMfpQMfQEMdGIcMjLf8ltbW0CyPpU+lT6VMltbW0GyPpSEvpU+lQU9ADJVijI+lIW+lIkzxQTzBTMyW1tbW0ByPQAVjAE+tcsIAAAAAyPctcsIAAAABSOGzBXEFcQVxBXIviSViHHBfiSLscFsfLi5BESs4821ywgAAAALI6j1ywgAAAANI4RVxFXEVcRVx1XIgz6SDHXCwHjDhEbESEMERLjDQwRIQwQzhDN4gERIQEREhEgERIBER8BAhESAhA8AuMNMjM0NQH4VxFXEVcRVyP4kizHBfLgSQ3TP/oA+kj6UDAh+kQw8tFN+Jf4k3D4OnH4OSBugU0OIuMEIW6BKGRYA+MEUCOogHCCANuIcPg8oAFw+DagAXD4NqCAcIIA2sCCEAlmAYBw+DegvPKwViMjvvKvESMiofiX+CdvEKL4L6CAcFUB/vQAyW3I9ABwzws0yQPI9AAS9ADMzMlxyMsjFcyLoAAACgAAAAQAACDPFhLMzBLMyXhRIsjPg8sEz4WgzMz5FoT3sAERJAGACwERJdckyM+KAEDOAREjAcv3z1BtiwggbrOTMIsI38jPkF41FGYVyz9QA/oCVhTPCwnPgVLg+lIxADQS+lTPhCASzsnIz4WIEvpScc8LbszJgEL7AAP81ywgAAAAhI5FVxFXEVcRVyMN+kgw+JIB8AH4koIQBfXhAG34KsjPkJQjWatWFc8LCVLw+lIS9AD0AMnIz4UIE/pSAfoCcc8LaszJc/sAjyzXLCEoRrNUjqFXEVcRVxFXIw3SANMJ+kj0BPQF+JIj8AFWFSS5kl8F4w3jDuIMNjc4AOZXEVcRVxFXIw36SDD4kgHwAVYa8tLEERKzVh+OVfiSi/YXV0aG9yaXR5RnJlZXplggbrOTMIsI38iLwXjUUZAAAAAAAAAACM8WViL6AlYTzwsJz4FS0PpSUtD6VM+EIM7JyM+FiBL6UnHPC27MyYBQ+wDeAv4xVxBXEFcQVyBXIFcgERDy0tMJ0z/TCfpI+kjU9ATXTPiS7UTQ1DHUMddM0PpIMfpI1NQx10zQ+kj6UDH6UDH0BDHRiHDIy3/JbW1tAsj6VPpU+lTJbW1tBsj6UhL6VPpUFPQAySvI+lIW+lIkzxQTzBTMyW1tbW0ByPQA9ADJVlEAKA4RIQ4RIAERHwECERICEN4QPRwTAMxXFSJWFfsEVhXQ7R7tUyHxCK5TVYEBC/SCb6UykQGOQIIQBfXhACHIz5CUI1mqKc8KACjPCwlScPpSUmD0AFYaAfQAycjPhQgS+lJY+gJxzwtqzMlz+wAhgQEL9HRvpTLoW1cVXwQD3tcsIAAAAESPYtcsIsr4PeSO1dcsJpuQrGSOQjBXEFcQVxBXIiWRcJf4kiPHBcMA4o4qNTtXEFcXVxx/ERuCEDuaygCgf/gj+Cj4KBEgBBEfBAMRGgMEERIERcQC3uMODhEhDhDeEM3jDREU4w0RFDk6OwAIESERGwPM1ywjmxaE5I9T1ywgiIiIjI4wVxFXEVcRVyMN+kj6ADD4kljwAcjPhYhSQPpSghARERERzwuOUsD6UgH6AsmAUPsAjxfXLCAAAAKM4w8RHxEhER8MER8MEM4QzeLjDQwRIQwQzhDNPD0+ANxXEVcRVxFXI/iX+DkgboE1hVjjBHGBAqJw+DgBcPg2oIEqr3D4NqC88rD4kizHBfLgSQ3TP/oA+lAwViIivvKvESIhocjPke92X3oTyz8B+gJSwPpSAREhAfpUycjPhYhSQPpScc8LbszJgFD7AAB0VxFXEVcRVyMN0gDTA/pIMPiSAfABAZUBERUBoJUBERUBoeJTqccFjhBXGlYZgggPQkC8f3DjBBEa3wL+VxJXElck+JItxwXy4rwO0PQB9AHUMddM0FYU8uK+9AHTADHXCwnBAfLixg7TP9IA+kgwUw3HBfLSxO1E0NQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMkmyFY/AfrXLCAAAAKUjhRXEVcRVxFXIw3TQDH6SDD4kgHwAY7R1ywgAAAApI4+MFcQVxBXEFci+JIrxwXy4rz4ksjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wDjDg4RIQ4Q3hDN4g4RIQ4OER8OEN4QzUIAdFcRVxFXEVcjDdM/+gD6SIIID0JAyM+RzYtCchXLP1AD+gL6Us7JyM+FCFLQ+lJY+gJxzwtqzMlz+wAC4vpSFvpSJM8UE8wUzMltbW1tAcj0APQAyW3I9ABwzws0yQPI9AAS9ADMzMlxyMsjFcyLoAAACgAAAAQAACDPFhLMzBLMyXhRIsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989QD9D0BPQFAuMPQEEAzlPxgQEL9ApvoTHy0s+CGOjUpRAAyAH6AgIBERABgQEL9EEOyPQAHvQAyREgghjo1KUQAKBR0HHjBIIY6NSlEABtyM+R73ZfehPLPwH6AlLA+lL6VMnIz4UIUkD6UnHPC27MyYBQ+wAA0jJT4IEBC/QKb6Ex8uLNViGCGOjUpRAAvvKvHoEBC/RZMA3I9AAd9ADJER+CGOjUpRAAoYIY6NSlEABtyIvHvdl94AAAAAAAAAAIzxZY+gJSwPpS+lTJyM+FCFJA+lJxzwtuzMmAUPsADAO61ywgAAAA1I4xVxFXEVcRVyP4kizHBfLgSQ3TPzH6SPoAMCCbyAH6AkAegQEL9EGZMFANgQEL9Fkw4o+b1ywgAAAA3I8N1ywgAAAA5OMPDBEfDOMNDBEf4hEhDg0MQ0RFAvxXEVcRVxFXI/iSLMcF8uBJDdM/0x/6SDAhwgDy4sRWISK+8q8RISGh+Jf4J28QovgvoIBwggDawIIQCWYBgHD4N7YJcvsC7UTQ1DHUMddM0PpIMfpI1NQx10zQ+kj6UDH6UDH0BDHRiHDIy3/JbW1tAsj6VPpU+lTJbW1tBshWRgOm1ywgAAAA7I9I1ywgAAAA9I6QMFcQVxBXEFci+CMnkTfjDY6k1ywgAAAAxDGOElcQVxBXEBEixwDysQwRIQwQzuMNDhEhDhDO4g4RIQ4Q3hDN4w1ISUoD/lcRVxFXEVcj+JIhgQEL9Ary4s36ANEO0z/6APpI+lAwVhEjvvLixVYkI77yr/iX+JNw+Dpx+DkgboFNDiLjBCFugShkWAPjBFAjqIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysFYRI7rjDxEjIaHtRNBMTU4B/vpSEvpU+lQU9ADJVifI+lIW+lIkzxQTzBTMyW1tbW0ByPQA9ADJbcj0AHDPCzTJA8j0ABL0AMzMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeFEiyM+DywTPhaDMzPkWhPewAREjAYALAREk1yTIz4oAQM4BESIBy/fPUC1HADDIz4WIEvpSgB3PC44Tyz/LH/pSyYBQ+wAA3iehgggnjQCpBCDCAI5eghA7msoAViGAeKkEtgkhqFYhtgggwgCOOREhViGhbciLx73ZfeAAAAAAAAAACM8WAREj+gJS0PpSAREiAfpUycjPhQhSUPpScc8LbszJgFD7AJEw4oIIJ40AqBegBpEw4gH6VyX4l4IQO5rKALry4r/4kshWJPoCViPPCx9WIs8UViHPCwdWIM8LAVYfzwoAVh76AlYd+gJWHPoCVhvPCgBWGs8LA1YZzwsTVhjPCwdWF88KAFYWzwoAVhXPCwlWFM8LCQEREwHMARERAcwfzMnIz4UIARERAfpSgBnPC45LAKxXEVcRVxFXIw3TP9Mf+kgw+JIB8AEBESABoPiX+JL4J28QWKH4L6CAcIIA2sCCEAlmAYBw+De2CXL7AsjPhQj6UoIQ1TJ2288LjgERIAHLP8mBAIL7AAAUAREQAczJgEL7AAAYVxH4klAEgQEL9FkwACr4khESI6HIAfoCAgEREgEFgQEL9EED/tQx1DHXTND6SDH6SNTUMddM0PpI+lAx+lAx9AQx0YhwyMt/yW1tbQLI+lT6VPpUyW1tbQbI+lIS+lT6VBT0AMkpyPpSFvpSJM8UE8wUzMltbW1tAcj0APQAyW3I9ABwzws0yQPI9AAS9ADMzMlxyMsjFcyJzxYSzMwSzMl4USJWT1AAEwAAAKAAAABAAAIAwMjPg8sEz4WgzMz5FoT3sBWAC1AG1yTIz4oAQM4Uy/fPUIsIIG6zkzCLCN/Iz5BeNRRmFMs/WPoCVhTPCwnPgVLg+lIBERAB+lTPhCDOycjPhYgf+lJxzwtuHszJgFD7AAP8bcj0AHDPCzTJA8j0ABL0AMzMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeChUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uK8f4IQO5rKACqUECdsMuMO+JLIz5AAAAASF8s/UtD6UhT6UhTMyciJUlNUAFw6VxFXIPgj+JJWISdWFryOElcVI/sEA9DtHu1TAfEIrgQREpQQJ2wy4hEfBFD3AAFCACLPFlYUAfpScc8LbszJgFD7AAL+ggDawIIQCWYBgHD4N7YJcvsC7UTQ1DHUMddM0PpIMfpI1NQx10zQ+kj6UDH6UDH0BDHRiHDIy3/JbW1tAsj6VPpU+lTJbW1tBsj6UhL6VPpUFPQAySfI+lIW+lIkzxQTzBTMyW1tbW0ByPQA9ADJbcj0AHDPCzTJA8j0ABL0AFZXAAAB/szMyXHIyyMVzIugAAAKAAAABAAAIM8WEszMEszJeFEiyM+DywTPhaDMzPkWhPewE4ALUATXJMjPigBAzhLL989QiwggbrOTMIsI38jPkF41FGYVyz9QA/oCVhTPCwnPg1Lg+lIBESMB+lTPhCASzsnIz4WIEvpScc8LbszJgFBYAAT7AADGBFYXuY41+JKCEAX14QBt+CrIz5CUI1mrVhvPCwlWFQH6UhL0APQAycjPhQgT+lIB+gJxzwtqzMlz+wCOJfiSghAF9eEAyM+FCBL6UgH6AoAQzwuKVhEB+lJWF88LCclz+wDiAMCCEAX14QBtggGGoG3I9ADPUCBus5MwiwjfyM+QXjUUZinPCz8o+gLPiADAUlD6UhP6VAH6As7JVHYhyM+RkK30HhPLP/pSUAP6AszJyM+FCFKQ+lJY+gJxzwtqzMlz+wAAPPg3tgly+wLIz4UI+lKCENUydtvPC47LP8mBAIL7AA==');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -2683,7 +2832,6 @@ export class FossFiWallet implements c.Contract {
     static fromStorage(emptyStorage: {
         jettonBalance?: coins /* = 0 */
         goldCoins?: uint32 /* = 1 */
-        id?: string /* = "" */
         txnCount?: uint8 /* = 0 */
         status?: uint2 /* = 0 */
         isAuthorityAccount?: boolean /* = false */
@@ -2698,6 +2846,7 @@ export class FossFiWallet implements c.Contract {
         mintable?: boolean /* = true */
         version?: uint10 /* = 0 */
         storeVersion?: uint10 /* = 0 */
+        profile: CellRef<ProfileInfo>
         timestamps: CellRef<TimeStamps>
         addresses: CellRef<Addresses>
         maps: CellRef<Maps>
@@ -2746,10 +2895,17 @@ export class FossFiWallet implements c.Contract {
         return AuthorityAction.toCell(AuthorityAction.create(body));
     }
 
-    static createCellOfChangeId(body: {
-        newId: string
+    static createCellOfChangeUsername(body: {
+        newUsername: string
     }) {
-        return ChangeId.toCell(ChangeId.create(body));
+        return ChangeUsername.toCell(ChangeUsername.create(body));
+    }
+
+    static createCellOfChangeCity(body: {
+        queryId?: uint64 /* = 0 */
+        newCity: string
+    }) {
+        return ChangeCity.toCell(ChangeCity.create(body));
     }
 
     static createCellOfInternalTransferStep(body: {
@@ -2772,7 +2928,8 @@ export class FossFiWallet implements c.Contract {
         invitor: c.Address
         currentWalletCode: c.Cell
         currentStorage: c.Cell | null
-        id: string
+        username: string
+        city: string
     }) {
         return InternalInvite.toCell(InternalInvite.create(body));
     }
@@ -2792,7 +2949,8 @@ export class FossFiWallet implements c.Contract {
     static createCellOfActInvite(body: {
         queryId: uint64
         transferRecipient: c.Address
-        id: string
+        username: string
+        city: string
     }) {
         return ActInvite.toCell(ActInvite.create(body));
     }
@@ -3029,12 +3187,23 @@ export class FossFiWallet implements c.Contract {
         });
     }
 
-    async sendChangeId(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        newId: string
+    async sendChangeUsername(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        newUsername: string
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: ChangeId.toCell(ChangeId.create(body)),
+            body: ChangeUsername.toCell(ChangeUsername.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendChangeCity(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        newCity: string
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: ChangeCity.toCell(ChangeCity.create(body)),
             ...extraOptions
         });
     }
@@ -3063,7 +3232,8 @@ export class FossFiWallet implements c.Contract {
         invitor: c.Address
         currentWalletCode: c.Cell
         currentStorage: c.Cell | null
-        id: string
+        username: string
+        city: string
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -3095,7 +3265,8 @@ export class FossFiWallet implements c.Contract {
     async sendActInvite(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         transferRecipient: c.Address
-        id: string
+        username: string
+        city: string
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -3393,7 +3564,6 @@ export class FossFiWallet implements c.Contract {
             $: 'FiWalletStore',
             jettonBalance: r.readBigInt(),
             goldCoins: r.readBigInt(),
-            id: r.readSnakeString(),
             txnCount: r.readBigInt(),
             status: r.readBigInt(),
             isAuthorityAccount: r.readBoolean(),
@@ -3408,14 +3578,20 @@ export class FossFiWallet implements c.Contract {
             mintable: r.readBoolean(),
             version: r.readBigInt(),
             storeVersion: r.readBigInt(),
+            profile: r.readCellRef<ProfileInfo>(ProfileInfo.fromSlice),
             timestamps: r.readCellRef<TimeStamps>(TimeStamps.fromSlice),
             addresses: r.readCellRef<Addresses>(Addresses.fromSlice),
             maps: r.readCellRef<Maps>(Maps.fromSlice),
         });
     }
 
-    async getId(provider: ContractProvider): Promise<string> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_id', []));
+    async getUsername(provider: ContractProvider): Promise<string> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_username', []));
+        return r.readSnakeString();
+    }
+
+    async getCity(provider: ContractProvider): Promise<string> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_city', []));
         return r.readSnakeString();
     }
 }

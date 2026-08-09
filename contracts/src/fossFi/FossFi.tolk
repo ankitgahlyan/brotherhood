@@ -19,8 +19,11 @@ type AllowedMessageToMinter =
     | ClaimMinterAdmin
     | DropMinterAdmin
     | ChangeMinterMetadata
+    | SetLocationAddresses
+    | ChangeDaoAddress
     | TopUpTons
     | InformMinterInviteInternal
+    | InformMinterChangeCity
     | RequestUpgradeCode
     | EnterLottery
     | LotteryWin
@@ -60,6 +63,21 @@ fun onBouncedMessage(in: InMessageBounced): void {
     store.save();
 }
 
+fun assertAdminOrDao(
+    sender: address,
+    adminAddress: address,
+    daoAddress: address?,
+    errCode: int = Errors.NotOwner,
+): void {
+    if (sender == adminAddress) {
+        return;
+    }
+    if (daoAddress != null && sender == daoAddress) {
+        return;
+    }
+    throw errCode;
+}
+
 fun onInternalMessage(in: InMessage): void {
     val msg = lazy AllowedMessageToMinter.fromSlice(in.body);
     var store = lazy FiStore.load();
@@ -72,14 +90,78 @@ fun onInternalMessage(in: InMessage): void {
             others.totalAccounts += 1;
             store.totalSupply += MBRP_AMOUNT; // note: broadcast id for explorers or dbs
 
-            // send excesses
-            val excesses = createMessage({
-                bounce: BounceMode.NoBounce,
-                value: 0,
-                dest: msg.invitor,
-                body: ReturnExcessesBack { queryId: msg.queryId },
-            });
-            excesses.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+            if (isNonEmptyString(msg.city)) {
+                val loc = others.locationAddrs.get(getLetterKey(msg.city));
+                if (loc.isFound) {
+                    val locMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: loc.loadValue(),
+                        value: 0,
+                        body: LocationRegisterCity {
+                            queryId: msg.queryId,
+                            ownerAddress: msg.sender,
+                            cityName: msg.city,
+                            sendExcessesTo: msg.invitor,
+                        },
+                    });
+                    locMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
+            } else {
+                // send excesses
+                val excesses = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    value: 0,
+                    dest: msg.invitor,
+                    body: ReturnExcessesBack { queryId: msg.queryId },
+                });
+                excesses.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+        }
+
+        InformMinterChangeCity => {
+            assertCorrectSender(in.senderAddress, msg.owner, store.adminAddress);
+
+            if (isNonEmptyString(msg.oldCity)) {
+                val oldLoc = others.locationAddrs.get(getLetterKey(msg.oldCity));
+                if (oldLoc.isFound) {
+                    val oldLocMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: oldLoc.loadValue(),
+                        value: 0,
+                        body: LocationUnregisterCity {
+                            queryId: msg.queryId,
+                            ownerAddress: msg.owner,
+                            cityName: msg.oldCity,
+                            sendExcessesTo: msg.owner,
+                        },
+                    });
+                    oldLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                }
+            }
+
+            if (isNonEmptyString(msg.newCity)) {
+                val newLoc = others.locationAddrs.get(getLetterKey(msg.newCity));
+                if (newLoc.isFound) {
+                    val newLocMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: newLoc.loadValue(),
+                        value: 0,
+                        body: LocationRegisterCity {
+                            queryId: msg.queryId,
+                            ownerAddress: msg.owner,
+                            cityName: msg.newCity,
+                            sendExcessesTo: msg.owner,
+                        },
+                    });
+                    newLocMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
+            }
         }
 
         NotifyMinter => {
@@ -129,7 +211,12 @@ fun onInternalMessage(in: InMessage): void {
 
         MintNewJettons => {
             // assert (false) throw Errors.IncorrectReceiver; // just for fun/standard
-            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
             assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
 
             val internalTransferMsg = lazy msg
@@ -163,7 +250,12 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         ChangeMinterAdmin => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
             // a handoff is already pending; the current admin must drop it first
             assert (store.adminHandoff == null) throw Errors.WaitMore;
 
@@ -174,7 +266,12 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         DropMinterAdmin => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
             assert (store.adminHandoff != null) throw Errors.WaitMore;
 
             store.adminHandoff = null;
@@ -195,12 +292,42 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         ChangeMinterMetadata => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.NotOwner;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
             store.metadata = msg.newMetadata;
         }
 
+        SetLocationAddresses => {
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
+            others.locationAddrs = msg.locationAddrs;
+        }
+
+        ChangeDaoAddress => {
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.NotOwner,
+            );
+            store.daoAddress = msg.newDaoAddress;
+        }
+
         Upgrade => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.IncorrectSender,
+            );
             assert (others.currentRequest == null) throw Errors.WaitMore;
 
             others.currentRequest = CurrentRequest {
@@ -210,14 +337,24 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         RejectUpgrade => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.IncorrectSender,
+            );
             assert (others.currentRequest != null) throw Errors.WaitMore; // todo: better error code
 
             others.currentRequest = null;
         }
 
         ApproveUpgrade => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.IncorrectSender,
+            );
             // todo: redundant check (why would admin do this?)
             assert (others.currentRequest != null) throw Errors.WaitMore;
             val currentRequest = others.currentRequest.load();
@@ -290,7 +427,10 @@ fun onInternalMessage(in: InMessage): void {
 
         TopUpTons => {
             // deploy + accept tons + deploy jettonWallet
-            if (in.senderAddress == store.adminAddress) {
+            if (
+                in.senderAddress == store.adminAddress ||
+                (store.daoAddress != null && in.senderAddress == store.daoAddress)
+            ) {
                 store.totalSupply += ton("1");
                 val deployTopUpMsg = createMessage({
                     // bounce for collecting fees back
@@ -362,7 +502,12 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         HotUpgrade => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.IncorrectSender,
+            );
 
             contract.setCodePostponed(msg.code);
 
@@ -376,7 +521,12 @@ fun onInternalMessage(in: InMessage): void {
 
         // testnetOnly
         Destroy => {
-            assert (in.senderAddress == store.adminAddress) throw Errors.IncorrectSender;
+            assertAdminOrDao(
+                in.senderAddress,
+                store.adminAddress,
+                store.daoAddress,
+                Errors.IncorrectSender,
+            );
 
             destroyContract(in.senderAddress);
         }
@@ -407,7 +557,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,                                              // but by peers only & not minter
         adminAddress: store.adminAddress,
         jettonContent: store.metadata as Cell<OnchainMetadataReply>, // metadata.toCell(),
-        jettonWalletCode: createEmptyCell(),                         // fetch from wallets
+        jettonWalletCode: fossFiWalletCompiledCode(),
     };
 }
 
@@ -464,4 +614,42 @@ fun hotUpgradeFiData(_additionalData: cell?) {
         others: oldStorage.others,
     };
     storage.save();
+}
+
+fun isNonEmptyString(str: string): bool {
+    return str.beginParse().remainingBitsCount() > 0;
+}
+
+fun getLetterKey(cityName: string): uint8 {
+    var s = cityName.beginParse();
+    if (s.remainingBitsCount() < 8) {
+        return 0;
+    }
+    val b = s.loadUint(8);
+    if (b >= 97 && b <= 122) {
+        return (b - 32) as uint8;
+    }
+    if (b >= 65 && b <= 90) {
+        return b as uint8;
+    }
+    return 0;
+}
+
+get fun get_location_address(cityName: string): address? {
+    val store = lazy FiStore.load();
+    val others = lazy store.others.load();
+    val letterKey = getLetterKey(cityName);
+    val loc = others.locationAddrs.get(letterKey);
+    return loc.isFound ? loc.loadValue() : null;
+}
+
+get fun get_location_addresses(): map<uint8, address> {
+    val store = lazy FiStore.load();
+    val others = lazy store.others.load();
+    return others.locationAddrs;
+}
+
+get fun get_dao_address(): address? {
+    val store = lazy FiStore.load();
+    return store.daoAddress;
 }

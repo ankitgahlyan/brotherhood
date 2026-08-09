@@ -173,6 +173,38 @@ fun FossFi.sendChangeMinterMetadata(
     return net.send(from, genericMsg);
 }
 
+fun FossFi.sendSetLocationAddresses(
+    self,
+    from: address,
+    queryId: uint64,
+    locationAddrs: map<uint8, address>,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SetLocationAddresses { queryId, locationAddrs },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendChangeDaoAddress(
+    self,
+    from: address,
+    queryId: uint64,
+    newDaoAddress: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ChangeDaoAddress { queryId, newDaoAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFi.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
@@ -189,14 +221,33 @@ fun FossFi.sendInformMinterInviteInternal(
     queryId: uint64,
     sender: address,
     invitor: address,
-    id: string,
+    username: string,
+    city: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: InformMinterInviteInternal { queryId, sender, invitor, id },
+        body: InformMinterInviteInternal { queryId, sender, invitor, username, city },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendInformMinterChangeCity(
+    self,
+    from: address,
+    queryId: uint64,
+    owner: address,
+    oldCity: string,
+    newCity: string,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: InformMinterChangeCity { queryId, owner, oldCity, newCity },
     });
     return net.send(from, genericMsg);
 }
@@ -336,4 +387,16 @@ fun FossFi.getJettonDataAll(self): FiStore {
 
 fun FossFi.getWalletAddress(self, owner: address): address {
     return net.runGetMethod(self.address, "get_wallet_address", [owner]);
+}
+
+fun FossFi.getLocationAddress(self, cityName: string): address? {
+    return net.runGetMethod(self.address, "get_location_address", [cityName]);
+}
+
+fun FossFi.getLocationAddresses(self): map<uint8, address> {
+    return net.runGetMethod(self.address, "get_location_addresses");
+}
+
+fun FossFi.getDaoAddress(self): address? {
+    return net.runGetMethod(self.address, "get_dao_address");
 }

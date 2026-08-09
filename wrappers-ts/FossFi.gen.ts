@@ -158,6 +158,14 @@ class StackReader {
     readCellRef<T>(loadFn_T: LoadCallback<T>): CellRef<T> {
         return { ref: loadFn_T(this.readCell().beginParse()) };
     }
+
+    readDictionary<K extends c.DictionaryKeyTypes, V>(keySerializer: c.DictionaryKey<K>, valueSerializer: c.DictionaryValue<V>): c.Dictionary<K, V> {
+        if (this.tuple[0].type === 'null') {
+            this.tuple.shift();
+            return c.Dictionary.empty<K, V>(keySerializer, valueSerializer);
+        }
+        return c.Dictionary.loadDirect<K, V>(keySerializer, valueSerializer, this.readCell());
+    }
 }
 
 // ————————————————————————————————————————————
@@ -166,6 +174,7 @@ class StackReader {
 
 type coins = bigint
 
+type uint8 = bigint
 type uint10 = bigint
 type uint32 = bigint
 type uint33 = bigint
@@ -514,7 +523,7 @@ export const NotifyMinter = {
 }
 
 /**
- > struct (0x2c76b973) RequestWalletAddress {
+ > struct (0x2c76b972) RequestWalletAddress {
  >     queryId: uint64
  >     owner: address
  >     includeOwnerAddress: bool
@@ -528,7 +537,7 @@ export interface RequestWalletAddress {
 }
 
 export const RequestWalletAddress = {
-    PREFIX: 0x2c76b973,
+    PREFIX: 0x2c76b972,
 
     create(args: {
         queryId: uint64
@@ -541,7 +550,7 @@ export const RequestWalletAddress = {
         }
     },
     fromSlice(s: c.Slice): RequestWalletAddress {
-        loadAndCheckPrefix32(s, 0x2c76b973, 'RequestWalletAddress');
+        loadAndCheckPrefix32(s, 0x2c76b972, 'RequestWalletAddress');
         return {
             $: 'RequestWalletAddress',
             queryId: s.loadUintBig(64),
@@ -550,7 +559,7 @@ export const RequestWalletAddress = {
         }
     },
     store(self: RequestWalletAddress, b: c.Builder): void {
-        b.storeUint(0x2c76b973, 32);
+        b.storeUint(0x2c76b972, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.owner);
         b.storeBit(self.includeOwnerAddress);
@@ -561,7 +570,7 @@ export const RequestWalletAddress = {
 }
 
 /**
- > struct (0xd1735400) ResponseWalletAddress {
+ > struct (0xd1735466) ResponseWalletAddress {
  >     queryId: uint64
  >     jettonWalletAddress: address?
  >     owner: Cell<address>?
@@ -575,7 +584,7 @@ export interface ResponseWalletAddress {
 }
 
 export const ResponseWalletAddress = {
-    PREFIX: 0xd1735400,
+    PREFIX: 0xd1735466,
 
     create(args: {
         queryId: uint64
@@ -588,7 +597,7 @@ export const ResponseWalletAddress = {
         }
     },
     fromSlice(s: c.Slice): ResponseWalletAddress {
-        loadAndCheckPrefix32(s, 0xd1735400, 'ResponseWalletAddress');
+        loadAndCheckPrefix32(s, 0xd1735466, 'ResponseWalletAddress');
         return {
             $: 'ResponseWalletAddress',
             queryId: s.loadUintBig(64),
@@ -599,7 +608,7 @@ export const ResponseWalletAddress = {
         }
     },
     store(self: ResponseWalletAddress, b: c.Builder): void {
-        b.storeUint(0xd1735400, 32);
+        b.storeUint(0xd1735466, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.jettonWalletAddress);
         storeTolkNullable<CellRef<c.Address>>(self.owner, b,
@@ -614,7 +623,7 @@ export const ResponseWalletAddress = {
 }
 
 /**
- > struct (0x642b7d07) MintNewJettons {
+ > struct (0x00001001) MintNewJettons {
  >     queryId: uint64
  >     mintRecipient: address
  >     tonAmount: coins
@@ -630,7 +639,7 @@ export interface MintNewJettons {
 }
 
 export const MintNewJettons = {
-    PREFIX: 0x642b7d07,
+    PREFIX: 0x00001001,
 
     create(args: {
         queryId: uint64
@@ -644,7 +653,7 @@ export const MintNewJettons = {
         }
     },
     fromSlice(s: c.Slice): MintNewJettons {
-        loadAndCheckPrefix32(s, 0x642b7d07, 'MintNewJettons');
+        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
         return {
             $: 'MintNewJettons',
             queryId: s.loadUintBig(64),
@@ -654,7 +663,7 @@ export const MintNewJettons = {
         }
     },
     store(self: MintNewJettons, b: c.Builder): void {
-        b.storeUint(0x642b7d07, 32);
+        b.storeUint(0x00001001, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.mintRecipient);
         b.storeCoins(self.tonAmount);
@@ -666,7 +675,7 @@ export const MintNewJettons = {
 }
 
 /**
- > struct (0x6501f354) ChangeMinterAdmin {
+ > struct (0x00001002) ChangeMinterAdmin {
  >     queryId: uint64
  >     newAdminAddress: address
  > }
@@ -678,7 +687,7 @@ export interface ChangeMinterAdmin {
 }
 
 export const ChangeMinterAdmin = {
-    PREFIX: 0x6501f354,
+    PREFIX: 0x00001002,
 
     create(args: {
         queryId: uint64
@@ -690,7 +699,7 @@ export const ChangeMinterAdmin = {
         }
     },
     fromSlice(s: c.Slice): ChangeMinterAdmin {
-        loadAndCheckPrefix32(s, 0x6501f354, 'ChangeMinterAdmin');
+        loadAndCheckPrefix32(s, 0x00001002, 'ChangeMinterAdmin');
         return {
             $: 'ChangeMinterAdmin',
             queryId: s.loadUintBig(64),
@@ -698,7 +707,7 @@ export const ChangeMinterAdmin = {
         }
     },
     store(self: ChangeMinterAdmin, b: c.Builder): void {
-        b.storeUint(0x6501f354, 32);
+        b.storeUint(0x00001002, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.newAdminAddress);
     },
@@ -708,7 +717,7 @@ export const ChangeMinterAdmin = {
 }
 
 /**
- > struct (0xfb88e119) ClaimMinterAdmin {
+ > struct (0x00001003) ClaimMinterAdmin {
  >     queryId: uint64
  > }
  */
@@ -718,7 +727,7 @@ export interface ClaimMinterAdmin {
 }
 
 export const ClaimMinterAdmin = {
-    PREFIX: 0xfb88e119,
+    PREFIX: 0x00001003,
 
     create(args: {
         queryId: uint64
@@ -729,14 +738,14 @@ export const ClaimMinterAdmin = {
         }
     },
     fromSlice(s: c.Slice): ClaimMinterAdmin {
-        loadAndCheckPrefix32(s, 0xfb88e119, 'ClaimMinterAdmin');
+        loadAndCheckPrefix32(s, 0x00001003, 'ClaimMinterAdmin');
         return {
             $: 'ClaimMinterAdmin',
             queryId: s.loadUintBig(64),
         }
     },
     store(self: ClaimMinterAdmin, b: c.Builder): void {
-        b.storeUint(0xfb88e119, 32);
+        b.storeUint(0x00001003, 32);
         b.storeUint(self.queryId, 64);
     },
     toCell(self: ClaimMinterAdmin): c.Cell {
@@ -745,7 +754,7 @@ export const ClaimMinterAdmin = {
 }
 
 /**
- > struct (0x7431f221) DropMinterAdmin {
+ > struct (0x00001004) DropMinterAdmin {
  >     queryId: uint64
  > }
  */
@@ -755,7 +764,7 @@ export interface DropMinterAdmin {
 }
 
 export const DropMinterAdmin = {
-    PREFIX: 0x7431f221,
+    PREFIX: 0x00001004,
 
     create(args: {
         queryId: uint64
@@ -766,14 +775,14 @@ export const DropMinterAdmin = {
         }
     },
     fromSlice(s: c.Slice): DropMinterAdmin {
-        loadAndCheckPrefix32(s, 0x7431f221, 'DropMinterAdmin');
+        loadAndCheckPrefix32(s, 0x00001004, 'DropMinterAdmin');
         return {
             $: 'DropMinterAdmin',
             queryId: s.loadUintBig(64),
         }
     },
     store(self: DropMinterAdmin, b: c.Builder): void {
-        b.storeUint(0x7431f221, 32);
+        b.storeUint(0x00001004, 32);
         b.storeUint(self.queryId, 64);
     },
     toCell(self: DropMinterAdmin): c.Cell {
@@ -782,7 +791,49 @@ export const DropMinterAdmin = {
 }
 
 /**
- > struct (0x2508d66a) Upgrade {
+ > struct (0x00001005) ChangeMinterMetadata {
+ >     queryId: uint64
+ >     newMetadata: cell
+ > }
+ */
+export interface ChangeMinterMetadata {
+    readonly $: 'ChangeMinterMetadata'
+    queryId: uint64
+    newMetadata: c.Cell
+}
+
+export const ChangeMinterMetadata = {
+    PREFIX: 0x00001005,
+
+    create(args: {
+        queryId: uint64
+        newMetadata: c.Cell
+    }): ChangeMinterMetadata {
+        return {
+            $: 'ChangeMinterMetadata',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeMinterMetadata {
+        loadAndCheckPrefix32(s, 0x00001005, 'ChangeMinterMetadata');
+        return {
+            $: 'ChangeMinterMetadata',
+            queryId: s.loadUintBig(64),
+            newMetadata: s.loadRef(),
+        }
+    },
+    store(self: ChangeMinterMetadata, b: c.Builder): void {
+        b.storeUint(0x00001005, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeRef(self.newMetadata);
+    },
+    toCell(self: ChangeMinterMetadata): c.Cell {
+        return makeCellFrom<ChangeMinterMetadata>(self, ChangeMinterMetadata.store);
+    }
+}
+
+/**
+ > struct (0x00001006) Upgrade {
  >     walletUpgrade: bool
  >     walletVersion: uint10
  >     sender: address
@@ -800,7 +851,7 @@ export interface Upgrade {
 }
 
 export const Upgrade = {
-    PREFIX: 0x2508d66a,
+    PREFIX: 0x00001006,
 
     create(args: {
         walletUpgrade?: boolean /* = true */
@@ -818,7 +869,7 @@ export const Upgrade = {
         }
     },
     fromSlice(s: c.Slice): Upgrade {
-        loadAndCheckPrefix32(s, 0x2508d66a, 'Upgrade');
+        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
         return {
             $: 'Upgrade',
             walletUpgrade: s.loadBoolean(),
@@ -829,7 +880,7 @@ export const Upgrade = {
         }
     },
     store(self: Upgrade, b: c.Builder): void {
-        b.storeUint(0x2508d66a, 32);
+        b.storeUint(0x00001006, 32);
         b.storeBit(self.walletUpgrade);
         b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.sender);
@@ -846,49 +897,7 @@ export const Upgrade = {
 }
 
 /**
- > struct (0xcb862902) ChangeMinterMetadata {
- >     queryId: uint64
- >     newMetadata: cell
- > }
- */
-export interface ChangeMinterMetadata {
-    readonly $: 'ChangeMinterMetadata'
-    queryId: uint64
-    newMetadata: c.Cell
-}
-
-export const ChangeMinterMetadata = {
-    PREFIX: 0xcb862902,
-
-    create(args: {
-        queryId: uint64
-        newMetadata: c.Cell
-    }): ChangeMinterMetadata {
-        return {
-            $: 'ChangeMinterMetadata',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): ChangeMinterMetadata {
-        loadAndCheckPrefix32(s, 0xcb862902, 'ChangeMinterMetadata');
-        return {
-            $: 'ChangeMinterMetadata',
-            queryId: s.loadUintBig(64),
-            newMetadata: s.loadRef(),
-        }
-    },
-    store(self: ChangeMinterMetadata, b: c.Builder): void {
-        b.storeUint(0xcb862902, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeRef(self.newMetadata);
-    },
-    toCell(self: ChangeMinterMetadata): c.Cell {
-        return makeCellFrom<ChangeMinterMetadata>(self, ChangeMinterMetadata.store);
-    }
-}
-
-/**
- > struct (0xd372158c) TopUpTons {
+ > struct (0x00001007) TopUpTons {
  > }
  */
 export interface TopUpTons {
@@ -896,7 +905,7 @@ export interface TopUpTons {
 }
 
 export const TopUpTons = {
-    PREFIX: 0xd372158c,
+    PREFIX: 0x00001007,
 
     create(): TopUpTons {
         return {
@@ -904,13 +913,13 @@ export const TopUpTons = {
         }
     },
     fromSlice(s: c.Slice): TopUpTons {
-        loadAndCheckPrefix32(s, 0xd372158c, 'TopUpTons');
+        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
         return {
             $: 'TopUpTons',
         }
     },
     store(self: TopUpTons, b: c.Builder): void {
-        b.storeUint(0xd372158c, 32);
+        b.storeUint(0x00001007, 32);
     },
     toCell(self: TopUpTons): c.Cell {
         return makeCellFrom<TopUpTons>(self, TopUpTons.store);
@@ -918,59 +927,7 @@ export const TopUpTons = {
 }
 
 /**
- > struct (0x00000004) InformMinterInviteInternal {
- >     queryId: uint64
- >     sender: address
- >     invitor: address
- >     id: string
- > }
- */
-export interface InformMinterInviteInternal {
-    readonly $: 'InformMinterInviteInternal'
-    queryId: uint64
-    sender: c.Address
-    invitor: c.Address
-    id: string
-}
-
-export const InformMinterInviteInternal = {
-    PREFIX: 0x00000004,
-
-    create(args: {
-        queryId: uint64
-        sender: c.Address
-        invitor: c.Address
-        id: string
-    }): InformMinterInviteInternal {
-        return {
-            $: 'InformMinterInviteInternal',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): InformMinterInviteInternal {
-        loadAndCheckPrefix32(s, 0x00000004, 'InformMinterInviteInternal');
-        return {
-            $: 'InformMinterInviteInternal',
-            queryId: s.loadUintBig(64),
-            sender: s.loadAddress(),
-            invitor: s.loadAddress(),
-            id: s.loadStringRefTail(),
-        }
-    },
-    store(self: InformMinterInviteInternal, b: c.Builder): void {
-        b.storeUint(0x00000004, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.sender);
-        b.storeAddress(self.invitor);
-        b.storeStringRefTail(self.id);
-    },
-    toCell(self: InformMinterInviteInternal): c.Cell {
-        return makeCellFrom<InformMinterInviteInternal>(self, InformMinterInviteInternal.store);
-    }
-}
-
-/**
- > struct (0x00000010) RequestUpgradeCode {
+ > struct (0x00001008) RequestUpgradeCode {
  >     sender: address
  >     version: uint10
  > }
@@ -982,7 +939,7 @@ export interface RequestUpgradeCode {
 }
 
 export const RequestUpgradeCode = {
-    PREFIX: 0x00000010,
+    PREFIX: 0x00001008,
 
     create(args: {
         sender: c.Address
@@ -994,7 +951,7 @@ export const RequestUpgradeCode = {
         }
     },
     fromSlice(s: c.Slice): RequestUpgradeCode {
-        loadAndCheckPrefix32(s, 0x00000010, 'RequestUpgradeCode');
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
         return {
             $: 'RequestUpgradeCode',
             sender: s.loadAddress(),
@@ -1002,7 +959,7 @@ export const RequestUpgradeCode = {
         }
     },
     store(self: RequestUpgradeCode, b: c.Builder): void {
-        b.storeUint(0x00000010, 32);
+        b.storeUint(0x00001008, 32);
         b.storeAddress(self.sender);
         b.storeUint(self.version, 10);
     },
@@ -1012,7 +969,7 @@ export const RequestUpgradeCode = {
 }
 
 /**
- > struct (0x00000011) ApproveUpgrade {
+ > struct (0x00001009) ApproveUpgrade {
  > }
  */
 export interface ApproveUpgrade {
@@ -1020,7 +977,7 @@ export interface ApproveUpgrade {
 }
 
 export const ApproveUpgrade = {
-    PREFIX: 0x00000011,
+    PREFIX: 0x00001009,
 
     create(): ApproveUpgrade {
         return {
@@ -1028,13 +985,13 @@ export const ApproveUpgrade = {
         }
     },
     fromSlice(s: c.Slice): ApproveUpgrade {
-        loadAndCheckPrefix32(s, 0x00000011, 'ApproveUpgrade');
+        loadAndCheckPrefix32(s, 0x00001009, 'ApproveUpgrade');
         return {
             $: 'ApproveUpgrade',
         }
     },
     store(self: ApproveUpgrade, b: c.Builder): void {
-        b.storeUint(0x00000011, 32);
+        b.storeUint(0x00001009, 32);
     },
     toCell(self: ApproveUpgrade): c.Cell {
         return makeCellFrom<ApproveUpgrade>(self, ApproveUpgrade.store);
@@ -1042,7 +999,7 @@ export const ApproveUpgrade = {
 }
 
 /**
- > struct (0x00000012) RejectUpgrade {
+ > struct (0x0000100a) RejectUpgrade {
  > }
  */
 export interface RejectUpgrade {
@@ -1050,7 +1007,7 @@ export interface RejectUpgrade {
 }
 
 export const RejectUpgrade = {
-    PREFIX: 0x00000012,
+    PREFIX: 0x0000100a,
 
     create(): RejectUpgrade {
         return {
@@ -1058,13 +1015,13 @@ export const RejectUpgrade = {
         }
     },
     fromSlice(s: c.Slice): RejectUpgrade {
-        loadAndCheckPrefix32(s, 0x00000012, 'RejectUpgrade');
+        loadAndCheckPrefix32(s, 0x0000100a, 'RejectUpgrade');
         return {
             $: 'RejectUpgrade',
         }
     },
     store(self: RejectUpgrade, b: c.Builder): void {
-        b.storeUint(0x00000012, 32);
+        b.storeUint(0x0000100a, 32);
     },
     toCell(self: RejectUpgrade): c.Cell {
         return makeCellFrom<RejectUpgrade>(self, RejectUpgrade.store);
@@ -1072,7 +1029,7 @@ export const RejectUpgrade = {
 }
 
 /**
- > struct (0x00000013) HotUpgrade {
+ > struct (0x0000100b) HotUpgrade {
  >     additionalData: cell?
  >     code: cell
  > }
@@ -1084,7 +1041,7 @@ export interface HotUpgrade {
 }
 
 export const HotUpgrade = {
-    PREFIX: 0x00000013,
+    PREFIX: 0x0000100b,
 
     create(args: {
         additionalData: c.Cell | null
@@ -1096,7 +1053,7 @@ export const HotUpgrade = {
         }
     },
     fromSlice(s: c.Slice): HotUpgrade {
-        loadAndCheckPrefix32(s, 0x00000013, 'HotUpgrade');
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
         return {
             $: 'HotUpgrade',
             additionalData: s.loadBoolean() ? s.loadRef() : null,
@@ -1104,7 +1061,7 @@ export const HotUpgrade = {
         }
     },
     store(self: HotUpgrade, b: c.Builder): void {
-        b.storeUint(0x00000013, 32);
+        b.storeUint(0x0000100b, 32);
         storeTolkNullable<c.Cell>(self.additionalData, b,
             (v,b) => b.storeRef(v)
         );
@@ -1116,7 +1073,154 @@ export const HotUpgrade = {
 }
 
 /**
- > struct (0x00000014) Destroy {
+ > struct (0x0000100c) SetLocationAddresses {
+ >     queryId: uint64
+ >     locationAddrs: map<uint8, address>
+ > }
+ */
+export interface SetLocationAddresses {
+    readonly $: 'SetLocationAddresses'
+    queryId: uint64
+    locationAddrs: c.Dictionary<uint8, c.Address>
+}
+
+export const SetLocationAddresses = {
+    PREFIX: 0x0000100c,
+
+    create(args: {
+        queryId: uint64
+        locationAddrs: c.Dictionary<uint8, c.Address>
+    }): SetLocationAddresses {
+        return {
+            $: 'SetLocationAddresses',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): SetLocationAddresses {
+        loadAndCheckPrefix32(s, 0x0000100c, 'SetLocationAddresses');
+        return {
+            $: 'SetLocationAddresses',
+            queryId: s.loadUintBig(64),
+            locationAddrs: c.Dictionary.load<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
+                (s) => s.loadAddress(),
+                (v,b) => b.storeAddress(v)
+            ), s),
+        }
+    },
+    store(self: SetLocationAddresses, b: c.Builder): void {
+        b.storeUint(0x0000100c, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeDict<uint8, c.Address>(self.locationAddrs, c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
+            (s) => s.loadAddress(),
+            (v,b) => b.storeAddress(v)
+        ));
+    },
+    toCell(self: SetLocationAddresses): c.Cell {
+        return makeCellFrom<SetLocationAddresses>(self, SetLocationAddresses.store);
+    }
+}
+
+/**
+ > struct (0x0000100d) ChangeDaoAddress {
+ >     queryId: uint64
+ >     newDaoAddress: address?
+ > }
+ */
+export interface ChangeDaoAddress {
+    readonly $: 'ChangeDaoAddress'
+    queryId: uint64
+    newDaoAddress: c.Address | null
+}
+
+export const ChangeDaoAddress = {
+    PREFIX: 0x0000100d,
+
+    create(args: {
+        queryId: uint64
+        newDaoAddress: c.Address | null
+    }): ChangeDaoAddress {
+        return {
+            $: 'ChangeDaoAddress',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ChangeDaoAddress {
+        loadAndCheckPrefix32(s, 0x0000100d, 'ChangeDaoAddress');
+        return {
+            $: 'ChangeDaoAddress',
+            queryId: s.loadUintBig(64),
+            newDaoAddress: s.loadMaybeAddress(),
+        }
+    },
+    store(self: ChangeDaoAddress, b: c.Builder): void {
+        b.storeUint(0x0000100d, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.newDaoAddress);
+    },
+    toCell(self: ChangeDaoAddress): c.Cell {
+        return makeCellFrom<ChangeDaoAddress>(self, ChangeDaoAddress.store);
+    }
+}
+
+/**
+ > struct (0x00001054) InformMinterInviteInternal {
+ >     queryId: uint64
+ >     sender: address
+ >     invitor: address
+ >     username: string
+ >     city: string
+ > }
+ */
+export interface InformMinterInviteInternal {
+    readonly $: 'InformMinterInviteInternal'
+    queryId: uint64
+    sender: c.Address
+    invitor: c.Address
+    username: string
+    city: string
+}
+
+export const InformMinterInviteInternal = {
+    PREFIX: 0x00001054,
+
+    create(args: {
+        queryId: uint64
+        sender: c.Address
+        invitor: c.Address
+        username: string
+        city: string
+    }): InformMinterInviteInternal {
+        return {
+            $: 'InformMinterInviteInternal',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): InformMinterInviteInternal {
+        loadAndCheckPrefix32(s, 0x00001054, 'InformMinterInviteInternal');
+        return {
+            $: 'InformMinterInviteInternal',
+            queryId: s.loadUintBig(64),
+            sender: s.loadAddress(),
+            invitor: s.loadAddress(),
+            username: s.loadStringRefTail(),
+            city: s.loadStringRefTail(),
+        }
+    },
+    store(self: InformMinterInviteInternal, b: c.Builder): void {
+        b.storeUint(0x00001054, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.sender);
+        b.storeAddress(self.invitor);
+        b.storeStringRefTail(self.username);
+        b.storeStringRefTail(self.city);
+    },
+    toCell(self: InformMinterInviteInternal): c.Cell {
+        return makeCellFrom<InformMinterInviteInternal>(self, InformMinterInviteInternal.store);
+    }
+}
+
+/**
+ > struct (0x00001059) Destroy {
  > }
  */
 export interface Destroy {
@@ -1124,7 +1228,7 @@ export interface Destroy {
 }
 
 export const Destroy = {
-    PREFIX: 0x00000014,
+    PREFIX: 0x00001059,
 
     create(): Destroy {
         return {
@@ -1132,16 +1236,172 @@ export const Destroy = {
         }
     },
     fromSlice(s: c.Slice): Destroy {
-        loadAndCheckPrefix32(s, 0x00000014, 'Destroy');
+        loadAndCheckPrefix32(s, 0x00001059, 'Destroy');
         return {
             $: 'Destroy',
         }
     },
     store(self: Destroy, b: c.Builder): void {
-        b.storeUint(0x00000014, 32);
+        b.storeUint(0x00001059, 32);
     },
     toCell(self: Destroy): c.Cell {
         return makeCellFrom<Destroy>(self, Destroy.store);
+    }
+}
+
+/**
+ > struct (0x000010a3) InformMinterChangeCity {
+ >     queryId: uint64
+ >     owner: address
+ >     oldCity: string
+ >     newCity: string
+ > }
+ */
+export interface InformMinterChangeCity {
+    readonly $: 'InformMinterChangeCity'
+    queryId: uint64
+    owner: c.Address
+    oldCity: string
+    newCity: string
+}
+
+export const InformMinterChangeCity = {
+    PREFIX: 0x000010a3,
+
+    create(args: {
+        queryId: uint64
+        owner: c.Address
+        oldCity: string
+        newCity: string
+    }): InformMinterChangeCity {
+        return {
+            $: 'InformMinterChangeCity',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): InformMinterChangeCity {
+        loadAndCheckPrefix32(s, 0x000010a3, 'InformMinterChangeCity');
+        return {
+            $: 'InformMinterChangeCity',
+            queryId: s.loadUintBig(64),
+            owner: s.loadAddress(),
+            oldCity: s.loadStringRefTail(),
+            newCity: s.loadStringRefTail(),
+        }
+    },
+    store(self: InformMinterChangeCity, b: c.Builder): void {
+        b.storeUint(0x000010a3, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.owner);
+        b.storeStringRefTail(self.oldCity);
+        b.storeStringRefTail(self.newCity);
+    },
+    toCell(self: InformMinterChangeCity): c.Cell {
+        return makeCellFrom<InformMinterChangeCity>(self, InformMinterChangeCity.store);
+    }
+}
+
+/**
+ > struct (0x000010a4) LocationRegisterCity {
+ >     queryId: uint64
+ >     ownerAddress: address
+ >     cityName: string
+ >     sendExcessesTo: address?
+ > }
+ */
+export interface LocationRegisterCity {
+    readonly $: 'LocationRegisterCity'
+    queryId: uint64
+    ownerAddress: c.Address
+    cityName: string
+    sendExcessesTo: c.Address | null
+}
+
+export const LocationRegisterCity = {
+    PREFIX: 0x000010a4,
+
+    create(args: {
+        queryId: uint64
+        ownerAddress: c.Address
+        cityName: string
+        sendExcessesTo: c.Address | null
+    }): LocationRegisterCity {
+        return {
+            $: 'LocationRegisterCity',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): LocationRegisterCity {
+        loadAndCheckPrefix32(s, 0x000010a4, 'LocationRegisterCity');
+        return {
+            $: 'LocationRegisterCity',
+            queryId: s.loadUintBig(64),
+            ownerAddress: s.loadAddress(),
+            cityName: s.loadStringRefTail(),
+            sendExcessesTo: s.loadMaybeAddress(),
+        }
+    },
+    store(self: LocationRegisterCity, b: c.Builder): void {
+        b.storeUint(0x000010a4, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.ownerAddress);
+        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.sendExcessesTo);
+    },
+    toCell(self: LocationRegisterCity): c.Cell {
+        return makeCellFrom<LocationRegisterCity>(self, LocationRegisterCity.store);
+    }
+}
+
+/**
+ > struct (0x000010a5) LocationUnregisterCity {
+ >     queryId: uint64
+ >     ownerAddress: address
+ >     cityName: string
+ >     sendExcessesTo: address?
+ > }
+ */
+export interface LocationUnregisterCity {
+    readonly $: 'LocationUnregisterCity'
+    queryId: uint64
+    ownerAddress: c.Address
+    cityName: string
+    sendExcessesTo: c.Address | null
+}
+
+export const LocationUnregisterCity = {
+    PREFIX: 0x000010a5,
+
+    create(args: {
+        queryId: uint64
+        ownerAddress: c.Address
+        cityName: string
+        sendExcessesTo: c.Address | null
+    }): LocationUnregisterCity {
+        return {
+            $: 'LocationUnregisterCity',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): LocationUnregisterCity {
+        loadAndCheckPrefix32(s, 0x000010a5, 'LocationUnregisterCity');
+        return {
+            $: 'LocationUnregisterCity',
+            queryId: s.loadUintBig(64),
+            ownerAddress: s.loadAddress(),
+            cityName: s.loadStringRefTail(),
+            sendExcessesTo: s.loadMaybeAddress(),
+        }
+    },
+    store(self: LocationUnregisterCity, b: c.Builder): void {
+        b.storeUint(0x000010a5, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.ownerAddress);
+        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.sendExcessesTo);
+    },
+    toCell(self: LocationUnregisterCity): c.Cell {
+        return makeCellFrom<LocationUnregisterCity>(self, LocationUnregisterCity.store);
     }
 }
 
@@ -1222,100 +1482,12 @@ export const AdminHandoff = {
 }
 
 /**
- > struct (0x11111111) EnterLottery {
- >     sender: address
- >     amount: coins
- > }
- */
-export interface EnterLottery {
-    readonly $: 'EnterLottery'
-    sender: c.Address
-    amount: coins
-}
-
-export const EnterLottery = {
-    PREFIX: 0x11111111,
-
-    create(args: {
-        sender: c.Address
-        amount: coins
-    }): EnterLottery {
-        return {
-            $: 'EnterLottery',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): EnterLottery {
-        loadAndCheckPrefix32(s, 0x11111111, 'EnterLottery');
-        return {
-            $: 'EnterLottery',
-            sender: s.loadAddress(),
-            amount: s.loadCoins(),
-        }
-    },
-    store(self: EnterLottery, b: c.Builder): void {
-        b.storeUint(0x11111111, 32);
-        b.storeAddress(self.sender);
-        b.storeCoins(self.amount);
-    },
-    toCell(self: EnterLottery): c.Cell {
-        return makeCellFrom<EnterLottery>(self, EnterLottery.store);
-    }
-}
-
-/**
- > struct (0x22222222) LotteryWin {
- >     entryAmount: coins
- >     amt: coins
- >     winner: address
- > }
- */
-export interface LotteryWin {
-    readonly $: 'LotteryWin'
-    entryAmount: coins
-    amt: coins
-    winner: c.Address
-}
-
-export const LotteryWin = {
-    PREFIX: 0x22222222,
-
-    create(args: {
-        entryAmount: coins
-        amt: coins
-        winner: c.Address
-    }): LotteryWin {
-        return {
-            $: 'LotteryWin',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): LotteryWin {
-        loadAndCheckPrefix32(s, 0x22222222, 'LotteryWin');
-        return {
-            $: 'LotteryWin',
-            entryAmount: s.loadCoins(),
-            amt: s.loadCoins(),
-            winner: s.loadAddress(),
-        }
-    },
-    store(self: LotteryWin, b: c.Builder): void {
-        b.storeUint(0x22222222, 32);
-        b.storeCoins(self.entryAmount);
-        b.storeCoins(self.amt);
-        b.storeAddress(self.winner);
-    },
-    toCell(self: LotteryWin): c.Cell {
-        return makeCellFrom<LotteryWin>(self, LotteryWin.store);
-    }
-}
-
-/**
  > struct FiCodes {
  >     totalAccounts: uint33
  >     lotteryCode: cell?
  >     latestFiWalletCode: cell?
  >     currentRequest: Cell<CurrentRequest>?
+ >     locationAddrs: map<uint8, address>
  > }
  */
 export interface FiCodes {
@@ -1324,6 +1496,7 @@ export interface FiCodes {
     lotteryCode: c.Cell | null /* = null */
     latestFiWalletCode: c.Cell | null /* = null */
     currentRequest: CellRef<CurrentRequest> | null /* = null */
+    locationAddrs: c.Dictionary<uint8, c.Address> /* = [] as map<uint8, address> */
 }
 
 export const FiCodes = {
@@ -1332,6 +1505,7 @@ export const FiCodes = {
         lotteryCode?: c.Cell | null /* = null */
         latestFiWalletCode?: c.Cell | null /* = null */
         currentRequest?: CellRef<CurrentRequest> | null /* = null */
+        locationAddrs: c.Dictionary<uint8, c.Address> /* = [] as map<uint8, address> */
     }): FiCodes {
         return {
             $: 'FiCodes',
@@ -1349,6 +1523,10 @@ export const FiCodes = {
             lotteryCode: s.loadBoolean() ? s.loadRef() : null,
             latestFiWalletCode: s.loadBoolean() ? s.loadRef() : null,
             currentRequest: s.loadBoolean() ? loadCellRef<CurrentRequest>(s, CurrentRequest.fromSlice) : null,
+            locationAddrs: c.Dictionary.load<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
+                (s) => s.loadAddress(),
+                (v,b) => b.storeAddress(v)
+            ), s),
         }
     },
     store(self: FiCodes, b: c.Builder): void {
@@ -1362,6 +1540,10 @@ export const FiCodes = {
         storeTolkNullable<CellRef<CurrentRequest>>(self.currentRequest, b,
             (v,b) => storeCellRef<CurrentRequest>(v, b, CurrentRequest.store)
         );
+        b.storeDict<uint8, c.Address>(self.locationAddrs, c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
+            (s) => s.loadAddress(),
+            (v,b) => b.storeAddress(v)
+        ));
     },
     toCell(self: FiCodes): c.Cell {
         return makeCellFrom<FiCodes>(self, FiCodes.store);
@@ -1373,6 +1555,7 @@ export const FiCodes = {
  >     totalSupply: coins
  >     walletVersion: uint10
  >     adminAddress: address
+ >     daoAddress: address?
  >     adminHandoff: Cell<AdminHandoff>?
  >     metadata: cell
  >     others: Cell<FiCodes>
@@ -1383,6 +1566,7 @@ export interface FiStore {
     totalSupply: coins /* = 0 */
     walletVersion: uint10 /* = 0 */
     adminAddress: c.Address
+    daoAddress: c.Address | null /* = null */
     adminHandoff: CellRef<AdminHandoff> | null /* = null */
     metadata: c.Cell
     others: CellRef<FiCodes>
@@ -1393,6 +1577,7 @@ export const FiStore = {
         totalSupply?: coins /* = 0 */
         walletVersion?: uint10 /* = 0 */
         adminAddress: c.Address
+        daoAddress?: c.Address | null /* = null */
         adminHandoff?: CellRef<AdminHandoff> | null /* = null */
         metadata: c.Cell
         others: CellRef<FiCodes>
@@ -1401,6 +1586,7 @@ export const FiStore = {
             $: 'FiStore',
             totalSupply: 0n,
             walletVersion: 0n,
+            daoAddress: null,
             adminHandoff: null,
             ...args
         }
@@ -1411,6 +1597,7 @@ export const FiStore = {
             totalSupply: s.loadCoins(),
             walletVersion: s.loadUintBig(10),
             adminAddress: s.loadAddress(),
+            daoAddress: s.loadMaybeAddress(),
             adminHandoff: s.loadBoolean() ? loadCellRef<AdminHandoff>(s, AdminHandoff.fromSlice) : null,
             metadata: s.loadRef(),
             others: loadCellRef<FiCodes>(s, FiCodes.fromSlice),
@@ -1420,6 +1607,7 @@ export const FiStore = {
         b.storeCoins(self.totalSupply);
         b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.adminAddress);
+        b.storeAddress(self.daoAddress);
         storeTolkNullable<CellRef<AdminHandoff>>(self.adminHandoff, b,
             (v,b) => storeCellRef<AdminHandoff>(v, b, AdminHandoff.store)
         );
@@ -1428,6 +1616,95 @@ export const FiStore = {
     },
     toCell(self: FiStore): c.Cell {
         return makeCellFrom<FiStore>(self, FiStore.store);
+    }
+}
+
+/**
+ > struct (0x00001198) EnterLottery {
+ >     sender: address
+ >     amount: coins
+ > }
+ */
+export interface EnterLottery {
+    readonly $: 'EnterLottery'
+    sender: c.Address
+    amount: coins
+}
+
+export const EnterLottery = {
+    PREFIX: 0x00001198,
+
+    create(args: {
+        sender: c.Address
+        amount: coins
+    }): EnterLottery {
+        return {
+            $: 'EnterLottery',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): EnterLottery {
+        loadAndCheckPrefix32(s, 0x00001198, 'EnterLottery');
+        return {
+            $: 'EnterLottery',
+            sender: s.loadAddress(),
+            amount: s.loadCoins(),
+        }
+    },
+    store(self: EnterLottery, b: c.Builder): void {
+        b.storeUint(0x00001198, 32);
+        b.storeAddress(self.sender);
+        b.storeCoins(self.amount);
+    },
+    toCell(self: EnterLottery): c.Cell {
+        return makeCellFrom<EnterLottery>(self, EnterLottery.store);
+    }
+}
+
+/**
+ > struct (0x00001199) LotteryWin {
+ >     entryAmount: coins
+ >     amt: coins
+ >     winner: address
+ > }
+ */
+export interface LotteryWin {
+    readonly $: 'LotteryWin'
+    entryAmount: coins
+    amt: coins
+    winner: c.Address
+}
+
+export const LotteryWin = {
+    PREFIX: 0x00001199,
+
+    create(args: {
+        entryAmount: coins
+        amt: coins
+        winner: c.Address
+    }): LotteryWin {
+        return {
+            $: 'LotteryWin',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): LotteryWin {
+        loadAndCheckPrefix32(s, 0x00001199, 'LotteryWin');
+        return {
+            $: 'LotteryWin',
+            entryAmount: s.loadCoins(),
+            amt: s.loadCoins(),
+            winner: s.loadAddress(),
+        }
+    },
+    store(self: LotteryWin, b: c.Builder): void {
+        b.storeUint(0x00001199, 32);
+        b.storeCoins(self.entryAmount);
+        b.storeCoins(self.amt);
+        b.storeAddress(self.winner);
+    },
+    toCell(self: LotteryWin): c.Cell {
+        return makeCellFrom<LotteryWin>(self, LotteryWin.store);
     }
 }
 
@@ -1487,12 +1764,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class FossFi implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
         'Errors.InvalidOp': 72,
-        'Errors.NotOwner': 73,
         'Errors.NotValidWallet': 74,
         'Errors.WrongWorkchain': 333,
         'Errors.IncorrectSender': 700,
@@ -1515,6 +1791,7 @@ export class FossFi implements c.Contract {
         totalSupply?: coins /* = 0 */
         walletVersion?: uint10 /* = 0 */
         adminAddress: c.Address
+        daoAddress?: c.Address | null /* = null */
         adminHandoff?: CellRef<AdminHandoff> | null /* = null */
         metadata: c.Cell
         others: CellRef<FiCodes>
@@ -1579,6 +1856,20 @@ export class FossFi implements c.Contract {
         return ChangeMinterMetadata.toCell(ChangeMinterMetadata.create(body));
     }
 
+    static createCellOfSetLocationAddresses(body: {
+        queryId: uint64
+        locationAddrs: c.Dictionary<uint8, c.Address>
+    }) {
+        return SetLocationAddresses.toCell(SetLocationAddresses.create(body));
+    }
+
+    static createCellOfChangeDaoAddress(body: {
+        queryId: uint64
+        newDaoAddress: c.Address | null
+    }) {
+        return ChangeDaoAddress.toCell(ChangeDaoAddress.create(body));
+    }
+
     static createCellOfTopUpTons(body: {
     }) {
         return TopUpTons.toCell(TopUpTons.create());
@@ -1588,9 +1879,19 @@ export class FossFi implements c.Contract {
         queryId: uint64
         sender: c.Address
         invitor: c.Address
-        id: string
+        username: string
+        city: string
     }) {
         return InformMinterInviteInternal.toCell(InformMinterInviteInternal.create(body));
+    }
+
+    static createCellOfInformMinterChangeCity(body: {
+        queryId: uint64
+        owner: c.Address
+        oldCity: string
+        newCity: string
+    }) {
+        return InformMinterChangeCity.toCell(InformMinterChangeCity.create(body));
     }
 
     static createCellOfRequestUpgradeCode(body: {
@@ -1735,6 +2036,28 @@ export class FossFi implements c.Contract {
         });
     }
 
+    async sendSetLocationAddresses(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        locationAddrs: c.Dictionary<uint8, c.Address>
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: SetLocationAddresses.toCell(SetLocationAddresses.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendChangeDaoAddress(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        newDaoAddress: c.Address | null
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: ChangeDaoAddress.toCell(ChangeDaoAddress.create(body)),
+            ...extraOptions
+        });
+    }
+
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -1748,11 +2071,25 @@ export class FossFi implements c.Contract {
         queryId: uint64
         sender: c.Address
         invitor: c.Address
-        id: string
+        username: string
+        city: string
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
             body: InformMinterInviteInternal.toCell(InformMinterInviteInternal.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendInformMinterChangeCity(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        owner: c.Address
+        oldCity: string
+        newCity: string
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: InformMinterChangeCity.toCell(InformMinterChangeCity.create(body)),
             ...extraOptions
         });
     }
@@ -1858,12 +2195,15 @@ export class FossFi implements c.Contract {
     }
 
     async getJettonDataAll(provider: ContractProvider): Promise<FiStore> {
-        const r = StackReader.fromGetMethod(6, await provider.get('get_jetton_data_all', []));
+        const r = StackReader.fromGetMethod(7, await provider.get('get_jetton_data_all', []));
         return ({
             $: 'FiStore',
             totalSupply: r.readBigInt(),
             walletVersion: r.readBigInt(),
             adminAddress: r.readSlice().loadAddress(),
+            daoAddress: r.readNullable<c.Address>(
+                (r) => r.readSlice().loadAddress()
+            ),
             adminHandoff: r.readNullable<CellRef<AdminHandoff>>(
                 (r) => r.readCellRef<AdminHandoff>(AdminHandoff.fromSlice)
             ),
@@ -1879,5 +2219,29 @@ export class FossFi implements c.Contract {
             ) },
         ]));
         return r.readSlice().loadAddress();
+    }
+
+    async getLocationAddress(provider: ContractProvider, cityName: string): Promise<c.Address | null> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_location_address', [
+            { type: 'cell', cell: beginCell().storeStringTail(cityName).endCell() },
+        ]));
+        return r.readNullable<c.Address>(
+            (r) => r.readSlice().loadAddress()
+        );
+    }
+
+    async getLocationAddresses(provider: ContractProvider): Promise<c.Dictionary<uint8, c.Address>> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_location_addresses', []));
+        return r.readDictionary<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
+            (s) => s.loadAddress(),
+            (v,b) => b.storeAddress(v)
+        ));
+    }
+
+    async getDaoAddress(provider: ContractProvider): Promise<c.Address | null> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_dao_address', []));
+        return r.readNullable<c.Address>(
+            (r) => r.readSlice().loadAddress()
+        );
     }
 }

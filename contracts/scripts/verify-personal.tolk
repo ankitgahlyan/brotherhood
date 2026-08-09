@@ -49,7 +49,8 @@ fun activateIssuer(
             inviterOwner,
             0,
             issuer,
-            "user@lat,long",
+            "issuer_user",
+            "Tokyo",
             { value: ton("1") },
         );
     invite.waitForFirstTransaction();

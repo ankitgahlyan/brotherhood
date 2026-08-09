@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, storeStateInit, toNano } from '@ton/core';
+import { Address, beginCell, Cell, Dictionary, storeStateInit, toNano } from '@ton/core';
 import {
   FossFi,
   MintNewJettons,
@@ -24,7 +24,7 @@ import {
   SetAllowance,
   SpendAllowance,
 } from '@wrappers/FossFiWallet.gen';
-import { Personal } from '@wrappers/Personal.gen';
+import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   buildOnchainMetadata,
@@ -49,7 +49,7 @@ export async function buildDeployMessage(params: {
     adminAddress: params.ownerAddress,
     metadata: content,
     others: {
-      ref: FiCodes.create({}),
+      ref: FiCodes.create({ locationAddrs: Dictionary.empty() }),
     },
   });
 
@@ -141,7 +141,7 @@ export async function buildPersonalMinterDeploy(params: {
     .endCell();
 
   const stateInit = {
-    code: Personal.CodeCell,
+    code: PersonalMinter.CodeCell,
     data,
   };
   const contractAddress = new Address(
@@ -216,15 +216,17 @@ export function buildTransferBody(params: {
 
 export function buildInviteBody(params: {
   transferRecipient: Address;
-  id?: string;
+  username?: string;
+  city?: string;
   queryId?: bigint;
 }): Cell {
-  const { transferRecipient, id = '', queryId = 0n } = params;
+  const { transferRecipient, username = '', city = '', queryId = 0n } = params;
   return ActInvite.toCell(
     ActInvite.create({
       queryId,
       transferRecipient,
-      id,
+      username,
+      city,
     }),
   );
 }

@@ -78,7 +78,10 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     val heavyStore = FiWalletStore {
         jettonBalance: ton("100000"),
         goldCoins: 1000,
-        id: "user@example.com,{40.7128,-74.0060}",
+        profile: ProfileInfo {
+            username: "user@example.com",
+            city: "New York",
+        }.toCell(),
         txnCount: 255,
         status: 3,
         isAuthorityAccount: true,

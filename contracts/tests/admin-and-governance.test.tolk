@@ -399,6 +399,75 @@ get fun `test shard: wallet address should keep owner shard prefix in get/discov
     }
 }
 
+get fun `test admin: admin or dao can set daoAddress and dao can perform privileged actions`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val dao = testing.treasury("dao-account");
+
+    expect(minter.getDaoAddress()).toBeNull();
+
+    val changeDaoResult = minter.sendChangeDaoAddress(
+        deployer.address,
+        0,
+        dao.address,
+        { value: ton("0.1") },
+    );
+    expect(changeDaoResult).toNotHaveTx({ bounced: true });
+    expect(minter.getDaoAddress()).toEqual(dao.address);
+
+    val mintAmount = ton("50");
+    val daoMintResult = minter.sendMintNewJettons(
+        dao.address,
+        0,
+        notDeployer.address,
+        ton("0.1"),
+        InternalTransferStep {
+            queryId: 0,
+            jettonAmount: mintAmount,
+            version: 0,
+            transferredAsCredit: false,
+            transferInitiator: dao.address,
+            sendExcessesTo: dao.address,
+            forwardTonAmount: 0,
+            forwardPayload: createEmptyCell().beginParse(),
+        },
+        { value: ton("0.2") },
+    );
+    expect(daoMintResult).toNotHaveTx({ bounced: true });
+
+    val newDao = testing.treasury("new-dao-account");
+    val daoChangeResult = minter.sendChangeDaoAddress(
+        dao.address,
+        0,
+        newDao.address,
+        { value: ton("0.1") },
+    );
+    expect(daoChangeResult).toNotHaveTx({ bounced: true });
+    expect(minter.getDaoAddress()).toEqual(newDao.address);
+
+    val unauthorizedMintResult = minter.sendMintNewJettons(
+        notDeployer.address,
+        0,
+        notDeployer.address,
+        ton("0.1"),
+        InternalTransferStep {
+            queryId: 0,
+            jettonAmount: mintAmount,
+            version: 0,
+            transferredAsCredit: false,
+            transferInitiator: notDeployer.address,
+            sendExcessesTo: notDeployer.address,
+            forwardTonAmount: 0,
+            forwardPayload: createEmptyCell().beginParse(),
+        },
+        { value: ton("0.2") },
+    );
+    expect(unauthorizedMintResult).toHaveTx({
+        from: notDeployer.address,
+        to: minter.address,
+        exitCode: Errors.NotOwner,
+    });
+}
+
 fun extractUriString(contentCell: cell): string? {
     val metadata = OnchainMetadataReply.fromCell(contentCell);
     val uriCell = metadata.contentDict.get("uri".sha256());

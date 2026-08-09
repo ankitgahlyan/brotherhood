@@ -15,7 +15,8 @@ type AllowedMessageToWallet =
     | AskToBurn
     | BuyCredit
     | AuthorityAction
-    | ChangeId
+    | ChangeUsername
+    | ChangeCity
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
@@ -103,6 +104,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
 fun onInternalMessage(in: InMessage): void {
     val msg = lazy AllowedMessageToWallet.fromSlice(in.body);
     var store = lazy FiWalletStore.load();
+    var profile = lazy store.profile.load();
     var time = lazy store.timestamps.load();
     var addrs = lazy store.addresses.load();
     var trustedAddrs = lazy addrs.trustedJettonAddrs.load();
@@ -110,15 +112,36 @@ fun onInternalMessage(in: InMessage): void {
     var nomins = lazy addrs.nomInAddrs.load();
 
     match (msg) {
-        ChangeId => {
-            assert (
-                in.valueCoins > ton("0.5")
-            ) throw Errors.NotEnoughGas;                                   // todo : bench and update
-            // alternate to assert
+        ChangeUsername => {
+            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
-            store.id = msg.newId;
+            profile.username = msg.newUsername;
+        }
+
+        ChangeCity => {
+            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
+            if (in.senderAddress != addrs.owner) {
+                throw Errors.IncorrectSender;
+            }
+            val oldCity = profile.city;
+            profile.city = msg.newCity;
+
+            val notifyMinterMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: InformMinterChangeCity {
+                    queryId: msg.queryId,
+                    owner: addrs.owner,
+                    oldCity,
+                    newCity: msg.newCity,
+                },
+            });
+            notifyMinterMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
         }
 
         ActClaimWeeklyGrant => {
@@ -197,7 +220,8 @@ fun onInternalMessage(in: InMessage): void {
                     invitor: nomins.invitor!, // todo null for dead?
                     currentWalletCode: contract.getCode(),
                     currentStorage: null,
-                    id: msg.id,
+                    username: msg.username,
+                    city: msg.city,
                 },
             });
             inviteInternal.send(
@@ -503,8 +527,8 @@ fun onInternalMessage(in: InMessage): void {
             if (time.accountInit == 0) {
                 time.accountInit = blockchain.now();
                 nomins.nominee = in.senderAddress; // must be null at init
-                // addrs.id = msg.forwardPayload.toCell();
-                store.id = msg.id;                 // for future use, can be empty
+                profile.username = msg.username;
+                profile.city = msg.city;
 
                 if (msg.version > store.version) {
                     store.version = msg.version;
@@ -530,7 +554,8 @@ fun onInternalMessage(in: InMessage): void {
                     queryId: msg.queryId,
                     sender: addrs.owner, // different for mint for addr calc
                     invitor: msg.sender, // just invitor not invitor0
-                    id: msg.id,          // for broadcast, ledger update
+                    username: msg.username,
+                    city: msg.city,
                 },
             });
             notifyMinterMsg.send(
@@ -894,6 +919,7 @@ fun onInternalMessage(in: InMessage): void {
 
     addrs.nomInAddrs = nomins.toCell();
     addrs.trustedJettonAddrs = trustedAddrs.toCell();
+    store.profile = profile.toCell();
     store.timestamps = time.toCell();
     store.addresses = addrs.toCell();
     store.maps = maps.toCell();
@@ -916,7 +942,14 @@ get fun get_wallet_data_all(): FiWalletStore {
     return FiWalletStore.load();
 }
 
-get fun get_id(): string {
+get fun get_username(): string {
     val store = lazy FiWalletStore.load();
-    return store.id;
+    val profile = lazy store.profile.load();
+    return profile.username;
+}
+
+get fun get_city(): string {
+    val store = lazy FiWalletStore.load();
+    val profile = lazy store.profile.load();
+    return profile.city;
 }
