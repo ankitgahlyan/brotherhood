@@ -16,3 +16,7 @@ struct (0x00001199) LotteryWin {
 struct (0x0000119a) DrawWinner {
     queryId: uint64
 }
+
+struct (0x0000119b) UpgradeLotteryCode {
+    newCode: cell
+}

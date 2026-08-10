@@ -1,5 +1,7 @@
 import "@acton/emulation/scripts"
+
 import "@wrappers/FossFi.gen"
+
 import "utils/common"
 
 fun main() {

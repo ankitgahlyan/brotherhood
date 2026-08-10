@@ -13,7 +13,7 @@ fun makeInternalTransferStep(
     version: uint10 = 0,
     transferredAsCredit: bool = false,
 ): Cell<InternalTransferStep> {
-    val payload = forwardPayload != null ? forwardPayload : createEmptySlice();
+    val payload = forwardPayload != null ? forwardPayload : beginCell().storeUint(0, 1).toSlice();
     return InternalTransferStep {
         queryId,
         jettonAmount,

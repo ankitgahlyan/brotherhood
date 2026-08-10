@@ -9,6 +9,7 @@ import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+
 import "test-utils"
 
 get fun `test validation: malformed forward payload should be rejected`() {

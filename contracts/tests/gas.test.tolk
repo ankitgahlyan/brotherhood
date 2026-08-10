@@ -1,4 +1,5 @@
 import "@stdlib/gas-payments"
+
 import "@acton/emulation/config"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
@@ -10,6 +11,7 @@ import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
+
 import "test-utils"
 
 get fun `test gas: transfer minimal value edge`() {

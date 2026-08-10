@@ -17,7 +17,7 @@ struct TrustedAddrs {
 struct Addresses {
     owner: address // todo: store pubKey+acceptExternalMsg for direct msg to receiver(socialRecovery?)
     treasury: address
-    baseFiWalletCode: cell
+    // baseFiWalletCode: cell
     nomInAddrs: Cell<NomInAddrs>
     trustedJettonAddrs: Cell<TrustedAddrs>
     // others: Cell<FiWalletCodes>
@@ -25,10 +25,10 @@ struct Addresses {
 
 struct FiCodes {
     totalAccounts: uint33 = 0
-    lotteryCode: cell? = null
-    latestFiWalletCode: cell? = null
+    lotteryCode: cell
+    latestFiWalletCode: cell
     currentRequest: Cell<CurrentRequest>? = null
-    locationAddrs: map<uint8, address> = []
+    locationAddrs: map<uint8, address>? = null
 }
 
 struct SocialMaps {

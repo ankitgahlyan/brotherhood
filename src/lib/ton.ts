@@ -88,7 +88,7 @@ export async function getWalletAddress( // todo: calc offchain
   //         ref: Addresses.create({
   //           owner: ownerAddress,
   //           treasury: ownerAddress,
-  //           baseFiWalletCode: fossFiWalletCompiledCode(),
+  //           baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
   //           nomInAddrs: {
   //             ref: NomInAddrs.create({})},
   //           trustedJettonAddrs: {

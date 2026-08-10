@@ -1,9 +1,12 @@
 import "@stdlib/tvm-lowlevel"
+
+import "@gen/DaoVoter.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+import "@contracts/dao/dao-utils"
 import "@contracts/followers/messages"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
@@ -21,6 +24,7 @@ type AllowedMessageToWallet =
     | InternalInvite
     | InternalDeActivate
     | ActAction // owner-initiated actions (invite, vote, claim, lottery, destroy, ...)
+    | ActVoteProposal
     | Payback
     | RequestState
     | RequestUpgradeCode
@@ -137,6 +141,8 @@ fun onInternalMessage(in: InMessage): void {
                     owner: addrs.owner,
                     oldCity,
                     newCity: msg.newCity,
+                    oldCityLetter: msg.oldCityLetter,
+                    newCityLetter: msg.newCityLetter,
                 },
             });
             notifyMinterMsg.send(
@@ -209,7 +215,7 @@ fun onInternalMessage(in: InMessage): void {
                     msg.transferRecipient,
                     addrs.treasury,
                     trustedAddrs.minterAddr,
-                    addrs.baseFiWalletCode,
+                    contract.getCode(), // todo: fixme: change to fossFiWalletCompiledCodeLibraryRef() after first upgrade at all places to avoid storage costs and now it creates a curcular dep
                 ),
                 // deploy in invite + standalone for idLess accounts
                 value: 0,
@@ -222,6 +228,7 @@ fun onInternalMessage(in: InMessage): void {
                     currentStorage: null,
                     username: msg.username,
                     city: msg.city,
+                    cityLetter: msg.cityLetter,
                 },
             });
             inviteInternal.send(
@@ -556,6 +563,7 @@ fun onInternalMessage(in: InMessage): void {
                     invitor: msg.sender, // just invitor not invitor0
                     username: msg.username,
                     city: msg.city,
+                    cityLetter: msg.cityLetter,
                 },
             });
             notifyMinterMsg.send(
@@ -604,18 +612,18 @@ fun onInternalMessage(in: InMessage): void {
 
         // for granular control
         SetStatus => {
-            // todo fixme : check correct sender
+            assert (
+                (trustedAddrs.authorisedAccs.exists(in.senderAddress)) | (in.senderAddress == trustedAddrs.minterAddr)
+            ) throw Errors.IncorrectSender;
             store.status = msg.status;
         }
 
         RequestUpgradeCode => {
-            // todo: need? this check
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             sendUpgrade(in.senderAddress, addrs.owner, store.version);
         }
 
         Upgrade => {
-            // todo: acc active is checked, need this for upgrades?
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             if (store.version < msg.walletVersion) {
                 // ignore if manually upgraded
@@ -625,24 +633,6 @@ fun onInternalMessage(in: InMessage): void {
                 setTvmRegisterC3(transformSliceToContinuation(msg.newCode!.beginParse()));
                 // any migration logic
                 hotUpgradeFiWalletData(msg.newData);
-
-                // send upgrade to all invitees
-                val invitees = maps.invited;
-                var invitee = invitees.findFirst();
-                while (invitee.isFound) {
-                    // ...
-                    val upgradeMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        value: ton("0.1"),
-                        dest: invitee.getKey(),
-                        body: msg, // same upgrade msg
-                    });
-                    upgradeMsg.send(
-                        SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS,
-                    ); // todo: fees mode & enough grams remaining or fund more
-
-                    invitee = invitees.iterateNext(invitee);
-                }
             }
         }
 
@@ -652,6 +642,55 @@ fun onInternalMessage(in: InMessage): void {
             if (addrs.owner != addrs.treasury) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
             }
+        }
+
+        ActSubmitProposal => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (store.active) throw Errors.AccountInactive;
+            val proposalFee = ton("1000");
+            assert (store.jettonBalance >= proposalFee) throw Errors.ProposalFeeInsufficient;
+
+            store.jettonBalance -= proposalFee;
+
+            val forwardSubmitMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: msg.daoAddress,
+                body: SubmitProposal {
+                    queryId: msg.queryId,
+                    proposerOwner: addrs.owner,
+                    targetMsg: msg.targetMsg,
+                },
+            });
+            forwardSubmitMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
+        }
+
+        ActVoteProposal => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (store.active) throw Errors.AccountInactive;
+
+            val voterChild = calcDeployDaoVoter(
+                addrs.owner,
+                msg.daoAddress,
+                daoVoterCompiledCodeLibraryRef(),
+            );
+
+            val forwardVoteMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: voterChild,
+                value: 0,
+                body: VoteProposalChild {
+                    queryId: msg.queryId,
+                    proposalId: msg.proposalId,
+                    voterOwner: addrs.owner,
+                    vote: msg.vote,
+                },
+            });
+            forwardVoteMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
         }
 
         AskToBurn => {
@@ -934,7 +973,7 @@ get fun get_wallet_data(): JettonWalletDataReply {
         jettonBalance: store.jettonBalance,
         ownerAddress: addrs.owner,
         minterAddress: addrs.trustedJettonAddrs.load().minterAddr,
-        jettonWalletCode: addrs.baseFiWalletCode, // embeded init code
+        jettonWalletCode: contract.getCode(),
     };
 }
 

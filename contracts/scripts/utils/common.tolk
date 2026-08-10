@@ -1,4 +1,5 @@
 import "@stdlib/strings"
+
 import "@acton/build"
 import "@acton/env"
 import "@acton/fmt"
@@ -6,11 +7,13 @@ import "@acton/io"
 import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
+
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
+import "@contracts/location/Location"
 
 const FI_ADDRESS = "kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT"
 const JETTON_DEFAULT_NAME = "BroTherHOOD"
@@ -118,6 +121,54 @@ fun buildJettonMetadataCell(info: JettonMetadata): cell {
     return metadata.toCell();
 }
 
+fun buildLocationAddrsMap(minterAddress: address): map<uint8, address> {
+    val locationCode = build("Location");
+    val cityMapCode = build("CityMap");
+    var locationAddrs: map<uint8, address> = [];
+
+    val loc0StateInit = ContractState {
+        code: locationCode,
+        data: (LocationStore {
+            letterKey: 0,
+            version: 0,
+            cityMapVersion: 0,
+            minterAddress,
+            cityMapCode,
+            cities: [],
+        }).toCell(),
+    };
+    val loc0Addr = AutoDeployAddress {
+        workchain: BASECHAIN,
+        stateInit: loc0StateInit,
+        toShard: null,
+    }.calculateAddress();
+    locationAddrs.set(0, loc0Addr);
+
+    var letter: uint8 = 65;
+    while (letter <= 90) {
+        val locStateInit = ContractState {
+            code: locationCode,
+            data: (LocationStore {
+                letterKey: letter,
+                version: 0,
+                cityMapVersion: 0,
+                minterAddress,
+                cityMapCode,
+                cities: [],
+            }).toCell(),
+        };
+        val locAddr = AutoDeployAddress {
+            workchain: BASECHAIN,
+            stateInit: locStateInit,
+            toShard: null,
+        }.calculateAddress();
+        locationAddrs.set(letter, locAddr);
+        letter += 1;
+    }
+
+    return locationAddrs;
+}
+
 fun promptJettonMinterStorage(admin: address): FiStore {
     return {
         totalSupply: promptJettonCoins(
@@ -130,8 +181,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
             lotteryCode: build("Lottery"),
-            latestFiWalletCode: null,
-            currentRequest: null,
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     };
 }

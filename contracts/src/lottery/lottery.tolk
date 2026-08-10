@@ -1,6 +1,8 @@
-import "@stdlib/common"
 import "@stdlib/tvm-lowlevel"
+
+import "@contracts/common/errors"
 import "@contracts/common/messages"
+
 import "consts"
 import "messages"
 import "storage"
@@ -32,15 +34,15 @@ fun onInternalMessage(in: InMessage) {
     match (msg) {
         EnterLottery => {
             // correct sender
-            assert (in.senderAddress == storage.owner) throw 700; // todo: incorrectSender
+            assert (in.senderAddress == storage.owner) throw Errors.IncorrectSender;
 
             if (storage.revealDeadline == 0) {
                 storage.revealDeadline = blockchain.now() + REVEAL_DEADLINE_SECONDS;
             } else {
-                assert (blockchain.now() <= storage.revealDeadline) throw 201;
+                assert (blockchain.now() <= storage.revealDeadline) throw Errors.WaitMore;
             }
 
-            assert (msg.amount == storage.entryAmount) throw 202;
+            assert (msg.amount == storage.entryAmount) throw Errors.InvalidMessage;
 
             // add if not already entered
             if (!storage.participants.exists(msg.sender)) {
@@ -56,8 +58,11 @@ fun onInternalMessage(in: InMessage) {
 
         DrawWinner => {
             // Phase check
-            assert (blockchain.now() > storage.revealDeadline) throw 400;
-            assert (storage.participantCount > 0) throw 401;
+            assert (blockchain.now() > storage.revealDeadline) throw Errors.WaitMore;
+            assert (storage.participantCount > 0) throw Errors.InvalidMessage;
+
+            // Initialize PRNG for secure random winner selection
+            random.initialize();
 
             // Select winner
             val winner = selectWinner(
@@ -88,7 +93,7 @@ fun onInternalMessage(in: InMessage) {
         }
 
         HotUpgrade => {
-            assert (in.senderAddress == storage.owner) throw 700;
+            assert (in.senderAddress == storage.owner) throw Errors.IncorrectSender;
             contract.setCodePostponed(msg.code);
             // SAFETY: updating continuation register C3 for new code
             setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
@@ -97,7 +102,7 @@ fun onInternalMessage(in: InMessage) {
         }
 
         Upgrade => {
-            assert (in.senderAddress == storage.owner) throw 700;
+            assert (in.senderAddress == storage.owner) throw Errors.IncorrectSender;
             if (storage.version < msg.walletVersion) {
                 storage.version = msg.walletVersion;
                 if (msg.newCode != null) {

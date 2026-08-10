@@ -1,7 +1,9 @@
 import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
+
 import "@wrappers/FossFi.gen"
+
 import "utils/common"
 
 fun main() {
@@ -12,7 +14,7 @@ fun main() {
         "JETTON_WALLET_UPGRADE",
     );
 
-    // val newCode = walletUpgrade ? fossFiWalletCompiledCode() : fossFiCompiledCode();
+    // val newCode = walletUpgrade ? fossFiWalletCompiledCodeLibraryRef() : fossFiCompiledCode();
     val newCode = walletUpgrade ? build("fossFiWallet") : build("fossFi");
 
     val res = minter.sendUpgrade(

@@ -2,10 +2,12 @@ import "@acton/build"
 import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
+
 import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@contracts/personalMinter/storage"
+
 import "utils/common"
 
 fun main() {

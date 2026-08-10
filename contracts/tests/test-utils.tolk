@@ -1,4 +1,5 @@
 import "@stdlib/strings"
+
 import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
@@ -6,14 +7,22 @@ import "@acton/testing/expect"
 import "@acton/types/big_array"
 import "@acton/types/out_actions"
 import "@acton/types/transaction"
+
+import "@gen/CityMap.code"
+import "@gen/DaoVoter.code"
 import "@gen/FossFiWallet.code"
+import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/Location.gen"
+import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+import "@contracts/location/Location"
+import "@contracts/lottery/storage"
 
 fun buildTestMetadata(uri: string): cell {
     var metadata: OnchainMetadataReply = { contentDict: [] };
@@ -111,6 +120,7 @@ fun activateUser(
         invitee,
         "user1",
         "Tokyo",
+        20, // for T
         { value: ton("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
@@ -168,7 +178,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
             addresses: Addresses {
                 owner: owner.address,
                 treasury: owner.address,
-                baseFiWalletCode: fossFiWalletCompiledCode(),
+                // baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
                 nomInAddrs: NomInAddrs {}.toCell(),
                 trustedJettonAddrs: TrustedAddrs {
                     minterAddr: minter.address,
@@ -247,22 +257,82 @@ fun hasSetCodeAction(res: SendResultList, account: address): bool {
     return false;
 }
 
+fun buildLocationAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
+    val cityMapCode = cityMapCompiledCodeLibraryRef();
+    var locationAddrs: map<uint8, address> = [];
+
+    var letter: uint8 = 0;
+    while (letter <= 26) {
+        val loc = Location.fromStorage({
+            letterKey: letter,
+            version: 0,
+            cityMapVersion: 0,
+            minterAddress,
+            cityMapCode,
+            cities: [],
+        });
+
+        loc.deploy(deployer, { value: ton("0.5") });
+        locationAddrs.set(letter, loc.address);
+        letter += 1;
+    }
+
+    return locationAddrs;
+}
+
+fun buildLotteryAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
+    var lotteryAddrs: map<uint8, address> = [];
+    var entryFees = [
+        1000,
+        500,
+        200,
+        100,
+        50,
+        20,
+        10,
+    ];
+    val entryAmount = entryFees.pop();
+    while (entryAmount != 0) {
+        val loc = Lottery.fromStorage({
+            entryAmount,
+            owner: minterAddress,
+            participants: [],
+        });
+
+        loc.deploy(deployer, { value: ton("0.5") });
+        lotteryAddrs.set(entryAmount, loc.address);
+    }
+
+    return lotteryAddrs;
+}
+
 fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     val deployer = testing.treasury("deployer");
     val notDeployer = testing.treasury("notDeployer");
+
+    testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
+    testing.registerLibrary(cityMapCompiledCodeLibraryRef());
+    testing.registerLibrary(daoVoterCompiledCodeLibraryRef());
 
     val minter = FossFi.fromStorage({
         totalSupply: initialSupply,
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
-        others: FiCodes {}.toCell(),
+        others: FiCodes {
+            lotteryCode: lotteryCompiledCode(),
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+        }.toCell(),
     });
 
     val transactions = minter.sendDeploy(deployer.address, { value: ton("10") });
     expect(transactions).toHaveSuccessfulDeploy({
         to: minter.address,
     });
+
+    val locationAddrs = buildLocationAddrsMap(minter.address, deployer.address);
+    minter.sendSetLocationAddresses(deployer.address, 1, locationAddrs);
+    val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
 
     return (minter, deployer, notDeployer);
 }

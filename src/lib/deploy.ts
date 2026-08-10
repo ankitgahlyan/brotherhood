@@ -49,7 +49,11 @@ export async function buildDeployMessage(params: {
     adminAddress: params.ownerAddress,
     metadata: content,
     others: {
-      ref: FiCodes.create({ locationAddrs: Dictionary.empty() }),
+      ref: FiCodes.create({
+        locationAddrs: Dictionary.empty(),
+        lotteryCode: Cell.EMPTY,
+        latestFiWalletCode: Cell.EMPTY,
+      }),
     },
   });
 
@@ -218,15 +222,17 @@ export function buildInviteBody(params: {
   transferRecipient: Address;
   username?: string;
   city?: string;
+  cityLetter?: number | bigint;
   queryId?: bigint;
 }): Cell {
-  const { transferRecipient, username = '', city = '', queryId = 0n } = params;
+  const { transferRecipient, username = '', city = '', cityLetter = 0, queryId = 0n } = params;
   return ActInvite.toCell(
     ActInvite.create({
       queryId,
       transferRecipient,
       username,
       city,
+      cityLetter: BigInt(cityLetter),
     }),
   );
 }

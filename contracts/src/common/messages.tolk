@@ -174,6 +174,15 @@ struct (0x0000100d) ChangeDaoAddress {
     newDaoAddress: address?
 }
 
+struct (0x0000100e) RequestTotalAccounts {
+    queryId: uint64
+}
+
+struct (0x0000100f) ResponseTotalAccounts {
+    queryId: uint64
+    totalAccounts: uint33
+}
+
 // ============================================================================
 // GROUP 2: ACCOUNT LIFECYCLE & ONBOARDING (Range: 0x00001050 - 0x0000109F)
 // Buffer: 50 reserved opcodes for future lifecycle features
@@ -184,6 +193,7 @@ struct (0x00001051) ActInvite {
     transferRecipient: address
     username: string
     city: string
+    cityLetter: uint8 = 0
 }
 
 struct (0x00001052) InternalInvite {
@@ -195,6 +205,7 @@ struct (0x00001052) InternalInvite {
     currentStorage: cell?
     username: string
     city: string
+    cityLetter: uint8 = 0
 }
 
 struct (0x00001053) InternalInviteApproval {
@@ -207,6 +218,7 @@ struct (0x00001054) InformMinterInviteInternal {
     invitor: address
     username: string
     city: string
+    cityLetter: uint8 = 0
 }
 
 struct (0x00001055) ActDeactivate {
@@ -232,6 +244,8 @@ type ActAction =
     | ActJoinLottery
     | ActSetPersonalJettonMinter
     | ActDestroyAccount
+    | ActSubmitProposal
+    | ActVoteProposal
 
 // ============================================================================
 // GROUP 3: PROFILE & LOCATION INDEXING (Range: 0x000010A0 - 0x000010EF)
@@ -245,6 +259,8 @@ struct (0x000010a1) ChangeUsername {
 struct (0x000010a2) ChangeCity {
     queryId: uint64 = 0
     newCity: string
+    oldCityLetter: uint8 = 0
+    newCityLetter: uint8 = 0
 }
 
 struct (0x000010a3) InformMinterChangeCity {
@@ -252,6 +268,8 @@ struct (0x000010a3) InformMinterChangeCity {
     owner: address
     oldCity: string
     newCity: string
+    oldCityLetter: uint8 = 0
+    newCityLetter: uint8 = 0
 }
 
 struct (0x000010a4) LocationRegisterCity {
@@ -321,6 +339,45 @@ struct (0x000010f7) TransferByAuthority {
     receiver: address
     @abi.clientType(PayloadInline | PayloadInRef)
     forwardPayload: ForwardPayloadRemainder
+}
+
+struct (0x000010fa) ActSubmitProposal {
+    queryId: uint64
+    daoAddress: address
+    targetMsg: cell
+}
+
+struct (0x000010fb) SubmitProposal {
+    queryId: uint64
+    proposerOwner: address
+    targetMsg: cell
+}
+
+struct (0x000010fc) ActVoteProposal {
+    queryId: uint64
+    daoAddress: address
+    proposalId: uint64
+    vote: bool
+}
+
+struct (0x000010fd) VoteProposalChild {
+    queryId: uint64
+    proposalId: uint64
+    voterOwner: address
+    vote: bool
+}
+
+struct (0x000010fe) VoteProposal {
+    queryId: uint64
+    proposalId: uint64
+    voterOwner: address
+    oldVote: bool?
+    newVote: bool
+}
+
+struct (0x000010ff) CleanupProposalVotes {
+    queryId: uint64
+    proposalId: uint64
 }
 
 // ============================================================================

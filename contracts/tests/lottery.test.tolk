@@ -3,6 +3,8 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
+import "@gen/FossFiWallet.code"
+import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
@@ -13,6 +15,7 @@ import "@contracts/fossFi/storage"
 import "@contracts/lottery/consts"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
+
 import "test-utils"
 
 // Realistic absolute time past the reveal deadline. Must be a future
@@ -115,7 +118,10 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
-        others: FiCodes { lotteryCode: build("Lottery") }.toCell(),
+        others: FiCodes {
+            lotteryCode: lotteryCompiledCode(),
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+        }.toCell(),
     });
 
     // empty-body deploy keeps the top-up value on the minter

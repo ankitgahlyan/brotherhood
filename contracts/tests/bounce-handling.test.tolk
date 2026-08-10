@@ -9,6 +9,7 @@ import "@wrappers/utils"
 
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+
 import "test-utils"
 
 get fun `test bounce: minter restores supply on internal_transfer bounce`() {

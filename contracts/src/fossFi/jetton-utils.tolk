@@ -3,6 +3,7 @@ import "@contracts/common/fees-management"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/lottery/messages"
+
 import "storage"
 
 fun calcDeployFiWallet(
@@ -15,7 +16,6 @@ fun calcDeployFiWallet(
         addresses: Addresses {
             owner,
             treasury,
-            baseFiWalletCode,
             nomInAddrs: NomInAddrs {}.toCell(),
             trustedJettonAddrs: TrustedAddrs {
                 minterAddr: minterAddress,
@@ -49,7 +49,7 @@ fun address.getAddrFiWallet(self): address {
         self,
         addrs.treasury,
         addrs.trustedJettonAddrs.load().minterAddr,
-        addrs.baseFiWalletCode,
+        contract.getCode(),
     ).calculateAddress();
 }
 

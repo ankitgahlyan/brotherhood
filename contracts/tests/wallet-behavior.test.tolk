@@ -4,13 +4,16 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/transaction"
+
 import "@gen/FossFiWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+
 import "test-utils"
 
 get fun `test wallet: kitchenSink`() {
@@ -27,6 +30,7 @@ get fun `test wallet: kitchenSink`() {
         notDeployer.address,
         "alice",
         "London",
+        12,
         { value: ton("1") }, // todo: bounce?
     );
     invite.giveName("inviteMsg");
@@ -123,11 +127,11 @@ get fun `test : addrs r same`() {
     val (minter, deployer, _notDeployer) = setupTest();
     val wallet = userWallet(minter, deployer.address);
 
-    val storage: FiWalletStore = FiWalletStore {
+    val _storage: FiWalletStore = FiWalletStore {
         addresses: Addresses {
             owner: deployer.address,
             treasury: deployer.address,
-            baseFiWalletCode: fossFiWalletCompiledCode(),
+            // baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
             nomInAddrs: NomInAddrs {}.toCell(),
             trustedJettonAddrs: TrustedAddrs {
                 minterAddr: minter.address,
@@ -146,10 +150,12 @@ get fun `test : addrs r same`() {
         profile: ProfileInfo {}.toCell(),
         timestamps: TimeStamps {}.toCell(),
     };
-    val calcAddr = AutoDeployAddress {
-        stateInit: walletStateInit(storage),
-        toShard: { fixedPrefixLength: 8, closeTo: deployer.address },
-    }.calculateAddress();
+    val calcAddr = calcDeployFiWallet(
+        deployer.address,
+        deployer.address,
+        minter.address,
+        fossFiWalletCompiledCodeLibraryRef(),
+    ).calculateAddress();
 
     expect(wallet.address).toEqual(calcAddr);
 }

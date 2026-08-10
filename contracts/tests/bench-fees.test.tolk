@@ -14,6 +14,7 @@ import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
+
 import "test-utils"
 
 fun maxGasOnAccount(res: SendResultList, account: address): int {
@@ -105,7 +106,6 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         addresses: Addresses {
             owner: deployer.address,
             treasury: deployer.address,
-            baseFiWalletCode: fossFiWalletCompiledCode(),
             nomInAddrs: NomInAddrs {
                 nominee: notDeployer.address,
                 invitor: notDeployer.address,
@@ -124,7 +124,7 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     val (storeCells, storeBits, _) = storeCell.calculateSizeStrict(4096);
 
     val walletInitStateCell = AutoDeployAddress {
-        stateInit: { code: fossFiWalletCompiledCode(), data: storeCell },
+        stateInit: { code: fossFiWalletCompiledCodeLibraryRef(), data: storeCell },
         toShard: { fixedPrefixLength: 8, closeTo: deployer.address },
     }.toCell();
     val (initCells, initBits, _) = walletInitStateCell.calculateSizeStrict(4096);

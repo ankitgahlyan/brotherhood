@@ -21,13 +21,14 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Treat all contracts as a coupled system. Keep storage, message formats, tests, wrappers, TypeScript wrappers, scripts, and frontend flows consistent across both sides.
 - Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them from the contract ABI instead of hand-editing them when the ABI changes.
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `src/` aligned with contract changes.
-- Prefer this validation loop when feasible: `acton fmt`, `acton check`, `acton build`, `acton test`, `bun run typecheck`, `bun run build`.
+- Prefer this validation loop when feasible: `acton check --fix`, `acton fmt`, `acton build`, `acton test`, `bun run typecheck`, `bun run build`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
 - For the Personal Token issuer onboarding flow, verify with `acton run verify-personal` (emulates deploy + wallet pointer + buy credit) before proposing a real `acton run deploy-personal`.
 - When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `bun run`, or the existing project config.
 
 #### Contract rules
 - separate struct/msg files for each contract instead of unnecessarily bloating other contracts and common file for common structs/msg
+- report any circular dependency issues
 
 ### Frontend (TanStack Start)
 

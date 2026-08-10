@@ -108,7 +108,7 @@ get fun `test allowance: grantee can spend and the allowance decrements`() {
         notDeployer.address,
         ton("4"),
         notDeployer.address,
-        deployer.address,
+        notDeployer.address,
     );
     expect(res).toHaveSuccessfulTx<SpendAllowance>({
         from: notDeployer.address,

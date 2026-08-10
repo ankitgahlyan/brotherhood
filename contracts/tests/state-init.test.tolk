@@ -10,6 +10,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
 import "@contracts/common/messages"
+
 import "test-utils"
 
 const MAX_JETTON_VALUE = ton("100000")

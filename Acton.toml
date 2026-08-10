@@ -10,17 +10,24 @@ acton = "trunk"
 [contracts.FossFi]
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
-depends = ["FossFiWallet"]
+depends = [
+    "Lottery", # small number deployed easy upgrades
+    { name = "FossFiWallet", kind = "library_ref", function = "fossFiWalletCompiledCodeLibraryRef" },
+]
 
 [contracts.FossFiWallet]
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
-depends = []
+depends = [
+    { name = "DaoVoter", kind = "library_ref", function = "daoVoterCompiledCodeLibraryRef" },
+]
 
 [contracts.Location]
 display-name = "Location Aggregator"
 src = "contracts/src/location/Location.tolk"
-depends = ["CityMap"]
+depends = [
+    { name = "CityMap", kind = "library_ref", function = "cityMapCompiledCodeLibraryRef" },
+]
 
 [contracts.CityMap]
 display-name = "City Map Index"
@@ -42,6 +49,18 @@ display-name = "Personal Token Wallet"
 src = "contracts/src/personalMinter/personalWallet.tolk"
 depends = []
 
+[contracts.Dao]
+display-name = "DAO Governance"
+src = "contracts/src/dao/Dao.tolk"
+depends = [
+    { name = "DaoVoter", kind = "library_ref", function = "daoVoterCompiledCodeLibraryRef" },
+]
+
+[contracts.DaoVoter]
+display-name = "DAO Voter Child"
+src = "contracts/src/dao/DaoVoter.tolk"
+depends = []
+
 [test]
 # ui = true
 # ui-port = 12345
@@ -58,11 +77,22 @@ depends = []
 
 [fmt]
 width = 100
-ignore = []
+# ignore = ["contracts/generated/*.tolk"]
+separate-import-groups = true
+
+[lint]
+exclude = ["contracts/wrappers/*.*.tolk", "gen/*.tolk"]
+max-warnings = 0 # fail on any warning
+
+[lint.rules]
+unused-variable = "deny"
+mutable-variable-can-be-immutable = "warn"
 
 [scripts]
+loop = "acton check --fix && acton fmt && acton build && acton wrapper --all"
 deploy-emulation = "acton script contracts/scripts/deploy.tolk"
 deploy-testnet = "acton script contracts/scripts/deploy.tolk --net testnet"
+deploy-libs = "acton library publish FossFiWallet --amount 1 --wallet teleg -y && acton library publish DaoVoter --amount 1 --wallet teleg -y && acton library publish CityMap --amount 1 --wallet teleg -y"
 deploy-personal = "acton script contracts/scripts/deploy-personal.tolk"
 verify-personal = "acton script contracts/scripts/verify-personal.tolk"
 jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"

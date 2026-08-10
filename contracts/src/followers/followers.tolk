@@ -1,3 +1,5 @@
+import "@contracts/common/errors"
+
 import "consts"
 import "messages"
 import "store"
@@ -12,10 +14,11 @@ fun onInternalMessage(in: InMessage) {
 
     match (msg) {
         UnFollowInternal => {
-            assert (in.senderAddress == store.admin) throw 700;          // incorrect sender
+            assert (in.senderAddress == store.admin) throw Errors.IncorrectSender;
             assert (msg.follow != store.follow) throw ALREADY_FOLLOWING; // or unfollowed
 
             store.follow = msg.follow;
+            store.save();
         }
     }
 }

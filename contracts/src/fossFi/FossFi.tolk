@@ -1,4 +1,5 @@
 import "@stdlib/tvm-lowlevel"
+
 import "@gen/FossFiWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
@@ -21,12 +22,14 @@ type AllowedMessageToMinter =
     | ChangeMinterMetadata
     | SetLocationAddresses
     | ChangeDaoAddress
+    | RequestTotalAccounts
     | TopUpTons
     | InformMinterInviteInternal
     | InformMinterChangeCity
     | RequestUpgradeCode
     | EnterLottery
     | LotteryWin
+    | UpgradeLotteryCode
     | HotUpgrade
     | Upgrade
     | RejectUpgrade
@@ -90,8 +93,8 @@ fun onInternalMessage(in: InMessage): void {
             others.totalAccounts += 1;
             store.totalSupply += MBRP_AMOUNT; // note: broadcast id for explorers or dbs
 
-            if (isNonEmptyString(msg.city)) {
-                val loc = others.locationAddrs.get(getLetterKey(msg.city));
+            if (isNonEmptyString(msg.city) && others.locationAddrs != null) {
+                val loc = others.locationAddrs.get(msg.cityLetter);
                 if (loc.isFound) {
                     val locMsg = createMessage({
                         bounce: BounceMode.NoBounce,
@@ -125,8 +128,8 @@ fun onInternalMessage(in: InMessage): void {
         InformMinterChangeCity => {
             assertCorrectSender(in.senderAddress, msg.owner, store.adminAddress);
 
-            if (isNonEmptyString(msg.oldCity)) {
-                val oldLoc = others.locationAddrs.get(getLetterKey(msg.oldCity));
+            if (isNonEmptyString(msg.oldCity) && others.locationAddrs != null) {
+                val oldLoc = others.locationAddrs.get(msg.oldCityLetter);
                 if (oldLoc.isFound) {
                     val oldLocMsg = createMessage({
                         bounce: BounceMode.NoBounce,
@@ -143,8 +146,8 @@ fun onInternalMessage(in: InMessage): void {
                 }
             }
 
-            if (isNonEmptyString(msg.newCity)) {
-                val newLoc = others.locationAddrs.get(getLetterKey(msg.newCity));
+            if (isNonEmptyString(msg.newCity) && others.locationAddrs != null) {
+                val newLoc = others.locationAddrs.get(msg.newCityLetter);
                 if (newLoc.isFound) {
                     val newLocMsg = createMessage({
                         bounce: BounceMode.NoBounce,
@@ -234,14 +237,11 @@ fun onInternalMessage(in: InMessage): void {
                 RESERVE_MODE_EXACT_AMOUNT,
             );
 
-            val jettonWalletCode = fossFiWalletCompiledCode();
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
-                dest: calcDeployFiWallet(
+                dest: getAutoAddress(
                     msg.mintRecipient,
                     store.adminAddress,
-                    contract.getAddress(),
-                    jettonWalletCode,
                 ),
                 value: msg.tonAmount,
                 body: msg.internalTransferMsg,
@@ -319,6 +319,7 @@ fun onInternalMessage(in: InMessage): void {
                 Errors.NotOwner,
             );
             store.daoAddress = msg.newDaoAddress;
+            store.save();
         }
 
         Upgrade => {
@@ -416,7 +417,7 @@ fun onInternalMessage(in: InMessage): void {
                     body: Upgrade {
                         walletVersion: store.walletVersion,
                         sender: store.adminAddress,
-                        newCode: others.latestFiWalletCode!,
+                        newCode: others.latestFiWalletCode,
                     },
                 });
                 upgradeMsg.send(
@@ -454,7 +455,7 @@ fun onInternalMessage(in: InMessage): void {
                     // deploy
                     contract.getAddress(),
                     msg.amount,
-                    others.lotteryCode!, // todo: fixme, should not be null for entering lottery
+                    others.lotteryCode,
                 ),
                 body: msg,
             });
@@ -469,7 +470,7 @@ fun onInternalMessage(in: InMessage): void {
                 calcDeployLottery(
                     contract.getAddress(),
                     msg.entryAmount,
-                    others.lotteryCode!,
+                    others.lotteryCode,
                 ).calculateAddress()
             ) throw Errors.IncorrectSender;
 
@@ -481,14 +482,11 @@ fun onInternalMessage(in: InMessage): void {
                 RESERVE_MODE_EXACT_AMOUNT,
             );
 
-            val jettonWalletCode = fossFiWalletCompiledCode();
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
-                dest: calcDeployFiWallet(
+                dest: getAutoAddress(
                     msg.winner,
                     store.adminAddress,
-                    contract.getAddress(),
-                    jettonWalletCode,
                 ),
                 value: in.valueCoins, // lottery forwards its pot to fund the mint
                 body: makeInternalTransferStep(
@@ -499,6 +497,12 @@ fun onInternalMessage(in: InMessage): void {
                 ),
             });
             deployMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+        }
+
+        UpgradeLotteryCode => {
+            assertAdminOrDao(in.senderAddress, store.adminAddress, store.daoAddress);
+
+            others.lotteryCode = msg.newCode;
         }
 
         HotUpgrade => {
@@ -531,6 +535,19 @@ fun onInternalMessage(in: InMessage): void {
             destroyContract(in.senderAddress);
         }
 
+        RequestTotalAccounts => {
+            val replyMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: in.senderAddress,
+                body: ResponseTotalAccounts {
+                    queryId: msg.queryId,
+                    totalAccounts: others.totalAccounts,
+                },
+            });
+            replyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        }
+
         else => {
             // invalid input; a typical reaction is:
             // ignore empty messages, "wrong opcode" if not
@@ -539,6 +556,11 @@ fun onInternalMessage(in: InMessage): void {
     }
     store.others = others.toCell();
     store.save();
+}
+
+get fun get_total_accounts(): uint33 {
+    val store = lazy FiStore.load();
+    return store.others.load().totalAccounts;
 }
 
 get fun get_jetton_data(): JettonDataReply {
@@ -557,7 +579,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,                                              // but by peers only & not minter
         adminAddress: store.adminAddress,
         jettonContent: store.metadata as Cell<OnchainMetadataReply>, // metadata.toCell(),
-        jettonWalletCode: fossFiWalletCompiledCode(),
+        jettonWalletCode: fossFiWalletCompiledCodeLibraryRef(),
     };
 }
 
@@ -581,7 +603,7 @@ fun getAutoAddress(owner: address, treasury: address): AutoDeployAddress {
         owner,
         treasury,
         contract.getAddress(),
-        fossFiWalletCompiledCode(),
+        fossFiWalletCompiledCodeLibraryRef(),
     );
 }
 
@@ -604,9 +626,8 @@ fun calcDeployLottery(
 @method_id(2121)
 fun hotUpgradeFiData(_additionalData: cell?) {
     val oldStorage = FiStore.load();
-    // assert (additionalData != null) throw Errors.1112;
     val storage = FiStore {
-        totalSupply: oldStorage.totalSupply + ton("11111"),
+        totalSupply: oldStorage.totalSupply,
         walletVersion: oldStorage.walletVersion,
         adminAddress: oldStorage.adminAddress,
         adminHandoff: oldStorage.adminHandoff,
@@ -639,6 +660,7 @@ get fun get_location_address(cityName: string): address? {
     val store = lazy FiStore.load();
     val others = lazy store.others.load();
     val letterKey = getLetterKey(cityName);
+    assert (others.locationAddrs != null) throw Errors.Null;
     val loc = others.locationAddrs.get(letterKey);
     return loc.isFound ? loc.loadValue() : null;
 }
@@ -646,7 +668,8 @@ get fun get_location_address(cityName: string): address? {
 get fun get_location_addresses(): map<uint8, address> {
     val store = lazy FiStore.load();
     val others = lazy store.others.load();
-    return others.locationAddrs;
+    // assert (others.locationAddrs != null) throw Errors.Null;
+    return others.locationAddrs!;
 }
 
 get fun get_dao_address(): address? {

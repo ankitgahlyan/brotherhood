@@ -1,6 +1,8 @@
 import "@stdlib/tvm-lowlevel"
+
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+
 import "CityMap"
 
 type AllowedMessageToLocation =
@@ -15,7 +17,7 @@ struct LocationStore {
     version: uint10 = 0
     cityMapVersion: uint10 = 0
     minterAddress: address
-    cityMapCode: cell
+    cityMapCode: cell // todo: what after upgrade
     cities: map<uint256, string>
 }
 
@@ -52,7 +54,7 @@ fun onInternalMessage(in: InMessage): void {
         LocationRegisterCity => {
             assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
 
-            store.cities.set(msg.cityName.beginParse().hash(), msg.cityName);
+            store.cities.addIfNotExists(msg.cityName.beginParse().hash(), msg.cityName);
             store.save();
 
             val forwardMsg = createMessage({

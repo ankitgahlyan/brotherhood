@@ -1,4 +1,5 @@
 enum Errors {
+    Null = 404
     BalanceError = 47
     NotEnoughGas = 48
     InvalidMessage = 49
@@ -41,4 +42,14 @@ enum Errors {
     InviteFirst = 740
     AlreadyReportedForOtherReason = 741
     MaxConnections = 250 // coz accClosing contract can send only approx 250 msg once
+
+    ProposalAlreadyActive = 750
+    ProposalNotFound = 751
+    ProposalPendingAccounts = 752
+    ProposalAlreadyExecuted = 753
+    ProposalExpired = 754
+    AlreadyVoted = 755
+    ProposalFeeInsufficient = 756
+    DuplicateVote = 757
+    InvalidDaoVoter = 758
 }

@@ -3,6 +3,8 @@ import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/transaction"
 
+import "@gen/FossFiWallet.code"
+import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -12,6 +14,7 @@ import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
+
 import "test-utils"
 
 get fun `test admin: deploy should create minter without bounce`() {
@@ -22,7 +25,10 @@ get fun `test admin: deploy should create minter without bounce`() {
         adminAddress: deployer.address,
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
-        others: FiCodes {}.toCell(),
+        others: FiCodes {
+            lotteryCode: lotteryCompiledCode(),
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+        }.toCell(),
     });
 
     val deployResult = minter.sendDeploy(deployer.address, { value: ton("10") });

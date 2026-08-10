@@ -2,6 +2,7 @@ import "@acton/build"
 import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
+
 import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -10,6 +11,7 @@ import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
+
 import "utils/common"
 
 fun deployTestMinter(admin: address): FossFi {
@@ -24,7 +26,11 @@ fun deployTestMinter(admin: address): FossFi {
             decimals: "9",
         }),
         adminHandoff: null,
-        others: FiCodes {}.toCell(),
+        others: FiCodes {
+            lotteryCode: build("Lottery"),
+            latestFiWalletCode: build("FossFiWallet"),
+            locationAddrs: [],
+        }.toCell(),
     });
     val res = minter.sendDeploy(admin, { value: ton("10") });
     res.waitForFirstTransaction();
@@ -51,6 +57,7 @@ fun activateIssuer(
             issuer,
             "issuer_user",
             "Tokyo",
+            20,
             { value: ton("1") },
         );
     invite.waitForFirstTransaction();
