@@ -101,7 +101,8 @@ export function InviteTab({
           disabled={loading}
         />
         <p className="text-xs text-muted-foreground">
-          This will send an invite message and register the city in the location index.
+          This will send an invite message and register the city in the location
+          index.
         </p>
       </div>
       <Button

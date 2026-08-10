@@ -27,6 +27,7 @@ This repository uses a single-context layout for domain documentation. The gloss
 - When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `bun run`, or the existing project config.
 
 #### Contract rules
+
 - separate struct/msg files for each contract instead of unnecessarily bloating other contracts and common file for common structs/msg
 - report any circular dependency issues
 

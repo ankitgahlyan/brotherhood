@@ -9,6 +9,8 @@ import { beginCell, ContractProvider, Sender, SendMode } from '@ton/core';
 //   predefined types and functions
 //
 
+type RemainingBitsAndRefs = c.Slice
+
 type StoreCallback<T> = (obj: T, b: c.Builder) => void
 type LoadCallback<T> = (s: c.Slice) => T
 
@@ -29,6 +31,17 @@ function loadAndCheckPrefix32(s: c.Slice, expected: number, structName: string):
     }
 }
 
+function formatPrefix(prefixNum: number, prefixLen: number): string {
+    return prefixLen % 4 ? `0b${prefixNum.toString(2).padStart(prefixLen, '0')}` : `0x${prefixNum.toString(16).padStart(prefixLen / 4, '0')}`;
+}
+
+function loadAndCheckPrefix(s: c.Slice, expected: number, prefixLen: number, structName: string): void {
+    let prefix = s.loadUint(prefixLen);
+    if (prefix !== expected) {
+        throw new Error(`Incorrect prefix for '${structName}': expected ${formatPrefix(expected, prefixLen)}, got ${formatPrefix(prefix, prefixLen)}`);
+    }
+}
+
 function lookupPrefix(s: c.Slice, expected: number, prefixLen: number): boolean {
     return s.remainingBits >= prefixLen && s.preloadUint(prefixLen) === expected;
 }
@@ -46,6 +59,19 @@ function storeCellRef<T>(cell: CellRef<T>, b: c.Builder, storeFn_T: StoreCallbac
 function loadCellRef<T>(s: c.Slice, loadFn_T: LoadCallback<T>): CellRef<T> {
     let s_ref = s.loadRef().beginParse();
     return { ref: loadFn_T(s_ref) };
+}
+
+function storeTolkRemaining(v: RemainingBitsAndRefs, b: c.Builder): void {
+    b.storeSlice(v);
+}
+
+function loadTolkRemaining(s: c.Slice): RemainingBitsAndRefs {
+    let rest = s.clone();
+    s.loadBits(s.remainingBits);
+    while (s.remainingRefs) {
+        s.loadRef();
+    }
+    return rest;
 }
 
 function storeTolkNullable<T>(v: T | null, b: c.Builder, storeFn_T: StoreCallback<T>): void {
@@ -158,9 +184,235 @@ class StackReader {
 
 type coins = bigint
 
+type uint10 = bigint
 type uint32 = bigint
 type uint33 = bigint
 type uint64 = bigint
+
+/**
+ > type ForwardPayloadRemainder = RemainingBitsAndRefs
+ */
+export type ForwardPayloadRemainder = RemainingBitsAndRefs
+
+export const ForwardPayloadRemainder = {
+    fromSlice(s: c.Slice): ForwardPayloadRemainder {
+        return loadTolkRemaining(s);
+    },
+    store(self: ForwardPayloadRemainder, b: c.Builder): void {
+        storeTolkRemaining(self, b);
+    },
+    toCell(self: ForwardPayloadRemainder): c.Cell {
+        return makeCellFrom<ForwardPayloadRemainder>(self, ForwardPayloadRemainder.store);
+    }
+}
+
+/**
+ > struct (0b0) PayloadInline {
+ >     value: RemainingBitsAndRefs
+ > }
+ */
+export interface PayloadInline {
+    readonly $: 'PayloadInline'
+    value: RemainingBitsAndRefs
+}
+
+export const PayloadInline = {
+    PREFIX: 0b0,
+
+    create(args: {
+        value: RemainingBitsAndRefs
+    }): PayloadInline {
+        return {
+            $: 'PayloadInline',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PayloadInline {
+        loadAndCheckPrefix(s, 0b0, 1, 'PayloadInline');
+        return {
+            $: 'PayloadInline',
+            value: loadTolkRemaining(s),
+        }
+    },
+    store(self: PayloadInline, b: c.Builder): void {
+        b.storeUint(0b0, 1);
+        storeTolkRemaining(self.value, b);
+    },
+    toCell(self: PayloadInline): c.Cell {
+        return makeCellFrom<PayloadInline>(self, PayloadInline.store);
+    }
+}
+
+/**
+ > struct (0b1) PayloadInRef {
+ >     value: Cell<RemainingBitsAndRefs>
+ > }
+ */
+export interface PayloadInRef {
+    readonly $: 'PayloadInRef'
+    value: CellRef<RemainingBitsAndRefs>
+}
+
+export const PayloadInRef = {
+    PREFIX: 0b1,
+
+    create(args: {
+        value: CellRef<RemainingBitsAndRefs>
+    }): PayloadInRef {
+        return {
+            $: 'PayloadInRef',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PayloadInRef {
+        loadAndCheckPrefix(s, 0b1, 1, 'PayloadInRef');
+        return {
+            $: 'PayloadInRef',
+            value: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+        }
+    },
+    store(self: PayloadInRef, b: c.Builder): void {
+        b.storeUint(0b1, 1);
+        storeCellRef<RemainingBitsAndRefs>(self.value, b, storeTolkRemaining);
+    },
+    toCell(self: PayloadInRef): c.Cell {
+        return makeCellFrom<PayloadInRef>(self, PayloadInRef.store);
+    }
+}
+
+/**
+ > struct (0x178d4519) InternalTransferStep {
+ >     queryId: uint64
+ >     jettonAmount: coins
+ >     version: uint10
+ >     transferredAsCredit: bool
+ >     transferInitiator: address
+ >     sendExcessesTo: address?
+ >     forwardTonAmount: coins
+ >     forwardPayload: ForwardPayloadRemainder
+ > }
+ */
+export interface InternalTransferStep {
+    readonly $: 'InternalTransferStep'
+    queryId: uint64
+    jettonAmount: coins
+    version: uint10
+    transferredAsCredit: boolean /* = false */
+    transferInitiator: c.Address
+    sendExcessesTo: c.Address | null
+    forwardTonAmount: coins
+    forwardPayload: PayloadInline | PayloadInRef
+}
+
+export const InternalTransferStep = {
+    PREFIX: 0x178d4519,
+
+    create(args: {
+        queryId: uint64
+        jettonAmount: coins
+        version: uint10
+        transferredAsCredit?: boolean /* = false */
+        transferInitiator: c.Address
+        sendExcessesTo: c.Address | null
+        forwardTonAmount: coins
+        forwardPayload: PayloadInline | PayloadInRef
+    }): InternalTransferStep {
+        return {
+            $: 'InternalTransferStep',
+            transferredAsCredit: false,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): InternalTransferStep {
+        loadAndCheckPrefix32(s, 0x178d4519, 'InternalTransferStep');
+        return {
+            $: 'InternalTransferStep',
+            queryId: s.loadUintBig(64),
+            jettonAmount: s.loadCoins(),
+            version: s.loadUintBig(10),
+            transferredAsCredit: s.loadBoolean(),
+            transferInitiator: s.loadAddress(),
+            sendExcessesTo: s.loadMaybeAddress(),
+            forwardTonAmount: s.loadCoins(),
+            forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
+                lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
+                throwNonePrefixMatch('InternalTransferStep.forwardPayload'),
+        }
+    },
+    store(self: InternalTransferStep, b: c.Builder): void {
+        b.storeUint(0x178d4519, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.jettonAmount);
+        b.storeUint(self.version, 10);
+        b.storeBit(self.transferredAsCredit);
+        b.storeAddress(self.transferInitiator);
+        b.storeAddress(self.sendExcessesTo);
+        b.storeCoins(self.forwardTonAmount);
+        switch (self.forwardPayload.$) {
+            case 'PayloadInline':
+                PayloadInline.store(self.forwardPayload, b);
+                break;
+            case 'PayloadInRef':
+                PayloadInRef.store(self.forwardPayload, b);
+                break;
+        }
+    },
+    toCell(self: InternalTransferStep): c.Cell {
+        return makeCellFrom<InternalTransferStep>(self, InternalTransferStep.store);
+    }
+}
+
+/**
+ > struct (0x00001001) MintNewJettons {
+ >     queryId: uint64
+ >     mintRecipient: address
+ >     tonAmount: coins
+ >     internalTransferMsg: Cell<InternalTransferStep>
+ > }
+ */
+export interface MintNewJettons {
+    readonly $: 'MintNewJettons'
+    queryId: uint64
+    mintRecipient: c.Address
+    tonAmount: coins
+    internalTransferMsg: CellRef<InternalTransferStep>
+}
+
+export const MintNewJettons = {
+    PREFIX: 0x00001001,
+
+    create(args: {
+        queryId: uint64
+        mintRecipient: c.Address
+        tonAmount: coins
+        internalTransferMsg: CellRef<InternalTransferStep>
+    }): MintNewJettons {
+        return {
+            $: 'MintNewJettons',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): MintNewJettons {
+        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
+        return {
+            $: 'MintNewJettons',
+            queryId: s.loadUintBig(64),
+            mintRecipient: s.loadAddress(),
+            tonAmount: s.loadCoins(),
+            internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+        }
+    },
+    store(self: MintNewJettons, b: c.Builder): void {
+        b.storeUint(0x00001001, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.mintRecipient);
+        b.storeCoins(self.tonAmount);
+        storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+    },
+    toCell(self: MintNewJettons): c.Cell {
+        return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
+    }
+}
 
 /**
  > struct (0x00001007) TopUpTons {
@@ -424,13 +676,9 @@ export const CleanupProposalVotes = {
  >     id: uint64
  >     proposerOwner: address
  >     targetMsg: cell
- >     totalAccounts: uint33
- >     totalAccountsSet: bool
  >     yesVotes: uint33
  >     noVotes: uint33
- >     createdAt: uint32
  >     expiresAt: uint32
- >     executed: bool
  > }
  */
 export interface Proposal {
@@ -438,13 +686,9 @@ export interface Proposal {
     id: uint64
     proposerOwner: c.Address
     targetMsg: c.Cell
-    totalAccounts: uint33 /* = 0 */
-    totalAccountsSet: boolean /* = false */
     yesVotes: uint33 /* = 0 */
     noVotes: uint33 /* = 0 */
-    createdAt: uint32 /* = 0 */
     expiresAt: uint32 /* = 0 */
-    executed: boolean /* = false */
 }
 
 export const Proposal = {
@@ -452,23 +696,15 @@ export const Proposal = {
         id: uint64
         proposerOwner: c.Address
         targetMsg: c.Cell
-        totalAccounts?: uint33 /* = 0 */
-        totalAccountsSet?: boolean /* = false */
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
-        createdAt?: uint32 /* = 0 */
         expiresAt?: uint32 /* = 0 */
-        executed?: boolean /* = false */
     }): Proposal {
         return {
             $: 'Proposal',
-            totalAccounts: 0n,
-            totalAccountsSet: false,
             yesVotes: 0n,
             noVotes: 0n,
-            createdAt: 0n,
             expiresAt: 0n,
-            executed: false,
             ...args
         }
     },
@@ -478,26 +714,18 @@ export const Proposal = {
             id: s.loadUintBig(64),
             proposerOwner: s.loadAddress(),
             targetMsg: s.loadRef(),
-            totalAccounts: s.loadUintBig(33),
-            totalAccountsSet: s.loadBoolean(),
             yesVotes: s.loadUintBig(33),
             noVotes: s.loadUintBig(33),
-            createdAt: s.loadUintBig(32),
             expiresAt: s.loadUintBig(32),
-            executed: s.loadBoolean(),
         }
     },
     store(self: Proposal, b: c.Builder): void {
         b.storeUint(self.id, 64);
         b.storeAddress(self.proposerOwner);
         b.storeRef(self.targetMsg);
-        b.storeUint(self.totalAccounts, 33);
-        b.storeBit(self.totalAccountsSet);
         b.storeUint(self.yesVotes, 33);
         b.storeUint(self.noVotes, 33);
-        b.storeUint(self.createdAt, 32);
         b.storeUint(self.expiresAt, 32);
-        b.storeBit(self.executed);
     },
     toCell(self: Proposal): c.Cell {
         return makeCellFrom<Proposal>(self, Proposal.store);
@@ -506,35 +734,30 @@ export const Proposal = {
 
 /**
  > struct DaoStore {
+ >     totalAccounts: uint33
  >     fiAddress: address
- >     treasuryAddress: address
- >     baseFiWalletCode: cell
- >     daoVoterCode: cell
  >     proposalCount: uint64
  >     proposals: map<uint64, Proposal>
  > }
  */
 export interface DaoStore {
     readonly $: 'DaoStore'
+    totalAccounts: uint33 /* = 0 */
     fiAddress: c.Address
-    treasuryAddress: c.Address
-    baseFiWalletCode: c.Cell
-    daoVoterCode: c.Cell
     proposalCount: uint64 /* = 0 */
     proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
 }
 
 export const DaoStore = {
     create(args: {
+        totalAccounts?: uint33 /* = 0 */
         fiAddress: c.Address
-        treasuryAddress: c.Address
-        baseFiWalletCode: c.Cell
-        daoVoterCode: c.Cell
         proposalCount?: uint64 /* = 0 */
         proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
     }): DaoStore {
         return {
             $: 'DaoStore',
+            totalAccounts: 0n,
             proposalCount: 0n,
             ...args
         }
@@ -542,19 +765,15 @@ export const DaoStore = {
     fromSlice(s: c.Slice): DaoStore {
         return {
             $: 'DaoStore',
+            totalAccounts: s.loadUintBig(33),
             fiAddress: s.loadAddress(),
-            treasuryAddress: s.loadAddress(),
-            baseFiWalletCode: s.loadRef(),
-            daoVoterCode: s.loadRef(),
             proposalCount: s.loadUintBig(64),
             proposals: c.Dictionary.load<uint64, Proposal>(c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store), s),
         }
     },
     store(self: DaoStore, b: c.Builder): void {
+        b.storeUint(self.totalAccounts, 33);
         b.storeAddress(self.fiAddress);
-        b.storeAddress(self.treasuryAddress);
-        b.storeRef(self.baseFiWalletCode);
-        b.storeRef(self.daoVoterCode);
         b.storeUint(self.proposalCount, 64);
         b.storeDict<uint64, Proposal>(self.proposals, c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store));
     },
@@ -602,14 +821,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Dao implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFQEAA6YAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAREgR31/EjImHAQY4BImHB2omh9JH0kamppn/oCg2uWEAAAQ+5xgWuWEAAAQD5xgWuWEAAAQ/pxgWuWEAAAQ/5BgcICQAHrFcYQAT80z8x+kjXTIiIAcjMzMlwyMt/yW1tbQLI+lT6VPpUyW1tbSzI+lIT+lT6VPQAySXI+lJSoPpSEszMyW1tbW0ByPQA9ADJbcj0AHDPCzTJA8j0ABL0AMzMyciL4AAAAAEAAACgAAAAQAACzxYUzBLMzMzJeFNjVBMyyM+DywSJCgoLDADG+JImxwXy4rzTP9cLIFMXgED0Dm+hjkjTP/pI1NMgMdIAMdMg0yDTH9Mf0gDRB8jLPxb6UhTMFssgz4PLIBTLIBPLHxLLH8oAQBeAQPRDBMj6UhP6UszMEss/9ADJ7VSSXwniBP7TPzHTP/pI0wABktIAkm0B4tcKAPgobQTI+lL6UhP0AMklyM+E0MzM+RbIz4oAQMv/z1D4kscF8uL2UyiAQPQO8uLv0z/6SNTTINIA0yDTINMf0x/SANEl8uLwIPLS8fgjIrny4vIqbpo6CpICpJMBpFji4w4kkXHjDSG74wAHDQ4PEADQjljTPzHXCz9TBoBA9A5voY5E0z8x+kgx1DHTIDHSADHTIDHTIDHTHzHTH9IA0ZIwf5X4I7vDAOKOGFAGgED0WzAEyPpSE/pSzMwSyz/0AMntVJJfB+KSXwji4Gxh1ywgAACAPDHc8j8AAAABaADazxbMzPkWhPewEoALUAPXJMjPigBAzsv3z1D4kscF8uBK+CMDpFMDgggJOoCgIcjLPxX6UhPMcM8LYxTLHxLLH8+BVCAIgED0QyXI+lIV+lITzMzLP/QAye1UyM+FCPpSgRAOzwuOyz/JgEL7AAAqUau9nQqUAqQBpZQCpQGk4liROuICABAkqgCmAnOpBAA2OH8l0MjOycjPhQhWEQH6UnHPC27MyYBC+wAIAGDIyz8W+lIUzBLLIMoAE8sgyyDLHxLLH8oAQBeAQPRDBMj6UhP6UszMEss/9ADJ7VQAgb+EX2omh9JBj9JBjqGOoY6Z+Y+gLAIHoHN9DHC+mf/SRqaZBpAGmQaZBpj+mP6QBowIBC8Bg2tra2tra2tra2uEAgFYExQAIbfaPaiaH0kfSRqammf+gJowAFG0L/2omhqGOumfBQ2geR9KX0pCXoAZIDkZ8JoZmZ8i2RnxQAgZf/nqEA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAAvQAART/APSkE/S88sgLAQIBYgIDA/jQ+JGRMOAgxwCRMODtRNDTIPpI0z/0BQTXLCAAAIfcjk74IwKkUgLTPzH6SNdMBIIICTqAoCPIyz8S+lIUzHDPC0ETyx9UIAaAQPRDA8jLIFIg+lLLPxL0AMntVMjPhQj6UoEQDs8Ljss/yYBC+wDg1ywgAACAfOMCidcnBAUGAgEgDQ4AODP4kiLHBfLivALTPzHXCyDIyyD6Uss/9ADJ7VQACAAAEP4BuOMC1ywgAACH/I5D0z8x1ws/UwSAQPQOb6GOL9M/MfpIMdQx0yAx0yAx0x/R+CO7jhVQBIBA9FswAsjLIPpSEss/9ADJ7VSSXwXikl8G4uBsQdcsIAAAgDwx3PI/BwT+0z8x0z/6SNMAAZLSAJJtAeLXCgD4KIhtBcj6UhL6UhT0AMlQA8jPhNDMzPkWyM+KAEDL/89Q+JLHBfLi9lMmgED0DvLi79M/+kjU0yDTINMf0fgjIbny4vImbpk2BpGkkwWkBeKOElFnvZsGk6QFpZOlBaTiBZE24uIp4w8huxEICQoAECmqAKYCc6kEAAJxAU6OFQPIyz8S+lLMyyASyyDLH0AVgED0Q+MNAsjLIPpSEss/9ADJ7VQLAf4wbCIyggiYloBw+wKCIAkYTnKgAIIQBfXhAIIK+vCA+ChtIG6zkzCLBN/Iz5BeNRRmKM8LP1AF+gLPiABA+lJSQPpUz4QgE87JyM+FCFKA+lJY+gKBEAHPC4olzws/E/pSAfoCzMlz+wDQyM7JyM+FCFJA+lJxzwtuzMmAQvsADAAOUASAQPRbMABfv4RfaiaGmQGP0kGOmfmPoCwCB6BzfQz+mf/SRqaZBpkGmP6MCAQvAYNra2tra2uEAgFYDxAAHbfaPaiaGmQfSRpn/oCaMAFHtC//BRENoHkfSkJfSkJegBkgORnwmhmZnyLZGfFACBl/+eoQEQhCArOTlFw2gd4inUvykpg4psvc7cyRlkC/BLIeTiZjeEQd');
 
     static Errors = {
-        'Errors.NotValidWallet': 74,
         'Errors.IncorrectSender': 700,
         'Errors.ProposalNotFound': 751,
-        'Errors.ProposalPendingAccounts': 752,
-        'Errors.ProposalAlreadyExecuted': 753,
         'Errors.ProposalExpired': 754,
         'Errors.InvalidDaoVoter': 758,
     }
@@ -627,10 +843,8 @@ export class Dao implements c.Contract {
     }
 
     static fromStorage(emptyStorage: {
+        totalAccounts?: uint33 /* = 0 */
         fiAddress: c.Address
-        treasuryAddress: c.Address
-        baseFiWalletCode: c.Cell
-        daoVoterCode: c.Cell
         proposalCount?: uint64 /* = 0 */
         proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
     }, deployedOptions?: DeployedAddrOptions) {
@@ -745,35 +959,29 @@ export class Dao implements c.Contract {
     }
 
     async getDaoData(provider: ContractProvider): Promise<DaoStore> {
-        const r = StackReader.fromGetMethod(6, await provider.get('get_dao_data', []));
+        const r = StackReader.fromGetMethod(4, await provider.get('get_dao_data', []));
         return ({
             $: 'DaoStore',
+            totalAccounts: r.readBigInt(),
             fiAddress: r.readSlice().loadAddress(),
-            treasuryAddress: r.readSlice().loadAddress(),
-            baseFiWalletCode: r.readCell(),
-            daoVoterCode: r.readCell(),
             proposalCount: r.readBigInt(),
             proposals: r.readDictionary<uint64, Proposal>(c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store)),
         });
     }
 
     async getProposal(provider: ContractProvider, proposalId: uint64): Promise<Proposal | null> {
-        const r = StackReader.fromGetMethod(11, await provider.get('get_proposal', [
+        const r = StackReader.fromGetMethod(7, await provider.get('get_proposal', [
             { type: 'int', value: proposalId },
         ]));
-        return r.readWideNullable<Proposal>(11,
+        return r.readWideNullable<Proposal>(7,
             (r) => ({
                 $: 'Proposal',
                 id: r.readBigInt(),
                 proposerOwner: r.readSlice().loadAddress(),
                 targetMsg: r.readCell(),
-                totalAccounts: r.readBigInt(),
-                totalAccountsSet: r.readBoolean(),
                 yesVotes: r.readBigInt(),
                 noVotes: r.readBigInt(),
-                createdAt: r.readBigInt(),
                 expiresAt: r.readBigInt(),
-                executed: r.readBoolean(),
             })
         );
     }

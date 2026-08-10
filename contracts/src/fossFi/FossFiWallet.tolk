@@ -613,7 +613,8 @@ fun onInternalMessage(in: InMessage): void {
         // for granular control
         SetStatus => {
             assert (
-                (trustedAddrs.authorisedAccs.exists(in.senderAddress)) | (in.senderAddress == trustedAddrs.minterAddr)
+                (trustedAddrs.authorisedAccs.exists(in.senderAddress)) |
+                (in.senderAddress == trustedAddrs.minterAddr)
             ) throw Errors.IncorrectSender;
             store.status = msg.status;
         }

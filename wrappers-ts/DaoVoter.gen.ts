@@ -352,7 +352,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoVoter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEAygABFP8A9KQT9LzyyAsBAZjT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wLXLCAAAIf8jijTPzHXCz9TA4BA9A5voTGOE1ADgED0WzAByPpSEvpS9ADJ7VSSXwTi4PI/AgDY0z/TP/pI1woAUxXHBfLivFMmgED0Dm+hbQGcMNIA0VMBupPywvXgkTHiIcjKAFQgSYBA9EMGyPpSUlD6Uhb0AMntVMjPhQgU+lKBEP7PC44Syz/LP/pSIm6UbBLPgZXPgxLKAOLKAMmAQPsA');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEA0gABFP8A9KQT9LzyyAsBAajT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wLXLCAAAIf8jjD4kiPHBfLivNM/MdcLP1MDgED0Dm+hMY4TUAOAQPRbMAHI+lIS+lL0AMntVJJfBOLg8j8CANjTP9M/+kjXCgBTFccF8uK8UyaAQPQOb6FtAZww0gDRUwG6k/LC9eCRMeIhyMoAVCBJgED0QwbI+lJSUPpSFvQAye1UyM+FCBT6UoEQ/s8LjhLLP8s/+lIibpRsEs+Blc+DEsoA4soAyYBA+wA=');
 
     static Errors = {
         'Errors.IncorrectSender': 700,

@@ -1,4 +1,11 @@
-import { Address, beginCell, Cell, Dictionary, storeStateInit, toNano } from '@ton/core';
+import {
+  Address,
+  beginCell,
+  Cell,
+  Dictionary,
+  storeStateInit,
+  toNano,
+} from '@ton/core';
 import {
   FossFi,
   MintNewJettons,
@@ -225,7 +232,13 @@ export function buildInviteBody(params: {
   cityLetter?: number | bigint;
   queryId?: bigint;
 }): Cell {
-  const { transferRecipient, username = '', city = '', cityLetter = 0, queryId = 0n } = params;
+  const {
+    transferRecipient,
+    username = '',
+    city = '',
+    cityLetter = 0,
+    queryId = 0n,
+  } = params;
   return ActInvite.toCell(
     ActInvite.create({
       queryId,

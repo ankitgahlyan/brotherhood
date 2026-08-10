@@ -61,9 +61,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         CleanupProposalVotes => {
-            assert (
-                (in.senderAddress == store.voterOwner)
-            ) throw Errors.IncorrectSender;
+            assert ((in.senderAddress == store.voterOwner)) throw Errors.IncorrectSender;
             if (store.votes.exists(msg.proposalId)) {
                 store.votes.delete(msg.proposalId);
                 store.save();
