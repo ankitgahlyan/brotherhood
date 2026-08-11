@@ -171,7 +171,7 @@ struct (0x0000100c) SetLocationAddresses {
 
 struct (0x0000100d) ChangeDaoAddress {
     queryId: uint64
-    newDaoAddress: address?
+    newDaoAddress: address
 }
 
 struct (0x0000100e) RequestTotalAccounts {
@@ -435,6 +435,25 @@ struct (0x00001148) Payback {
 
 struct (0x00001149) ActSetPersonalJettonMinter {
     transferRecipient: address
+}
+
+struct (0x0000114a) SetCreditNeed {
+    queryId: uint64 = 0
+    amount: coins
+}
+
+struct (0x0000114b) RepayDebt {
+    queryId: uint64 = 0
+    amount: coins
+}
+
+struct (0x0000105a) ActCloseAccount {
+    queryId: uint64 = 0
+}
+
+struct (0x0000105b) AuthorityCloseAccount {
+    queryId: uint64 = 0
+    target: address
 }
 
 // ============================================================================

@@ -42,6 +42,10 @@ type AllowedMessageToWallet =
     | AskGoldCoinsTransfer
     | InternalGoldCoinsTransfer
     | TriggerDecay
+    | SetCreditNeed
+    | RepayDebt
+    | ActCloseAccount
+    | AuthorityCloseAccount
 
 type BounceOpToHandle =
     | EnterLottery
@@ -118,6 +122,8 @@ fun onInternalMessage(in: InMessage): void {
     match (msg) {
         ChangeUsername => {
             assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
+            assert (isNonEmptyString(msg.newUsername)) throw Errors.ProvideCoordinates;
+
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
@@ -129,6 +135,8 @@ fun onInternalMessage(in: InMessage): void {
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
+            assert (isNonEmptyString(msg.newCity)) throw Errors.ProvideCoordinates;
+
             val oldCity = profile.city;
             profile.city = msg.newCity;
 
@@ -192,12 +200,16 @@ fun onInternalMessage(in: InMessage): void {
             // todo: ensure enough fees sent only in vulnerable msg calls (at sending side)
             // active, !reported
             idActionChecks(store);
+            assert (
+                isNonEmptyString(msg.username) && isNonEmptyString(msg.city)
+            ) throw Errors.ProvideCoordinates;
+
             val now = blockchain.now();
             assert (
                 ((now > (time.lastInvite + INVITE_WAIT)) &
                 (now > (time.accountInit + ACTIVATION_WAIT))) |
                 (in.senderAddress == addrs.treasury)
-            ) throw Errors.WaitMore;                                                                                                                                        // invite every 4 hours, spam protection
+            ) throw Errors.WaitMore;                                                                                                                                        // every 4 hours, spam protection
             assert (store.connections < 11) throw Errors.MaxConnections;
             store.connections += 1;
             time.lastInvite = now;
@@ -380,6 +392,10 @@ fun onInternalMessage(in: InMessage): void {
             store.jettonBalance += msg.jettonAmount;
 
             if (msg.transferredAsCredit) {
+                // Credit Need gate (#23)
+                assert (store.creditNeed >= msg.jettonAmount) throw Errors.CreditNeedExceeded;
+                store.creditNeed -= msg.jettonAmount;
+
                 // trigger personal token minting
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
@@ -389,7 +405,7 @@ fun onInternalMessage(in: InMessage): void {
                         msg.queryId,
                         msg.jettonAmount,
                         msg.transferInitiator, // the buyer
-                        null,                  // sendExcessesTo
+                        null,                  // sendExcessesTo,
                         ton("0.0001"),
                         beginCell().storeMaybeRef(null).endCell().beginParse(),
                         0,                     // version
@@ -399,7 +415,7 @@ fun onInternalMessage(in: InMessage): void {
                 val mintMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     value: ton("0.1"),
-                    dest: trustedAddrs.personalJettonMinter!, // fails if not set
+                    dest: trustedAddrs.personalJettonMinter, // fails if not set
                     body: mintBody.toCell(),
                 });
                 mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
@@ -420,16 +436,8 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         AskToTransfer => {
-            // todo: lock transfers initially unless stable
-            // assert (false) throw 5;
-            // todo : or sender == authorityAccount/minter for force transfer in disputes USDT like control
-            // val isFromMaster = in.senderAddress == trustedAddrs.minterAddr;
-            // val outgoingTransfersAllowed = ((store.status & 1) == 0);
-            // val outgoingTransfersAllowed = (store.locked != true);
-            // require(outgoingTransfersAllowed || isFromMaster, "Contract is locked");
-            // require(sender() == self.owner || isFromMaster, "Incorrect sender");
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
-            // assert (false, 0); // todo what it does?
+            checkDebts(store);
             msg.forwardPayload.checkIsCorrectTlbEither();
             assert (
                 msg.transferRecipient.getWorkchain() == MY_WORKCHAIN
@@ -441,15 +449,13 @@ fun onInternalMessage(in: InMessage): void {
                 in.originalForwardFee,
             );
 
-            // no self-transfer
-            // normal txn
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
             reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
-                dest: msg.transferRecipient.getAddrFiWallet(), // only id accounts allowed
+                dest: msg.transferRecipient.getAddrFiWallet(),
                 value: 0,
                 body: makeInternalTransferStep(
                     msg.queryId,
@@ -461,19 +467,19 @@ fun onInternalMessage(in: InMessage): void {
                     store.version,
                 ),
             });
-            // safety
+            // safety:
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-            ); // return;
+            );
         }
 
         BuyCredit => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            checkDebts(store);
             assert (
                 msg.transferRecipient.getWorkchain() == MY_WORKCHAIN
             ) throw Errors.WrongWorkchain;
             checkAmountIsEnoughToTransfer(in.valueCoins, 0, in.originalForwardFee);
-            // no self-credit
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
@@ -500,7 +506,7 @@ fun onInternalMessage(in: InMessage): void {
 
         Payback => {
             assert (
-                in.senderAddress == trustedAddrs.personalJettonMinter!
+                in.senderAddress == trustedAddrs.personalJettonMinter
             ) throw Errors.IncorrectSender;
 
             assert (msg.amount <= store.jettonBalance) throw Errors.InsufficientBalance;
@@ -869,6 +875,7 @@ fun onInternalMessage(in: InMessage): void {
 
         AskGoldCoinsTransfer => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            checkDebts(store);
             assert (msg.amount > 0) throw Errors.IncorrectReceiver;
             assert (store.goldCoins >= msg.amount) throw Errors.BalanceError;
             store.goldCoins -= msg.amount;
@@ -893,6 +900,122 @@ fun onInternalMessage(in: InMessage): void {
             checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
             store.goldCoins += msg.amount;
             sendExcesses(msg.queryId, in.valueCoins, in.senderAddress);
+        }
+
+        SetCreditNeed => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            store.creditNeed = msg.amount;
+        }
+
+        RepayDebt => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            assert (msg.amount > 0) throw Errors.InvalidMessage;
+            assert (store.jettonBalance >= msg.amount) throw Errors.BalanceError;
+            if (store.debt > 0) {
+                val pay = min(msg.amount, store.debt);
+                store.debt -= pay;
+                store.jettonBalance -= pay;
+                if (store.debt == 0) {
+                    store.debts = false;
+                }
+            }
+        }
+
+        ActCloseAccount => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            val remainingFi = store.jettonBalance;
+            val remainingGold = store.goldCoins;
+            val nomineeAddr = nomins.nominee != null ? nomins.nominee : addrs.treasury;
+
+            store.jettonBalance = 0;
+            store.goldCoins = 0;
+            store.active = false;
+
+            if (remainingFi > 0) {
+                val transferMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: nomineeAddr.getAddrFiWallet(),
+                    value: 0,
+                    body: makeInternalTransferStep(
+                        msg.queryId,
+                        remainingFi,
+                        addrs.owner,
+                        addrs.owner,
+                        0,
+                        createEmptySlice(),
+                        store.version,
+                    ),
+                });
+                transferMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+
+            if (remainingGold > 0) {
+                val transferGoldMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: nomineeAddr.getAddrFiWallet(),
+                    value: 0,
+                    body: InternalGoldCoinsTransfer {
+                        queryId: msg.queryId,
+                        amount: remainingGold,
+                        transferInitiator: addrs.owner,
+                    },
+                });
+                transferGoldMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+        }
+
+        AuthorityCloseAccount => {
+            checkCorrectSenderInternal(in.senderAddress, msg.target);
+            assert (
+                store.isAuthorityAccount || in.senderAddress == addrs.treasury
+            ) throw Errors.IncorrectSender;
+            val remainingFi = store.jettonBalance;
+            val remainingGold = store.goldCoins;
+            val nomineeAddr = nomins.nominee != null ? nomins.nominee : addrs.treasury;
+
+            store.jettonBalance = 0;
+            store.goldCoins = 0;
+            store.active = false;
+
+            if (remainingFi > 0) {
+                val transferMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: nomineeAddr.getAddrFiWallet(),
+                    value: 0,
+                    body: makeInternalTransferStep(
+                        msg.queryId,
+                        remainingFi,
+                        addrs.owner,
+                        addrs.owner,
+                        0,
+                        createEmptySlice(),
+                        store.version,
+                    ),
+                });
+                transferMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+
+            if (remainingGold > 0) {
+                val transferGoldMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: nomineeAddr.getAddrFiWallet(),
+                    value: 0,
+                    body: InternalGoldCoinsTransfer {
+                        queryId: msg.queryId,
+                        amount: remainingGold,
+                        transferInitiator: addrs.owner,
+                    },
+                });
+                transferGoldMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
         }
 
         TriggerDecay => {

@@ -2,7 +2,7 @@
  * Minimal headless smoke test for the app.
  *
  * Opens the app in headless Chromium (bundled via Playwright) and asserts the
- * Manage page shell + content render. Use `bun run dev` (or serve
+ * Manage page shell + content render. Use `nub run dev` (or serve
  * `dist/client`) first, then:
  *
  *   node scripts/smoke-test.mjs [baseUrl]

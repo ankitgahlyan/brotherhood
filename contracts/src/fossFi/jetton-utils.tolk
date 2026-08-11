@@ -9,7 +9,7 @@ import "storage"
 fun calcDeployFiWallet(
     owner: address,
     treasury: address,
-    minterAddress: address,
+    minterAddr: address,
     baseFiWalletCode: cell,
 ): AutoDeployAddress {
     val emptyFiWalletStore: FiWalletStore = {
@@ -17,20 +17,12 @@ fun calcDeployFiWallet(
             owner,
             treasury,
             nomInAddrs: NomInAddrs {}.toCell(),
-            trustedJettonAddrs: TrustedAddrs {
-                minterAddr: minterAddress,
-                authorisedAccs: [],
-            }.toCell(),
+            trustedJettonAddrs: TrustedAddrs { minterAddr }.toCell(),
         }.toCell(),
         maps: Maps {
-            allowances: [],
-            invited: [],
-            social: SocialMaps {
-                votedFor: [],
-                followings: [],
-            }.toCell(),
-            reportInfo: ReportInfo { reports: [] }.toCell(),
-        }.toCell(), // todo: learn how to set it default
+            social: SocialMaps {}.toCell(),
+            reportInfo: ReportInfo {}.toCell(),
+        }.toCell(),
         profile: ProfileInfo {}.toCell(),
         timestamps: TimeStamps {}.toCell(),
     };
@@ -38,7 +30,7 @@ fun calcDeployFiWallet(
     return {
         stateInit: { code: baseFiWalletCode, data: emptyFiWalletStore.toCell() },
         toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: owner },
-    };                                                                                                                                                // todo: remove code dep just deploy empty wallet and then upgrade it to the latest code
+    };
 }
 
 fun address.getAddrFiWallet(self): address {
@@ -81,6 +73,13 @@ fun idActionChecks(store: FiWalletStore) {
         store.active
     ) throw Errors.AccountInactive;                                     // mint/burn actions allowed only for active/ID accounts
     assert (reportInfo.reporterCount < 1) throw Errors.AlreadyReported; // reported IDs can't act
+    assert (!store.debts) throw Errors.AccountInDebt;
+    assert (store.debt == 0) throw Errors.AccountInDebt;
+}
+
+fun checkDebts(store: FiWalletStore) {
+    assert (!store.debts) throw Errors.AccountInDebt;
+    assert (store.debt == 0) throw Errors.AccountInDebt;
 }
 
 fun address.deActivate(self, _commandAmount: coins, store: FiWalletStore) {
@@ -194,4 +193,8 @@ fun destroyContract(dest: address) {
     });
     // safety
     outMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
+}
+
+fun isNonEmptyString(str: string): bool {
+    return str.beginParse().remainingBitsCount() > 0;
 }

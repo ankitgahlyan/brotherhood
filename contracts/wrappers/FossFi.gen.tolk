@@ -194,7 +194,7 @@ fun FossFi.sendChangeDaoAddress(
     self,
     from: address,
     queryId: uint64,
-    newDaoAddress: address?,
+    newDaoAddress: address,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
@@ -432,10 +432,6 @@ fun FossFi.getJettonDataAll(self): FiStore {
 
 fun FossFi.getWalletAddress(self, owner: address): address {
     return net.runGetMethod(self.address, "get_wallet_address", [owner]);
-}
-
-fun FossFi.getLocationAddress(self, cityName: string): address? {
-    return net.runGetMethod(self.address, "get_location_address", [cityName]);
 }
 
 fun FossFi.getLocationAddresses(self): map<uint8, address> {

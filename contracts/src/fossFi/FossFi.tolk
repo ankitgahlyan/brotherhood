@@ -69,13 +69,13 @@ fun onBouncedMessage(in: InMessageBounced): void {
 fun assertAdminOrDao(
     sender: address,
     adminAddress: address,
-    daoAddress: address?,
+    daoAddress: address,
     errCode: int = Errors.NotOwner,
 ): void {
     if (sender == adminAddress) {
         return;
     }
-    if (daoAddress != null && sender == daoAddress) {
+    if (sender == daoAddress) {
         return;
     }
     throw errCode;
@@ -93,78 +93,56 @@ fun onInternalMessage(in: InMessage): void {
             others.totalAccounts += 1;
             store.totalSupply += MBRP_AMOUNT; // note: broadcast id for explorers or dbs
 
-            if (isNonEmptyString(msg.city) && others.locationAddrs != null) {
-                val loc = others.locationAddrs.get(msg.cityLetter);
-                if (loc.isFound) {
-                    val locMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        dest: loc.loadValue(),
-                        value: 0,
-                        body: LocationRegisterCity {
-                            queryId: msg.queryId,
-                            ownerAddress: msg.sender,
-                            cityName: msg.city,
-                            sendExcessesTo: msg.invitor,
-                        },
-                    });
-                    locMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                    );
-                }
-            } else {
-                // send excesses
-                val excesses = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    value: 0,
-                    dest: msg.invitor,
-                    body: ReturnExcessesBack { queryId: msg.queryId },
-                });
-                excesses.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            val loc = others.locationAddrs.get(msg.cityLetter);
+            // if (loc.isFound) {
+            val locMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: loc.loadValue(),
+                value: 0,
+                body: LocationRegisterCity {
+                    queryId: msg.queryId,
+                    ownerAddress: msg.sender,
+                    cityName: msg.city,
+                    sendExcessesTo: msg.invitor,
+                },
+            });
+            locMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
         InformMinterChangeCity => {
             assertCorrectSender(in.senderAddress, msg.owner, store.adminAddress);
 
-            if (isNonEmptyString(msg.oldCity) && others.locationAddrs != null) {
-                val oldLoc = others.locationAddrs.get(msg.oldCityLetter);
-                if (oldLoc.isFound) {
-                    val oldLocMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        dest: oldLoc.loadValue(),
-                        value: 0,
-                        body: LocationUnregisterCity {
-                            queryId: msg.queryId,
-                            ownerAddress: msg.owner,
-                            cityName: msg.oldCity,
-                            sendExcessesTo: msg.owner,
-                        },
-                    });
-                    oldLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
-                }
-            }
+            val oldLoc = others.locationAddrs.get(msg.oldCityLetter);
+            val oldLocMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: oldLoc.loadValue(),
+                value: 0,
+                body: LocationUnregisterCity {
+                    queryId: msg.queryId,
+                    ownerAddress: msg.owner,
+                    cityName: msg.oldCity,
+                    sendExcessesTo: msg.owner,
+                },
+            });
+            oldLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
 
-            if (isNonEmptyString(msg.newCity) && others.locationAddrs != null) {
-                val newLoc = others.locationAddrs.get(msg.newCityLetter);
-                if (newLoc.isFound) {
-                    val newLocMsg = createMessage({
-                        bounce: BounceMode.NoBounce,
-                        dest: newLoc.loadValue(),
-                        value: 0,
-                        body: LocationRegisterCity {
-                            queryId: msg.queryId,
-                            ownerAddress: msg.owner,
-                            cityName: msg.newCity,
-                            sendExcessesTo: msg.owner,
-                        },
-                    });
-                    newLocMsg.send(
-                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                    );
-                }
-            }
+            val newLoc = others.locationAddrs.get(msg.newCityLetter);
+            val newLocMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: newLoc.loadValue(),
+                value: 0,
+                body: LocationRegisterCity {
+                    queryId: msg.queryId,
+                    ownerAddress: msg.owner,
+                    cityName: msg.newCity,
+                    sendExcessesTo: msg.owner,
+                },
+            });
+            newLocMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
         NotifyMinter => {
@@ -319,7 +297,6 @@ fun onInternalMessage(in: InMessage): void {
                 Errors.NotOwner,
             );
             store.daoAddress = msg.newDaoAddress;
-            store.save();
         }
 
         Upgrade => {
@@ -428,10 +405,7 @@ fun onInternalMessage(in: InMessage): void {
 
         TopUpTons => {
             // deploy + accept tons + deploy jettonWallet
-            if (
-                in.senderAddress == store.adminAddress ||
-                (store.daoAddress != null && in.senderAddress == store.daoAddress)
-            ) {
+            if (in.senderAddress == store.adminAddress || in.senderAddress == store.daoAddress) {
                 store.totalSupply += ton("1");
                 val deployTopUpMsg = createMessage({
                     // bounce for collecting fees back
@@ -637,39 +611,9 @@ fun hotUpgradeFiData(_additionalData: cell?) {
     storage.save();
 }
 
-fun isNonEmptyString(str: string): bool {
-    return str.beginParse().remainingBitsCount() > 0;
-}
-
-fun getLetterKey(cityName: string): uint8 {
-    var s = cityName.beginParse();
-    if (s.remainingBitsCount() < 8) {
-        return 0;
-    }
-    val b = s.loadUint(8);
-    if (b >= 97 && b <= 122) {
-        return (b - 32) as uint8;
-    }
-    if (b >= 65 && b <= 90) {
-        return b as uint8;
-    }
-    return 0;
-}
-
-get fun get_location_address(cityName: string): address? {
-    val store = lazy FiStore.load();
-    val others = lazy store.others.load();
-    val letterKey = getLetterKey(cityName);
-    assert (others.locationAddrs != null) throw Errors.Null;
-    val loc = others.locationAddrs.get(letterKey);
-    return loc.isFound ? loc.loadValue() : null;
-}
-
 get fun get_location_addresses(): map<uint8, address> {
     val store = lazy FiStore.load();
-    val others = lazy store.others.load();
-    // assert (others.locationAddrs != null) throw Errors.Null;
-    return others.locationAddrs!;
+    return store.others.load().locationAddrs;
 }
 
 get fun get_dao_address(): address? {

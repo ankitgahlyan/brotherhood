@@ -1,4 +1,5 @@
 import "@contracts/common/messages"
+import "@contracts/fossFi/consts"
 
 struct NomInAddrs {
     nominee: address? = null
@@ -8,10 +9,10 @@ struct NomInAddrs {
 
 struct TrustedAddrs {
     // todo: map field to store variable trusted addrs by root
-    minterAddr: address                   // todo: use trusted jettonWallets pattern like bidAsk for cross contract centralised calls instead of stateInit storing & for use of provide_wallet_addr onchain api to query jettonWallet addr from owner 
-    personalJettonMinter: address? = null
-    personalJettonWallet: address? = null // separately deployed & manually added by owner
-    authorisedAccs: map<address, address> // each acc can delegate its power of attorney
+    minterAddr: address                          // todo: use trusted jettonWallets pattern like bidAsk for cross contract centralised calls instead of stateInit storing & for use of provide_wallet_addr onchain api to query jettonWallet addr from owner 
+    personalJettonMinter: address = ZERO_ADDRESS // should i use null to avoid fund loss? when not set, no it is accessible to owner only
+    personalJettonWallet: address = ZERO_ADDRESS // separately deployed & manually added by owner
+    authorisedAccs: map<address, address> = []   // each acc can delegate its power of attorney
 }
 
 struct Addresses {
@@ -28,15 +29,15 @@ struct FiCodes {
     lotteryCode: cell
     latestFiWalletCode: cell
     currentRequest: Cell<CurrentRequest>? = null
-    locationAddrs: map<uint8, address>? = null
+    locationAddrs: map<uint8, address> = [] // no need to be null, will be set just after deploy
 }
 
 struct SocialMaps {
-    votedFor: map<address, uint4>   // todo: what struct to use
+    votedFor: map<address, uint4> = []   // todo: what struct to use
     followings: map<
         address,
         coins,
-    >                               // directional social link; value = FI minted for the link, burnt on unfollow
+    > = []                               // directional social link; value = FI minted for the link, burnt on unfollow
     // followers: map<address, coins> // added on closure (#24) so a closing Account can notify its followers
 }
 
@@ -44,9 +45,9 @@ struct Maps {
     // friends: map<address, coins> // todo: store jettonAddrs instead of userAddrs for bounce handling or pass extra receiver field in outgoing msg & can it help in socialRecovery too?
     // followers: map<address, coins> // todo delete redundant state just keep following and one side friend then bounce on other side if not exists? NO coz how to accClose then!
     // followings: map<address, coins>
-    invited: map<address, coins>
+    invited: map<address, coins> = []
 
-    allowances: map<address, coins> // todo need in personal tokens too?
+    allowances: map<address, coins> = [] // todo need in personal tokens too?
     // debts: map<address, coins>
     // closeFriends: map<address, bool> // for social recovery of account
     social: Cell<SocialMaps>
@@ -55,7 +56,7 @@ struct Maps {
 }
 
 struct ReportInfo {
-    reports: map<address, bool>
+    reports: map<address, bool> = []
     tosBreach: bool = false
     reporterCount: uint10 = 0 // todo: should be less than 250? msg sending
     disputerCount: uint10 = 0
@@ -102,8 +103,8 @@ struct FiWalletStore {
 struct FiStore {
     totalSupply: coins = 0
     walletVersion: uint10 = 0
-    adminAddress: address
-    daoAddress: address? = null
+    adminAddress: address                  // todo: can i set it to zeroAddr to drop instead of null ?
+    daoAddress: address = RAW_ZERO_ADDRESS // set on deploy
     adminHandoff: Cell<AdminHandoff>? = null
     metadata: cell
     others: Cell<FiCodes>

@@ -708,6 +708,69 @@ fun FossFiWallet.sendTriggerDecay(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendSetCreditNeed(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SetCreditNeed { queryId, amount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendRepayDebt(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RepayDebt { queryId, amount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActCloseAccount(
+    self,
+    from: address,
+    queryId: uint64,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActCloseAccount { queryId },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendAuthorityCloseAccount(
+    self,
+    from: address,
+    queryId: uint64,
+    target: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AuthorityCloseAccount { queryId, target },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun FossFiWallet.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
