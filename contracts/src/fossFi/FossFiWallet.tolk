@@ -43,6 +43,7 @@ type AllowedMessageToWallet =
     | InternalGoldCoinsTransfer
     | TriggerDecay
     | SetCreditNeed
+    | SetMultiplier
     | RepayDebt
     | ActCloseAccount
     | AuthorityCloseAccount
@@ -393,17 +394,42 @@ fun onInternalMessage(in: InMessage): void {
 
             if (msg.transferredAsCredit) {
                 // Credit Need gate (#23)
-                assert (store.creditNeed >= msg.jettonAmount) throw Errors.CreditNeedExceeded;
-                store.creditNeed -= msg.jettonAmount;
+                assert (store.creditNeed > 0) throw Errors.CreditNeedExceeded;
+                val acceptedAmount = min(msg.jettonAmount, store.creditNeed);
+                val refundAmount = msg.jettonAmount - acceptedAmount;
+                store.creditNeed -= acceptedAmount;
+
+                if (refundAmount > 0) {
+                    store.jettonBalance -= refundAmount;
+
+                    // refund excess FI jettons back to buyer
+                    val refundMsg = createMessage({
+                        bounce: BounceMode.Only256BitsOfBody,
+                        dest: msg.transferInitiator.getAddrFiWallet(),
+                        value: ton("0.05"),
+                        body: makeInternalTransferStep(
+                            msg.queryId,
+                            refundAmount,
+                            addrs.owner,
+                            msg.sendExcessesTo,
+                            0,
+                            createEmptySlice(),
+                            store.version,
+                            false,
+                        ),
+                    });
+                    refundMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                }
 
                 // trigger personal token minting
+                val mintPersonalAmount = acceptedAmount * store.multiplier;
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
                     mintRecipient: msg.transferInitiator,
                     tonAmount: ton("0.1"),
                     internalTransferMsg: makeInternalTransferStep(
                         msg.queryId,
-                        msg.jettonAmount,
+                        mintPersonalAmount,
                         msg.transferInitiator, // the buyer
                         null,                  // sendExcessesTo,
                         ton("0.0001"),
@@ -905,6 +931,13 @@ fun onInternalMessage(in: InMessage): void {
         SetCreditNeed => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
             store.creditNeed = msg.amount;
+        }
+
+        SetMultiplier => {
+            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            // todo: multiplier > 1 makes sense
+            assert (msg.multiplier > 0) throw Errors.InvalidMessage;
+            store.multiplier = msg.multiplier;
         }
 
         RepayDebt => {

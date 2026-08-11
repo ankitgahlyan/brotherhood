@@ -166,6 +166,7 @@ type uint2 = bigint
 type uint4 = bigint
 type uint8 = bigint
 type uint10 = bigint
+type uint16 = bigint
 type uint20 = bigint
 type uint32 = bigint
 type uint64 = bigint
@@ -2227,6 +2228,216 @@ export const ActSetPersonalJettonMinter = {
 }
 
 /**
+ > struct (0x0000114a) SetCreditNeed {
+ >     queryId: uint64
+ >     amount: coins
+ > }
+ */
+export interface SetCreditNeed {
+    readonly $: 'SetCreditNeed'
+    queryId: uint64 /* = 0 */
+    amount: coins
+}
+
+export const SetCreditNeed = {
+    PREFIX: 0x0000114a,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }): SetCreditNeed {
+        return {
+            $: 'SetCreditNeed',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): SetCreditNeed {
+        loadAndCheckPrefix32(s, 0x0000114a, 'SetCreditNeed');
+        return {
+            $: 'SetCreditNeed',
+            queryId: s.loadUintBig(64),
+            amount: s.loadCoins(),
+        }
+    },
+    store(self: SetCreditNeed, b: c.Builder): void {
+        b.storeUint(0x0000114a, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.amount);
+    },
+    toCell(self: SetCreditNeed): c.Cell {
+        return makeCellFrom<SetCreditNeed>(self, SetCreditNeed.store);
+    }
+}
+
+/**
+ > struct (0x0000114c) SetMultiplier {
+ >     queryId: uint64
+ >     multiplier: uint16
+ > }
+ */
+export interface SetMultiplier {
+    readonly $: 'SetMultiplier'
+    queryId: uint64 /* = 0 */
+    multiplier: uint16
+}
+
+export const SetMultiplier = {
+    PREFIX: 0x0000114c,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        multiplier: uint16
+    }): SetMultiplier {
+        return {
+            $: 'SetMultiplier',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): SetMultiplier {
+        loadAndCheckPrefix32(s, 0x0000114c, 'SetMultiplier');
+        return {
+            $: 'SetMultiplier',
+            queryId: s.loadUintBig(64),
+            multiplier: s.loadUintBig(16),
+        }
+    },
+    store(self: SetMultiplier, b: c.Builder): void {
+        b.storeUint(0x0000114c, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeUint(self.multiplier, 16);
+    },
+    toCell(self: SetMultiplier): c.Cell {
+        return makeCellFrom<SetMultiplier>(self, SetMultiplier.store);
+    }
+}
+
+/**
+ > struct (0x0000114b) RepayDebt {
+ >     queryId: uint64
+ >     amount: coins
+ > }
+ */
+export interface RepayDebt {
+    readonly $: 'RepayDebt'
+    queryId: uint64 /* = 0 */
+    amount: coins
+}
+
+export const RepayDebt = {
+    PREFIX: 0x0000114b,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }): RepayDebt {
+        return {
+            $: 'RepayDebt',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RepayDebt {
+        loadAndCheckPrefix32(s, 0x0000114b, 'RepayDebt');
+        return {
+            $: 'RepayDebt',
+            queryId: s.loadUintBig(64),
+            amount: s.loadCoins(),
+        }
+    },
+    store(self: RepayDebt, b: c.Builder): void {
+        b.storeUint(0x0000114b, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.amount);
+    },
+    toCell(self: RepayDebt): c.Cell {
+        return makeCellFrom<RepayDebt>(self, RepayDebt.store);
+    }
+}
+
+/**
+ > struct (0x0000105a) ActCloseAccount {
+ >     queryId: uint64
+ > }
+ */
+export interface ActCloseAccount {
+    readonly $: 'ActCloseAccount'
+    queryId: uint64 /* = 0 */
+}
+
+export const ActCloseAccount = {
+    PREFIX: 0x0000105a,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+    }): ActCloseAccount {
+        return {
+            $: 'ActCloseAccount',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ActCloseAccount {
+        loadAndCheckPrefix32(s, 0x0000105a, 'ActCloseAccount');
+        return {
+            $: 'ActCloseAccount',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: ActCloseAccount, b: c.Builder): void {
+        b.storeUint(0x0000105a, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: ActCloseAccount): c.Cell {
+        return makeCellFrom<ActCloseAccount>(self, ActCloseAccount.store);
+    }
+}
+
+/**
+ > struct (0x0000105b) AuthorityCloseAccount {
+ >     queryId: uint64
+ >     target: address
+ > }
+ */
+export interface AuthorityCloseAccount {
+    readonly $: 'AuthorityCloseAccount'
+    queryId: uint64 /* = 0 */
+    target: c.Address
+}
+
+export const AuthorityCloseAccount = {
+    PREFIX: 0x0000105b,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        target: c.Address
+    }): AuthorityCloseAccount {
+        return {
+            $: 'AuthorityCloseAccount',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): AuthorityCloseAccount {
+        loadAndCheckPrefix32(s, 0x0000105b, 'AuthorityCloseAccount');
+        return {
+            $: 'AuthorityCloseAccount',
+            queryId: s.loadUintBig(64),
+            target: s.loadAddress(),
+        }
+    },
+    store(self: AuthorityCloseAccount, b: c.Builder): void {
+        b.storeUint(0x0000105b, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.target);
+    },
+    toCell(self: AuthorityCloseAccount): c.Cell {
+        return makeCellFrom<AuthorityCloseAccount>(self, AuthorityCloseAccount.store);
+    }
+}
+
+/**
  > struct (0x00001191) ActJoinLottery {
  > }
  */
@@ -2466,30 +2677,30 @@ export const NomInAddrs = {
 /**
  > struct TrustedAddrs {
  >     minterAddr: address
- >     personalJettonMinter: address?
- >     personalJettonWallet: address?
+ >     personalJettonMinter: address
+ >     personalJettonWallet: address
  >     authorisedAccs: map<address, address>
  > }
  */
 export interface TrustedAddrs {
     readonly $: 'TrustedAddrs'
     minterAddr: c.Address
-    personalJettonMinter: c.Address | null /* = null */
-    personalJettonWallet: c.Address | null /* = null */
-    authorisedAccs: c.Dictionary<c.Address, c.Address>
+    personalJettonMinter: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+    personalJettonWallet: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+    authorisedAccs: c.Dictionary<c.Address, c.Address> /* = [] as map<address, address> */
 }
 
 export const TrustedAddrs = {
     create(args: {
         minterAddr: c.Address
-        personalJettonMinter?: c.Address | null /* = null */
-        personalJettonWallet?: c.Address | null /* = null */
-        authorisedAccs: c.Dictionary<c.Address, c.Address>
+        personalJettonMinter?: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+        personalJettonWallet?: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+        authorisedAccs: c.Dictionary<c.Address, c.Address> /* = [] as map<address, address> */
     }): TrustedAddrs {
         return {
             $: 'TrustedAddrs',
-            personalJettonMinter: null,
-            personalJettonWallet: null,
+            personalJettonMinter: c.Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
+            personalJettonWallet: c.Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
             ...args
         }
     },
@@ -2497,8 +2708,8 @@ export const TrustedAddrs = {
         return {
             $: 'TrustedAddrs',
             minterAddr: s.loadAddress(),
-            personalJettonMinter: s.loadMaybeAddress(),
-            personalJettonWallet: s.loadMaybeAddress(),
+            personalJettonMinter: s.loadAddress(),
+            personalJettonWallet: s.loadAddress(),
             authorisedAccs: c.Dictionary.load<c.Address, c.Address>(c.Dictionary.Keys.Address(), createDictionaryValue<c.Address>(
                 (s) => s.loadAddress(),
                 (v,b) => b.storeAddress(v)
@@ -2575,14 +2786,14 @@ export const Addresses = {
  */
 export interface SocialMaps {
     readonly $: 'SocialMaps'
-    votedFor: c.Dictionary<c.Address, uint4>
-    followings: c.Dictionary<c.Address, coins>
+    votedFor: c.Dictionary<c.Address, uint4> /* = [] as map<address, uint4> */
+    followings: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
 }
 
 export const SocialMaps = {
     create(args: {
-        votedFor: c.Dictionary<c.Address, uint4>
-        followings: c.Dictionary<c.Address, coins>
+        votedFor: c.Dictionary<c.Address, uint4> /* = [] as map<address, uint4> */
+        followings: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
     }): SocialMaps {
         return {
             $: 'SocialMaps',
@@ -2615,16 +2826,16 @@ export const SocialMaps = {
  */
 export interface Maps {
     readonly $: 'Maps'
-    invited: c.Dictionary<c.Address, coins>
-    allowances: c.Dictionary<c.Address, coins>
+    invited: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
+    allowances: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
     social: CellRef<SocialMaps>
     reportInfo: CellRef<ReportInfo>
 }
 
 export const Maps = {
     create(args: {
-        invited: c.Dictionary<c.Address, coins>
-        allowances: c.Dictionary<c.Address, coins>
+        invited: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
+        allowances: c.Dictionary<c.Address, coins> /* = [] as map<address, coins> */
         social: CellRef<SocialMaps>
         reportInfo: CellRef<ReportInfo>
     }): Maps {
@@ -2664,7 +2875,7 @@ export const Maps = {
  */
 export interface ReportInfo {
     readonly $: 'ReportInfo'
-    reports: c.Dictionary<c.Address, boolean>
+    reports: c.Dictionary<c.Address, boolean> /* = [] as map<address, bool> */
     tosBreach: boolean /* = false */
     reporterCount: uint10 /* = 0 */
     disputerCount: uint10 /* = 0 */
@@ -2673,7 +2884,7 @@ export interface ReportInfo {
 
 export const ReportInfo = {
     create(args: {
-        reports: c.Dictionary<c.Address, boolean>
+        reports: c.Dictionary<c.Address, boolean> /* = [] as map<address, bool> */
         tosBreach?: boolean /* = false */
         reporterCount?: uint10 /* = 0 */
         disputerCount?: uint10 /* = 0 */
@@ -2810,6 +3021,7 @@ export const ProfileInfo = {
  >     status: uint2
  >     isAuthorityAccount: bool
  >     creditNeed: coins
+ >     multiplier: uint16
  >     accumulatedFees: coins
  >     debt: coins
  >     debts: bool
@@ -2834,6 +3046,7 @@ export interface FiWalletStore {
     status: uint2 /* = 0 */
     isAuthorityAccount: boolean /* = false */
     creditNeed: coins /* = 0 */
+    multiplier: uint16 /* = 1 */
     accumulatedFees: coins /* = 0 */
     debt: coins /* = 0 */
     debts: boolean /* = false */
@@ -2858,6 +3071,7 @@ export const FiWalletStore = {
         status?: uint2 /* = 0 */
         isAuthorityAccount?: boolean /* = false */
         creditNeed?: coins /* = 0 */
+        multiplier?: uint16 /* = 1 */
         accumulatedFees?: coins /* = 0 */
         debt?: coins /* = 0 */
         debts?: boolean /* = false */
@@ -2881,6 +3095,7 @@ export const FiWalletStore = {
             status: 0n,
             isAuthorityAccount: false,
             creditNeed: 0n,
+            multiplier: 1n,
             accumulatedFees: 0n,
             debt: 0n,
             debts: false,
@@ -2903,6 +3118,7 @@ export const FiWalletStore = {
             status: s.loadUintBig(2),
             isAuthorityAccount: s.loadBoolean(),
             creditNeed: s.loadCoins(),
+            multiplier: s.loadUintBig(16),
             accumulatedFees: s.loadCoins(),
             debt: s.loadCoins(),
             debts: s.loadBoolean(),
@@ -2926,6 +3142,7 @@ export const FiWalletStore = {
         b.storeUint(self.status, 2);
         b.storeBit(self.isAuthorityAccount);
         b.storeCoins(self.creditNeed);
+        b.storeUint(self.multiplier, 16);
         b.storeCoins(self.accumulatedFees);
         b.storeCoins(self.debt);
         b.storeBit(self.debts);
@@ -3027,7 +3244,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class FossFiWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -3049,8 +3266,11 @@ export class FossFiWallet implements c.Contract {
         'Errors.NoVotesAvailable': 731,
         'Errors.NotVotedYet': 732,
         'Errors.WaitMore': 735,
+        'Errors.ProvideCoordinates': 738,
         'Errors.InviteFirst': 740,
         'Errors.ProposalFeeInsufficient': 756,
+        'Errors.CreditNeedExceeded': 760,
+        'Errors.AccountInDebt': 761,
     }
 
     readonly address: c.Address
@@ -3072,6 +3292,7 @@ export class FossFiWallet implements c.Contract {
         status?: uint2 /* = 0 */
         isAuthorityAccount?: boolean /* = false */
         creditNeed?: coins /* = 0 */
+        multiplier?: uint16 /* = 1 */
         accumulatedFees?: coins /* = 0 */
         debt?: coins /* = 0 */
         debts?: boolean /* = false */
@@ -3382,6 +3603,40 @@ export class FossFiWallet implements c.Contract {
         sender: c.Address
     }) {
         return TriggerDecay.toCell(TriggerDecay.create(body));
+    }
+
+    static createCellOfSetCreditNeed(body: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }) {
+        return SetCreditNeed.toCell(SetCreditNeed.create(body));
+    }
+
+    static createCellOfSetMultiplier(body: {
+        queryId?: uint64 /* = 0 */
+        multiplier: uint16
+    }) {
+        return SetMultiplier.toCell(SetMultiplier.create(body));
+    }
+
+    static createCellOfRepayDebt(body: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }) {
+        return RepayDebt.toCell(RepayDebt.create(body));
+    }
+
+    static createCellOfActCloseAccount(body: {
+        queryId?: uint64 /* = 0 */
+    }) {
+        return ActCloseAccount.toCell(ActCloseAccount.create(body));
+    }
+
+    static createCellOfAuthorityCloseAccount(body: {
+        queryId?: uint64 /* = 0 */
+        target: c.Address
+    }) {
+        return AuthorityCloseAccount.toCell(AuthorityCloseAccount.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -3833,6 +4088,60 @@ export class FossFiWallet implements c.Contract {
         });
     }
 
+    async sendSetCreditNeed(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: SetCreditNeed.toCell(SetCreditNeed.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendSetMultiplier(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        multiplier: uint16
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: SetMultiplier.toCell(SetMultiplier.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendRepayDebt(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        amount: coins
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RepayDebt.toCell(RepayDebt.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendActCloseAccount(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: ActCloseAccount.toCell(ActCloseAccount.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendAuthorityCloseAccount(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        target: c.Address
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: AuthorityCloseAccount.toCell(AuthorityCloseAccount.create(body)),
+            ...extraOptions
+        });
+    }
+
     async getWalletData(provider: ContractProvider): Promise<JettonWalletDataReply> {
         const r = StackReader.fromGetMethod(4, await provider.get('get_wallet_data', []));
         return ({
@@ -3845,7 +4154,7 @@ export class FossFiWallet implements c.Contract {
     }
 
     async getWalletDataAll(provider: ContractProvider): Promise<FiWalletStore> {
-        const r = StackReader.fromGetMethod(20, await provider.get('get_wallet_data_all', []));
+        const r = StackReader.fromGetMethod(21, await provider.get('get_wallet_data_all', []));
         return ({
             $: 'FiWalletStore',
             jettonBalance: r.readBigInt(),
@@ -3854,6 +4163,7 @@ export class FossFiWallet implements c.Contract {
             status: r.readBigInt(),
             isAuthorityAccount: r.readBoolean(),
             creditNeed: r.readBigInt(),
+            multiplier: r.readBigInt(),
             accumulatedFees: r.readBigInt(),
             debt: r.readBigInt(),
             debts: r.readBoolean(),

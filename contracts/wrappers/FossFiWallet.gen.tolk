@@ -724,6 +724,22 @@ fun FossFiWallet.sendSetCreditNeed(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendSetMultiplier(
+    self,
+    from: address,
+    queryId: uint64,
+    multiplier: uint16,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SetMultiplier { queryId, multiplier },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFiWallet.sendRepayDebt(
     self,
     from: address,

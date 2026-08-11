@@ -442,6 +442,11 @@ struct (0x0000114a) SetCreditNeed {
     amount: coins
 }
 
+struct (0x0000114c) SetMultiplier {
+    queryId: uint64 = 0
+    multiplier: uint16
+}
+
 struct (0x0000114b) RepayDebt {
     queryId: uint64 = 0
     amount: coins

@@ -83,6 +83,7 @@ fun setupPersonalScenario(): (
     // deploy the issuer's Personal Token minter and point the issuer's FI wallet at it
     val pm = deployPersonalMinter(issuerWallet.address, notDeployer.address);
     pointIssuerAtPersonalMinter(issuerWallet, notDeployer.address, pm.address);
+    issuerWallet.sendSetCreditNeed(notDeployer.address, 0, ton("1000"), { value: ton("0.1") });
 
     return (
         minter,
