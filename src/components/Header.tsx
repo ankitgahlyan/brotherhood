@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
-import { WalletSelector } from './wallet/WalletSelector';
+import { TonConnectButton } from '@tonconnect/ui-react';
 import { Diamond, Moon, Sun, RefreshCw, Settings, WifiOff } from 'lucide-react';
 import { useTheme, toggleTheme, type Theme } from '../lib/theme';
 import { useRefreshContractQueries } from '../lib/queries';
@@ -159,7 +159,7 @@ export default function Header() {
             <Settings className="size-4" />
           </Button>
 
-          <WalletSelector />
+          <TonConnectButton />
         </div>
       </header>
 

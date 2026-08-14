@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
-import { Address, toNano } from '@ton/core';
-import { useAppWallet } from '@/providers/WalletContext';
+import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
+import { Address, toNano, beginCell, storeStateInit } from '@ton/core';
 import {
   CheckCircle,
   ExternalLink,
@@ -32,7 +32,8 @@ interface Props {
 }
 
 export function DeployPage({ network }: Props) {
-  const wallet = useAppWallet();
+  const [tonConnectUI] = useTonConnectUI();
+  const wallet = useTonWallet();
 
   const [name, setName] = useState('Acton Token');
   const [symbol, setSymbol] = useState('ACT');
@@ -50,20 +51,17 @@ export function DeployPage({ network }: Props) {
   } | null>(null);
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
 
-  const ownerAddress = wallet.activeWallet?.address
-    ? Address.parse(wallet.activeWallet.address)
+  const ownerAddress = wallet?.account?.address
+    ? Address.parse(wallet.account.address)
     : null;
 
-  const isConnected = wallet.isUnlocked;
+  const isConnected = !!wallet;
 
   async function handleDeploy(e: SyntheticEvent) {
     e.preventDefault();
 
     if (!isConnected) {
-      setStatus({
-        type: 'error',
-        message: 'Please create or unlock a TON wallet first.',
-      });
+      tonConnectUI.openModal();
       return;
     }
 
@@ -111,14 +109,24 @@ export function DeployPage({ network }: Props) {
 
       setStatus({
         type: 'info',
-        message: 'Signing and broadcasting deployment transaction...',
+        message: 'Confirm the transaction in your wallet...',
       });
 
-      await wallet.sendTransaction({
-        to: contractAddress,
-        value: toNano('0.15'),
-        stateInit,
-        body: mintBody,
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        network: network === 'mainnet' ? '-239' : '-3',
+        messages: [
+          {
+            address: contractAddress.toString(),
+            amount: toNano('0.15').toString(),
+            stateInit: beginCell()
+              .store(storeStateInit(stateInit))
+              .endCell()
+              .toBoc()
+              .toString('base64'),
+            payload: mintBody.toBoc().toString('base64'),
+          },
+        ],
       });
 
       const friendlyAddr = contractAddress.toString({

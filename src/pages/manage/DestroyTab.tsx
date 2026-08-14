@@ -1,4 +1,5 @@
 import { Address, toNano } from '@ton/core';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildDestroyBody } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
@@ -9,13 +10,16 @@ import { StatusAlert } from '../DeployPage';
 
 export function DestroyTab({
   network,
+  tonConnectUI,
   ownerAddress,
 }: {
   network: Network;
+  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
 }) {
   const { sendTransaction, loading, status } = useSendFiTransaction(
-      network,
+    tonConnectUI,
+    network,
   );
 
   if (!ownerAddress) return <WalletRequired />;

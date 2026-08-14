@@ -1,5 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Address, beginCell, storeStateInit, toNano } from '@ton/core';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
   buildPersonalMinterDeploy,
   buildPointPersonalMinterBody,
@@ -18,9 +19,11 @@ import { StatusAlert } from '../DeployPage';
 
 export function IssueTokenTab({
   network,
+  tonConnectUI,
   ownerAddress,
 }: {
   network: Network;
+  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
 }) {
   const [name, setName] = useState('My Personal Token');
@@ -30,7 +33,8 @@ export function IssueTokenTab({
   const [imageUrl, setImageUrl] = useState('');
   const [issuerAddr, setIssuerAddr] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-      network,
+    tonConnectUI,
+    network,
   );
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Address, fromNano, toNano } from '@ton/core';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
   buildBuyCreditBody,
   buildBurnBody,
@@ -25,11 +26,13 @@ export function CreditTab({
   decimals,
   isConnected,
   network,
+  tonConnectUI,
   ownerAddress,
 }: {
   decimals: number;
   isConnected: boolean;
   network: Network;
+  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
 }) {
   const [buyIssuer, setBuyIssuer] = useState('');
@@ -37,7 +40,8 @@ export function CreditTab({
   const [paybackIssuer, setPaybackIssuer] = useState('');
   const [paybackAmount, setPaybackAmount] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-      network,
+    tonConnectUI,
+    network,
   );
   const [personalBalance, setPersonalBalance] = useState<bigint | null>(null);
   const [personalBalanceError, setPersonalBalanceError] = useState<

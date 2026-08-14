@@ -1,9 +1,8 @@
 import { useState } from 'react';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import type { Cell } from '@ton/core';
-import { loadStateInit } from '@ton/core';
 import { getErrorMessage, isCancelledTransactionError } from './errors';
 import type { Network } from './config';
-import { useAppWallet } from '@/providers/WalletContext';
 
 export interface SendStatus {
   type: 'success' | 'error' | 'info';
@@ -25,35 +24,32 @@ export interface SendFiTransactionParams {
 }
 
 /**
- * Single entry point for sending in-app TON transactions from any tab.
+ * Single entry point for sending a TON Connect transaction from any tab.
+ * Owns the `loading` / `status` pair so handlers no longer duplicate the
+ * info -> success/error -> clear pattern and the error mapping.
  */
 export function useSendFiTransaction(
-  _ignoredTonConnectUI?: unknown,
-  _ignoredNetwork?: Network
+  tonConnectUI: TonConnectUI,
+  network: Network,
 ) {
-  const wallet = useAppWallet();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<SendStatus | null>(null);
 
   const sendTransaction = async (params: SendFiTransactionParams) => {
     setLoading(true);
-    setStatus({ type: 'info', message: 'Signing and broadcasting transaction...' });
+    setStatus({ type: 'info', message: 'Confirm in your wallet...' });
 
     try {
-      if (!wallet.isUnlocked) {
-        throw new Error('Please create or unlock your TON wallet first.');
-      }
-
-      for (const m of params.messages) {
-        await wallet.sendTransaction({
-          to: m.address,
-          value: m.amount,
-          body: m.payload,
-          stateInit: m.stateInit
-            ? loadStateInit(m.stateInit.asSlice())
-            : undefined,
-        });
-      }
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        network: network === 'mainnet' ? '-239' : '-3',
+        messages: params.messages.map((m) => ({
+          address: m.address,
+          amount: m.amount.toString(),
+          payload: m.payload?.toBoc().toString('base64'),
+          stateInit: m.stateInit?.toBoc().toString('base64'),
+        })),
+      });
 
       setStatus({ type: 'success', message: params.successMessage });
       params.onSuccess?.();

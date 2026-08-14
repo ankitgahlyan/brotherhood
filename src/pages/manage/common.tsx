@@ -83,7 +83,7 @@ export function WalletRequired() {
       icon={<Wallet className="size-8" />}
       title="Wallet not connected"
       description="Connect your wallet to perform this action"
-      action={<div className="mx-auto w-fit"><WalletSelector /></div>}
+      action={<WalletSelector className="rounded-full max-w-55 mx-auto" />}
     />
   );
 }

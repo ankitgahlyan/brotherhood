@@ -1,5 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
   buildSetAllowanceBody,
   buildSpendAllowanceBody,
@@ -21,6 +22,7 @@ export function AllowanceTab({
   decimals,
   isConnected,
   network,
+  tonConnectUI,
   ownerAddress,
   fiWalletState,
   onSuccess,
@@ -28,6 +30,7 @@ export function AllowanceTab({
   decimals: number;
   isConnected: boolean;
   network: Network;
+  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
   fiWalletState: FiWalletStore | null;
   onSuccess: () => void;
@@ -38,7 +41,8 @@ export function AllowanceTab({
   const [spendAmount, setSpendAmount] = useState('');
   const [spendReceiver, setSpendReceiver] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-      network,
+    tonConnectUI,
+    network,
   );
 
   if (!isConnected) return <WalletRequired />;

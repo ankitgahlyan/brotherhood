@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Address, toNano } from '@ton/core';
+import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildVoteBody, buildUnvoteBody } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
@@ -13,14 +14,17 @@ import { StatusAlert } from '../DeployPage';
 
 export function VoteTab({
   network,
+  tonConnectUI,
   ownerAddress,
 }: {
   network: Network;
+  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
 }) {
   const [toAddr, setToAddr] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-      network,
+    tonConnectUI,
+    network,
   );
 
   if (!ownerAddress) return <WalletRequired />;
