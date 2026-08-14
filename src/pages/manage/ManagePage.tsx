@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Address, fromNano } from '@ton/core';
-import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
+import { useAppWallet } from '@/providers/WalletContext';
 import {
   Search,
   AlertCircle,
@@ -72,12 +72,11 @@ const TAB_ICONS: Record<ManageTab, LucideIcon> = {
 };
 
 export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
-  const [tonConnectUI] = useTonConnectUI();
-  const wallet = useTonWallet();
+  const appWallet = useAppWallet();
   const navigate = useNavigate();
   const tabsListRef = useRef<HTMLDivElement>(null);
 
-  const rawOwnerAddress = wallet?.account?.address ?? null;
+  const rawOwnerAddress = appWallet.activeWallet?.address ?? null;
   const ownerAddress = rawOwnerAddress ? Address.parse(rawOwnerAddress) : null;
 
   const jettonInfoQuery = useJettonMaster();
@@ -106,7 +105,7 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
   const decimals = jettonInfo?.metadata.decimals
     ? parseInt(jettonInfo.metadata.decimals)
     : 9;
-  const isConnected = !!wallet;
+  const isConnected = appWallet.isUnlocked;
 
   const adminAddress = jettonInfo?.adminAddress ?? null;
   const isAdmin =
@@ -218,7 +217,6 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                       isAdmin={isAdmin}
                       isConnected={isConnected}
                       network={network}
-                      tonConnectUI={tonConnectUI}
                       ownerAddress={ownerAddress}
                       onSuccess={() => jettonInfoQuery.refetch()}
                     />
@@ -229,7 +227,6 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     decimals={decimals}
                     isConnected={isConnected}
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                     fiWalletState={fiWalletState}
                     onSuccess={() => fiWalletStateQuery.refetch()}
@@ -240,7 +237,6 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     decimals={decimals}
                     isConnected={isConnected}
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                     onSuccess={() => jettonInfoQuery.refetch()}
                   />
@@ -250,28 +246,24 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     decimals={decimals}
                     isConnected={isConnected}
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>
                 <TabsContent value="destroy" className="mt-5">
                   <DestroyTab
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>
                 <TabsContent value="invite" className="mt-5">
                   <InviteTab
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>
                 <TabsContent value="issue" className="mt-5">
                   <IssueTokenTab
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>
@@ -280,14 +272,12 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     decimals={decimals}
                     isConnected={isConnected}
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>
                 <TabsContent value="vote" className="mt-5">
                   <VoteTab
                     network={network}
-                    tonConnectUI={tonConnectUI}
                     ownerAddress={ownerAddress}
                   />
                 </TabsContent>

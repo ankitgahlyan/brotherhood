@@ -1,6 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
-import type { TonConnectUI } from '@tonconnect/ui-react';
 import {
   buildChangeAdminBody,
   buildTopUpTonsBody,
@@ -33,7 +32,6 @@ export function AdminTab({
   isAdmin,
   isConnected,
   network,
-  tonConnectUI,
   ownerAddress,
   onSuccess,
 }: {
@@ -42,15 +40,11 @@ export function AdminTab({
   isAdmin: boolean;
   isConnected: boolean;
   network: Network;
-  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
   onSuccess: () => void;
 }) {
   const [newAdmin, setNewAdmin] = useState(ZERO_ADDRESS);
-  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-    tonConnectUI,
-    network,
-  );
+  const { sendTransaction, loading, status, setStatus } = useSendFiTransaction();
 
   const [newName, setNewName] = useState(info.metadata.name || '');
   const [newSymbol, setNewSymbol] = useState(info.metadata.symbol || '');
@@ -170,7 +164,6 @@ export function AdminTab({
           isAdmin={isAdmin}
           isConnected={isConnected}
           network={network}
-          tonConnectUI={tonConnectUI}
           ownerAddress={ownerAddress}
           onSuccess={onSuccess}
         />

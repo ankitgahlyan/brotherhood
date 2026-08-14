@@ -16,7 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "rootDir": ".",
-    "types": ["vite/client", "node", "@nubjs/types"],
+    "types": ["vite/client", "node", "@nubjs/types", "bun"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {

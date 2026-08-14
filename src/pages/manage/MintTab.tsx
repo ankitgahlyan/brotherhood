@@ -1,6 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
-import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildMintBody, parseUnits } from '../../lib/deploy';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
 import {
@@ -22,7 +21,6 @@ export function MintTab({
   isAdmin,
   isConnected,
   network,
-  tonConnectUI,
   ownerAddress,
   onSuccess,
 }: {
@@ -31,15 +29,13 @@ export function MintTab({
   isAdmin: boolean;
   isConnected: boolean;
   network: Network;
-  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
   onSuccess: () => void;
 }) {
   const [toAddr, setToAddr] = useState('');
   const [amount, setAmount] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-    tonConnectUI,
-    network,
+      network,
   );
 
   if (!isConnected) return <WalletRequired />;

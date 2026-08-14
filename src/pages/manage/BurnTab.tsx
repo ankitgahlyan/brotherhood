@@ -1,6 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Address, toNano } from '@ton/core';
-import type { TonConnectUI } from '@tonconnect/ui-react';
 import { buildBurnBody, parseUnits } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
@@ -15,21 +14,18 @@ export function BurnTab({
   decimals,
   isConnected,
   network,
-  tonConnectUI,
   ownerAddress,
   onSuccess,
 }: {
   decimals: number;
   isConnected: boolean;
   network: Network;
-  tonConnectUI: TonConnectUI;
   ownerAddress: Address | null;
   onSuccess: () => void;
 }) {
   const [amount, setAmount] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
-    tonConnectUI,
-    network,
+      network,
   );
 
   if (!isConnected) return <WalletRequired />;

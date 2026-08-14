@@ -332,7 +332,9 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
 
     val locationAddrs = buildLocationAddrsMap(minter.address, deployer.address);
     minter.sendSetLocationAddresses(deployer.address, 1, locationAddrs);
-    val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
+    // val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
+
+    // todo: send upgrade to fiWallet right after deploy to use lib for addr calculation after upgrades as we are not storing baseFiWalletCode to store.
 
     return (minter, deployer, notDeployer);
 }
