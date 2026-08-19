@@ -7,14 +7,12 @@ import {
   AlertCircle,
   Wallet,
   Lock,
-  Send,
-  Sparkles,
+  User,
+  Coins,
+  Users,
   CreditCard,
-  Flame,
-  UserPlus,
-  KeyRound,
   Vote,
-  Ban,
+  Dices,
   Shield,
   type LucideIcon,
 } from 'lucide-react';
@@ -38,40 +36,63 @@ import {
   type JettonInfo,
   type Network,
 } from './common';
-import { TransferTab } from './TransferTab';
-import { IssueTokenTab } from './IssueTokenTab';
+import { IdentityTab } from './IdentityTab';
+import { EconomyTab } from './EconomyTab';
+import { SocialTab } from './SocialTab';
 import { CreditTab } from './CreditTab';
-import { BurnTab } from './BurnTab';
-import { InviteTab } from './InviteTab';
-import { AllowanceTab } from './AllowanceTab';
-import { VoteTab } from './VoteTab';
-import { DestroyTab } from './DestroyTab';
+import { GovernanceTab } from './GovernanceTab';
+import { LotteryTab } from './LotteryTab';
 import { AdminTab } from './AdminTab';
+import { WeeklyClaimCard } from './WeeklyClaimCard';
 
-type ManageTab =
-  | 'admin'
-  | 'allowance'
-  | 'burn'
+export type ManageTab =
+  | 'identity'
+  | 'economy'
+  | 'social'
   | 'credit'
-  | 'destroy'
-  | 'invite'
-  | 'issue'
-  | 'transfer'
-  | 'vote';
+  | 'governance'
+  | 'lottery'
+  | 'admin';
 
 const TAB_ICONS: Record<ManageTab, LucideIcon> = {
-  admin: Shield,
-  allowance: KeyRound,
-  burn: Flame,
+  identity: User,
+  economy: Coins,
+  social: Users,
   credit: CreditCard,
-  destroy: Ban,
-  invite: UserPlus,
-  issue: Sparkles,
-  transfer: Send,
-  vote: Vote,
+  governance: Vote,
+  lottery: Dices,
+  admin: Shield,
 };
 
-export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
+function normalizeTab(rawTab?: string): ManageTab {
+  switch (rawTab) {
+    case 'invite':
+      return 'identity';
+    case 'transfer':
+    case 'burn':
+      return 'economy';
+    case 'allowance':
+      return 'social';
+    case 'issue':
+      return 'credit';
+    case 'vote':
+      return 'governance';
+    case 'destroy':
+    case 'admin':
+      return 'admin';
+    case 'identity':
+    case 'economy':
+    case 'social':
+    case 'credit':
+    case 'governance':
+    case 'lottery':
+      return rawTab;
+    default:
+      return 'identity';
+  }
+}
+
+export function ManagePage({ initialTab }: { initialTab?: string }) {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
   const navigate = useNavigate();
@@ -114,34 +135,27 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
     !!adminAddress &&
     ownerAddress.toString() === adminAddress.toString();
 
-  const [tab, setTab] = useState<ManageTab>(initialTab);
+  const [tab, setTab] = useState<ManageTab>(() => normalizeTab(initialTab));
 
   const visibleTabs: ManageTab[] = isAdmin
     ? [
-        'admin',
-        'allowance',
-        'burn',
+        'identity',
+        'economy',
+        'social',
         'credit',
-        'destroy',
-        'invite',
-        'issue',
-        'transfer',
-        'vote',
+        'governance',
+        'lottery',
+        'admin',
       ]
     : [
-        'allowance',
-        'burn',
+        'identity',
+        'economy',
+        'social',
         'credit',
-        'destroy',
-        'invite',
-        'issue',
-        'transfer',
-        'vote',
+        'governance',
+        'lottery',
       ];
 
-  // The active tab lives in the URL (?tab=...). If it is not reachable for the
-  // current wallet (e.g. ?tab=admin for a non-admin), fall back to the first
-  // visible tab without touching the URL.
   const activeTab: ManageTab = visibleTabs.includes(tab)
     ? tab
     : visibleTabs[0]!;
@@ -203,13 +217,84 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                         className="flex-1 h-9 rounded-lg text-[13px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground data-[state=active]:bg-[#ff4e00] data-[state=active]:text-white data-[state=active]:shadow-[0_4px_14px_-3px_rgba(255,78,0,0.5)] transition-all max-md:flex-none max-md:min-w-fit max-md:px-4 max-md:snap-start"
                       >
                         <Icon className="size-4 max-md:hidden" />
-                        {t === 'issue'
-                          ? 'Issue Token'
-                          : t.charAt(0).toUpperCase() + t.slice(1)}
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
                       </TabsTrigger>
                     );
                   })}
                 </TabsList>
+
+                <TabsContent value="identity" className="mt-5">
+                  <IdentityTab
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+
+                <TabsContent value="economy" className="mt-5">
+                  <EconomyTab
+                    decimals={decimals}
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => {
+                      fiWalletStateQuery.refetch();
+                      jettonInfoQuery.refetch();
+                    }}
+                  />
+                </TabsContent>
+
+                <TabsContent value="social" className="mt-5">
+                  <SocialTab
+                    decimals={decimals}
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+
+                <TabsContent value="credit" className="mt-5">
+                  <CreditTab
+                    decimals={decimals}
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+
+                <TabsContent value="governance" className="mt-5">
+                  <GovernanceTab
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+
+                <TabsContent value="lottery" className="mt-5">
+                  <LotteryTab
+                    fiWalletState={fiWalletState}
+                    isConnected={isConnected}
+                    network={network}
+                    tonConnectUI={tonConnectUI}
+                    ownerAddress={ownerAddress}
+                    onSuccess={() => fiWalletStateQuery.refetch()}
+                  />
+                </TabsContent>
+
                 {isAdmin && (
                   <TabsContent value="admin" className="mt-5">
                     <AdminTab
@@ -224,73 +309,6 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
                     />
                   </TabsContent>
                 )}
-                <TabsContent value="allowance" className="mt-5">
-                  <AllowanceTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                    fiWalletState={fiWalletState}
-                    onSuccess={() => fiWalletStateQuery.refetch()}
-                  />
-                </TabsContent>
-                <TabsContent value="burn" className="mt-5">
-                  <BurnTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                    onSuccess={() => jettonInfoQuery.refetch()}
-                  />
-                </TabsContent>
-                <TabsContent value="credit" className="mt-5">
-                  <CreditTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="destroy" className="mt-5">
-                  <DestroyTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="invite" className="mt-5">
-                  <InviteTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="issue" className="mt-5">
-                  <IssueTokenTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="transfer" className="mt-5">
-                  <TransferTab
-                    decimals={decimals}
-                    isConnected={isConnected}
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
-                <TabsContent value="vote" className="mt-5">
-                  <VoteTab
-                    network={network}
-                    tonConnectUI={tonConnectUI}
-                    ownerAddress={ownerAddress}
-                  />
-                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
@@ -308,6 +326,16 @@ export function ManagePage({ initialTab }: { initialTab: ManageTab }) {
           loading={loading}
           error={!jettonInfo ? jettonInfoError : null}
           contractAddr={FI_ADDRESS}
+        />
+        <WeeklyClaimCard
+          fiWalletState={fiWalletState}
+          ownerAddress={ownerAddress}
+          network={network}
+          tonConnectUI={tonConnectUI}
+          onSuccess={() => {
+            fiWalletStateQuery.refetch();
+            jettonInfoQuery.refetch();
+          }}
         />
         <FiWalletInfoCard
           fiWalletState={fiWalletState}

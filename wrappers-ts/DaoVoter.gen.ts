@@ -118,49 +118,6 @@ type coins = bigint
 type uint64 = bigint
 
 /**
- > struct DaoVoterStore {
- >     voterOwner: address
- >     daoAddress: address
- >     votes: map<uint64, bool>
- > }
- */
-export interface DaoVoterStore {
-    readonly $: 'DaoVoterStore'
-    voterOwner: c.Address
-    daoAddress: c.Address
-    votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
-}
-
-export const DaoVoterStore = {
-    create(args: {
-        voterOwner: c.Address
-        daoAddress: c.Address
-        votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
-    }): DaoVoterStore {
-        return {
-            $: 'DaoVoterStore',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): DaoVoterStore {
-        return {
-            $: 'DaoVoterStore',
-            voterOwner: s.loadAddress(),
-            daoAddress: s.loadAddress(),
-            votes: c.Dictionary.load<uint64, boolean>(c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool(), s),
-        }
-    },
-    store(self: DaoVoterStore, b: c.Builder): void {
-        b.storeAddress(self.voterOwner);
-        b.storeAddress(self.daoAddress);
-        b.storeDict<uint64, boolean>(self.votes, c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool());
-    },
-    toCell(self: DaoVoterStore): c.Cell {
-        return makeCellFrom<DaoVoterStore>(self, DaoVoterStore.store);
-    }
-}
-
-/**
  > struct (0x000010fd) VoteProposalChild {
  >     queryId: uint64
  >     proposalId: uint64
@@ -313,6 +270,49 @@ export const CleanupProposalVotes = {
     }
 }
 
+/**
+ > struct DaoVoterStore {
+ >     voterOwner: address
+ >     daoAddress: address
+ >     votes: map<uint64, bool>
+ > }
+ */
+export interface DaoVoterStore {
+    readonly $: 'DaoVoterStore'
+    voterOwner: c.Address
+    daoAddress: c.Address
+    votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
+}
+
+export const DaoVoterStore = {
+    create(args: {
+        voterOwner: c.Address
+        daoAddress: c.Address
+        votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
+    }): DaoVoterStore {
+        return {
+            $: 'DaoVoterStore',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DaoVoterStore {
+        return {
+            $: 'DaoVoterStore',
+            voterOwner: s.loadAddress(),
+            daoAddress: s.loadAddress(),
+            votes: c.Dictionary.load<uint64, boolean>(c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool(), s),
+        }
+    },
+    store(self: DaoVoterStore, b: c.Builder): void {
+        b.storeAddress(self.voterOwner);
+        b.storeAddress(self.daoAddress);
+        b.storeDict<uint64, boolean>(self.votes, c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool());
+    },
+    toCell(self: DaoVoterStore): c.Cell {
+        return makeCellFrom<DaoVoterStore>(self, DaoVoterStore.store);
+    }
+}
+
 // ————————————————————————————————————————————
 //    class DaoVoter
 //
@@ -352,7 +352,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoVoter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEA0gABFP8A9KQT9LzyyAsBAajT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wLXLCAAAIf8jjD4kiPHBfLivNM/MdcLP1MDgED0Dm+hMY4TUAOAQPRbMAHI+lIS+lL0AMntVJJfBOLg8j8CANjTP9M/+kjXCgBTFccF8uK8UyaAQPQOb6FtAZww0gDRUwG6k/LC9eCRMeIhyMoAVCBJgED0QwbI+lJSUPpSFvQAye1UyM+FCBT6UoEQ/s8LjhLLP8s/+lIibpRsEs+Blc+DEsoA4soAyYBA+wA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEArAABFP8A9KQT9LzyyAsBAVzT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wIxbBLXLCAAAIf8MZf4kscF8uK84PI/AgDY0z/TP/pI1woAUxXHBfLivFMmgED0Dm+hbQGcMNIA0VMBupPywvXgkTHiIcjKAFQgSYBA9EMGyPpSUlD6Uhb0AMntVMjPhQgU+lKBEP7PC44Syz/LP/pSIm6UbBLPgZXPgxLKAOLKAMmAQPsA');
 
     static Errors = {
         'Errors.IncorrectSender': 700,

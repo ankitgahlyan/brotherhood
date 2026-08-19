@@ -30,6 +30,20 @@ import {
   Destroy,
   SetAllowance,
   SpendAllowance,
+  ActClaimWeeklyGrant,
+  Follow,
+  Unfollow,
+  ChangeUsername,
+  ChangeCity,
+  ChangeCountry,
+  AskGoldCoinsTransfer,
+  RepayDebt,
+  SetCreditNeed,
+  SetMultiplier,
+  ActCloseAccount,
+  ActJoinLottery,
+  ActSubmitProposal,
+  ActVoteProposal,
 } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
@@ -321,3 +335,155 @@ export function buildSpendAllowanceBody(params: {
     SpendAllowance.create({ queryId, amount, receiver, sendExcessesTo }),
   );
 }
+
+export function buildClaimWeeklyGrantBody(params?: {
+  sendExcessesTo?: Address | null;
+  queryId?: bigint;
+}): Cell {
+  const { sendExcessesTo = null, queryId = 0n } = params ?? {};
+  return ActClaimWeeklyGrant.toCell(
+    ActClaimWeeklyGrant.create({ queryId, sendExcessesTo }),
+  );
+}
+
+export function buildFollowBody(params: {
+  followee: Address;
+  queryId?: bigint;
+}): Cell {
+  const { followee, queryId = 0n } = params;
+  return Follow.toCell(Follow.create({ queryId, followee }));
+}
+
+export function buildUnfollowBody(params: {
+  followee: Address;
+  initiator: Address;
+  queryId?: bigint;
+}): Cell {
+  const { followee, initiator, queryId = 0n } = params;
+  return Unfollow.toCell(Unfollow.create({ queryId, initiator, followee }));
+}
+
+export function buildChangeUsernameBody(params: {
+  newUsername: string;
+}): Cell {
+  const { newUsername } = params;
+  return ChangeUsername.toCell(ChangeUsername.create({ newUsername }));
+}
+
+export function getCityLetterCode(city: string): bigint {
+  const trimmed = city.trim();
+  if (!trimmed) return 0n;
+  const firstChar = trimmed.charAt(0).toUpperCase();
+  const code = firstChar.charCodeAt(0);
+  if (code >= 65 && code <= 90) {
+    return BigInt(code - 65);
+  }
+  return 0n;
+}
+
+export function buildChangeCityBody(params: {
+  newCity: string;
+  oldCity?: string;
+  queryId?: bigint;
+}): Cell {
+  const { newCity, oldCity = '', queryId = 0n } = params;
+  return ChangeCity.toCell(
+    ChangeCity.create({
+      queryId,
+      newCity,
+      oldCityLetter: getCityLetterCode(oldCity),
+      newCityLetter: getCityLetterCode(newCity),
+    }),
+  );
+}
+
+export function buildChangeCountryBody(params: {
+  newCountry: number | bigint;
+  queryId?: bigint;
+}): Cell {
+  const { newCountry, queryId = 0n } = params;
+  return ChangeCountry.toCell(
+    ChangeCountry.create({ queryId, newCountry: BigInt(newCountry) }),
+  );
+}
+
+export function buildGoldCoinsTransferBody(params: {
+  receiver: Address;
+  amount: number | bigint;
+  sendExcessesTo?: Address | null;
+  queryId?: bigint;
+}): Cell {
+  const { receiver, amount, sendExcessesTo = null, queryId = 0n } = params;
+  return AskGoldCoinsTransfer.toCell(
+    AskGoldCoinsTransfer.create({
+      queryId,
+      amount: BigInt(amount),
+      receiver,
+      sendExcessesTo,
+    }),
+  );
+}
+
+export function buildRepayDebtBody(params: {
+  amount: bigint;
+  queryId?: bigint;
+}): Cell {
+  const { amount, queryId = 0n } = params;
+  return RepayDebt.toCell(RepayDebt.create({ queryId, amount }));
+}
+
+export function buildSetCreditNeedBody(params: {
+  amount: bigint;
+  queryId?: bigint;
+}): Cell {
+  const { amount, queryId = 0n } = params;
+  return SetCreditNeed.toCell(SetCreditNeed.create({ queryId, amount }));
+}
+
+export function buildSetMultiplierBody(params: {
+  multiplier: number | bigint;
+  queryId?: bigint;
+}): Cell {
+  const { multiplier, queryId = 0n } = params;
+  return SetMultiplier.toCell(
+    SetMultiplier.create({ queryId, multiplier: BigInt(multiplier) }),
+  );
+}
+
+export function buildCloseAccountBody(params?: { queryId?: bigint }): Cell {
+  const { queryId = 0n } = params ?? {};
+  return ActCloseAccount.toCell(ActCloseAccount.create({ queryId }));
+}
+
+export function buildJoinLotteryBody(): Cell {
+  return ActJoinLottery.toCell(ActJoinLottery.create());
+}
+
+export function buildSubmitProposalBody(params: {
+  daoAddress: Address;
+  targetMsg: Cell;
+  queryId?: bigint;
+}): Cell {
+  const { daoAddress, targetMsg, queryId = 0n } = params;
+  return ActSubmitProposal.toCell(
+    ActSubmitProposal.create({ queryId, daoAddress, targetMsg }),
+  );
+}
+
+export function buildVoteProposalBody(params: {
+  daoAddress: Address;
+  proposalId: number | bigint;
+  vote: boolean;
+  queryId?: bigint;
+}): Cell {
+  const { daoAddress, proposalId, vote, queryId = 0n } = params;
+  return ActVoteProposal.toCell(
+    ActVoteProposal.create({
+      queryId,
+      daoAddress,
+      proposalId: BigInt(proposalId),
+      vote,
+    }),
+  );
+}
+

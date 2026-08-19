@@ -54,7 +54,7 @@ try {
 
   const expectations = {
     'header brand': 'BrotherHood',
-    'Manage tab list': 'ISSUE',
+    'Manage tab list': 'IDENTITY',
     'token card': 'BROTHERHOOD — HD',
   };
 

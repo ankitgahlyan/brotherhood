@@ -5,10 +5,15 @@ import { ManagePage } from '../pages/manage/ManagePage';
 export const manageSearchSchema = z.object({
   tab: z
     .enum([
+      'identity',
+      'economy',
+      'social',
+      'credit',
+      'governance',
+      'lottery',
+      'admin',
       'transfer',
       'burn',
-      'credit',
-      'admin',
       'invite',
       'vote',
       'destroy',
@@ -16,7 +21,7 @@ export const manageSearchSchema = z.object({
       'allowance',
     ])
     .optional()
-    .default('vote'),
+    .default('identity'),
 });
 
 export const Route = createFileRoute('/')({
