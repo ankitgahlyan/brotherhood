@@ -10,6 +10,9 @@ BrotherHood is an invite-only online community on TON that uses cryptocurrency t
 A human who belongs to BrotherHood. A member can invite, be invited, vote, be reported, and, on death, have their account closed.
 _Avoid_: User, person, account holder
 
+**Country** — the numeric ISO 3166-1 country code recorded in a Member's Account profile, scoping governance voting and regional representation.
+_Avoid_: Nationality, citizenship, region
+
 **Account** — a member's on-chain record, implemented as a `FossFiWallet` contract. Holds the member's balance, votes, connections, and status. One member owns exactly one account.
 _Avoid_: Wallet, jetton wallet (reserved for the TON standard view)
 
@@ -27,11 +30,15 @@ _Avoid_: Token (when the distinction matters), the coin
 **Invite** — the act of bringing a new Member into BrotherHood. Only Members can invite; an accepted invite mints FI to reward the network growth it causes.
 _Avoid_: Referral, signup, voucher
 
-**Following** — a directional social link from one Account to another Account or to a contract, rewarded with minted FI.
+**Following** — a directional social link from Follower Account to Followee Account, rewarding the Followee with 1,000 minted FI. Implemented as an ephemeral child `Following` contract deployed with shared TON library code.
 _Avoid_: Friendship, connection, subscription
 
-**Unfollow** — removing a Following; burns exactly the amount that following minted, so social capital is reversible.
+**Unfollow** — removing a Following; burns the 1,000 FI from the Followee and self-destructs the child `Following` contract to recover TON storage rent.
 _Avoid_: Unfriend, remove
+
+**Settlement** — the required burning of minted FI when either party of an active Following dies/closes. Under the survivor-pays invariant, the surviving counterparty burns 1,000 FI to settle the trust supply (if Follower dies, Followee burns; if Followee dies, Follower burns). Unpaid shortfalls become Debt on the surviving Account and cascade up its Invite Lineage.
+_Avoid_: Liquidation, default, clearing
+
 
 **Lifetime Decay** — a small monthly burn of an Account's FI spread over the expected human lifespan, so minted value converges to zero as a Member ages out. One of the economic counterweights to minting; weekly claims still continue alongside it.
 _Avoid_: Inflation, demurrage (too broad), fees
@@ -84,8 +91,11 @@ _Avoid_: Referral chain, network
 
 ### Governance
 
-**Vote** — a unit of reputational endorsement cast by one Account for another. Voting power is a fixed endowment per Account, deliberately not weighted by FI balance or staked capital: consensus is moral, not economic.
+**Vote** — a unit of reputational endorsement cast by one Account for another within the same Country. Voting power is a fixed endowment per Account, deliberately not weighted by FI balance or staked capital: consensus is moral and regional, not economic.
 _Avoid_: Stake, token-weight, reputation (when meaning the tally)
+
+**Candidate** — an active Member Account receiving a Vote endorsement from another Member of the same Country.
+_Avoid_: Nominee (reserved for inheritance successor), delegate
 
 **Received Votes** — the tally of votes an Account has collected; crossing the Authority Threshold elevates it to Authority.
 

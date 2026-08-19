@@ -1,19 +1,10 @@
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/dao/storage"
 
 type AllowedMessageToDaoVoter =
     | VoteProposalChild
     | CleanupProposalVotes
-
-struct DaoVoterStore {
-    voterOwner: address
-    daoAddress: address
-    votes: map<uint64, bool> = []
-}
-
-fun DaoVoterStore.save(self): void {
-    contract.setData(self.toCell());
-}
 
 contract DaoVoter {
     author: "zeta"
@@ -25,7 +16,7 @@ contract DaoVoter {
 
 fun onInternalMessage(in: InMessage): void {
     val msg = lazy AllowedMessageToDaoVoter.fromSlice(in.body);
-    var store = lazy DaoVoterStore.fromSlice(contract.getData().beginParse());
+    var store = lazy DaoVoterStore.load();
 
     match (msg) {
         VoteProposalChild => {
@@ -62,10 +53,12 @@ fun onInternalMessage(in: InMessage): void {
 
         CleanupProposalVotes => {
             assert ((in.senderAddress == store.voterOwner)) throw Errors.IncorrectSender;
-            if (store.votes.exists(msg.proposalId)) {
-                store.votes.delete(msg.proposalId);
-                store.save();
-            }
+            // store.votes = []; // todo: fixme: unlimited votes
+            // store.save();
+            // if (store.votes.exists(msg.proposalId)) {
+            //     store.votes.delete(msg.proposalId);
+            //     store.save();
+            // }
         }
     }
 }

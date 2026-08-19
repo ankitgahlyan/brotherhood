@@ -58,6 +58,7 @@ fun activateIssuer(
             "issuer_user",
             "Tokyo",
             20,
+            0,
             { value: ton("1") },
         );
     invite.waitForFirstTransaction();
@@ -80,7 +81,7 @@ fun main() {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: deployer,
-        jettonWalletCode: personalWalletCompiledCode(),
+        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
         metadataUri: buildJettonMetadataCell({
             name: "Issuer Token",
             symbol: "IT",

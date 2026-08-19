@@ -11,7 +11,7 @@ acton = "trunk"
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
-    "Lottery", # small number deployed easy upgrades
+    "Lottery",                                                                                        # small number deployed easy upgrades
     { name = "FossFiWallet", kind = "library_ref", function = "fossFiWalletCompiledCodeLibraryRef" },
 ]
 
@@ -20,7 +20,16 @@ display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
     { name = "DaoVoter", kind = "library_ref", function = "daoVoterCompiledCodeLibraryRef" },
+    { name = "Following", kind = "library_ref", function = "followingCompiledCodeLibraryRef" },
+    { name = "PersonalMinter", kind = "library_ref", function = "personalMinterCompiledCodeLibraryRef" },
+
 ]
+
+[contracts.Following]
+display-name = "Following Child"
+src = "contracts/src/followers/followers.tolk"
+depends = []
+
 
 [contracts.Location]
 display-name = "Location Aggregator"
@@ -42,7 +51,9 @@ depends = []
 [contracts.PersonalMinter]
 display-name = "Personal Token Minter"
 src = "contracts/src/personalMinter/personal.tolk"
-depends = ["PersonalWallet"]
+depends = [
+    { name = "PersonalWallet", kind = "library_ref", function = "personalWalletCompiledCodeLibraryRef" },
+]
 
 [contracts.PersonalWallet]
 display-name = "Personal Token Wallet"
@@ -82,14 +93,14 @@ separate-import-groups = true
 
 [lint]
 exclude = ["contracts/wrappers/*.*.tolk", "gen/*.tolk"]
-max-warnings = 0 # fail on any warning
+max-warnings = 0                                        # fail on any warning
 
 [lint.rules]
 unused-variable = "deny"
 mutable-variable-can-be-immutable = "warn"
 
 [scripts]
-loop = "acton check --fix && acton fmt && acton build && acton wrapper --all"
+loop = "acton build && acton wrapper --all && acton check --fix && acton fmt && acton build && acton wrapper --all"
 deploy-emulation = "acton script contracts/scripts/deploy.tolk"
 deploy-testnet = "acton script contracts/scripts/deploy.tolk --net testnet"
 deploy-libs = "acton library publish FossFiWallet --amount 1 --wallet teleg -y && acton library publish DaoVoter --amount 1 --wallet teleg -y && acton library publish CityMap --amount 1 --wallet teleg -y"

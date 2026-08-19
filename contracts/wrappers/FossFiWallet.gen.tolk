@@ -170,6 +170,22 @@ fun FossFiWallet.sendChangeCity(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendChangeCountry(
+    self,
+    from: address,
+    queryId: uint64,
+    newCountry: uint16,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ChangeCountry { queryId, newCountry },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFiWallet.sendInternalTransferStep(
     self,
     from: address,
@@ -215,6 +231,7 @@ fun FossFiWallet.sendInternalInvite(
     username: string,
     city: string,
     cityLetter: uint8,
+    country: uint16,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
@@ -231,6 +248,7 @@ fun FossFiWallet.sendInternalInvite(
             username,
             city,
             cityLetter,
+            country,
         },
     });
     return net.send(from, genericMsg);
@@ -274,13 +292,14 @@ fun FossFiWallet.sendActInvite(
     username: string,
     city: string,
     cityLetter: uint8,
+    country: uint16,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActInvite { queryId, transferRecipient, username, city, cityLetter },
+        body: ActInvite { queryId, transferRecipient, username, city, cityLetter, country },
     });
     return net.send(from, genericMsg);
 }
@@ -552,13 +571,14 @@ fun FossFiWallet.sendVotingAction(
     positiveVote: bool,
     count: uint4,
     sender: address,
+    country: uint16,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: VotingAction { positiveVote, count, sender },
+        body: VotingAction { positiveVote, count, sender, country },
     });
     return net.send(from, genericMsg);
 }
@@ -579,11 +599,10 @@ fun FossFiWallet.sendEnterLottery(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendUnFollow(
+fun FossFiWallet.sendFollow(
     self,
     from: address,
     queryId: uint64,
-    follow: bool,
     followee: address,
     config: SendParams = {},
 ): SendResultList {
@@ -591,24 +610,76 @@ fun FossFiWallet.sendUnFollow(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: UnFollow { queryId, follow, followee },
+        body: Follow { queryId, followee },
     });
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendUnFollowInternal(
+fun FossFiWallet.sendUnfollow(
     self,
     from: address,
     queryId: uint64,
-    follow: bool,
-    sender: address,
+    initiator: address,
+    followee: address,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: UnFollowInternal { queryId, follow, sender },
+        body: Unfollow { queryId, initiator, followee },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendFollowNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    follower: address,
+    followerOwner: address,
+    mintAmount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: FollowNotification { queryId, follower, followerOwner, mintAmount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendUnfollowNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    follower: address,
+    followerOwner: address,
+    burnAmount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: UnfollowNotification { queryId, follower, followerOwner, burnAmount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendSettleDeath(
+    self,
+    from: address,
+    queryId: uint64,
+    deceased: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SettleDeath { queryId, deceased },
     });
     return net.send(from, genericMsg);
 }
@@ -812,4 +883,16 @@ fun FossFiWallet.getUsername(self): string {
 
 fun FossFiWallet.getCity(self): string {
     return net.runGetMethod(self.address, "get_city");
+}
+
+fun FossFiWallet.getProfile(self): (string, string, uint16) {
+    return net.runGetMethod(self.address, "get_profile");
+}
+
+fun FossFiWallet.getFollowingCount(self): uint32 {
+    return net.runGetMethod(self.address, "get_following_count");
+}
+
+fun FossFiWallet.getFollowersCount(self): uint32 {
+    return net.runGetMethod(self.address, "get_followers_count");
 }

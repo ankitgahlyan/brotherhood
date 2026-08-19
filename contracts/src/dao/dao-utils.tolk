@@ -1,4 +1,4 @@
-import "@contracts/dao/DaoVoter"
+import "@contracts/dao/storage"
 
 fun calcDeployDaoVoter(
     voterOwner: address,

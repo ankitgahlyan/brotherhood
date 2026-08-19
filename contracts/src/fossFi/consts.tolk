@@ -13,4 +13,5 @@ const CLOSURE_WAIT: int = 86400 // 1 day
 const DECAY_MONTH_SECONDS: int = 2592000 // 30 days
 const DECAY_MONTHS_TOTAL: int = 480 // ~40 years
 const WEEKLY_CLAIM_AMOUNT: coins = ton("11111")
-const FOLLOW_MINT_AMOUNT: coins = ton("1000") // minted on following, burnt exactly on unfollow
+const FOLLOW_MINT_AMOUNT: coins = ton("1000") // minted to followee on following, burnt on unfollow/settlement
+const MIN_FOLLOW_GAS: coins = ton("0.08")

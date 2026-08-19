@@ -45,7 +45,7 @@ fun main() {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        jettonWalletCode: personalWalletCompiledCode(),
+        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
         metadataUri: buildJettonMetadataCell(metadata),
     };
     val stateInit = ContractState {

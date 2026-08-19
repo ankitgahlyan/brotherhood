@@ -194,6 +194,7 @@ struct (0x00001051) ActInvite {
     username: string
     city: string
     cityLetter: uint8 = 0
+    country: uint16 = 0
 }
 
 struct (0x00001052) InternalInvite {
@@ -206,6 +207,7 @@ struct (0x00001052) InternalInvite {
     username: string
     city: string
     cityLetter: uint8 = 0
+    country: uint16 = 0
 }
 
 struct (0x00001053) InternalInviteApproval {
@@ -219,6 +221,7 @@ struct (0x00001054) InformMinterInviteInternal {
     username: string
     city: string
     cityLetter: uint8 = 0
+    country: uint16 = 0
 }
 
 struct (0x00001055) ActDeactivate {
@@ -302,6 +305,11 @@ struct (0x000010a7) UnregisterCityMember {
     version: uint10 = 0
 }
 
+struct (0x000010a8) ChangeCountry {
+    queryId: uint64 = 0
+    newCountry: uint16
+}
+
 // ============================================================================
 // GROUP 4: SOCIAL, VOTING, & AUTHORITY (Range: 0x000010F0 - 0x0000113F)
 // Buffer: 50 reserved opcodes for future social & governance features
@@ -319,6 +327,7 @@ struct (0x000010f3) VotingAction {
     positiveVote: bool = true
     count: uint4 = 10
     sender: address
+    country: uint16 = 0
 }
 
 struct (0x000010f4) ActDispatchAuthorityAction {

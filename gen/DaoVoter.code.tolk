@@ -15,5 +15,5 @@
 /// This function always returns the correct cell with the contract code.
 @pure
 fun daoVoterCompiledCodeLibraryRef(): cell asm """
-    "te6ccgEBAwEA0gABFP8A9KQT9LzyyAsBAajT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wLXLCAAAIf8jjD4kiPHBfLivNM/MdcLP1MDgED0Dm+hMY4TUAOAQPRbMAHI+lIS+lL0AMntVJJfBOLg8j8CANjTP9M/+kjXCgBTFccF8uK8UyaAQPQOb6FtAZww0gDRUwG6k/LC9eCRMeIhyMoAVCBJgED0QwbI+lJSUPpSFvQAye1UyM+FCBT6UoEQ/s8LjhLLP8s/+lIibpRsEs+Blc+DEsoA4soAyYBA+wA=" base64>B B>boc hashu <b 2 8 u, swap 256 u, b>spec PUSHREF
+    "te6ccgEBAwEArAABFP8A9KQT9LzyyAsBAVzT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wIxbBLXLCAAAIf8MZf4kscF8uK84PI/AgDY0z/TP/pI1woAUxXHBfLivFMmgED0Dm+hbQGcMNIA0VMBupPywvXgkTHiIcjKAFQgSYBA9EMGyPpSUlD6Uhb0AMntVMjPhQgU+lKBEP7PC44Syz/LP/pSIm6UbBLPgZXPgxLKAOLKAMmAQPsA" base64>B B>boc hashu <b 2 8 u, swap 256 u, b>spec PUSHREF
 """

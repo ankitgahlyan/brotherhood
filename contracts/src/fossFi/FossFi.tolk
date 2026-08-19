@@ -146,6 +146,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         NotifyMinter => {
+            // todo: fixme for Following supply contract
             assertCorrectSender(in.senderAddress, msg.burnInitiator, store.adminAddress);
 
             // determine whether MINT or BURN

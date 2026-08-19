@@ -21,3 +21,17 @@ fun DaoStore.load(): DaoStore {
 fun DaoStore.save(self): void {
     contract.setData(self.toCell());
 }
+
+struct DaoVoterStore {
+    voterOwner: address
+    daoAddress: address
+    votes: map<uint64, bool> = []
+}
+
+fun DaoVoterStore.load(): DaoVoterStore {
+    return DaoVoterStore.fromCell(contract.getData());
+}
+
+fun DaoVoterStore.save(self): void {
+    contract.setData(self.toCell());
+}

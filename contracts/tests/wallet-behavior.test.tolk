@@ -31,6 +31,7 @@ get fun `test wallet: kitchenSink`() {
         "alice",
         "London",
         12,
+        0,
         { value: ton("1") }, // todo: bounce?
     );
     invite.giveName("inviteMsg");
@@ -141,10 +142,7 @@ get fun `test : addrs r same`() {
         maps: Maps {
             allowances: [],
             invited: [],
-            social: SocialMaps {
-                votedFor: [],
-                followings: [],
-            }.toCell(),
+            social: SocialMaps { votedFor: [] }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),
         }.toCell(), // todo: learn how to set it default
         profile: ProfileInfo {}.toCell(),
@@ -408,4 +406,225 @@ get fun `test wallet: cannot burn more than balance`() {
 
     expect(wallet.getJettonBalance()).toEqual(balanceBefore);
     expect(minter.getTotalSupply()).toEqual(supplyBefore);
+}
+
+get fun `test wallet: profile country and get_profile getter`() {
+    val (minter, deployer, _notDeployer) = setupTest();
+    val senderWallet = userWallet(minter, deployer.address);
+    val user2 = testing.treasury("user-country-test");
+    val user2Wallet = userWallet(minter, user2.address);
+
+    val invite = senderWallet.sendActInvite(
+        deployer.address,
+        0,
+        user2.address,
+        "bob",
+        "NewYork",
+        12,
+        840,
+        { value: ton("1") },
+    );
+    expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
+        from: senderWallet.address,
+        to: user2Wallet.address,
+    });
+
+    val (username, city, country) = user2Wallet.getProfile();
+    expect(username).toEqual("bob");
+    expect(city).toEqual("NewYork");
+    expect(country).toEqual(840);
+}
+
+get fun `test wallet: change country succeeds when no active votes`() {
+    val (minter, deployer, _) = setupTest();
+    val user = testing.treasury("user-change-country");
+    val userWallet2 = userWallet(minter, user.address);
+    val rootWallet = userWallet(minter, deployer.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        user.address,
+        "charlie",
+        "Paris",
+        15,
+        250,
+        { value: ton("1") },
+    );
+
+    val changeRes = userWallet2.sendChangeCountry(user.address, 0, 356, { value: ton("0.1") });
+    expect(changeRes).toHaveSuccessfulTx<ChangeCountry>({
+        from: user.address,
+        to: userWallet2.address,
+    });
+
+    val (_, _, country) = userWallet2.getProfile();
+    expect(country).toEqual(356);
+}
+
+get fun `test wallet: voting succeeds between accounts with matching country`() {
+    val (minter, deployer, _) = setupTest();
+    val rootWallet = userWallet(minter, deployer.address);
+
+    val voter = testing.treasury("voter-same-country");
+    val candidate = testing.treasury("candidate-same-country");
+    val voterWallet = userWallet(minter, voter.address);
+    val candidateWallet = userWallet(minter, candidate.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        voter.address,
+        "voter1",
+        "London",
+        12,
+        826,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidate.address,
+        "cand1",
+        "Manchester",
+        12,
+        826,
+        { value: ton("1") },
+    );
+
+    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    expect(voteRes).toHaveSuccessfulTx<VotingAction>({
+        from: voterWallet.address,
+        to: candidateWallet.address,
+    });
+
+    val candidateData = candidateWallet.getWalletDataAll();
+    expect(candidateData.receivedVotes).toEqual(10);
+    val voterData = voterWallet.getWalletDataAll();
+    expect(voterData.votes).toEqual(0);
+}
+
+get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
+    val (minter, deployer, _) = setupTest();
+    val rootWallet = userWallet(minter, deployer.address);
+
+    val voter = testing.treasury("voter-globalist");
+    val candidate = testing.treasury("candidate-globalist");
+    val voterWallet = userWallet(minter, voter.address);
+    val candidateWallet = userWallet(minter, candidate.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        voter.address,
+        "voterG",
+        "Global",
+        0,
+        0,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidate.address,
+        "candG",
+        "Global",
+        0,
+        0,
+        { value: ton("1") },
+    );
+
+    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    expect(voteRes).toHaveSuccessfulTx<VotingAction>({
+        from: voterWallet.address,
+        to: candidateWallet.address,
+    });
+
+    val candidateData = candidateWallet.getWalletDataAll();
+    expect(candidateData.receivedVotes).toEqual(10);
+}
+
+get fun `test wallet: voting fails and bounces when country mismatches, restoring voter votes`() {
+    val (minter, deployer, _) = setupTest();
+    val rootWallet = userWallet(minter, deployer.address);
+
+    val voter = testing.treasury("voter-us");
+    val candidate = testing.treasury("candidate-in");
+    val voterWallet = userWallet(minter, voter.address);
+    val candidateWallet = userWallet(minter, candidate.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        voter.address,
+        "voterUS",
+        "NewYork",
+        12,
+        840,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidate.address,
+        "candIN",
+        "Delhi",
+        4,
+        356,
+        { value: ton("1") },
+    );
+
+    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    expect(voteRes).toHaveFailedTx<VotingAction>({
+        from: voterWallet.address,
+        to: candidateWallet.address,
+        exitCode: Errors.CountryMismatch,
+    });
+
+    val candidateData = candidateWallet.getWalletDataAll();
+    expect(candidateData.receivedVotes).toEqual(0);
+
+    // Voter receives bounce and recovers voting power
+    val voterData = voterWallet.getWalletDataAll();
+    expect(voterData.votes).toEqual(10);
+}
+
+get fun `test wallet: change country fails when active votes exist`() {
+    val (minter, deployer, _) = setupTest();
+    val rootWallet = userWallet(minter, deployer.address);
+
+    val voter = testing.treasury("voter-active-votes");
+    val candidate = testing.treasury("candidate-active-votes");
+    val voterWallet = userWallet(minter, voter.address);
+    val _candidateWallet = userWallet(minter, candidate.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        voter.address,
+        "voterA",
+        "Tokyo",
+        19,
+        392,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidate.address,
+        "candA",
+        "Osaka",
+        19,
+        392,
+        { value: ton("1") },
+    );
+
+    voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+
+    val failChange = voterWallet.sendChangeCountry(voter.address, 0, 840, { value: ton("0.1") });
+    expect(failChange).toHaveFailedTx<ChangeCountry>({
+        from: voter.address,
+        to: voterWallet.address,
+        exitCode: Errors.HasActiveVotes,
+    });
 }

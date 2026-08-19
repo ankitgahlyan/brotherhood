@@ -1,12 +1,14 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/DaoVoter.code"
+import "@gen/Following.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/dao/dao-utils"
+import "@contracts/followers/following-utils"
 import "@contracts/followers/messages"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
@@ -20,11 +22,11 @@ type AllowedMessageToWallet =
     | AuthorityAction
     | ChangeUsername
     | ChangeCity
+    | ChangeCountry
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
     | ActAction // owner-initiated actions (invite, vote, claim, lottery, destroy, ...)
-    | ActVoteProposal
     | Payback
     | RequestState
     | RequestUpgradeCode
@@ -34,8 +36,11 @@ type AllowedMessageToWallet =
     | Upgrade
     | VotingAction
     | EnterLottery
-    | UnFollow
-    | UnFollowInternal
+    | Follow
+    | Unfollow
+    | FollowNotification
+    | UnfollowNotification
+    | SettleDeath
     | Destroy
     | SetAllowance
     | SpendAllowance
@@ -53,7 +58,6 @@ type BounceOpToHandle =
     | InternalTransferStep
     | InternalInvite
     | VotingAction
-    | UnFollowInternal
     | InternalGoldCoinsTransfer
 
 // type BounceRich = InternalInvite
@@ -94,10 +98,15 @@ fun onBouncedMessage(in: InMessageBounced): void {
             store.connections -= 1;
         }
 
-        VotingAction => {} // todo: need?
-
-        UnFollowInternal => {
-            restoreAmount = -MBRP_AMOUNT;
+        VotingAction => {
+            if (msg.positiveVote) {
+                store.votes += msg.count;
+                var maps = store.maps.load();
+                var social = maps.social.load();
+                social.votedFor.delete(in.senderAddress);
+                maps.social = social.toCell();
+                store.maps = maps.toCell();
+            }
         }
 
         InternalGoldCoinsTransfer => {
@@ -119,6 +128,7 @@ fun onInternalMessage(in: InMessage): void {
     var trustedAddrs = lazy addrs.trustedJettonAddrs.load();
     var maps = lazy store.maps.load();
     var nomins = lazy addrs.nomInAddrs.load();
+    var social = lazy maps.social.load();
 
     match (msg) {
         ChangeUsername => {
@@ -157,6 +167,16 @@ fun onInternalMessage(in: InMessage): void {
             notifyMinterMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
+        }
+
+        ChangeCountry => {
+            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
+            if (in.senderAddress != addrs.owner) {
+                throw Errors.IncorrectSender;
+            }
+            assert (store.votes == 10) throw Errors.HasActiveVotes;
+
+            profile.country = msg.newCountry;
         }
 
         ActClaimWeeklyGrant => {
@@ -242,6 +262,7 @@ fun onInternalMessage(in: InMessage): void {
                     username: msg.username,
                     city: msg.city,
                     cityLetter: msg.cityLetter,
+                    country: msg.country,
                 },
             });
             inviteInternal.send(
@@ -270,13 +291,14 @@ fun onInternalMessage(in: InMessage): void {
             maps.social = social.toCell();
 
             val votingMsg = createMessage({
-                bounce: BounceMode.NoBounce, // todo: ok?
+                bounce: BounceMode.Only256BitsOfBody,
                 dest: candidate,
                 value: 0,
                 body: VotingAction {
                     // positiveVote: true, // default
                     // count: 10, // default
                     sender: addrs.owner,
+                    country: profile.country,
                 },
             });
             votingMsg.send(
@@ -365,7 +387,7 @@ fun onInternalMessage(in: InMessage): void {
         ActSetPersonalJettonMinter => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
-            if (trustedAddrs.personalJettonMinter == null) {
+            if (trustedAddrs.personalJettonMinter == ZERO_ADDRESS) {
                 trustedAddrs.personalJettonMinter = msg.transferRecipient;
             } // else ignore
         }
@@ -568,6 +590,7 @@ fun onInternalMessage(in: InMessage): void {
                 nomins.nominee = in.senderAddress; // must be null at init
                 profile.username = msg.username;
                 profile.city = msg.city;
+                profile.country = msg.country;
 
                 if (msg.version > store.version) {
                     store.version = msg.version;
@@ -596,6 +619,7 @@ fun onInternalMessage(in: InMessage): void {
                     username: msg.username,
                     city: msg.city,
                     cityLetter: msg.cityLetter,
+                    country: msg.country,
                 },
             });
             notifyMinterMsg.send(
@@ -671,7 +695,12 @@ fun onInternalMessage(in: InMessage): void {
 
         VotingAction => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
-            msg.positiveVote ? store.receivedVotes += msg.count : store.receivedVotes -= msg.count;
+            if (msg.positiveVote) {
+                assert (msg.country == profile.country) throw Errors.CountryMismatch;
+                store.receivedVotes += msg.count;
+            } else {
+                store.receivedVotes -= msg.count;
+            }
             if (addrs.owner != addrs.treasury) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
             }
@@ -777,52 +806,139 @@ fun onInternalMessage(in: InMessage): void {
             enterLottery(addrs.owner, trustedAddrs.minterAddr, msg.amount);
         }
 
-        UnFollow => {
+        Follow => {
+            // checks
             assert (in.senderAddress == addrs.owner) throw Errors.IncorrectSender;
             idActionChecks(store); // active + not Under Review
-            assert (msg.followee != addrs.owner) throw Errors.IncorrectReceiver;
+            assert (msg.followee != addrs.owner.getAddrFiWallet()) throw Errors.IncorrectReceiver;
+            // no need to check fees in cases where no harm can be done to network
+            // assert (in.valueCoins >= grams("0.5")) throw Errors.InsufficientGasSent;
 
-            val target = msg.followee.getAddrFiWallet();
-            var social = lazy maps.social.load();
-            if (msg.follow) {
-                // follow: mint FI for the link and record it (reversible)
-                assert (!social.followings.get(target).isFound) throw Errors.ConnectionExists;
-                social.followings.set(target, FOLLOW_MINT_AMOUNT);
-                maps.social = social.toCell();
-                store.jettonBalance += FOLLOW_MINT_AMOUNT;
+            // state alterations
+            social.followingCount += 1;
 
-                val mintMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: trustedAddrs.minterAddr,
-                    value: 0,
-                    body: NotifyMinter {
-                        queryId: msg.queryId != 0 ? msg.queryId : 1, // nonzero = MINT in minter
-                        jettonAmount: FOLLOW_MINT_AMOUNT,
-                        burnInitiator: addrs.owner,
-                        sendExcessesTo: null,
-                    },
-                });
-                mintMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                );
+            // outgoing msgs
+            val followingChild = calcDeployFollowing(
+                contract.getAddress(),
+                msg.followee,
+                followingCompiledCodeLibraryRef(),
+                FOLLOW_MINT_AMOUNT,
+            );
+
+            val initMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: followingChild,
+                value: 0,
+                body: InitFollow {
+                    queryId: msg.queryId != 0 ? msg.queryId : 1,
+                    followerOwner: addrs.owner, // for fees refund
+                },
+            });
+            initMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        Unfollow => {
+            val isOwner = in.senderAddress == addrs.owner;
+            val isAuth = in.senderAddress == msg.initiator.getAddrFiWallet();
+            assert (isOwner || isAuth) throw Errors.IncorrectSender;
+            // no need, will have no effect if contract doesn't exist
+            //assert (msg.followee != addrs.owner.getAddrFiWallet()) throw Errors.IncorrectReceiver;
+            // owner initiates unfollow of target
+            // idActionChecks(store);
+
+            // if (social.followingCount > 0) {
+            social.followingCount -= 1;
+            // }
+
+            val followingChild = calcDeployFollowing(
+                contract.getAddress(),
+                msg.followee,
+                followingCompiledCodeLibraryRef(),
+                FOLLOW_MINT_AMOUNT,
+            ).calculateAddress(); // init should exist so, no AutoDeployAddress needed
+
+            val forwardUnfollowMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: followingChild,
+                value: 0,
+                body: Unfollow {
+                    queryId: msg.queryId,
+                    initiator: msg.initiator,
+                    followee: msg.followee,
+                },
+            });
+            forwardUnfollowMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        FollowNotification => {
+            // received by followee from Following child contract
+            val expectedChild = calcDeployFollowing(
+                msg.follower,
+                contract.getAddress(),
+                followingCompiledCodeLibraryRef(),
+                msg.mintAmount,
+            ).calculateAddress();
+            assert (in.senderAddress == expectedChild) throw Errors.IncorrectSender;
+
+            social.followersCount += 1;
+            store.jettonBalance += msg.mintAmount;
+
+            val mintMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: NotifyMinter {
+                    queryId: 1,                        // nonzero = MINT in minter
+                    jettonAmount: msg.mintAmount,
+                    burnInitiator: addrs.owner,        // todo: fixme
+                    sendExcessesTo: msg.followerOwner, // excess gas refunded by minter to follower owner
+                },
+            });
+            mintMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        UnfollowNotification => {
+            // received by followee from Following child contract
+            val expectedChild = calcDeployFollowing(
+                msg.follower,
+                contract.getAddress(),
+                followingCompiledCodeLibraryRef(),
+                msg.burnAmount,
+            ).calculateAddress();
+            assert (in.senderAddress == expectedChild) throw Errors.IncorrectSender;
+
+            // if (social.followersCount > 0) {
+            social.followersCount -= 1;
+            // }
+
+            var actualBurn: coins = 0;
+            if (store.jettonBalance >= msg.burnAmount) {
+                store.jettonBalance -= msg.burnAmount;
+                actualBurn = msg.burnAmount;
             } else {
-                // unfollow: burn exactly what the link minted; shortfall fails cleanly here
-                val link = social.followings.get(target);
-                assert (link.isFound) throw Errors.NotFollowing;
-                assert (store.jettonBalance >= FOLLOW_MINT_AMOUNT) throw Errors.BalanceError;
-                social.followings.delete(target);
-                maps.social = social.toCell();
-                store.jettonBalance -= FOLLOW_MINT_AMOUNT;
+                val available = store.jettonBalance;
+                store.debt += (msg.burnAmount - available);
+                store.debts = true;
+                store.jettonBalance = 0;
+                actualBurn = available;
+            }
 
+            if (actualBurn > 0) {
                 val burnMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
                     value: 0,
                     body: NotifyMinter {
                         queryId: 0, // zero = BURN in minter
-                        jettonAmount: FOLLOW_MINT_AMOUNT,
+                        jettonAmount: actualBurn,
                         burnInitiator: addrs.owner,
-                        sendExcessesTo: null,
+                        sendExcessesTo: msg.followerOwner,
                     },
                 });
                 burnMsg.send(
@@ -831,19 +947,46 @@ fun onInternalMessage(in: InMessage): void {
             }
         }
 
-        UnFollowInternal => {
-            checkCorrectSenderInternal(in.senderAddress, msg.sender);
-            // store.jettonBalance += MBRP_AMOUNT;
-            // var to;
-            // msg.follow ?
-            //     to = msg.followee.calcDeployUnFollow(msg.sender) :
-            //     to = msg.followee.calcDeployUnFollow(msg.sender).calculateAddress();
-            // createMessage({
-            //     bounce: BounceMode.Only256BitsOfBody, // deduct balance
-            //     value: 0,
-            //     dest: to,
-            //     body: msg,
-            // }).send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+        SettleDeath => {
+            // settlement order from authority or peer
+            val isAuth = store.isAuthorityAccount || in.senderAddress == addrs.treasury;
+            val isPeer = in.senderAddress == msg.deceased.getAddrFiWallet();
+            assert (isAuth || isPeer) throw Errors.IncorrectSender;
+
+            var social = lazy maps.social.load();
+            if (social.followersCount > 0) {
+                social.followersCount -= 1;
+            }
+            maps.social = social.toCell();
+
+            var actualBurn: coins = 0;
+            if (store.jettonBalance >= FOLLOW_MINT_AMOUNT) {
+                store.jettonBalance -= FOLLOW_MINT_AMOUNT;
+                actualBurn = FOLLOW_MINT_AMOUNT;
+            } else {
+                val available = store.jettonBalance;
+                store.debt += (FOLLOW_MINT_AMOUNT - available);
+                store.debts = true;
+                store.jettonBalance = 0;
+                actualBurn = available;
+            }
+
+            if (actualBurn > 0) {
+                val burnMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: NotifyMinter {
+                        queryId: 0,
+                        jettonAmount: actualBurn,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: in.senderAddress,
+                    },
+                });
+                burnMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            }
         }
 
         // testnetOnly
@@ -1118,7 +1261,9 @@ fun onInternalMessage(in: InMessage): void {
     store.profile = profile.toCell();
     store.timestamps = time.toCell();
     store.addresses = addrs.toCell();
+    maps.social = social.toCell();
     store.maps = maps.toCell();
+
     store.save(); // save once for any matches above
 }
 
@@ -1148,4 +1293,24 @@ get fun get_city(): string {
     val store = lazy FiWalletStore.load();
     val profile = lazy store.profile.load();
     return profile.city;
+}
+
+get fun get_profile(): (string, string, uint16) {
+    val store = lazy FiWalletStore.load();
+    val profile = lazy store.profile.load();
+    return (profile.username, profile.city, profile.country);
+}
+
+get fun get_following_count(): uint32 {
+    val store = lazy FiWalletStore.load();
+    val maps = lazy store.maps.load();
+    val social = lazy maps.social.load();
+    return social.followingCount;
+}
+
+get fun get_followers_count(): uint32 {
+    val store = lazy FiWalletStore.load();
+    val maps = lazy store.maps.load();
+    val social = lazy maps.social.load();
+    return social.followersCount;
 }

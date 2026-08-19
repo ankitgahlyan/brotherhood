@@ -1,6 +1,5 @@
 import "@stdlib/strings"
 
-import "@acton/build"
 import "@acton/env"
 import "@acton/fmt"
 import "@acton/io"
@@ -8,12 +7,15 @@ import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
+import "@gen/CityMap.code"
+import "@gen/FossFiWallet.code"
+import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/Location.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
-import "@contracts/location/Location"
 
 const FI_ADDRESS = "kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT"
 const JETTON_DEFAULT_NAME = "BroTherHOOD"
@@ -121,48 +123,23 @@ fun buildJettonMetadataCell(info: JettonMetadata): cell {
     return metadata.toCell();
 }
 
-fun buildLocationAddrsMap(minterAddress: address): map<uint8, address> {
-    val locationCode = build("Location");
-    val cityMapCode = build("CityMap");
+fun buildLocationAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
+    val cityMapCode = cityMapCompiledCodeLibraryRef();
     var locationAddrs: map<uint8, address> = [];
 
-    val loc0StateInit = ContractState {
-        code: locationCode,
-        data: (LocationStore {
-            letterKey: 0,
+    var letter: uint8 = 0;
+    while (letter <= 26) {
+        val loc = Location.fromStorage({
+            letterKey: letter,
             version: 0,
             cityMapVersion: 0,
             minterAddress,
             cityMapCode,
             cities: [],
-        }).toCell(),
-    };
-    val loc0Addr = AutoDeployAddress {
-        workchain: BASECHAIN,
-        stateInit: loc0StateInit,
-        toShard: null,
-    }.calculateAddress();
-    locationAddrs.set(0, loc0Addr);
+        });
 
-    var letter: uint8 = 65;
-    while (letter <= 90) {
-        val locStateInit = ContractState {
-            code: locationCode,
-            data: (LocationStore {
-                letterKey: letter,
-                version: 0,
-                cityMapVersion: 0,
-                minterAddress,
-                cityMapCode,
-                cities: [],
-            }).toCell(),
-        };
-        val locAddr = AutoDeployAddress {
-            workchain: BASECHAIN,
-            stateInit: locStateInit,
-            toShard: null,
-        }.calculateAddress();
-        locationAddrs.set(letter, locAddr);
+        loc.deploy(deployer, { value: ton("0.5") });
+        locationAddrs.set(letter, loc.address);
         letter += 1;
     }
 
@@ -180,18 +157,16 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         adminAddress: admin,
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
-            lotteryCode: build("Lottery"),
-            latestFiWalletCode: build("FossFiWallet"),
+            lotteryCode: lotteryCompiledCode(),
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
         }.toCell(),
     };
 }
 
 fun deployJettonMinter(deployer: ActonWallet, storage: FiStore): FossFi {
     val minter = FossFi.fromStorage(storage);
-    val res = minter.deploy(deployer.address, { value: ton("0.55") });
+    val res = minter.sendDeploy(deployer.address, { value: ton("0.55") });
     res.waitForFirstTransaction();
-    val result = minter.sendTopUpTons(deployer.address, { value: ton("0.55") });
-    result.waitForFirstTransaction();
     return minter;
 }
 

@@ -240,13 +240,22 @@ fun FossFi.sendInformMinterInviteInternal(
     username: string,
     city: string,
     cityLetter: uint8,
+    country: uint16,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: InformMinterInviteInternal { queryId, sender, invitor, username, city, cityLetter },
+        body: InformMinterInviteInternal {
+            queryId,
+            sender,
+            invitor,
+            username,
+            city,
+            cityLetter,
+            country,
+        },
     });
     return net.send(from, genericMsg);
 }

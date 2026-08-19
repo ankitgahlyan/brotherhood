@@ -12,8 +12,8 @@ struct PriStore {
     walletVersion: uint10 = 0
     fiJettonAddress: address
     adminAddress: address
-    jettonWalletCode: cell
-    metadataUri: cell? = null
+    jettonWalletCode: cell    // todo: address circular dep and store libRef
+    metadataUri: cell? = null // for on-chain deployment or use default
 }
 
 fun PriStore.load(): PriStore {

@@ -8,13 +8,14 @@ import "utils/common"
 
 fun main() {
     val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
+    // val minter = FossFi.fromAddress(address(FI_ADDRESS));
     val minter = promptJettonMinter("Enter Jetton Minter address");
 
     val walletUpgrade = promptWalletUpgrade(
         "JETTON_WALLET_UPGRADE",
     );
 
-    // val newCode = walletUpgrade ? fossFiWalletCompiledCodeLibraryRef() : fossFiCompiledCode();
+    // val newCode = walletUpgrade ? fossFiWalletCompiledCodeLibraryRef() : fossFiCompiledCode(); // no need to be lib on upgrade as init is already deployed as ref
     val newCode = walletUpgrade ? build("fossFiWallet") : build("fossFi");
 
     val res = minter.sendUpgrade(

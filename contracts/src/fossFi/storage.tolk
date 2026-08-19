@@ -1,3 +1,5 @@
+import "@stdlib/strings"
+
 import "@contracts/common/messages"
 import "@contracts/fossFi/consts"
 
@@ -33,12 +35,9 @@ struct FiCodes {
 }
 
 struct SocialMaps {
-    votedFor: map<address, uint4> = []   // todo: what struct to use
-    followings: map<
-        address,
-        coins,
-    > = []                               // directional social link; value = FI minted for the link, burnt on unfollow
-    // followers: map<address, coins> // added on closure (#24) so a closing Account can notify its followers
+    votedFor: map<address, uint4> = [] // todo: what struct to use
+    followingCount: uint32 = 0
+    followersCount: uint32 = 0
 }
 
 struct Maps {
@@ -73,6 +72,7 @@ struct TimeStamps {
 struct ProfileInfo {
     username: string = ""
     city: string = ""
+    country: uint16 = 0
 }
 
 struct FiWalletStore {
@@ -103,6 +103,7 @@ struct FiWalletStore {
 
 struct FiStore {
     totalSupply: coins = 0
+    offChainRulesHash: string_prefixed0x = ""
     walletVersion: uint10 = 0
     adminAddress: address                  // todo: can i set it to zeroAddr to drop instead of null ?
     daoAddress: address = RAW_ZERO_ADDRESS // set on deploy

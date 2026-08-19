@@ -10,19 +10,20 @@ import "@acton/types/transaction"
 
 import "@gen/CityMap.code"
 import "@gen/DaoVoter.code"
+import "@gen/Following.code"
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
-import "@wrappers/Location.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
-import "@contracts/location/Location"
 import "@contracts/lottery/storage"
+
+import "../scripts/utils/common"
 
 fun buildTestMetadata(uri: string): cell {
     var metadata: OnchainMetadataReply = { contentDict: [] };
@@ -121,6 +122,7 @@ fun activateUser(
         "user1",
         "Tokyo",
         20, // for T
+        0,  // for global
         { value: ton("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
@@ -188,10 +190,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
             maps: Maps {
                 allowances: [],
                 invited: [],
-                social: SocialMaps {
-                    votedFor: [],
-                    followings: [],
-                }.toCell(),
+                social: SocialMaps { votedFor: [] }.toCell(),
                 reportInfo: ReportInfo { reports: [] }.toCell(),
             }.toCell(), // todo: learn how to set it default
             profile: ProfileInfo {}.toCell(),
@@ -257,29 +256,6 @@ fun hasSetCodeAction(res: SendResultList, account: address): bool {
     return false;
 }
 
-fun buildLocationAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
-    val cityMapCode = cityMapCompiledCodeLibraryRef();
-    var locationAddrs: map<uint8, address> = [];
-
-    var letter: uint8 = 0;
-    while (letter <= 26) {
-        val loc = Location.fromStorage({
-            letterKey: letter,
-            version: 0,
-            cityMapVersion: 0,
-            minterAddress,
-            cityMapCode,
-            cities: [],
-        });
-
-        loc.deploy(deployer, { value: ton("0.5") });
-        locationAddrs.set(letter, loc.address);
-        letter += 1;
-    }
-
-    return locationAddrs;
-}
-
 fun buildLotteryAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
     var lotteryAddrs: map<uint8, address> = [];
     var entryFees = [
@@ -313,6 +289,10 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
     testing.registerLibrary(cityMapCompiledCodeLibraryRef());
     testing.registerLibrary(daoVoterCompiledCodeLibraryRef());
+    testing.registerLibrary(followingCompiledCodeLibraryRef());
+    // todo: other libs
+    testing.registerLibrary(followingCompiledCodeLibraryRef());
+    testing.registerLibrary(followingCompiledCodeLibraryRef());
 
     val minter = FossFi.fromStorage({
         totalSupply: initialSupply,
@@ -321,7 +301,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         adminHandoff: null,
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(), // need code?
         }.toCell(),
     });
 

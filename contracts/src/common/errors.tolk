@@ -52,7 +52,8 @@ enum Errors {
     ProposalFeeInsufficient = 756
     DuplicateVote = 757
     InvalidDaoVoter = 758
-
+    CountryMismatch = 759
     CreditNeedExceeded = 760
     AccountInDebt = 761
+    HasActiveVotes = 762
 }

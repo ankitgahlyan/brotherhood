@@ -1,14 +1,13 @@
-struct UnFollowStore {
-    admin: address
-    follow: bool
+struct FollowingStore {
     follower: address
     followee: address
+    mintAmount: coins
 }
 
-fun UnFollowStore.load(): UnFollowStore {
-    return UnFollowStore.fromCell(contract.getData());
+fun FollowingStore.load(): FollowingStore {
+    return FollowingStore.fromCell(contract.getData());
 }
 
-fun UnFollowStore.save(self) {
+fun FollowingStore.save(self) {
     contract.setData(self.toCell());
 }

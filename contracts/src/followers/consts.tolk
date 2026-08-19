@@ -1,1 +1,3 @@
 const ALREADY_FOLLOWING: int = 750
+const NOT_FOLLOWING: int = 751
+const INVALID_FOLLOW_ACTION: int = 752

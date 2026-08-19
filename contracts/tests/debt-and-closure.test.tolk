@@ -11,12 +11,13 @@ import "test-utils"
 
 get fun `test unfollow shortfall: fails cleanly without creating debt`() {
     val (wallet, owner, _minter, followee) = setupDirectWallet(ton("0")); // 0 balance
-
+    // todo: fixme
+    val initiator = testing.treasury("initiator");
     // Attempting unfollow with 0 balance fails with BalanceError
-    val unfollowTx = wallet.sendUnFollow(
+    val unfollowTx = wallet.sendUnfollow(
         owner.address,
         0,
-        false, // unfollow
+        initiator.address,
         followee.address,
         { value: ton("0.5") },
     );

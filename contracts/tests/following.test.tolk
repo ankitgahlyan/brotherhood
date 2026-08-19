@@ -2,150 +2,222 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
+import "@gen/Following.code"
+import "@wrappers/Followers.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/followers/following-utils"
 import "@contracts/followers/messages"
+import "@contracts/followers/store"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"
 
-fun followingsOf(wallet: FossFiWallet, target: address): bool {
-    val social = wallet.getWalletDataAll().maps.load().social.load();
-    return social.followings.get(target).isFound;
-}
-
 fun sendFollow(
     wallet: FossFiWallet,
     from: address,
-    followee: address,
+    followeeWalletAddr: address,
     queryId: uint64 = 1,
 ): SendResultList {
-    return wallet.sendUnFollow(from, queryId, true, followee, { value: ton("0.3") });
+    return wallet.sendFollow(from, queryId, followeeWalletAddr, { value: ton("0.3") });
 }
 
 fun sendUnfollow(
     wallet: FossFiWallet,
     from: address,
-    followee: address,
+    initiator: address,
+    followeeWalletAddr: address,
     queryId: uint64 = 0,
 ): SendResultList {
-    return wallet.sendUnFollow(from, queryId, false, followee, { value: ton("0.3") });
+    return wallet.sendUnfollow(from, queryId, initiator, followeeWalletAddr, { value: ton("0.3") });
 }
 
-get fun `test follow: following mints FI and records the link`() {
+get fun `test follow: follower deploys following child, followee receives 1000 FI and counters update`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
-    val target = userWallet(minter, notDeployer.address).address;
-    val balanceBefore = wallet.getJettonBalance();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    val followerBalanceBefore = followerWallet.getJettonBalance();
+    val followeeBalanceBefore = followeeWallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
-    val res = sendFollow(wallet, deployer.address, notDeployer.address);
-    expect(res).toHaveSuccessfulTx<UnFollow>({
+    val res = sendFollow(followerWallet, deployer.address, followeeWallet.address);
+    expect(res).toHaveSuccessfulTx<Follow>({
         from: deployer.address,
-        to: wallet.address,
+        to: followerWallet.address,
     });
 
-    expect(wallet.getJettonBalance()).toEqual(balanceBefore + FOLLOW_MINT_AMOUNT);
+    // Follower balance remains unchanged, followee receives minted 1000 FI
+    expect(followerWallet.getJettonBalance()).toEqual(followerBalanceBefore);
+    expect(followeeWallet.getJettonBalance()).toEqual(followeeBalanceBefore + FOLLOW_MINT_AMOUNT);
     expect(minter.getTotalSupply()).toEqual(supplyBefore + FOLLOW_MINT_AMOUNT);
-    expect(followingsOf(wallet, target)).toBeTrue();
+
+    expect(followerWallet.getFollowingCount()).toEqual(1);
+    expect(followeeWallet.getFollowersCount()).toEqual(1);
 }
 
-get fun `test follow: unfollow burns exactly the minted amount and removes the link`() {
+get fun `test follow: following child contract data and lifecycle`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
-    val target = userWallet(minter, notDeployer.address).address;
-    val balanceBefore = wallet.getJettonBalance();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    sendFollow(followerWallet, deployer.address, followeeWallet.address);
+
+    val followingChildAddr = calcDeployFollowing(
+        followerWallet.address,
+        followeeWallet.address,
+        followingCompiledCodeLibraryRef(),
+        FOLLOW_MINT_AMOUNT,
+    ).calculateAddress();
+
+    val followingChild = Followers.fromAddress(followingChildAddr);
+    val data = followingChild.getFollowingData();
+    expect(data.follower).toEqual(followerWallet.address);
+    expect(data.followee).toEqual(followeeWallet.address);
+    expect(data.mintAmount).toEqual(FOLLOW_MINT_AMOUNT);
+}
+
+get fun `test follow: unfollow burns 1000 FI from followee and decrements counters`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    val followeeBalanceBefore = followeeWallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
-    sendFollow(wallet, deployer.address, notDeployer.address);
-    val res = sendUnfollow(wallet, deployer.address, notDeployer.address);
-    expect(res).toHaveSuccessfulTx<UnFollow>({
-        from: deployer.address,
-        to: wallet.address,
-    });
-
-    expect(wallet.getJettonBalance()).toEqual(balanceBefore);
-    expect(minter.getTotalSupply()).toEqual(supplyBefore);
-    expect(followingsOf(wallet, target)).toBeFalse();
-}
-
-get fun `test follow: cannot follow twice`() {
-    val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
-
-    sendFollow(wallet, deployer.address, notDeployer.address);
-    val res = sendFollow(wallet, deployer.address, notDeployer.address);
-    expect(res).toHaveFailedTx<UnFollow>({
-        from: deployer.address,
-        to: wallet.address,
-        exitCode: Errors.ConnectionExists,
-    });
-}
-
-get fun `test follow: unfollow without a link fails cleanly`() {
-    val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
-    val balanceBefore = wallet.getJettonBalance();
-    val supplyBefore = minter.getTotalSupply();
-
-    val res = sendUnfollow(wallet, deployer.address, notDeployer.address);
-    expect(res).toHaveFailedTx<UnFollow>({
-        from: deployer.address,
-        to: wallet.address,
-        exitCode: Errors.NotFollowing,
-    });
-
-    expect(wallet.getJettonBalance()).toEqual(balanceBefore);
-    expect(minter.getTotalSupply()).toEqual(supplyBefore);
-}
-
-get fun `test follow: unfollow with insufficient balance fails without corrupting state`() {
-    val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
-    val target = userWallet(minter, notDeployer.address).address;
-    val supplyBefore = minter.getTotalSupply();
-
-    sendFollow(wallet, deployer.address, notDeployer.address);
-    expect(wallet.getJettonBalance()).toEqual(ton("1001"));
-
-    // burn most of the balance so the link's minted amount can no longer be repaid
-    val burn = wallet.sendAskToBurn(
+    sendFollow(followerWallet, deployer.address, followeeWallet.address);
+    val res = sendUnfollow(
+        followerWallet,
         deployer.address,
+        deployer.address,
+        followeeWallet.address,
+    );
+    expect(res).toHaveSuccessfulTx<Unfollow>({
+        from: deployer.address,
+        to: followerWallet.address,
+    });
+
+    // Followee balance and supply are restored after unfollow burn
+    expect(followeeWallet.getJettonBalance()).toEqual(followeeBalanceBefore);
+    expect(minter.getTotalSupply()).toEqual(supplyBefore);
+
+    expect(followerWallet.getFollowingCount()).toEqual(0);
+    expect(followeeWallet.getFollowersCount()).toEqual(0);
+}
+
+get fun `test follow: only the owner can initiate a follow`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    val res = sendFollow(followerWallet, notDeployer.address, followeeWallet.address);
+    expect(res).toHaveFailedTx<Follow>({
+        from: notDeployer.address,
+        to: followerWallet.address,
+        exitCode: Errors.IncorrectSender,
+    });
+}
+
+get fun `test follow: cannot follow self`() {
+    val (minter, deployer, _notDeployer) = setupTest();
+    val followerWallet = userWallet(minter, deployer.address);
+
+    val res = sendFollow(followerWallet, deployer.address, followerWallet.address);
+    expect(res).toHaveFailedTx<Follow>({
+        from: deployer.address,
+        to: followerWallet.address,
+        exitCode: Errors.IncorrectReceiver,
+    });
+}
+
+get fun `test follow: survivor settlement on follower death burns from living followee`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    val followeeBalanceBefore = followeeWallet.getJettonBalance();
+    val supplyBefore = minter.getTotalSupply();
+
+    sendFollow(followerWallet, deployer.address, followeeWallet.address);
+    expect(followeeWallet.getJettonBalance()).toEqual(followeeBalanceBefore + FOLLOW_MINT_AMOUNT);
+
+    // Follower dies/closes -> settlement burn sent to living followee
+    val settleRes = followeeWallet.sendSettleDeath(
+        followerWallet.address,
+        1,
+        deployer.address,
+        { value: ton("0.2") },
+    );
+    expect(settleRes).toHaveSuccessfulTx<SettleDeath>({
+        from: followerWallet.address,
+        to: followeeWallet.address,
+    });
+
+    expect(followeeWallet.getJettonBalance()).toEqual(followeeBalanceBefore);
+    expect(minter.getTotalSupply()).toEqual(supplyBefore);
+    expect(followeeWallet.getFollowersCount()).toEqual(0);
+}
+
+get fun `test follow: survivor settlement with insufficient balance creates debt on living wallet`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+
+    sendFollow(followerWallet, deployer.address, followeeWallet.address);
+
+    // Followee spends all tokens down to 100 FI
+    val currentBalance = followeeWallet.getJettonBalance();
+    val burnExcess = followeeWallet.sendAskToBurn(
+        notDeployer.address,
         0,
-        ton("2"),
-        deployer.address,
+        currentBalance - ton("100"),
+        notDeployer.address,
         null,
         { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
     );
-    expect(burn).toHaveSuccessfulTx<AskToBurn>({
-        from: deployer.address,
-        to: wallet.address,
+    expect(burnExcess).toHaveSuccessfulTx<AskToBurn>({
+        from: notDeployer.address,
+        to: followeeWallet.address,
     });
-    expect(wallet.getJettonBalance()).toEqual(ton("999"));
+    expect(followeeWallet.getJettonBalance()).toEqual(ton("100"));
 
-    val res = sendUnfollow(wallet, deployer.address, notDeployer.address);
-    expect(res).toHaveFailedTx<UnFollow>({
-        from: deployer.address,
-        to: wallet.address,
-        exitCode: Errors.BalanceError,
+    // Settlement burn arrives for 1000 FI: 100 FI burned, remaining 900 FI becomes debt
+    val settleRes = followeeWallet.sendSettleDeath(
+        followerWallet.address,
+        1,
+        deployer.address,
+        { value: ton("0.2") },
+    );
+    expect(settleRes).toHaveSuccessfulTx<SettleDeath>({
+        from: followerWallet.address,
+        to: followeeWallet.address,
     });
 
-    expect(wallet.getJettonBalance()).toEqual(ton("999"));
-    expect(minter.getTotalSupply()).toEqual(supplyBefore + FOLLOW_MINT_AMOUNT - ton("2"));
-    expect(followingsOf(wallet, target)).toBeTrue();
+    val walletData = followeeWallet.getWalletDataAll();
+    expect(walletData.jettonBalance).toEqual(0);
+    expect(walletData.debt).toEqual(ton("900"));
+    expect(walletData.debts).toBeTrue();
 }
 
-get fun `test follow: only the owner can follow`() {
+get fun `test follow: unauthorized sender cannot trigger unfollow`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = userWallet(minter, deployer.address);
+    val followerWallet = userWallet(minter, deployer.address);
+    val followeeWallet = userWallet(minter, notDeployer.address);
+    val randomAccount = testing.treasury("random");
 
-    val res = sendFollow(wallet, notDeployer.address, notDeployer.address);
-    expect(res).toHaveFailedTx<UnFollow>({
-        from: notDeployer.address,
-        to: wallet.address,
+    val res = followerWallet.sendUnfollow(
+        randomAccount.address,
+        0,
+        randomAccount.address,
+        followeeWallet.address,
+        { value: ton("0.2") },
+    );
+    expect(res).toHaveFailedTx<Unfollow>({
+        from: randomAccount.address,
+        to: followerWallet.address,
         exitCode: Errors.IncorrectSender,
     });
 }
