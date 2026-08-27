@@ -632,11 +632,10 @@ fun FossFiWallet.sendUnfollow(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendFollowNotification(
+fun FossFiWallet.sendRequestFollow(
     self,
     from: address,
     queryId: uint64,
-    follower: address,
     followerOwner: address,
     mintAmount: coins,
     config: SendParams = {},
@@ -645,16 +644,16 @@ fun FossFiWallet.sendFollowNotification(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: FollowNotification { queryId, follower, followerOwner, mintAmount },
+        body: RequestFollow { queryId, followerOwner, mintAmount },
     });
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendUnfollowNotification(
+fun FossFiWallet.sendRequestUnfollow(
     self,
     from: address,
     queryId: uint64,
-    follower: address,
+    initiator: address,
     followerOwner: address,
     burnAmount: coins,
     config: SendParams = {},
@@ -663,7 +662,41 @@ fun FossFiWallet.sendUnfollowNotification(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: UnfollowNotification { queryId, follower, followerOwner, burnAmount },
+        body: RequestUnfollow { queryId, initiator, followerOwner, burnAmount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendFollowRevertedNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    reason: uint16,
+    followerOwner: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: FollowRevertedNotification { queryId, reason, followerOwner },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendUnfollowRevertedNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    reason: uint16,
+    followerOwner: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: UnfollowRevertedNotification { queryId, reason, followerOwner },
     });
     return net.send(from, genericMsg);
 }

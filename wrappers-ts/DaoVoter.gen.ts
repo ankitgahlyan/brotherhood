@@ -271,45 +271,45 @@ export const CleanupProposalVotes = {
 }
 
 /**
- > struct DaoVoterStore {
+ > struct Voter {
  >     voterOwner: address
  >     daoAddress: address
  >     votes: map<uint64, bool>
  > }
  */
-export interface DaoVoterStore {
-    readonly $: 'DaoVoterStore'
+export interface Voter {
+    readonly $: 'Voter'
     voterOwner: c.Address
     daoAddress: c.Address
     votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
 }
 
-export const DaoVoterStore = {
+export const Voter = {
     create(args: {
         voterOwner: c.Address
         daoAddress: c.Address
         votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
-    }): DaoVoterStore {
+    }): Voter {
         return {
-            $: 'DaoVoterStore',
+            $: 'Voter',
             ...args
         }
     },
-    fromSlice(s: c.Slice): DaoVoterStore {
+    fromSlice(s: c.Slice): Voter {
         return {
-            $: 'DaoVoterStore',
+            $: 'Voter',
             voterOwner: s.loadAddress(),
             daoAddress: s.loadAddress(),
             votes: c.Dictionary.load<uint64, boolean>(c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool(), s),
         }
     },
-    store(self: DaoVoterStore, b: c.Builder): void {
+    store(self: Voter, b: c.Builder): void {
         b.storeAddress(self.voterOwner);
         b.storeAddress(self.daoAddress);
         b.storeDict<uint64, boolean>(self.votes, c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool());
     },
-    toCell(self: DaoVoterStore): c.Cell {
-        return makeCellFrom<DaoVoterStore>(self, DaoVoterStore.store);
+    toCell(self: Voter): c.Cell {
+        return makeCellFrom<Voter>(self, Voter.store);
     }
 }
 
@@ -378,7 +378,7 @@ export class DaoVoter implements c.Contract {
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? DaoVoter.CodeCell,
-            data: DaoVoterStore.toCell(DaoVoterStore.create(emptyStorage)),
+            data: Voter.toCell(Voter.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new DaoVoter(address, initialState);

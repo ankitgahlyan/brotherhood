@@ -733,52 +733,52 @@ export const Proposal = {
 }
 
 /**
- > struct DaoStore {
+ > struct PollStore {
  >     totalAccounts: uint33
  >     fiAddress: address
  >     proposalCount: uint64
  >     proposals: map<uint64, Proposal>
  > }
  */
-export interface DaoStore {
-    readonly $: 'DaoStore'
+export interface PollStore {
+    readonly $: 'PollStore'
     totalAccounts: uint33 /* = 0 */
     fiAddress: c.Address
     proposalCount: uint64 /* = 0 */
     proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
 }
 
-export const DaoStore = {
+export const PollStore = {
     create(args: {
         totalAccounts?: uint33 /* = 0 */
         fiAddress: c.Address
         proposalCount?: uint64 /* = 0 */
         proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
-    }): DaoStore {
+    }): PollStore {
         return {
-            $: 'DaoStore',
+            $: 'PollStore',
             totalAccounts: 0n,
             proposalCount: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): DaoStore {
+    fromSlice(s: c.Slice): PollStore {
         return {
-            $: 'DaoStore',
+            $: 'PollStore',
             totalAccounts: s.loadUintBig(33),
             fiAddress: s.loadAddress(),
             proposalCount: s.loadUintBig(64),
             proposals: c.Dictionary.load<uint64, Proposal>(c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store), s),
         }
     },
-    store(self: DaoStore, b: c.Builder): void {
+    store(self: PollStore, b: c.Builder): void {
         b.storeUint(self.totalAccounts, 33);
         b.storeAddress(self.fiAddress);
         b.storeUint(self.proposalCount, 64);
         b.storeDict<uint64, Proposal>(self.proposals, c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store));
     },
-    toCell(self: DaoStore): c.Cell {
-        return makeCellFrom<DaoStore>(self, DaoStore.store);
+    toCell(self: PollStore): c.Cell {
+        return makeCellFrom<PollStore>(self, PollStore.store);
     }
 }
 
@@ -850,7 +850,7 @@ export class Dao implements c.Contract {
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Dao.CodeCell,
-            data: DaoStore.toCell(DaoStore.create(emptyStorage)),
+            data: PollStore.toCell(PollStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new Dao(address, initialState);
@@ -958,10 +958,10 @@ export class Dao implements c.Contract {
         });
     }
 
-    async getDaoData(provider: ContractProvider): Promise<DaoStore> {
+    async getDaoData(provider: ContractProvider): Promise<PollStore> {
         const r = StackReader.fromGetMethod(4, await provider.get('get_dao_data', []));
         return ({
-            $: 'DaoStore',
+            $: 'PollStore',
             totalAccounts: r.readBigInt(),
             fiAddress: r.readSlice().loadAddress(),
             proposalCount: r.readBigInt(),

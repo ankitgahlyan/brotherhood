@@ -86,22 +86,6 @@ fun Followers.sendUnfollow(
     return net.send(from, genericMsg);
 }
 
-fun Followers.sendSettleDeath(
-    self,
-    from: address,
-    queryId: uint64,
-    deceased: address,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: SettleDeath { queryId, deceased },
-    });
-    return net.send(from, genericMsg);
-}
-
 /// Send message to the contract with a custom body cell
 fun Followers.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
@@ -115,4 +99,8 @@ fun Followers.sendAny(self, from: address, body: cell, config: SendParams = {}):
 
 fun Followers.getFollowingData(self): FollowingStore {
     return net.runGetMethod(self.address, "get_following_data");
+}
+
+fun Followers.getIsFollowing(self): bool {
+    return net.runGetMethod(self.address, "get_is_following");
 }

@@ -207,156 +207,11 @@ export const InitFollow = {
 }
 
 /**
- > struct (0x00001202) FollowNotification {
- >     queryId: uint64
- >     follower: address
- >     followerOwner: address
- >     mintAmount: coins
- > }
- */
-export interface FollowNotification {
-    readonly $: 'FollowNotification'
-    queryId: uint64
-    follower: c.Address
-    followerOwner: c.Address
-    mintAmount: coins
-}
-
-export const FollowNotification = {
-    PREFIX: 0x00001202,
-
-    create(args: {
-        queryId: uint64
-        follower: c.Address
-        followerOwner: c.Address
-        mintAmount: coins
-    }): FollowNotification {
-        return {
-            $: 'FollowNotification',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): FollowNotification {
-        loadAndCheckPrefix32(s, 0x00001202, 'FollowNotification');
-        return {
-            $: 'FollowNotification',
-            queryId: s.loadUintBig(64),
-            follower: s.loadAddress(),
-            followerOwner: s.loadAddress(),
-            mintAmount: s.loadCoins(),
-        }
-    },
-    store(self: FollowNotification, b: c.Builder): void {
-        b.storeUint(0x00001202, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.follower);
-        b.storeAddress(self.followerOwner);
-        b.storeCoins(self.mintAmount);
-    },
-    toCell(self: FollowNotification): c.Cell {
-        return makeCellFrom<FollowNotification>(self, FollowNotification.store);
-    }
-}
-
-/**
- > struct (0x00001203) UnfollowNotification {
- >     queryId: uint64
- >     follower: address
- >     followerOwner: address
- >     burnAmount: coins
- > }
- */
-export interface UnfollowNotification {
-    readonly $: 'UnfollowNotification'
-    queryId: uint64
-    follower: c.Address
-    followerOwner: c.Address
-    burnAmount: coins
-}
-
-export const UnfollowNotification = {
-    PREFIX: 0x00001203,
-
-    create(args: {
-        queryId: uint64
-        follower: c.Address
-        followerOwner: c.Address
-        burnAmount: coins
-    }): UnfollowNotification {
-        return {
-            $: 'UnfollowNotification',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): UnfollowNotification {
-        loadAndCheckPrefix32(s, 0x00001203, 'UnfollowNotification');
-        return {
-            $: 'UnfollowNotification',
-            queryId: s.loadUintBig(64),
-            follower: s.loadAddress(),
-            followerOwner: s.loadAddress(),
-            burnAmount: s.loadCoins(),
-        }
-    },
-    store(self: UnfollowNotification, b: c.Builder): void {
-        b.storeUint(0x00001203, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.follower);
-        b.storeAddress(self.followerOwner);
-        b.storeCoins(self.burnAmount);
-    },
-    toCell(self: UnfollowNotification): c.Cell {
-        return makeCellFrom<UnfollowNotification>(self, UnfollowNotification.store);
-    }
-}
-
-/**
- > struct (0x00001204) SettleDeath {
- >     queryId: uint64
- >     deceased: address
- > }
- */
-export interface SettleDeath {
-    readonly $: 'SettleDeath'
-    queryId: uint64
-    deceased: c.Address
-}
-
-export const SettleDeath = {
-    PREFIX: 0x00001204,
-
-    create(args: {
-        queryId: uint64
-        deceased: c.Address
-    }): SettleDeath {
-        return {
-            $: 'SettleDeath',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): SettleDeath {
-        loadAndCheckPrefix32(s, 0x00001204, 'SettleDeath');
-        return {
-            $: 'SettleDeath',
-            queryId: s.loadUintBig(64),
-            deceased: s.loadAddress(),
-        }
-    },
-    store(self: SettleDeath, b: c.Builder): void {
-        b.storeUint(0x00001204, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.deceased);
-    },
-    toCell(self: SettleDeath): c.Cell {
-        return makeCellFrom<SettleDeath>(self, SettleDeath.store);
-    }
-}
-
-/**
  > struct FollowingStore {
  >     follower: address
  >     followee: address
  >     mintAmount: coins
+ >     isFollowing: bool
  > }
  */
 export interface FollowingStore {
@@ -364,6 +219,7 @@ export interface FollowingStore {
     follower: c.Address
     followee: c.Address
     mintAmount: coins
+    isFollowing: boolean /* = false */
 }
 
 export const FollowingStore = {
@@ -371,9 +227,11 @@ export const FollowingStore = {
         follower: c.Address
         followee: c.Address
         mintAmount: coins
+        isFollowing?: boolean /* = false */
     }): FollowingStore {
         return {
             $: 'FollowingStore',
+            isFollowing: false,
             ...args
         }
     },
@@ -383,12 +241,14 @@ export const FollowingStore = {
             follower: s.loadAddress(),
             followee: s.loadAddress(),
             mintAmount: s.loadCoins(),
+            isFollowing: s.loadBoolean(),
         }
     },
     store(self: FollowingStore, b: c.Builder): void {
         b.storeAddress(self.follower);
         b.storeAddress(self.followee);
         b.storeCoins(self.mintAmount);
+        b.storeBit(self.isFollowing);
     },
     toCell(self: FollowingStore): c.Cell {
         return makeCellFrom<FollowingStore>(self, FollowingStore.store);
@@ -434,10 +294,12 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Following implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEA0wABFP8A9KQT9LzyyAsBAgFiAgMCwtD4kZEw4O1E0PpI+kj6ADAD1ywgAACQDI4y+JIjxwXy4rzTP/pIMMjPkAAASAoSyz8T+lIS+lJY+gLJyM+FCBL6UnHPC27MyYBQ+wDg1ywgAACQBOMC1ywgAACQJOMC8j8EBAAZoHSd2omh9JH0kfQBowCW+JIjxwXy4rzXCz/4ksjPkAAASA4Syz9SMPpS+lJQA/oCycjPhQgT+lJxzwtuEszJgBD7AIsIyM7JyM+FCBL6UnHPC27MyYEAoPsA');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBwEA3gABFP8A9KQT9LzyyAsBAgFiAgMB0ND4kZEw4O1E0PpI+kj6ANcKAATXLCAAAJAMjjzXLCAAAJAEMZLyP+H4kiLHBZF/l/iSI8cFwwDi8uK8A/Li73CLCMjOycjPhQhSQPpScc8LbszJgFD7AAPjDQLI+lL6UgH6AsoAye1UBAIBIAUGAGr4kiPHBZF/l/iSJMcFwwDi8uK8BPLS7n8E0z8x+kgwiwjIzsnIz4UIEvpScc8LbszJgFD7AAAdvdJ3aiaH0kfSR9AGkAaMACO/KZdqJofSQY/SQY/QAY6QBow=');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
+        'FollowingErrors.AlreadyFollowing': 750,
+        'FollowingErrors.NotFollowing': 751,
     }
 
     readonly address: c.Address
@@ -456,6 +318,7 @@ export class Following implements c.Contract {
         follower: c.Address
         followee: c.Address
         mintAmount: coins
+        isFollowing?: boolean /* = false */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Following.CodeCell,
@@ -478,13 +341,6 @@ export class Following implements c.Contract {
         followee: c.Address
     }) {
         return Unfollow.toCell(Unfollow.create(body));
-    }
-
-    static createCellOfSettleDeath(body: {
-        queryId: uint64
-        deceased: c.Address
-    }) {
-        return SettleDeath.toCell(SettleDeath.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -518,24 +374,19 @@ export class Following implements c.Contract {
         });
     }
 
-    async sendSettleDeath(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        queryId: uint64
-        deceased: c.Address
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: SettleDeath.toCell(SettleDeath.create(body)),
-            ...extraOptions
-        });
-    }
-
     async getFollowingData(provider: ContractProvider): Promise<FollowingStore> {
-        const r = StackReader.fromGetMethod(3, await provider.get('get_following_data', []));
+        const r = StackReader.fromGetMethod(4, await provider.get('get_following_data', []));
         return ({
             $: 'FollowingStore',
             follower: r.readSlice().loadAddress(),
             followee: r.readSlice().loadAddress(),
             mintAmount: r.readBigInt(),
+            isFollowing: r.readBoolean(),
         });
+    }
+
+    async getIsFollowing(provider: ContractProvider): Promise<boolean> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_is_following', []));
+        return r.readBoolean();
     }
 }
