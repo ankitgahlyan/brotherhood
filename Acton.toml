@@ -11,8 +11,9 @@ acton = "trunk"
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
-    "Lottery",                                                                                        # small number deployed easy upgrades
+    "Lottery", # small number deployed easy upgrades
     { name = "FossFiWallet", kind = "library_ref", function = "fossFiWalletCompiledCodeLibraryRef" },
+    { name = "Dao", kind = "library_ref", function = "daoCompiledCodeLibraryRef" },
 ]
 
 [contracts.FossFiWallet]
@@ -22,7 +23,6 @@ depends = [
     { name = "DaoVoter", kind = "library_ref", function = "daoVoterCompiledCodeLibraryRef" },
     { name = "Following", kind = "library_ref", function = "followingCompiledCodeLibraryRef" },
     { name = "PersonalMinter", kind = "library_ref", function = "personalMinterCompiledCodeLibraryRef" },
-
 ]
 
 [contracts.Following]

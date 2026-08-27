@@ -12,3 +12,11 @@ fun calcDeployDaoVoter(
     };
     return { stateInit: { code: daoVoterCode, data: store.toCell() }, toShard: null };
 }
+
+fun calcDeployDao(
+    proposal: Proposal,
+    daoCode: cell,
+): AutoDeployAddress {
+    val store: DaoStore = { proposal };
+    return { stateInit: { code: daoCode, data: store.toCell() }, toShard: null };
+}

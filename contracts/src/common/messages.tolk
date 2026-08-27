@@ -357,8 +357,9 @@ struct (0x000010fa) ActSubmitProposal {
 }
 
 struct (0x000010fb) SubmitProposal {
-    queryId: uint64
+    id: uint64
     proposerOwner: address
+    targetAddr: address
     targetMsg: cell
 }
 

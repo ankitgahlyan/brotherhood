@@ -82,7 +82,7 @@ struct FiWalletStore {
     txnCount: uint8 = 0        // for fixed fees burns to counter minting
     status: uint2 = 0          // for granular control
     isAuthorityAccount: bool = false
-    creditNeed: coins = 0
+    creditNeed: coins = 0      // todo: fixme: need to set timeout (instant withdraw attack)
     multiplier: uint16 = 1
     accumulatedFees: coins = 0 // todo: use fixed no of txnCount instead
     debt: coins = 0            // or directly set balance -ve (ton supports this?)
@@ -106,7 +106,7 @@ struct FiStore {
     offChainRulesHash: string_prefixed0x = ""
     walletVersion: uint10 = 0
     adminAddress: address                  // todo: can i set it to zeroAddr to drop instead of null ?
-    daoAddress: address = RAW_ZERO_ADDRESS // set on deploy
+    daoAddress: address = RAW_ZERO_ADDRESS // todo: set on deploy
     adminHandoff: Cell<AdminHandoff>? = null
     metadata: cell
     others: Cell<FiCodes>

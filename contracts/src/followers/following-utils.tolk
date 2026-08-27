@@ -11,6 +11,7 @@ fun calcDeployFollowing(
         follower,
         followee,
         mintAmount,
+        isFollowing: false,
     };
     return {
         stateInit: { code: followingCodeLibRef, data: store.toCell() },

@@ -1,3 +1,5 @@
-const ALREADY_FOLLOWING: int = 750
-const NOT_FOLLOWING: int = 751
-const INVALID_FOLLOW_ACTION: int = 752
+enum FollowingErrors {
+    AlreadyFollowing = 750
+    NotFollowing = 751
+    InvalidFollowAction = 752
+}

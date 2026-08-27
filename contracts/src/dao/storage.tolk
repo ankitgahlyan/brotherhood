@@ -1,6 +1,7 @@
 struct Proposal {
     id: uint64
     proposerOwner: address
+    targetAddr: address
     targetMsg: cell
     yesVotes: uint33 = 0
     noVotes: uint33 = 0
@@ -9,9 +10,7 @@ struct Proposal {
 
 struct DaoStore {
     totalAccounts: uint33 = 0
-    fiAddress: address
-    proposalCount: uint64 = 0
-    proposals: map<uint64, Proposal> = []
+    proposal: Proposal
 }
 
 fun DaoStore.load(): DaoStore {

@@ -2,6 +2,7 @@ struct FollowingStore {
     follower: address
     followee: address
     mintAmount: coins
+    isFollowing: bool = false
 }
 
 fun FollowingStore.load(): FollowingStore {

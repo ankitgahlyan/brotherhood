@@ -90,6 +90,12 @@ fun onInternalMessage(in: InMessage): void {
                 hotUpgradeCityMapData(msg.newData);
             }
         }
+
+        else => {
+            // invalid input; a typical reaction is:
+            // ignore empty messages, "wrong opcode" if not
+            assert (in.body.isEmpty()) throw 0xFFFF;
+        }
     }
 }
 

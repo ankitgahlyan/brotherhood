@@ -28,7 +28,7 @@ fun onInternalMessage(in: InMessage) {
         return;
     }
 
-    val msg = AllowedMessageToLottery.fromSlice(in.body);
+    val msg = lazy AllowedMessageToLottery.fromSlice(in.body);
     var storage = lazy LotteryStorage.load();
 
     match (msg) {
@@ -112,6 +112,12 @@ fun onInternalMessage(in: InMessage) {
                 }
                 hotUpgradeLotteryData(msg.newData);
             }
+        }
+
+        else => {
+            // invalid input; a typical reaction is:
+            // ignore empty messages, "wrong opcode" if not
+            assert (in.body.isEmpty()) throw 0xFFFF;
         }
     }
 

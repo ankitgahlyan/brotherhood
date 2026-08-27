@@ -1,5 +1,6 @@
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/common/utils"
 import "@contracts/dao/storage"
 
 type AllowedMessageToDaoVoter =
@@ -9,7 +10,7 @@ type AllowedMessageToDaoVoter =
 contract DaoVoter {
     author: "zeta"
     version: "0.1.0"
-    description: "Child contract for storing voter state on multiple DAO proposals"
+    description: "Child contract for storing voter state on DAO proposal"
     storage: DaoVoterStore
     incomingMessages: AllowedMessageToDaoVoter
 }
@@ -52,13 +53,14 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         CleanupProposalVotes => {
-            assert ((in.senderAddress == store.voterOwner)) throw Errors.IncorrectSender;
-            // store.votes = []; // todo: fixme: unlimited votes
-            // store.save();
-            // if (store.votes.exists(msg.proposalId)) {
-            //     store.votes.delete(msg.proposalId);
-            //     store.save();
-            // }
+            assert (in.senderAddress == store.voterOwner) throw Errors.IncorrectSender;
+            destroyContract(store.voterOwner);
+        }
+
+        else => {
+            // invalid input; a typical reaction is:
+            // ignore empty messages, "wrong opcode" if not
+            assert (in.body.isEmpty()) throw 0xFFFF;
         }
     }
 }

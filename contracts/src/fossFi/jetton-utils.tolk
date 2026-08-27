@@ -59,7 +59,7 @@ fun checkCorrectSenderInternal(sender: address, owner: address) {
 // shared guard for all owner-initiated "Act*" actions
 fun checkOwnerAction(senderAddress: address, valueCoins: coins, owner: address) {
     assert (senderAddress == owner) throw Errors.NotOwner;
-    assert (valueCoins > ton("0.5")) throw Errors.NotEnoughGas;
+    assert (valueCoins >= ton("0.05")) throw Errors.NotEnoughGas;
 }
 
 fun checkActionRecipient(recipient: address) {
@@ -70,9 +70,11 @@ fun idActionChecks(store: FiWalletStore) {
     val reports = lazy store.maps.load();
     val reportInfo = lazy reports.reportInfo.load();
     assert (
-        store.active
-    ) throw Errors.AccountInactive;                                     // mint/burn actions allowed only for active/ID accounts
-    assert (reportInfo.reporterCount < 1) throw Errors.AlreadyReported; // reported IDs can't act
+        store.active || store.addresses.load().owner == store.addresses.load().treasury
+    ) throw Errors.AccountInactive;                                                                                        // mint/burn actions allowed only for active/ID accounts
+    assert (
+        reportInfo.reporterCount < 1
+    ) throw Errors.AlreadyReported;                                                                                        // reported IDs can't act
     assert (!store.debts) throw Errors.AccountInDebt;
     assert (store.debt == 0) throw Errors.AccountInDebt;
 }

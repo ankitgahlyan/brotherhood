@@ -23,7 +23,7 @@ enum Errors {
     AccountNotReported = 711
     // st NOT_AUTHORIZED  = 712
     // st AMOUNT_EXCEEDS_MBRP  = 715
-    NotFollowing = 717
+    // NotFollowing = 717
     //ower Cleared by confirmRequestInternal bounce? TODO
     ConnectionExists = 719
     NotFriend = 720

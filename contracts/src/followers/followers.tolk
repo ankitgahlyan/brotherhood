@@ -6,7 +6,6 @@ import "store"
 type FollowingAllowedMsg =
     | InitFollow
     | Unfollow
-    | SettleDeath
 
 contract Following {
     author: "zeta"
@@ -20,86 +19,113 @@ fun onBouncedMessage(_in: InMessageBounced) {}
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy FollowingAllowedMsg.fromSlice(in.body);
-    val store = lazy FollowingStore.load();
+    var store = lazy FollowingStore.load();
 
     match (msg) {
         InitFollow => {
-            assert (in.senderAddress == store.follower) throw Errors.IncorrectSender;
+            assert (
+                in.senderAddress == store.followee || in.senderAddress == store.follower
+            ) throw Errors.IncorrectSender;
+            if (store.isFollowing) {
+                val revFollower = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: store.follower,
+                    value: ton("0.05"),
+                    body: FollowRevertedNotification {
+                        queryId: msg.queryId,
+                        reason: 750,
+                        followerOwner: msg.followerOwner,
+                    },
+                });
+                revFollower.send(SEND_MODE_IGNORE_ERRORS);
 
-            val notifyMsg = createMessage({
+                val revFollowee = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: store.followee,
+                    value: 0,
+                    body: FollowRevertedNotification {
+                        queryId: msg.queryId,
+                        reason: 750,
+                        followerOwner: msg.followerOwner,
+                    },
+                });
+                // SAFETY: refund remaining balance to followee when reverting
+                revFollowee.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+                return;
+            }
+
+            store.isFollowing = true;
+
+            // Follow contract is deployed and active; refund any excess gas to followerOwner
+            val refundMsg = createMessage({
                 bounce: BounceMode.NoBounce,
-                dest: store.followee,
+                dest: msg.followerOwner,
                 value: 0,
-                body: FollowNotification {
-                    queryId: msg.queryId,
-                    follower: store.follower,
-                    followerOwner: msg.followerOwner,
-                    mintAmount: store.mintAmount,
-                },
+                body: createEmptySlice(),
             });
-            notifyMsg.send(
+            refundMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
         Unfollow => {
-            assert (in.senderAddress == store.follower) throw Errors.IncorrectSender;
+            assert (
+                in.senderAddress == store.followee || in.senderAddress == store.follower
+            ) throw Errors.IncorrectSender;
+            if (!store.isFollowing) {
+                val revFollower = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: store.follower,
+                    value: ton("0.05"),
+                    body: UnfollowRevertedNotification {
+                        queryId: msg.queryId,
+                        reason: 751,
+                        followerOwner: msg.initiator,
+                    },
+                });
+                revFollower.send(SEND_MODE_IGNORE_ERRORS);
 
-            val notifyMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: store.followee,
-                value: 0,
-                body: UnfollowNotification {
-                    queryId: msg.queryId,
-                    follower: store.follower,
-                    followerOwner: in.senderAddress,
-                    burnAmount: store.mintAmount,
-                },
-            });
-            notifyMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+                val revFollowee = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: store.followee,
+                    value: 0,
+                    body: UnfollowRevertedNotification {
+                        queryId: msg.queryId,
+                        reason: 751,
+                        followerOwner: msg.initiator,
+                    },
+                });
+                // SAFETY: refund remaining balance to followee when reverting
+                revFollowee.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+                return;
+            }
 
-            val destroyMsg = createMessage({
+            store.isFollowing = false;
+
+            val refundMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: store.follower,
                 value: 0,
                 body: createEmptySlice(),
             });
-            // todo: fixme: safety: maintain enough balance to process bounces when followee is inactive or change route 
-            destroyMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY,
+            refundMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
-        SettleDeath => {
-            assert (in.senderAddress == store.follower) throw Errors.IncorrectSender;
-
-            val notifyMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: store.followee,
-                value: 0,
-                body: UnfollowNotification {
-                    queryId: msg.queryId,
-                    follower: store.follower,
-                    followerOwner: in.senderAddress,
-                    burnAmount: store.mintAmount,
-                },
-            });
-            notifyMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL);
-
-            val destroyMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: store.follower,
-                value: 0,
-                body: createEmptySlice(),
-            });
-            // safety:
-            destroyMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY,
-            );
+        else => {
+            // invalid input; a typical reaction is:
+            // ignore empty messages, "wrong opcode" if not
+            assert (in.body.isEmpty()) throw 0xFFFF;
         }
     }
+    store.save();
 }
 
 get fun get_following_data(): FollowingStore {
     return FollowingStore.load();
+}
+
+get fun get_is_following(): bool {
+    return FollowingStore.load().isFollowing;
 }

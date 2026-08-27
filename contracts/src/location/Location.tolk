@@ -134,9 +134,16 @@ fun onInternalMessage(in: InMessage): void {
             });
             upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }
+
+        else => {
+            // invalid input; a typical reaction is:
+            // ignore empty messages, "wrong opcode" if not
+            assert (in.body.isEmpty()) throw 0xFFFF;
+        }
     }
 }
 
+// todo: fixme: add unique method id to all hotUpgrades
 fun hotUpgradeLocationData(_additionalData: cell?) {
     var oldStore = LocationStore.fromSlice(contract.getData().beginParse());
     oldStore.version += 1;
