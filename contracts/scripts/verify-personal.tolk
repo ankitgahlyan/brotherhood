@@ -29,7 +29,6 @@ fun deployTestMinter(admin: address): FossFi {
         others: FiCodes {
             lotteryCode: build("Lottery"),
             latestFiWalletCode: build("FossFiWallet"),
-            locationAddrs: [],
         }.toCell(),
     });
     val res = minter.sendDeploy(admin, { value: ton("10") });
@@ -56,9 +55,8 @@ fun activateIssuer(
             0,
             issuer,
             "issuer_user",
-            "Tokyo",
+            "Tokyo", // todo: fixme
             20,
-            0,
             { value: ton("1") },
         );
     invite.waitForFirstTransaction();

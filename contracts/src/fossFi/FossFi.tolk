@@ -1,6 +1,7 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/FossFiWallet.code"
+import "@gen/Location.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -9,6 +10,7 @@ import "@contracts/common/sharding"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+import "@contracts/location/location-utils"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
 
@@ -20,12 +22,11 @@ type AllowedMessageToMinter =
     | ClaimMinterAdmin
     | DropMinterAdmin
     | ChangeMinterMetadata
-    | SetLocationAddresses
     | ChangeDaoAddress
     | RequestTotalAccounts
     | TopUpTons
     | InformMinterInviteInternal
-    | InformMinterChangeCity
+    | InformMinterChangeLocation
     | RequestUpgradeCode
     | EnterLottery
     | LotteryWin
@@ -93,61 +94,62 @@ fun onInternalMessage(in: InMessage): void {
             others.totalAccounts += 1;
             store.totalSupply += MBRP_AMOUNT; // note: broadcast id for explorers or dbs
 
-            val loc = others.locationAddrs.get(msg.cityLetter);
-            if (loc.isFound) {
-                val locMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: loc.loadValue(),
-                    value: 0,
-                    body: LocationRegisterCity {
-                        queryId: msg.queryId,
-                        ownerAddress: msg.sender,
-                        cityName: msg.city,
-                        sendExcessesTo: msg.invitor,
-                    },
-                });
-                locMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            val locDeploy = calcDeployLocation(
+                msg.h3Cell,
+                contract.getAddress(),
+                locationCompiledCodeLibraryRef(),
+            );
+            val locMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: locDeploy,
+                value: 0,
+                body: LocationAddMember {
+                    queryId: msg.queryId,
+                    userAddress: msg.sender,
+                    sendExcessesTo: msg.invitor,
+                },
+            });
+            locMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
-        InformMinterChangeCity => {
+        InformMinterChangeLocation => {
             assertCorrectSender(in.senderAddress, msg.owner, store.adminAddress);
 
-            val oldLoc = others.locationAddrs.get(msg.oldCityLetter);
-            if (oldLoc.isFound) {
-                val oldLocMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: oldLoc.loadValue(),
-                    value: 0,
-                    body: LocationUnregisterCity {
-                        queryId: msg.queryId,
-                        ownerAddress: msg.owner,
-                        cityName: msg.oldCity,
-                        sendExcessesTo: msg.owner,
-                    },
-                });
-                oldLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
-            }
+            val oldLocDeploy = calcDeployLocation(
+                msg.oldH3Cell,
+                contract.getAddress(),
+                locationCompiledCodeLibraryRef(),
+            );
+            val oldLocMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: oldLocDeploy,
+                value: ton("0.05"),
+                body: LocationRemoveMember {
+                    queryId: msg.queryId,
+                    userAddress: msg.owner,
+                    sendExcessesTo: null,
+                },
+            });
+            oldLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
 
-            val newLoc = others.locationAddrs.get(msg.newCityLetter);
-            if (newLoc.isFound) {
-                val newLocMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: newLoc.loadValue(),
-                    value: 0,
-                    body: LocationRegisterCity {
-                        queryId: msg.queryId,
-                        ownerAddress: msg.owner,
-                        cityName: msg.newCity,
-                        sendExcessesTo: msg.owner,
-                    },
-                });
-                newLocMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            val newLocDeploy = calcDeployLocation(
+                msg.newH3Cell,
+                contract.getAddress(),
+                locationCompiledCodeLibraryRef(),
+            );
+            val newLocMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: newLocDeploy,
+                value: ton("0.05"),
+                body: LocationAddMember {
+                    queryId: msg.queryId,
+                    userAddress: msg.owner,
+                    sendExcessesTo: msg.owner,
+                },
+            });
+            newLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
         }
 
         NotifyMinter => {
@@ -283,16 +285,6 @@ fun onInternalMessage(in: InMessage): void {
                 Errors.NotOwner,
             );
             store.metadata = msg.newMetadata;
-        }
-
-        SetLocationAddresses => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
-            others.locationAddrs = msg.locationAddrs;
         }
 
         ChangeDaoAddress => {
@@ -616,11 +608,6 @@ fun hotUpgradeFiData(_additionalData: cell?) {
         others: oldStorage.others,
     };
     storage.save();
-}
-
-get fun get_location_addresses(): map<uint8, address> {
-    val store = lazy FiStore.load();
-    return store.others.load().locationAddrs;
 }
 
 get fun get_dao_address(): address? {

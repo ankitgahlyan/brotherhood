@@ -78,7 +78,7 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         goldCoins: 1000,
         profile: ProfileInfo {
             username: "user@example.com",
-            city: "New York",
+            h3Cell: "8828308281fffff",
         }.toCell(),
         txnCount: 255,
         status: 3,

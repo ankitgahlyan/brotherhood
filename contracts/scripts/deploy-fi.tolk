@@ -1,10 +1,15 @@
+import "@acton/build"
 import "@acton/emulation/scripts"
-
-import "@wrappers/FossFi.gen"
+import "@acton/emulation/testing"
 
 import "utils/common"
 
 fun main() {
+    testing.registerLibrary(build("FossFiWallet"));
+    testing.registerLibrary(build("Location"));
+    testing.registerLibrary(build("Dao"));
+    testing.registerLibrary(build("DaoVoter"));
+
     // make sure to deploy libs first then deploy
 
     val deployer = promptJettonWallet("JETTON_DEPLOYER", "Select Jetton Deployer");
@@ -18,10 +23,6 @@ fun main() {
     val minter = deployJettonMinter(deployer, storage);
 
     // check if minter is deployed successfully
-
-    // initialize location addrs
-    val locationAddrs = buildLocationAddrsMap(minter.address, deployer.address);
-    minter.sendSetLocationAddresses(deployer.address, 1, locationAddrs);
 
     // deploy and update dao Address in minter
 

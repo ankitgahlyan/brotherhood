@@ -8,9 +8,9 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 
 import "@contracts/common/messages"
-import "@contracts/location/Location"
+import "@contracts/location/location-utils"
 
-/// Storage `LocationStore` is defined in `@contracts/location/Location`
+/// Storage `LocationStore` is defined in `@contracts/location/location-utils`
 struct Location {
     address: address
     stateInit: ContractState? = null
@@ -53,12 +53,11 @@ fun Location.deploy(self, from: address, config: SendParams = {}): SendResultLis
     return net.send(from, genericMsg);
 }
 
-fun Location.sendLocationRegisterCity(
+fun Location.sendLocationAddMember(
     self,
     from: address,
     queryId: uint64,
-    ownerAddress: address,
-    cityName: string,
+    userAddress: address,
     sendExcessesTo: address?,
     config: SendParams = {},
 ): SendResultList {
@@ -66,17 +65,16 @@ fun Location.sendLocationRegisterCity(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: LocationRegisterCity { queryId, ownerAddress, cityName, sendExcessesTo },
+        body: LocationAddMember { queryId, userAddress, sendExcessesTo },
     });
     return net.send(from, genericMsg);
 }
 
-fun Location.sendLocationUnregisterCity(
+fun Location.sendLocationRemoveMember(
     self,
     from: address,
     queryId: uint64,
-    ownerAddress: address,
-    cityName: string,
+    userAddress: address,
     sendExcessesTo: address?,
     config: SendParams = {},
 ): SendResultList {
@@ -84,7 +82,7 @@ fun Location.sendLocationUnregisterCity(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: LocationUnregisterCity { queryId, ownerAddress, cityName, sendExcessesTo },
+        body: LocationRemoveMember { queryId, userAddress, sendExcessesTo },
     });
     return net.send(from, genericMsg);
 }
@@ -124,22 +122,6 @@ fun Location.sendUpgrade(
     return net.send(from, genericMsg);
 }
 
-fun Location.sendRequestUpgradeCode(
-    self,
-    from: address,
-    sender: address,
-    version: uint10,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: RequestUpgradeCode { sender, version },
-    });
-    return net.send(from, genericMsg);
-}
-
 /// Send message to the contract with a custom body cell
 fun Location.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
@@ -155,26 +137,22 @@ fun Location.getVersion(self): uint10 {
     return net.runGetMethod(self.address, "get_version");
 }
 
-fun Location.getCityMapVersion(self): uint10 {
-    return net.runGetMethod(self.address, "get_city_map_version");
-}
-
-fun Location.getLetterKey(self): uint8 {
-    return net.runGetMethod(self.address, "get_letter_key");
+fun Location.getH3Cell(self): string {
+    return net.runGetMethod(self.address, "get_h3_cell");
 }
 
 fun Location.getMinterAddress(self): address {
     return net.runGetMethod(self.address, "get_minter_address");
 }
 
-fun Location.cityExists(self, cityName: string): bool {
-    return net.runGetMethod(self.address, "city_exists", [cityName]);
+fun Location.getMemberCount(self): uint32 {
+    return net.runGetMethod(self.address, "get_member_count");
 }
 
-fun Location.getCities(self): map<uint256, string> {
-    return net.runGetMethod(self.address, "get_cities");
+fun Location.isMember(self, userAddress: address): bool {
+    return net.runGetMethod(self.address, "is_member", [userAddress]);
 }
 
-fun Location.getCityMapAddress(self, cityName: string): address {
-    return net.runGetMethod(self.address, "get_city_map_address", [cityName]);
+fun Location.getMembers(self): map<address, bool> {
+    return net.runGetMethod(self.address, "get_members");
 }

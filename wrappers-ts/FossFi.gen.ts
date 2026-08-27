@@ -162,14 +162,6 @@ class StackReader {
     readCellRef<T>(loadFn_T: LoadCallback<T>): CellRef<T> {
         return { ref: loadFn_T(this.readCell().beginParse()) };
     }
-
-    readDictionary<K extends c.DictionaryKeyTypes, V>(keySerializer: c.DictionaryKey<K>, valueSerializer: c.DictionaryValue<V>): c.Dictionary<K, V> {
-        if (this.tuple[0].type === 'null') {
-            this.tuple.shift();
-            return c.Dictionary.empty<K, V>(keySerializer, valueSerializer);
-        }
-        return c.Dictionary.loadDirect<K, V>(keySerializer, valueSerializer, this.readCell());
-    }
 }
 
 // ————————————————————————————————————————————
@@ -178,7 +170,6 @@ class StackReader {
 
 type coins = bigint
 
-type uint8 = bigint
 type uint10 = bigint
 type uint16 = bigint
 type uint32 = bigint
@@ -1078,54 +1069,6 @@ export const HotUpgrade = {
 }
 
 /**
- > struct (0x0000100c) SetLocationAddresses {
- >     queryId: uint64
- >     locationAddrs: map<uint8, address>
- > }
- */
-export interface SetLocationAddresses {
-    readonly $: 'SetLocationAddresses'
-    queryId: uint64
-    locationAddrs: c.Dictionary<uint8, c.Address>
-}
-
-export const SetLocationAddresses = {
-    PREFIX: 0x0000100c,
-
-    create(args: {
-        queryId: uint64
-        locationAddrs: c.Dictionary<uint8, c.Address>
-    }): SetLocationAddresses {
-        return {
-            $: 'SetLocationAddresses',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): SetLocationAddresses {
-        loadAndCheckPrefix32(s, 0x0000100c, 'SetLocationAddresses');
-        return {
-            $: 'SetLocationAddresses',
-            queryId: s.loadUintBig(64),
-            locationAddrs: c.Dictionary.load<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
-                (s) => s.loadAddress(),
-                (v,b) => b.storeAddress(v)
-            ), s),
-        }
-    },
-    store(self: SetLocationAddresses, b: c.Builder): void {
-        b.storeUint(0x0000100c, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeDict<uint8, c.Address>(self.locationAddrs, c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
-            (s) => s.loadAddress(),
-            (v,b) => b.storeAddress(v)
-        ));
-    },
-    toCell(self: SetLocationAddresses): c.Cell {
-        return makeCellFrom<SetLocationAddresses>(self, SetLocationAddresses.store);
-    }
-}
-
-/**
  > struct (0x0000100d) ChangeDaoAddress {
  >     queryId: uint64
  >     newDaoAddress: address
@@ -1252,8 +1195,7 @@ export const ResponseTotalAccounts = {
  >     sender: address
  >     invitor: address
  >     username: string
- >     city: string
- >     cityLetter: uint8
+ >     h3Cell: string
  >     country: uint16
  > }
  */
@@ -1263,8 +1205,7 @@ export interface InformMinterInviteInternal {
     sender: c.Address
     invitor: c.Address
     username: string
-    city: string
-    cityLetter: uint8 /* = 0 */
+    h3Cell: string
     country: uint16 /* = 0 */
 }
 
@@ -1276,13 +1217,11 @@ export const InformMinterInviteInternal = {
         sender: c.Address
         invitor: c.Address
         username: string
-        city: string
-        cityLetter?: uint8 /* = 0 */
+        h3Cell: string
         country?: uint16 /* = 0 */
     }): InformMinterInviteInternal {
         return {
             $: 'InformMinterInviteInternal',
-            cityLetter: 0n,
             country: 0n,
             ...args
         }
@@ -1295,8 +1234,7 @@ export const InformMinterInviteInternal = {
             sender: s.loadAddress(),
             invitor: s.loadAddress(),
             username: s.loadStringRefTail(),
-            city: s.loadStringRefTail(),
-            cityLetter: s.loadUintBig(8),
+            h3Cell: s.loadStringRefTail(),
             country: s.loadUintBig(16),
         }
     },
@@ -1306,8 +1244,7 @@ export const InformMinterInviteInternal = {
         b.storeAddress(self.sender);
         b.storeAddress(self.invitor);
         b.storeStringRefTail(self.username);
-        b.storeStringRefTail(self.city);
-        b.storeUint(self.cityLetter, 8);
+        b.storeStringRefTail(self.h3Cell);
         b.storeUint(self.country, 16);
     },
     toCell(self: InformMinterInviteInternal): c.Cell {
@@ -1346,170 +1283,148 @@ export const Destroy = {
 }
 
 /**
- > struct (0x000010a3) InformMinterChangeCity {
+ > struct (0x000010a3) InformMinterChangeLocation {
  >     queryId: uint64
  >     owner: address
- >     oldCity: string
- >     newCity: string
- >     oldCityLetter: uint8
- >     newCityLetter: uint8
+ >     oldH3Cell: string
+ >     newH3Cell: string
  > }
  */
-export interface InformMinterChangeCity {
-    readonly $: 'InformMinterChangeCity'
+export interface InformMinterChangeLocation {
+    readonly $: 'InformMinterChangeLocation'
     queryId: uint64
     owner: c.Address
-    oldCity: string
-    newCity: string
-    oldCityLetter: uint8 /* = 0 */
-    newCityLetter: uint8 /* = 0 */
+    oldH3Cell: string
+    newH3Cell: string
 }
 
-export const InformMinterChangeCity = {
+export const InformMinterChangeLocation = {
     PREFIX: 0x000010a3,
 
     create(args: {
         queryId: uint64
         owner: c.Address
-        oldCity: string
-        newCity: string
-        oldCityLetter?: uint8 /* = 0 */
-        newCityLetter?: uint8 /* = 0 */
-    }): InformMinterChangeCity {
+        oldH3Cell: string
+        newH3Cell: string
+    }): InformMinterChangeLocation {
         return {
-            $: 'InformMinterChangeCity',
-            oldCityLetter: 0n,
-            newCityLetter: 0n,
+            $: 'InformMinterChangeLocation',
             ...args
         }
     },
-    fromSlice(s: c.Slice): InformMinterChangeCity {
-        loadAndCheckPrefix32(s, 0x000010a3, 'InformMinterChangeCity');
+    fromSlice(s: c.Slice): InformMinterChangeLocation {
+        loadAndCheckPrefix32(s, 0x000010a3, 'InformMinterChangeLocation');
         return {
-            $: 'InformMinterChangeCity',
+            $: 'InformMinterChangeLocation',
             queryId: s.loadUintBig(64),
             owner: s.loadAddress(),
-            oldCity: s.loadStringRefTail(),
-            newCity: s.loadStringRefTail(),
-            oldCityLetter: s.loadUintBig(8),
-            newCityLetter: s.loadUintBig(8),
+            oldH3Cell: s.loadStringRefTail(),
+            newH3Cell: s.loadStringRefTail(),
         }
     },
-    store(self: InformMinterChangeCity, b: c.Builder): void {
+    store(self: InformMinterChangeLocation, b: c.Builder): void {
         b.storeUint(0x000010a3, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.owner);
-        b.storeStringRefTail(self.oldCity);
-        b.storeStringRefTail(self.newCity);
-        b.storeUint(self.oldCityLetter, 8);
-        b.storeUint(self.newCityLetter, 8);
+        b.storeStringRefTail(self.oldH3Cell);
+        b.storeStringRefTail(self.newH3Cell);
     },
-    toCell(self: InformMinterChangeCity): c.Cell {
-        return makeCellFrom<InformMinterChangeCity>(self, InformMinterChangeCity.store);
+    toCell(self: InformMinterChangeLocation): c.Cell {
+        return makeCellFrom<InformMinterChangeLocation>(self, InformMinterChangeLocation.store);
     }
 }
 
 /**
- > struct (0x000010a4) LocationRegisterCity {
+ > struct (0x000010a4) LocationAddMember {
  >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
+ >     userAddress: address
  >     sendExcessesTo: address?
  > }
  */
-export interface LocationRegisterCity {
-    readonly $: 'LocationRegisterCity'
+export interface LocationAddMember {
+    readonly $: 'LocationAddMember'
     queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
+    userAddress: c.Address
     sendExcessesTo: c.Address | null
 }
 
-export const LocationRegisterCity = {
+export const LocationAddMember = {
     PREFIX: 0x000010a4,
 
     create(args: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
-    }): LocationRegisterCity {
+    }): LocationAddMember {
         return {
-            $: 'LocationRegisterCity',
+            $: 'LocationAddMember',
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationRegisterCity {
-        loadAndCheckPrefix32(s, 0x000010a4, 'LocationRegisterCity');
+    fromSlice(s: c.Slice): LocationAddMember {
+        loadAndCheckPrefix32(s, 0x000010a4, 'LocationAddMember');
         return {
-            $: 'LocationRegisterCity',
+            $: 'LocationAddMember',
             queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
+            userAddress: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
         }
     },
-    store(self: LocationRegisterCity, b: c.Builder): void {
+    store(self: LocationAddMember, b: c.Builder): void {
         b.storeUint(0x000010a4, 32);
         b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.userAddress);
         b.storeAddress(self.sendExcessesTo);
     },
-    toCell(self: LocationRegisterCity): c.Cell {
-        return makeCellFrom<LocationRegisterCity>(self, LocationRegisterCity.store);
+    toCell(self: LocationAddMember): c.Cell {
+        return makeCellFrom<LocationAddMember>(self, LocationAddMember.store);
     }
 }
 
 /**
- > struct (0x000010a5) LocationUnregisterCity {
+ > struct (0x000010a5) LocationRemoveMember {
  >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
+ >     userAddress: address
  >     sendExcessesTo: address?
  > }
  */
-export interface LocationUnregisterCity {
-    readonly $: 'LocationUnregisterCity'
+export interface LocationRemoveMember {
+    readonly $: 'LocationRemoveMember'
     queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
+    userAddress: c.Address
     sendExcessesTo: c.Address | null
 }
 
-export const LocationUnregisterCity = {
+export const LocationRemoveMember = {
     PREFIX: 0x000010a5,
 
     create(args: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
-    }): LocationUnregisterCity {
+    }): LocationRemoveMember {
         return {
-            $: 'LocationUnregisterCity',
+            $: 'LocationRemoveMember',
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationUnregisterCity {
-        loadAndCheckPrefix32(s, 0x000010a5, 'LocationUnregisterCity');
+    fromSlice(s: c.Slice): LocationRemoveMember {
+        loadAndCheckPrefix32(s, 0x000010a5, 'LocationRemoveMember');
         return {
-            $: 'LocationUnregisterCity',
+            $: 'LocationRemoveMember',
             queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
+            userAddress: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
         }
     },
-    store(self: LocationUnregisterCity, b: c.Builder): void {
+    store(self: LocationRemoveMember, b: c.Builder): void {
         b.storeUint(0x000010a5, 32);
         b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.userAddress);
         b.storeAddress(self.sendExcessesTo);
     },
-    toCell(self: LocationUnregisterCity): c.Cell {
-        return makeCellFrom<LocationUnregisterCity>(self, LocationUnregisterCity.store);
+    toCell(self: LocationRemoveMember): c.Cell {
+        return makeCellFrom<LocationRemoveMember>(self, LocationRemoveMember.store);
     }
 }
 
@@ -1595,7 +1510,6 @@ export const AdminHandoff = {
  >     lotteryCode: cell
  >     latestFiWalletCode: cell
  >     currentRequest: Cell<CurrentRequest>?
- >     locationAddrs: map<uint8, address>
  > }
  */
 export interface FiCodes {
@@ -1604,7 +1518,6 @@ export interface FiCodes {
     lotteryCode: c.Cell
     latestFiWalletCode: c.Cell
     currentRequest: CellRef<CurrentRequest> | null /* = null */
-    locationAddrs: c.Dictionary<uint8, c.Address> /* = [] as map<uint8, address> */
 }
 
 export const FiCodes = {
@@ -1613,7 +1526,6 @@ export const FiCodes = {
         lotteryCode: c.Cell
         latestFiWalletCode: c.Cell
         currentRequest?: CellRef<CurrentRequest> | null /* = null */
-        locationAddrs: c.Dictionary<uint8, c.Address> /* = [] as map<uint8, address> */
     }): FiCodes {
         return {
             $: 'FiCodes',
@@ -1629,10 +1541,6 @@ export const FiCodes = {
             lotteryCode: s.loadRef(),
             latestFiWalletCode: s.loadRef(),
             currentRequest: s.loadBoolean() ? loadCellRef<CurrentRequest>(s, CurrentRequest.fromSlice) : null,
-            locationAddrs: c.Dictionary.load<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
-                (s) => s.loadAddress(),
-                (v,b) => b.storeAddress(v)
-            ), s),
         }
     },
     store(self: FiCodes, b: c.Builder): void {
@@ -1642,10 +1550,6 @@ export const FiCodes = {
         storeTolkNullable<CellRef<CurrentRequest>>(self.currentRequest, b,
             (v,b) => storeCellRef<CurrentRequest>(v, b, CurrentRequest.store)
         );
-        b.storeDict<uint8, c.Address>(self.locationAddrs, c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
-            (s) => s.loadAddress(),
-            (v,b) => b.storeAddress(v)
-        ));
     },
     toCell(self: FiCodes): c.Cell {
         return makeCellFrom<FiCodes>(self, FiCodes.store);
@@ -1909,7 +1813,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class FossFi implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -2002,13 +1906,6 @@ export class FossFi implements c.Contract {
         return ChangeMinterMetadata.toCell(ChangeMinterMetadata.create(body));
     }
 
-    static createCellOfSetLocationAddresses(body: {
-        queryId: uint64
-        locationAddrs: c.Dictionary<uint8, c.Address>
-    }) {
-        return SetLocationAddresses.toCell(SetLocationAddresses.create(body));
-    }
-
     static createCellOfChangeDaoAddress(body: {
         queryId: uint64
         newDaoAddress: c.Address
@@ -2032,22 +1929,19 @@ export class FossFi implements c.Contract {
         sender: c.Address
         invitor: c.Address
         username: string
-        city: string
-        cityLetter?: uint8 /* = 0 */
+        h3Cell: string
         country?: uint16 /* = 0 */
     }) {
         return InformMinterInviteInternal.toCell(InformMinterInviteInternal.create(body));
     }
 
-    static createCellOfInformMinterChangeCity(body: {
+    static createCellOfInformMinterChangeLocation(body: {
         queryId: uint64
         owner: c.Address
-        oldCity: string
-        newCity: string
-        oldCityLetter?: uint8 /* = 0 */
-        newCityLetter?: uint8 /* = 0 */
+        oldH3Cell: string
+        newH3Cell: string
     }) {
-        return InformMinterChangeCity.toCell(InformMinterChangeCity.create(body));
+        return InformMinterChangeLocation.toCell(InformMinterChangeLocation.create(body));
     }
 
     static createCellOfRequestUpgradeCode(body: {
@@ -2198,17 +2092,6 @@ export class FossFi implements c.Contract {
         });
     }
 
-    async sendSetLocationAddresses(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        queryId: uint64
-        locationAddrs: c.Dictionary<uint8, c.Address>
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: SetLocationAddresses.toCell(SetLocationAddresses.create(body)),
-            ...extraOptions
-        });
-    }
-
     async sendChangeDaoAddress(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         newDaoAddress: c.Address
@@ -2244,8 +2127,7 @@ export class FossFi implements c.Contract {
         sender: c.Address
         invitor: c.Address
         username: string
-        city: string
-        cityLetter?: uint8 /* = 0 */
+        h3Cell: string
         country?: uint16 /* = 0 */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -2255,17 +2137,15 @@ export class FossFi implements c.Contract {
         });
     }
 
-    async sendInformMinterChangeCity(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+    async sendInformMinterChangeLocation(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         owner: c.Address
-        oldCity: string
-        newCity: string
-        oldCityLetter?: uint8 /* = 0 */
-        newCityLetter?: uint8 /* = 0 */
+        oldH3Cell: string
+        newH3Cell: string
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: InformMinterChangeCity.toCell(InformMinterChangeCity.create(body)),
+            body: InformMinterChangeLocation.toCell(InformMinterChangeLocation.create(body)),
             ...extraOptions
         });
     }
@@ -2409,14 +2289,6 @@ export class FossFi implements c.Contract {
             ) },
         ]));
         return r.readSlice().loadAddress();
-    }
-
-    async getLocationAddresses(provider: ContractProvider): Promise<c.Dictionary<uint8, c.Address>> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_location_addresses', []));
-        return r.readDictionary<uint8, c.Address>(c.Dictionary.Keys.BigUint(8), createDictionaryValue<c.Address>(
-            (s) => s.loadAddress(),
-            (v,b) => b.storeAddress(v)
-        ));
     }
 
     async getDaoAddress(provider: ContractProvider): Promise<c.Address | null> {

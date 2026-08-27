@@ -115,6 +115,7 @@ class StackReader {
 
 type coins = bigint
 
+type uint16 = bigint
 type uint64 = bigint
 
 /**
@@ -207,6 +208,100 @@ export const InitFollow = {
 }
 
 /**
+ > struct (0x00001208) FollowRevertedNotification {
+ >     queryId: uint64
+ >     reason: uint16
+ >     followerOwner: address
+ > }
+ */
+export interface FollowRevertedNotification {
+    readonly $: 'FollowRevertedNotification'
+    queryId: uint64
+    reason: uint16
+    followerOwner: c.Address
+}
+
+export const FollowRevertedNotification = {
+    PREFIX: 0x00001208,
+
+    create(args: {
+        queryId: uint64
+        reason: uint16
+        followerOwner: c.Address
+    }): FollowRevertedNotification {
+        return {
+            $: 'FollowRevertedNotification',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): FollowRevertedNotification {
+        loadAndCheckPrefix32(s, 0x00001208, 'FollowRevertedNotification');
+        return {
+            $: 'FollowRevertedNotification',
+            queryId: s.loadUintBig(64),
+            reason: s.loadUintBig(16),
+            followerOwner: s.loadAddress(),
+        }
+    },
+    store(self: FollowRevertedNotification, b: c.Builder): void {
+        b.storeUint(0x00001208, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeUint(self.reason, 16);
+        b.storeAddress(self.followerOwner);
+    },
+    toCell(self: FollowRevertedNotification): c.Cell {
+        return makeCellFrom<FollowRevertedNotification>(self, FollowRevertedNotification.store);
+    }
+}
+
+/**
+ > struct (0x00001209) UnfollowRevertedNotification {
+ >     queryId: uint64
+ >     reason: uint16
+ >     followerOwner: address
+ > }
+ */
+export interface UnfollowRevertedNotification {
+    readonly $: 'UnfollowRevertedNotification'
+    queryId: uint64
+    reason: uint16
+    followerOwner: c.Address
+}
+
+export const UnfollowRevertedNotification = {
+    PREFIX: 0x00001209,
+
+    create(args: {
+        queryId: uint64
+        reason: uint16
+        followerOwner: c.Address
+    }): UnfollowRevertedNotification {
+        return {
+            $: 'UnfollowRevertedNotification',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): UnfollowRevertedNotification {
+        loadAndCheckPrefix32(s, 0x00001209, 'UnfollowRevertedNotification');
+        return {
+            $: 'UnfollowRevertedNotification',
+            queryId: s.loadUintBig(64),
+            reason: s.loadUintBig(16),
+            followerOwner: s.loadAddress(),
+        }
+    },
+    store(self: UnfollowRevertedNotification, b: c.Builder): void {
+        b.storeUint(0x00001209, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeUint(self.reason, 16);
+        b.storeAddress(self.followerOwner);
+    },
+    toCell(self: UnfollowRevertedNotification): c.Cell {
+        return makeCellFrom<UnfollowRevertedNotification>(self, UnfollowRevertedNotification.store);
+    }
+}
+
+/**
  > struct FollowingStore {
  >     follower: address
  >     followee: address
@@ -294,12 +389,10 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Following implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBwEA3gABFP8A9KQT9LzyyAsBAgFiAgMB0ND4kZEw4O1E0PpI+kj6ANcKAATXLCAAAJAMjjzXLCAAAJAEMZLyP+H4kiLHBZF/l/iSI8cFwwDi8uK8A/Li73CLCMjOycjPhQhSQPpScc8LbszJgFD7AAPjDQLI+lL6UgH6AsoAye1UBAIBIAUGAGr4kiPHBZF/l/iSJMcFwwDi8uK8BPLS7n8E0z8x+kgwiwjIzsnIz4UIEvpScc8LbszJgFD7AAAdvdJ3aiaH0kfSR9AGkAaMACO/KZdqJofSQY/SQY/QAY6QBow=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECCAEAAYEAART/APSkE/S88sgLAQIBYgIDApDQ7aLt+/iRkTDgIO1E0PpI+kj6ANcKAATXLCAAAJAMjpfXLCAAAJAEmzCEDwXHABXy9EMT4w1AE+MNAcj6UvpSWPoCygDJ7VQEBQIBIAYHAPY1+JIixwWRf5f4kiPHBcMA4vLivAOOSjIC0z/6SDCCCvrwgMjPhQgV+lJQBPoCgRIJzwuKIc8LP8+IC75SMPpSyXL7AMjPhQgS+lKBEgnPC47LP8+IC776UsmBAIL7ANsx4TNwiwjIzsnIz4UIUjD6UnHPC27MyYBQ+wAA9DX4kiLHBZF/l/iSI8cFwwDi8uK8BNM/+kgwBI5DNIIK+vCAyM+FCBP6Ulj6AoESCM8LiiPPCz/PiAu6UiD6Usly+wDIz4UI+lKBEgjPC44Syz/PiAu6+lLJgQCC+wDbMeAwf4sIyM7JyM+FCBX6UnHPC24UzMmAUPsAAB290ndqJofSR9JH0AaQBowAI78pl2omh9JBj9JBj9ABjpAGjA==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
-        'FollowingErrors.AlreadyFollowing': 750,
-        'FollowingErrors.NotFollowing': 751,
     }
 
     readonly address: c.Address

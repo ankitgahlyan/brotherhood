@@ -709,8 +709,8 @@ function FiWalletInfoCard({
           value={fiWalletState.profile?.ref?.username || '—'}
         />
         <PreviewRow
-          label="City"
-          value={fiWalletState.profile?.ref?.city || '—'}
+          label="H3 Location"
+          value={fiWalletState.profile?.ref?.h3Cell || '—'}
         />
         <PreviewRow
           label="Txn Count"

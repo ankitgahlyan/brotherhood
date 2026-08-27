@@ -18,8 +18,6 @@ import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/lottery/storage"
 
-import "../scripts/utils/common"
-
 fun buildTestMetadata(uri: string): cell {
     var metadata: OnchainMetadataReply = { contentDict: [] };
     val prefixedUri = beginCell()
@@ -120,9 +118,8 @@ fun activateUser(
         0,
         invitee,
         "user1",
-        "Tokyo",
-        20, // for T
-        0,  // for global
+        "8828308281fffff",
+        0, // for global
         { value: ton("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
@@ -172,11 +169,11 @@ fun deployWalletFromStorage(
 }
 
 fun registerAllTestLibraries(): void {
-    testing.registerLibrary(build("CityMap"));
     testing.registerLibrary(build("Dao"));
     testing.registerLibrary(build("DaoVoter"));
     testing.registerLibrary(build("Following"));
     testing.registerLibrary(build("FossFiWallet"));
+    testing.registerLibrary(build("Location"));
     testing.registerLibrary(build("PersonalMinter"));
     testing.registerLibrary(build("PersonalWallet"));
 }
@@ -314,10 +311,6 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     expect(transactions).toHaveSuccessfulDeploy({
         to: minter.address,
     });
-
-    val locationAddrs = buildLocationAddrsMap(minter.address, deployer.address);
-    minter.sendSetLocationAddresses(deployer.address, 1, locationAddrs);
-    // val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
 
     return (minter, deployer, notDeployer);
 }

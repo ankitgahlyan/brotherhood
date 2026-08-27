@@ -57,19 +57,6 @@ function storeTolkNullable<T>(v: T | null, b: c.Builder, storeFn_T: StoreCallbac
     }
 }
 
-function createDictionaryValue<V>(loadFn_V: LoadCallback<V>, storeFn_V: StoreCallback<V>): c.DictionaryValue<V> {
-    return {
-        serialize(self: V, b: c.Builder) {
-            storeFn_V(self, b);
-        },
-        parse(s: c.Slice): V {
-            const value = loadFn_V(s);
-            s.endParse();
-            return value;
-        }
-    }
-}
-
 // ————————————————————————————————————————————
 //   parse get methods result from a TVM stack
 //
@@ -121,6 +108,10 @@ class StackReader {
         return this.popCellLike().beginParse();
     }
 
+    readSnakeString(): string {
+        return this.readCell().beginParse().loadStringTail();
+    }
+
     readDictionary<K extends c.DictionaryKeyTypes, V>(keySerializer: c.DictionaryKey<K>, valueSerializer: c.DictionaryValue<V>): c.Dictionary<K, V> {
         if (this.tuple[0].type === 'null') {
             this.tuple.shift();
@@ -136,74 +127,44 @@ class StackReader {
 
 type coins = bigint
 
-type uint8 = bigint
 type uint10 = bigint
+type uint32 = bigint
 type uint64 = bigint
-type uint256 = bigint
 
 /**
- > struct LocationStore {
- >     letterKey: uint8
- >     version: uint10
- >     cityMapVersion: uint10
- >     minterAddress: address
- >     cityMapCode: cell
- >     cities: map<uint256, string>
+ > struct (0xd53276db) ReturnExcessesBack {
+ >     queryId: uint64
  > }
  */
-export interface LocationStore {
-    readonly $: 'LocationStore'
-    letterKey: uint8
-    version: uint10 /* = 0 */
-    cityMapVersion: uint10 /* = 0 */
-    minterAddress: c.Address
-    cityMapCode: c.Cell
-    cities: c.Dictionary<uint256, string>
+export interface ReturnExcessesBack {
+    readonly $: 'ReturnExcessesBack'
+    queryId: uint64
 }
 
-export const LocationStore = {
+export const ReturnExcessesBack = {
+    PREFIX: 0xd53276db,
+
     create(args: {
-        letterKey: uint8
-        version?: uint10 /* = 0 */
-        cityMapVersion?: uint10 /* = 0 */
-        minterAddress: c.Address
-        cityMapCode: c.Cell
-        cities: c.Dictionary<uint256, string>
-    }): LocationStore {
+        queryId: uint64
+    }): ReturnExcessesBack {
         return {
-            $: 'LocationStore',
-            version: 0n,
-            cityMapVersion: 0n,
+            $: 'ReturnExcessesBack',
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationStore {
+    fromSlice(s: c.Slice): ReturnExcessesBack {
+        loadAndCheckPrefix32(s, 0xd53276db, 'ReturnExcessesBack');
         return {
-            $: 'LocationStore',
-            letterKey: s.loadUintBig(8),
-            version: s.loadUintBig(10),
-            cityMapVersion: s.loadUintBig(10),
-            minterAddress: s.loadAddress(),
-            cityMapCode: s.loadRef(),
-            cities: c.Dictionary.load<uint256, string>(c.Dictionary.Keys.BigUint(256), createDictionaryValue<string>(
-                (s) => s.loadStringRefTail(),
-                (v,b) => b.storeStringRefTail(v)
-            ), s),
+            $: 'ReturnExcessesBack',
+            queryId: s.loadUintBig(64),
         }
     },
-    store(self: LocationStore, b: c.Builder): void {
-        b.storeUint(self.letterKey, 8);
-        b.storeUint(self.version, 10);
-        b.storeUint(self.cityMapVersion, 10);
-        b.storeAddress(self.minterAddress);
-        b.storeRef(self.cityMapCode);
-        b.storeDict<uint256, string>(self.cities, c.Dictionary.Keys.BigUint(256), createDictionaryValue<string>(
-            (s) => s.loadStringRefTail(),
-            (v,b) => b.storeStringRefTail(v)
-        ));
+    store(self: ReturnExcessesBack, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
     },
-    toCell(self: LocationStore): c.Cell {
-        return makeCellFrom<LocationStore>(self, LocationStore.store);
+    toCell(self: ReturnExcessesBack): c.Cell {
+        return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
     }
 }
 
@@ -272,48 +233,6 @@ export const Upgrade = {
 }
 
 /**
- > struct (0x00001008) RequestUpgradeCode {
- >     sender: address
- >     version: uint10
- > }
- */
-export interface RequestUpgradeCode {
-    readonly $: 'RequestUpgradeCode'
-    sender: c.Address
-    version: uint10
-}
-
-export const RequestUpgradeCode = {
-    PREFIX: 0x00001008,
-
-    create(args: {
-        sender: c.Address
-        version: uint10
-    }): RequestUpgradeCode {
-        return {
-            $: 'RequestUpgradeCode',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): RequestUpgradeCode {
-        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
-        return {
-            $: 'RequestUpgradeCode',
-            sender: s.loadAddress(),
-            version: s.loadUintBig(10),
-        }
-    },
-    store(self: RequestUpgradeCode, b: c.Builder): void {
-        b.storeUint(0x00001008, 32);
-        b.storeAddress(self.sender);
-        b.storeUint(self.version, 10);
-    },
-    toCell(self: RequestUpgradeCode): c.Cell {
-        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
-    }
-}
-
-/**
  > struct (0x0000100b) HotUpgrade {
  >     additionalData: cell?
  >     code: cell
@@ -358,222 +277,151 @@ export const HotUpgrade = {
 }
 
 /**
- > struct (0x000010a4) LocationRegisterCity {
+ > struct (0x000010a4) LocationAddMember {
  >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
+ >     userAddress: address
  >     sendExcessesTo: address?
  > }
  */
-export interface LocationRegisterCity {
-    readonly $: 'LocationRegisterCity'
+export interface LocationAddMember {
+    readonly $: 'LocationAddMember'
     queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
+    userAddress: c.Address
     sendExcessesTo: c.Address | null
 }
 
-export const LocationRegisterCity = {
+export const LocationAddMember = {
     PREFIX: 0x000010a4,
 
     create(args: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
-    }): LocationRegisterCity {
+    }): LocationAddMember {
         return {
-            $: 'LocationRegisterCity',
+            $: 'LocationAddMember',
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationRegisterCity {
-        loadAndCheckPrefix32(s, 0x000010a4, 'LocationRegisterCity');
+    fromSlice(s: c.Slice): LocationAddMember {
+        loadAndCheckPrefix32(s, 0x000010a4, 'LocationAddMember');
         return {
-            $: 'LocationRegisterCity',
+            $: 'LocationAddMember',
             queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
+            userAddress: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
         }
     },
-    store(self: LocationRegisterCity, b: c.Builder): void {
+    store(self: LocationAddMember, b: c.Builder): void {
         b.storeUint(0x000010a4, 32);
         b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.userAddress);
         b.storeAddress(self.sendExcessesTo);
     },
-    toCell(self: LocationRegisterCity): c.Cell {
-        return makeCellFrom<LocationRegisterCity>(self, LocationRegisterCity.store);
+    toCell(self: LocationAddMember): c.Cell {
+        return makeCellFrom<LocationAddMember>(self, LocationAddMember.store);
     }
 }
 
 /**
- > struct (0x000010a5) LocationUnregisterCity {
+ > struct (0x000010a5) LocationRemoveMember {
  >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
+ >     userAddress: address
  >     sendExcessesTo: address?
  > }
  */
-export interface LocationUnregisterCity {
-    readonly $: 'LocationUnregisterCity'
+export interface LocationRemoveMember {
+    readonly $: 'LocationRemoveMember'
     queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
+    userAddress: c.Address
     sendExcessesTo: c.Address | null
 }
 
-export const LocationUnregisterCity = {
+export const LocationRemoveMember = {
     PREFIX: 0x000010a5,
 
     create(args: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
-    }): LocationUnregisterCity {
+    }): LocationRemoveMember {
         return {
-            $: 'LocationUnregisterCity',
+            $: 'LocationRemoveMember',
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationUnregisterCity {
-        loadAndCheckPrefix32(s, 0x000010a5, 'LocationUnregisterCity');
+    fromSlice(s: c.Slice): LocationRemoveMember {
+        loadAndCheckPrefix32(s, 0x000010a5, 'LocationRemoveMember');
         return {
-            $: 'LocationUnregisterCity',
+            $: 'LocationRemoveMember',
             queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
+            userAddress: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
         }
     },
-    store(self: LocationUnregisterCity, b: c.Builder): void {
+    store(self: LocationRemoveMember, b: c.Builder): void {
         b.storeUint(0x000010a5, 32);
         b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
+        b.storeAddress(self.userAddress);
         b.storeAddress(self.sendExcessesTo);
     },
-    toCell(self: LocationUnregisterCity): c.Cell {
-        return makeCellFrom<LocationUnregisterCity>(self, LocationUnregisterCity.store);
+    toCell(self: LocationRemoveMember): c.Cell {
+        return makeCellFrom<LocationRemoveMember>(self, LocationRemoveMember.store);
     }
 }
 
 /**
- > struct (0x000010a6) RegisterCityMember {
- >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
- >     sendExcessesTo: address?
+ > struct LocationStore {
+ >     h3Cell: string
+ >     minterAddress: address
+ >     memberCount: uint32
+ >     members: map<address, bool>
  >     version: uint10
  > }
  */
-export interface RegisterCityMember {
-    readonly $: 'RegisterCityMember'
-    queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
-    sendExcessesTo: c.Address | null
+export interface LocationStore {
+    readonly $: 'LocationStore'
+    h3Cell: string
+    minterAddress: c.Address
+    memberCount: uint32 /* = 0 */
+    members: c.Dictionary<c.Address, boolean> /* = [] as map<address, bool> */
     version: uint10 /* = 0 */
 }
 
-export const RegisterCityMember = {
-    PREFIX: 0x000010a6,
-
+export const LocationStore = {
     create(args: {
-        queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
-        sendExcessesTo: c.Address | null
+        h3Cell: string
+        minterAddress: c.Address
+        memberCount?: uint32 /* = 0 */
+        members: c.Dictionary<c.Address, boolean> /* = [] as map<address, bool> */
         version?: uint10 /* = 0 */
-    }): RegisterCityMember {
+    }): LocationStore {
         return {
-            $: 'RegisterCityMember',
+            $: 'LocationStore',
+            memberCount: 0n,
             version: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): RegisterCityMember {
-        loadAndCheckPrefix32(s, 0x000010a6, 'RegisterCityMember');
+    fromSlice(s: c.Slice): LocationStore {
         return {
-            $: 'RegisterCityMember',
-            queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
-            sendExcessesTo: s.loadMaybeAddress(),
+            $: 'LocationStore',
+            h3Cell: s.loadStringRefTail(),
+            minterAddress: s.loadAddress(),
+            memberCount: s.loadUintBig(32),
+            members: c.Dictionary.load<c.Address, boolean>(c.Dictionary.Keys.Address(), c.Dictionary.Values.Bool(), s),
             version: s.loadUintBig(10),
         }
     },
-    store(self: RegisterCityMember, b: c.Builder): void {
-        b.storeUint(0x000010a6, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
-        b.storeAddress(self.sendExcessesTo);
+    store(self: LocationStore, b: c.Builder): void {
+        b.storeStringRefTail(self.h3Cell);
+        b.storeAddress(self.minterAddress);
+        b.storeUint(self.memberCount, 32);
+        b.storeDict<c.Address, boolean>(self.members, c.Dictionary.Keys.Address(), c.Dictionary.Values.Bool());
         b.storeUint(self.version, 10);
     },
-    toCell(self: RegisterCityMember): c.Cell {
-        return makeCellFrom<RegisterCityMember>(self, RegisterCityMember.store);
-    }
-}
-
-/**
- > struct (0x000010a7) UnregisterCityMember {
- >     queryId: uint64
- >     ownerAddress: address
- >     cityName: string
- >     sendExcessesTo: address?
- >     version: uint10
- > }
- */
-export interface UnregisterCityMember {
-    readonly $: 'UnregisterCityMember'
-    queryId: uint64
-    ownerAddress: c.Address
-    cityName: string
-    sendExcessesTo: c.Address | null
-    version: uint10 /* = 0 */
-}
-
-export const UnregisterCityMember = {
-    PREFIX: 0x000010a7,
-
-    create(args: {
-        queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
-        sendExcessesTo: c.Address | null
-        version?: uint10 /* = 0 */
-    }): UnregisterCityMember {
-        return {
-            $: 'UnregisterCityMember',
-            version: 0n,
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): UnregisterCityMember {
-        loadAndCheckPrefix32(s, 0x000010a7, 'UnregisterCityMember');
-        return {
-            $: 'UnregisterCityMember',
-            queryId: s.loadUintBig(64),
-            ownerAddress: s.loadAddress(),
-            cityName: s.loadStringRefTail(),
-            sendExcessesTo: s.loadMaybeAddress(),
-            version: s.loadUintBig(10),
-        }
-    },
-    store(self: UnregisterCityMember, b: c.Builder): void {
-        b.storeUint(0x000010a7, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.ownerAddress);
-        b.storeStringRefTail(self.cityName);
-        b.storeAddress(self.sendExcessesTo);
-        b.storeUint(self.version, 10);
-    },
-    toCell(self: UnregisterCityMember): c.Cell {
-        return makeCellFrom<UnregisterCityMember>(self, UnregisterCityMember.store);
+    toCell(self: LocationStore): c.Cell {
+        return makeCellFrom<LocationStore>(self, LocationStore.store);
     }
 }
 
@@ -616,7 +464,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Location implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFQEAAsoAART/APSkE/S88sgLAQIBYgIDBPLQ+JHyQO1E0NYH0wnTCfpI1PQFBtcsIAAAhSTjAtcsIAAAhSzjAtcsIAAAgFyOPDFsQviSWMcF8uBJ9AQx10wg+wTQ7R7tU+1E0NMH0wnTCfpI1PQE0QSkBcjLBxXLCRLLCfpSEsz0AMntVODXLCAAAIA04wIybDMBBAUGBwIBIAkKAPb4kiPHBfLgSdM/+kjU+lAwIdDIzvkWVEIbgwf0NzAIyM4XywklzwsJFPpSIs8UFvQAye1U+ChtJcjMz4gAgBL6UvQAycjPkAAAQpoWyz8S+lITzBT6VBPLCcnIz4kIAVMjyM+E0MzM+RbPC/+BAI3PC3QTzMzMyYBA+wAAsjQ0NPiSUATHBfLgSdM/+kjU+lAw+ChtI8jMz4gAgBL6UvQAycjPkAAAQp4Vyz8T+lLM+lQTywnJyM+JCAFdyM+E0MzM+RbPC/+BAI3PC3QSzBLMzMmAQPsAAOj4kiPHBfLgSdIA0wn6SDH0BDH0BQKOGzADpCNukTOSMQLiBMjOE8sJywn6Usz0AMntVI4/UGdfBSK5bBKOMiBukTCYIPsE0O0e7VPi7UTQ0wfTCdMJ+kjU9ATRBKQFyMsHFcsJEssJ+lISzPQAye1UkTDi4gFiidcnMY4o+JL4KG3Iz5AAAEAbFcsJ+lIT9AD0AMnIz4UIEvpScc8LbszJgEL7AODyPwgACAAAEAgCASALDAIBIBESAB+5AW7UTQ0xsx+kgx1DH0BYAgEgDQ4CASAPEAAXt989qJoaYiY64WEwABewZDtRNDTBzHXCwmAAU7K7u1E0NdM+ChtA8jMz4gAgPpSEvQAyQHIz4TQzMz5FsjPigBAy//PUIAARuvy+1E0NcLB4AgFqExQAO64S9qJoaY2Y/SQY6hj6AoDoZGd8iwDBg/oHN9CYwAAXrFZ2omhpjZj9JBhA');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEQEAAh8AART/APSkE/S88sgLAQIBYgIDAfjQ+JHyQCDtRNDU+kjTH/QE1wsJBdcsIAAAhSSOXzb4kiPHBfLgSQXTP/pI+lAwUxeBAQv0Cm+hMZQ3FV8Fjh7Iz4NACIEBC/RBAqQEyMwT+lITyx8S9AASywnJ7VTiIW6RW44XyM+FCBL6UoIQ1TJ2288Ljss/yYBC+wDiBAIBIAcIAv7g1ywgAACFLI5hNviSI8cF8uBJBdM/+kj6UDBTF4EBC/QKb6ExjiAHgQEL9FkwIsIAkwKlAt4EyMwT+lLLHxL0ABLLCcntVJQ3FV8F4iFukVuOF8jPhQgS+lKCENUydtvPC47LP8mAQvsA4uA0WwHXLCAAAIBc4wLXLCAAAIA0BQYAaGwi+JJYxwXy4En0BDHXTCD7BNDtHu1T7UTQ1PpI0x/0BNMJ0aQEyMwT+lLLH/QAywnJ7VQArI5KM/iSxwXy4EkB0wAx0wn6SDH0BDH0BVEhuTGOKyBukTCYIPsE0O0e7VPi7UTQ1PpI0x/0BNMJ0aQEyMwT+lLLH/QAywnJ7VSRMOLgXwOEDwHHAPL0AgEgCQoCASALDAAvu2e+1E0NQx+kgx0x8x9AWBAQv0Cm+hMYACW4GQ7UTQ1DH6SDHTHzH0AdcLCYAA+4sP7UTQ10yAIBIA0OABe25b2omh9JBjrhY/ACASAPEAARsis7UTQ+kgwgAB+wqbtRNDUMfpIMdMfMfQFg');
 
     static Errors = {
         'Errors.NotOwner': 73,
@@ -635,12 +483,11 @@ export class Location implements c.Contract {
     }
 
     static fromStorage(emptyStorage: {
-        letterKey: uint8
-        version?: uint10 /* = 0 */
-        cityMapVersion?: uint10 /* = 0 */
+        h3Cell: string
         minterAddress: c.Address
-        cityMapCode: c.Cell
-        cities: c.Dictionary<uint256, string>
+        memberCount?: uint32 /* = 0 */
+        members: c.Dictionary<c.Address, boolean> /* = [] as map<address, bool> */
+        version?: uint10 /* = 0 */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Location.CodeCell,
@@ -650,22 +497,20 @@ export class Location implements c.Contract {
         return new Location(address, initialState);
     }
 
-    static createCellOfLocationRegisterCity(body: {
+    static createCellOfLocationAddMember(body: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
     }) {
-        return LocationRegisterCity.toCell(LocationRegisterCity.create(body));
+        return LocationAddMember.toCell(LocationAddMember.create(body));
     }
 
-    static createCellOfLocationUnregisterCity(body: {
+    static createCellOfLocationRemoveMember(body: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
     }) {
-        return LocationUnregisterCity.toCell(LocationUnregisterCity.create(body));
+        return LocationRemoveMember.toCell(LocationRemoveMember.create(body));
     }
 
     static createCellOfHotUpgrade(body: {
@@ -685,13 +530,6 @@ export class Location implements c.Contract {
         return Upgrade.toCell(Upgrade.create(body));
     }
 
-    static createCellOfRequestUpgradeCode(body: {
-        sender: c.Address
-        version: uint10
-    }) {
-        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
-    }
-
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -700,28 +538,26 @@ export class Location implements c.Contract {
         });
     }
 
-    async sendLocationRegisterCity(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+    async sendLocationAddMember(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: LocationRegisterCity.toCell(LocationRegisterCity.create(body)),
+            body: LocationAddMember.toCell(LocationAddMember.create(body)),
             ...extraOptions
         });
     }
 
-    async sendLocationUnregisterCity(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+    async sendLocationRemoveMember(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
-        ownerAddress: c.Address
-        cityName: string
+        userAddress: c.Address
         sendExcessesTo: c.Address | null
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: LocationUnregisterCity.toCell(LocationUnregisterCity.create(body)),
+            body: LocationRemoveMember.toCell(LocationRemoveMember.create(body)),
             ...extraOptions
         });
     }
@@ -751,30 +587,14 @@ export class Location implements c.Contract {
         });
     }
 
-    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        sender: c.Address
-        version: uint10
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
-            ...extraOptions
-        });
-    }
-
     async getVersion(provider: ContractProvider): Promise<uint10> {
         const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
         return r.readBigInt();
     }
 
-    async getCityMapVersion(provider: ContractProvider): Promise<uint10> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_city_map_version', []));
-        return r.readBigInt();
-    }
-
-    async getLetterKey(provider: ContractProvider): Promise<uint8> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_letter_key', []));
-        return r.readBigInt();
+    async getH3Cell(provider: ContractProvider): Promise<string> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_h3_cell', []));
+        return r.readSnakeString();
     }
 
     async getMinterAddress(provider: ContractProvider): Promise<c.Address> {
@@ -782,25 +602,22 @@ export class Location implements c.Contract {
         return r.readSlice().loadAddress();
     }
 
-    async getCityExists(provider: ContractProvider, cityName: string): Promise<boolean> {
-        const r = StackReader.fromGetMethod(1, await provider.get('city_exists', [
-            { type: 'cell', cell: beginCell().storeStringTail(cityName).endCell() },
+    async getMemberCount(provider: ContractProvider): Promise<uint32> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_member_count', []));
+        return r.readBigInt();
+    }
+
+    async getIsMember(provider: ContractProvider, userAddress: c.Address): Promise<boolean> {
+        const r = StackReader.fromGetMethod(1, await provider.get('is_member', [
+            { type: 'slice', cell: makeCellFrom<c.Address>(userAddress,
+                (v,b) => b.storeAddress(v)
+            ) },
         ]));
         return r.readBoolean();
     }
 
-    async getCities(provider: ContractProvider): Promise<c.Dictionary<uint256, string>> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_cities', []));
-        return r.readDictionary<uint256, string>(c.Dictionary.Keys.BigUint(256), createDictionaryValue<string>(
-            (s) => s.loadStringRefTail(),
-            (v,b) => b.storeStringRefTail(v)
-        ));
-    }
-
-    async getCityMapAddress(provider: ContractProvider, cityName: string): Promise<c.Address> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_city_map_address', [
-            { type: 'cell', cell: beginCell().storeStringTail(cityName).endCell() },
-        ]));
-        return r.readSlice().loadAddress();
+    async getMembers(provider: ContractProvider): Promise<c.Dictionary<c.Address, boolean>> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_members', []));
+        return r.readDictionary<c.Address, boolean>(c.Dictionary.Keys.Address(), c.Dictionary.Values.Bool());
     }
 }

@@ -34,7 +34,6 @@ import {
   Follow,
   Unfollow,
   ChangeUsername,
-  ChangeCity,
   ChangeCountry,
   AskGoldCoinsTransfer,
   RepayDebt,
@@ -44,6 +43,7 @@ import {
   ActJoinLottery,
   ActSubmitProposal,
   ActVoteProposal,
+  ChangeLocation,
 } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
@@ -71,7 +71,6 @@ export async function buildDeployMessage(params: {
     metadata: content,
     others: {
       ref: FiCodes.create({
-        locationAddrs: Dictionary.empty(),
         lotteryCode: Cell.EMPTY,
         latestFiWalletCode: Cell.EMPTY,
       }),
@@ -242,24 +241,21 @@ export function buildTransferBody(params: {
 export function buildInviteBody(params: {
   transferRecipient: Address;
   username?: string;
-  city?: string;
-  cityLetter?: number | bigint;
+  h3Cell:string;
   queryId?: bigint;
 }): Cell {
   const {
     transferRecipient,
     username = '',
-    city = '',
-    cityLetter = 0,
     queryId = 0n,
+    h3Cell,
   } = params;
   return ActInvite.toCell(
     ActInvite.create({
       queryId,
       transferRecipient,
       username,
-      city,
-      cityLetter: BigInt(cityLetter),
+      h3Cell,
     }),
   );
 }
@@ -370,30 +366,12 @@ export function buildChangeUsernameBody(params: {
   return ChangeUsername.toCell(ChangeUsername.create({ newUsername }));
 }
 
-export function getCityLetterCode(city: string): bigint {
-  const trimmed = city.trim();
-  if (!trimmed) return 0n;
-  const firstChar = trimmed.charAt(0).toUpperCase();
-  const code = firstChar.charCodeAt(0);
-  if (code >= 65 && code <= 90) {
-    return BigInt(code - 65);
-  }
-  return 0n;
-}
-
-export function buildChangeCityBody(params: {
-  newCity: string;
-  oldCity?: string;
-  queryId?: bigint;
+export function buildChangeLocationBody(params: {
+  newH3Cell: string;
 }): Cell {
-  const { newCity, oldCity = '', queryId = 0n } = params;
-  return ChangeCity.toCell(
-    ChangeCity.create({
-      queryId,
-      newCity,
-      oldCityLetter: getCityLetterCode(oldCity),
-      newCityLetter: getCityLetterCode(newCity),
-    }),
+  const { newH3Cell } = params;
+  return ChangeLocation.toCell(
+    ChangeLocation.create({ newH3Cell }),
   );
 }
 

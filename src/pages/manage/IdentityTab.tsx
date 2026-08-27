@@ -4,7 +4,7 @@ import type { TonConnectUI } from '@tonconnect/ui-react';
 import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import {
   buildChangeUsernameBody,
-  buildChangeCityBody,
+  buildChangeLocationBody,
   buildChangeCountryBody,
   buildInviteBody,
   buildCloseAccountBody,
@@ -55,7 +55,7 @@ export function IdentityTab({
   const [username, setUsername] = useState(
     () => fiWalletState?.profile?.ref?.username || '',
   );
-  const [city, setCity] = useState(() => fiWalletState?.profile?.ref?.city || '');
+  const [h3Cell, setH3Cell] = useState(() => fiWalletState?.profile?.ref?.h3Cell || '');
   const [country, setCountry] = useState(
     () => String(fiWalletState?.profile?.ref?.country ?? 0),
   );
@@ -63,7 +63,7 @@ export function IdentityTab({
   // Invite states
   const [inviteeAddr, setInviteeAddr] = useState('');
   const [inviteeUsername, setInviteeUsername] = useState('');
-  const [inviteeCity, setInviteeCity] = useState('');
+  const [inviteeH3Cell, setInviteeH3Cell] = useState('');
 
   // Close confirmation
   const [closeConfirmed, setCloseConfirmed] = useState(false);
@@ -102,18 +102,16 @@ export function IdentityTab({
     });
   }
 
-  async function handleUpdateCity(e: SyntheticEvent) {
+  async function handleUpdateLocation(e: SyntheticEvent) {
     e.preventDefault();
     if (!ownerAddress) return;
-    const trimmed = city.trim();
+    const trimmed = h3Cell.trim();
     if (!trimmed) {
-      setStatus({ type: 'error', message: 'City name cannot be empty' });
+      setStatus({ type: 'error', message: 'H3 spatial cell cannot be empty' });
       return;
     }
-    const oldCity = fiWalletState?.profile?.ref?.city || '';
-    const body = buildChangeCityBody({
-      newCity: trimmed,
-      oldCity,
+    const body = buildChangeLocationBody({
+      newH3Cell: trimmed,
     });
     const walletAddr = await getWalletAddress(ownerAddress);
 
@@ -125,8 +123,8 @@ export function IdentityTab({
           payload: body,
         },
       ],
-      successMessage: 'City updated and location registry notified!',
-      fallbackError: 'Failed to update city',
+      successMessage: 'Location updated and Minter registry notified!',
+      fallbackError: 'Failed to update location',
       onSuccess: () => {
         if (onSuccess) setTimeout(onSuccess, 4000);
       },
@@ -179,23 +177,18 @@ export function IdentityTab({
       setStatus({ type: 'error', message: 'Invalid invitee address' });
       return;
     }
-    if (!inviteeUsername.trim() || !inviteeCity.trim()) {
+    if (!inviteeUsername.trim() || !inviteeH3Cell.trim()) {
       setStatus({
         type: 'error',
-        message: 'Invitee username and city are required',
+        message: 'Invitee username and H3 spatial cell are required',
       });
       return;
     }
 
-    const firstChar = inviteeCity.trim().charAt(0).toUpperCase();
-    const cityLetter =
-      firstChar >= 'A' && firstChar <= 'Z' ? firstChar.charCodeAt(0) - 65 : 0;
-
     const body = buildInviteBody({
       transferRecipient: recipient,
       username: inviteeUsername.trim(),
-      city: inviteeCity.trim(),
-      cityLetter,
+      h3Cell: inviteeH3Cell.trim(),
     });
     const walletAddr = await getWalletAddress(ownerAddress);
 
@@ -212,7 +205,7 @@ export function IdentityTab({
       onSuccess: () => {
         setInviteeAddr('');
         setInviteeUsername('');
-        setInviteeCity('');
+        setInviteeH3Cell('');
         if (onSuccess) setTimeout(onSuccess, 4000);
       },
     });
@@ -281,25 +274,24 @@ export function IdentityTab({
             </div>
           </form>
 
-          <form onSubmit={handleUpdateCity} className="space-y-3">
+          <form onSubmit={handleUpdateLocation} className="space-y-3">
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                City Coordinates
+                H3 Spatial Cell
               </Label>
               <p className="text-xs text-muted-foreground">
-                Changing your city informs the Minter and CityMap registry to update
-                regional shards.
+                Changing your H3 cell informs the Minter to migrate your account to the target Location contract.
               </p>
             </div>
             <div className="flex gap-2">
               <Input
-                placeholder="Tokyo"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+                placeholder="8828308281fffff"
+                value={h3Cell}
+                onChange={(e) => setH3Cell(e.target.value)}
                 disabled={loading}
               />
               <Button type="submit" variant="secondary" disabled={loading}>
-                Update City
+                Update Location
               </Button>
             </div>
           </form>
@@ -360,12 +352,12 @@ export function IdentityTab({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  City
+                  H3 Spatial Cell
                 </Label>
                 <Input
-                  placeholder="Berlin"
-                  value={inviteeCity}
-                  onChange={(e) => setInviteeCity(e.target.value)}
+                  placeholder="8828308281fffff"
+                  value={inviteeH3Cell}
+                  onChange={(e) => setInviteeH3Cell(e.target.value)}
                   disabled={loading}
                 />
               </div>

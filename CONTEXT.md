@@ -13,6 +13,12 @@ _Avoid_: User, person, account holder
 **Country** — the numeric ISO 3166-1 country code recorded in a Member's Account profile, scoping governance voting and regional representation.
 _Avoid_: Nationality, citizenship, region
 
+**Location** — an on-chain child contract indexing Members residing within a specific Uber H3 spatial area. Deployed on-demand by the Minter using shared TON library code.
+_Avoid_: City, CityMap, Region, Geo-index
+
+**H3 Cell** — the string representation of an Uber H3 hexagonal spatial index recorded in a Member's Account profile to position them geographically.
+_Avoid_: Coordinate, GPS, City name, Address
+
 **Account** — a member's on-chain record, implemented as a `FossFiWallet` contract. Holds the member's balance, votes, connections, and status. One member owns exactly one account.
 _Avoid_: Wallet, jetton wallet (reserved for the TON standard view)
 

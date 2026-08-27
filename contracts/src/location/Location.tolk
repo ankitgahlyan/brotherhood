@@ -2,92 +2,73 @@ import "@stdlib/tvm-lowlevel"
 
 import "@contracts/common/errors"
 import "@contracts/common/messages"
-
-import "CityMap"
+import "@contracts/location/location-utils"
 
 type AllowedMessageToLocation =
-    | LocationRegisterCity
-    | LocationUnregisterCity
+    | LocationAddMember
+    | LocationRemoveMember
     | HotUpgrade
     | Upgrade
-    | RequestUpgradeCode
-
-struct LocationStore {
-    letterKey: uint8
-    version: uint10 = 0
-    cityMapVersion: uint10 = 0
-    minterAddress: address
-    cityMapCode: cell // todo: what after upgrade
-    cities: map<uint256, string>
-}
-
-fun LocationStore.save(self) {
-    contract.setData(self.toCell());
-}
-
-fun calcDeployCityMap(
-    cityName: string,
-    locationAddress: address,
-    cityMapCode: cell,
-): AutoDeployAddress {
-    val store: CityMapStore = {
-        cityName,
-        locationAddress,
-        members: [],
-    };
-    return { stateInit: { code: cityMapCode, data: store.toCell() }, toShard: null };
-}
 
 contract Location {
     author: "zeta"
-    version: "0.1.0"
-    description: "Location aggregator contract for cities starting with a particular letter"
+    version: "0.2.0"
+    description: "Location child contract indexing members for a specific H3 cell"
     storage: LocationStore
     incomingMessages: AllowedMessageToLocation
 }
 
 fun onInternalMessage(in: InMessage): void {
     val msg = lazy AllowedMessageToLocation.fromSlice(in.body);
-    var store = lazy LocationStore.fromSlice(contract.getData().beginParse());
+    var store = lazy LocationStore.load();
 
     match (msg) {
-        LocationRegisterCity => {
+        LocationAddMember => {
             assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
 
-            store.cities.addIfNotExists(msg.cityName.beginParse().hash(), msg.cityName);
-            store.save();
+            val existing = store.members.get(msg.userAddress);
+            if (!existing.isFound) {
+                store.members.set(msg.userAddress, true);
+                store.memberCount += 1;
+                store.save();
+            }
 
-            val forwardMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: calcDeployCityMap(msg.cityName, contract.getAddress(), store.cityMapCode),
-                value: 0,
-                body: RegisterCityMember {
-                    queryId: msg.queryId,
-                    ownerAddress: msg.ownerAddress,
-                    cityName: msg.cityName,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    version: store.cityMapVersion,
-                },
-            });
-            forwardMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            if (msg.sendExcessesTo != null) {
+                val retMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: msg.sendExcessesTo,
+                    value: 0,
+                    body: ReturnExcessesBack { queryId: msg.queryId },
+                });
+                retMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
         }
 
-        LocationUnregisterCity => {
+        LocationRemoveMember => {
             assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
 
-            val forwardMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: calcDeployCityMap(msg.cityName, contract.getAddress(), store.cityMapCode),
-                value: 0,
-                body: UnregisterCityMember {
-                    queryId: msg.queryId,
-                    ownerAddress: msg.ownerAddress,
-                    cityName: msg.cityName,
-                    sendExcessesTo: msg.sendExcessesTo,
-                    version: store.cityMapVersion,
-                },
-            });
-            forwardMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            val existing = store.members.get(msg.userAddress);
+            if (existing.isFound) {
+                store.members.delete(msg.userAddress);
+                if (store.memberCount > 0) {
+                    store.memberCount -= 1;
+                }
+                store.save();
+            }
+
+            if (msg.sendExcessesTo != null) {
+                val retMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: msg.sendExcessesTo,
+                    value: 0,
+                    body: ReturnExcessesBack { queryId: msg.queryId },
+                });
+                retMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
         }
 
         HotUpgrade => {
@@ -101,38 +82,15 @@ fun onInternalMessage(in: InMessage): void {
 
         Upgrade => {
             assert (in.senderAddress == store.minterAddress) throw Errors.NotOwner;
-            if (msg.walletUpgrade) {
-                store.cityMapVersion += 1;
+            if (store.version < msg.walletVersion) {
+                store.version = msg.walletVersion;
                 if (msg.newCode != null) {
-                    store.cityMapCode = msg.newCode;
+                    contract.setCodePostponed(msg.newCode);
+                    // SAFETY: updating continuation register C3 for new code
+                    setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
                 }
-                store.save();
-            } else {
-                if (store.version < msg.walletVersion) {
-                    store.version = msg.walletVersion;
-                    if (msg.newCode != null) {
-                        contract.setCodePostponed(msg.newCode);
-                        // SAFETY: updating continuation register C3 for new code
-                        setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
-                    }
-                    hotUpgradeLocationData(msg.newData);
-                }
+                hotUpgradeLocationData(msg.newData);
             }
-        }
-
-        RequestUpgradeCode => {
-            val upgradeMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                value: 0,
-                dest: in.senderAddress,
-                body: Upgrade {
-                    walletUpgrade: true,
-                    walletVersion: store.cityMapVersion,
-                    sender: contract.getAddress(),
-                    newCode: store.cityMapCode,
-                },
-            });
-            upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }
 
         else => {
@@ -143,45 +101,38 @@ fun onInternalMessage(in: InMessage): void {
     }
 }
 
-// todo: fixme: add unique method id to all hotUpgrades
 fun hotUpgradeLocationData(_additionalData: cell?) {
-    var oldStore = LocationStore.fromSlice(contract.getData().beginParse());
+    var oldStore = LocationStore.load();
     oldStore.version += 1;
     oldStore.save();
 }
 
 get fun get_version(): uint10 {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
+    val store = lazy LocationStore.load();
     return store.version;
 }
 
-get fun get_city_map_version(): uint10 {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
-    return store.cityMapVersion;
-}
-
-get fun get_letter_key(): uint8 {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
-    return store.letterKey;
+get fun get_h3_cell(): string {
+    val store = lazy LocationStore.load();
+    return store.h3Cell;
 }
 
 get fun get_minter_address(): address {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
+    val store = lazy LocationStore.load();
     return store.minterAddress;
 }
 
-get fun city_exists(cityName: string): bool {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
-    return store.cities.get(cityName.beginParse().hash()).isFound;
+get fun get_member_count(): uint32 {
+    val store = lazy LocationStore.load();
+    return store.memberCount;
 }
 
-get fun get_cities(): map<uint256, string> {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
-    return store.cities;
+get fun is_member(userAddress: address): bool {
+    val store = lazy LocationStore.load();
+    return store.members.get(userAddress).isFound;
 }
 
-get fun get_city_map_address(cityName: string): address {
-    val store = lazy LocationStore.fromSlice(contract.getData().beginParse());
-    val deployable = calcDeployCityMap(cityName, contract.getAddress(), store.cityMapCode);
-    return deployable.calculateAddress();
+get fun get_members(): map<address, bool> {
+    val store = lazy LocationStore.load();
+    return store.members;
 }

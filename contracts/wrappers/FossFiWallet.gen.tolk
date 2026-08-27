@@ -152,20 +152,18 @@ fun FossFiWallet.sendChangeUsername(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendChangeCity(
+fun FossFiWallet.sendChangeLocation(
     self,
     from: address,
     queryId: uint64,
-    newCity: string,
-    oldCityLetter: uint8,
-    newCityLetter: uint8,
+    newH3Cell: string,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ChangeCity { queryId, newCity, oldCityLetter, newCityLetter },
+        body: ChangeLocation { queryId, newH3Cell },
     });
     return net.send(from, genericMsg);
 }
@@ -229,8 +227,7 @@ fun FossFiWallet.sendInternalInvite(
     currentWalletCode: cell,
     currentStorage: cell?,
     username: string,
-    city: string,
-    cityLetter: uint8,
+    h3Cell: string,
     country: uint16,
     config: SendParams = {},
 ): SendResultList {
@@ -246,8 +243,7 @@ fun FossFiWallet.sendInternalInvite(
             currentWalletCode,
             currentStorage,
             username,
-            city,
-            cityLetter,
+            h3Cell,
             country,
         },
     });
@@ -290,8 +286,7 @@ fun FossFiWallet.sendActInvite(
     queryId: uint64,
     transferRecipient: address,
     username: string,
-    city: string,
-    cityLetter: uint8,
+    h3Cell: string,
     country: uint16,
     config: SendParams = {},
 ): SendResultList {
@@ -299,7 +294,7 @@ fun FossFiWallet.sendActInvite(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActInvite { queryId, transferRecipient, username, city, cityLetter, country },
+        body: ActInvite { queryId, transferRecipient, username, h3Cell, country },
     });
     return net.send(from, genericMsg);
 }
@@ -914,8 +909,8 @@ fun FossFiWallet.getUsername(self): string {
     return net.runGetMethod(self.address, "get_username");
 }
 
-fun FossFiWallet.getCity(self): string {
-    return net.runGetMethod(self.address, "get_city");
+fun FossFiWallet.getH3Cell(self): string {
+    return net.runGetMethod(self.address, "get_h3_cell");
 }
 
 fun FossFiWallet.getProfile(self): (string, string, uint16) {

@@ -118,6 +118,43 @@ type coins = bigint
 type uint64 = bigint
 
 /**
+ > struct (0xd53276db) ReturnExcessesBack {
+ >     queryId: uint64
+ > }
+ */
+export interface ReturnExcessesBack {
+    readonly $: 'ReturnExcessesBack'
+    queryId: uint64
+}
+
+export const ReturnExcessesBack = {
+    PREFIX: 0xd53276db,
+
+    create(args: {
+        queryId: uint64
+    }): ReturnExcessesBack {
+        return {
+            $: 'ReturnExcessesBack',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ReturnExcessesBack {
+        loadAndCheckPrefix32(s, 0xd53276db, 'ReturnExcessesBack');
+        return {
+            $: 'ReturnExcessesBack',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: ReturnExcessesBack, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: ReturnExcessesBack): c.Cell {
+        return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
+    }
+}
+
+/**
  > struct (0x000010fd) VoteProposalChild {
  >     queryId: uint64
  >     proposalId: uint64
@@ -271,45 +308,45 @@ export const CleanupProposalVotes = {
 }
 
 /**
- > struct Voter {
+ > struct DaoVoterStore {
  >     voterOwner: address
  >     daoAddress: address
  >     votes: map<uint64, bool>
  > }
  */
-export interface Voter {
-    readonly $: 'Voter'
+export interface DaoVoterStore {
+    readonly $: 'DaoVoterStore'
     voterOwner: c.Address
     daoAddress: c.Address
     votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
 }
 
-export const Voter = {
+export const DaoVoterStore = {
     create(args: {
         voterOwner: c.Address
         daoAddress: c.Address
         votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
-    }): Voter {
+    }): DaoVoterStore {
         return {
-            $: 'Voter',
+            $: 'DaoVoterStore',
             ...args
         }
     },
-    fromSlice(s: c.Slice): Voter {
+    fromSlice(s: c.Slice): DaoVoterStore {
         return {
-            $: 'Voter',
+            $: 'DaoVoterStore',
             voterOwner: s.loadAddress(),
             daoAddress: s.loadAddress(),
             votes: c.Dictionary.load<uint64, boolean>(c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool(), s),
         }
     },
-    store(self: Voter, b: c.Builder): void {
+    store(self: DaoVoterStore, b: c.Builder): void {
         b.storeAddress(self.voterOwner);
         b.storeAddress(self.daoAddress);
         b.storeDict<uint64, boolean>(self.votes, c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool());
     },
-    toCell(self: Voter): c.Cell {
-        return makeCellFrom<Voter>(self, Voter.store);
+    toCell(self: DaoVoterStore): c.Cell {
+        return makeCellFrom<DaoVoterStore>(self, DaoVoterStore.store);
     }
 }
 
@@ -352,7 +389,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoVoter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEArAABFP8A9KQT9LzyyAsBAVzT+JHyQO1E0PpI+kj0BQPXLCAAAIfs4wIxbBLXLCAAAIf8MZf4kscF8uK84PI/AgDY0z/TP/pI1woAUxXHBfLivFMmgED0Dm+hbQGcMNIA0VMBupPywvXgkTHiIcjKAFQgSYBA9EMGyPpSUlD6Uhb0AMntVMjPhQgU+lKBEP7PC44Syz/LP/pSIm6UbBLPgZXPgxLKAOLKAMmAQPsA');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEA4gABFP8A9KQT9LzyyAsBAcbT+JHyQCDtRND6SPpI9AUD1ywgAACH7OMCMWwS1ywgAACH/DGONDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wDgMIQPAccA8vQCANo0A9M/0z/6SNcKAFMUxwXy4rxTJYBA9A5voW0BnDDSANFTAbqT8sL14JEx4iHIygBUIEiAQPRDBcj6UlJw+lIV9ADJ7VTIz4UIFvpSgRD+zwuOEss/yz8T+lIhbpMxz4GUz4PKAOLKAMmAQPsA');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
@@ -378,7 +415,7 @@ export class DaoVoter implements c.Contract {
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? DaoVoter.CodeCell,
-            data: Voter.toCell(Voter.create(emptyStorage)),
+            data: DaoVoterStore.toCell(DaoVoterStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new DaoVoter(address, initialState);

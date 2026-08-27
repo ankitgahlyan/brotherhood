@@ -31,7 +31,6 @@ struct FiCodes {
     lotteryCode: cell
     latestFiWalletCode: cell
     currentRequest: Cell<CurrentRequest>? = null
-    locationAddrs: map<uint8, address> = [] // no need to be null, will be set just after deploy
 }
 
 struct SocialMaps {
@@ -71,7 +70,7 @@ struct TimeStamps {
 
 struct ProfileInfo {
     username: string = ""
-    city: string = ""
+    h3Cell: string = ""
     country: uint16 = 0
 }
 

@@ -22,7 +22,7 @@ type AllowedMessageToWallet =
     | BuyCredit
     | AuthorityAction
     | ChangeUsername
-    | ChangeCity
+    | ChangeLocation
     | ChangeCountry
     | InternalTransferStep
     | InternalInvite
@@ -229,27 +229,25 @@ fun onInternalMessage(in: InMessage): void {
             profile.username = msg.newUsername;
         }
 
-        ChangeCity => {
+        ChangeLocation => {
             assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
-            assert (isNonEmptyString(msg.newCity)) throw Errors.ProvideCoordinates;
+            assert (isNonEmptyString(msg.newH3Cell)) throw Errors.ProvideCoordinates;
 
-            val oldCity = profile.city;
-            profile.city = msg.newCity;
+            val oldH3Cell = profile.h3Cell;
+            profile.h3Cell = msg.newH3Cell;
 
             val notifyMinterMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: trustedAddrs.minterAddr,
                 value: 0,
-                body: InformMinterChangeCity {
+                body: InformMinterChangeLocation {
                     queryId: msg.queryId,
                     owner: addrs.owner,
-                    oldCity,
-                    newCity: msg.newCity,
-                    oldCityLetter: msg.oldCityLetter,
-                    newCityLetter: msg.newCityLetter,
+                    oldH3Cell,
+                    newH3Cell: msg.newH3Cell,
                 },
             });
             notifyMinterMsg.send(
@@ -310,7 +308,7 @@ fun onInternalMessage(in: InMessage): void {
             // active, !reported
             idActionChecks(store);
             assert (
-                isNonEmptyString(msg.username) && isNonEmptyString(msg.city)
+                isNonEmptyString(msg.username) && isNonEmptyString(msg.h3Cell)
             ) throw Errors.ProvideCoordinates;
 
             val now = blockchain.now();
@@ -348,8 +346,7 @@ fun onInternalMessage(in: InMessage): void {
                     currentWalletCode: contract.getCode(),
                     currentStorage: null,
                     username: msg.username,
-                    city: msg.city,
-                    cityLetter: msg.cityLetter,
+                    h3Cell: msg.h3Cell,
                     country: msg.country,
                 },
             });
@@ -673,7 +670,7 @@ fun onInternalMessage(in: InMessage): void {
                 time.accountInit = blockchain.now();
                 nomins.nominee = in.senderAddress; // must be null at init
                 profile.username = msg.username;
-                profile.city = msg.city;
+                profile.h3Cell = msg.h3Cell;
                 profile.country = msg.country;
 
                 if (msg.version > store.version) {
@@ -701,8 +698,7 @@ fun onInternalMessage(in: InMessage): void {
                     sender: addrs.owner, // different for mint for addr calc
                     invitor: msg.sender, // just invitor not invitor0
                     username: msg.username,
-                    city: msg.city,
-                    cityLetter: msg.cityLetter,
+                    h3Cell: msg.h3Cell,
                     country: msg.country,
                 },
             });
@@ -1449,16 +1445,16 @@ get fun get_username(): string {
     return profile.username;
 }
 
-get fun get_city(): string {
+get fun get_h3_cell(): string {
     val store = lazy FiWalletStore.load();
     val profile = lazy store.profile.load();
-    return profile.city;
+    return profile.h3Cell;
 }
 
 get fun get_profile(): (string, string, uint16) {
     val store = lazy FiWalletStore.load();
     val profile = lazy store.profile.load();
-    return (profile.username, profile.city, profile.country);
+    return (profile.username, profile.h3Cell, profile.country);
 }
 
 get fun get_following_count(): uint32 {

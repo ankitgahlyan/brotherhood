@@ -35,8 +35,7 @@ get fun `test wallet: kitchenSink`() {
         0,
         notDeployer.address,
         "alice",
-        "London",
-        12,
+        "8828308281fffff",
         0,
         { value: ton("1") }, // todo: bounce?
     );
@@ -426,8 +425,7 @@ get fun `test wallet: profile country and get_profile getter`() {
         0,
         user2.address,
         "bob",
-        "NewYork",
-        12,
+        "8828308281fffff",
         840,
         { value: ton("1") },
     );
@@ -436,9 +434,9 @@ get fun `test wallet: profile country and get_profile getter`() {
         to: user2Wallet.address,
     });
 
-    val (username, city, country) = user2Wallet.getProfile();
+    val (username, h3Cell, country) = user2Wallet.getProfile();
     expect(username).toEqual("bob");
-    expect(city).toEqual("NewYork");
+    expect(h3Cell).toEqual("8828308281fffff");
     expect(country).toEqual(840);
 }
 
@@ -453,8 +451,7 @@ get fun `test wallet: change country succeeds when no active votes`() {
         0,
         user.address,
         "charlie",
-        "Paris",
-        15,
+        "8828308281fffff",
         250,
         { value: ton("1") },
     );
@@ -483,8 +480,7 @@ get fun `test wallet: voting succeeds between accounts with matching country`() 
         0,
         voter.address,
         "voter1",
-        "London",
-        12,
+        "8828308281fffff",
         826,
         { value: ton("1") },
     );
@@ -493,8 +489,7 @@ get fun `test wallet: voting succeeds between accounts with matching country`() 
         0,
         candidate.address,
         "cand1",
-        "Manchester",
-        12,
+        "8828308281fffff",
         826,
         { value: ton("1") },
     );
@@ -525,8 +520,7 @@ get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
         0,
         voter.address,
         "voterG",
-        "Global",
-        0,
+        "8828308281fffff",
         0,
         { value: ton("1") },
     );
@@ -535,8 +529,7 @@ get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
         0,
         candidate.address,
         "candG",
-        "Global",
-        0,
+        "8828308281fffff",
         0,
         { value: ton("1") },
     );
@@ -565,8 +558,7 @@ get fun `test wallet: voting fails and bounces when country mismatches, restorin
         0,
         voter.address,
         "voterUS",
-        "NewYork",
-        12,
+        "8828308281fffff",
         840,
         { value: ton("1") },
     );
@@ -575,8 +567,7 @@ get fun `test wallet: voting fails and bounces when country mismatches, restorin
         0,
         candidate.address,
         "candIN",
-        "Delhi",
-        4,
+        "8828308281fffff",
         356,
         { value: ton("1") },
     );
@@ -610,8 +601,7 @@ get fun `test wallet: change country fails when active votes exist`() {
         0,
         voter.address,
         "voterA",
-        "Tokyo",
-        19,
+        "8828308281fffff",
         392,
         { value: ton("1") },
     );
@@ -620,8 +610,7 @@ get fun `test wallet: change country fails when active votes exist`() {
         0,
         candidate.address,
         "candA",
-        "Osaka",
-        19,
+        "8828308281fffff",
         392,
         { value: ton("1") },
     );

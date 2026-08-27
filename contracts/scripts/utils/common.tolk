@@ -7,12 +7,10 @@ import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
-import "@gen/CityMap.code"
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
-import "@wrappers/Location.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
@@ -121,29 +119,6 @@ fun buildJettonMetadataCell(info: JettonMetadata): cell {
     metadata.contentDict.set("image".sha256(), info.image.prefixWith00());
     metadata.contentDict.set("decimals".sha256(), info.decimals.prefixWith00());
     return metadata.toCell();
-}
-
-fun buildLocationAddrsMap(minterAddress: address, deployer: address): map<uint8, address> {
-    val cityMapCode = cityMapCompiledCodeLibraryRef();
-    var locationAddrs: map<uint8, address> = [];
-
-    var letter: uint8 = 0;
-    while (letter <= 26) {
-        val loc = Location.fromStorage({
-            letterKey: letter,
-            version: 0,
-            cityMapVersion: 0,
-            minterAddress,
-            cityMapCode,
-            cities: [],
-        });
-
-        loc.deploy(deployer, { value: ton("0.5") });
-        locationAddrs.set(letter, loc.address);
-        letter += 1;
-    }
-
-    return locationAddrs;
 }
 
 fun promptJettonMinterStorage(admin: address): FiStore {

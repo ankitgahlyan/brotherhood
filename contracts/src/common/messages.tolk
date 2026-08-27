@@ -164,11 +164,6 @@ struct (0x0000100b) HotUpgrade {
     code: cell
 }
 
-struct (0x0000100c) SetLocationAddresses {
-    queryId: uint64
-    locationAddrs: map<uint8, address>
-}
-
 struct (0x0000100d) ChangeDaoAddress {
     queryId: uint64
     newDaoAddress: address
@@ -192,8 +187,7 @@ struct (0x00001051) ActInvite {
     queryId: uint64
     transferRecipient: address
     username: string
-    city: string
-    cityLetter: uint8 = 0
+    h3Cell: string
     country: uint16 = 0
 }
 
@@ -205,8 +199,7 @@ struct (0x00001052) InternalInvite {
     currentWalletCode: cell
     currentStorage: cell?
     username: string
-    city: string
-    cityLetter: uint8 = 0
+    h3Cell: string
     country: uint16 = 0
 }
 
@@ -219,8 +212,7 @@ struct (0x00001054) InformMinterInviteInternal {
     sender: address
     invitor: address
     username: string
-    city: string
-    cityLetter: uint8 = 0
+    h3Cell: string
     country: uint16 = 0
 }
 
@@ -259,50 +251,28 @@ struct (0x000010a1) ChangeUsername {
     newUsername: string
 }
 
-struct (0x000010a2) ChangeCity {
+struct (0x000010a2) ChangeLocation {
     queryId: uint64 = 0
-    newCity: string
-    oldCityLetter: uint8 = 0
-    newCityLetter: uint8 = 0
+    newH3Cell: string
 }
 
-struct (0x000010a3) InformMinterChangeCity {
+struct (0x000010a3) InformMinterChangeLocation {
     queryId: uint64
     owner: address
-    oldCity: string
-    newCity: string
-    oldCityLetter: uint8 = 0
-    newCityLetter: uint8 = 0
+    oldH3Cell: string
+    newH3Cell: string
 }
 
-struct (0x000010a4) LocationRegisterCity {
+struct (0x000010a4) LocationAddMember {
     queryId: uint64
-    ownerAddress: address
-    cityName: string
+    userAddress: address
     sendExcessesTo: address?
 }
 
-struct (0x000010a5) LocationUnregisterCity {
+struct (0x000010a5) LocationRemoveMember {
     queryId: uint64
-    ownerAddress: address
-    cityName: string
+    userAddress: address
     sendExcessesTo: address?
-}
-
-struct (0x000010a6) RegisterCityMember {
-    queryId: uint64
-    ownerAddress: address
-    cityName: string
-    sendExcessesTo: address?
-    version: uint10 = 0
-}
-
-struct (0x000010a7) UnregisterCityMember {
-    queryId: uint64
-    ownerAddress: address
-    cityName: string
-    sendExcessesTo: address?
-    version: uint10 = 0
 }
 
 struct (0x000010a8) ChangeCountry {

@@ -14,6 +14,7 @@ depends = [
     "Lottery", # small number deployed easy upgrades
     { name = "FossFiWallet", kind = "library_ref", function = "fossFiWalletCompiledCodeLibraryRef" },
     { name = "Dao", kind = "library_ref", function = "daoCompiledCodeLibraryRef" },
+    { name = "Location", kind = "library_ref", function = "locationCompiledCodeLibraryRef" },
 ]
 
 [contracts.FossFiWallet]
@@ -32,15 +33,8 @@ depends = []
 
 
 [contracts.Location]
-display-name = "Location Aggregator"
+display-name = "Location Child"
 src = "contracts/src/location/Location.tolk"
-depends = [
-    { name = "CityMap", kind = "library_ref", function = "cityMapCompiledCodeLibraryRef" },
-]
-
-[contracts.CityMap]
-display-name = "City Map Index"
-src = "contracts/src/location/CityMap.tolk"
 depends = []
 
 [contracts.Lottery]
@@ -101,9 +95,7 @@ mutable-variable-can-be-immutable = "warn"
 
 [scripts]
 loop = "acton build && acton wrapper --all && acton check --fix && acton fmt && acton build && acton wrapper --all"
-deploy-emulation = "acton script contracts/scripts/deploy.tolk"
-deploy-testnet = "acton script contracts/scripts/deploy.tolk --net testnet"
-deploy-libs = "acton library publish FossFiWallet --amount 1 --wallet teleg -y && acton library publish DaoVoter --amount 1 --wallet teleg -y && acton library publish CityMap --amount 1 --wallet teleg -y"
+deploy-libs = "acton library publish FossFiWallet --amount 1 --wallet teleg -y && acton library publish DaoVoter --amount 1 --wallet teleg -y && acton library publish Location --amount 1 --wallet teleg -y"
 deploy-personal = "acton script contracts/scripts/deploy-personal.tolk"
 verify-personal = "acton script contracts/scripts/verify-personal.tolk"
 jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"

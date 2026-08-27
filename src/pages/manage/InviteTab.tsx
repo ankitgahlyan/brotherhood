@@ -23,7 +23,7 @@ export function InviteTab({
 }) {
   const [toAddr, setToAddr] = useState('');
   const [username, setUsername] = useState('');
-  const [city, setCity] = useState('');
+  const [h3Cell, setH3Cell] = useState('');
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
     tonConnectUI,
     network,
@@ -47,7 +47,7 @@ export function InviteTab({
     const body = buildInviteBody({
       transferRecipient: recipientAddr,
       username: username.trim(),
-      city: city.trim(),
+      h3Cell: h3Cell.trim(),
     });
     const walletAddr = await getWalletAddress(ownerAddress);
 
@@ -64,7 +64,7 @@ export function InviteTab({
       onSuccess: () => {
         setToAddr('');
         setUsername('');
-        setCity('');
+        setH3Cell('');
       },
     });
   }
@@ -91,18 +91,17 @@ export function InviteTab({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          City
+          H3 Spatial Cell
         </Label>
         <Input
           type="text"
-          placeholder="City name"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
+          placeholder="8828308281fffff"
+          value={h3Cell}
+          onChange={(e) => setH3Cell(e.target.value)}
           disabled={loading}
         />
         <p className="text-xs text-muted-foreground">
-          This will send an invite message and register the city in the location
-          index.
+          This will send an invite message and register the member in the on-demand H3 Location contract.
         </p>
       </div>
       <Button

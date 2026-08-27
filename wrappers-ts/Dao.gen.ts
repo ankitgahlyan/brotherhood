@@ -83,19 +83,6 @@ function storeTolkNullable<T>(v: T | null, b: c.Builder, storeFn_T: StoreCallbac
     }
 }
 
-function createDictionaryValue<V>(loadFn_V: LoadCallback<V>, storeFn_V: StoreCallback<V>): c.DictionaryValue<V> {
-    return {
-        serialize(self: V, b: c.Builder) {
-            storeFn_V(self, b);
-        },
-        parse(s: c.Slice): V {
-            const value = loadFn_V(s);
-            s.endParse();
-            return value;
-        }
-    }
-}
-
 // ————————————————————————————————————————————
 //   parse get methods result from a TVM stack
 //
@@ -145,36 +132,6 @@ class StackReader {
 
     readSlice(): c.Slice {
         return this.popCellLike().beginParse();
-    }
-
-    readNullable<T>(readFn_T: (r: StackReader) => T): T | null {
-        if (this.tuple[0].type === 'null') {
-            this.tuple.shift();
-            return null;
-        }
-        return readFn_T(this);
-    }
-
-    readWideNullable<T>(stackW: number, readFn_T: (r: StackReader) => T): T | null {
-        const slotTypeId = this.tuple[stackW - 1];
-        if (slotTypeId?.type !== 'int') {
-            throw new Error(`not 'int' on a stack`);
-        }
-        if (slotTypeId.value === 0n) {
-            this.tuple = this.tuple.slice(stackW);
-            return null;
-        }
-        const valueT = readFn_T(this);
-        this.tuple.shift();
-        return valueT;
-    }
-
-    readDictionary<K extends c.DictionaryKeyTypes, V>(keySerializer: c.DictionaryKey<K>, valueSerializer: c.DictionaryValue<V>): c.Dictionary<K, V> {
-        if (this.tuple[0].type === 'null') {
-            this.tuple.shift();
-            return c.Dictionary.empty<K, V>(keySerializer, valueSerializer);
-        }
-        return c.Dictionary.loadDirect<K, V>(keySerializer, valueSerializer, this.readCell());
     }
 }
 
@@ -363,6 +320,43 @@ export const InternalTransferStep = {
 }
 
 /**
+ > struct (0xd53276db) ReturnExcessesBack {
+ >     queryId: uint64
+ > }
+ */
+export interface ReturnExcessesBack {
+    readonly $: 'ReturnExcessesBack'
+    queryId: uint64
+}
+
+export const ReturnExcessesBack = {
+    PREFIX: 0xd53276db,
+
+    create(args: {
+        queryId: uint64
+    }): ReturnExcessesBack {
+        return {
+            $: 'ReturnExcessesBack',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ReturnExcessesBack {
+        loadAndCheckPrefix32(s, 0xd53276db, 'ReturnExcessesBack');
+        return {
+            $: 'ReturnExcessesBack',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: ReturnExcessesBack, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: ReturnExcessesBack): c.Cell {
+        return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
+    }
+}
+
+/**
  > struct (0x00001001) MintNewJettons {
  >     queryId: uint64
  >     mintRecipient: address
@@ -525,15 +519,17 @@ export const ResponseTotalAccounts = {
 
 /**
  > struct (0x000010fb) SubmitProposal {
- >     queryId: uint64
+ >     id: uint64
  >     proposerOwner: address
+ >     targetAddr: address
  >     targetMsg: cell
  > }
  */
 export interface SubmitProposal {
     readonly $: 'SubmitProposal'
-    queryId: uint64
+    id: uint64
     proposerOwner: c.Address
+    targetAddr: c.Address
     targetMsg: c.Cell
 }
 
@@ -541,8 +537,9 @@ export const SubmitProposal = {
     PREFIX: 0x000010fb,
 
     create(args: {
-        queryId: uint64
+        id: uint64
         proposerOwner: c.Address
+        targetAddr: c.Address
         targetMsg: c.Cell
     }): SubmitProposal {
         return {
@@ -554,15 +551,17 @@ export const SubmitProposal = {
         loadAndCheckPrefix32(s, 0x000010fb, 'SubmitProposal');
         return {
             $: 'SubmitProposal',
-            queryId: s.loadUintBig(64),
+            id: s.loadUintBig(64),
             proposerOwner: s.loadAddress(),
+            targetAddr: s.loadAddress(),
             targetMsg: s.loadRef(),
         }
     },
     store(self: SubmitProposal, b: c.Builder): void {
         b.storeUint(0x000010fb, 32);
-        b.storeUint(self.queryId, 64);
+        b.storeUint(self.id, 64);
         b.storeAddress(self.proposerOwner);
+        b.storeAddress(self.targetAddr);
         b.storeRef(self.targetMsg);
     },
     toCell(self: SubmitProposal): c.Cell {
@@ -675,6 +674,7 @@ export const CleanupProposalVotes = {
  > struct Proposal {
  >     id: uint64
  >     proposerOwner: address
+ >     targetAddr: address
  >     targetMsg: cell
  >     yesVotes: uint33
  >     noVotes: uint33
@@ -685,6 +685,7 @@ export interface Proposal {
     readonly $: 'Proposal'
     id: uint64
     proposerOwner: c.Address
+    targetAddr: c.Address
     targetMsg: c.Cell
     yesVotes: uint33 /* = 0 */
     noVotes: uint33 /* = 0 */
@@ -695,6 +696,7 @@ export const Proposal = {
     create(args: {
         id: uint64
         proposerOwner: c.Address
+        targetAddr: c.Address
         targetMsg: c.Cell
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
@@ -713,6 +715,7 @@ export const Proposal = {
             $: 'Proposal',
             id: s.loadUintBig(64),
             proposerOwner: s.loadAddress(),
+            targetAddr: s.loadAddress(),
             targetMsg: s.loadRef(),
             yesVotes: s.loadUintBig(33),
             noVotes: s.loadUintBig(33),
@@ -722,6 +725,7 @@ export const Proposal = {
     store(self: Proposal, b: c.Builder): void {
         b.storeUint(self.id, 64);
         b.storeAddress(self.proposerOwner);
+        b.storeAddress(self.targetAddr);
         b.storeRef(self.targetMsg);
         b.storeUint(self.yesVotes, 33);
         b.storeUint(self.noVotes, 33);
@@ -733,52 +737,41 @@ export const Proposal = {
 }
 
 /**
- > struct PollStore {
+ > struct DaoStore {
  >     totalAccounts: uint33
- >     fiAddress: address
- >     proposalCount: uint64
- >     proposals: map<uint64, Proposal>
+ >     proposal: Proposal
  > }
  */
-export interface PollStore {
-    readonly $: 'PollStore'
+export interface DaoStore {
+    readonly $: 'DaoStore'
     totalAccounts: uint33 /* = 0 */
-    fiAddress: c.Address
-    proposalCount: uint64 /* = 0 */
-    proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
+    proposal: Proposal
 }
 
-export const PollStore = {
+export const DaoStore = {
     create(args: {
         totalAccounts?: uint33 /* = 0 */
-        fiAddress: c.Address
-        proposalCount?: uint64 /* = 0 */
-        proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
-    }): PollStore {
+        proposal: Proposal
+    }): DaoStore {
         return {
-            $: 'PollStore',
+            $: 'DaoStore',
             totalAccounts: 0n,
-            proposalCount: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): PollStore {
+    fromSlice(s: c.Slice): DaoStore {
         return {
-            $: 'PollStore',
+            $: 'DaoStore',
             totalAccounts: s.loadUintBig(33),
-            fiAddress: s.loadAddress(),
-            proposalCount: s.loadUintBig(64),
-            proposals: c.Dictionary.load<uint64, Proposal>(c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store), s),
+            proposal: Proposal.fromSlice(s),
         }
     },
-    store(self: PollStore, b: c.Builder): void {
+    store(self: DaoStore, b: c.Builder): void {
         b.storeUint(self.totalAccounts, 33);
-        b.storeAddress(self.fiAddress);
-        b.storeUint(self.proposalCount, 64);
-        b.storeDict<uint64, Proposal>(self.proposals, c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store));
+        Proposal.store(self.proposal, b);
     },
-    toCell(self: PollStore): c.Cell {
-        return makeCellFrom<PollStore>(self, PollStore.store);
+    toCell(self: DaoStore): c.Cell {
+        return makeCellFrom<DaoStore>(self, DaoStore.store);
     }
 }
 
@@ -821,11 +814,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Dao implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAAvQAART/APSkE/S88sgLAQIBYgIDA/jQ+JGRMOAgxwCRMODtRNDTIPpI0z/0BQTXLCAAAIfcjk74IwKkUgLTPzH6SNdMBIIICTqAoCPIyz8S+lIUzHDPC0ETyx9UIAaAQPRDA8jLIFIg+lLLPxL0AMntVMjPhQj6UoEQDs8Ljss/yYBC+wDg1ywgAACAfOMCidcnBAUGAgEgDQ4AODP4kiLHBfLivALTPzHXCyDIyyD6Uss/9ADJ7VQACAAAEP4BuOMC1ywgAACH/I5D0z8x1ws/UwSAQPQOb6GOL9M/MfpIMdQx0yAx0yAx0x/R+CO7jhVQBIBA9FswAsjLIPpSEss/9ADJ7VSSXwXikl8G4uBsQdcsIAAAgDwx3PI/BwT+0z8x0z/6SNMAAZLSAJJtAeLXCgD4KIhtBcj6UhL6UhT0AMlQA8jPhNDMzPkWyM+KAEDL/89Q+JLHBfLi9lMmgED0DvLi79M/+kjU0yDTINMf0fgjIbny4vImbpk2BpGkkwWkBeKOElFnvZsGk6QFpZOlBaTiBZE24uIp4w8huxEICQoAECmqAKYCc6kEAAJxAU6OFQPIyz8S+lLMyyASyyDLH0AVgED0Q+MNAsjLIPpSEss/9ADJ7VQLAf4wbCIyggiYloBw+wKCIAkYTnKgAIIQBfXhAIIK+vCA+ChtIG6zkzCLBN/Iz5BeNRRmKM8LP1AF+gLPiABA+lJSQPpUz4QgE87JyM+FCFKA+lJY+gKBEAHPC4olzws/E/pSAfoCzMlz+wDQyM7JyM+FCFJA+lJxzwtuzMmAQvsADAAOUASAQPRbMABfv4RfaiaGmQGP0kGOmfmPoCwCB6BzfQz+mf/SRqaZBpkGmP6MCAQvAYNra2tra2uEAgFYDxAAHbfaPaiaGmQfSRpn/oCaMAFHtC//BRENoHkfSkJfSkJegBkgORnwmhmZnyLZGfFACBl/+eoQEQhCArdNWkSIyVxB8ZUbpan+tZU6WGApdIvOSatU8qvnzAdE');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAAy4AART/APSkE/S88sgLAQIBYgIDA/bQ+JGRMOAgxwCRMOAg7UTQ0yDTP/pI+kjU0yDTINcLHwjXLCAAAIfcjkQ4XwYy+CMB0z/6SPpI10wEgggJOoCgUzEHyMsgyz8T+lIV+lITzHDPC0ESyx/J7VTIz4UIEvpSgRAOzwuOyz/JgEL7AODXLCAAAIB84wKJ1ycEBQYCASANDgBONzj4kiPHBfLivAXTPzHXCyDIyyAUyz8S+lL6UszLIBLLIMsfye1UAAgAABD+AkjjAjZfAzMB1ywgAACH/OMCbDHXLCAAAIA8MZEw4IQPAccA8vQHCAP+OQjTPzHTP/pI0wABktIAkm0B4tcKAPgoiG0FyPpSEvpSFPQAyVADyM+E0MzM+RbIz4oAQMv/z1D4kscF8uL2JfgjK7ny4vIhbpsxAZICpJQJpEkZ4o4WURK9ngGUAqQJpZQCpQmk4kkZkTHiAuInmCeqAKYCc6kEkXHiIbvjAhEJCgH2NPiSIccF8uK8+CNQA77y4t+CGOjUpRAAA9cLP4IK+vCAIPgobSBus5MwiwTfyM+QXjUUZiXPCz9QCPoCz4gAQPpSUlD6VM+EIBbOycjPhQgU+lIB+gKBEAHPC4rLP1Ig+lJQA/oCEszJc/sAyM+FCPpSic8WyYEAoPsADAL8MDFsRIIgCRhOcqAAggr68IAg+ChtIG6zkzCLBN/Iz5BeNRRmJs8LP1AF+gLPiABA+lJScPpUz4QgE87JyM+FCFJg+lJY+gKBEAHPC4oTyz9SUPpSAfoCzMlz+wDQyM7JyM+FCBL6UnHPC27MyYBC+wDIz4UI+lKJzxbJgQCgDAsANDEzBcjLIBTLPxL6UhP6UszLIBLLIMsfye1UAAT7AAAzAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEALb+EX2omhpkBjpn/0kfSRqaZBpkGuFj8AgFYDxAAK7faPaiaGmQaZ/9JH0kammQaZBpj+jABR7Qv/wURDaB5H0pCX0pCXoAZIDkZ8JoZmZ8i2RnxQAgZf/nqEBEIQgIfjULpDUi4aTihOxAOJVLuWcAE9qFQIKcv7fsqP0ybzg==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
-        'Errors.ProposalNotFound': 751,
+        'Errors.WaitMore': 735,
         'Errors.ProposalExpired': 754,
         'Errors.InvalidDaoVoter': 758,
     }
@@ -844,21 +837,20 @@ export class Dao implements c.Contract {
 
     static fromStorage(emptyStorage: {
         totalAccounts?: uint33 /* = 0 */
-        fiAddress: c.Address
-        proposalCount?: uint64 /* = 0 */
-        proposals: c.Dictionary<uint64, Proposal> /* = [] as map<uint64, Proposal> */
+        proposal: Proposal
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Dao.CodeCell,
-            data: PollStore.toCell(PollStore.create(emptyStorage)),
+            data: DaoStore.toCell(DaoStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new Dao(address, initialState);
     }
 
     static createCellOfSubmitProposal(body: {
-        queryId: uint64
+        id: uint64
         proposerOwner: c.Address
+        targetAddr: c.Address
         targetMsg: c.Cell
     }) {
         return SubmitProposal.toCell(SubmitProposal.create(body));
@@ -902,8 +894,9 @@ export class Dao implements c.Contract {
     }
 
     async sendSubmitProposal(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        queryId: uint64
+        id: uint64
         proposerOwner: c.Address
+        targetAddr: c.Address
         targetMsg: c.Cell
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -958,32 +951,36 @@ export class Dao implements c.Contract {
         });
     }
 
-    async getDaoData(provider: ContractProvider): Promise<PollStore> {
-        const r = StackReader.fromGetMethod(4, await provider.get('get_dao_data', []));
+    async getDaoData(provider: ContractProvider): Promise<DaoStore> {
+        const r = StackReader.fromGetMethod(8, await provider.get('get_dao_data', []));
         return ({
-            $: 'PollStore',
+            $: 'DaoStore',
             totalAccounts: r.readBigInt(),
-            fiAddress: r.readSlice().loadAddress(),
-            proposalCount: r.readBigInt(),
-            proposals: r.readDictionary<uint64, Proposal>(c.Dictionary.Keys.BigUint(64), createDictionaryValue<Proposal>(Proposal.fromSlice, Proposal.store)),
-        });
-    }
-
-    async getProposal(provider: ContractProvider, proposalId: uint64): Promise<Proposal | null> {
-        const r = StackReader.fromGetMethod(7, await provider.get('get_proposal', [
-            { type: 'int', value: proposalId },
-        ]));
-        return r.readWideNullable<Proposal>(7,
-            (r) => ({
+            proposal: ({
                 $: 'Proposal',
                 id: r.readBigInt(),
                 proposerOwner: r.readSlice().loadAddress(),
+                targetAddr: r.readSlice().loadAddress(),
                 targetMsg: r.readCell(),
                 yesVotes: r.readBigInt(),
                 noVotes: r.readBigInt(),
                 expiresAt: r.readBigInt(),
-            })
-        );
+            }),
+        });
+    }
+
+    async getProposal(provider: ContractProvider): Promise<Proposal> {
+        const r = StackReader.fromGetMethod(7, await provider.get('get_proposal', []));
+        return ({
+            $: 'Proposal',
+            id: r.readBigInt(),
+            proposerOwner: r.readSlice().loadAddress(),
+            targetAddr: r.readSlice().loadAddress(),
+            targetMsg: r.readCell(),
+            yesVotes: r.readBigInt(),
+            noVotes: r.readBigInt(),
+            expiresAt: r.readBigInt(),
+        });
     }
 
     async getDaoVoterAddress(provider: ContractProvider, voterOwner: c.Address): Promise<c.Address> {
