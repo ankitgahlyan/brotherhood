@@ -9,6 +9,7 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/errors"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
@@ -104,7 +105,7 @@ get fun `test lottery: reject entry with incorrect amount`() {
     expect(badResult).toHaveFailedTx<EnterLottery>({
         from: deployer.address,
         to: lotteryAddress,
-        exitCode: 202,
+        exitCode: Errors.InvalidMessage,
     });
 }
 

@@ -12,6 +12,7 @@ import "@contracts/fossFi/consts"
 import "test-utils"
 
 get fun `test weekly claim: before activation wait fails with WaitMore`() {
+    testing.setNow(1_800_000_000);
     val (minter, owner, _outsider) = setupTest();
     val user = testing.treasury("claim-user-1");
 
@@ -34,6 +35,7 @@ get fun `test weekly claim: before activation wait fails with WaitMore`() {
 }
 
 get fun `test weekly claim: after activation wait mints fixed 11111 FI without receivedVotes boost`() {
+    testing.setNow(1_800_000_000);
     val (minter, owner, _outsider) = setupTest();
     val user = testing.treasury("claim-user-2");
 
@@ -61,6 +63,7 @@ get fun `test weekly claim: after activation wait mints fixed 11111 FI without r
 }
 
 get fun `test weekly claim: claiming twice in same period fails with WaitMore`() {
+    testing.setNow(1_800_000_000);
     val (minter, owner, _outsider) = setupTest();
     val user = testing.treasury("claim-user-3");
 

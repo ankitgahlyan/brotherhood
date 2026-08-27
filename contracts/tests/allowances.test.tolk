@@ -6,6 +6,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/followers/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"
@@ -151,7 +152,7 @@ get fun `test allowance: non-grantee cannot spend`() {
     expect(res).toHaveFailedTx<SpendAllowance>({
         from: stranger.address,
         to: wallet.address,
-        exitCode: Errors.NotFollowing,
+        exitCode: FollowingErrors.NotFollowing,
     });
     expect(wallet.getJettonBalance()).toEqual(balanceBefore);
     expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("10")));

@@ -28,9 +28,7 @@ struct TestSetup {
 
 fun setupDaoTest(): TestSetup {
     val deployer = testing.treasury("dao-deployer");
-    val walletCode = fossFiWalletCompiledCodeLibraryRef();
-    val daoVoterCode = daoVoterCompiledCodeLibraryRef();
-    testing.registerLibrary(daoVoterCode);
+    registerAllTestLibraries();
 
     val minter = FossFi.fromStorage({
         totalSupply: 0,
@@ -38,7 +36,6 @@ fun setupDaoTest(): TestSetup {
         metadata: buildTestMetadata("dao-test"),
         adminHandoff: null,
         others: FiCodes {
-            totalAccounts: 0,
             lotteryCode: lotteryCompiledCode(),
             latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
         }.toCell(),
@@ -48,9 +45,16 @@ fun setupDaoTest(): TestSetup {
     val deployerWallet = userWallet(minter, deployer.address);
 
     val dao = Dao.fromStorage({
-        fiAddress: minter.address,
-        proposalCount: 0,
-        proposals: [],
+        totalAccounts: 0,
+        proposal: {
+            id: 0,
+            proposerOwner: deployer.address,
+            targetAddr: minter.address,
+            targetMsg: beginCell().endCell(),
+            yesVotes: 0,
+            noVotes: 0,
+            expiresAt: 0,
+        },
     });
     dao.deploy(deployer.address, { value: ton("10") });
 
@@ -61,8 +65,8 @@ fun setupDaoTest(): TestSetup {
         dao,
         deployer,
         deployerWallet,
-        walletLibRef: walletCode,
-        daoVoterCodeLibRef: daoVoterCode,
+        walletLibRef: fossFiWalletCompiledCodeLibraryRef(),
+        daoVoterCodeLibRef: daoVoterCompiledCodeLibraryRef(),
     };
 }
 
@@ -90,20 +94,24 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and creates pr
         internalTransferMsg: makeInternalTransferStep(100, ton("50"), setup.deployer.address),
     }.toCell();
 
-    val res = wallet1.sendActSubmitProposal(member1.address, 1, setup.dao.address, targetMsg);
+    val res = wallet1.sendActSubmitProposal(
+        member1.address,
+        1,
+        setup.dao.address,
+        targetMsg,
+        { value: ton("0.3") },
+    );
     expect(res).toHaveAllSuccessfulTxs();
 
     val newBal = wallet1.getJettonBalance();
     expect(newBal).toEqual(initialBal - ton("1000"));
 
-    val prop = setup.dao.getProposal(1);
-    expect(prop != null).toBeTrue();
-    val p = prop!;
+    val p = setup.dao.getProposal();
     expect(p.id).toEqual(1);
     expect(setup.dao.getDaoData().totalAccounts >= 0).toBeTrue();
 }
 
-get fun `test dao: multi-proposal voting with DaoVoter and vote switching`() {
+get fun `test dao: voting with DaoVoter and vote switching`() {
     val setup = setupDaoTest();
 
     // Create 3 member accounts BEFORE submitting proposals so totalAccounts = 3
@@ -122,72 +130,67 @@ get fun `test dao: multi-proposal voting with DaoVoter and vote switching`() {
         internalTransferMsg: makeInternalTransferStep(200, ton("100"), member1.address),
     }.toCell();
 
-    val targetMsg2 = MintNewJettons {
-        queryId: 201,
-        mintRecipient: member2.address,
-        tonAmount: ton("1"),
-        internalTransferMsg: makeInternalTransferStep(201, ton("100"), member2.address),
-    }.toCell();
+    wallet1.sendActSubmitProposal(
+        member1.address,
+        200,
+        setup.dao.address,
+        targetMsg1,
+        { value: ton("0.3") },
+    );
 
-    wallet1.sendActSubmitProposal(member1.address, 200, setup.dao.address, targetMsg1);
-    wallet2.sendActSubmitProposal(member2.address, 201, setup.dao.address, targetMsg2);
-
-    val prop1 = setup.dao.getProposal(1)!;
-    val prop2 = setup.dao.getProposal(2)!;
-    expect(prop1.id).toEqual(1);
-    expect(prop2.id).toEqual(2);
+    val prop1 = setup.dao.getProposal();
+    expect(prop1.id).toEqual(200);
     expect(setup.dao.getDaoData().totalAccounts).toEqual(3);
 
-    // Member 1 votes YES on proposal 1 (threshold is ceil(3 * 2 / 3) = 3 votes)
+    // Member 1 votes YES on proposal (threshold is ceil(3 * 2 / 3) = 3 votes)
     wallet1.sendActVoteProposal(
         member1.address,
         301,
         setup.dao.address,
-        1,
+        200,
         true,
     );
 
-    var p1 = setup.dao.getProposal(1)!;
+    var p1 = setup.dao.getProposal();
     expect(p1.yesVotes).toEqual(1);
     expect(p1.noVotes).toEqual(0);
 
-    // Member 1 switches vote to NO on proposal 1
+    // Member 1 switches vote to NO on proposal
     val res2 = wallet1.sendActVoteProposal(
         member1.address,
         302,
         setup.dao.address,
-        1,
+        200,
         false,
     );
     expect(res2).toHaveAllSuccessfulTxs();
 
-    p1 = setup.dao.getProposal(1)!;
+    p1 = setup.dao.getProposal();
     expect(p1.yesVotes).toEqual(0);
     expect(p1.noVotes).toEqual(1);
 
-    // Member 2 votes YES on proposal 1
+    // Member 2 votes YES on proposal
     wallet2.sendActVoteProposal(
         member2.address,
         303,
         setup.dao.address,
-        1,
+        200,
         true,
     );
 
-    p1 = setup.dao.getProposal(1)!;
+    p1 = setup.dao.getProposal();
     expect(p1.yesVotes).toEqual(1);
 
-    // Member 3 votes YES on proposal 1 -> 2 YES votes >= threshold (2) -> executed & deleted!
+    // Member 3 votes YES on proposal -> 2 YES votes >= threshold (2) -> executed & deleted!
     val res304 = wallet3.sendActVoteProposal(
         member3.address,
         304,
         setup.dao.address,
-        1,
+        200,
         true,
     );
     expect(res304).toHaveAllSuccessfulTxs();
 
-    expect(setup.dao.getProposal(1) == null).toBeTrue();
     // Proposer (member1) gets 10x proposal fee (10,000 FI) reward: initial 2001 FI - 1000 fee + 100 targetMsg + 10000 reward = 11101 FI
     expect(wallet1.getJettonBalance()).toEqual(ton("11101"));
 }
@@ -207,7 +210,13 @@ get fun `test dao: duplicate vote on same option is rejected`() {
         internalTransferMsg: makeInternalTransferStep(300, ton("50"), member1.address),
     }.toCell();
 
-    wallet1.sendActSubmitProposal(member1.address, 300, setup.dao.address, targetMsg);
+    wallet1.sendActSubmitProposal(
+        member1.address,
+        300,
+        setup.dao.address,
+        targetMsg,
+        { value: ton("0.3") },
+    );
 
     // First vote YES succeeds
     wallet1.sendActVoteProposal(

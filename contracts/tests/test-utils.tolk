@@ -1,5 +1,3 @@
-import "@stdlib/strings"
-
 import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
@@ -8,9 +6,6 @@ import "@acton/types/big_array"
 import "@acton/types/out_actions"
 import "@acton/types/transaction"
 
-import "@gen/CityMap.code"
-import "@gen/DaoVoter.code"
-import "@gen/Following.code"
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
@@ -27,7 +22,12 @@ import "../scripts/utils/common"
 
 fun buildTestMetadata(uri: string): cell {
     var metadata: OnchainMetadataReply = { contentDict: [] };
-    metadata.contentDict.set("uri".sha256(), uri.prefixWith00());
+    val prefixedUri = beginCell()
+        .storeUint(0x00, 8)
+        .storeString(uri)
+        .endCell() as unknown as string;
+    metadata.contentDict.set("uri".sha256(), prefixedUri);
+    // metadata.contentDict.set("uri".sha256(), uri.prefixWith00());
     return metadata.toCell();
 }
 
@@ -171,7 +171,18 @@ fun deployWalletFromStorage(
     return FossFiWallet { address };
 }
 
+fun registerAllTestLibraries(): void {
+    testing.registerLibrary(build("CityMap"));
+    testing.registerLibrary(build("Dao"));
+    testing.registerLibrary(build("DaoVoter"));
+    testing.registerLibrary(build("Following"));
+    testing.registerLibrary(build("FossFiWallet"));
+    testing.registerLibrary(build("PersonalMinter"));
+    testing.registerLibrary(build("PersonalWallet"));
+}
+
 fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treasury, Treasury) {
+    registerAllTestLibraries();
     val owner = testing.treasury("direct-wallet-owner");
     val minter = testing.treasury("direct-wallet-minter");
     val outsider = testing.treasury("direct-wallet-outsider");
@@ -286,13 +297,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     val deployer = testing.treasury("deployer");
     val notDeployer = testing.treasury("notDeployer");
 
-    testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
-    testing.registerLibrary(cityMapCompiledCodeLibraryRef());
-    testing.registerLibrary(daoVoterCompiledCodeLibraryRef());
-    testing.registerLibrary(followingCompiledCodeLibraryRef());
-    // todo: other libs
-    testing.registerLibrary(followingCompiledCodeLibraryRef());
-    testing.registerLibrary(followingCompiledCodeLibraryRef());
+    registerAllTestLibraries();
 
     val minter = FossFi.fromStorage({
         totalSupply: initialSupply,
@@ -312,7 +317,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
 
     val locationAddrs = buildLocationAddrsMap(minter.address, deployer.address);
     minter.sendSetLocationAddresses(deployer.address, 1, locationAddrs);
-    val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
+    // val _lotteryAddrs = buildLotteryAddrsMap(minter.address, deployer.address);
 
     return (minter, deployer, notDeployer);
 }
