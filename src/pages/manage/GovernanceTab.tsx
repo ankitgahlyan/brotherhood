@@ -49,7 +49,6 @@ export function GovernanceTab({
   const [delegateAddr, setDelegateAddr] = useState('');
 
   // DAO Submit states
-  const [daoAddr, setDaoAddr] = useState('');
   const [proposalDescription, setProposalDescription] = useState('');
 
   // DAO Vote states
@@ -102,11 +101,6 @@ export function GovernanceTab({
     e.preventDefault();
     if (!ownerAddress) return;
 
-    const parsedDao = tryParseAddress(daoAddr);
-    if (!parsedDao) {
-      setStatus({ type: 'error', message: 'Invalid DAO contract address' });
-      return;
-    }
     if (!proposalDescription.trim()) {
       setStatus({
         type: 'error',
@@ -117,7 +111,6 @@ export function GovernanceTab({
 
     const targetPayload = comment(proposalDescription.trim());
     const body = buildSubmitProposalBody({
-      daoAddress: parsedDao,
       targetMsg: targetPayload,
     });
     const walletAddr = await getWalletAddress(ownerAddress);
@@ -289,12 +282,6 @@ export function GovernanceTab({
               </span>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                DAO Contract Address
-              </Label>
-              <InputScan toAddr={daoAddr} setToAddr={setDaoAddr} />
-            </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

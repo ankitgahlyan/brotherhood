@@ -434,13 +434,12 @@ export function buildJoinLotteryBody(): Cell {
 }
 
 export function buildSubmitProposalBody(params: {
-  daoAddress: Address;
   targetMsg: Cell;
   queryId?: bigint;
 }): Cell {
-  const { daoAddress, targetMsg, queryId = 0n } = params;
+  const { targetMsg, queryId = 0n } = params;
   return ActSubmitProposal.toCell(
-    ActSubmitProposal.create({ queryId, daoAddress, targetMsg }),
+    ActSubmitProposal.create({ queryId, targetMsg }),
   );
 }
 

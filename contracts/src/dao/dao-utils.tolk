@@ -14,9 +14,9 @@ fun calcDeployDaoVoter(
 }
 
 fun calcDeployDao(
-    proposal: Proposal,
+    fiAddress: address,
     daoCode: cell,
 ): AutoDeployAddress {
-    val store: DaoStore = { proposal };
+    val store: DaoStore = { fiAddress };
     return { stateInit: { code: daoCode, data: store.toCell() }, toShard: null };
 }

@@ -56,9 +56,8 @@ fun Dao.deploy(self, from: address, config: SendParams = {}): SendResultList {
 fun Dao.sendSubmitProposal(
     self,
     from: address,
-    id: uint64,
+    queryId: uint64,
     proposerOwner: address,
-    targetAddr: address,
     targetMsg: cell,
     config: SendParams = {},
 ): SendResultList {
@@ -66,7 +65,7 @@ fun Dao.sendSubmitProposal(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SubmitProposal { id, proposerOwner, targetAddr, targetMsg },
+        body: SubmitProposal { queryId, proposerOwner, targetMsg },
     });
     return net.send(from, genericMsg);
 }
@@ -147,8 +146,8 @@ fun Dao.getDaoData(self): DaoStore {
     return net.runGetMethod(self.address, "get_dao_data");
 }
 
-fun Dao.getProposal(self): Proposal {
-    return net.runGetMethod(self.address, "get_proposal");
+fun Dao.getProposal(self, proposalId: uint64): Proposal? {
+    return net.runGetMethod(self.address, "get_proposal", [proposalId]);
 }
 
 fun Dao.getDaoVoterAddress(self, voterOwner: address): address {

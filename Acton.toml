@@ -21,6 +21,7 @@ depends = [
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
+    { name = "Dao", kind = "library_ref", function = "daoCompiledCodeLibraryRef" },
     { name = "DaoVoter", kind = "library_ref", function = "daoVoterCompiledCodeLibraryRef" },
     { name = "Following", kind = "library_ref", function = "followingCompiledCodeLibraryRef" },
     { name = "PersonalMinter", kind = "library_ref", function = "personalMinterCompiledCodeLibraryRef" },

@@ -397,6 +397,10 @@ fun FossFi.getTotalAccounts(self): uint33 {
     return net.runGetMethod(self.address, "get_total_accounts");
 }
 
+fun FossFi.getDaoAddress(self): address? {
+    return net.runGetMethod(self.address, "get_dao_address");
+}
+
 fun FossFi.getJettonData(self): JettonDataReply {
     return net.runGetMethod(self.address, "get_jetton_data");
 }
@@ -407,8 +411,4 @@ fun FossFi.getJettonDataAll(self): FiStore {
 
 fun FossFi.getWalletAddress(self, owner: address): address {
     return net.runGetMethod(self.address, "get_wallet_address", [owner]);
-}
-
-fun FossFi.getDaoAddress(self): address? {
-    return net.runGetMethod(self.address, "get_dao_address");
 }

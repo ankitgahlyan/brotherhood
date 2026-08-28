@@ -102,7 +102,6 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
         }.toCell(),
         addresses: Addresses {
             owner: deployer.address,
-            treasury: deployer.address,
             nomInAddrs: NomInAddrs {
                 nominee: notDeployer.address,
                 invitor: notDeployer.address,

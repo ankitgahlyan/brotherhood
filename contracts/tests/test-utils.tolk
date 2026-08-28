@@ -145,7 +145,6 @@ fun deployWalletFromStorage(
     val init = storage.jettonBalance == 0
         ? calcDeployFiWallet(
             storage.addresses.load().owner,
-            storage.addresses.load().treasury,
             storage.addresses.load().trustedJettonAddrs.load().minterAddr,
             build("FossFiWallet"),
         )
@@ -187,7 +186,6 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
         FiWalletStore {
             addresses: Addresses {
                 owner: owner.address,
-                treasury: owner.address,
                 // baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
                 nomInAddrs: NomInAddrs {}.toCell(),
                 trustedJettonAddrs: TrustedAddrs {

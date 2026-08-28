@@ -164,9 +164,21 @@ struct (0x0000100b) HotUpgrade {
     code: cell
 }
 
-struct (0x0000100d) ChangeDaoAddress {
+struct (0x0000100c) ChangeDaoAddress {
     queryId: uint64
     newDaoAddress: address
+}
+
+struct (0x0000100d) ExecuteDaoProposal {
+    id: uint64
+    proposerOwner: address
+    targetMsg: cell
+}
+
+struct (0x0000100e) RefundDaoProposalFee {
+    id: uint64
+    proposerOwner: address
+    targetMsg: cell
 }
 
 struct (0x0000100e) RequestTotalAccounts {
@@ -327,9 +339,8 @@ struct (0x000010fa) ActSubmitProposal {
 }
 
 struct (0x000010fb) SubmitProposal {
-    id: uint64
+    queryId: uint64
     proposerOwner: address
-    targetAddr: address
     targetMsg: cell
 }
 

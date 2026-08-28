@@ -7,6 +7,7 @@ import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+import "@contracts/common/utils"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
@@ -67,12 +68,13 @@ fun onBouncedMessage(in: InMessageBounced): void {
     store.save();
 }
 
-fun assertAdminOrDao(
+fun assertAdmin(
     sender: address,
-    adminAddress: address,
-    daoAddress: address,
     errCode: int = Errors.NotOwner,
 ): void {
+    val store = lazy FiStore.load();
+    val adminAddress = store.adminAddress;
+    val daoAddress = store.daoAddress;
     if (sender == adminAddress) {
         return;
     }
@@ -90,7 +92,7 @@ fun onInternalMessage(in: InMessage): void {
     match (msg) {
         InformMinterInviteInternal => {
             // note: use notifyMinter but forwardPayload?
-            assertCorrectSender(in.senderAddress, msg.sender, store.adminAddress);
+            assertCorrectSender(in.senderAddress, msg.sender);
             others.totalAccounts += 1;
             store.totalSupply += MBRP_AMOUNT; // note: broadcast id for explorers or dbs
 
@@ -115,7 +117,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         InformMinterChangeLocation => {
-            assertCorrectSender(in.senderAddress, msg.owner, store.adminAddress);
+            assertCorrectSender(in.senderAddress, msg.owner);
 
             val oldLocDeploy = calcDeployLocation(
                 msg.oldH3Cell,
@@ -154,7 +156,7 @@ fun onInternalMessage(in: InMessage): void {
 
         NotifyMinter => {
             // todo: fixme for Following supply contract
-            assertCorrectSender(in.senderAddress, msg.burnInitiator, store.adminAddress);
+            assertCorrectSender(in.senderAddress, msg.burnInitiator);
 
             // determine whether MINT or BURN
             msg.queryId != 0
@@ -180,7 +182,7 @@ fun onInternalMessage(in: InMessage): void {
 
             var walletAddress: address? = null;
             if (msg.owner.getWorkchain() == MY_WORKCHAIN) {
-                walletAddress = getAutoAddress(msg.owner, store.adminAddress).calculateAddress();
+                walletAddress = getAutoAddress(msg.owner).calculateAddress();
             }
 
             val respondMsg = createMessage({
@@ -200,12 +202,7 @@ fun onInternalMessage(in: InMessage): void {
 
         MintNewJettons => {
             // assert (false) throw Errors.IncorrectReceiver; // just for fun/standard
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
+            assertAdmin(in.senderAddress);
             assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
 
             val internalTransferMsg = lazy msg
@@ -225,10 +222,7 @@ fun onInternalMessage(in: InMessage): void {
 
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
-                dest: getAutoAddress(
-                    msg.mintRecipient,
-                    store.adminAddress,
-                ),
+                dest: getAutoAddress(msg.mintRecipient),
                 value: msg.tonAmount,
                 body: msg.internalTransferMsg,
             });
@@ -236,12 +230,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         ChangeMinterAdmin => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
+            assertAdmin(in.senderAddress);
             // a handoff is already pending; the current admin must drop it first
             assert (store.adminHandoff == null) throw Errors.WaitMore;
 
@@ -252,12 +241,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         DropMinterAdmin => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
+            assertAdmin(in.senderAddress);
             assert (store.adminHandoff != null) throw Errors.WaitMore;
 
             store.adminHandoff = null;
@@ -278,32 +262,17 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         ChangeMinterMetadata => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
+            assertAdmin(in.senderAddress);
             store.metadata = msg.newMetadata;
         }
 
         ChangeDaoAddress => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.NotOwner,
-            );
+            assertAdmin(in.senderAddress);
             store.daoAddress = msg.newDaoAddress;
         }
 
         Upgrade => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.IncorrectSender,
-            );
+            assertAdmin(in.senderAddress);
             assert (others.currentRequest == null) throw Errors.WaitMore;
 
             others.currentRequest = CurrentRequest {
@@ -313,24 +282,14 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         RejectUpgrade => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.IncorrectSender,
-            );
+            assertAdmin(in.senderAddress);
             assert (others.currentRequest != null) throw Errors.WaitMore; // todo: better error code
 
             others.currentRequest = null;
         }
 
         ApproveUpgrade => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.IncorrectSender,
-            );
+            assertAdmin(in.senderAddress);
             // todo: redundant check (why would admin do this?)
             assert (others.currentRequest != null) throw Errors.WaitMore;
             val currentRequest = others.currentRequest.load();
@@ -351,7 +310,6 @@ fun onInternalMessage(in: InMessage): void {
                         value: 0,
                         dest: getAutoAddress(
                             in.senderAddress,
-                            store.adminAddress,
                         ).calculateAddress(),
                         body: Upgrade {
                             walletVersion: store.walletVersion,
@@ -381,7 +339,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         RequestUpgradeCode => {
-            assertCorrectSender(in.senderAddress, msg.sender, store.adminAddress);
+            assertCorrectSender(in.senderAddress, msg.sender);
             if (msg.version < store.walletVersion) {
                 // sendUpgradeMinter(in.senderAddress, store);
                 val upgradeMsg = createMessage({
@@ -404,13 +362,13 @@ fun onInternalMessage(in: InMessage): void {
 
         TopUpTons => {
             // deploy + accept tons + deploy jettonWallet
-            if (in.senderAddress == store.adminAddress || in.senderAddress == store.daoAddress) {
+            if (in.senderAddress == store.adminAddress) {
                 store.totalSupply += ton("1");
                 val deployTopUpMsg = createMessage({
                     // bounce for collecting fees back
                     bounce: BounceMode.Only256BitsOfBody,
                     value: 0,
-                    dest: getAutoAddress(in.senderAddress, in.senderAddress),
+                    dest: getAutoAddress(in.senderAddress),
                     body: TopUpTons {},
                 });
                 deployTopUpMsg.send(
@@ -420,7 +378,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         EnterLottery => {
-            assertCorrectSender(in.senderAddress, msg.sender, store.adminAddress);
+            assertCorrectSender(in.senderAddress, msg.sender);
             val enterMsg = createMessage({
                 bounce: BounceMode.RichBounce, // todo handle deepBounces
                 value: 0,
@@ -459,7 +417,6 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: getAutoAddress(
                     msg.winner,
-                    store.adminAddress,
                 ),
                 value: in.valueCoins, // lottery forwards its pot to fund the mint
                 body: makeInternalTransferStep(
@@ -473,18 +430,13 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         UpgradeLotteryCode => {
-            assertAdminOrDao(in.senderAddress, store.adminAddress, store.daoAddress);
+            assertAdmin(in.senderAddress);
 
             others.lotteryCode = msg.newCode;
         }
 
         HotUpgrade => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.IncorrectSender,
-            );
+            assertAdmin(in.senderAddress);
 
             contract.setCodePostponed(msg.code);
 
@@ -498,12 +450,7 @@ fun onInternalMessage(in: InMessage): void {
 
         // testnetOnly
         Destroy => {
-            assertAdminOrDao(
-                in.senderAddress,
-                store.adminAddress,
-                store.daoAddress,
-                Errors.IncorrectSender,
-            );
+            assertAdmin(in.senderAddress);
 
             destroyContract(in.senderAddress);
         }
@@ -536,6 +483,11 @@ get fun get_total_accounts(): uint33 {
     return store.others.load().totalAccounts;
 }
 
+get fun get_dao_address(): address? {
+    val store = lazy FiStore.load();
+    return store.daoAddress == RAW_ZERO_ADDRESS ? null : store.daoAddress;
+}
+
 get fun get_jetton_data(): JettonDataReply {
     val store = lazy FiStore.load();
 
@@ -561,20 +513,16 @@ get fun get_jetton_data_all(): FiStore {
 }
 
 get fun get_wallet_address(owner: address): address {
-    val store = lazy FiStore.load();
-    return getAutoAddress(owner, store.adminAddress).calculateAddress();
+    return getAutoAddress(owner).calculateAddress();
 }
 
-fun assertCorrectSender(sender: address, owner: address, treasury: address): void {
-    assert (
-        sender == getAutoAddress(owner, treasury).calculateAddress()
-    ) throw Errors.NotValidWallet;
+fun assertCorrectSender(sender: address, owner: address): void {
+    assert (sender == getAutoAddress(owner).calculateAddress()) throw Errors.NotValidWallet;
 }
 
-fun getAutoAddress(owner: address, treasury: address): AutoDeployAddress {
+fun getAutoAddress(owner: address): AutoDeployAddress {
     return calcDeployFiWallet(
         owner,
-        treasury,
         contract.getAddress(),
         fossFiWalletCompiledCodeLibraryRef(),
     );
@@ -608,9 +556,4 @@ fun hotUpgradeFiData(_additionalData: cell?) {
         others: oldStorage.others,
     };
     storage.save();
-}
-
-get fun get_dao_address(): address? {
-    val store = lazy FiStore.load();
-    return store.daoAddress == RAW_ZERO_ADDRESS ? null : store.daoAddress;
 }

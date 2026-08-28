@@ -7,6 +7,7 @@ import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+import "@contracts/common/utils"
 import "@contracts/dao/dao-utils"
 import "@contracts/followers/consts"
 import "@contracts/followers/following-utils"
@@ -315,8 +316,8 @@ fun onInternalMessage(in: InMessage): void {
             assert (
                 ((now > (time.lastInvite + INVITE_WAIT)) &
                 (now > (time.accountInit + ACTIVATION_WAIT))) |
-                (in.senderAddress == addrs.treasury)
-            ) throw Errors.WaitMore;                                                                                                                                        // every 4 hours, spam protection
+                (store.isPrevilegedAccount)
+            ) throw Errors.WaitMore;                                                                                                                               // every 4 hours, spam protection
             assert (store.connections < 11) throw Errors.MaxConnections;
             store.connections += 1;
             time.lastInvite = now;
@@ -332,7 +333,6 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody, // 
                 dest: calcDeployFiWallet(
                     msg.transferRecipient,
-                    addrs.treasury,
                     trustedAddrs.minterAddr,
                     contract.getCode(), // todo: fixme: change to fossFiWalletCompiledCodeLibraryRef() after first upgrade at all places to avoid storage costs and now it creates a curcular dep
                 ),
@@ -439,7 +439,7 @@ fun onInternalMessage(in: InMessage): void {
             checkActionRecipient(msg.transferRecipient);
             // send AuthorityAction
             assert (
-                store.isAuthorityAccount || in.senderAddress == addrs.treasury
+                store.isAuthorityAccount || store.isPrevilegedAccount
             ) throw Errors.IncorrectSender;
 
             val authorityMsg = createMessage({
@@ -782,7 +782,7 @@ fun onInternalMessage(in: InMessage): void {
             } else {
                 store.receivedVotes -= msg.count;
             }
-            if (addrs.owner != addrs.treasury) {
+            if (!store.isPrevilegedAccount) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
             }
         }
@@ -795,33 +795,19 @@ fun onInternalMessage(in: InMessage): void {
 
             store.jettonBalance -= proposalFee;
 
-            val notifyMinterMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: trustedAddrs.minterAddr,
-                value: ton("0.05"),
-                body: NotifyMinter {
-                    queryId: 0, // zero = BURN in minter
-                    jettonAmount: proposalFee,
-                    burnInitiator: addrs.owner,
-                    sendExcessesTo: null,
-                },
-            });
-            notifyMinterMsg.send(SEND_MODE_IGNORE_ERRORS);
-
             val forwardSubmitMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 value: 0,
                 dest: msg.daoAddress,
                 body: SubmitProposal {
-                    id: msg.queryId,
+                    queryId: msg.queryId,
                     proposerOwner: addrs.owner,
-                    targetAddr: trustedAddrs.minterAddr,
                     targetMsg: msg.targetMsg,
                 },
             });
             // SAFETY: forward remaining balance to dao proposal
             forwardSubmitMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
 
@@ -880,6 +866,7 @@ fun onInternalMessage(in: InMessage): void {
                 store.active = true;
                 store.jettonBalance += ton("1");
                 store.isAuthorityAccount = true;
+                store.isPrevilegedAccount = true;
                 time.accountInit = blockchain.now();
                 nomins.invitor = contract.getAddress();
                 nomins.invitor0 = contract.getAddress();
@@ -1108,7 +1095,7 @@ fun onInternalMessage(in: InMessage): void {
 
         SettleDeath => {
             // settlement order from authority or peer
-            val isAuth = store.isAuthorityAccount || in.senderAddress == addrs.treasury;
+            val isAuth = store.isAuthorityAccount || store.isPrevilegedAccount;
             val isPeer = in.senderAddress == msg.deceased.getAddrFiWallet();
             assert (isAuth || isPeer) throw Errors.IncorrectSender;
 
@@ -1265,96 +1252,100 @@ fun onInternalMessage(in: InMessage): void {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             val remainingFi = store.jettonBalance;
             val remainingGold = store.goldCoins;
-            val nomineeAddr = nomins.nominee != null ? nomins.nominee : addrs.treasury;
+            val nomineeAddr = nomins.nominee;
 
             store.jettonBalance = 0;
             store.goldCoins = 0;
             store.active = false;
 
-            if (remainingFi > 0) {
-                val transferMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: nomineeAddr.getAddrFiWallet(),
-                    value: 0,
-                    body: makeInternalTransferStep(
-                        msg.queryId,
-                        remainingFi,
-                        addrs.owner,
-                        addrs.owner,
-                        0,
-                        createEmptySlice(),
-                        store.version,
-                    ),
-                });
-                transferMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            if (nomineeAddr != null) {
+                if (remainingFi > 0) {
+                    val transferMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: nomineeAddr,
+                        value: 0,
+                        body: makeInternalTransferStep(
+                            msg.queryId,
+                            remainingFi,
+                            addrs.owner,
+                            addrs.owner,
+                            0,
+                            createEmptySlice(),
+                            store.version,
+                        ),
+                    });
+                    transferMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
 
-            if (remainingGold > 0) {
-                val transferGoldMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: nomineeAddr.getAddrFiWallet(),
-                    value: 0,
-                    body: InternalGoldCoinsTransfer {
-                        queryId: msg.queryId,
-                        amount: remainingGold,
-                        transferInitiator: addrs.owner,
-                    },
-                });
-                transferGoldMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
+                if (remainingGold > 0) {
+                    val transferGoldMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: nomineeAddr,
+                        value: 0,
+                        body: InternalGoldCoinsTransfer {
+                            queryId: msg.queryId,
+                            amount: remainingGold,
+                            transferInitiator: addrs.owner,
+                        },
+                    });
+                    transferGoldMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
             }
         }
 
         AuthorityCloseAccount => {
             checkCorrectSenderInternal(in.senderAddress, msg.target);
             assert (
-                store.isAuthorityAccount || in.senderAddress == addrs.treasury
+                store.isAuthorityAccount || store.isPrevilegedAccount
             ) throw Errors.IncorrectSender;
             val remainingFi = store.jettonBalance;
             val remainingGold = store.goldCoins;
-            val nomineeAddr = nomins.nominee != null ? nomins.nominee : addrs.treasury;
+            val nomineeAddr = nomins.nominee;
 
             store.jettonBalance = 0;
             store.goldCoins = 0;
             store.active = false;
 
-            if (remainingFi > 0) {
-                val transferMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: nomineeAddr.getAddrFiWallet(),
-                    value: 0,
-                    body: makeInternalTransferStep(
-                        msg.queryId,
-                        remainingFi,
-                        addrs.owner,
-                        addrs.owner,
-                        0,
-                        createEmptySlice(),
-                        store.version,
-                    ),
-                });
-                transferMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            if (nomineeAddr != null) {
+                if (remainingFi > 0) {
+                    val transferMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: nomineeAddr,
+                        value: 0,
+                        body: makeInternalTransferStep(
+                            msg.queryId,
+                            remainingFi,
+                            addrs.owner,
+                            addrs.owner,
+                            0,
+                            createEmptySlice(),
+                            store.version,
+                        ),
+                    });
+                    transferMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
 
-            if (remainingGold > 0) {
-                val transferGoldMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    dest: nomineeAddr.getAddrFiWallet(),
-                    value: 0,
-                    body: InternalGoldCoinsTransfer {
-                        queryId: msg.queryId,
-                        amount: remainingGold,
-                        transferInitiator: addrs.owner,
-                    },
-                });
-                transferGoldMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
+                if (remainingGold > 0) {
+                    val transferGoldMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: nomineeAddr,
+                        value: 0,
+                        body: InternalGoldCoinsTransfer {
+                            queryId: msg.queryId,
+                            amount: remainingGold,
+                            transferInitiator: addrs.owner,
+                        },
+                    });
+                    transferGoldMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
             }
         }
 

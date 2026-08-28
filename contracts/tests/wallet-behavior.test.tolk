@@ -137,7 +137,6 @@ get fun `test : addrs r same`() {
     val _storage: FiWalletStore = FiWalletStore {
         addresses: Addresses {
             owner: deployer.address,
-            treasury: deployer.address,
             // baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
             nomInAddrs: NomInAddrs {}.toCell(),
             trustedJettonAddrs: TrustedAddrs {
@@ -155,7 +154,6 @@ get fun `test : addrs r same`() {
         timestamps: TimeStamps {}.toCell(),
     };
     val calcAddr = calcDeployFiWallet(
-        deployer.address,
         deployer.address,
         minter.address,
         fossFiWalletCompiledCodeLibraryRef(),

@@ -2,7 +2,6 @@ import "@gen/DaoVoter.code"
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
-import "@contracts/common/utils"
 
 import "@contracts/dao/dao-utils"
 
@@ -33,31 +32,29 @@ fun onInternalMessage(in: InMessage): void {
 
     match (msg) {
         SubmitProposal => {
-            val now = blockchain.now();
+            val proposalId = store.proposalCount + 1;
+            store.proposalCount = proposalId;
 
-            val newProp: Proposal = {
-                id: msg.id,
+            val proposal: Proposal = {
+                id: proposalId,
                 proposerOwner: msg.proposerOwner,
-                targetAddr: msg.targetAddr,
                 targetMsg: msg.targetMsg,
-                yesVotes: 0,
-                noVotes: 0,
-                expiresAt: now + 604800, // 7 days (7 * 86400)
+                expiresAt: blockchain.now() + 604800,
             };
-            store.proposal = newProp;
+            store.proposals.set(proposalId, proposal);
             store.save();
 
             val reqMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 value: 0,
-                dest: msg.targetAddr,
-                body: RequestTotalAccounts { queryId: msg.id },
+                dest: store.fiAddress,
+                body: RequestTotalAccounts { queryId: proposalId },
             });
             reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }
 
         ResponseTotalAccounts => {
-            assert (in.senderAddress == store.proposal.targetAddr) throw Errors.IncorrectSender;
+            assert (in.senderAddress == store.fiAddress) throw Errors.IncorrectSender;
             store.totalAccounts = msg.totalAccounts;
             store.save();
         }
@@ -70,7 +67,9 @@ fun onInternalMessage(in: InMessage): void {
             ).calculateAddress();
             assert (in.senderAddress == expectedVoterChild) throw Errors.InvalidDaoVoter;
 
-            var proposal = store.proposal;
+            val propEntry = store.proposals.get(msg.proposalId);
+            assert (propEntry.isFound) throw Errors.ProposalNotFound;
+            var proposal = propEntry.loadValue();
 
             assert (blockchain.now() < proposal.expiresAt) throw Errors.ProposalExpired;
 
@@ -95,11 +94,16 @@ fun onInternalMessage(in: InMessage): void {
                 : (store.totalAccounts * 2 + 2) / 3;
 
             if (proposal.yesVotes >= threshold) {
+                reserveGramsOnBalance(
+                    ton("0.01"),
+                    RESERVE_MODE_EXACT_AMOUNT,
+                );
+
                 val rewardAmount = ton("10000"); // 10x proposal fee reward (10 * 1000 FI)
                 val rewardMsg = createMessage({
                     bounce: BounceMode.NoBounce,
-                    value: ton("0.05"),
-                    dest: store.proposal.targetAddr,
+                    value: ton("0.1"),
+                    dest: store.fiAddress,
                     body: MintNewJettons {
                         queryId: msg.proposalId,
                         mintRecipient: proposal.proposerOwner,
@@ -120,50 +124,30 @@ fun onInternalMessage(in: InMessage): void {
                 val forwardMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     value: 0,
-                    dest: store.proposal.targetAddr,
+                    dest: store.fiAddress,
                     body: proposal.targetMsg.beginParse(),
                 });
                 forwardMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                 );
 
-                destroyContract(proposal.proposerOwner);
-                return;
+                store.proposals.delete(msg.proposalId);
+            } else {
+                store.proposals.set(msg.proposalId, proposal);
             }
 
-            store.proposal = proposal;
             store.save();
         }
 
         CleanupProposalVotes => {
-            assert (in.senderAddress == store.proposal.proposerOwner) throw Errors.IncorrectSender;
-            assert (blockchain.now() >= store.proposal.expiresAt) throw Errors.WaitMore;
-
-            // Refund the 1000 FI tokens deducted at creation time
-            val refundFeeAmount = ton("1000");
-            val refundMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                value: ton("0.05"),
-                dest: store.proposal.targetAddr,
-                body: MintNewJettons {
-                    queryId: msg.queryId,
-                    mintRecipient: store.proposal.proposerOwner,
-                    tonAmount: ton("0.05"),
-                    internalTransferMsg: makeInternalTransferStep(
-                        msg.queryId,
-                        refundFeeAmount,
-                        contract.getAddress(),
-                        store.proposal.proposerOwner,
-                        0,
-                    ),
-                },
-            });
-            refundMsg.send(
-                SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS,
-            );
-
-            // Destroy contract and send remaining TON back to proposer
-            destroyContract(store.proposal.proposerOwner);
+            val propEntry = store.proposals.get(msg.proposalId);
+            if (propEntry.isFound) {
+                val proposal = propEntry.loadValue();
+                if (blockchain.now() >= proposal.expiresAt) {
+                    store.proposals.delete(msg.proposalId);
+                    store.save();
+                }
+            }
         }
 
         TopUpTons => {
@@ -190,9 +174,13 @@ get fun get_dao_data(): DaoStore {
     return DaoStore.load();
 }
 
-get fun get_proposal(): Proposal {
+get fun get_proposal(proposalId: uint64): Proposal? {
     val store = lazy DaoStore.load();
-    return store.proposal;
+    val propEntry = store.proposals.get(proposalId);
+    if (propEntry.isFound) {
+        return propEntry.loadValue();
+    }
+    return null;
 }
 
 get fun get_dao_voter_address(voterOwner: address): address {

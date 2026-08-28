@@ -9,8 +9,6 @@ import { beginCell, ContractProvider, Sender, SendMode } from '@ton/core';
 //   predefined types and functions
 //
 
-type RemainingBitsAndRefs = c.Slice
-
 type StoreCallback<T> = (obj: T, b: c.Builder) => void
 type LoadCallback<T> = (s: c.Slice) => T
 
@@ -31,17 +29,6 @@ function loadAndCheckPrefix32(s: c.Slice, expected: number, structName: string):
     }
 }
 
-function formatPrefix(prefixNum: number, prefixLen: number): string {
-    return prefixLen % 4 ? `0b${prefixNum.toString(2).padStart(prefixLen, '0')}` : `0x${prefixNum.toString(16).padStart(prefixLen / 4, '0')}`;
-}
-
-function loadAndCheckPrefix(s: c.Slice, expected: number, prefixLen: number, structName: string): void {
-    let prefix = s.loadUint(prefixLen);
-    if (prefix !== expected) {
-        throw new Error(`Incorrect prefix for '${structName}': expected ${formatPrefix(expected, prefixLen)}, got ${formatPrefix(prefix, prefixLen)}`);
-    }
-}
-
 function lookupPrefix(s: c.Slice, expected: number, prefixLen: number): boolean {
     return s.remainingBits >= prefixLen && s.preloadUint(prefixLen) === expected;
 }
@@ -59,19 +46,6 @@ function storeCellRef<T>(cell: CellRef<T>, b: c.Builder, storeFn_T: StoreCallbac
 function loadCellRef<T>(s: c.Slice, loadFn_T: LoadCallback<T>): CellRef<T> {
     let s_ref = s.loadRef().beginParse();
     return { ref: loadFn_T(s_ref) };
-}
-
-function storeTolkRemaining(v: RemainingBitsAndRefs, b: c.Builder): void {
-    b.storeSlice(v);
-}
-
-function loadTolkRemaining(s: c.Slice): RemainingBitsAndRefs {
-    let rest = s.clone();
-    s.loadBits(s.remainingBits);
-    while (s.remainingRefs) {
-        s.loadRef();
-    }
-    return rest;
 }
 
 function storeTolkNullable<T>(v: T | null, b: c.Builder, storeFn_T: StoreCallback<T>): void {
@@ -133,6 +107,14 @@ class StackReader {
     readSlice(): c.Slice {
         return this.popCellLike().beginParse();
     }
+
+    readNullable<T>(readFn_T: (r: StackReader) => T): T | null {
+        if (this.tuple[0].type === 'null') {
+            this.tuple.shift();
+            return null;
+        }
+        return readFn_T(this);
+    }
 }
 
 // ————————————————————————————————————————————
@@ -141,183 +123,9 @@ class StackReader {
 
 type coins = bigint
 
-type uint10 = bigint
 type uint32 = bigint
 type uint33 = bigint
 type uint64 = bigint
-
-/**
- > type ForwardPayloadRemainder = RemainingBitsAndRefs
- */
-export type ForwardPayloadRemainder = RemainingBitsAndRefs
-
-export const ForwardPayloadRemainder = {
-    fromSlice(s: c.Slice): ForwardPayloadRemainder {
-        return loadTolkRemaining(s);
-    },
-    store(self: ForwardPayloadRemainder, b: c.Builder): void {
-        storeTolkRemaining(self, b);
-    },
-    toCell(self: ForwardPayloadRemainder): c.Cell {
-        return makeCellFrom<ForwardPayloadRemainder>(self, ForwardPayloadRemainder.store);
-    }
-}
-
-/**
- > struct (0b0) PayloadInline {
- >     value: RemainingBitsAndRefs
- > }
- */
-export interface PayloadInline {
-    readonly $: 'PayloadInline'
-    value: RemainingBitsAndRefs
-}
-
-export const PayloadInline = {
-    PREFIX: 0b0,
-
-    create(args: {
-        value: RemainingBitsAndRefs
-    }): PayloadInline {
-        return {
-            $: 'PayloadInline',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): PayloadInline {
-        loadAndCheckPrefix(s, 0b0, 1, 'PayloadInline');
-        return {
-            $: 'PayloadInline',
-            value: loadTolkRemaining(s),
-        }
-    },
-    store(self: PayloadInline, b: c.Builder): void {
-        b.storeUint(0b0, 1);
-        storeTolkRemaining(self.value, b);
-    },
-    toCell(self: PayloadInline): c.Cell {
-        return makeCellFrom<PayloadInline>(self, PayloadInline.store);
-    }
-}
-
-/**
- > struct (0b1) PayloadInRef {
- >     value: Cell<RemainingBitsAndRefs>
- > }
- */
-export interface PayloadInRef {
-    readonly $: 'PayloadInRef'
-    value: CellRef<RemainingBitsAndRefs>
-}
-
-export const PayloadInRef = {
-    PREFIX: 0b1,
-
-    create(args: {
-        value: CellRef<RemainingBitsAndRefs>
-    }): PayloadInRef {
-        return {
-            $: 'PayloadInRef',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): PayloadInRef {
-        loadAndCheckPrefix(s, 0b1, 1, 'PayloadInRef');
-        return {
-            $: 'PayloadInRef',
-            value: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
-        }
-    },
-    store(self: PayloadInRef, b: c.Builder): void {
-        b.storeUint(0b1, 1);
-        storeCellRef<RemainingBitsAndRefs>(self.value, b, storeTolkRemaining);
-    },
-    toCell(self: PayloadInRef): c.Cell {
-        return makeCellFrom<PayloadInRef>(self, PayloadInRef.store);
-    }
-}
-
-/**
- > struct (0x178d4519) InternalTransferStep {
- >     queryId: uint64
- >     jettonAmount: coins
- >     version: uint10
- >     transferredAsCredit: bool
- >     transferInitiator: address
- >     sendExcessesTo: address?
- >     forwardTonAmount: coins
- >     forwardPayload: ForwardPayloadRemainder
- > }
- */
-export interface InternalTransferStep {
-    readonly $: 'InternalTransferStep'
-    queryId: uint64
-    jettonAmount: coins
-    version: uint10
-    transferredAsCredit: boolean /* = false */
-    transferInitiator: c.Address
-    sendExcessesTo: c.Address | null
-    forwardTonAmount: coins
-    forwardPayload: PayloadInline | PayloadInRef
-}
-
-export const InternalTransferStep = {
-    PREFIX: 0x178d4519,
-
-    create(args: {
-        queryId: uint64
-        jettonAmount: coins
-        version: uint10
-        transferredAsCredit?: boolean /* = false */
-        transferInitiator: c.Address
-        sendExcessesTo: c.Address | null
-        forwardTonAmount: coins
-        forwardPayload: PayloadInline | PayloadInRef
-    }): InternalTransferStep {
-        return {
-            $: 'InternalTransferStep',
-            transferredAsCredit: false,
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): InternalTransferStep {
-        loadAndCheckPrefix32(s, 0x178d4519, 'InternalTransferStep');
-        return {
-            $: 'InternalTransferStep',
-            queryId: s.loadUintBig(64),
-            jettonAmount: s.loadCoins(),
-            version: s.loadUintBig(10),
-            transferredAsCredit: s.loadBoolean(),
-            transferInitiator: s.loadAddress(),
-            sendExcessesTo: s.loadMaybeAddress(),
-            forwardTonAmount: s.loadCoins(),
-            forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
-                lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
-                throwNonePrefixMatch('InternalTransferStep.forwardPayload'),
-        }
-    },
-    store(self: InternalTransferStep, b: c.Builder): void {
-        b.storeUint(0x178d4519, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeCoins(self.jettonAmount);
-        b.storeUint(self.version, 10);
-        b.storeBit(self.transferredAsCredit);
-        b.storeAddress(self.transferInitiator);
-        b.storeAddress(self.sendExcessesTo);
-        b.storeCoins(self.forwardTonAmount);
-        switch (self.forwardPayload.$) {
-            case 'PayloadInline':
-                PayloadInline.store(self.forwardPayload, b);
-                break;
-            case 'PayloadInRef':
-                PayloadInRef.store(self.forwardPayload, b);
-                break;
-        }
-    },
-    toCell(self: InternalTransferStep): c.Cell {
-        return makeCellFrom<InternalTransferStep>(self, InternalTransferStep.store);
-    }
-}
 
 /**
  > struct (0xd53276db) ReturnExcessesBack {
@@ -357,84 +165,96 @@ export const ReturnExcessesBack = {
 }
 
 /**
- > struct (0x00001001) MintNewJettons {
- >     queryId: uint64
- >     mintRecipient: address
- >     tonAmount: coins
- >     internalTransferMsg: Cell<InternalTransferStep>
+ > struct (0x0000100d) ExecuteDaoProposal {
+ >     id: uint64
+ >     proposerOwner: address
+ >     targetMsg: cell
  > }
  */
-export interface MintNewJettons {
-    readonly $: 'MintNewJettons'
-    queryId: uint64
-    mintRecipient: c.Address
-    tonAmount: coins
-    internalTransferMsg: CellRef<InternalTransferStep>
+export interface ExecuteDaoProposal {
+    readonly $: 'ExecuteDaoProposal'
+    id: uint64
+    proposerOwner: c.Address
+    targetMsg: c.Cell
 }
 
-export const MintNewJettons = {
-    PREFIX: 0x00001001,
+export const ExecuteDaoProposal = {
+    PREFIX: 0x0000100d,
 
     create(args: {
-        queryId: uint64
-        mintRecipient: c.Address
-        tonAmount: coins
-        internalTransferMsg: CellRef<InternalTransferStep>
-    }): MintNewJettons {
+        id: uint64
+        proposerOwner: c.Address
+        targetMsg: c.Cell
+    }): ExecuteDaoProposal {
         return {
-            $: 'MintNewJettons',
+            $: 'ExecuteDaoProposal',
             ...args
         }
     },
-    fromSlice(s: c.Slice): MintNewJettons {
-        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
+    fromSlice(s: c.Slice): ExecuteDaoProposal {
+        loadAndCheckPrefix32(s, 0x0000100d, 'ExecuteDaoProposal');
         return {
-            $: 'MintNewJettons',
-            queryId: s.loadUintBig(64),
-            mintRecipient: s.loadAddress(),
-            tonAmount: s.loadCoins(),
-            internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+            $: 'ExecuteDaoProposal',
+            id: s.loadUintBig(64),
+            proposerOwner: s.loadAddress(),
+            targetMsg: s.loadRef(),
         }
     },
-    store(self: MintNewJettons, b: c.Builder): void {
-        b.storeUint(0x00001001, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.mintRecipient);
-        b.storeCoins(self.tonAmount);
-        storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+    store(self: ExecuteDaoProposal, b: c.Builder): void {
+        b.storeUint(0x0000100d, 32);
+        b.storeUint(self.id, 64);
+        b.storeAddress(self.proposerOwner);
+        b.storeRef(self.targetMsg);
     },
-    toCell(self: MintNewJettons): c.Cell {
-        return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
+    toCell(self: ExecuteDaoProposal): c.Cell {
+        return makeCellFrom<ExecuteDaoProposal>(self, ExecuteDaoProposal.store);
     }
 }
 
 /**
- > struct (0x00001007) TopUpTons {
+ > struct (0x0000100e) RefundDaoProposalFee {
+ >     id: uint64
+ >     proposerOwner: address
+ >     targetMsg: cell
  > }
  */
-export interface TopUpTons {
-    readonly $: 'TopUpTons'
+export interface RefundDaoProposalFee {
+    readonly $: 'RefundDaoProposalFee'
+    id: uint64
+    proposerOwner: c.Address
+    targetMsg: c.Cell
 }
 
-export const TopUpTons = {
-    PREFIX: 0x00001007,
+export const RefundDaoProposalFee = {
+    PREFIX: 0x0000100e,
 
-    create(): TopUpTons {
+    create(args: {
+        id: uint64
+        proposerOwner: c.Address
+        targetMsg: c.Cell
+    }): RefundDaoProposalFee {
         return {
-            $: 'TopUpTons',
+            $: 'RefundDaoProposalFee',
+            ...args
         }
     },
-    fromSlice(s: c.Slice): TopUpTons {
-        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
+    fromSlice(s: c.Slice): RefundDaoProposalFee {
+        loadAndCheckPrefix32(s, 0x0000100e, 'RefundDaoProposalFee');
         return {
-            $: 'TopUpTons',
+            $: 'RefundDaoProposalFee',
+            id: s.loadUintBig(64),
+            proposerOwner: s.loadAddress(),
+            targetMsg: s.loadRef(),
         }
     },
-    store(self: TopUpTons, b: c.Builder): void {
-        b.storeUint(0x00001007, 32);
+    store(self: RefundDaoProposalFee, b: c.Builder): void {
+        b.storeUint(0x0000100e, 32);
+        b.storeUint(self.id, 64);
+        b.storeAddress(self.proposerOwner);
+        b.storeRef(self.targetMsg);
     },
-    toCell(self: TopUpTons): c.Cell {
-        return makeCellFrom<TopUpTons>(self, TopUpTons.store);
+    toCell(self: RefundDaoProposalFee): c.Cell {
+        return makeCellFrom<RefundDaoProposalFee>(self, RefundDaoProposalFee.store);
     }
 }
 
@@ -671,91 +491,45 @@ export const CleanupProposalVotes = {
 }
 
 /**
- > struct Proposal {
- >     id: uint64
- >     proposerOwner: address
+ > struct DaoStore {
+ >     totalAccounts: uint33
+ >     proposer: address
  >     targetAddr: address
- >     targetMsg: cell
+ >     targetMsg: cell?
  >     yesVotes: uint33
  >     noVotes: uint33
  >     expiresAt: uint32
  > }
  */
-export interface Proposal {
-    readonly $: 'Proposal'
-    id: uint64
-    proposerOwner: c.Address
-    targetAddr: c.Address
-    targetMsg: c.Cell
+export interface DaoStore {
+    readonly $: 'DaoStore'
+    totalAccounts: uint33 /* = 0 */
+    proposer: c.Address
+    targetAddr: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+    targetMsg: c.Cell | null /* = null */
     yesVotes: uint33 /* = 0 */
     noVotes: uint33 /* = 0 */
     expiresAt: uint32 /* = 0 */
 }
 
-export const Proposal = {
-    create(args: {
-        id: uint64
-        proposerOwner: c.Address
-        targetAddr: c.Address
-        targetMsg: c.Cell
-        yesVotes?: uint33 /* = 0 */
-        noVotes?: uint33 /* = 0 */
-        expiresAt?: uint32 /* = 0 */
-    }): Proposal {
-        return {
-            $: 'Proposal',
-            yesVotes: 0n,
-            noVotes: 0n,
-            expiresAt: 0n,
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): Proposal {
-        return {
-            $: 'Proposal',
-            id: s.loadUintBig(64),
-            proposerOwner: s.loadAddress(),
-            targetAddr: s.loadAddress(),
-            targetMsg: s.loadRef(),
-            yesVotes: s.loadUintBig(33),
-            noVotes: s.loadUintBig(33),
-            expiresAt: s.loadUintBig(32),
-        }
-    },
-    store(self: Proposal, b: c.Builder): void {
-        b.storeUint(self.id, 64);
-        b.storeAddress(self.proposerOwner);
-        b.storeAddress(self.targetAddr);
-        b.storeRef(self.targetMsg);
-        b.storeUint(self.yesVotes, 33);
-        b.storeUint(self.noVotes, 33);
-        b.storeUint(self.expiresAt, 32);
-    },
-    toCell(self: Proposal): c.Cell {
-        return makeCellFrom<Proposal>(self, Proposal.store);
-    }
-}
-
-/**
- > struct DaoStore {
- >     totalAccounts: uint33
- >     proposal: Proposal
- > }
- */
-export interface DaoStore {
-    readonly $: 'DaoStore'
-    totalAccounts: uint33 /* = 0 */
-    proposal: Proposal
-}
-
 export const DaoStore = {
     create(args: {
         totalAccounts?: uint33 /* = 0 */
-        proposal: Proposal
+        proposer: c.Address
+        targetAddr?: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+        targetMsg?: c.Cell | null /* = null */
+        yesVotes?: uint33 /* = 0 */
+        noVotes?: uint33 /* = 0 */
+        expiresAt?: uint32 /* = 0 */
     }): DaoStore {
         return {
             $: 'DaoStore',
             totalAccounts: 0n,
+            targetAddr: c.Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
+            targetMsg: null,
+            yesVotes: 0n,
+            noVotes: 0n,
+            expiresAt: 0n,
             ...args
         }
     },
@@ -763,12 +537,24 @@ export const DaoStore = {
         return {
             $: 'DaoStore',
             totalAccounts: s.loadUintBig(33),
-            proposal: Proposal.fromSlice(s),
+            proposer: s.loadAddress(),
+            targetAddr: s.loadAddress(),
+            targetMsg: s.loadBoolean() ? s.loadRef() : null,
+            yesVotes: s.loadUintBig(33),
+            noVotes: s.loadUintBig(33),
+            expiresAt: s.loadUintBig(32),
         }
     },
     store(self: DaoStore, b: c.Builder): void {
         b.storeUint(self.totalAccounts, 33);
-        Proposal.store(self.proposal, b);
+        b.storeAddress(self.proposer);
+        b.storeAddress(self.targetAddr);
+        storeTolkNullable<c.Cell>(self.targetMsg, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeUint(self.yesVotes, 33);
+        b.storeUint(self.noVotes, 33);
+        b.storeUint(self.expiresAt, 32);
     },
     toCell(self: DaoStore): c.Cell {
         return makeCellFrom<DaoStore>(self, DaoStore.store);
@@ -814,7 +600,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Dao implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAAy4AART/APSkE/S88sgLAQIBYgIDA/bQ+JGRMOAgxwCRMOAg7UTQ0yDTP/pI+kjU0yDTINcLHwjXLCAAAIfcjkQ4XwYy+CMB0z/6SPpI10wEgggJOoCgUzEHyMsgyz8T+lIV+lITzHDPC0ESyx/J7VTIz4UIEvpSgRAOzwuOyz/JgEL7AODXLCAAAIB84wKJ1ycEBQYCASANDgBONzj4kiPHBfLivAXTPzHXCyDIyyAUyz8S+lL6UszLIBLLIMsfye1UAAgAABD+AkjjAjZfAzMB1ywgAACH/OMCbDHXLCAAAIA8MZEw4IQPAccA8vQHCAP+OQjTPzHTP/pI0wABktIAkm0B4tcKAPgoiG0FyPpSEvpSFPQAyVADyM+E0MzM+RbIz4oAQMv/z1D4kscF8uL2JfgjK7ny4vIhbpsxAZICpJQJpEkZ4o4WURK9ngGUAqQJpZQCpQmk4kkZkTHiAuInmCeqAKYCc6kEkXHiIbvjAhEJCgH2NPiSIccF8uK8+CNQA77y4t+CGOjUpRAAA9cLP4IK+vCAIPgobSBus5MwiwTfyM+QXjUUZiXPCz9QCPoCz4gAQPpSUlD6VM+EIBbOycjPhQgU+lIB+gKBEAHPC4rLP1Ig+lJQA/oCEszJc/sAyM+FCPpSic8WyYEAoPsADAL8MDFsRIIgCRhOcqAAggr68IAg+ChtIG6zkzCLBN/Iz5BeNRRmJs8LP1AF+gLPiABA+lJScPpUz4QgE87JyM+FCFJg+lJY+gKBEAHPC4oTyz9SUPpSAfoCzMlz+wDQyM7JyM+FCBL6UnHPC27MyYBC+wDIz4UI+lKJzxbJgQCgDAsANDEzBcjLIBTLPxL6UhP6UszLIBLLIMsfye1UAAT7AAAzAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEALb+EX2omhpkBjpn/0kfSRqaZBpkGuFj8AgFYDxAAK7faPaiaGmQaZ/9JH0kammQaZBpj+jABR7Qv/wURDaB5H0pCX0pCXoAZIDkZ8JoZmZ8i2RnxQAgZf/nqEBEIQgIfjULpDUi4aTihOxAOJVLuWcAE9qFQIKcv7fsqP0ybzg==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDgEAAp8AART/APSkE/S88sgLAQIBYgIDBPjQ+JGRMOAgxwCRMOAg7UTQ0yD6SPpI9ATTINMg1wsfB9csIAAAh9yORDMzNfgjNtM/+kgx+kjXTFRBGIIICTqAoAbIyyAV+lIX+lIT9AAUyyATyyDLH8ntVMjPhQgS+lKBEA7PC47LP8mAQvsA4NcsIAAAgHzjAonXJ+MCBAUGBwIBbgsMAEo2N/iSI8cF8uK8BNM/MdcLIMjLIBP6UvpS9ADLIBLLIMsfye1UAAgAABD+A/w4B9N/MfpI0wABktIAkm0B4tcKAPgoiG0FyPpSEvpSFPQAyVADyM+E0MzM+RbIz4oAQMv/z1D4kscF8uL2+CMoufLi8iBumDCRpJMGpAbijhAhvZqTpAalk6UGpOIGkTDi4iSYJKoApgJzqQSRceIhu+MCBMjLIBP6UvpS9AANCAkB/jZbA9csIAAAh/wxjm00+JIhxwXy4rz4I1ADvvLi38jPhQgT+lKNBoAAAAAAAAAAAAAAAAAAAAAIBwAAAAAAAAAAQM8WUhD6UhLMyYBC+wDIz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsA4F8EhA8KALwwbDPIz4UIEvpSjQaAAAAAAAAAAAAAAAAAAAAACAaAAAAAAAAAAEDPFlIg+lLMyYBC+wDIz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsAABTLIBLLIMsfye1UAAoBxwDy9AApt9o9qJoaZB9JH0kegJpkGmQaY/owAUe0L/8FEQ2geR9KQl9KQl6AGSA5GfCaGZmfItkZ8UAIGX/56hANCEICH41C6Q1IuGk4oTsQDiVS7lnABPahUCCnL+37Kj9Mm84=');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
@@ -837,7 +623,12 @@ export class Dao implements c.Contract {
 
     static fromStorage(emptyStorage: {
         totalAccounts?: uint33 /* = 0 */
-        proposal: Proposal
+        proposer: c.Address
+        targetAddr?: c.Address /* = address('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') */
+        targetMsg?: c.Cell | null /* = null */
+        yesVotes?: uint33 /* = 0 */
+        noVotes?: uint33 /* = 0 */
+        expiresAt?: uint32 /* = 0 */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Dao.CodeCell,
@@ -878,11 +669,6 @@ export class Dao implements c.Contract {
         proposalId: uint64
     }) {
         return CleanupProposalVotes.toCell(CleanupProposalVotes.create(body));
-    }
-
-    static createCellOfTopUpTons(body: {
-    }) {
-        return TopUpTons.toCell(TopUpTons.create());
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -942,41 +728,16 @@ export class Dao implements c.Contract {
         });
     }
 
-    async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: TopUpTons.toCell(TopUpTons.create()),
-            ...extraOptions
-        });
-    }
-
     async getDaoData(provider: ContractProvider): Promise<DaoStore> {
-        const r = StackReader.fromGetMethod(8, await provider.get('get_dao_data', []));
+        const r = StackReader.fromGetMethod(7, await provider.get('get_dao_data', []));
         return ({
             $: 'DaoStore',
             totalAccounts: r.readBigInt(),
-            proposal: ({
-                $: 'Proposal',
-                id: r.readBigInt(),
-                proposerOwner: r.readSlice().loadAddress(),
-                targetAddr: r.readSlice().loadAddress(),
-                targetMsg: r.readCell(),
-                yesVotes: r.readBigInt(),
-                noVotes: r.readBigInt(),
-                expiresAt: r.readBigInt(),
-            }),
-        });
-    }
-
-    async getProposal(provider: ContractProvider): Promise<Proposal> {
-        const r = StackReader.fromGetMethod(7, await provider.get('get_proposal', []));
-        return ({
-            $: 'Proposal',
-            id: r.readBigInt(),
-            proposerOwner: r.readSlice().loadAddress(),
+            proposer: r.readSlice().loadAddress(),
             targetAddr: r.readSlice().loadAddress(),
-            targetMsg: r.readCell(),
+            targetMsg: r.readNullable<c.Cell>(
+                (r) => r.readCell()
+            ),
             yesVotes: r.readBigInt(),
             noVotes: r.readBigInt(),
             expiresAt: r.readBigInt(),

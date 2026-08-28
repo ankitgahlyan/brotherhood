@@ -1,15 +1,8 @@
-import "@acton/build"
 import "@acton/emulation/scripts"
-import "@acton/emulation/testing"
 
 import "utils/common"
 
 fun main() {
-    testing.registerLibrary(build("FossFiWallet"));
-    testing.registerLibrary(build("Location"));
-    testing.registerLibrary(build("Dao"));
-    testing.registerLibrary(build("DaoVoter"));
-
     // make sure to deploy libs first then deploy
 
     val deployer = promptJettonWallet("JETTON_DEPLOYER", "Select Jetton Deployer");

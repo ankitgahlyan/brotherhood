@@ -45,16 +45,9 @@ fun setupDaoTest(): TestSetup {
     val deployerWallet = userWallet(minter, deployer.address);
 
     val dao = Dao.fromStorage({
-        totalAccounts: 0,
-        proposal: {
-            id: 0,
-            proposerOwner: deployer.address,
-            targetAddr: minter.address,
-            targetMsg: beginCell().endCell(),
-            yesVotes: 0,
-            noVotes: 0,
-            expiresAt: 0,
-        },
+        fiAddress: minter.address,
+        proposalCount: 0,
+        proposals: [],
     });
     dao.deploy(deployer.address, { value: ton("10") });
 
@@ -106,7 +99,9 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and creates pr
     val newBal = wallet1.getJettonBalance();
     expect(newBal).toEqual(initialBal - ton("1000"));
 
-    val p = setup.dao.getProposal();
+    val prop = setup.dao.getProposal(1);
+    expect(prop != null).toBeTrue();
+    val p = prop!;
     expect(p.id).toEqual(1);
     expect(setup.dao.getDaoData().totalAccounts >= 0).toBeTrue();
 }
@@ -138,8 +133,8 @@ get fun `test dao: voting with DaoVoter and vote switching`() {
         { value: ton("0.3") },
     );
 
-    val prop1 = setup.dao.getProposal();
-    expect(prop1.id).toEqual(200);
+    val prop1 = setup.dao.getProposal(1)!;
+    expect(prop1.id).toEqual(1);
     expect(setup.dao.getDaoData().totalAccounts).toEqual(3);
 
     // Member 1 votes YES on proposal (threshold is ceil(3 * 2 / 3) = 3 votes)
@@ -147,11 +142,11 @@ get fun `test dao: voting with DaoVoter and vote switching`() {
         member1.address,
         301,
         setup.dao.address,
-        200,
+        1,
         true,
     );
 
-    var p1 = setup.dao.getProposal();
+    var p1 = setup.dao.getProposal(1)!;
     expect(p1.yesVotes).toEqual(1);
     expect(p1.noVotes).toEqual(0);
 
@@ -160,12 +155,12 @@ get fun `test dao: voting with DaoVoter and vote switching`() {
         member1.address,
         302,
         setup.dao.address,
-        200,
+        1,
         false,
     );
     expect(res2).toHaveAllSuccessfulTxs();
 
-    p1 = setup.dao.getProposal();
+    p1 = setup.dao.getProposal(1)!;
     expect(p1.yesVotes).toEqual(0);
     expect(p1.noVotes).toEqual(1);
 
@@ -174,11 +169,11 @@ get fun `test dao: voting with DaoVoter and vote switching`() {
         member2.address,
         303,
         setup.dao.address,
-        200,
+        1,
         true,
     );
 
-    p1 = setup.dao.getProposal();
+    p1 = setup.dao.getProposal(1)!;
     expect(p1.yesVotes).toEqual(1);
 
     // Member 3 votes YES on proposal -> 2 YES votes >= threshold (2) -> executed & deleted!
@@ -186,11 +181,12 @@ get fun `test dao: voting with DaoVoter and vote switching`() {
         member3.address,
         304,
         setup.dao.address,
-        200,
+        1,
         true,
     );
     expect(res304).toHaveAllSuccessfulTxs();
 
+    expect(setup.dao.getProposal(1) == null).toBeTrue();
     // Proposer (member1) gets 10x proposal fee (10,000 FI) reward: initial 2001 FI - 1000 fee + 100 targetMsg + 10000 reward = 11101 FI
     expect(wallet1.getJettonBalance()).toEqual(ton("11101"));
 }

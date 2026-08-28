@@ -8,14 +8,12 @@ import "storage"
 
 fun calcDeployFiWallet(
     owner: address,
-    treasury: address,
     minterAddr: address,
     baseFiWalletCode: cell,
 ): AutoDeployAddress {
     val emptyFiWalletStore: FiWalletStore = {
         addresses: Addresses {
             owner,
-            treasury,
             nomInAddrs: NomInAddrs {}.toCell(),
             trustedJettonAddrs: TrustedAddrs { minterAddr }.toCell(),
         }.toCell(),
@@ -39,7 +37,6 @@ fun address.getAddrFiWallet(self): address {
     val addrs = lazy store.addresses.load();
     return calcDeployFiWallet(
         self,
-        addrs.treasury,
         addrs.trustedJettonAddrs.load().minterAddr,
         contract.getCode(),
     ).calculateAddress();
@@ -70,11 +67,11 @@ fun idActionChecks(store: FiWalletStore) {
     val reports = lazy store.maps.load();
     val reportInfo = lazy reports.reportInfo.load();
     assert (
-        store.active || store.addresses.load().owner == store.addresses.load().treasury
-    ) throw Errors.AccountInactive;                                                                                        // mint/burn actions allowed only for active/ID accounts
+        store.active || store.isPrevilegedAccount
+    ) throw Errors.AccountInactive;                                                  // mint/burn actions allowed only for active/ID accounts
     assert (
         reportInfo.reporterCount < 1
-    ) throw Errors.AlreadyReported;                                                                                        // reported IDs can't act
+    ) throw Errors.AlreadyReported;                                                  // reported IDs can't act
     assert (!store.debts) throw Errors.AccountInDebt;
     assert (store.debt == 0) throw Errors.AccountInDebt;
 }
@@ -183,18 +180,6 @@ fun hotUpgradeFiWalletData(_additionalData: cell?) {
     //     others: oldStorage.others,
     // };
     // contract.setData(storage.toCell());
-}
-
-@inline
-fun destroyContract(dest: address) {
-    val outMsg = createMessage({
-        bounce: BounceMode.NoBounce,
-        value: 0,
-        dest,
-        body: ReturnExcessesBack { queryId: 0 },
-    });
-    // safety
-    outMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
 }
 
 fun isNonEmptyString(str: string): bool {
