@@ -147,14 +147,7 @@ export function ManagePage({ initialTab }: { initialTab?: string }) {
         'lottery',
         'admin',
       ]
-    : [
-        'identity',
-        'economy',
-        'social',
-        'credit',
-        'governance',
-        'lottery',
-      ];
+    : ['identity', 'economy', 'social', 'credit', 'governance', 'lottery'];
 
   const activeTab: ManageTab = visibleTabs.includes(tab)
     ? tab

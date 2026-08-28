@@ -638,6 +638,7 @@ fun onInternalMessage(in: InMessage): void {
                 in.senderAddress == trustedAddrs.personalJettonMinter
             ) throw Errors.IncorrectSender;
 
+            assert (blockchain.now() >= store.creditMaturity) throw Errors.CreditNotMatured;
             assert (msg.amount <= store.jettonBalance) throw Errors.InsufficientBalance;
             store.jettonBalance -= msg.amount;
 
@@ -1229,6 +1230,13 @@ fun onInternalMessage(in: InMessage): void {
 
         SetCreditNeed => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            if (msg.amount > 0) {
+                assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
+                if (store.creditMaturity > blockchain.now()) {
+                    assert (msg.maturityDate >= store.creditMaturity) throw Errors.InvalidMessage;
+                }
+                store.creditMaturity = msg.maturityDate;
+            }
             store.creditNeed = msg.amount;
         }
 

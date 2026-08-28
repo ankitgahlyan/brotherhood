@@ -67,6 +67,7 @@ fun setupPersonalScenario(): (
     FossFiWallet,
     Personal,
 ) {
+    testing.setNow(1_800_000_000);
     val (minter, deployer, notDeployer) = setupTest();
 
     // buyer: the treasury wallet (funded with FI to lend)
@@ -83,7 +84,13 @@ fun setupPersonalScenario(): (
     // deploy the issuer's Personal Token minter and point the issuer's FI wallet at it
     val pm = deployPersonalMinter(issuerWallet.address, notDeployer.address);
     pointIssuerAtPersonalMinter(issuerWallet, notDeployer.address, pm.address);
-    issuerWallet.sendSetCreditNeed(notDeployer.address, 0, ton("1000"), { value: ton("0.1") });
+    issuerWallet.sendSetCreditNeed(
+        notDeployer.address,
+        0,
+        ton("1000"),
+        1_800_000_000 + 86400,
+        { value: ton("0.1") },
+    );
 
     return (
         minter,
@@ -206,7 +213,7 @@ fun sendPayback(
     );
 }
 
-get fun `test personal token: payback burns the loan and returns FI to the buyer`() {
+get fun `test personal token: payback before maturity fails with CreditNotMatured and unwinds`() {
     val (
         _minter,
         deployer,
@@ -225,6 +232,61 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
         deployer.address,
         { value: ton("1.5") },
     );
+
+    val buyerFiAfterBuy = buyerWallet.getJettonBalance();
+    val issuerFiAfterBuy = issuerWallet.getJettonBalance();
+    val supplyBefore = personalSupply(pm);
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+
+    // Time is still before maturity (maturity is 1_800_000_000 + 86400)
+    testing.setNow(1_800_000_000 + 3600);
+
+    val res = sendPayback(deployer.address, buyerPriWallet, loan);
+    expect(res).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+
+    // FossFiWallet throws CreditNotMatured and bounces back to PersonalMinter
+    expect(res).toHaveFailedTx<Payback>({
+        from: pm.address,
+        to: issuerWallet.address,
+        exitCode: Errors.CreditNotMatured,
+    });
+    expect(res).toHaveBouncedTx({
+        from: issuerWallet.address,
+        to: pm.address,
+    });
+
+    // Personal tokens are restored to the buyer and no FI is transferred
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+    expect(personalSupply(pm)).toEqual(supplyBefore);
+    expect(buyerWallet.getJettonBalance()).toEqual(buyerFiAfterBuy);
+    expect(issuerWallet.getJettonBalance()).toEqual(issuerFiAfterBuy);
+}
+
+get fun `test personal token: payback burns the loan and returns FI to the buyer after maturity`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val loan = ton("100");
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: ton("1.5") },
+    );
+
+    // Advance time past maturity
+    testing.setNow(1_800_000_000 + 86400 + 10);
 
     val buyerFiBefore = buyerWallet.getJettonBalance();
     val issuerFiBefore = issuerWallet.getJettonBalance();
@@ -269,6 +331,9 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
     val issuerFiBefore = issuerWallet.getJettonBalance();
     val supplyBefore = personalSupply(pm);
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+
+    // Advance time past maturity
+    testing.setNow(1_800_000_000 + 86400 + 10);
 
     val res = sendPayback(deployer.address, buyerPriWallet, repaid);
     expect(res).toHaveSuccessfulTx<AskToBurn>({
@@ -356,6 +421,9 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
     val supplyBefore = personalSupply(pm);
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
 
+    // Advance time past maturity
+    testing.setNow(1_800_000_000 + 86400 + 10);
+
     // the buyer tries to pay back; the issuer bounces the Payback, unwinding the burn
     val res = sendPayback(deployer.address, buyerPriWallet, loan);
     expect(res).toHaveSuccessfulTx<AskToBurn>({
@@ -418,6 +486,9 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
     val supplyBefore = personalSupply(pm);
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
 
+    // Advance time past maturity
+    testing.setNow(1_800_000_000 + 86400 + 10);
+
     // the buyer repays the full loan; the issuer can cover it exactly
     val res = sendPayback(deployer.address, buyerPriWallet, loan);
     expect(res).toHaveSuccessfulTx<AskToBurn>({
@@ -429,6 +500,51 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
     expect(personalSupply(pm)).toEqual(supplyBefore - loan);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
     expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+}
+
+get fun `test personal token: secondary market transfer succeeds before maturity`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val loan = ton("100");
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: ton("1.5") },
+    );
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val friend = testing.treasury("personal-token-recipient");
+
+    // Transfer 30 personal tokens to friend while still before maturity
+    testing.setNow(1_800_000_000 + 1000);
+    val transferRes = buyerPriWallet.sendAskToTransfer(
+        deployer.address,
+        0,
+        ton("30"),
+        friend.address,
+        deployer.address,
+        null,
+        0,
+        PayloadInline { value: createEmptySlice() },
+        { value: ton("0.5") },
+    );
+    expect(transferRes).toHaveSuccessfulTx<AskToTransfer>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(ton("70"));
+    expect(personalBalanceOf(pm, friend.address)).toEqual(ton("30"));
 }
 
 fun personalBalanceOf(pm: Personal, owner: address): coins {

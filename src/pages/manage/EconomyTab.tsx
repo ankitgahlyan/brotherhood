@@ -10,11 +10,7 @@ import {
 } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
-import {
-  tryParseAddress,
-  WalletRequired,
-  type Network,
-} from './common';
+import { tryParseAddress, WalletRequired, type Network } from './common';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +36,9 @@ export function EconomyTab({
   ownerAddress: Address | null;
   onSuccess?: () => void;
 }) {
-  const [subTab, setSubTab] = useState<'transfer' | 'gold' | 'burn'>('transfer');
+  const [subTab, setSubTab] = useState<'transfer' | 'gold' | 'burn'>(
+    'transfer',
+  );
 
   // FI Transfer
   const [toAddr, setToAddr] = useState('');
@@ -116,7 +114,10 @@ export function EconomyTab({
     }
     const coinsParsed = parseInt(goldAmount.trim(), 10);
     if (isNaN(coinsParsed) || coinsParsed <= 0) {
-      setStatus({ type: 'error', message: 'Enter a valid positive number of Gold Coins' });
+      setStatus({
+        type: 'error',
+        message: 'Enter a valid positive number of Gold Coins',
+      });
       return;
     }
 
@@ -254,8 +255,12 @@ export function EconomyTab({
             <div className="flex items-center gap-2.5">
               <Coins className="size-5 text-amber-500" />
               <div>
-                <div className="text-xs font-bold text-foreground">Available Gold Coins</div>
-                <div className="text-xs text-muted-foreground">Transferable store-of-value units</div>
+                <div className="text-xs font-bold text-foreground">
+                  Available Gold Coins
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Transferable store-of-value units
+                </div>
               </div>
             </div>
             <div className="font-mono text-lg font-bold text-amber-500">
@@ -305,8 +310,8 @@ export function EconomyTab({
 
         <TabsContent value="burn" className="mt-5 space-y-4.5">
           <p className="text-xs text-muted-foreground">
-            Burning FI permanently removes tokens from circulation and reduces your
-            account balance.
+            Burning FI permanently removes tokens from circulation and reduces
+            your account balance.
           </p>
           <form onSubmit={handleBurnFi} className="space-y-4">
             <div className="space-y-1.5">

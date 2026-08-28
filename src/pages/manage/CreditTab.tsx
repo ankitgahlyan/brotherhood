@@ -1,5 +1,11 @@
 import { useEffect, useState, type SyntheticEvent } from 'react';
-import { Address, fromNano, toNano, beginCell, storeStateInit } from '@ton/core';
+import {
+  Address,
+  fromNano,
+  toNano,
+  beginCell,
+  storeStateInit,
+} from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import {
@@ -39,6 +45,9 @@ import {
   ExternalLink,
   Coins,
   BadgeAlert,
+  Calendar,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import { StatusAlert } from '../DeployPage';
 
@@ -69,9 +78,9 @@ export function CreditTab({
   const [paybackIssuer, setPaybackIssuer] = useState('');
   const [paybackAmount, setPaybackAmount] = useState('');
   const [personalBalance, setPersonalBalance] = useState<bigint | null>(null);
-  const [personalBalanceError, setPersonalBalanceError] = useState<string | null>(
-    null,
-  );
+  const [personalBalanceError, setPersonalBalanceError] = useState<
+    string | null
+  >(null);
 
   // Issue Token states
   const [name, setName] = useState('My Personal Token');
@@ -84,13 +93,76 @@ export function CreditTab({
 
   // Debt & Credit Need states
   const [creditNeedAmount, setCreditNeedAmount] = useState('');
+  const [creditMaturityDate, setCreditMaturityDate] = useState('');
   const [multiplierVal, setMultiplierVal] = useState('');
   const [repayAmount, setRepayAmount] = useState('');
+
+  // Info for Buy & Payback issuers
+  const [buyIssuerState, setBuyIssuerState] = useState<FiWalletStore | null>(
+    null,
+  );
+  const [paybackIssuerState, setPaybackIssuerState] =
+    useState<FiWalletStore | null>(null);
 
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
     tonConnectUI,
     network,
   );
+
+  function getFutureIsoDateString(days: number): string {
+    const d = new Date(Date.now() + days * 86400 * 1000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
+
+  function formatMaturityDate(timestamp?: bigint | number): string {
+    if (!timestamp || Number(timestamp) === 0) return 'None';
+    const date = new Date(Number(timestamp) * 1000);
+    return date.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
+  useEffect(() => {
+    const issuer = tryParseAddress(buyIssuer);
+    if (!issuer) {
+      setBuyIssuerState(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const state = await getFiWalletState(issuer);
+        if (!cancelled) setBuyIssuerState(state);
+      } catch {
+        if (!cancelled) setBuyIssuerState(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [buyIssuer]);
+
+  useEffect(() => {
+    const issuer = tryParseAddress(paybackIssuer);
+    if (!issuer) {
+      setPaybackIssuerState(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const state = await getFiWalletState(issuer);
+        if (!cancelled) setPaybackIssuerState(state);
+      } catch {
+        if (!cancelled) setPaybackIssuerState(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paybackIssuer]);
 
   useEffect(() => {
     if (!ownerAddress) return;
@@ -318,8 +390,39 @@ export function CreditTab({
       return;
     }
 
+    let maturityTimestamp = 0;
+    if (amountParsed > 0) {
+      if (!creditMaturityDate) {
+        setStatus({
+          type: 'error',
+          message: 'Please set a maturity date for your credit request',
+        });
+        return;
+      }
+      maturityTimestamp = Math.floor(
+        new Date(creditMaturityDate).getTime() / 1000,
+      );
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (isNaN(maturityTimestamp) || maturityTimestamp <= nowSec) {
+        setStatus({
+          type: 'error',
+          message: 'Maturity date must be in the future',
+        });
+        return;
+      }
+      const existingMaturity = Number(fiWalletState?.creditMaturity || 0n);
+      if (existingMaturity > nowSec && maturityTimestamp < existingMaturity) {
+        setStatus({
+          type: 'error',
+          message: `Cannot shorten maturity date. New date must be on or after ${new Date(existingMaturity * 1000).toLocaleString()}`,
+        });
+        return;
+      }
+    }
+
     const body = buildSetCreditNeedBody({
       amount: parseUnits(creditNeedAmount.trim(), decimals),
+      maturityDate: BigInt(maturityTimestamp),
     });
     const walletAddr = await getWalletAddress(ownerAddress);
 
@@ -335,6 +438,7 @@ export function CreditTab({
       fallbackError: 'Failed to update credit need',
       onSuccess: () => {
         setCreditNeedAmount('');
+        setCreditMaturityDate('');
         if (onSuccess) setTimeout(onSuccess, 4000);
       },
     });
@@ -345,7 +449,10 @@ export function CreditTab({
     if (!ownerAddress) return;
     const mult = parseInt(multiplierVal.trim(), 10);
     if (isNaN(mult) || mult <= 0) {
-      setStatus({ type: 'error', message: 'Multiplier must be greater than 0' });
+      setStatus({
+        type: 'error',
+        message: 'Multiplier must be greater than 0',
+      });
       return;
     }
 
@@ -432,6 +539,30 @@ export function CreditTab({
               <p className="text-xs text-muted-foreground">
                 Lend FI to an issuer and receive their Personal Token as credit.
               </p>
+              {buyIssuerState && (
+                <div className="p-2.5 rounded-lg bg-secondary/50 border text-xs space-y-1 mt-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Credit Need:</span>
+                    <span className="font-semibold text-primary">
+                      {fromNano(buyIssuerState.creditNeed)} FI
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Multiplier:</span>
+                    <span className="font-semibold">
+                      {buyIssuerState.multiplier}x
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      Maturity Lock:
+                    </span>
+                    <span className="font-semibold">
+                      {formatMaturityDate(buyIssuerState.creditMaturity)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -466,7 +597,9 @@ export function CreditTab({
           <Separator />
 
           <form onSubmit={handlePayback} className="space-y-4.5">
-            <h3 className="font-display text-base font-semibold">Pay Back Loan</h3>
+            <h3 className="font-display text-base font-semibold">
+              Pay Back Loan
+            </h3>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Issuer Address
@@ -478,12 +611,36 @@ export function CreditTab({
               {personalBalance !== null && (
                 <p className="text-xs text-muted-foreground">
                   Your Personal Token balance on this issuer:{' '}
-                  <span className="font-semibold">{fromNano(personalBalance)}</span>
+                  <span className="font-semibold">
+                    {fromNano(personalBalance)}
+                  </span>
                 </p>
               )}
               {personalBalanceError && (
-                <p className="text-xs text-destructive">{personalBalanceError}</p>
+                <p className="text-xs text-destructive">
+                  {personalBalanceError}
+                </p>
               )}
+              {paybackIssuerState?.creditMaturity &&
+                Number(paybackIssuerState.creditMaturity) * 1000 >
+                  Date.now() && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold">Loan Not Matured</div>
+                      <div>
+                        This issuer's loan is locked until{' '}
+                        <span className="font-bold">
+                          {formatMaturityDate(
+                            paybackIssuerState.creditMaturity,
+                          )}
+                        </span>
+                        . Early payback before maturity will be rejected and
+                        refunded.
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -565,7 +722,8 @@ export function CreditTab({
                 </Label>
                 <InputScan toAddr={issuerAddr} setToAddr={setIssuerAddr} />
                 <p className="text-xs text-muted-foreground">
-                  The Member whose FI account backs this token (defaults to you).
+                  The Member whose FI account backs this token (defaults to
+                  you).
                 </p>
               </div>
             </div>
@@ -618,9 +776,7 @@ export function CreditTab({
           {deployedAddress && (
             <Card>
               <CardContent className="text-center py-5">
-                <div
-                  className="mb-3.5 flex justify-center text-success"
-                >
+                <div className="mb-3.5 flex justify-center text-success">
                   <CheckCircle className="size-9" strokeWidth={1.5} />
                 </div>
                 <div className="text-base font-bold mb-1.5">
@@ -657,7 +813,7 @@ export function CreditTab({
         </TabsContent>
 
         <TabsContent value="debt-need" className="mt-5 space-y-6">
-          <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
+          <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
             <div className="p-4 rounded-xl bg-secondary/40 border">
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Current Debt
@@ -674,18 +830,30 @@ export function CreditTab({
                 {fromNano(fiWalletState?.creditNeed || 0n)} FI
               </div>
             </div>
+            <div className="p-4 rounded-xl bg-secondary/40 border">
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Active Maturity
+              </div>
+              <div className="font-display text-sm font-semibold mt-2 text-foreground">
+                {formatMaturityDate(fiWalletState?.creditMaturity)}
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleSetCreditNeed} className="space-y-3">
+          <form onSubmit={handleSetCreditNeed} className="space-y-4">
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Set Credit Need
+                Set Credit Need & Maturity Lock
               </Label>
               <p className="text-xs text-muted-foreground">
-                Specifies how much credit you can receive in incoming loan transfers.
+                Specifies how much credit you can receive in incoming loan
+                transfers and sets the maturity lock.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Credit Need Amount (FI)
+              </Label>
               <Input
                 type="text"
                 placeholder="1000"
@@ -693,10 +861,74 @@ export function CreditTab({
                 onChange={(e) => setCreditNeedAmount(e.target.value)}
                 disabled={loading}
               />
-              <Button type="submit" variant="secondary" disabled={loading}>
-                Update Need
-              </Button>
             </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Maturity Date & Time
+                </Label>
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() =>
+                      setCreditMaturityDate(getFutureIsoDateString(7))
+                    }
+                  >
+                    +7d
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() =>
+                      setCreditMaturityDate(getFutureIsoDateString(30))
+                    }
+                  >
+                    +30d
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() =>
+                      setCreditMaturityDate(getFutureIsoDateString(90))
+                    }
+                  >
+                    +90d
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() =>
+                      setCreditMaturityDate(getFutureIsoDateString(180))
+                    }
+                  >
+                    +180d
+                  </Button>
+                </div>
+              </div>
+              <Input
+                type="datetime-local"
+                value={creditMaturityDate}
+                onChange={(e) => setCreditMaturityDate(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full"
+              disabled={loading}
+            >
+              Update Credit Need & Maturity
+            </Button>
           </form>
 
           <form onSubmit={handleSetMultiplier} className="space-y-3">

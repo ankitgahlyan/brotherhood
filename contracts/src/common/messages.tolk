@@ -420,6 +420,7 @@ struct (0x00001149) ActSetPersonalJettonMinter {
 struct (0x0000114a) SetCreditNeed {
     queryId: uint64 = 0
     amount: coins
+    maturityDate: uint32 = 0
 }
 
 struct (0x0000114c) SetMultiplier {

@@ -56,4 +56,5 @@ enum Errors {
     CreditNeedExceeded = 760
     AccountInDebt = 761
     HasActiveVotes = 762
+    CreditNotMatured = 763
 }

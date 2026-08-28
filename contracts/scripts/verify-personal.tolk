@@ -67,6 +67,16 @@ fun main() {
     val deployer = testing.treasury("deployer").address;
     val issuerOwner = testing.treasury("issuer").address;
 
+    testing.registerLibrary(build("Dao"));
+    testing.registerLibrary(build("DaoVoter"));
+    testing.registerLibrary(build("Following"));
+    testing.registerLibrary(build("FossFiWallet"));
+    testing.registerLibrary(build("Location"));
+    testing.registerLibrary(build("PersonalMinter"));
+    testing.registerLibrary(build("PersonalWallet"));
+
+    testing.setNow(1_800_000_000);
+
     // 1. fresh jetton minter + an active issuer FI account
     val minter = deployTestMinter(deployer);
     val buyerWallet = mintTo(minter, deployer, deployer, ton("1000"));
@@ -127,6 +137,18 @@ fun main() {
         println("VERIFY_FAIL: trusted minter mismatch");
     }
 
+    // Set issuer's credit need with a future maturity date
+    val setCreditRes = FossFiWallet
+        .fromAddress(issuerWallet)
+        .sendSetCreditNeed(
+            issuerOwner,
+            0,
+            ton("1000"),
+            1_800_000_000 + 86400,
+            { value: ton("0.1") },
+        );
+    setCreditRes.waitForFirstTransaction();
+
     // 3. buy credit end-to-end: the buyer's FI moves to the issuer
     val loan = ton("100");
     val buyerFiBefore = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
@@ -171,7 +193,9 @@ fun main() {
         println("VERIFY_FAIL: personal token mint did not match the loan");
     }
 
-    // 5. payback: the buyer burns their personal tokens and the FI loan returns
+    // 5. payback: advance time past maturity so payback is allowed
+    testing.setNow(1_800_000_000 + 86400 + 10);
+
     val burnBody = AskToBurn {
         queryId: 0,
         jettonAmount: loan,

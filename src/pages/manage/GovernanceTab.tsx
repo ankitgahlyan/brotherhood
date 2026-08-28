@@ -67,7 +67,10 @@ export function GovernanceTab({
     if (!ownerAddress) return;
     const recipientAddr = tryParseAddress(delegateAddr);
     if (!recipientAddr) {
-      setStatus({ type: 'error', message: 'Invalid candidate delegate address' });
+      setStatus({
+        type: 'error',
+        message: 'Invalid candidate delegate address',
+      });
       return;
     }
 
@@ -105,7 +108,10 @@ export function GovernanceTab({
       return;
     }
     if (!proposalDescription.trim()) {
-      setStatus({ type: 'error', message: 'Proposal description/action is required' });
+      setStatus({
+        type: 'error',
+        message: 'Proposal description/action is required',
+      });
       return;
     }
 
@@ -217,9 +223,10 @@ export function GovernanceTab({
               Moral & Regional Governance
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Every Member receives a fixed endowment of 10 Votes to endorse trusted
-              peers in their Country. Accumulating votes elevates an account to Authority.
-              Voting power is moral and equal—never weighted by FI balance or capital.
+              Every Member receives a fixed endowment of 10 Votes to endorse
+              trusted peers in their Country. Accumulating votes elevates an
+              account to Authority. Voting power is moral and equal—never
+              weighted by FI balance or capital.
             </p>
           </div>
 

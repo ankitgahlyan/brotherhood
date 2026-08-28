@@ -812,13 +812,14 @@ fun FossFiWallet.sendSetCreditNeed(
     from: address,
     queryId: uint64,
     amount: coins,
+    maturityDate: uint32,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SetCreditNeed { queryId, amount },
+        body: SetCreditNeed { queryId, amount, maturityDate },
     });
     return net.send(from, genericMsg);
 }

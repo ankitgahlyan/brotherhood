@@ -81,7 +81,8 @@ struct FiWalletStore {
     txnCount: uint8 = 0        // for fixed fees burns to counter minting
     status: uint2 = 0          // for granular control
     isAuthorityAccount: bool = false
-    creditNeed: coins = 0      // todo: fixme: need to set timeout (instant withdraw attack)
+    creditNeed: coins = 0
+    creditMaturity: uint32 = 0
     multiplier: uint16 = 1
     accumulatedFees: coins = 0 // todo: use fixed no of txnCount instead
     debt: coins = 0            // or directly set balance -ve (ton supports this?)

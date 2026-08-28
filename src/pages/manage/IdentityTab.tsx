@@ -11,11 +11,7 @@ import {
 } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
-import {
-  tryParseAddress,
-  WalletRequired,
-  type Network,
-} from './common';
+import { tryParseAddress, WalletRequired, type Network } from './common';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,9 +51,11 @@ export function IdentityTab({
   const [username, setUsername] = useState(
     () => fiWalletState?.profile?.ref?.username || '',
   );
-  const [h3Cell, setH3Cell] = useState(() => fiWalletState?.profile?.ref?.h3Cell || '');
-  const [country, setCountry] = useState(
-    () => String(fiWalletState?.profile?.ref?.country ?? 0),
+  const [h3Cell, setH3Cell] = useState(
+    () => fiWalletState?.profile?.ref?.h3Cell || '',
+  );
+  const [country, setCountry] = useState(() =>
+    String(fiWalletState?.profile?.ref?.country ?? 0),
   );
 
   // Invite states
@@ -226,7 +224,8 @@ export function IdentityTab({
           payload: body,
         },
       ],
-      successMessage: 'Account voluntarily closed. Residual assets forwarded to nominee.',
+      successMessage:
+        'Account voluntarily closed. Residual assets forwarded to nominee.',
       fallbackError: 'Failed to close account',
       onSuccess: () => {
         setCloseConfirmed(false);
@@ -280,7 +279,8 @@ export function IdentityTab({
                 H3 Spatial Cell
               </Label>
               <p className="text-xs text-muted-foreground">
-                Changing your H3 cell informs the Minter to migrate your account to the target Location contract.
+                Changing your H3 cell informs the Minter to migrate your account
+                to the target Location contract.
               </p>
             </div>
             <div className="flex gap-2">
@@ -302,7 +302,8 @@ export function IdentityTab({
                 Country (ISO 3166-1)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Scopes regional governance representation. Requires all 10 endorsement votes to be uncast.
+                Scopes regional governance representation. Requires all 10
+                endorsement votes to be uncast.
               </p>
             </div>
             <div className="flex gap-2">
@@ -324,7 +325,8 @@ export function IdentityTab({
             {(fiWalletState?.votes ?? 0) < 10 && (
               <p className="text-xs text-warning flex items-center gap-1">
                 <AlertTriangle className="size-3.5 shrink-0" />
-                You currently have active cast votes. Revoke votes before changing country.
+                You currently have active cast votes. Revoke votes before
+                changing country.
               </p>
             )}
           </form>
@@ -389,9 +391,9 @@ export function IdentityTab({
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Voluntary closure permanently deactivates your member account. All
-              remaining FI trust supply is burned, social followings are settled, and
-              residual transferable assets (Gold Coins & TON) are forwarded to your
-              designated Nominee (or Treasury).
+              remaining FI trust supply is burned, social followings are
+              settled, and residual transferable assets (Gold Coins & TON) are
+              forwarded to your designated Nominee (or Treasury).
             </p>
 
             <div className="flex items-center gap-2 pt-2">

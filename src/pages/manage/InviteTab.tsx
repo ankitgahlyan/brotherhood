@@ -101,7 +101,8 @@ export function InviteTab({
           disabled={loading}
         />
         <p className="text-xs text-muted-foreground">
-          This will send an invite message and register the member in the on-demand H3 Location contract.
+          This will send an invite message and register the member in the
+          on-demand H3 Location contract.
         </p>
       </div>
       <Button

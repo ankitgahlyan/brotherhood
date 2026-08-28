@@ -66,7 +66,9 @@ export function LotteryTab({
                 <Dices className="size-6" />
               </div>
               <div>
-                <h3 className="font-display text-lg font-bold">BrotherHood Lottery</h3>
+                <h3 className="font-display text-lg font-bold">
+                  BrotherHood Lottery
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Decentralized cryptographic prize pool game
                 </p>
@@ -79,9 +81,10 @@ export function LotteryTab({
           </div>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Accounts pay a 10 FI entry to join the active lottery pool. Once the reveal
-            deadline is reached, a winner is selected cryptographically through on-chain
-            randomness and receives the entire accumulated prize pot.
+            Accounts pay a 10 FI entry to join the active lottery pool. Once the
+            reveal deadline is reached, a winner is selected cryptographically
+            through on-chain randomness and receives the entire accumulated
+            prize pot.
           </p>
 
           <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
@@ -107,7 +110,9 @@ export function LotteryTab({
           <Button
             variant="brand"
             className="w-full h-12 rounded-full font-bold text-sm uppercase tracking-wider"
-            disabled={loading || (fiWalletState?.jettonBalance || 0n) < toNano('10')}
+            disabled={
+              loading || (fiWalletState?.jettonBalance || 0n) < toNano('10')
+            }
             onClick={handleJoinLottery}
           >
             {loading ? (

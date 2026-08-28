@@ -51,13 +51,17 @@ export function WeeklyClaimCard({
   // 1. now > accountInit + ACTIVATION_WAIT (account must be older than 1 week)
   // 2. now < accountInit + MAX_CLAIM_PERIOD (within 2 years from init)
   // 3. now > lastClaim + ACTIVATION_WAIT (at least 1 week since last claim)
-  const isPastActivation = accountInit > 0 && now > accountInit + ACTIVATION_WAIT;
+  const isPastActivation =
+    accountInit > 0 && now > accountInit + ACTIVATION_WAIT;
   const isWithinMaxPeriod =
     accountInit === 0 || now < accountInit + MAX_CLAIM_PERIOD;
   const isCooledDown = lastClaim === 0 || now > lastClaim + ACTIVATION_WAIT;
 
   const isEligible =
-    fiWalletState.active && isPastActivation && isWithinMaxPeriod && isCooledDown;
+    fiWalletState.active &&
+    isPastActivation &&
+    isWithinMaxPeriod &&
+    isCooledDown;
 
   let nextClaimTime = 0;
   if (!isPastActivation && accountInit > 0) {
@@ -112,8 +116,12 @@ export function WeeklyClaimCard({
               <Gift className="size-5" />
             </div>
             <div>
-              <div className="font-display text-base font-bold">Weekly Claim</div>
-              <div className="text-xs text-muted-foreground">11,111 FI recurring grant</div>
+              <div className="font-display text-base font-bold">
+                Weekly Claim
+              </div>
+              <div className="text-xs text-muted-foreground">
+                11,111 FI recurring grant
+              </div>
             </div>
           </div>
           {isEligible ? (
@@ -134,16 +142,16 @@ export function WeeklyClaimCard({
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Members are endowed with 11,111 FI every week for 2 years as trust-based
-          community issuance.
+          Members are endowed with 11,111 FI every week for 2 years as
+          trust-based community issuance.
         </p>
 
         {!isPastActivation && accountInit > 0 && (
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-secondary/50 text-xs text-muted-foreground">
             <AlertCircle className="size-4 shrink-0 text-warning mt-0.5" />
             <span>
-              New accounts must wait 7 days after onboarding before claiming their
-              first weekly grant.
+              New accounts must wait 7 days after onboarding before claiming
+              their first weekly grant.
             </span>
           </div>
         )}

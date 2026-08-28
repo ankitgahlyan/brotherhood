@@ -45,7 +45,6 @@ _Avoid_: Unfriend, remove
 **Settlement** — the required burning of minted FI when either party of an active Following dies/closes. Under the survivor-pays invariant, the surviving counterparty burns 1,000 FI to settle the trust supply (if Follower dies, Followee burns; if Followee dies, Follower burns). Unpaid shortfalls become Debt on the surviving Account and cascade up its Invite Lineage.
 _Avoid_: Liquidation, default, clearing
 
-
 **Lifetime Decay** — a small monthly burn of an Account's FI spread over the expected human lifespan, so minted value converges to zero as a Member ages out. One of the economic counterweights to minting; weekly claims still continue alongside it.
 _Avoid_: Inflation, demurrage (too broad), fees
 

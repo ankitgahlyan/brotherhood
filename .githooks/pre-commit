@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
-bunx acton check
-bunx acton fmt --check
+acton check
+acton fmt --check

@@ -11,11 +11,7 @@ import {
 } from '../../lib/deploy';
 import { getWalletAddress } from '../../lib/ton';
 import { useSendFiTransaction } from '../../lib/useSendFiTransaction';
-import {
-  tryParseAddress,
-  WalletRequired,
-  type Network,
-} from './common';
+import { tryParseAddress, WalletRequired, type Network } from './common';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +51,9 @@ export function SocialTab({
   const [followTarget, setFollowTarget] = useState('');
 
   // Allowance states
-  const [allowanceMode, setAllowanceMode] = useState<'grant' | 'spend'>('grant');
+  const [allowanceMode, setAllowanceMode] = useState<'grant' | 'spend'>(
+    'grant',
+  );
   const [granteeAddr, setGranteeAddr] = useState('');
   const [grantAmount, setGrantAmount] = useState('');
   const [grantorAddr, setGrantorAddr] = useState('');
@@ -95,7 +93,8 @@ export function SocialTab({
           payload: body,
         },
       ],
-      successMessage: 'Follow link initialized! 1,000 FI trust reward minted to followee.',
+      successMessage:
+        'Follow link initialized! 1,000 FI trust reward minted to followee.',
       fallbackError: 'Failed to follow member',
       onSuccess: () => {
         setFollowTarget('');
@@ -127,7 +126,8 @@ export function SocialTab({
           payload: body,
         },
       ],
-      successMessage: 'Unfollow link dispatched! 1,000 FI burned from followee and rent recovered.',
+      successMessage:
+        'Unfollow link dispatched! 1,000 FI burned from followee and rent recovered.',
       fallbackError: 'Failed to unfollow member',
       onSuccess: () => {
         setFollowTarget('');
@@ -182,7 +182,9 @@ export function SocialTab({
       setStatus({ type: 'error', message: 'Invalid friend/grantor address' });
       return;
     }
-    const receiver = tryParseAddress(spendReceiverAddr.trim() || ownerAddress.toString());
+    const receiver = tryParseAddress(
+      spendReceiverAddr.trim() || ownerAddress.toString(),
+    );
     if (!receiver) {
       setStatus({ type: 'error', message: 'Invalid receiver address' });
       return;
@@ -268,10 +270,10 @@ export function SocialTab({
               Directional Trust Economics
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Following another member deploys an on-chain child Following contract
-              and mints <strong>1,000 FI</strong> of trust supply to the Followee.
-              Unfollowing burns the 1,000 FI and destroys the child contract to recover
-              TON storage rent.
+              Following another member deploys an on-chain child Following
+              contract and mints <strong>1,000 FI</strong> of trust supply to
+              the Followee. Unfollowing burns the 1,000 FI and destroys the
+              child contract to recover TON storage rent.
             </p>
           </div>
 

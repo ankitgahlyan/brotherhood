@@ -120,6 +120,7 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         notDeployer.address,
         0,
         creditNeedAmount,
+        1_800_000_000 + 86400,
         { value: ton("0.1") },
     );
     issuerWallet.sendSetMultiplier(

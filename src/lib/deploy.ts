@@ -241,15 +241,10 @@ export function buildTransferBody(params: {
 export function buildInviteBody(params: {
   transferRecipient: Address;
   username?: string;
-  h3Cell:string;
+  h3Cell: string;
   queryId?: bigint;
 }): Cell {
-  const {
-    transferRecipient,
-    username = '',
-    queryId = 0n,
-    h3Cell,
-  } = params;
+  const { transferRecipient, username = '', queryId = 0n, h3Cell } = params;
   return ActInvite.toCell(
     ActInvite.create({
       queryId,
@@ -359,20 +354,14 @@ export function buildUnfollowBody(params: {
   return Unfollow.toCell(Unfollow.create({ queryId, initiator, followee }));
 }
 
-export function buildChangeUsernameBody(params: {
-  newUsername: string;
-}): Cell {
+export function buildChangeUsernameBody(params: { newUsername: string }): Cell {
   const { newUsername } = params;
   return ChangeUsername.toCell(ChangeUsername.create({ newUsername }));
 }
 
-export function buildChangeLocationBody(params: {
-  newH3Cell: string;
-}): Cell {
+export function buildChangeLocationBody(params: { newH3Cell: string }): Cell {
   const { newH3Cell } = params;
-  return ChangeLocation.toCell(
-    ChangeLocation.create({ newH3Cell }),
-  );
+  return ChangeLocation.toCell(ChangeLocation.create({ newH3Cell }));
 }
 
 export function buildChangeCountryBody(params: {
@@ -412,10 +401,17 @@ export function buildRepayDebtBody(params: {
 
 export function buildSetCreditNeedBody(params: {
   amount: bigint;
+  maturityDate?: number | bigint;
   queryId?: bigint;
 }): Cell {
-  const { amount, queryId = 0n } = params;
-  return SetCreditNeed.toCell(SetCreditNeed.create({ queryId, amount }));
+  const { amount, maturityDate = 0n, queryId = 0n } = params;
+  return SetCreditNeed.toCell(
+    SetCreditNeed.create({
+      queryId,
+      amount,
+      maturityDate: BigInt(maturityDate),
+    }),
+  );
 }
 
 export function buildSetMultiplierBody(params: {
@@ -464,4 +460,3 @@ export function buildVoteProposalBody(params: {
     }),
   );
 }
-
