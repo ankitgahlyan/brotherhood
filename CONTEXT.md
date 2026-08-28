@@ -110,6 +110,15 @@ _Avoid_: Quorum, supermajority
 **Authority Action** — a privileged operation an Authority may perform on an ordinary Account: freeze, burn, or close.
 _Avoid_: Admin action, moderation
 
+**Poll** — an on-chain contract deployed per governance proposal, tallying Member votes and forwarding successful proposals to the DAO Proxy upon reaching the supermajority threshold.
+_Avoid_: DAO contract, Proposal contract, ballot
+
+**Voter** — a child contract of a Poll tracking whether a specific Member Account has cast a vote on that Poll and preventing duplicate voting.
+_Avoid_: DaoVoter, Ballot receipt, vote ticket
+
+**DAO Proxy** — the network's canonical governance proxy contract registered in the minter, authenticating and forwarding approved actions from verified Poll contracts to the minter.
+_Avoid_: DAO, governance controller, admin proxy
+
 ### Account lifecycle
 
 **Active** — the operational state of an Account that can take actions.

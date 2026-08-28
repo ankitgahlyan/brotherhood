@@ -434,28 +434,31 @@ export function buildJoinLotteryBody(): Cell {
 }
 
 export function buildSubmitProposalBody(params: {
+  daoProxyAddress: Address;
   targetMsg: Cell;
   queryId?: bigint;
 }): Cell {
-  const { targetMsg, queryId = 0n } = params;
+  const { daoProxyAddress, targetMsg, queryId = 0n } = params;
   return ActSubmitProposal.toCell(
-    ActSubmitProposal.create({ queryId, targetMsg }),
+    ActSubmitProposal.create({ queryId, daoProxyAddress, targetMsg }),
   );
 }
 
 export function buildVoteProposalBody(params: {
-  daoAddress: Address;
+  pollAddress: Address;
   proposalId: number | bigint;
   vote: boolean;
+  oldVote?: boolean | null;
   queryId?: bigint;
 }): Cell {
-  const { daoAddress, proposalId, vote, queryId = 0n } = params;
+  const { pollAddress, proposalId, vote, oldVote = null, queryId = 0n } = params;
   return ActVoteProposal.toCell(
     ActVoteProposal.create({
       queryId,
-      daoAddress,
+      pollAddress,
       proposalId: BigInt(proposalId),
       vote,
+      oldVote,
     }),
   );
 }

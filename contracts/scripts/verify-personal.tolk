@@ -67,8 +67,9 @@ fun main() {
     val deployer = testing.treasury("deployer").address;
     val issuerOwner = testing.treasury("issuer").address;
 
-    testing.registerLibrary(build("Dao"));
-    testing.registerLibrary(build("DaoVoter"));
+    testing.registerLibrary(build("DaoProxy"));
+    testing.registerLibrary(build("Poll"));
+    testing.registerLibrary(build("Voter"));
     testing.registerLibrary(build("Following"));
     testing.registerLibrary(build("FossFiWallet"));
     testing.registerLibrary(build("Location"));

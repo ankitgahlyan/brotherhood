@@ -170,23 +170,20 @@ struct (0x0000100c) ChangeDaoAddress {
 }
 
 struct (0x0000100d) ExecuteDaoProposal {
-    id: uint64
+    queryId: uint64 = 0
+    proposalId: uint64
     proposerOwner: address
-    targetMsg: cell
-}
-
-struct (0x0000100e) RefundDaoProposalFee {
-    id: uint64
-    proposerOwner: address
+    expiresAt: uint32
+    walletLibRef: cell
     targetMsg: cell
 }
 
 struct (0x0000100e) RequestTotalAccounts {
-    queryId: uint64
+    queryId: uint64 = 0
 }
 
 struct (0x0000100f) ResponseTotalAccounts {
-    queryId: uint64
+    queryId: uint64 = 0
     totalAccounts: uint33
 }
 
@@ -334,35 +331,34 @@ struct (0x000010f7) TransferByAuthority {
 
 struct (0x000010fa) ActSubmitProposal {
     queryId: uint64
-    daoAddress: address
+    daoProxyAddress: address
     targetMsg: cell
 }
 
-struct (0x000010fb) SubmitProposal {
-    queryId: uint64
-    proposerOwner: address
-    targetMsg: cell
+struct (0x000010fb) InitPoll {
+    queryId: uint64 = 0
 }
 
 struct (0x000010fc) ActVoteProposal {
     queryId: uint64
-    daoAddress: address
+    pollAddress: address
     proposalId: uint64
     vote: bool
+    oldVote: bool? = null
 }
 
 struct (0x000010fd) VoteProposalChild {
     queryId: uint64
     proposalId: uint64
-    voterOwner: address
     vote: bool
+    voterOwner: address
 }
 
 struct (0x000010fe) VoteProposal {
     queryId: uint64
     proposalId: uint64
     voterOwner: address
-    oldVote: bool?
+    oldVote: bool? = null
     newVote: bool
 }
 

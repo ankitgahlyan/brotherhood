@@ -416,7 +416,7 @@ fun FossFiWallet.sendActSubmitProposal(
     self,
     from: address,
     queryId: uint64,
-    daoAddress: address,
+    daoProxyAddress: address,
     targetMsg: cell,
     config: SendParams = {},
 ): SendResultList {
@@ -424,7 +424,7 @@ fun FossFiWallet.sendActSubmitProposal(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActSubmitProposal { queryId, daoAddress, targetMsg },
+        body: ActSubmitProposal { queryId, daoProxyAddress, targetMsg },
     });
     return net.send(from, genericMsg);
 }
@@ -433,16 +433,17 @@ fun FossFiWallet.sendActVoteProposal(
     self,
     from: address,
     queryId: uint64,
-    daoAddress: address,
+    pollAddress: address,
     proposalId: uint64,
     vote: bool,
+    oldVote: bool?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActVoteProposal { queryId, daoAddress, proposalId, vote },
+        body: ActVoteProposal { queryId, pollAddress, proposalId, vote, oldVote },
     });
     return net.send(from, genericMsg);
 }

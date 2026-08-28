@@ -1,7 +1,7 @@
 import "@stdlib/tvm-lowlevel"
 
-import "@gen/DaoVoter.code"
 import "@gen/Following.code"
+import "@gen/Poll.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -795,18 +795,25 @@ fun onInternalMessage(in: InMessage): void {
 
             store.jettonBalance -= proposalFee;
 
-            val forwardSubmitMsg = createMessage({
+            val expiresAt = blockchain.now() + 604800;
+            val pollDeploy = calcDeployPoll(
+                msg.queryId,
+                addrs.owner,
+                msg.daoProxyAddress,
+                trustedAddrs.minterAddr,
+                contract.getCode(),
+                msg.targetMsg,
+                expiresAt,
+                pollCompiledCodeLibraryRef(),
+            );
+
+            val deployPollMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 value: 0,
-                dest: msg.daoAddress,
-                body: SubmitProposal {
-                    queryId: msg.queryId,
-                    proposerOwner: addrs.owner,
-                    targetMsg: msg.targetMsg,
-                },
+                dest: pollDeploy,
+                body: InitPoll { queryId: msg.queryId },
             });
-            // SAFETY: forward remaining balance to dao proposal
-            forwardSubmitMsg.send(
+            deployPollMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
@@ -815,21 +822,16 @@ fun onInternalMessage(in: InMessage): void {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
             assert (store.active) throw Errors.AccountInactive;
 
-            val voterChild = calcDeployDaoVoter(
-                addrs.owner,
-                msg.daoAddress,
-                daoVoterCompiledCodeLibraryRef(),
-            );
-
             val forwardVoteMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
-                dest: voterChild,
+                dest: msg.pollAddress,
                 value: 0,
-                body: VoteProposalChild {
+                body: VoteProposal {
                     queryId: msg.queryId,
                     proposalId: msg.proposalId,
                     voterOwner: addrs.owner,
-                    vote: msg.vote,
+                    oldVote: msg.oldVote,
+                    newVote: msg.vote,
                 },
             });
             forwardVoteMsg.send(

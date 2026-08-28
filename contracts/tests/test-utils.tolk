@@ -168,8 +168,9 @@ fun deployWalletFromStorage(
 }
 
 fun registerAllTestLibraries(): void {
-    testing.registerLibrary(build("Dao"));
-    testing.registerLibrary(build("DaoVoter"));
+    testing.registerLibrary(build("DaoProxy"));
+    testing.registerLibrary(build("Poll"));
+    testing.registerLibrary(build("Voter"));
     testing.registerLibrary(build("Following"));
     testing.registerLibrary(build("FossFiWallet"));
     testing.registerLibrary(build("Location"));

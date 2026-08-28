@@ -1,37 +1,48 @@
-struct Proposal {
-    id: uint64
-    proposerOwner: address
-    targetMsg: cell
-    yesVotes: uint33 = 0
-    noVotes: uint33 = 0
-    expiresAt: uint32 = 0
-}
-
-struct DaoStore {
-    totalAccounts: uint33 = 0
+struct DaoProxyStore {
     fiAddress: address
-    proposalCount: uint64 = 0
-    proposals: map<uint64, Proposal> = []
 }
 
-fun DaoStore.load(): DaoStore {
-    return DaoStore.fromCell(contract.getData());
+fun DaoProxyStore.load(): DaoProxyStore {
+    return DaoProxyStore.fromCell(contract.getData());
 }
 
-fun DaoStore.save(self): void {
+fun DaoProxyStore.save(self): void {
     contract.setData(self.toCell());
 }
 
-struct DaoVoterStore {
+struct PollStore {
+    proposalId: uint64
+    proposerOwner: address
+    daoProxyAddress: address
+    fiAddress: address
+    walletLibRef: cell
+    targetMsg: cell
+    yesVotes: uint33 = 0
+    noVotes: uint33 = 0
+    totalAccounts: uint33 = 0
+    expiresAt: uint32 = 0
+    executed: bool = false
+}
+
+fun PollStore.load(): PollStore {
+    return PollStore.fromCell(contract.getData());
+}
+
+fun PollStore.save(self): void {
+    contract.setData(self.toCell());
+}
+
+struct VoterStore {
     voterOwner: address
-    daoAddress: address
-    votes: map<uint64, bool> = []
+    pollAddress: address
+    voted: bool = false
+    vote: bool = false
 }
 
-fun DaoVoterStore.load(): DaoVoterStore {
-    return DaoVoterStore.fromCell(contract.getData());
+fun VoterStore.load(): VoterStore {
+    return VoterStore.fromCell(contract.getData());
 }
 
-fun DaoVoterStore.save(self): void {
+fun VoterStore.save(self): void {
     contract.setData(self.toCell());
 }

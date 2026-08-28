@@ -49,10 +49,11 @@ export function GovernanceTab({
   const [delegateAddr, setDelegateAddr] = useState('');
 
   // DAO Submit states
+  const [daoProxyAddr, setDaoProxyAddr] = useState('');
   const [proposalDescription, setProposalDescription] = useState('');
 
   // DAO Vote states
-  const [voteDaoAddr, setVoteDaoAddr] = useState('');
+  const [votePollAddr, setVotePollAddr] = useState('');
   const [proposalId, setProposalId] = useState('');
 
   const { sendTransaction, loading, status, setStatus } = useSendFiTransaction(
@@ -101,6 +102,15 @@ export function GovernanceTab({
     e.preventDefault();
     if (!ownerAddress) return;
 
+    const parsedDaoProxy = tryParseAddress(daoProxyAddr);
+    if (!parsedDaoProxy) {
+      setStatus({
+        type: 'error',
+        message: 'Invalid DAO Proxy contract address',
+      });
+      return;
+    }
+
     if (!proposalDescription.trim()) {
       setStatus({
         type: 'error',
@@ -111,6 +121,7 @@ export function GovernanceTab({
 
     const targetPayload = comment(proposalDescription.trim());
     const body = buildSubmitProposalBody({
+      daoProxyAddress: parsedDaoProxy,
       targetMsg: targetPayload,
     });
     const walletAddr = await getWalletAddress(ownerAddress);
@@ -119,12 +130,12 @@ export function GovernanceTab({
       messages: [
         {
           address: walletAddr.toString(),
-          amount: toNano('0.2'),
+          amount: toNano('0.5'),
           payload: body,
         },
       ],
       successMessage:
-        'DAO proposal submitted! 1,000 FI proposal fee paid from balance.',
+        'DAO Poll deployed! 1,000 FI proposal fee paid from balance.',
       fallbackError: 'Failed to submit DAO proposal',
       onSuccess: () => {
         setProposalDescription('');
@@ -136,9 +147,9 @@ export function GovernanceTab({
   async function handleVoteProposal(voteYes: boolean) {
     if (!ownerAddress) return;
 
-    const parsedDao = tryParseAddress(voteDaoAddr);
-    if (!parsedDao) {
-      setStatus({ type: 'error', message: 'Invalid DAO contract address' });
+    const parsedPoll = tryParseAddress(votePollAddr);
+    if (!parsedPoll) {
+      setStatus({ type: 'error', message: 'Invalid Poll contract address' });
       return;
     }
     const propIdNum = parseInt(proposalId.trim(), 10);
@@ -148,7 +159,7 @@ export function GovernanceTab({
     }
 
     const body = buildVoteProposalBody({
-      daoAddress: parsedDao,
+      pollAddress: parsedPoll,
       proposalId: propIdNum,
       vote: voteYes,
     });
@@ -158,7 +169,7 @@ export function GovernanceTab({
       messages: [
         {
           address: walletAddr.toString(),
-          amount: toNano('0.2'),
+          amount: toNano('0.3'),
           payload: body,
         },
       ],
@@ -285,6 +296,13 @@ export function GovernanceTab({
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                DAO Proxy Contract Address
+              </Label>
+              <InputScan toAddr={daoProxyAddr} setToAddr={setDaoProxyAddr} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Proposal Description / Action Payload
               </Label>
               <Textarea
@@ -320,9 +338,9 @@ export function GovernanceTab({
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                DAO Contract Address
+                Poll Contract Address
               </Label>
-              <InputScan toAddr={voteDaoAddr} setToAddr={setVoteDaoAddr} />
+              <InputScan toAddr={votePollAddr} setToAddr={setVotePollAddr} />
             </div>
 
             <div className="space-y-1.5">

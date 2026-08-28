@@ -1,5 +1,5 @@
 // AUTO-GENERATED, do not edit
-// It's a TypeScript wrapper for a DaoVoter contract in Tolk.
+// It's a TypeScript wrapper for a Voter contract in Tolk.
 /* eslint-disable */
 
 import * as c from '@ton/core';
@@ -158,16 +158,16 @@ export const ReturnExcessesBack = {
  > struct (0x000010fd) VoteProposalChild {
  >     queryId: uint64
  >     proposalId: uint64
- >     voterOwner: address
  >     vote: bool
+ >     voterOwner: address
  > }
  */
 export interface VoteProposalChild {
     readonly $: 'VoteProposalChild'
     queryId: uint64
     proposalId: uint64
-    voterOwner: c.Address
     vote: boolean
+    voterOwner: c.Address
 }
 
 export const VoteProposalChild = {
@@ -176,8 +176,8 @@ export const VoteProposalChild = {
     create(args: {
         queryId: uint64
         proposalId: uint64
-        voterOwner: c.Address
         vote: boolean
+        voterOwner: c.Address
     }): VoteProposalChild {
         return {
             $: 'VoteProposalChild',
@@ -190,78 +190,19 @@ export const VoteProposalChild = {
             $: 'VoteProposalChild',
             queryId: s.loadUintBig(64),
             proposalId: s.loadUintBig(64),
-            voterOwner: s.loadAddress(),
             vote: s.loadBoolean(),
+            voterOwner: s.loadAddress(),
         }
     },
     store(self: VoteProposalChild, b: c.Builder): void {
         b.storeUint(0x000010fd, 32);
         b.storeUint(self.queryId, 64);
         b.storeUint(self.proposalId, 64);
-        b.storeAddress(self.voterOwner);
         b.storeBit(self.vote);
+        b.storeAddress(self.voterOwner);
     },
     toCell(self: VoteProposalChild): c.Cell {
         return makeCellFrom<VoteProposalChild>(self, VoteProposalChild.store);
-    }
-}
-
-/**
- > struct (0x000010fe) VoteProposal {
- >     queryId: uint64
- >     proposalId: uint64
- >     voterOwner: address
- >     oldVote: bool?
- >     newVote: bool
- > }
- */
-export interface VoteProposal {
-    readonly $: 'VoteProposal'
-    queryId: uint64
-    proposalId: uint64
-    voterOwner: c.Address
-    oldVote: boolean | null
-    newVote: boolean
-}
-
-export const VoteProposal = {
-    PREFIX: 0x000010fe,
-
-    create(args: {
-        queryId: uint64
-        proposalId: uint64
-        voterOwner: c.Address
-        oldVote: boolean | null
-        newVote: boolean
-    }): VoteProposal {
-        return {
-            $: 'VoteProposal',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): VoteProposal {
-        loadAndCheckPrefix32(s, 0x000010fe, 'VoteProposal');
-        return {
-            $: 'VoteProposal',
-            queryId: s.loadUintBig(64),
-            proposalId: s.loadUintBig(64),
-            voterOwner: s.loadAddress(),
-            oldVote: s.loadBoolean() ? s.loadBoolean() : null,
-            newVote: s.loadBoolean(),
-        }
-    },
-    store(self: VoteProposal, b: c.Builder): void {
-        b.storeUint(0x000010fe, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeUint(self.proposalId, 64);
-        b.storeAddress(self.voterOwner);
-        storeTolkNullable<boolean>(self.oldVote, b,
-            (v,b) => b.storeBit(v)
-        );
-        b.storeBit(self.newVote);
-    },
-    toCell(self: VoteProposal): c.Cell {
-        return makeCellFrom<VoteProposal>(self, VoteProposal.store);
     }
 }
 
@@ -308,50 +249,57 @@ export const CleanupProposalVotes = {
 }
 
 /**
- > struct DaoVoterStore {
+ > struct VoterStore {
  >     voterOwner: address
- >     daoAddress: address
- >     votes: map<uint64, bool>
+ >     pollAddress: address
+ >     voted: bool
+ >     vote: bool
  > }
  */
-export interface DaoVoterStore {
-    readonly $: 'DaoVoterStore'
+export interface VoterStore {
+    readonly $: 'VoterStore'
     voterOwner: c.Address
-    daoAddress: c.Address
-    votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
+    pollAddress: c.Address
+    voted: boolean /* = false */
+    vote: boolean /* = false */
 }
 
-export const DaoVoterStore = {
+export const VoterStore = {
     create(args: {
         voterOwner: c.Address
-        daoAddress: c.Address
-        votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
-    }): DaoVoterStore {
+        pollAddress: c.Address
+        voted?: boolean /* = false */
+        vote?: boolean /* = false */
+    }): VoterStore {
         return {
-            $: 'DaoVoterStore',
+            $: 'VoterStore',
+            voted: false,
+            vote: false,
             ...args
         }
     },
-    fromSlice(s: c.Slice): DaoVoterStore {
+    fromSlice(s: c.Slice): VoterStore {
         return {
-            $: 'DaoVoterStore',
+            $: 'VoterStore',
             voterOwner: s.loadAddress(),
-            daoAddress: s.loadAddress(),
-            votes: c.Dictionary.load<uint64, boolean>(c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool(), s),
+            pollAddress: s.loadAddress(),
+            voted: s.loadBoolean(),
+            vote: s.loadBoolean(),
         }
     },
-    store(self: DaoVoterStore, b: c.Builder): void {
+    store(self: VoterStore, b: c.Builder): void {
         b.storeAddress(self.voterOwner);
-        b.storeAddress(self.daoAddress);
-        b.storeDict<uint64, boolean>(self.votes, c.Dictionary.Keys.BigUint(64), c.Dictionary.Values.Bool());
+        b.storeAddress(self.pollAddress);
+        b.storeBit(self.voted);
+        b.storeBit(self.vote);
     },
-    toCell(self: DaoVoterStore): c.Cell {
-        return makeCellFrom<DaoVoterStore>(self, DaoVoterStore.store);
+    toCell(self: VoterStore): c.Cell {
+        return makeCellFrom<VoterStore>(self, VoterStore.store);
     }
 }
 
 // ————————————————————————————————————————————
-//    class DaoVoter
+//    class Voter
 //
 
 interface ExtraSendOptions {
@@ -388,8 +336,8 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
     return new c.Address(options.workchain ?? 0, addrHash);
 }
 
-export class DaoVoter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBAwEA4gABFP8A9KQT9LzyyAsBAcbT+JHyQCDtRND6SPpI9AUD1ywgAACH7OMCMWwS1ywgAACH/DGONDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wDgMIQPAccA8vQCANo0A9M/0z/6SNcKAFMUxwXy4rxTJYBA9A5voW0BnDDSANFTAbqT8sL14JEx4iHIygBUIEiAQPRDBcj6UlJw+lIV9ADJ7VTIz4UIFvpSgRD+zwuOEss/yz8T+lIhbpMxz4GUz4PKAOLKAMmAQPsA');
+export class Voter implements c.Contract {
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEAwgABFP8A9KQT9LzyyAsBAgFiAgMBzND4kfJAIO1E0PpI+kjSANcKAATXLCAAAIfsjjQ1+JIixwXy4rwE038x0gD6SDAjxwXy4rwElVEjusMAkjJw4pPywvXgyPpS+lLPg8oAye1U4DRbAdcsIAAAh/wx4wIwhA8BxwDy9AQAHaDEs9qJofSR9JGkAaQBowBoMfiSIccF8uK8yM+FCPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAKD7AA==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
@@ -405,27 +353,28 @@ export class DaoVoter implements c.Contract {
     }
 
     static fromAddress(address: c.Address) {
-        return new DaoVoter(address);
+        return new Voter(address);
     }
 
     static fromStorage(emptyStorage: {
         voterOwner: c.Address
-        daoAddress: c.Address
-        votes: c.Dictionary<uint64, boolean> /* = [] as map<uint64, bool> */
+        pollAddress: c.Address
+        voted?: boolean /* = false */
+        vote?: boolean /* = false */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
-            code: deployedOptions?.overrideContractCode ?? DaoVoter.CodeCell,
-            data: DaoVoterStore.toCell(DaoVoterStore.create(emptyStorage)),
+            code: deployedOptions?.overrideContractCode ?? Voter.CodeCell,
+            data: VoterStore.toCell(VoterStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
-        return new DaoVoter(address, initialState);
+        return new Voter(address, initialState);
     }
 
     static createCellOfVoteProposalChild(body: {
         queryId: uint64
         proposalId: uint64
-        voterOwner: c.Address
         vote: boolean
+        voterOwner: c.Address
     }) {
         return VoteProposalChild.toCell(VoteProposalChild.create(body));
     }
@@ -448,8 +397,8 @@ export class DaoVoter implements c.Contract {
     async sendVoteProposalChild(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         proposalId: uint64
-        voterOwner: c.Address
         vote: boolean
+        voterOwner: c.Address
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -466,6 +415,17 @@ export class DaoVoter implements c.Contract {
             value: msgValue,
             body: CleanupProposalVotes.toCell(CleanupProposalVotes.create(body)),
             ...extraOptions
+        });
+    }
+
+    async getVoterData(provider: ContractProvider): Promise<VoterStore> {
+        const r = StackReader.fromGetMethod(4, await provider.get('get_voter_data', []));
+        return ({
+            $: 'VoterStore',
+            voterOwner: r.readSlice().loadAddress(),
+            pollAddress: r.readSlice().loadAddress(),
+            voted: r.readBoolean(),
+            vote: r.readBoolean(),
         });
     }
 }

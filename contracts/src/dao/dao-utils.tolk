@@ -1,22 +1,49 @@
 import "@contracts/dao/storage"
 
-fun calcDeployDaoVoter(
-    voterOwner: address,
-    daoAddress: address,
-    daoVoterCode: cell,
+fun calcDeployDaoProxy(
+    fiAddress: address,
+    daoProxyCode: cell,
 ): AutoDeployAddress {
-    val store: DaoVoterStore = {
-        voterOwner,
-        daoAddress,
-        votes: [],
-    };
-    return { stateInit: { code: daoVoterCode, data: store.toCell() }, toShard: null };
+    val store: DaoProxyStore = { fiAddress };
+    return { stateInit: { code: daoProxyCode, data: store.toCell() }, toShard: null };
 }
 
-fun calcDeployDao(
+fun calcDeployPoll(
+    proposalId: uint64,
+    proposerOwner: address,
+    daoProxyAddress: address,
     fiAddress: address,
-    daoCode: cell,
+    walletLibRef: cell,
+    targetMsg: cell,
+    expiresAt: uint32,
+    pollCode: cell,
 ): AutoDeployAddress {
-    val store: DaoStore = { fiAddress };
-    return { stateInit: { code: daoCode, data: store.toCell() }, toShard: null };
+    val store: PollStore = {
+        proposalId,
+        proposerOwner,
+        daoProxyAddress,
+        fiAddress,
+        walletLibRef,
+        targetMsg,
+        yesVotes: 0,
+        noVotes: 0,
+        totalAccounts: 0,
+        expiresAt,
+        executed: false,
+    };
+    return { stateInit: { code: pollCode, data: store.toCell() }, toShard: null };
+}
+
+fun calcDeployVoter(
+    voterOwner: address,
+    pollAddress: address,
+    voterCode: cell,
+): AutoDeployAddress {
+    val store: VoterStore = {
+        voterOwner,
+        pollAddress,
+        voted: false,
+        vote: false,
+    };
+    return { stateInit: { code: voterCode, data: store.toCell() }, toShard: null };
 }
