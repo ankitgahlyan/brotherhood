@@ -96,6 +96,7 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
         1,
         setup.daoProxy.address,
         targetMsg,
+        setup.pollCodeLibRef,
         { value: ton("0.5") },
     );
     expect(res).toHaveAllSuccessfulTxs();
@@ -109,7 +110,6 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
         member1.address,
         setup.daoProxy.address,
         setup.minter.address,
-        setup.walletLibRef,
         targetMsg,
         expiresAt,
         setup.pollCodeLibRef,
@@ -146,6 +146,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         setup.daoProxy.address,
         targetMsg1,
+        setup.pollCodeLibRef,
         { value: ton("0.5") },
     );
     expect(submitRes).toHaveAllSuccessfulTxs();
@@ -156,7 +157,6 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         member1.address,
         setup.daoProxy.address,
         setup.minter.address,
-        setup.walletLibRef,
         targetMsg1,
         expiresAt,
         setup.pollCodeLibRef,
@@ -252,6 +252,7 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         300,
         setup.daoProxy.address,
         targetMsg,
+        setup.pollCodeLibRef,
         { value: ton("0.5") },
     );
 
@@ -261,7 +262,6 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         member1.address,
         setup.daoProxy.address,
         setup.minter.address,
-        setup.walletLibRef,
         targetMsg,
         expiresAt,
         setup.pollCodeLibRef,

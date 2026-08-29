@@ -1,3 +1,4 @@
+import "@gen/FossFiWallet.code"
 import "@gen/Voter.code"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
@@ -40,6 +41,7 @@ fun onInternalMessage(in: InMessage): void {
             reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
         }
 
+        // lazy elections - convince voters to pass law
         ResponseTotalAccounts => {
             assert (in.senderAddress == store.fiAddress) throw Errors.IncorrectSender;
             store.totalAccounts = msg.totalAccounts;
@@ -50,7 +52,7 @@ fun onInternalMessage(in: InMessage): void {
             val expectedWallet = calcDeployFiWallet(
                 msg.voterOwner,
                 store.fiAddress,
-                store.walletLibRef,
+                fossFiWalletCompiledCodeLibraryRef(),
             ).calculateAddress();
             assert (in.senderAddress == expectedWallet) throw Errors.IncorrectSender;
 
@@ -107,20 +109,33 @@ fun onInternalMessage(in: InMessage): void {
                         proposalId: store.proposalId,
                         proposerOwner: store.proposerOwner,
                         expiresAt: store.expiresAt,
-                        walletLibRef: store.walletLibRef,
+                        walletLibRef: fossFiWalletCompiledCodeLibraryRef(),
                         targetMsg: store.targetMsg,
                     },
                 });
-                execMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+                // safety:
+                execMsg.send(
+                    SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL |
+                    SEND_MODE_DESTROY,
+                );
             }
 
             store.save();
         }
 
         CleanupProposalVotes => {
-            if (blockchain.now() >= store.expiresAt && !store.executed) {
-                // Poll expired without passing
-            }
+            assert (in.senderAddress == store.proposerOwner) throw Errors.IncorrectSender;
+
+            val excessesMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: store.proposerOwner,
+                body: ReturnExcessesBack { queryId: msg.queryId },
+            });
+            // safety:
+            excessesMsg.send(
+                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY,
+            );
         }
 
         TopUpTons => {

@@ -418,13 +418,14 @@ fun FossFiWallet.sendActSubmitProposal(
     queryId: uint64,
     daoProxyAddress: address,
     targetMsg: cell,
+    pollCode: cell,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActSubmitProposal { queryId, daoProxyAddress, targetMsg },
+        body: ActSubmitProposal { queryId, daoProxyAddress, targetMsg, pollCode },
     });
     return net.send(from, genericMsg);
 }

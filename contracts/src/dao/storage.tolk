@@ -15,7 +15,6 @@ struct PollStore {
     proposerOwner: address
     daoProxyAddress: address
     fiAddress: address
-    walletLibRef: cell
     targetMsg: cell
     yesVotes: uint33 = 0
     noVotes: uint33 = 0

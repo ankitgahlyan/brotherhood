@@ -22,7 +22,6 @@ fun onInternalMessage(in: InMessage): void {
     match (msg) {
         VoteProposalChild => {
             assert (in.senderAddress == store.pollAddress) throw Errors.IncorrectSender;
-            assert (msg.voterOwner == store.voterOwner) throw Errors.IncorrectSender;
 
             if (store.voted && store.vote == msg.vote) {
                 throw Errors.DuplicateVote;
@@ -35,6 +34,7 @@ fun onInternalMessage(in: InMessage): void {
 
         CleanupProposalVotes => {
             assert (in.senderAddress == store.voterOwner) throw Errors.IncorrectSender;
+            // todo: release some fi funds to encourage housekeeping
             destroyContract(store.voterOwner);
         }
 

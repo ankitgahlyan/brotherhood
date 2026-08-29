@@ -20,7 +20,6 @@ depends = [
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
-    { name = "Poll", kind = "library_ref", function = "pollCompiledCodeLibraryRef" },
     { name = "Following", kind = "library_ref", function = "followingCompiledCodeLibraryRef" },
     { name = "PersonalMinter", kind = "library_ref", function = "personalMinterCompiledCodeLibraryRef" },
 ]

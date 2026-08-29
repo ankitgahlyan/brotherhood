@@ -33,7 +33,6 @@ fun onInternalMessage(in: InMessage): void {
                 msg.proposerOwner,
                 contract.getAddress(),
                 store.fiAddress,
-                msg.walletLibRef,
                 msg.targetMsg,
                 msg.expiresAt,
                 pollCompiledCodeLibraryRef(),

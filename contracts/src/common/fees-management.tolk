@@ -17,7 +17,7 @@ const STORAGE_SIZE_INIT_STATE_WALLET_CELLS = 112 // measured init = 110, rounded
 const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 674 // NotifyMinter body, measured in bench-fees.test.tolk
 const MESSAGE_SIZE_BURN_NOTIFICATION_CELLS = 1 // body always in ref
 
-const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // 5 years
+const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // todo: 5 years
 
 // Gas costs
 // these constants are used to estimate gas fee (how much we should remain on balance for a swap to succeed);

@@ -1,7 +1,6 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/Following.code"
-import "@gen/Poll.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -801,20 +800,19 @@ fun onInternalMessage(in: InMessage): void {
                 addrs.owner,
                 msg.daoProxyAddress,
                 trustedAddrs.minterAddr,
-                contract.getCode(),
                 msg.targetMsg,
                 expiresAt,
-                pollCompiledCodeLibraryRef(),
+                msg.pollCode, // todo: can v supply libRef in msg?
             );
 
             val deployPollMsg = createMessage({
-                bounce: BounceMode.NoBounce,
+                bounce: BounceMode.Only256BitsOfBody,
                 value: 0,
                 dest: pollDeploy,
                 body: InitPoll { queryId: msg.queryId },
             });
             deployPollMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 

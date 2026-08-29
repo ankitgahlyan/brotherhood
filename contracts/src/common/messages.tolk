@@ -333,6 +333,7 @@ struct (0x000010fa) ActSubmitProposal {
     queryId: uint64
     daoProxyAddress: address
     targetMsg: cell
+    pollCode: cell
 }
 
 struct (0x000010fb) InitPoll {

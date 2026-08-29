@@ -74,7 +74,7 @@ struct ProfileInfo {
 struct FiWalletStore {
     // todo: nft like store migration after activate/upgrade/ID acc also code upgrade & reverese/killSwitch for normal jettons coz of  
     jettonBalance: coins = 0
-    goldCoins: uint32 = 1             // todo: implement: store of value, transferrable
+    goldCoins: uint32 = 1             // store of value, transferrable, fixed amount per h3?
     txnCount: uint8 = 0               // for fixed fees burns to counter minting
     status: uint2 = 0                 // for granular control
     isAuthorityAccount: bool = false
