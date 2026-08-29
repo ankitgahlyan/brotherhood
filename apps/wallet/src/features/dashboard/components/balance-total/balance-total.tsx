@@ -65,13 +65,13 @@ export const BalanceTotal: React.FC = () => {
         <section className="flex flex-col items-center pt-6 pb-6">
             {ready ? (
                 <div className="font-display font-bold tabular-nums leading-none tracking-[-2%]">
-                    <span className="text-5xl text-gray-400 mr-0.5">$</span>
-                    <span className="text-5xl text-gray-900">{intPart}</span>
-                    <span className="text-5xl text-gray-400">.</span>
-                    <span className="text-3xl text-gray-400">{fracPart}</span>
+                    <span className="text-5xl text-muted-foreground mr-0.5">$</span>
+                    <span className="text-5xl text-foreground">{intPart}</span>
+                    <span className="text-5xl text-muted-foreground">.</span>
+                    <span className="text-3xl text-muted-foreground">{fracPart}</span>
                 </div>
             ) : (
-                <div className="h-12 w-56 rounded-lg bg-gray-100 animate-pulse" />
+                <div className="h-12 w-56 rounded-lg bg-muted animate-pulse" />
             )}
 
             {address ? (
@@ -84,11 +84,11 @@ export const BalanceTotal: React.FC = () => {
                     <span className="w-4 h-4 rounded-full overflow-hidden inline-block flex-shrink-0">
                         <img src="/ton.svg" alt="" className="w-full h-full" />
                     </span>
-                    <span className="text-xs font-medium text-gray-500">{shortenAddress(address, 4)}</span>
-                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs font-medium text-muted-foreground">{shortenAddress(address, 4)}</span>
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
             ) : (
-                <div className="mt-3 h-4 w-32 rounded-full bg-gray-100 animate-pulse" />
+                <div className="mt-3 h-4 w-32 rounded-full bg-muted animate-pulse" />
             )}
         </section>
     );

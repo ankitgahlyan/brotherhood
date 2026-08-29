@@ -55,7 +55,7 @@ export const BrotherhoodScreen: React.FC = () => {
     const [invitee, setInvitee] = useState('');
     const [inviteUsername, setInviteUsername] = useState('');
     const [inviteCity, setInviteCity] = useState('');
-    const [inviteCityLetter, setInviteCityLetter] = useState(0);
+    const [inviteCityLetter, _setInviteCityLetter] = useState(0);
     const [targetAddress, setTargetAddress] = useState('');
     const [isUnvote, setIsUnvote] = useState(false);
     const [grantee, setGrantee] = useState('');
@@ -64,7 +64,7 @@ export const BrotherhoodScreen: React.FC = () => {
     const [goldAmount, setGoldAmount] = useState(1);
     const [profileUsername, setProfileUsername] = useState('');
     const [profileCity, setProfileCity] = useState('');
-    const [profileCityLetter, setProfileCityLetter] = useState(0);
+    const [profileCityLetter, _setProfileCityLetter] = useState(0);
     const [authTarget, setAuthTarget] = useState('');
     const [authStatus, setAuthStatus] = useState(0);
 
@@ -121,7 +121,7 @@ export const BrotherhoodScreen: React.FC = () => {
         <NewLayout header={<ScreenHeader title="BrotherHood (FossFi)" onBack={() => navigate('/wallet')} />}>
             <div className="space-y-4">
                 {/* Navigation Tabs */}
-                <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
                     {(
                         [
                             'account',
@@ -140,8 +140,10 @@ export const BrotherhoodScreen: React.FC = () => {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-2.5 py-1.5 rounded-md capitalize transition-colors ${
-                                activeTab === tab ? 'bg-white shadow text-black' : 'text-gray-600 hover:text-black'
+                            className={`px-2.5 py-1.5 rounded-lg capitalize transition-colors ${
+                                activeTab === tab
+                                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                             }`}
                             data-testid={`brotherhood-tab-${tab}`}
                         >
@@ -152,49 +154,49 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Account Dashboard */}
                 {activeTab === 'account' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-2">Member Account Details</h3>
                         {account.isLoading ? (
-                            <p className="text-gray-500">Loading on-chain account state…</p>
+                            <p className="text-muted-foreground">Loading on-chain account state…</p>
                         ) : account.data ? (
                             <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Username</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Username</span>
                                     <span className="font-medium">{account.data.username || 'Not set'}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">City</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">City</span>
                                     <span className="font-medium">{account.data.city || 'Not set'}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">FI Balance</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">FI Balance</span>
                                     <span className="font-medium">{(Number(account.data.jettonBalance) / 1e9).toFixed(4)} FI</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Gold Coins</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Gold Coins</span>
                                     <span className="font-medium">{account.data.goldCoins}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Received Votes</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Received Votes</span>
                                     <span className="font-medium">{account.data.receivedVotes.toString()}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Connections</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Connections</span>
                                     <span className="font-medium">{account.data.connections}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Status</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Status</span>
                                     <span className="font-medium">
                                         {account.data.active ? 'Active' : 'Inactive'} ({account.data.status})
                                     </span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Authority Account</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Authority Account</span>
                                     <span className="font-medium">{account.data.isAuthorityAccount ? 'Yes' : 'No'}</span>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-gray-500">No FossFi account initialized for this wallet address.</p>
+                            <p className="text-muted-foreground">No FossFi account initialized for this wallet address.</p>
                         )}
                         <Button variant="secondary" size="sm" onClick={() => account.refetch()} fullWidth>
                             Refresh Account Data
@@ -204,10 +206,10 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Transfer FI */}
                 {activeTab === 'transfer' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Transfer FI Tokens</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Recipient Address</label>
+                            <label className="text-xs font-medium text-muted-foreground">Recipient Address</label>
                             <InputScan
                                 value={recipient}
                                 onChange={setRecipient}
@@ -216,13 +218,13 @@ export const BrotherhoodScreen: React.FC = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Amount (FI)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Amount (FI)</label>
                             <input
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="0.0"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-transfer-amount"
                             />
                         </div>
@@ -240,16 +242,16 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Burn FI */}
                 {activeTab === 'burn' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Burn FI Tokens</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Amount to Burn (FI)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Amount to Burn (FI)</label>
                             <input
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="0.0"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-burn-amount"
                             />
                         </div>
@@ -267,9 +269,9 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Weekly Claim */}
                 {activeTab === 'claim' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm text-center">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm text-center">
                         <h3 className="font-semibold text-base mb-1">Claim Weekly Grant (UBI)</h3>
-                        <p className="text-xs text-gray-500 mb-3">
+                        <p className="text-xs text-muted-foreground mb-3">
                             Members are entitled to claim their weekly FI grant token allocation.
                         </p>
                         <Button
@@ -286,10 +288,10 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Invite Member */}
                 {activeTab === 'invite' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Invite New Member</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Invitee Wallet Address</label>
+                            <label className="text-xs font-medium text-muted-foreground">Invitee Wallet Address</label>
                             <InputScan
                                 value={invitee}
                                 onChange={setInvitee}
@@ -298,24 +300,24 @@ export const BrotherhoodScreen: React.FC = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Username</label>
+                            <label className="text-xs font-medium text-muted-foreground">Username</label>
                             <input
                                 type="text"
                                 value={inviteUsername}
                                 onChange={(e) => setInviteUsername(e.target.value)}
                                 placeholder="alice"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-invite-username"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">City</label>
+                            <label className="text-xs font-medium text-muted-foreground">City</label>
                             <input
                                 type="text"
                                 value={inviteCity}
                                 onChange={(e) => setInviteCity(e.target.value)}
                                 placeholder="London"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-invite-city"
                             />
                         </div>
@@ -333,10 +335,10 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Vote / Unvote */}
                 {activeTab === 'vote' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Trust Graph Voting</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Target Member Address</label>
+                            <label className="text-xs font-medium text-muted-foreground">Target Member Address</label>
                             <InputScan
                                 value={targetAddress}
                                 onChange={setTargetAddress}
@@ -344,14 +346,15 @@ export const BrotherhoodScreen: React.FC = () => {
                                 data-testid="brotherhood-vote-target"
                             />
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <input
                                 type="checkbox"
                                 id="unvote-check"
                                 checked={isUnvote}
                                 onChange={(e) => setIsUnvote(e.target.checked)}
+                                className="rounded border-border"
                             />
-                            <label htmlFor="unvote-check">Unvote (remove trust endorsement)</label>
+                            <label htmlFor="unvote-check" className="text-foreground">Unvote (remove trust endorsement)</label>
                         </div>
                         <Button
                             onClick={() => vote.send()}
@@ -367,7 +370,7 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Buy Credit & Repay Debt */}
                 {activeTab === 'credit' && (
-                    <div className="space-y-4 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Buy Credit</h3>
                             <InputScan
@@ -381,7 +384,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Credit Amount (FI)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-credit-amount"
                             />
                             <Button
@@ -395,7 +398,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             </Button>
                         </div>
 
-                        <hr />
+                        <hr className="border-border" />
 
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Repay Debt</h3>
@@ -404,7 +407,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Repayment Amount (FI)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-repay-amount"
                             />
                             <Button
@@ -422,7 +425,7 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Allowances */}
                 {activeTab === 'allowance' && (
-                    <div className="space-y-4 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Grant Allowance</h3>
                             <InputScan
@@ -436,7 +439,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Allowance Amount (FI)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-allowance-amount"
                             />
                             <Button
@@ -450,7 +453,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             </Button>
                         </div>
 
-                        <hr />
+                        <hr className="border-border" />
 
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Spend Allowance</h3>
@@ -471,7 +474,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Amount to Spend (FI)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-spend-amount"
                             />
                             <Button
@@ -489,10 +492,10 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Gold Coins */}
                 {activeTab === 'gold' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Transfer Gold Coins</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Recipient Address</label>
+                            <label className="text-xs font-medium text-muted-foreground">Recipient Address</label>
                             <InputScan
                                 value={goldRecipient}
                                 onChange={setGoldRecipient}
@@ -501,13 +504,13 @@ export const BrotherhoodScreen: React.FC = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Number of Gold Coins</label>
+                            <label className="text-xs font-medium text-muted-foreground">Number of Gold Coins</label>
                             <input
                                 type="number"
                                 value={goldAmount}
                                 onChange={(e) => setGoldAmount(parseInt(e.target.value) || 0)}
                                 placeholder="1"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-gold-amount"
                             />
                         </div>
@@ -525,16 +528,16 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Profile */}
                 {activeTab === 'profile' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Update Member Profile</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">New Username</label>
+                            <label className="text-xs font-medium text-muted-foreground">New Username</label>
                             <input
                                 type="text"
                                 value={profileUsername}
                                 onChange={(e) => setProfileUsername(e.target.value)}
                                 placeholder="bob"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-profile-username"
                             />
                             <Button
@@ -548,16 +551,16 @@ export const BrotherhoodScreen: React.FC = () => {
                             </Button>
                         </div>
 
-                        <hr />
+                        <hr className="border-border" />
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">New City</label>
+                            <label className="text-xs font-medium text-muted-foreground">New City</label>
                             <input
                                 type="text"
                                 value={profileCity}
                                 onChange={(e) => setProfileCity(e.target.value)}
                                 placeholder="Tokyo"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-profile-city"
                             />
                             <Button
@@ -575,17 +578,17 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {/* Authority Panel */}
                 {activeTab === 'authority' && isAuthority && (
-                    <div className="space-y-4 bg-white p-4 border rounded-xl shadow-sm text-sm border-amber-200 bg-amber-50/20">
-                        <h3 className="font-semibold text-base text-amber-900 mb-1">Authority Actions</h3>
+                    <div className="space-y-4 bg-amber-500/10 p-4 border rounded-2xl shadow-sm text-sm border-amber-500/30 text-card-foreground">
+                        <h3 className="font-semibold text-base text-amber-500 mb-1">Authority Actions</h3>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Set Account Status</label>
+                            <label className="text-xs font-medium text-muted-foreground">Set Account Status</label>
                             <input
                                 type="number"
                                 value={authStatus}
                                 onChange={(e) => setAuthStatus(parseInt(e.target.value) || 0)}
                                 placeholder="0 = active, 1 = suspended, 2 = review"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="brotherhood-authority-status-input"
                             />
                             <Button
@@ -599,10 +602,10 @@ export const BrotherhoodScreen: React.FC = () => {
                             </Button>
                         </div>
 
-                        <hr />
+                        <hr className="border-border" />
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Close Member Account</label>
+                            <label className="text-xs font-medium text-muted-foreground">Close Member Account</label>
                             <InputScan
                                 value={authTarget}
                                 onChange={setAuthTarget}

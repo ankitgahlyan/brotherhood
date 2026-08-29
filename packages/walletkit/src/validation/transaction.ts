@@ -82,7 +82,7 @@ export function validateTransactionMessage(
 /**
  * Validate message object structure
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateMessageObject(message: any, requireFriendlyAddress: boolean = true): ValidationResult {
     const errors: string[] = [];
 
@@ -137,7 +137,7 @@ export function validateMessageObject(message: any, requireFriendlyAddress: bool
 /**
  * Validate transaction request structure
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateTransactionRequest(request: any, isTonConnect: boolean = true): ValidationResult {
     const errors: string[] = [];
 
@@ -273,7 +273,7 @@ export function validateStructuredItems(items: unknown[]): ValidationResult {
 /**
  * Check if value is a valid nano units amount
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function isValidNanoAmount(amount: any): boolean {
     if (typeof amount !== 'string') {
         return false;
@@ -302,7 +302,7 @@ function isValidBOC(bocString: string): boolean {
 /**
  * Extract estimated fees from transaction (placeholder)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function estimateTransactionFees(messages: any[]): string {
     // TODO: Implement proper fee calculation
     // This would typically involve:

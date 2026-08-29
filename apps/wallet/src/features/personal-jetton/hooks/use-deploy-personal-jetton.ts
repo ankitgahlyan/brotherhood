@@ -49,7 +49,7 @@ export function useDeployPersonalJetton({
         const ownerAddr = Address.parse(walletAddress);
         const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
-        const { contractAddress, stateInit } = await buildPersonalMinterDeploy({
+        const { contractAddress, stateInit: _stateInit } = await buildPersonalMinterDeploy({
             issuerWallet: fiWalletAddr,
             adminAddress: ownerAddr,
             metadata: { name, symbol, description, image },

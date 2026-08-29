@@ -22,7 +22,7 @@ interface CenteredScreenProps {
  * content vertically centered in between and scrollable when it doesn't fit.
  */
 export const CenteredScreen: React.FC<CenteredScreenProps> = ({ onBack, footer, children }) => (
-    <div className="h-dvh bg-white select-none flex flex-col">
+    <div className="h-dvh bg-background text-foreground select-none flex flex-col">
         <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-0">
             {onBack && (
                 <div className="flex-shrink-0 px-4 pt-3">
@@ -30,7 +30,7 @@ export const CenteredScreen: React.FC<CenteredScreenProps> = ({ onBack, footer, 
                         type="button"
                         onClick={onBack}
                         aria-label="Back"
-                        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 transition-colors"
+                        className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors"
                     >
                         <ChevronLeft className="w-5 h-5" />
                     </button>

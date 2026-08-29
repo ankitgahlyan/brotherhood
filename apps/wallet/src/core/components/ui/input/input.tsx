@@ -86,7 +86,7 @@ const Header: FC<ComponentProps<'div'>> = ({ className, children, ...props }) =>
 );
 
 const Title: FC<ComponentProps<'span'>> = ({ className, children, ...props }) => (
-    <span className={cn('text-sm font-medium text-gray-500', className)} {...props}>
+    <span className={cn('text-sm font-medium text-muted-foreground', className)} {...props}>
         {children}
     </span>
 );
@@ -98,7 +98,7 @@ const Field: FC<ComponentProps<'div'>> = ({ className, children, ...props }) => 
             className={cn(
                 'relative flex items-center gap-2 overflow-hidden transition-colors',
                 variant === 'default' &&
-                    'rounded-2xl border-2 border-transparent bg-gray-100 p-3.5 focus-within:border-blue-500',
+                    'rounded-2xl border-2 border-border/50 bg-secondary/70 p-3.5 focus-within:border-blue-500',
                 variant === 'default' && error && 'border-red-500',
                 className,
             )}
@@ -139,7 +139,7 @@ const InputControl: FC<ComponentProps<'input'>> = ({ className, disabled: propsD
     if (loading) {
         return (
             <div className={cn('flex-1', SIZE_FONT[size])}>
-                <div className="h-[1em] w-16 animate-pulse rounded bg-gray-200" />
+                <div className="h-[1em] w-16 animate-pulse rounded bg-muted" />
             </div>
         );
     }
@@ -164,7 +164,7 @@ const InputControl: FC<ComponentProps<'input'>> = ({ className, disabled: propsD
             )}
             <input
                 className={cn(
-                    'w-full min-w-0 flex-1 border-0 bg-transparent p-0 text-gray-900 outline-none placeholder:text-gray-400',
+                    'w-full min-w-0 flex-1 border-0 bg-transparent p-0 text-foreground outline-none placeholder:text-muted-foreground',
                     SIZE_FONT[size],
                     className,
                 )}

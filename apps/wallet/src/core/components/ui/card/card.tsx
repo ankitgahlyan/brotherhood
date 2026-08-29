@@ -20,10 +20,10 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, com
     const titlePadding = compact ? 'px-4 py-2' : 'px-6 py-4';
     const titleSize = compact ? 'text-base' : 'text-lg';
     return (
-        <div className={`bg-white rounded-lg shadow-md border border-gray-200 ${className}`}>
+        <div className={`bg-card text-card-foreground rounded-2xl shadow-sm border border-border ${className}`}>
             {title && (
-                <div className={`${titlePadding} border-b border-gray-200`}>
-                    <h3 className={`${titleSize} font-medium text-gray-900`}>{title}</h3>
+                <div className={`${titlePadding} border-b border-border`}>
+                    <h3 className={`${titleSize} font-medium text-foreground`}>{title}</h3>
                 </div>
             )}
             <div className={contentPadding}>{children}</div>

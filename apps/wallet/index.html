@@ -6,7 +6,25 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="BrotherHood" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>BrotherHood Wallet</title>
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('brotherhood-theme');
+          var isDark = stored === 'dark' || stored === 'oled' || (!stored || stored === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = stored === 'oled' ? 'oled' : (isDark ? 'dark' : 'light');
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute('content', isDark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

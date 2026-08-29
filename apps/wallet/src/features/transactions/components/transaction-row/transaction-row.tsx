@@ -13,11 +13,11 @@ import type { TransactionRowModel, TransactionRowStatus } from '../../utils/map-
 
 const StatusBadge: React.FC<{ status: TransactionRowStatus }> = ({ status }) => {
     const base =
-        'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white';
+        'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-background';
 
     if (status === 'success') {
         return (
-            <span className={`${base} bg-green-500`}>
+            <span className={`${base} bg-emerald-500`}>
                 <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
             </span>
         );
@@ -30,8 +30,8 @@ const StatusBadge: React.FC<{ status: TransactionRowStatus }> = ({ status }) => 
         );
     }
     return (
-        <span className={`${base} bg-white`} title="Pending">
-            <span className="w-3 h-3 rounded-full border-2 border-gray-300 border-t-gray-500 animate-spin" />
+        <span className={`${base} bg-card`} title="Pending">
+            <span className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
         </span>
     );
 };
@@ -48,25 +48,25 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
 }) => {
     const content = (
         <>
-            <span className="relative w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <span className="relative w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
                 {isOutgoing ? (
-                    <MinusCircle className="w-6 h-6 text-gray-400" strokeWidth={2} />
+                    <MinusCircle className="w-6 h-6 text-muted-foreground" strokeWidth={2} />
                 ) : (
-                    <PlusCircle className="w-6 h-6 text-gray-400" strokeWidth={2} />
+                    <PlusCircle className="w-6 h-6 text-muted-foreground" strokeWidth={2} />
                 )}
                 <StatusBadge status={status} />
             </span>
 
             <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-gray-900 truncate">{title}</div>
-                <div className="text-xs text-gray-500 truncate">{subtitleId}</div>
+                <div className="text-sm font-semibold text-foreground truncate">{title}</div>
+                <div className="text-xs text-muted-foreground truncate">{subtitleId}</div>
             </div>
 
             <div className="text-right flex-shrink-0">
-                <div className={`text-sm font-semibold ${isOutgoing ? 'text-red-500' : 'text-green-500'}`}>
+                <div className={`text-sm font-semibold ${isOutgoing ? 'text-red-500' : 'text-emerald-500'}`}>
                     {amount}
                 </div>
-                <div className="text-xs text-gray-400">{date}</div>
+                <div className="text-xs text-muted-foreground">{date}</div>
             </div>
         </>
     );
@@ -82,7 +82,7 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${rowClassName} hover:bg-gray-50 transition-colors`}
+            className={`${rowClassName} hover:bg-secondary/50 transition-colors`}
         >
             {content}
         </a>

@@ -54,11 +54,11 @@ const createLogger = (customLogger?: CreateWalletStoreOptions['logger']) => {
     if (customLogger) return customLogger;
 
     return {
-        // eslint-disable-next-line no-console
+         
         info: (...args: unknown[]) => console.log('[WalletStore]', ...args),
-        // eslint-disable-next-line no-console
+         
         warn: (...args: unknown[]) => console.warn('[WalletStore]', ...args),
-        // eslint-disable-next-line no-console
+         
         error: (...args: unknown[]) => console.error('[WalletStore]', ...args),
     };
 };
@@ -66,7 +66,7 @@ const createLogger = (customLogger?: CreateWalletStoreOptions['logger']) => {
 const migrate = (persistedState: unknown, fromVersion: number, log: ReturnType<typeof createLogger>): unknown => {
     log.info('Migrating store from version', fromVersion, 'to', STORE_VERSION);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let state = persistedState as Record<string, any>;
 
     // Migration from v1 (old wallet slice) to v2 (split slices)
@@ -153,7 +153,7 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                         // @ts-ignore
                         ...createGaslessSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                         
                     })) as unknown as any,
                     {
                         name: 'demo-wallet-store',
@@ -191,7 +191,7 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                             },
                         }),
                         merge: (persistedState, currentState) => {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                             
                             const persisted = persistedState as any;
 
                             const merged = {

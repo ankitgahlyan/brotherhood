@@ -16,7 +16,7 @@ export interface Network {
     chainId: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+ 
 export const Network = {
     /**
      * TON Mainnet (chain ID: -239)

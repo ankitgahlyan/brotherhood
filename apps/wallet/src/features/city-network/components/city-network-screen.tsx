@@ -57,13 +57,15 @@ export const CityNetworkScreen: React.FC = () => {
         <NewLayout header={<ScreenHeader title="City & Location Registry" onBack={() => navigate('/wallet')} />}>
             <div className="space-y-4">
                 {/* Tabs */}
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
                     {(['cities', 'city-detail', 'register-city', 'manage-member'] as Tab[]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-1.5 rounded-md capitalize transition-colors ${
-                                activeTab === tab ? 'bg-white shadow text-black' : 'text-gray-600 hover:text-black'
+                            className={`flex-1 py-1.5 rounded-lg capitalize transition-colors ${
+                                activeTab === tab
+                                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                             }`}
                             data-testid={`city-tab-${tab}`}
                         >
@@ -74,7 +76,7 @@ export const CityNetworkScreen: React.FC = () => {
 
                 {/* Cities Browser */}
                 {activeTab === 'cities' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Regional Location Hub</h3>
                         <InputScan
                             value={locationAddrInput}
@@ -85,25 +87,25 @@ export const CityNetworkScreen: React.FC = () => {
                         />
 
                         <div className="flex justify-between items-center my-2">
-                            <span className="text-xs font-medium text-gray-700">Registered Cities</span>
+                            <span className="text-xs font-medium text-muted-foreground">Registered Cities</span>
                             <Button size="sm" variant="secondary" onClick={() => cities.refetch()}>
                                 Refresh
                             </Button>
                         </div>
 
                         {cities.isLoading ? (
-                            <p className="text-xs text-gray-500">Querying location hub contract…</p>
+                            <p className="text-xs text-muted-foreground">Querying location hub contract…</p>
                         ) : cities.cities.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2">
                                 {cities.cities.map((c) => (
-                                    <div key={c.id} className="p-2.5 border rounded-lg bg-gray-50 text-xs">
-                                        <span className="font-semibold block">{c.cityName}</span>
-                                        <span className="text-gray-400 text-[10px]">ID: {c.id}</span>
+                                    <div key={c.id} className="p-2.5 border border-border/60 rounded-xl bg-secondary/50 text-xs">
+                                        <span className="font-semibold block text-foreground">{c.cityName}</span>
+                                        <span className="text-muted-foreground text-[10px]">ID: {c.id}</span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 {locationAddrInput ? 'No cities registered under this hub.' : 'Enter a location hub address.'}
                             </p>
                         )}
@@ -112,7 +114,7 @@ export const CityNetworkScreen: React.FC = () => {
 
                 {/* City Detail & Members */}
                 {activeTab === 'city-detail' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">CityMap Members</h3>
                         <InputScan
                             value={cityMapAddrInput}
@@ -123,27 +125,27 @@ export const CityNetworkScreen: React.FC = () => {
                         />
 
                         {cityMembers.isLoading ? (
-                            <p className="text-xs text-gray-500">Querying city map contract…</p>
+                            <p className="text-xs text-muted-foreground">Querying city map contract…</p>
                         ) : (
                             <div className="space-y-2">
-                                <div className="bg-gray-50 p-2.5 rounded-lg text-xs">
-                                    <span className="text-gray-500 block">City Name</span>
-                                    <span className="font-semibold">{cityMembers.cityName || 'Not loaded'}</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl text-xs">
+                                    <span className="text-muted-foreground block">City Name</span>
+                                    <span className="font-semibold text-foreground">{cityMembers.cityName || 'Not loaded'}</span>
                                 </div>
 
-                                <h4 className="font-semibold text-xs text-gray-700 pt-1">
+                                <h4 className="font-semibold text-xs text-foreground pt-1">
                                     Registered Members ({cityMembers.members.length})
                                 </h4>
                                 {cityMembers.members.length > 0 ? (
                                     <div className="space-y-1">
                                         {cityMembers.members.map((m) => (
-                                            <div key={m} className="p-2 bg-gray-50 rounded border text-xs break-all">
+                                            <div key={m} className="p-2 bg-secondary/50 rounded-xl border border-border/50 text-xs text-foreground break-all">
                                                 {m}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-gray-500">No members registered in this city map.</p>
+                                    <p className="text-xs text-muted-foreground">No members registered in this city map.</p>
                                 )}
                             </div>
                         )}
@@ -152,7 +154,7 @@ export const CityNetworkScreen: React.FC = () => {
 
                 {/* Register City */}
                 {activeTab === 'register-city' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Register New City</h3>
                         <div className="space-y-2">
                             <InputScan
@@ -166,7 +168,7 @@ export const CityNetworkScreen: React.FC = () => {
                                 value={newCityName}
                                 onChange={(e) => setNewCityName(e.target.value)}
                                 placeholder="City Name (e.g. Paris)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="city-register-city-name"
                             />
                         </div>
@@ -184,7 +186,7 @@ export const CityNetworkScreen: React.FC = () => {
 
                 {/* Manage Members */}
                 {activeTab === 'manage-member' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">City Member Management</h3>
                         <div className="space-y-2">
                             <InputScan
@@ -198,7 +200,7 @@ export const CityNetworkScreen: React.FC = () => {
                                 value={newCityName}
                                 onChange={(e) => setNewCityName(e.target.value)}
                                 placeholder="City Name"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="city-manage-city-name"
                             />
                             <InputScan

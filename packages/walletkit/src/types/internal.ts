@@ -61,7 +61,7 @@ export interface StorageAdapter {
     clear(): Promise<void>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export interface EventCallback<T = any> {
     (event: T): void | Promise<void>;
 }
@@ -70,7 +70,7 @@ export interface EventCallback<T = any> {
 export interface RawBridgeEventGeneric extends BridgeEvent {
     id: string;
     method: 'none';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     params: Record<string, any>;
     timestamp?: number;
 }

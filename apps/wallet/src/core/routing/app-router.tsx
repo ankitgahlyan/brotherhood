@@ -52,8 +52,8 @@ export const AppRouter: React.FC = () => {
 
     if (initializationError) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
+            <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4">
+                <div className="max-w-md w-full bg-card border border-border shadow-lg rounded-2xl p-8 text-center">
                     <div className="mb-4">
                         <svg
                             className="mx-auto h-12 w-12 text-red-500"
@@ -70,8 +70,8 @@ export const AppRouter: React.FC = () => {
                         </svg>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Initialization Error</h2>
-                    <p className="text-gray-600 mb-6">Failed to initialize wallet. Please reload the page.</p>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Initialization Error</h2>
+                    <p className="text-muted-foreground mb-6">Failed to initialize wallet. Please reload the page.</p>
 
                     <Button onClick={() => window.location.reload()} className="w-full cursor-pointer">
                         Reload Page

@@ -24,7 +24,7 @@ export interface SegmentedProps<T extends string> {
 /** Compact single-select segmented control (e.g. network / wallet version pickers). */
 export function Segmented<T extends string>({ value, onChange, options, className }: SegmentedProps<T>) {
     return (
-        <div className={cn('flex rounded-lg border border-gray-200 overflow-hidden', className)}>
+        <div className={cn('flex rounded-xl border border-border overflow-hidden bg-secondary/50', className)}>
             {options.map((option, index) => (
                 <button
                     key={option.value}
@@ -33,8 +33,8 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
                     onClick={() => onChange(option.value)}
                     className={cn(
                         'px-3 py-1.5 text-xs font-medium transition-colors',
-                        index > 0 && 'border-l border-gray-200',
-                        value === option.value ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50',
+                        index > 0 && 'border-l border-border',
+                        value === option.value ? 'bg-blue-500 text-white shadow-sm' : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/60',
                     )}
                 >
                     {option.label}

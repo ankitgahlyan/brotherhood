@@ -96,11 +96,11 @@ export const DashboardAssets: React.FC = () => {
             <button
                 type="button"
                 onClick={() => navigate('/wallet/assets')}
-                className="flex items-center gap-1 mb-2"
+                className="flex items-center gap-1 mb-2 group"
                 aria-label="View all assets"
             >
-                <h2 className="text-base font-semibold text-gray-900">Assets</h2>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <h2 className="text-base font-semibold text-foreground">Assets</h2>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </button>
 
             <div className="space-y-1">

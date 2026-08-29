@@ -71,7 +71,7 @@ export function useManageMember({
         );
 
         await sendTx([{ toAddress: cityMapAddress, amount: GAS.PROFILE, payload }]);
-    }, [walletAddress, cityMapAddress, targetMember, sendTx]);
+    }, [walletAddress, cityMapAddress, cityName, targetMember, sendTx]);
 
     const isDisabled = !wallet || !walletAddress || !cityMapAddress || !targetMember || isSending;
 

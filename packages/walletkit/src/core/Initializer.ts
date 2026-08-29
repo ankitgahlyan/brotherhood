@@ -265,16 +265,16 @@ export async function wrapWalletInterface(wallet: WalletAdapter): Promise<Wallet
     const newProxy = new Proxy(wallet, {
         get: (target, prop) => {
             if (typeof prop === 'symbol') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 return (target as any)[prop];
             }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const ourMethonImplementation = ourClassesToExtend.find((cls) => !!(cls.prototype as any)[prop]);
             if (ourMethonImplementation) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 const value = (ourMethonImplementation.prototype as any)[prop];
                 // return ourMethonImplementation.prototype[prop].bind(target);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 return (...args: any[]) => value.apply(newProxy, [...args]);
             }
 

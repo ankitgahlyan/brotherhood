@@ -56,7 +56,7 @@ class TestProvider extends WebsocketStreamingProvider {
 
     public triggerClose() {
         if (this.ws) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (this.ws as any).onclose?.();
         }
     }

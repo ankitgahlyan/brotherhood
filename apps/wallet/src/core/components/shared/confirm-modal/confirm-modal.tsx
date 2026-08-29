@@ -40,7 +40,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {description && (
             <Modal.Body>
-                <p className="text-base text-gray-500">{description}</p>
+                <p className="text-base text-muted-foreground">{description}</p>
             </Modal.Body>
         )}
 
@@ -57,7 +57,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-4 rounded-2xl bg-gray-100 text-gray-900 text-base font-bold hover:bg-gray-200 transition-colors"
+                className="w-full py-4 rounded-2xl bg-secondary text-foreground border border-border text-base font-bold hover:bg-secondary/80 transition-colors"
             >
                 {cancelLabel}
             </button>

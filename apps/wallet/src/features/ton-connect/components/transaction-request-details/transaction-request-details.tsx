@@ -40,7 +40,7 @@ function AddressLink({ address, label }: { address?: string; label?: string }) {
 }
 
 function DetailPill({ children }: { children: React.ReactNode }) {
-    return <span className="text-[10px] px-2 py-0.5 bg-white text-gray-600 rounded">{children}</span>;
+    return <span className="text-[10px] px-2 py-0.5 bg-secondary text-foreground rounded border border-border/50">{children}</span>;
 }
 
 function PayloadDetails({ label, payload }: { label: string; payload?: string }) {
@@ -48,8 +48,8 @@ function PayloadDetails({ label, payload }: { label: string; payload?: string })
     const decoded = decodeTextCommentPayload(payload);
 
     return (
-        <div className="text-xs text-gray-600 break-words">
-            <span className="font-medium text-gray-700">{label}: </span>
+        <div className="text-xs text-muted-foreground break-words">
+            <span className="font-medium text-foreground">{label}: </span>
             {decoded ? (
                 <span>Comment “{decoded}”</span>
             ) : (
@@ -77,12 +77,12 @@ function RawMessageAction({ message, index }: { message: TransactionRequestMessa
         <div className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">Message #{index + 1}</div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-sm font-medium text-foreground">Message #{index + 1}</div>
+                    <div className="text-xs text-muted-foreground truncate">
                         To <AddressLink address={message.address} />
                     </div>
                 </div>
-                <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <div className="text-sm font-medium text-foreground whitespace-nowrap">
                     {formatNanoTonAmount(message.amount)}
                 </div>
             </div>
@@ -101,12 +101,12 @@ function TonItemAction({ item, index }: { item: Extract<StructuredItem, { type: 
         <div className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">Send GRAM #{index + 1}</div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-sm font-medium text-foreground">Send GRAM #{index + 1}</div>
+                    <div className="text-xs text-muted-foreground truncate">
                         To <AddressLink address={item.address} />
                     </div>
                 </div>
-                <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <div className="text-sm font-medium text-foreground whitespace-nowrap">
                     {formatNanoTonAmount(item.amount)}
                 </div>
             </div>
@@ -126,11 +126,11 @@ function JettonItemAction({ item, index }: { item: Extract<StructuredItem, { typ
         <div className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">Send jetton #{index + 1}</div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-sm font-medium text-foreground">Send jetton #{index + 1}</div>
+                    <div className="text-xs text-muted-foreground truncate">
                         To <AddressLink address={item.destination} />
                     </div>
-                    <div className="text-xs text-gray-500 truncate flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
                         {jettonInfo?.images?.[0] && (
                             <img src={jettonInfo.images[0]} alt="" className="w-4 h-4 rounded-full" />
                         )}
@@ -141,7 +141,7 @@ function JettonItemAction({ item, index }: { item: Extract<StructuredItem, { typ
                         />
                     </div>
                 </div>
-                <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <div className="text-sm font-medium text-foreground whitespace-nowrap">
                     {formatTokenAmount(item.amount, jettonInfo?.decimals ?? 9, jettonInfo?.symbol)}
                 </div>
             </div>
@@ -161,11 +161,11 @@ function NftItemAction({ item, index }: { item: Extract<StructuredItem, { type: 
         <div className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">Transfer NFT #{index + 1}</div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-sm font-medium text-foreground">Transfer NFT #{index + 1}</div>
+                    <div className="text-xs text-muted-foreground truncate">
                         To <AddressLink address={item.newOwner} />
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                         NFT <AddressLink address={item.nftAddress} />
                     </div>
                 </div>
@@ -194,11 +194,11 @@ export function TransactionRequestDetails({ request, title = 'You will sign' }: 
     const count = hasItems ? items.length : messages.length;
 
     return (
-        <div className="rounded-2xl bg-gray-100 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{title}</p>
-            <div className="mt-3 divide-y divide-gray-200">
+        <div className="rounded-2xl bg-secondary/50 border border-border/60 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+            <div className="mt-3 divide-y divide-border">
                 {count === 0 ? (
-                    <p className="text-sm text-gray-500">No outgoing messages in this request</p>
+                    <p className="text-sm text-muted-foreground">No outgoing messages in this request</p>
                 ) : hasItems ? (
                     items.map((item, index) => (
                         <StructuredItemAction key={`${item.type}-${index}`} item={item} index={index} />

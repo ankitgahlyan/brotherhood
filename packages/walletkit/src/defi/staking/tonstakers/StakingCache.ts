@@ -11,7 +11,7 @@ import { LRUCache } from 'lru-cache';
 import { CACHE_TIMEOUT } from './constants';
 
 export class StakingCache {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     private cache: LRUCache<string, any>;
     private readonly defaultTtl: number;
 

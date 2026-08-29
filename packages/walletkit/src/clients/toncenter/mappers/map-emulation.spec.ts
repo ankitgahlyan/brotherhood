@@ -141,11 +141,11 @@ describe('mapToncenterEmulationResponse', () => {
         const rawFields = Object.keys(rawTx);
         const mappedFields = Object.keys(mappedTx);
 
-        // eslint-disable-next-line no-console
+         
         console.log('raw tx fields   :', rawFields);
-        // eslint-disable-next-line no-console
+         
         console.log('mapped tx fields:', mappedFields);
-        // eslint-disable-next-line no-console
+         
         console.log(`field count: ${rawFields.length} → ${mappedFields.length}`);
 
         expect(mappedFields.length).toBe(rawFields.length);

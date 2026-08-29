@@ -25,11 +25,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-100 disabled:text-gray-400',
-    secondary: 'bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-60',
-    gray: 'bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:opacity-50',
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground shadow-sm',
+    secondary: 'bg-blue-500/15 text-blue-500 hover:bg-blue-500/25 disabled:opacity-60',
+    gray: 'bg-secondary text-foreground hover:bg-secondary/80 border border-border disabled:opacity-50',
     danger: 'bg-red-500 text-white hover:bg-red-600 disabled:opacity-60',
-    ghost: 'bg-transparent text-gray-400 hover:text-gray-600 disabled:opacity-50',
+    ghost: 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50',
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {

@@ -85,8 +85,8 @@ export const CreateWalletScreen: React.FC = () => {
         <CenteredScreen onBack={() => navigate(-1)} footer={footer}>
             <div className="px-6">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Recovery phrase</h1>
-                    <p className="mt-2 text-base text-gray-500">
+                    <h1 className="text-2xl font-bold text-foreground">Recovery phrase</h1>
+                    <p className="mt-2 text-base text-muted-foreground">
                         This is the only way you will be able to recover your account. Please store it somewhere safe!
                     </p>
                 </div>
@@ -103,19 +103,19 @@ export const CreateWalletScreen: React.FC = () => {
                                     {(ready ? mnemonic : Array.from({ length: 24 }).map(() => ''))
                                         .slice(offset, offset + 12)
                                         .map((word, idx) => {
-                                            const n = offset + idx + 1;
-                                            return (
-                                                <div key={n} className="flex items-baseline gap-3">
-                                                    <span className="w-6 text-gray-400 tabular-nums">{n}</span>
-                                                    <span
-                                                        className="font-bold text-gray-900"
-                                                        data-testid={`mnemonic-word-${n}`}
-                                                    >
-                                                        {word || '—'}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                             const n = offset + idx + 1;
+                                             return (
+                                                 <div key={n} className="flex items-baseline gap-3">
+                                                     <span className="w-6 text-muted-foreground tabular-nums">{n}</span>
+                                                     <span
+                                                         className="font-bold text-foreground"
+                                                         data-testid={`mnemonic-word-${n}`}
+                                                     >
+                                                         {word || '—'}
+                                                     </span>
+                                                 </div>
+                                             );
+                                         })}
                                 </div>
                             ))}
                         </div>

@@ -112,11 +112,11 @@ export class ConnectHandler
     /**
      * Extract dApp name from bridge event or manifest
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     private extractDAppName(event: RawBridgeEvent, manifest?: any): string {
         const name =
             manifest?.name ||
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (event as any).params?.manifest?.name ||
             'Unknown dApp';
 
@@ -143,7 +143,7 @@ export class ConnectHandler
         manifestFetchErrorCode?: CONNECT_EVENT_ERROR_CODES,
     ): ConnectionRequestEventPreview {
         const eventManifest = event.params?.manifest;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const manifest = (fetchedManifest || eventManifest) as any;
 
         const dAppUrl = (event?.domain || manifest?.url?.toString() || '').trim();

@@ -7,15 +7,22 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
-      'dist',
-      'dist-ssr',
-      'build',
-      'node_modules',
-      '.wrangler',
-      '.tanstack',
-      'scripts',
-      'public',
-      'src/routeTree.gen.ts',
+      '**/dist/**',
+      '**/dist-ssr/**',
+      '**/build/**',
+      '**/node_modules/**',
+      '**/.wrangler/**',
+      '**/.tanstack/**',
+      '**/.acton/**',
+      'scripts/**',
+      'public/**',
+      'contracts/**',
+      'wrappers/**',
+      'wrappers-ts/**',
+      'gen/**',
+      '**/routeTree.gen.ts',
+      '**/*.gen.ts',
+      '**/e2e/**',
     ],
   },
   {
@@ -32,6 +39,15 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...reactCompiler.configs.recommended.rules,
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 );

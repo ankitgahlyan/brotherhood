@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -16,18 +16,18 @@ const toList = (src: string | string[] | undefined): string[] =>
 const useImageStatus = (src: string | undefined): ImageStatus => {
     const imageRef = useRef<HTMLImageElement | null>(null);
 
-    const getImage = (): HTMLImageElement | null => {
+    const getImage = useCallback((): HTMLImageElement | null => {
         if (typeof window === 'undefined') return null;
         if (!imageRef.current) imageRef.current = new window.Image();
         return imageRef.current;
-    };
+    }, []);
 
-    const resolve = (): ImageStatus => {
+    const resolve = useCallback((): ImageStatus => {
         const image = getImage();
         if (!image || !src) return 'idle';
         if (image.src !== src) image.src = src;
         return image.complete && image.naturalWidth > 0 ? 'loaded' : 'loading';
-    };
+    }, [getImage, src]);
 
     const [status, setStatus] = useState<ImageStatus>(resolve);
 
@@ -43,7 +43,7 @@ const useImageStatus = (src: string | undefined): ImageStatus => {
             image.removeEventListener('load', onLoad);
             image.removeEventListener('error', onError);
         };
-    }, [src]);
+    }, [getImage, resolve]);
 
     return status;
 };

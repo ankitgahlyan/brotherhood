@@ -36,10 +36,10 @@ export interface WalletProviderProps extends CreateWalletStoreOptions {
  * }
  * ```
  */
-export function WalletProvider({ children, ...options }: WalletProviderProps) {
+export function WalletProvider({ children, storage, enableDevtools, walletKitConfig }: WalletProviderProps) {
     const store = useMemo(
-        () => createWalletStore(options),
-        [options.storage, options.enableDevtools, options.walletKitConfig],
+        () => createWalletStore({ storage, enableDevtools, walletKitConfig }),
+        [storage, enableDevtools, walletKitConfig],
     );
 
     return <WalletStoreContext.Provider value={store}>{children}</WalletStoreContext.Provider>;

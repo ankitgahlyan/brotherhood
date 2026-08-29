@@ -61,6 +61,8 @@ export const useSendToken = ({
         amount,
     });
 
+    const { effective: gaslessEffective, send: gaslessSend } = gasless;
+
     const send = useCallback(async (): Promise<SendTransactionResponse | undefined> => {
         if (!wallet) throw new Error('No wallet available');
 
@@ -73,8 +75,8 @@ export const useSendToken = ({
         }
 
         // Gasless jetton transfer: relay the already-fetched, locally-signed quote.
-        if (gasless.effective && jetton) {
-            return gasless.send();
+        if (gaslessEffective && jetton) {
+            return gaslessSend();
         }
 
         if (tokenType === 'TON') {
@@ -99,7 +101,7 @@ export const useSendToken = ({
         }
 
         return undefined;
-    }, [wallet, walletKit, tokenType, jetton, recipient, amount, gasless.effective, gasless.send]);
+    }, [wallet, walletKit, tokenType, jetton, recipient, amount, gaslessEffective, gaslessSend]);
 
     const isDisabled =
         !wallet ||

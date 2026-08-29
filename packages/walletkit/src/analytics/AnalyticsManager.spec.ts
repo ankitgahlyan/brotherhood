@@ -32,7 +32,7 @@ describe('AnalyticsManager', () => {
         });
 
         // Replace the API with a mock
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (manager as any).api = {
             events: {
                 eventsCreate: mockEventsCreate,
@@ -132,7 +132,7 @@ describe('AnalyticsManager', () => {
             }
 
             // Access internal events array
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const events = (manager as any).events as AnalyticsEvent[];
 
             // Should have exactly maxQueueSize events
@@ -158,7 +158,7 @@ describe('AnalyticsManager', () => {
             // Trigger flush which will fail and restore events
             await manager.flush();
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const events = (manager as any).events as AnalyticsEvent[];
 
             // Should be limited to maxQueueSize, oldest events dropped
@@ -186,7 +186,7 @@ describe('AnalyticsManager', () => {
             await new Promise((resolve) => setTimeout(resolve, batchTimeoutMs + 50));
 
             // Events should be restored
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const events = (manager as any).events as AnalyticsEvent[];
             expect(events.length).toBeGreaterThan(0);
         });
@@ -206,7 +206,7 @@ describe('AnalyticsManager', () => {
             await new Promise((resolve) => setTimeout(resolve, batchTimeoutMs + 50));
 
             // Events should be dropped (not restored)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const events = (manager as any).events as AnalyticsEvent[];
             expect(events.length).toBe(0);
         });
@@ -252,7 +252,7 @@ describe('AnalyticsManager', () => {
                 },
             });
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (managerWithAppInfo as any).api = {
                 events: {
                     eventsCreate: mockEventsCreate,

@@ -71,7 +71,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({ onClose, onBack, child
                 <button
                     type="button"
                     onClick={onBack}
-                    className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+                    className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
                     aria-label="Back"
                 >
                     <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
@@ -83,7 +83,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({ onClose, onBack, child
             <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
                 aria-label="Close"
             >
                 <X className="w-4 h-4" strokeWidth={2.5} />
@@ -95,7 +95,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({ onClose, onBack, child
 export const ModalTitle: React.FC<ComponentProps<'h2'>> = ({ className, ...props }) => {
     const isMobile = useIsMobile();
     const Wrapper = isMobile ? DrawerTitle : DialogTitle;
-    return <Wrapper className={cn('text-xl font-bold text-gray-900 truncate', className)} {...props} />;
+    return <Wrapper className={cn('text-xl font-bold text-foreground truncate', className)} {...props} />;
 };
 
 export const ModalBody: React.FC<ComponentProps<'div'>> = ({ children, className, ...props }) => (

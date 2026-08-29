@@ -7,8 +7,9 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Moon, Sun, Sparkles } from 'lucide-react';
 import { useTonConnect, useWallet } from '@demo/wallet-core';
+import { useTheme } from '@/core/theme';
 
 import { WalletSelectorModal } from '@/features/wallets';
 import { SettingsDropdown } from '@/features/settings';
@@ -22,6 +23,7 @@ export const DashboardHeader: React.FC = () => {
 
     const { handleTonConnectUrl } = useTonConnect();
     const { savedWallets, activeWalletId } = useWallet();
+    const { resolvedTheme, toggleTheme } = useTheme();
     const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
 
     usePasteHandler(handleTonConnectUrl, isConnectOpen);
@@ -31,24 +33,42 @@ export const DashboardHeader: React.FC = () => {
             <button
                 type="button"
                 onClick={() => setIsConnectOpen(true)}
-                className="p-1.5 -ml-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="p-1.5 -ml-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
                 aria-label="Scan"
                 data-testid="connect-dapp-button"
             >
-                <ScanIcon className="w-5 h-5" />
+                <ScanIcon className="w-5 h-5 text-foreground" />
             </button>
 
             <button
                 type="button"
                 onClick={() => setIsWalletSelectorOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary cursor-pointer hover:bg-secondary/80 border border-border transition-colors"
                 aria-label="Select wallet"
             >
-                <span className="text-sm font-semibold text-gray-900">{activeWallet?.name || 'No wallet'}</span>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-semibold text-foreground">{activeWallet?.name || 'No wallet'}</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
 
-            <SettingsDropdown />
+            <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label={`Toggle theme (currently ${resolvedTheme})`}
+                    title={`Current theme: ${resolvedTheme}. Click to toggle.`}
+                    data-testid="header-theme-toggle"
+                >
+                    {resolvedTheme === 'light' ? (
+                        <Moon className="w-5 h-5" />
+                    ) : resolvedTheme === 'oled' ? (
+                        <Sparkles className="w-5 h-5 text-amber-400" />
+                    ) : (
+                        <Sun className="w-5 h-5 text-yellow-500" />
+                    )}
+                </button>
+                <SettingsDropdown />
+            </div>
 
             <WalletSelectorModal isOpen={isWalletSelectorOpen} onClose={() => setIsWalletSelectorOpen(false)} />
             <ConnectDappModal isOpen={isConnectOpen} onClose={() => setIsConnectOpen(false)} />

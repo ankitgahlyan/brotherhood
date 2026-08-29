@@ -34,7 +34,7 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
     if (compact) {
         return (
             <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">{label}</span>
+                <span className="text-sm font-medium text-foreground">{label}</span>
                 <Segmented value={value} onChange={onChange} options={COMPACT_OPTIONS} />
             </div>
         );
@@ -42,55 +42,55 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
 
     return (
         <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">{label}</label>
+            <label className="block text-sm font-medium text-foreground">{label}</label>
             <div className="grid grid-cols-3 gap-3">
                 <button
                     type="button"
                     data-testid="network-select-mainnet"
                     onClick={() => onChange('mainnet')}
-                    className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
                         value === 'mainnet'
-                            ? 'bg-blue-50 text-blue-700 border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
                     }`}
                 >
                     <div className="flex flex-col items-center space-y-1">
                         <span className="font-semibold">Mainnet</span>
-                        <span className="text-xs text-gray-500">Real transactions</span>
+                        <span className="text-xs text-muted-foreground">Real transactions</span>
                     </div>
                 </button>
                 <button
                     type="button"
                     data-testid="network-select-testnet"
                     onClick={() => onChange('testnet')}
-                    className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
                         value === 'testnet'
-                            ? 'bg-blue-50 text-blue-700 border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
                     }`}
                 >
                     <div className="flex flex-col items-center space-y-1">
                         <span className="font-semibold">Testnet</span>
-                        <span className="text-xs text-gray-500">For development</span>
+                        <span className="text-xs text-muted-foreground">For development</span>
                     </div>
                 </button>
                 <button
                     type="button"
                     data-testid="network-select-tetra"
                     onClick={() => onChange('tetra')}
-                    className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
                         value === 'tetra'
-                            ? 'bg-blue-50 text-blue-700 border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
                     }`}
                 >
                     <div className="flex flex-col items-center space-y-1">
                         <span className="font-semibold">Tetra</span>
-                        <span className="text-xs text-gray-500">Tetra network</span>
+                        <span className="text-xs text-muted-foreground">Tetra network</span>
                     </div>
                 </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
                 {value === 'mainnet'
                     ? 'Use mainnet for real transactions with real TON.'
                     : value === 'testnet'

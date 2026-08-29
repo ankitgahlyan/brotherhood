@@ -71,16 +71,24 @@ export const useGaslessJettonSend = ({
             ? `${formatUnits(gasless.currentQuote.fee, feeAssetInfo.decimals)} ${feeAssetInfo.symbol ?? ''}`.trim()
             : null;
 
+    const {
+        loadGaslessConfig,
+        clearGasless,
+        clearGaslessQuote,
+        getGaslessQuote,
+        feeAsset,
+    } = gasless;
+
     // Resolve the relayer config (fee assets + relay address) once gasless is on
     // — single load point so the selector is populated before the first quote.
     useEffect(() => {
-        if (effective) gasless.loadGaslessConfig();
-    }, [effective, gasless.loadGaslessConfig]);
+        if (effective) loadGaslessConfig();
+    }, [effective, loadGaslessConfig]);
 
     // Reset gasless state when leaving the page.
     useEffect(() => {
-        return () => gasless.clearGasless();
-    }, [gasless.clearGasless]);
+        return () => clearGasless();
+    }, [clearGasless]);
 
     const jettonAddress = jetton?.address;
     const jettonDecimals = jetton?.decimalsNumber;
@@ -91,7 +99,7 @@ export const useGaslessJettonSend = ({
     // requests, so a slow earlier response can't overwrite a newer quote.
     useEffect(() => {
         if (!effective) return;
-        gasless.clearGaslessQuote();
+        clearGaslessQuote();
 
         const inputAmount = parseFloat(amount);
         if (
@@ -99,7 +107,7 @@ export const useGaslessJettonSend = ({
             !recipient ||
             !isValidAddress(recipient) ||
             !(inputAmount > 0) ||
-            !gasless.feeAsset ||
+            !feeAsset ||
             jettonDecimals == null
         ) {
             return;
@@ -107,18 +115,18 @@ export const useGaslessJettonSend = ({
 
         const transferAmount = parseUnits(amount, jettonDecimals).toString();
         const id = setTimeout(() => {
-            gasless.getGaslessQuote({ recipientAddress: recipient, jettonAddress, transferAmount });
+            getGaslessQuote({ recipientAddress: recipient, jettonAddress, transferAmount });
         }, QUOTE_DEBOUNCE_MS);
         return () => clearTimeout(id);
     }, [
         effective,
         recipient,
         amount,
-        gasless.feeAsset,
+        feeAsset,
         jettonAddress,
         jettonDecimals,
-        gasless.clearGaslessQuote,
-        gasless.getGaslessQuote,
+        clearGaslessQuote,
+        getGaslessQuote,
     ]);
 
     return {

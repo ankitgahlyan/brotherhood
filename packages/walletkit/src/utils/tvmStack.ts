@@ -38,8 +38,8 @@ function ParseStackItem(item: RawStackItem): TupleItem {
 
 // todo - add support for all types
 export function ParseStack(list: RawStackItem[]): TupleItem[] {
-    let stack: TupleItem[] = [];
-    for (let item of list) {
+    const stack: TupleItem[] = [];
+    for (const item of list) {
         stack.push(ParseStackItem(item));
     }
     return stack;
@@ -67,8 +67,8 @@ function SerializeStackItem(item: TupleItem): RawStackItem {
 }
 
 export function SerializeStack(list: TupleItem[]): RawStackItem[] {
-    let stack: RawStackItem[] = [];
-    for (let item of list) {
+    const stack: RawStackItem[] = [];
+    for (const item of list) {
         stack.push(SerializeStackItem(item));
     }
     return stack;

@@ -15,7 +15,7 @@ import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
 
 const INPUT_CLASS =
-    'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+    'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
 
 export const UnlockScreen: React.FC = () => {
     const [password, setPassword] = useState('');
@@ -76,12 +76,18 @@ export const UnlockScreen: React.FC = () => {
     return (
         <CenteredScreen footer={footer}>
             <div className="flex flex-col items-center text-center px-6">
-                <h1 className="text-2xl font-bold text-gray-900" data-testid="subtitle">
+                <h1 className="text-2xl font-bold text-foreground" data-testid="subtitle">
                     Enter your password
                 </h1>
-                <p className="mt-2 text-base text-gray-500">Enter your password to unlock your wallet.</p>
+                <p className="mt-2 text-base text-muted-foreground">Enter your password to unlock your wallet.</p>
 
-                <div className="mt-8 w-full text-left">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleSubmit();
+                    }}
+                    className="mt-8 w-full text-left"
+                >
                     <input
                         ref={inputRef}
                         type="password"
@@ -91,15 +97,12 @@ export const UnlockScreen: React.FC = () => {
                             setPassword(e.target.value);
                             setError('');
                         }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') void handleSubmit();
-                        }}
                         placeholder="Password"
                         autoComplete="current-password"
                         aria-label="Password"
                         className={INPUT_CLASS}
                     />
-                </div>
+                </form>
 
                 {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
             </div>

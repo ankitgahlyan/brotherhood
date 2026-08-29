@@ -13,9 +13,9 @@ import util from 'util';
 import type { ConnectTransactionParamMessage, Wallet } from '../src';
 import { ApiClientToncenter, CHAIN, Signer, WalletV5R1Adapter, wrapWalletInterface } from '../src';
 
-// eslint-disable-next-line no-console
+ 
 const logInfo = console.log;
-// eslint-disable-next-line no-console
+ 
 const logError = console.error;
 
 const isTestSend = process.env.TEST_SEND;

@@ -6,7 +6,7 @@
  *
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { createConsola } from 'consola';
 
 // Get log level from localStorage or fallback to environment-based level
@@ -23,7 +23,7 @@ const getInitialLogLevel = (): number => {
     } catch (error) {
         // localStorage might not be available (SSR, etc.)
         // Can't use our logger here since it's not created yet, fallback to console
-        // eslint-disable-next-line no-console
+         
         console.warn('Failed to read log level from localStorage:', error);
     }
     // Fallback to environment-based level

@@ -121,7 +121,7 @@ export function parseTonConnectTransactionRequest(
     result: TransactionRequest | undefined;
     validation: ValidationResult;
 } {
-    let errors: string[] = [];
+    const errors: string[] = [];
     try {
         if (event.params.length !== 1) {
             throw new WalletKitError(

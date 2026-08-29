@@ -807,7 +807,7 @@ export class RequestProcessor {
                     signature: signature,
                 };
             }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
         } catch (error: any) {
             log.error('Failed to approve sign data request', {
                 error: error?.message?.toString() ?? error?.toString(),

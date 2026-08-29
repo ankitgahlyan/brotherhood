@@ -48,7 +48,7 @@ class MockWebSocket {
 const ADDR_A = '0:83dfd552e63729b472fcbcc8c44e6cc6691702558b68ecb527e1ba403a0f31a8';
 const ADDR_B = '0:ef4458951c1468a43d5506def6543b009c1fd48392497b45453287efdfa40f05';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const makeContext = (): ProviderFactoryContext => ({ networkManager: {} as any, eventEmitter: {} as any });
 
 describe('TonCenterStreamingProvider', () => {

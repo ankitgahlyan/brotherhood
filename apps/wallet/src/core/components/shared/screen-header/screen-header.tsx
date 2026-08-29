@@ -22,12 +22,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, onBack }) => 
             <button
                 type="button"
                 onClick={onBack}
-                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
                 aria-label="Back"
             >
                 <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
             </button>
         )}
-        <h1 className="text-xl font-bold text-gray-900 truncate">{title}</h1>
+        <h1 className="text-xl font-bold text-foreground truncate">{title}</h1>
     </header>
 );

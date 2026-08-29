@@ -69,7 +69,7 @@ describe('TonStakersStakingProvider', () => {
         });
         provider = factory({ networkManager: mockNetworkManager } as ProviderFactoryContext);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         vi.spyOn(provider as any, 'getApyFromTonApi').mockResolvedValue(0.05);
     });
 

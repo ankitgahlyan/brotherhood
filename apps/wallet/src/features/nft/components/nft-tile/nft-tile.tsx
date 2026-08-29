@@ -38,14 +38,14 @@ export const NftTile: React.FC<NftTileProps> = ({ nft, formatNftIndex }) => {
     const indexLabel = nft.index ? formatNftIndex(nft.index) : null;
 
     return (
-        <article className="bg-gray-100 rounded-2xl overflow-hidden">
-            <div className="aspect-square w-full overflow-hidden bg-gray-300">
+        <article className="bg-secondary/70 border border-border rounded-2xl overflow-hidden">
+            <div className="aspect-square w-full overflow-hidden bg-muted">
                 <FallbackImage src={getNftImageSources(nft)} alt={name} className="w-full h-full object-cover" />
             </div>
             <div className="p-2">
-                <div className="text-sm font-semibold text-gray-900 truncate">{name}</div>
+                <div className="text-sm font-semibold text-foreground truncate">{name}</div>
                 {indexLabel && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                         {indexLabel.length > 10 ? `${indexLabel.slice(0, 6)}…` : indexLabel}
                     </div>
                 )}

@@ -22,9 +22,9 @@ import { createWalletInitConfigLedger } from '../WalletV4R2LedgerAdapter';
 
 dotenv.config();
 
-// eslint-disable-next-line no-console
+ 
 const logInfo = console.log;
-// eslint-disable-next-line no-console
+ 
 const logError = console.error;
 
 const isTestSend = process.env.TEST_SEND;

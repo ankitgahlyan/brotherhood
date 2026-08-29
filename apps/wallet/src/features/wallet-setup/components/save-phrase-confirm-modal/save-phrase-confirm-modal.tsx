@@ -37,7 +37,7 @@ export const SavePhraseConfirmModal: React.FC<SavePhraseConfirmModalProps> = ({
         </Modal.Header>
 
         <Modal.Body>
-            <p className="text-base text-gray-500">
+            <p className="text-base text-muted-foreground">
                 Make sure you’ve written down all 24 words and stored them somewhere safe. Without your recovery phrase
                 you won’t be able to restore this wallet.
             </p>

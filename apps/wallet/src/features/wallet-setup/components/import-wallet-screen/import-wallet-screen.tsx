@@ -228,10 +228,10 @@ export const ImportWalletScreen: React.FC = () => {
     };
 
     const cellClassName = (index: number) => {
-        if (validation.invalidIndices.includes(index)) return 'border-red-400 bg-red-50 text-red-900';
-        if (words[index]) return 'border-green-300 bg-green-50 text-green-800';
-        if (activeInput === index) return 'border-blue-300 bg-blue-50';
-        return 'border-gray-300 bg-white';
+        if (validation.invalidIndices.includes(index)) return 'border-red-500/60 bg-red-500/10 text-red-500';
+        if (words[index]) return 'border-emerald-500/60 bg-emerald-500/10 text-emerald-500';
+        if (activeInput === index) return 'border-blue-500/60 bg-blue-500/10 text-foreground';
+        return 'border-border bg-card text-foreground';
     };
 
     // If wallets discovered, render discovery selection view
@@ -257,8 +257,8 @@ export const ImportWalletScreen: React.FC = () => {
             <CenteredScreen onBack={() => setDiscoveredWallets(null)} footer={footer}>
                 <div className="px-6 space-y-4">
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold text-gray-900">Select Wallet(s)</h1>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <h1 className="text-2xl font-bold text-foreground">Select Wallet(s)</h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Discovered on-chain contracts derived from your recovery phrase:
                         </p>
                     </div>
@@ -270,10 +270,10 @@ export const ImportWalletScreen: React.FC = () => {
                                 <div
                                     key={w.id}
                                     onClick={() => toggleWalletId(w.id)}
-                                    className={`p-3.5 border rounded-xl cursor-pointer transition-all ${
+                                    className={`p-3.5 border rounded-2xl cursor-pointer transition-all ${
                                         isSelected
-                                            ? 'border-blue-500 bg-blue-50/50 shadow-sm ring-1 ring-blue-500'
-                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                            ? 'border-blue-500 bg-blue-500/10 shadow-sm ring-1 ring-blue-500'
+                                            : 'border-border bg-card text-card-foreground hover:border-border/80'
                                     }`}
                                     data-testid={`discovered-wallet-${w.id}`}
                                 >
@@ -406,7 +406,7 @@ export const ImportWalletScreen: React.FC = () => {
                                 autoComplete="off"
                                 spellCheck={false}
                             />
-                            <span className="absolute -top-1 left-0.5 text-[10px] text-gray-400 bg-white px-0.5">
+                            <span className="absolute -top-1 left-0.5 text-[10px] text-muted-foreground bg-card px-0.5">
                                 {index + 1}
                             </span>
                         </div>

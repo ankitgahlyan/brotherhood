@@ -110,7 +110,7 @@ export class TonConnectBridge {
             try {
                 callback(event);
             } catch (error) {
-                // eslint-disable-next-line no-console
+                 
                 console.error('TonConnect event listener error:', error);
             }
         });

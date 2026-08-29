@@ -31,7 +31,7 @@ export interface StorageConfig {
 /**
  * Storage operation result
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export interface StorageResult<T = any> {
     success: boolean;
     data?: T;

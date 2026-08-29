@@ -8,8 +8,10 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
-import { ChevronRight, KeyRound, Lock, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, KeyRound, Lock, Moon, Monitor, Plus, Sun, Sparkles, Trash2, Check } from 'lucide-react';
 import { useAuth, useWallet } from '@demo/wallet-core';
+import { useTheme } from '@/core/theme';
+import type { ThemeMode } from '@/core/theme';
 
 import { ToggleRow } from '../toggle-row';
 
@@ -36,17 +38,27 @@ const ActionRow: React.FC<ActionRowProps> = ({ icon, label, onClick, danger = fa
         onClick={onClick}
         disabled={disabled}
         className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors disabled:opacity-50 ${
-            danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-900 hover:bg-gray-100/60'
+            danger
+                ? 'text-red-500 hover:bg-red-500/10'
+                : 'text-foreground hover:bg-muted/80'
         }`}
     >
-        <span className="flex-shrink-0">{icon}</span>
+        <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
         <span className="flex-1 text-sm font-semibold">{label}</span>
-        <ChevronRight className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-gray-400'}`} />
+        <ChevronRight className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`} />
     </button>
 );
 
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
+    { mode: 'system', label: 'System', icon: <Monitor className="w-4 h-4" /> },
+    { mode: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
+    { mode: 'dark', label: 'Midnight', icon: <Moon className="w-4 h-4" /> },
+    { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
+];
+
 export const SettingsDropdown: React.FC = () => {
     const navigate = useNavigate();
+    const { theme, setTheme } = useTheme();
     const {
         lock,
         reset,
@@ -113,11 +125,11 @@ export const SettingsDropdown: React.FC = () => {
         <>
             <button
                 onClick={() => setPanel('menu')}
-                className="p-1.5 -mr-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
                 aria-label="Settings"
                 data-testid="wallet-menu"
             >
-                <SettingsIcon className="w-6 h-6 text-[#14181F]" />
+                <SettingsIcon className="w-6 h-6 text-foreground" />
             </button>
 
             <Modal.Container
@@ -130,7 +142,38 @@ export const SettingsDropdown: React.FC = () => {
                 </Modal.Header>
 
                 <Modal.Body className="gap-3">
-                    <div className="rounded-2xl bg-[#F7F8FA] divide-y divide-gray-200/70 overflow-hidden">
+                    {/* Appearance Section */}
+                    <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2 block">
+                            Appearance
+                        </span>
+                        <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
+                            {THEME_OPTIONS.map((opt) => {
+                                const isSelected = theme === opt.mode;
+                                return (
+                                    <button
+                                        key={opt.mode}
+                                        type="button"
+                                        onClick={() => setTheme(opt.mode)}
+                                        className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
+                                            isSelected
+                                                ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
+                                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                        }`}
+                                        data-testid={`theme-option-${opt.mode}`}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            {opt.icon}
+                                            {isSelected && <Check className="w-3 h-3 text-blue-500" />}
+                                        </div>
+                                        <span>{opt.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                         <ToggleRow
                             testId="auto-lock"
                             label="Auto-Lock"
@@ -166,7 +209,7 @@ export const SettingsDropdown: React.FC = () => {
                         />
                     </div>
 
-                    <div className="rounded-2xl bg-[#F7F8FA] divide-y divide-gray-200/70 overflow-hidden">
+                    <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                         <ActionRow
                             icon={<Plus className="w-5 h-5" />}
                             label="Create New Wallet"
@@ -188,7 +231,7 @@ export const SettingsDropdown: React.FC = () => {
                     </div>
 
                     {mnemonicError && (
-                        <p className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl">{mnemonicError}</p>
+                        <p className="text-red-500 text-sm text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">{mnemonicError}</p>
                     )}
                 </Modal.Body>
             </Modal.Container>

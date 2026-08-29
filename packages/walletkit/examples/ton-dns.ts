@@ -9,9 +9,9 @@
 // npx tsx examples/ton-dns.ts
 import { ApiClientToncenter, CHAIN } from '../src';
 
-// eslint-disable-next-line no-console
+ 
 const logInfo = console.log;
-// eslint-disable-next-line no-console
+ 
 const logError = console.error;
 
 const networkName = process.env.TON_NETWORK ?? 'TESTNET';

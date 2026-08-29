@@ -104,7 +104,7 @@ export class TONConnectStoredSessionManager implements TONConnectSessionManager 
         domain?: string;
         isJsBridge?: boolean;
     }): Promise<TONConnectSession[]> {
-        let sessions = Array.from(this.sessions.values());
+        const sessions = Array.from(this.sessions.values());
 
         if (!filter) {
             return sessions;

@@ -120,7 +120,7 @@ export const StakingInterface: FC = () => {
     return (
         <div className="space-y-5">
             {/* Stake / Unstake tabs */}
-            <div className="flex rounded-2xl bg-gray-100 p-1">
+            <div className="flex rounded-2xl bg-secondary/70 border border-border p-1">
                 {(['stake', 'unstake'] as const).map((value) => (
                     <button
                         key={value}
@@ -128,7 +128,7 @@ export const StakingInterface: FC = () => {
                         onClick={() => handleTab(value)}
                         className={cn(
                             'flex-1 rounded-xl py-2.5 text-sm font-semibold capitalize transition-colors',
-                            tab === value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                            tab === value ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground',
                         )}
                     >
                         {value}
@@ -147,11 +147,11 @@ export const StakingInterface: FC = () => {
             </div>
 
             {/* Balances + Max */}
-            <div className="space-y-2 rounded-2xl bg-gray-100 p-4 text-sm">
+            <div className="space-y-2 rounded-2xl bg-secondary/50 border border-border/60 p-4 text-sm">
                 <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Available</span>
+                    <span className="text-muted-foreground">Available</span>
                     <span className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 tabular-nums">
+                        <span className="font-semibold text-foreground tabular-nums">
                             {formatLargeValue(availableGram, 4)} GRAM
                         </span>
                         {isStake && parseFloat(availableGram) > 0 && (
@@ -166,9 +166,9 @@ export const StakingInterface: FC = () => {
                     </span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Staked</span>
+                    <span className="text-muted-foreground">Staked</span>
                     <span className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 tabular-nums">
+                        <span className="font-semibold text-foreground tabular-nums">
                             {formatLargeValue(stakedTs, 4)} tsTON
                         </span>
                         {!isStake && parseFloat(stakedTs) > 0 && (
@@ -187,7 +187,7 @@ export const StakingInterface: FC = () => {
             {/* Unstake method */}
             {!isStake && (
                 <div className="space-y-2">
-                    <span className="block text-sm font-medium text-gray-700">Unstake method</span>
+                    <span className="block text-sm font-medium text-foreground">Unstake method</span>
                     <div className="grid grid-cols-3 gap-2">
                         {UNSTAKE_MODES.map(({ mode, label }) => (
                             <button
@@ -197,20 +197,20 @@ export const StakingInterface: FC = () => {
                                 className={cn(
                                     'rounded-xl border-2 py-2 text-xs font-semibold transition-colors',
                                     unstakeMode === mode
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                        : 'border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200',
+                                        ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                                        : 'border-border bg-secondary text-foreground hover:bg-secondary/80',
                                 )}
                             >
                                 {label}
                             </button>
                         ))}
                     </div>
-                    {activeHint && <p className="text-xs text-gray-500">{activeHint}</p>}
+                    {activeHint && <p className="text-xs text-muted-foreground">{activeHint}</p>}
                 </div>
             )}
 
             {(balanceError || error) && (
-                <p className="rounded-2xl bg-red-50 p-3 text-center text-sm text-red-500">{balanceError || error}</p>
+                <p className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-center text-sm text-red-500">{balanceError || error}</p>
             )}
 
             {/* Actions */}

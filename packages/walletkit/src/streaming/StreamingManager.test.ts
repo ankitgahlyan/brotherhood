@@ -55,7 +55,7 @@ const makeMockProvider = (network: Network = makeMockNetwork()): MockProvider =>
     } as unknown as MockProvider;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const makeFactoryCtx = () => vi.fn(() => ({ networkManager: {} as any, eventEmitter: {} as any }))();
 
 const makeManager = (provider: MockProvider) => {

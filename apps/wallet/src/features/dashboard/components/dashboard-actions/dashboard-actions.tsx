@@ -43,38 +43,38 @@ export const DashboardActions: React.FC = () => {
             <div className="grid grid-cols-5 gap-1.5 pt-1">
                 <button
                     onClick={() => navigate('/brotherhood')}
-                    className="p-2 bg-gray-50 border rounded-lg text-center hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
                     data-testid="brotherhood-button"
                 >
-                    <span className="block text-[11px] font-semibold text-gray-800">FossFi</span>
+                    <span className="block text-[11px] font-semibold text-foreground">FossFi</span>
                 </button>
                 <button
                     onClick={() => navigate('/personal-jetton')}
-                    className="p-2 bg-gray-50 border rounded-lg text-center hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
                     data-testid="personal-jetton-button"
                 >
-                    <span className="block text-[11px] font-semibold text-gray-800">Personal</span>
+                    <span className="block text-[11px] font-semibold text-foreground">Personal</span>
                 </button>
                 <button
                     onClick={() => navigate('/dao')}
-                    className="p-2 bg-gray-50 border rounded-lg text-center hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
                     data-testid="dao-button"
                 >
-                    <span className="block text-[11px] font-semibold text-gray-800">DAO</span>
+                    <span className="block text-[11px] font-semibold text-foreground">DAO</span>
                 </button>
                 <button
                     onClick={() => navigate('/lottery')}
-                    className="p-2 bg-gray-50 border rounded-lg text-center hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
                     data-testid="lottery-button"
                 >
-                    <span className="block text-[11px] font-semibold text-gray-800">Lottery</span>
+                    <span className="block text-[11px] font-semibold text-foreground">Lottery</span>
                 </button>
                 <button
                     onClick={() => navigate('/city-network')}
-                    className="p-2 bg-gray-50 border rounded-lg text-center hover:bg-gray-100 transition-colors"
+                    className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
                     data-testid="city-network-button"
                 >
-                    <span className="block text-[11px] font-semibold text-gray-800">Cities</span>
+                    <span className="block text-[11px] font-semibold text-foreground">Cities</span>
                 </button>
             </div>
         </div>

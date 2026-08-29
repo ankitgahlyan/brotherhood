@@ -18,7 +18,7 @@ import type { WalletSetupMode } from '@/features/wallet-setup';
 const MIN_LENGTH = 4;
 
 const INPUT_CLASS =
-    'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+    'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
 
 export const SetupPasswordScreen: React.FC = () => {
     const [password, setPassword] = useState('');
@@ -70,12 +70,18 @@ export const SetupPasswordScreen: React.FC = () => {
     return (
         <CenteredScreen onBack={() => navigate(-1)} footer={footer}>
             <div className="flex flex-col items-center text-center px-6">
-                <h1 className="text-2xl font-bold text-gray-900" data-testid="subtitle">
+                <h1 className="text-2xl font-bold text-foreground" data-testid="subtitle">
                     Create a password
                 </h1>
-                <p className="mt-2 text-base text-gray-500">Create a password to protect your wallet.</p>
+                <p className="mt-2 text-base text-muted-foreground">Create a password to protect your wallet.</p>
 
-                <div className="mt-8 w-full space-y-3 text-left">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleSubmit();
+                    }}
+                    className="mt-8 w-full space-y-3 text-left"
+                >
                     <input
                         ref={inputRef}
                         type="password"
@@ -84,9 +90,6 @@ export const SetupPasswordScreen: React.FC = () => {
                         onChange={(e) => {
                             setPassword(e.target.value);
                             setError('');
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') void handleSubmit();
                         }}
                         placeholder="Password"
                         autoComplete="new-password"
@@ -101,15 +104,12 @@ export const SetupPasswordScreen: React.FC = () => {
                             setConfirmPassword(e.target.value);
                             setError('');
                         }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') void handleSubmit();
-                        }}
                         placeholder="Confirm password"
                         autoComplete="new-password"
                         aria-label="Confirm password"
                         className={INPUT_CLASS}
                     />
-                </div>
+                </form>
 
                 {(error || tooShort || mismatch) && (
                     <p className="mt-4 text-sm text-red-500">
@@ -120,7 +120,7 @@ export const SetupPasswordScreen: React.FC = () => {
                     </p>
                 )}
 
-                <p className="mt-6 text-xs text-gray-400">
+                <p className="mt-6 text-xs text-muted-foreground">
                     Make sure to remember your password — it can’t be recovered if forgotten.
                 </p>
             </div>

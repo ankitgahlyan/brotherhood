@@ -91,21 +91,21 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
     return (
         <div
             className={
-                compact ? 'overflow-hidden' : 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'
+                compact ? 'overflow-hidden' : 'bg-card text-card-foreground rounded-2xl shadow-sm border border-border overflow-hidden'
             }
         >
             {/* Active Wallet Display */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className={`w-full flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                className={`w-full flex items-center justify-between hover:bg-secondary/60 transition-colors ${
                     compact ? 'px-0 py-1' : 'px-4 py-3'
                 }`}
             >
                 <div className={`flex items-center space-x-3 ${compact ? 'min-w-0 flex-1' : ''}`}>
                     {!compact && (
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                             <svg
-                                className="w-5 h-5 text-blue-600"
+                                className="w-5 h-5 text-blue-500"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -121,17 +121,17 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                     )}
                     <div className={`text-left min-w-0 flex-1 ${compact ? 'truncate' : ''}`}>
                         <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                                 {activeWallet?.name || 'No Wallet Selected'}
                             </p>
                             {activeWallet && (
                                 <span
                                     className={`px-1.5 py-0.5 text-xs font-medium rounded ${
                                         activeWallet.network === 'mainnet'
-                                            ? 'bg-green-100 text-green-800'
+                                            ? 'bg-emerald-500/10 text-emerald-500'
                                             : activeWallet.network === 'tetra'
-                                              ? 'bg-purple-100 text-purple-800'
-                                              : 'bg-blue-100 text-blue-800'
+                                              ? 'bg-purple-500/10 text-purple-500'
+                                              : 'bg-blue-500/10 text-blue-500'
                                     }`}
                                 >
                                     {getNetworkLabel(activeWallet.network)}
@@ -139,7 +139,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                             )}
                         </div>
                         {!compact && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 {activeWallet ? formatAddress(activeWallet.address) : 'Select a wallet'}
                             </p>
                         )}
@@ -147,12 +147,12 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                 </div>
                 <div className="flex items-center space-x-2 flex-shrink-0">
                     {savedWallets.length > 1 && !compact && (
-                        <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
+                        <span className="text-xs text-muted-foreground px-2 py-1 bg-secondary border border-border/50 rounded-full">
                             {savedWallets.length} wallets
                         </span>
                     )}
                     <svg
-                        className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -164,7 +164,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
 
             {/* Wallet List */}
             {isExpanded && (
-                <div className="border-t border-gray-200">
+                <div className="border-t border-border">
                     <div className="max-h-96 overflow-y-auto">
                         {savedWallets.map((wallet) => {
                             const isActive = wallet.id === activeWalletId;
@@ -173,8 +173,8 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                             return (
                                 <div
                                     key={wallet.id}
-                                    className={`px-4 py-3 border-b border-gray-100 last:border-b-0 ${
-                                        isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
+                                    className={`px-4 py-3 border-b border-border/60 last:border-b-0 ${
+                                        isActive ? 'bg-blue-500/10' : 'hover:bg-secondary/50'
                                     }`}
                                 >
                                     <div className="flex items-start justify-between">
@@ -185,7 +185,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                         type="text"
                                                         value={editingName}
                                                         onChange={(e) => setEditingName(e.target.value)}
-                                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        className="flex-1 px-2 py-1 text-sm border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         autoFocus
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') handleSaveEdit();
@@ -194,7 +194,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                     />
                                                     <button
                                                         onClick={handleSaveEdit}
-                                                        className="p-1 text-green-600 hover:text-green-700"
+                                                        className="p-1 text-emerald-500 hover:text-emerald-600"
                                                         title="Save"
                                                     >
                                                         <svg
@@ -213,7 +213,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                     </button>
                                                     <button
                                                         onClick={handleCancelEdit}
-                                                        className="p-1 text-gray-600 hover:text-gray-700"
+                                                        className="p-1 text-muted-foreground hover:text-foreground"
                                                         title="Cancel"
                                                     >
                                                         <svg
@@ -233,36 +233,36 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center space-x-2 mb-1">
-                                                    <p className="text-sm font-medium text-gray-900">{wallet.name}</p>
+                                                    <p className="text-sm font-medium text-foreground">{wallet.name}</p>
                                                     <span
                                                         className={`px-1.5 py-0.5 text-xs font-medium rounded ${
                                                             wallet.network === 'mainnet'
-                                                                ? 'bg-green-100 text-green-800'
+                                                                ? 'bg-emerald-500/10 text-emerald-500'
                                                                 : wallet.network === 'tetra'
-                                                                  ? 'bg-purple-100 text-purple-800'
-                                                                  : 'bg-blue-100 text-blue-800'
+                                                                  ? 'bg-purple-500/10 text-purple-500'
+                                                                  : 'bg-blue-500/10 text-blue-500'
                                                         }`}
                                                     >
                                                         {getNetworkLabel(wallet.network)}
                                                     </span>
                                                     {isActive && (
-                                                        <span className="text-xs text-blue-600 font-medium">
+                                                        <span className="text-xs text-blue-500 font-medium">
                                                             Active
                                                         </span>
                                                     )}
                                                 </div>
                                             )}
-                                            <p className="text-xs text-gray-600 font-mono mb-1">
+                                            <p className="text-xs text-muted-foreground font-mono mb-1">
                                                 {formatAddress(wallet.address)}
                                             </p>
-                                            <div className="flex items-center space-x-3 text-xs text-gray-500">
+                                            <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                                                 <button
                                                     onClick={() =>
                                                         setShowDetailsWalletId(
                                                             showDetailsWalletId === wallet.id ? null : wallet.id,
                                                         )
                                                     }
-                                                    className="hover:text-blue-600 transition-colors flex items-center space-x-1"
+                                                    className="hover:text-blue-500 transition-colors flex items-center space-x-1"
                                                 >
                                                     <span className="capitalize">
                                                         {formatWalletType(wallet.walletInterfaceType)}
@@ -289,32 +289,32 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
 
                                             {/* Wallet Details */}
                                             {showDetailsWalletId === wallet.id && (
-                                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                                <div className="mt-3 pt-3 border-t border-border">
                                                     <div className="space-y-2">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-medium text-gray-700">
+                                                            <span className="text-xs font-medium text-foreground">
                                                                 Interface Type:
                                                             </span>
-                                                            <span className="text-xs text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                                                            <span className="text-xs text-muted-foreground px-2 py-1 bg-secondary border border-border/50 rounded-lg">
                                                                 {formatWalletType(wallet.walletInterfaceType)}
                                                             </span>
                                                         </div>
                                                         {wallet.ledgerConfig && (
                                                             <div className="flex items-center justify-between">
-                                                                <span className="text-xs font-medium text-gray-700">
+                                                                <span className="text-xs font-medium text-foreground">
                                                                     Ledger Account:
                                                                 </span>
-                                                                <span className="text-xs text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                                                                <span className="text-xs text-muted-foreground px-2 py-1 bg-secondary border border-border/50 rounded-lg">
                                                                     #{wallet.ledgerConfig.accountIndex}
                                                                 </span>
                                                             </div>
                                                         )}
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-medium text-gray-700">
+                                                            <span className="text-xs font-medium text-foreground">
                                                                 Full Address:
                                                             </span>
                                                         </div>
-                                                        <div className="text-xs text-gray-600 font-mono break-all bg-gray-50 p-2 rounded">
+                                                        <div className="text-xs text-muted-foreground font-mono break-all bg-secondary/70 border border-border/50 p-2 rounded-xl">
                                                             {wallet.address}
                                                         </div>
                                                     </div>
@@ -330,7 +330,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                             log.info(`Switching to wallet ${wallet.id}`);
                                                             onSwitchWallet(wallet.id);
                                                         }}
-                                                        className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        className="p-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
                                                         title="Switch to this wallet"
                                                     >
                                                         <svg
@@ -350,7 +350,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                 )}
                                                 <button
                                                     onClick={() => handleStartEdit(wallet)}
-                                                    className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    className="p-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
                                                     title="Rename wallet"
                                                 >
                                                     <svg
@@ -369,7 +369,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                                 </button>
                                                 <button
                                                     onClick={() => handleRemove(wallet.id)}
-                                                    className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                                     title="Remove wallet"
                                                 >
                                                     <svg
@@ -395,8 +395,8 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                     </div>
 
                     {/* Add New Wallet Button */}
-                    <div className="p-3 bg-gray-50 border-t border-gray-200">
-                        <p className="text-xs text-gray-500 text-center">
+                    <div className="p-3 bg-secondary/40 border-t border-border">
+                        <p className="text-xs text-muted-foreground text-center">
                             Create or import a new wallet from the setup page
                         </p>
                     </div>

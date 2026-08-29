@@ -28,7 +28,7 @@ export const DashboardActionButton: React.FC<DashboardActionButtonProps> = ({
         onClick={onClick}
         data-testid={testId}
         aria-label={ariaLabel ?? label}
-        className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl bg-[#F7F8FA] text-gray-900 text-sm font-medium hover:scale-[1.03] active:scale-[0.97] transition-transform"
+        className="flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl bg-secondary/70 border border-border text-foreground text-sm font-medium hover:bg-secondary hover:scale-[1.03] active:scale-[0.97] transition-all"
     >
         {icon}
         <span>{label}</span>

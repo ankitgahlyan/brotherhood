@@ -17,13 +17,13 @@ const InfoPopover: React.FC<{ label: string; children: React.ReactNode }> = ({ l
             <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                 aria-label={`${label} info`}
             >
                 <Info className="w-4 h-4" />
             </button>
         </PopoverTrigger>
-        <PopoverContent side="top" align="start" className="w-64 text-xs text-gray-600 leading-relaxed">
+        <PopoverContent side="top" align="start" className="w-64 text-xs text-popover-foreground bg-popover border border-border leading-relaxed">
             {children}
         </PopoverContent>
     </Popover>
@@ -42,10 +42,10 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({ testId, label, description
     <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-gray-900">{label}</span>
+                <span className="text-sm font-semibold text-foreground">{label}</span>
                 {info && <InfoPopover label={label}>{info}</InfoPopover>}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
         </div>
         <label data-testid={testId} className="relative inline-flex items-center cursor-pointer flex-shrink-0">
             <input
@@ -54,7 +54,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({ testId, label, description
                 checked={checked}
                 onChange={(e) => onChange(e.target.checked)}
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+            <div className="w-11 h-6 bg-muted border border-border/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
         </label>
     </div>
 );

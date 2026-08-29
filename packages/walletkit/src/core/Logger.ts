@@ -61,7 +61,7 @@ export interface LoggerConfig {
  * Context object for structured logging
  */
 export interface LogContext {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     [key: string]: any;
 }
 
@@ -215,7 +215,7 @@ export class Logger {
 
         logMessage += `${level}: ${message}`;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const logArgs: any[] = [logMessage];
 
         if (context && Object.keys(context).length > 0) {
@@ -225,22 +225,22 @@ export class Logger {
         // Use appropriate console method based on level
         switch (level) {
             case 'DEBUG':
-                // eslint-disable-next-line no-console
+                 
                 console.debug(...logArgs);
                 break;
             case 'INFO':
-                // eslint-disable-next-line no-console
+                 
                 console.info(...logArgs);
                 break;
             case 'WARN':
-                // eslint-disable-next-line no-console
+                 
                 console.warn(...logArgs);
                 break;
             case 'ERROR':
-                // eslint-disable-next-line no-console
+                 
                 console.error(...logArgs);
                 if (this.config.enableStackTrace) {
-                    // eslint-disable-next-line no-console
+                     
                     console.trace();
                 }
                 break;

@@ -97,7 +97,7 @@ export const CenteredAmountInput: FC<CenteredAmountInputProps> = ({
             <div className="flex max-w-full items-baseline font-bold">
                 {symbol && (
                     <span
-                        className="select-none whitespace-nowrap text-gray-400"
+                        className="select-none whitespace-nowrap text-muted-foreground"
                         style={{ fontSize: inputFontSize, lineHeight: INPUT_LINE_HEIGHT }}
                     >
                         {symbol}
@@ -106,7 +106,7 @@ export const CenteredAmountInput: FC<CenteredAmountInputProps> = ({
                 <input
                     ref={inputRef}
                     data-testid={baseTestId ? `${baseTestId}-input` : undefined}
-                    className="min-w-[24px] max-w-full border-0 bg-transparent p-0 text-right text-gray-900 outline-none placeholder:text-gray-400"
+                    className="min-w-[24px] max-w-full border-0 bg-transparent p-0 text-right text-foreground outline-none placeholder:text-muted-foreground"
                     type="text"
                     inputMode="decimal"
                     placeholder={placeholder}
@@ -121,7 +121,7 @@ export const CenteredAmountInput: FC<CenteredAmountInputProps> = ({
                 />
                 {ticker && (
                     <span
-                        className="ml-[0.2em] select-none whitespace-nowrap text-gray-400"
+                        className="ml-[0.2em] select-none whitespace-nowrap text-muted-foreground"
                         style={{ fontSize: tickerFontSize, lineHeight: 1 }}
                     >
                         {ticker}

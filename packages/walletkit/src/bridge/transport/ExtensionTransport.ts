@@ -126,7 +126,7 @@ export class ExtensionTransport implements Transport {
             try {
                 this.eventCallback(event);
             } catch (error) {
-                // eslint-disable-next-line no-console
+                 
                 console.error('TonConnect event callback error:', error);
             }
         }

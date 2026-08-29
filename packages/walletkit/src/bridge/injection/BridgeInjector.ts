@@ -99,7 +99,7 @@ export function injectBridge(
 
     // 3. Check if bridge already exists
     if (windowAccessor.exists()) {
-        // eslint-disable-next-line no-console
+         
         console.log(`${config.jsBridgeKey}.tonconnect already exists, skipping injection`);
         return;
     }
@@ -117,7 +117,7 @@ export function injectBridge(
     // 6. Inject bridge into window
     windowAccessor.injectBridge(bridge);
 
-    // eslint-disable-next-line no-console
+     
     console.log(`TonConnect JS Bridge injected for ${config.jsBridgeKey} - forwarding to extension`);
 
     // 7. Setup iframe watcher

@@ -215,18 +215,18 @@ describe('mnemonic', () => {
             });
 
             it('should throw error for invalid mnemonic type', async () => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 await expect(MnemonicToKeyPair(VALID_TON_MNEMONIC_24, 'invalid' as any)).rejects.toThrow(
                     WalletKitError,
                 );
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 await expect(MnemonicToKeyPair(VALID_TON_MNEMONIC_24, 'invalid' as any)).rejects.toMatchObject({
                     code: ERROR_CODES.VALIDATION_ERROR,
                 });
             });
 
             it('should include received type in error message for invalid type', async () => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 await expect(MnemonicToKeyPair(VALID_TON_MNEMONIC_24, 'invalid' as any)).rejects.toThrow(
                     /expected "ton" or "bip39", got "invalid"/,
                 );

@@ -27,11 +27,11 @@ export const NftsCard: React.FC = () => {
             <button
                 type="button"
                 onClick={() => navigate('/wallet/nft')}
-                className="flex items-center gap-1 mb-2"
+                className="flex items-center gap-1 mb-2 group"
                 aria-label="View all NFTs"
             >
-                <h2 className="text-base font-semibold text-gray-900">NFTs</h2>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <h2 className="text-base font-semibold text-foreground">NFTs</h2>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </button>
 
             <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">

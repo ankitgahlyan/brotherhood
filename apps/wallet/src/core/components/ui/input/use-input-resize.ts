@@ -6,7 +6,7 @@
  *
  */
 
-import { useRef, useState, useLayoutEffect } from 'react';
+import { useCallback, useRef, useState, useLayoutEffect } from 'react';
 import type { CSSProperties, RefObject } from 'react';
 
 export type InputSize = 's' | 'm' | 'l';
@@ -61,7 +61,7 @@ export const useInputResize = ({ resizable, contextSize, value }: UseInputResize
     const [fontSizeEm, setFontSizeEm] = useState<number | undefined>(undefined);
     const lineHeightRatioRef = useRef<number>(1.25);
 
-    const adjustSize = () => {
+    const adjustSize = useCallback(() => {
         if (!resizable || !inputRef.current || !measureMaxRef.current || !measureMinRef.current) return;
         const availableWidth = inputRef.current.clientWidth;
         if (availableWidth === 0) return;
@@ -77,10 +77,10 @@ export const useInputResize = ({ resizable, contextSize, value }: UseInputResize
         const scaledPx = Math.min(maxFontSize, Math.max(minFontSize, maxFontSize * ratio));
         setFontSizeEm(scaledPx / parentFontSize);
         lineHeightRatioRef.current = lineHeightRatio;
-    };
+    }, [resizable]);
 
     // Re-measure when the controlled value or context size changes.
-    useLayoutEffect(adjustSize, [resizable, contextSize, value]);
+    useLayoutEffect(adjustSize, [adjustSize, contextSize, value]);
 
     // Re-measure on container resize (observe the parent, not the input itself,
     // to avoid a feedback loop when the font-size change triggers the observer).
@@ -90,7 +90,7 @@ export const useInputResize = ({ resizable, contextSize, value }: UseInputResize
         const observer = new ResizeObserver(adjustSize);
         observer.observe(parent);
         return () => observer.disconnect();
-    }, [resizable, contextSize]);
+    }, [resizable, adjustSize]);
 
     const resizeStyle: CSSProperties | undefined =
         resizable && fontSizeEm !== undefined

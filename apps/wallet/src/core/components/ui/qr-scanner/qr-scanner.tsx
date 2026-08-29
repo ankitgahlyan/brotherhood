@@ -150,13 +150,13 @@ export const QrScanner: React.FC<QrScannerProps> = ({
             }}
         >
             <div
-                className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl space-y-4"
+                className="relative w-full max-w-sm rounded-2xl bg-card text-card-foreground border border-border p-5 shadow-2xl space-y-4"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Camera className="w-5 h-5 text-blue-600" />
-                        <span className="font-semibold text-sm text-gray-900">{title}</span>
+                        <span className="font-semibold text-sm text-foreground">{title}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         {cameras.length > 1 && (
@@ -166,7 +166,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
                                     e.stopPropagation();
                                     void flipCamera();
                                 }}
-                                className="p-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
                                 title="Flip Camera"
                             >
                                 <RefreshCw className="w-4 h-4" />
@@ -178,7 +178,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
                                 e.stopPropagation();
                                 void stopQRScanner();
                             }}
-                            className="p-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
                             title="Close"
                         >
                             <X className="w-4 h-4" />

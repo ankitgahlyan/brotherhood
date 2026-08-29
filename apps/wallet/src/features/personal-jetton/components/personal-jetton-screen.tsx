@@ -105,13 +105,15 @@ export const PersonalJettonScreen: React.FC = () => {
         <NewLayout header={<ScreenHeader title="Personal Token Economy" onBack={() => navigate('/wallet')} />}>
             <div className="space-y-4">
                 {/* Tabs */}
-                <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
                     {(['info', 'deploy', 'mint', 'burn', 'admin', 'topup'] as Tab[]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
-                                activeTab === tab ? 'bg-white shadow text-black' : 'text-gray-600 hover:text-black'
+                            className={`px-3 py-1.5 rounded-lg capitalize transition-colors ${
+                                activeTab === tab
+                                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                             }`}
                             data-testid={`personal-tab-${tab}`}
                         >
@@ -122,23 +124,23 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Info Tab */}
                 {activeTab === 'info' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-2">Personal Jetton Overview</h3>
                         {info.isLoading ? (
-                            <p className="text-gray-500 text-xs">Querying minter & wallet contracts…</p>
+                            <p className="text-muted-foreground text-xs">Querying minter & wallet contracts…</p>
                         ) : (
                             <div className="space-y-2 text-xs">
-                                <div className="bg-gray-50 p-2.5 rounded-lg break-all">
-                                    <span className="text-gray-500 block">Personal Minter Address</span>
-                                    <span className="font-medium">{info.personalMinterAddress || 'None deployed yet'}</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all">
+                                    <span className="text-muted-foreground block">Personal Minter Address</span>
+                                    <span className="font-medium text-foreground">{info.personalMinterAddress || 'None deployed yet'}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg break-all">
-                                    <span className="text-gray-500 block">Personal Wallet Address</span>
-                                    <span className="font-medium">{info.personalWalletAddress || 'None'}</span>
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all">
+                                    <span className="text-muted-foreground block">Personal Wallet Address</span>
+                                    <span className="font-medium text-foreground">{info.personalWalletAddress || 'None'}</span>
                                 </div>
-                                <div className="bg-gray-50 p-2.5 rounded-lg">
-                                    <span className="text-gray-500 block">Personal Token Balance</span>
-                                    <span className="font-medium font-semibold text-sm">
+                                <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                    <span className="text-muted-foreground block">Personal Token Balance</span>
+                                    <span className="font-medium font-semibold text-sm text-foreground">
                                         {info.personalBalance !== null ? (Number(info.personalBalance) / 1e9).toFixed(4) : '0.0000'}
                                     </span>
                                 </div>
@@ -149,7 +151,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Deploy Wizard */}
                 {activeTab === 'deploy' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Issue Personal Token</h3>
                         <div className="space-y-2">
                             <input
@@ -157,7 +159,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={tokenName}
                                 onChange={(e) => setTokenName(e.target.value)}
                                 placeholder="Token Name (e.g. Alice Credit)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-deploy-name"
                             />
                             <input
@@ -165,14 +167,14 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={tokenSymbol}
                                 onChange={(e) => setTokenSymbol(e.target.value)}
                                 placeholder="Symbol (e.g. ALICE)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-deploy-symbol"
                             />
                             <textarea
                                 value={tokenDesc}
                                 onChange={(e) => setTokenDesc(e.target.value)}
                                 placeholder="Description"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 rows={2}
                                 data-testid="personal-deploy-desc"
                             />
@@ -181,7 +183,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={tokenImage}
                                 onChange={(e) => setTokenImage(e.target.value)}
                                 placeholder="Image URL (https://...)"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-deploy-image"
                             />
                         </div>
@@ -199,7 +201,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Mint Tokens */}
                 {activeTab === 'mint' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Mint Personal Tokens</h3>
                         <div className="space-y-2">
                             <InputScan
@@ -219,7 +221,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Amount to Mint"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-mint-amount"
                             />
                         </div>
@@ -237,7 +239,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Burn Tokens */}
                 {activeTab === 'burn' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Burn Personal Tokens</h3>
                         <div className="space-y-2">
                             <InputScan
@@ -251,7 +253,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Amount to Burn"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-burn-amount"
                             />
                         </div>
@@ -269,7 +271,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Admin Management */}
                 {activeTab === 'admin' && (
-                    <div className="space-y-4 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Transfer Minter Admin</h3>
                             <InputScan
@@ -289,7 +291,7 @@ export const PersonalJettonScreen: React.FC = () => {
                             </Button>
                         </div>
 
-                        <hr />
+                        <hr className="border-border" />
 
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base">Update Metadata</h3>
@@ -298,7 +300,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={tokenName}
                                 onChange={(e) => setTokenName(e.target.value)}
                                 placeholder="New Name"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-meta-name"
                             />
                             <input
@@ -306,7 +308,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                 value={tokenSymbol}
                                 onChange={(e) => setTokenSymbol(e.target.value)}
                                 placeholder="New Symbol"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="personal-meta-symbol"
                             />
                             <Button
@@ -324,7 +326,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {/* Top Up TONs */}
                 {activeTab === 'topup' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Top Up Contract TON Balance</h3>
                         <div className="space-y-2">
                             <InputScan

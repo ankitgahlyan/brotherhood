@@ -32,10 +32,10 @@ export const SwapField: React.FC<SwapFieldProps> = ({
     onAmountChange,
     onMax,
 }) => (
-    <div className="space-y-2 rounded-2xl bg-gray-100 p-4">
+    <div className="space-y-2 rounded-2xl bg-secondary/50 border border-border/60 p-4">
         <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-500">{label}</span>
-            <span className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="text-sm font-medium text-muted-foreground">{label}</span>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="tabular-nums">Balance: {formatLargeValue(balance, 4)}</span>
                 {onMax && parseFloat(balance) > 0 && (
                     <button type="button" onClick={onMax} className="font-semibold text-blue-600 hover:text-blue-700">
@@ -47,15 +47,15 @@ export const SwapField: React.FC<SwapFieldProps> = ({
 
         <div className="flex items-center gap-3">
             <input
-                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-3xl font-semibold text-gray-900 outline-none placeholder:text-gray-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-3xl font-semibold text-foreground outline-none placeholder:text-muted-foreground/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 inputMode="decimal"
                 placeholder="0"
                 value={amount}
                 onChange={(e) => onAmountChange(e.target.value)}
             />
 
-            <span className="flex flex-shrink-0 items-center gap-2 rounded-full bg-white px-3 py-2 shadow-sm">
-                <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+            <span className="flex flex-shrink-0 items-center gap-2 rounded-full bg-card border border-border px-3 py-2 shadow-sm">
+                <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-secondary">
                     <FallbackImage
                         src={icon}
                         alt=""
@@ -67,7 +67,7 @@ export const SwapField: React.FC<SwapFieldProps> = ({
                         }
                     />
                 </span>
-                <span className="text-sm font-semibold text-gray-900">{symbol}</span>
+                <span className="text-sm font-semibold text-foreground">{symbol}</span>
             </span>
         </div>
     </div>

@@ -49,11 +49,11 @@ export async function runSendTransactionTest(
             isPositiveCase = testCaseData.isPositiveCase;
             testCaseName = testCaseData.name || '';
         } catch (error) {
-            // eslint-disable-next-line no-console
+             
             console.error('Error getting test case data:', error);
         }
     } else {
-        // eslint-disable-next-line no-console
+         
         console.warn('AllureId not found in test title or client not available');
     }
 
@@ -116,11 +116,11 @@ export async function runSignDataTest(
             expectedResult = testCaseData.expectedResult;
             testCaseName = testCaseData.name || '';
         } catch (error) {
-            // eslint-disable-next-line no-console
+             
             console.error('Error getting test case data:', error);
         }
     } else {
-        // eslint-disable-next-line no-console
+         
         console.warn('AllureId not found in test title or client not available');
     }
 

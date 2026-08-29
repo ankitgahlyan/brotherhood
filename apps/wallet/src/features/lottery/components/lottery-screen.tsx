@@ -42,8 +42,8 @@ export const LotteryScreen: React.FC = () => {
         <NewLayout header={<ScreenHeader title="On-Chain Lottery" onBack={() => navigate('/wallet')} />}>
             <div className="space-y-4">
                 {/* Contract Input */}
-                <div className="bg-white p-3 border rounded-xl shadow-sm text-xs space-y-1">
-                    <label className="font-semibold text-gray-700">Lottery Contract Address</label>
+                <div className="bg-card text-card-foreground p-3 border border-border rounded-2xl shadow-sm text-xs space-y-1">
+                    <label className="font-semibold text-foreground">Lottery Contract Address</label>
                     <InputScan
                         value={lotteryAddressInput}
                         onChange={setLotteryAddressInput}
@@ -53,7 +53,7 @@ export const LotteryScreen: React.FC = () => {
                 </div>
 
                 {/* Dashboard / State Card */}
-                <div className="bg-white p-4 border rounded-xl shadow-sm space-y-3 text-sm">
+                <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm space-y-3 text-sm">
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-base">Prize Pool & Phase</h3>
                         <Button size="sm" variant="secondary" onClick={() => state.refetch()}>
@@ -62,26 +62,26 @@ export const LotteryScreen: React.FC = () => {
                     </div>
 
                     {state.isLoading ? (
-                        <p className="text-xs text-gray-500">Querying lottery contract state…</p>
+                        <p className="text-xs text-muted-foreground">Querying lottery contract state…</p>
                     ) : (
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="bg-gray-50 p-2.5 rounded-lg">
-                                <span className="text-gray-500 block">Prize Pool</span>
-                                <span className="font-semibold text-sm">
+                            <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                <span className="text-muted-foreground block">Prize Pool</span>
+                                <span className="font-semibold text-sm text-foreground">
                                     {state.prizePool !== null ? (Number(state.prizePool) / 1e9).toFixed(2) : '0.00'} TON
                                 </span>
                             </div>
-                            <div className="bg-gray-50 p-2.5 rounded-lg">
-                                <span className="text-gray-500 block">Participants</span>
-                                <span className="font-semibold text-sm">{state.participantCount ?? 0}</span>
+                            <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                <span className="text-muted-foreground block">Participants</span>
+                                <span className="font-semibold text-sm text-foreground">{state.participantCount ?? 0}</span>
                             </div>
-                            <div className="bg-gray-50 p-2.5 rounded-lg">
-                                <span className="text-gray-500 block">Current Phase</span>
-                                <span className="font-semibold text-sm">{state.currentPhase ?? 0}</span>
+                            <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                <span className="text-muted-foreground block">Current Phase</span>
+                                <span className="font-semibold text-sm text-foreground">{state.currentPhase ?? 0}</span>
                             </div>
-                            <div className="bg-gray-50 p-2.5 rounded-lg">
-                                <span className="text-gray-500 block">Your Entry Status</span>
-                                <span className={`font-semibold text-xs ${state.isParticipant ? 'text-green-600' : 'text-gray-600'}`}>
+                            <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                                <span className="text-muted-foreground block">Your Entry Status</span>
+                                <span className={`font-semibold text-xs ${state.isParticipant ? 'text-emerald-500' : 'text-muted-foreground'}`}>
                                     {state.isParticipant ? 'Entered' : 'Not Entered'}
                                 </span>
                             </div>

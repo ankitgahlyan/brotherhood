@@ -57,7 +57,7 @@ describe('Toncenter Mappers', () => {
                 finality: 'confirmed' as const,
             };
             // asAddressFriendly might throw or return something for invalid, let's see current behavior
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             expect(() => mapBalance(notification as any)).toThrow();
         });
     });
@@ -120,7 +120,7 @@ describe('Toncenter Mappers', () => {
                 transactions: [],
                 finality: 'confirmed' as const,
             };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const result = mapTransactions(ADDR, notification as any);
             expect(result.transactions).toEqual([]);
         });
@@ -134,7 +134,7 @@ describe('Toncenter Mappers', () => {
                 metadata: { some: 'data' },
                 finality: 'confirmed' as const,
             };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const result = mapTransactions(ADDR, notification as any);
             expect(result.addressBook).toBeDefined();
             expect(result.metadata).toEqual({ some: 'data' });
@@ -184,7 +184,7 @@ describe('Toncenter Mappers', () => {
                 },
                 finality: 'confirmed' as const,
             };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const result = mapJettons(notification as any);
             expect(result.decimals).toBeUndefined();
             expect(result.balance).toBeUndefined();
@@ -212,7 +212,7 @@ describe('Toncenter Mappers', () => {
                 },
                 finality: 'confirmed' as const,
             };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const result = mapJettons(notification as any);
             expect(isNaN(result.decimals as number)).toBe(true);
             expect(result.balance).toBeUndefined();

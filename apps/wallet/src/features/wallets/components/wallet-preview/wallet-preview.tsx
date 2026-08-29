@@ -162,10 +162,10 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
     return (
         <div
             onClick={onClick}
-            className={`border rounded-lg transition-all ${
+            className={`border rounded-2xl transition-all ${
                 isActive
-                    ? 'border-blue-500 bg-blue-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                    ? 'border-blue-500 bg-blue-500/10 shadow-md ring-1 ring-blue-500'
+                    : 'border-border bg-card text-card-foreground hover:border-border/80 hover:shadow-sm'
             } ${onClick ? 'cursor-pointer' : ''} ${className}`}
         >
             <div className="p-4">
@@ -174,15 +174,15 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
                     <div className="flex items-center space-x-3">
                         <div
                             className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                                isActive ? 'bg-blue-500/20 text-blue-500' : 'bg-secondary text-muted-foreground'
                             }`}
                         >
                             {getWalletIcon(wallet.walletInterfaceType)}
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-gray-900">{wallet.name}</h3>
+                            <h3 className="text-base font-semibold text-foreground">{wallet.name}</h3>
                             {isActive && (
-                                <span className="inline-block px-2 py-0.5 text-xs font-medium text-blue-600 bg-blue-100 rounded-full">
+                                <span className="inline-block px-2 py-0.5 text-xs font-medium text-blue-500 bg-blue-500/10 rounded-full">
                                     Active
                                 </span>
                             )}
@@ -190,8 +190,8 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
                     </div>
                     {balance !== undefined && (
                         <div className="text-right">
-                            <p className="text-xs text-gray-500 mb-1">Balance</p>
-                            <p className="text-lg font-bold text-gray-900">{formatBalance(balance)}</p>
+                            <p className="text-xs text-muted-foreground mb-1">Balance</p>
+                            <p className="text-lg font-bold text-foreground">{formatBalance(balance)}</p>
                         </div>
                     )}
                 </div>
@@ -200,8 +200,8 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
                 <div className="space-y-2">
                     {/* Address */}
                     <div className="flex items-start justify-between">
-                        <span className="text-xs font-medium text-gray-500">Address:</span>
-                        <span className="text-xs text-gray-900 font-mono text-right break-all ml-2">
+                        <span className="text-xs font-medium text-muted-foreground">Address:</span>
+                        <span className="text-xs text-foreground font-mono text-right break-all ml-2">
                             {showFullAddress ? wallet.address : formatAddress(wallet.address, 20)}
                         </span>
                     </div>
@@ -209,28 +209,28 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
                     {/* Version, Network & Interface Type */}
                     <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-500">Version:</span>
-                            <span className="text-xs text-gray-900 px-2 py-0.5 bg-gray-100 rounded">
+                            <span className="text-xs font-medium text-muted-foreground">Version:</span>
+                            <span className="text-xs text-foreground px-2 py-0.5 bg-secondary border border-border/50 rounded-lg">
                                 {formatVersion(wallet.version)}
                             </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-500">Network:</span>
+                            <span className="text-xs font-medium text-muted-foreground">Network:</span>
                             <span
                                 className={`text-xs px-2 py-0.5 rounded ${
                                     wallet.network === 'testnet'
-                                        ? 'bg-orange-100 text-orange-800'
+                                        ? 'bg-amber-500/10 text-amber-500'
                                         : wallet.network === 'tetra'
-                                          ? 'bg-purple-100 text-purple-800'
-                                          : 'bg-green-100 text-green-800'
+                                          ? 'bg-purple-500/10 text-purple-500'
+                                          : 'bg-emerald-500/10 text-emerald-500'
                                 }`}
                             >
                                 {getNetworkLabel(wallet.network)}
                             </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-500">Type:</span>
-                            <span className="text-xs text-gray-900 px-2 py-0.5 bg-gray-100 rounded">
+                            <span className="text-xs font-medium text-muted-foreground">Type:</span>
+                            <span className="text-xs text-foreground px-2 py-0.5 bg-secondary border border-border/50 rounded-lg">
                                 {formatWalletType(wallet.walletInterfaceType)}
                             </span>
                         </div>
@@ -238,9 +238,9 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
 
                     {/* Ledger Info */}
                     {wallet.ledgerConfig && (
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                            <span className="text-xs font-medium text-gray-500">Ledger Account:</span>
-                            <span className="text-xs text-gray-900">#{wallet.ledgerConfig.accountIndex}</span>
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="text-xs font-medium text-muted-foreground">Ledger Account:</span>
+                            <span className="text-xs text-foreground">#{wallet.ledgerConfig.accountIndex}</span>
                         </div>
                     )}
                 </div>

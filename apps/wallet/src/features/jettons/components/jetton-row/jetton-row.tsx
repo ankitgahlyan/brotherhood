@@ -49,7 +49,7 @@ export const JettonRow: React.FC<JettonRowProps> = ({
                 className={`flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
                 onClick={onClick}
             >
-                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
                     {jettonInfo.image ? (
                         <img
                             src={jettonInfo.image}
@@ -63,24 +63,24 @@ export const JettonRow: React.FC<JettonRowProps> = ({
                         </span>
                     )}
                 </div>
-                <span className="text-sm font-medium text-gray-900 truncate flex-1 min-w-0">
+                <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
                     {jettonInfo.name || jettonInfo.symbol}
                 </span>
-                <span className="text-sm font-medium text-gray-700 truncate flex-shrink-0">{jettonInfo.balance}</span>
+                <span className="text-sm font-medium text-muted-foreground truncate flex-shrink-0">{jettonInfo.balance}</span>
             </div>
         );
     }
 
     return (
         <div
-            className={`group flex items-center p-4 border border-gray-200 rounded-xl 
-                hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer
-                bg-white hover:bg-gray-50/50 min-w-0 select-none ${className}`}
+            className={`group flex items-center p-4 border border-border rounded-2xl 
+                hover:border-border/80 hover:shadow-md transition-all duration-200 cursor-pointer
+                bg-card hover:bg-secondary/40 min-w-0 select-none ${className}`}
             onClick={onClick}
         >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <div className="relative flex-shrink-0 select-none">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-gray-100 group-hover:ring-gray-200 transition-all duration-200">
+                    <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center overflow-hidden ring-2 ring-border/50 group-hover:ring-border transition-all duration-200">
                         {jettonInfo.image ? (
                             <img
                                 src={jettonInfo.image}
@@ -99,27 +99,27 @@ export const JettonRow: React.FC<JettonRowProps> = ({
                 </div>
                 <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center space-x-2 min-w-0">
-                        <h3 className="text-left text-base font-semibold text-gray-900 truncate">
+                        <h3 className="text-left text-base font-semibold text-foreground truncate">
                             {jettonInfo.name || jettonInfo.symbol}
                         </h3>
-                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md flex-shrink-0 select-none">
+                        <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-md flex-shrink-0 select-none">
                             {jettonInfo.symbol && jettonInfo.symbol?.length > 6
                                 ? `${jettonInfo.symbol.slice(0, 6)}...`
                                 : jettonInfo.symbol}
                         </span>
                     </div>
                     <div className="mt-1">
-                        <p className="text-left text-sm text-gray-500 font-mono truncate">
+                        <p className="text-left text-sm text-muted-foreground font-mono truncate">
                             {formatAddress(jetton.address)}
                         </p>
                     </div>
                 </div>
             </div>
             <div className="text-right flex-shrink-0 ml-4 min-w-0 max-w-[140px] select-none">
-                <p className="text-base font-semibold text-gray-900 truncate">{jettonInfo.balance}</p>
+                <p className="text-base font-semibold text-foreground truncate">{jettonInfo.balance}</p>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1 select-none">
                     <svg
-                        className="w-4 h-4 text-gray-400 ml-auto"
+                        className="w-4 h-4 text-muted-foreground ml-auto"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

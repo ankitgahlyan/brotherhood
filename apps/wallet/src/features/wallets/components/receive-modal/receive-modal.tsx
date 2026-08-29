@@ -34,17 +34,14 @@ const StyledQrCode: React.FC<{ value: string; size?: number }> = ({ value, size 
     const containerRef = useRef<HTMLDivElement>(null);
     const qrRef = useRef<QRCodeStyling | null>(null);
 
-    // Create the QR instance once and append it to the container.
+    // Create the QR instance and append it to the container.
     useEffect(() => {
         if (!containerRef.current) return;
-        qrRef.current = new QRCodeStyling({ ...QR_OPTIONS, width: size, height: size, data: value });
+        const qr = new QRCodeStyling({ ...QR_OPTIONS, width: size, height: size, data: value });
+        qrRef.current = qr;
         containerRef.current.replaceChildren();
-        qrRef.current.append(containerRef.current);
-    }, []);
-
-    useEffect(() => {
-        qrRef.current?.update({ data: value });
-    }, [value]);
+        qr.append(containerRef.current);
+    }, [size, value]);
 
     return <div ref={containerRef} style={{ width: size, height: size }} />;
 };
@@ -99,15 +96,15 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose }) =
             </Modal.Header>
 
             <Modal.Body className="items-center gap-5">
-                <div className="rounded-2xl border border-gray-100 p-4 bg-white">
+                <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
                     {formattedAddress ? (
                         <StyledQrCode value={formattedAddress} />
                     ) : (
-                        <div className="w-[220px] h-[220px] rounded-lg bg-gray-100 animate-pulse" />
+                        <div className="w-[220px] h-[220px] rounded-lg bg-muted animate-pulse" />
                     )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-1 w-full bg-[#F7F8FA] rounded-full p-1">
+                <div className="grid grid-cols-3 gap-1 w-full bg-secondary/70 border border-border rounded-full p-1">
                     {FORMATS.map((f) => (
                         <button
                             key={f.id}
@@ -115,8 +112,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose }) =
                             onClick={() => setFormat(f.id)}
                             className={`py-1.5 rounded-full text-xs font-semibold transition-colors ${
                                 format === f.id
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
                             }`}
                         >
                             {f.label}
@@ -127,11 +124,11 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose }) =
                 <button
                     type="button"
                     onClick={handleCopy}
-                    className="w-full flex items-center gap-2 bg-[#F7F8FA] rounded-2xl px-4 py-3 text-left hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center gap-2 bg-secondary/70 border border-border rounded-2xl px-4 py-3 text-left hover:bg-secondary transition-colors"
                     aria-label="Copy address"
                 >
-                    <span className="flex-1 min-w-0 text-sm font-mono text-gray-700 break-all">{formattedAddress}</span>
-                    <Copy className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="flex-1 min-w-0 text-sm font-mono text-foreground break-all">{formattedAddress}</span>
+                    <Copy className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </button>
             </Modal.Body>
         </Modal.Container>

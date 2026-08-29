@@ -56,8 +56,8 @@ export const DaoScreen: React.FC = () => {
         <NewLayout header={<ScreenHeader title="DAO Governance" onBack={() => navigate('/wallet')} />}>
             <div className="space-y-4">
                 {/* Global DAO Contract Address Input */}
-                <div className="bg-white p-3 border rounded-xl shadow-sm text-xs space-y-1">
-                    <label className="font-semibold text-gray-700">Target DAO Contract Address</label>
+                <div className="bg-card text-card-foreground p-3 border border-border rounded-2xl shadow-sm text-xs space-y-1">
+                    <label className="font-semibold text-foreground">Target DAO Contract Address</label>
                     <InputScan
                         value={daoAddrInput}
                         onChange={setDaoAddrInput}
@@ -67,13 +67,15 @@ export const DaoScreen: React.FC = () => {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
                     {(['proposals', 'submit', 'vote'] as Tab[]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-1.5 rounded-md capitalize transition-colors ${
-                                activeTab === tab ? 'bg-white shadow text-black' : 'text-gray-600 hover:text-black'
+                            className={`flex-1 py-1.5 rounded-lg capitalize transition-colors ${
+                                activeTab === tab
+                                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                             }`}
                             data-testid={`dao-tab-${tab}`}
                         >
@@ -84,7 +86,7 @@ export const DaoScreen: React.FC = () => {
 
                 {/* Proposals List */}
                 {activeTab === 'proposals' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-semibold text-base">Active Proposals</h3>
                             <Button size="sm" variant="secondary" onClick={() => proposals.refetch()}>
@@ -93,25 +95,25 @@ export const DaoScreen: React.FC = () => {
                         </div>
 
                         {proposals.isLoading ? (
-                            <p className="text-gray-500 text-xs">Loading proposals from DAO contract…</p>
+                            <p className="text-muted-foreground text-xs">Loading proposals from DAO contract…</p>
                         ) : proposals.proposals.length > 0 ? (
                             <div className="space-y-2">
                                 {proposals.proposals.map((p) => (
-                                    <div key={p.id} className="p-3 border rounded-lg bg-gray-50 text-xs space-y-1">
-                                        <div className="flex justify-between font-semibold">
+                                    <div key={p.id} className="p-3 border border-border/60 rounded-xl bg-secondary/50 text-xs space-y-1">
+                                        <div className="flex justify-between font-semibold text-foreground">
                                             <span>Proposal #{p.id}</span>
                                             <span>{p.executed ? 'Executed' : 'Active'}</span>
                                         </div>
-                                        <p className="text-gray-500 break-all">Proposer: {p.proposer}</p>
+                                        <p className="text-muted-foreground break-all">Proposer: {p.proposer}</p>
                                         <div className="flex gap-4 pt-1 font-medium">
-                                            <span className="text-green-600">Yes: {p.yesVotes.toString()}</span>
-                                            <span className="text-red-600">No: {p.noVotes.toString()}</span>
+                                            <span className="text-emerald-500 font-semibold">Yes: {p.yesVotes.toString()}</span>
+                                            <span className="text-rose-500 font-semibold">No: {p.noVotes.toString()}</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-gray-500 text-xs">
+                            <p className="text-muted-foreground text-xs">
                                 {daoAddrInput ? 'No proposals found in this DAO.' : 'Enter a DAO contract address above.'}
                             </p>
                         )}
@@ -120,9 +122,9 @@ export const DaoScreen: React.FC = () => {
 
                 {/* Submit Proposal */}
                 {activeTab === 'submit' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Submit Governance Proposal</h3>
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-muted-foreground mb-2">
                             Submitting a proposal requires target message payload and DAO contract address.
                         </p>
                         <Button
@@ -139,21 +141,21 @@ export const DaoScreen: React.FC = () => {
 
                 {/* Vote on Proposal */}
                 {activeTab === 'vote' && (
-                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-sm">
+                    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
                         <h3 className="font-semibold text-base mb-1">Vote on Proposal</h3>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Proposal ID</label>
+                            <label className="text-xs font-medium text-muted-foreground">Proposal ID</label>
                             <input
                                 type="number"
                                 value={voteProposalId}
                                 onChange={(e) => setVoteProposalId(e.target.value)}
                                 placeholder="0"
-                                className="w-full p-2 border rounded-lg text-xs"
+                                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 data-testid="dao-vote-proposal-id"
                             />
                         </div>
                         <div className="flex items-center gap-4 text-xs font-medium my-2">
-                            <label className="flex items-center gap-1 cursor-pointer">
+                            <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
                                 <input
                                     type="radio"
                                     name="voteRadio"
@@ -162,7 +164,7 @@ export const DaoScreen: React.FC = () => {
                                 />
                                 Vote YES
                             </label>
-                            <label className="flex items-center gap-1 cursor-pointer">
+                            <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
                                 <input
                                     type="radio"
                                     name="voteRadio"

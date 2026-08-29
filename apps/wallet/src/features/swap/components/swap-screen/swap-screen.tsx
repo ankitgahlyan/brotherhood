@@ -26,7 +26,7 @@ export const Swap: FC = () => {
         setToToken({ address: USDT_ADDRESS, decimals: 6, symbol: 'USDT' });
 
         return () => clearSwap();
-    }, []);
+    }, [clearSwap, setFromToken, setToToken]);
 
     return (
         <NewLayout header={<ScreenHeader title="Swap" onBack={() => navigate('/wallet')} />}>

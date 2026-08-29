@@ -60,8 +60,8 @@ export async function createWalletAdapter(params: CreateWalletAdapterParams): Pr
         createLedgerTransport,
     } = params;
 
-    let chainNetwork = getChainNetwork(network);
-    let domain: SignatureDomain | undefined =
+    const chainNetwork = getChainNetwork(network);
+    const domain: SignatureDomain | undefined =
         network == 'tetra'
             ? {
                   type: 'l2',
@@ -133,7 +133,7 @@ export async function createWalletAdapter(params: CreateWalletAdapterParams): Pr
                 if (storedLedgerConfig) {
                     return createWalletV4R2Ledger(
                         createWalletInitConfigLedger({
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                             
                             createTransport: createLedgerTransport as any,
                             path: storedLedgerConfig.path,
                             publicKey: Buffer.from(storedLedgerConfig.publicKey.substring(2), 'hex'),
@@ -157,7 +157,7 @@ export async function createWalletAdapter(params: CreateWalletAdapterParams): Pr
 
                 return createWalletV4R2Ledger(
                     createWalletInitConfigLedger({
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                         
                         createTransport: createLedgerTransport as any,
                         path,
                         version: 'v4r2',

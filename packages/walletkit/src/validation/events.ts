@@ -13,7 +13,7 @@ import type { ValidationResult, ValidationContext } from './types';
 /**
  * Validate bridge event structure
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateBridgeEvent(event: any, context: ValidationContext = {}): ValidationResult {
     const errors: string[] = [];
 
@@ -57,7 +57,7 @@ export function validateBridgeEvent(event: any, context: ValidationContext = {})
 /**
  * Validate connect event parameters
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateConnectEventParams(params: any): ValidationResult {
     const errors: string[] = [];
 
@@ -87,7 +87,7 @@ export function validateConnectEventParams(params: any): ValidationResult {
 /**
  * Validate transaction event parameters
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateTransactionEventParams(params: any): ValidationResult {
     const errors: string[] = [];
 
@@ -122,7 +122,7 @@ export function validateTransactionEventParams(params: any): ValidationResult {
 /**
  * Validate sign data event parameters
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateSignDataEventParams(params: any): ValidationResult {
     const errors: string[] = [];
 

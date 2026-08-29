@@ -37,10 +37,15 @@
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
     "eslint": "^9.39.5",
+    "eslint-plugin-react-compiler": "^19.1.0-rc.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "globals": "^16.5.0",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
-    "typescript": "^5.9.3",
+    "typescript": "5.8.2",
     "typescript-eslint": "^8.66.0"
+  },
+  "overrides": {
+    "typescript": "5.8.2"
   }
 }

@@ -13,9 +13,9 @@ import type { ReturnWithValidationResult } from '../validation/types';
 import { isValidAddress } from '../utils/address';
 import type { Wallet } from '../api/interfaces';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateNetwork(network: any, wallet: Wallet): ReturnWithValidationResult<ChainId | undefined> {
-    let errors: string[] = [];
+    const errors: string[] = [];
     if (typeof network === 'string') {
         const walletNetwork = wallet.getNetwork();
         if (network !== walletNetwork.chainId) {
@@ -30,7 +30,7 @@ export function validateNetwork(network: any, wallet: Wallet): ReturnWithValidat
 }
 
 export function validateFrom(from: unknown, wallet: Wallet): ReturnWithValidationResult<string> {
-    let errors: string[] = [];
+    const errors: string[] = [];
     if (typeof from !== 'string') {
         errors.push('Invalid from address not a string');
         return { result: '', isValid: errors.length === 0, errors: errors };
@@ -48,9 +48,9 @@ export function validateFrom(from: unknown, wallet: Wallet): ReturnWithValidatio
     return { result: from, isValid: errors.length === 0, errors: errors };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function validateValidUntil(validUntil: any): ReturnWithValidationResult<number> {
-    let errors: string[] = [];
+    const errors: string[] = [];
     if (typeof validUntil === 'undefined') {
         return { result: 0, isValid: errors.length === 0, errors: errors };
     }

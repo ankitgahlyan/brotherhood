@@ -47,7 +47,7 @@ export class BridgeManager {
     private jsBridgeTransport?: JSBridgeTransportFunction;
 
     // Event processing queue and concurrency control
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     private eventQueue: any[] = [];
     private isProcessing = false;
     private isActive = false;
@@ -103,7 +103,7 @@ export class BridgeManager {
             this.bridgeProvider = new BridgeProvider<WalletConsumer>(
                 this.config.bridgeUrl,
                 this.queueBridgeEvent.bind(this),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 (error: any) => {
                     log.error('Bridge listener error', { error: error.toString() });
                     // Send bridge-client-connect-error event for listener errors
@@ -212,7 +212,7 @@ export class BridgeManager {
 
     async sendResponse(
         event: BridgeEvent,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         response: any,
         providedSessionCrypto?: SessionCrypto,
     ): Promise<void> {
@@ -265,7 +265,7 @@ export class BridgeManager {
         }
 
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             await this.bridgeProvider.send(response, sessionCrypto as any, sessionId, {
                 traceId: event?.traceId,
             });
@@ -290,7 +290,7 @@ export class BridgeManager {
         sessionId: string,
         _isJsBridge: boolean,
         requestId: string | null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         response: any,
         options?: {
             traceId?: string;
@@ -311,7 +311,7 @@ export class BridgeManager {
             try {
                 await this.jsBridgeTransport(sessionId, message);
             } catch (e) {
-                // eslint-disable-next-line no-console
+                 
                 console.error('Failed to send response through JS Bridge', { error: e });
             }
         } else {
@@ -383,7 +383,7 @@ export class BridgeManager {
             session: new SessionCrypto({
                 publicKey: session.publicKey,
                 secretKey: session.privateKey.length > 64 ? session.privateKey.slice(0, 64) : session.privateKey,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
             }) as any,
             clientId: session.sessionId,
         }));
@@ -407,7 +407,7 @@ export class BridgeManager {
             if (clients.length === 0) {
                 clients.push({
                     clientId: '0',
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                     
                     session: new SessionCrypto() as any,
                 });
             }
@@ -439,7 +439,7 @@ export class BridgeManager {
                 });
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
         } catch (error: any) {
             log.error('Bridge connection failed', { error: error?.toString() });
 
@@ -492,7 +492,7 @@ export class BridgeManager {
     /**
      * Queue incoming bridge events for processing
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     private queueBridgeEvent(event: any): void {
         log.debug('Bridge event queued', { eventId: event?.id, event });
         this.eventQueue.push(event);
@@ -543,7 +543,7 @@ export class BridgeManager {
         } else if (event.method == 'send' && event?.params?.length === 1) {
             this.eventQueue.push({
                 ...event,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 ...(event as any).params[0],
                 isJsBridge: true,
                 tabId: messageInfo.tabId,
@@ -598,7 +598,7 @@ export class BridgeManager {
     /**
      * Handle individual bridge event (original processing logic)
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     private async handleBridgeEvent(event: any): Promise<void> {
         try {
             log.info('Bridge event received', { event });

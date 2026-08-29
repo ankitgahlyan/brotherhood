@@ -264,7 +264,7 @@ export class TonWalletKit implements ITonWalletKit {
             await this.eventProcessor.startProcessing();
 
             this.isInitialized = true;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
         } catch (error: any) {
             log.error('TonWalletKit initialization failed', { error: error?.toString() });
             throw error;
@@ -659,9 +659,7 @@ export class TonWalletKit implements ITonWalletKit {
         [key: string]: string;
     } | null {
         try {
-            let parsedUrl: URL;
-
-            parsedUrl = new URL(url);
+            const parsedUrl = new URL(url);
 
             // Extract query parameters
             const params: { [key: string]: string } = {};
