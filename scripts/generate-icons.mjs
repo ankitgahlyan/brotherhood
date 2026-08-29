@@ -2,7 +2,7 @@
 // Pure Node — no canvas/sharp dependency. Draws a simple rounded icon with a
 // vertical sea-to-lagoon gradient, a subtle ring, and a light pip.
 //
-//   nub run icons   (or:  nub scripts/generate-icons.mjs)
+//   bun run icons   (or:  bun scripts/generate-icons.mjs)
 //
 // Outputs in public/:
 //   favicon.svg, icon-192.png, icon-512.png,

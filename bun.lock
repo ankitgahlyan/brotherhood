@@ -6,7 +6,6 @@
       "name": "jetton",
       "devDependencies": {
         "@eslint/js": "^9.39.5",
-        "@nubjs/types": "^0.7.5",
         "@playwright/test": "^1.62.1",
         "@ton/core": "^0.63.1",
         "@ton/crypto": "^3.3.0",
@@ -488,8 +487,6 @@
     "@noble/curves": ["@noble/curves@1.9.7", "", { "dependencies": { "@noble/hashes": "1.8.0" } }, "sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw=="],
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
-
-    "@nubjs/types": ["@nubjs/types@0.7.5", "", { "dependencies": { "@types/node": "26.2.0" }, "peerDependencies": { "@types/node": ">=25" } }, "sha512-NWECA86iZzmIhSSN0RnTjq5FFrG/q0p/EyY+dB1O3bwuSo85x1KwRPZspDC1A+1kahIKNXLfWarDvCWRGu4/lQ=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.143.0", "", {}, "sha512-u6JZdLBTLotrNC9Vd6vPssINdzcCzleKAH6EJKImQb7GtYvX5keN2dxkoK44stCc4tffE6QQRtZTXVSzsLUlWA=="],
 

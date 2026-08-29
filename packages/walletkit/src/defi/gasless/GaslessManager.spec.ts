@@ -34,12 +34,10 @@ const makeProvider = (providerId: string): GaslessProviderInterface => ({
   getMetadata: vi
     .fn()
     .mockResolvedValue({ name: 'Test', url: 'https://test.example' }),
-  getConfig: vi
-    .fn<(n: Network) => Promise<GaslessConfig>>()
-    .mockResolvedValue({
-      relayAddress: TEST_ADDRESS,
-      supportedAssets: [{ address: TEST_ADDRESS }],
-    }),
+  getConfig: vi.fn<(n: Network) => Promise<GaslessConfig>>().mockResolvedValue({
+    relayAddress: TEST_ADDRESS,
+    supportedAssets: [{ address: TEST_ADDRESS }],
+  }),
   getQuote: vi
     .fn<(p: GaslessQuoteParams) => Promise<GaslessQuote>>()
     .mockResolvedValue({

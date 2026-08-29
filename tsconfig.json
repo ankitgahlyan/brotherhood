@@ -14,7 +14,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "rootDir": ".",
-    "types": ["node", "@nubjs/types"],
+    "types": ["node"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {

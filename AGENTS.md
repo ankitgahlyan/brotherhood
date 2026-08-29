@@ -21,10 +21,10 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Treat all contracts as a coupled system. Keep storage, message formats, tests, wrappers, TypeScript wrappers, scripts, and frontend flows consistent across both sides.
 - Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them from the contract ABI instead of hand-editing them when the ABI changes.
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `src/` aligned with contract changes.
-- Prefer this validation loop when feasible: `acton check --fix`, `acton fmt`, `acton build`, `acton test`, `nub run typecheck`, `nub run build`.
+- Prefer this validation loop when feasible: `acton check --fix`, `acton fmt`, `acton build`, `acton test`, `bun run typecheck`, `bun run build`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
 - For the Personal Token issuer onboarding flow, verify with `acton run verify-personal` (emulates deploy + wallet pointer + buy credit) before proposing a real `acton run deploy-personal`.
-- When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `nub run`, or the existing project config.
+- When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `bun run`, or the existing project config.
 
 #### Contract rules
 
@@ -40,7 +40,7 @@ The frontend was migrated from the old client-side Vite SPA (`app/`, now removed
 bunx @tanstack/cli@latest create my-tanstack-app --agent --package-manager pnpm --tailwind --deployment cloudflare --add-ons better-auth,prisma,tanstack-query,shadcn
 ```
 
-The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the merged product (nub-based).
+The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the merged product (bun-based).
 
 **Skill loading.** Before substantial frontend edits, run `bunx @tanstack/intent@latest list` from the workspace root; if a listed skill matches, run `bunx @tanstack/intent@latest load <package>#<skill>` and follow its `SKILL.md` (they also live under `node_modules/@tanstack/*/skills/*/SKILL.md`).
 
@@ -50,9 +50,9 @@ The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the me
 
 **Env vars:** `VITE_BASE` (Vite `base` + Router `basepath`, keep in sync with `src/router.tsx` and `vite.config.ts`; default `/brotherhood/` for the GH Pages project site), `TONCENTER_MAINNET_API_KEY` / `TONCENTER_TESTNET_API_KEY` (client-exposed, higher Toncenter rate limits), `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` (server-only, used by `/api/chat`). Local Cloudflare dev keys go in `.dev.vars`; on Workers bind them as secrets/vars.
 
-**Deployment:** Static-first. `.github/workflows/pages.yml` runs `nub run build:ghpages` and uploads `dist/client` to GitHub Pages (works because every route is `ssr: false` and the build prerenders shells + `404.html`). Cloudflare Workers SSR is optional via `nub run deploy:workers` (`wrangler.jsonc`); server routes only run on a server runtime (dev or Workers) and 404 on a static host.
+**Deployment:** Static-first. `.github/workflows/pages.yml` runs `bun run build:ghpages` and uploads `dist/client` to GitHub Pages (works because every route is `ssr: false` and the build prerenders shells + `404.html`). Cloudflare Workers SSR is optional via `bun run deploy:workers` (`wrangler.jsonc`); server routes only run on a server runtime (dev or Workers) and 404 on a static host.
 
-**Testing:** `playwright` is a devDependency for headless checks (browser binary in `~/.cache/ms-playwright`, installed once via `bunx playwright install chromium`). `nub run smoke` runs `scripts/smoke-test.mjs` against the dev server (or pass a URL, e.g. against a served `dist/client`). Use it after frontend changes to catch client-side render regressions — especially because routes are `ssr: false` and only the shell is server-rendered.
+**Testing:** `playwright` is a devDependency for headless checks (browser binary in `~/.cache/ms-playwright`, installed once via `bunx playwright install chromium`). `bun run smoke` runs `scripts/smoke-test.mjs` against the dev server (or pass a URL, e.g. against a served `dist/client`). Use it after frontend changes to catch client-side render regressions — especially because routes are `ssr: false` and only the shell is server-rendered.
 
 You have access to local Cloudflare services (KV, R2, D1, Durable Objects, and Workflows) for this app via the Explorer API.
 API endpoint: http://localhost:3000/cdn-cgi/local/explorer/api

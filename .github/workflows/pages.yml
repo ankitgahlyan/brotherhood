@@ -39,18 +39,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Nub
-        uses: nubjs/setup-nub@v0
-        with:
-          nub-version: latest
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: nub install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build site
         env:
           VITE_BASE: /brotherhood/
-        run: nub run build:ghpages
+        run: bun run build:ghpages
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
