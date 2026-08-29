@@ -19,14 +19,14 @@ import type { TransactionRequestMessage } from '../transactions/TransactionReque
  * will deduct and the timestamp after which the bundle expires.
  */
 export interface GaslessQuote {
-    /** Network the quote is bound to (mirrors the request `network`) */
-    network: Network;
-    /** Relayer-wrapped messages ready to be signed */
-    messages: TransactionRequestMessage[];
-    /** Relayer fee in fee-jetton nanounits */
-    fee: TokenAmount;
-    /** Unix timestamp after which the bundle becomes invalid for relay */
-    validUntil: number;
-    /** Sender wallet address echoed by the relayer */
-    from: UserFriendlyAddress;
+  /** Network the quote is bound to (mirrors the request `network`) */
+  network: Network;
+  /** Relayer-wrapped messages ready to be signed */
+  messages: TransactionRequestMessage[];
+  /** Relayer fee in fee-jetton nanounits */
+  fee: TokenAmount;
+  /** Unix timestamp after which the bundle becomes invalid for relay */
+  validUntil: number;
+  /** Sender wallet address echoed by the relayer */
+  from: UserFriendlyAddress;
 }

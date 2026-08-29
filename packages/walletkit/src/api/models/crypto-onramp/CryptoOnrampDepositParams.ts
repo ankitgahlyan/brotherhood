@@ -13,19 +13,22 @@ import type { CryptoOnrampQuote } from './CryptoOnrampQuote';
  *
  * The recipient is taken from `quote.recipientAddress` set at quote time.
  */
-export interface CryptoOnrampDepositParams<TQuoteMetadata = unknown, TProviderOptions = unknown> {
-    /**
-     * Quote to execute the deposit against (contains recipientAddress and provider metadata)
-     */
-    quote: CryptoOnrampQuote<TQuoteMetadata>;
+export interface CryptoOnrampDepositParams<
+  TQuoteMetadata = unknown,
+  TProviderOptions = unknown,
+> {
+  /**
+   * Quote to execute the deposit against (contains recipientAddress and provider metadata)
+   */
+  quote: CryptoOnrampQuote<TQuoteMetadata>;
 
-    /**
-     * Address to refund the crypto to in case of failure
-     */
-    refundAddress: string;
+  /**
+   * Address to refund the crypto to in case of failure
+   */
+  refundAddress: string;
 
-    /**
-     * Provider-specific options
-     */
-    providerOptions?: TProviderOptions;
+  /**
+   * Provider-specific options
+   */
+  providerOptions?: TProviderOptions;
 }

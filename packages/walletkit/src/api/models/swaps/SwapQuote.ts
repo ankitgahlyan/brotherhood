@@ -14,70 +14,70 @@ import type { SwapToken } from './SwapToken';
  * Swap quote response with pricing information
  */
 export interface SwapQuote {
-    /**
-     * Token being sold
-     */
-    fromToken: SwapToken;
+  /**
+   * Token being sold
+   */
+  fromToken: SwapToken;
 
-    /**
-     * Token being bought
-     */
-    toToken: SwapToken;
+  /**
+   * Token being bought
+   */
+  toToken: SwapToken;
 
-    /**
-     * Amount of tokens to sell
-     */
-    rawFromAmount: TokenAmount;
+  /**
+   * Amount of tokens to sell
+   */
+  rawFromAmount: TokenAmount;
 
-    /**
-     * Amount of tokens to buy
-     */
-    rawToAmount: TokenAmount;
+  /**
+   * Amount of tokens to buy
+   */
+  rawToAmount: TokenAmount;
 
-    /**
-     * Amount of tokens to sell
-     */
-    fromAmount: string;
+  /**
+   * Amount of tokens to sell
+   */
+  fromAmount: string;
 
-    /**
-     * Amount of tokens to buy
-     */
-    toAmount: string;
+  /**
+   * Amount of tokens to buy
+   */
+  toAmount: string;
 
-    /**
-     * Minimum amount of tokens to receive (after slippage)
-     */
-    rawMinReceived: TokenAmount;
+  /**
+   * Minimum amount of tokens to receive (after slippage)
+   */
+  rawMinReceived: TokenAmount;
 
-    /**
-     * Minimum amount of tokens to receive (after slippage)
-     */
-    minReceived: string;
+  /**
+   * Minimum amount of tokens to receive (after slippage)
+   */
+  minReceived: string;
 
-    /**
-     * Network on which the swap will be executed
-     */
-    network: Network;
+  /**
+   * Network on which the swap will be executed
+   */
+  network: Network;
 
-    /**
-     * Price impact of the swap in basis points (100 = 1%)
-     * @format int
-     */
-    priceImpact?: number;
+  /**
+   * Price impact of the swap in basis points (100 = 1%)
+   * @format int
+   */
+  priceImpact?: number;
 
-    /**
-     * Identifier of the swap provider
-     */
-    providerId: string;
+  /**
+   * Identifier of the swap provider
+   */
+  providerId: string;
 
-    /**
-     * Unix timestamp in seconds when the quote expires
-     * @format int
-     */
-    expiresAt?: number;
+  /**
+   * Unix timestamp in seconds when the quote expires
+   * @format int
+   */
+  expiresAt?: number;
 
-    /**
-     * Provider-specific metadata for the quote
-     */
-    metadata?: unknown;
+  /**
+   * Provider-specific metadata for the quote
+   */
+  metadata?: unknown;
 }

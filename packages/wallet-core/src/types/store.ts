@@ -8,65 +8,67 @@
 
 import type { StateCreator } from 'zustand';
 import type {
-    Wallet,
-    JettonTransfer,
-    JettonInfo,
-    ITonWalletKit,
-    TransactionsUpdate,
-    NFT,
-    Jetton,
-    ConnectionRequestEvent,
-    SendTransactionRequestEvent,
-    SignDataRequestEvent,
-    SignMessageRequestEvent,
-    DisconnectionEvent,
-    WalletAdapter,
-    SwapQuote,
-    SwapToken,
-    StakingQuote,
-    StakingQuoteParams,
-    StakingBalance,
-    StakingProviderInfo,
-    StakeParams,
-    UnstakeModes,
-    GaslessQuote,
-    GaslessSupportedAsset,
-    SendTransactionResponse,
+  Wallet,
+  JettonTransfer,
+  JettonInfo,
+  ITonWalletKit,
+  TransactionsUpdate,
+  NFT,
+  Jetton,
+  ConnectionRequestEvent,
+  SendTransactionRequestEvent,
+  SignDataRequestEvent,
+  SignMessageRequestEvent,
+  DisconnectionEvent,
+  WalletAdapter,
+  SwapQuote,
+  SwapToken,
+  StakingQuote,
+  StakingQuoteParams,
+  StakingBalance,
+  StakingProviderInfo,
+  StakeParams,
+  UnstakeModes,
+  GaslessQuote,
+  GaslessSupportedAsset,
+  SendTransactionResponse,
 } from '@ton/walletkit';
 
 import type { PendingTransaction } from './streaming';
 import type {
-    AuthState,
-    SavedWallet,
-    QueuedRequest,
-    QueuedRequestData,
-    RequestQueue,
-    DisconnectNotification,
+  AuthState,
+  SavedWallet,
+  QueuedRequest,
+  QueuedRequestData,
+  RequestQueue,
+  DisconnectNotification,
 } from './wallet';
 import type { NetworkType } from '../utils/network';
 
 // Auth slice interface
 export interface AuthSlice extends AuthState {
-    setPassword: (password: string) => Promise<void>;
-    unlock: (password: string) => Promise<boolean>;
-    lock: () => void;
-    reset: () => void;
-    setPersistPassword: (persist: boolean) => void;
-    setHoldToSign: (enabled: boolean) => void;
-    setShowFastSend: (enabled: boolean) => void;
-    setUseWalletInterfaceType: (interfaceType: 'signer' | 'mnemonic' | 'ledger') => void;
-    setLedgerAccountNumber: (accountNumber: number) => void;
+  setPassword: (password: string) => Promise<void>;
+  unlock: (password: string) => Promise<boolean>;
+  lock: () => void;
+  reset: () => void;
+  setPersistPassword: (persist: boolean) => void;
+  setHoldToSign: (enabled: boolean) => void;
+  setShowFastSend: (enabled: boolean) => void;
+  setUseWalletInterfaceType: (
+    interfaceType: 'signer' | 'mnemonic' | 'ledger',
+  ) => void;
+  setLedgerAccountNumber: (accountNumber: number) => void;
 }
 
 // Wallet Core slice - WalletKit initialization and instance management
 export interface WalletCoreSlice {
-    walletCore: {
-        walletKit: ITonWalletKit | null;
-        isWalletKitInitialized: boolean;
-        initializationError: string | null;
-    };
+  walletCore: {
+    walletKit: ITonWalletKit | null;
+    isWalletKitInitialized: boolean;
+    initializationError: string | null;
+  };
 
-    initializeWalletKit: (network?: NetworkType) => Promise<void>;
+  initializeWalletKit: (network?: NetworkType) => Promise<void>;
 }
 
 /** Local seqno + timestamp for fast send (prevents duplicate seqno on rapid clicks) */
@@ -74,322 +76,338 @@ export type LocalSeqnoEntry = { seqno: number; timestamp: number };
 
 // Wallet Management slice - Wallet CRUD and data
 export interface WalletManagementSlice {
-    walletManagement: {
-        savedWallets: SavedWallet[];
-        activeWalletId?: string;
-        address?: string;
-        balance?: string;
-        publicKey?: string;
+  walletManagement: {
+    savedWallets: SavedWallet[];
+    activeWalletId?: string;
+    address?: string;
+    balance?: string;
+    publicKey?: string;
 
-        // Event history for active wallet
-        events: unknown[];
-        hasNextEvents: boolean;
+    // Event history for active wallet
+    events: unknown[];
+    hasNextEvents: boolean;
 
-        /** Pending transactions from WebSocket streaming */
-        pendingTransactions: PendingTransaction[];
+    /** Pending transactions from WebSocket streaming */
+    pendingTransactions: PendingTransaction[];
 
-        /** Trace IDs (trace_id) we've received as confirmed - never mix with trace_external_hash */
-        confirmedTraceIds: string[];
-        /** External hashes (trace_external_hash_norm) confirmed - never mix with trace_id */
-        confirmedExternalHashes: string[];
+    /** Trace IDs (trace_id) we've received as confirmed - never mix with trace_external_hash */
+    confirmedTraceIds: string[];
+    /** External hashes (trace_external_hash_norm) confirmed - never mix with trace_id */
+    confirmedExternalHashes: string[];
 
-        currentWallet?: Wallet;
-        hasWallet: boolean;
-        isAuthenticated: boolean;
+    currentWallet?: Wallet;
+    hasWallet: boolean;
+    isAuthenticated: boolean;
 
-        // WebSocket streaming state
-        isStreamingConnected: boolean;
-    };
+    // WebSocket streaming state
+    isStreamingConnected: boolean;
+  };
 
-    // Multi-wallet actions
-    createWallet: (
-        mnemonic: string[],
-        name?: string,
-        version?: 'v5r1' | 'v4r2',
-        network?: NetworkType,
-        subwalletId?: number,
-    ) => Promise<string>;
-    importWallet: (
-        mnemonic: string[],
-        name?: string,
-        version?: 'v5r1' | 'v4r2',
-        network?: NetworkType,
-        subwalletId?: number,
-    ) => Promise<string>;
-    createLedgerWallet: (name?: string, network?: NetworkType) => Promise<string>;
-    switchWallet: (walletId: string) => Promise<void>;
-    removeWallet: (walletId: string) => void;
-    renameWallet: (walletId: string, newName: string) => void;
-    loadAllWallets: () => Promise<void>;
-    loadSavedWalletsIntoKit: (walletKit: ITonWalletKit) => Promise<void>;
-    createAdapterFromSavedWallet: (
-        walletKit: ITonWalletKit,
-        savedWallet: SavedWallet,
-    ) => Promise<WalletAdapter | undefined>;
+  // Multi-wallet actions
+  createWallet: (
+    mnemonic: string[],
+    name?: string,
+    version?: 'v5r1' | 'v4r2',
+    network?: NetworkType,
+    subwalletId?: number,
+  ) => Promise<string>;
+  importWallet: (
+    mnemonic: string[],
+    name?: string,
+    version?: 'v5r1' | 'v4r2',
+    network?: NetworkType,
+    subwalletId?: number,
+  ) => Promise<string>;
+  createLedgerWallet: (name?: string, network?: NetworkType) => Promise<string>;
+  switchWallet: (walletId: string) => Promise<void>;
+  removeWallet: (walletId: string) => void;
+  renameWallet: (walletId: string, newName: string) => void;
+  loadAllWallets: () => Promise<void>;
+  loadSavedWalletsIntoKit: (walletKit: ITonWalletKit) => Promise<void>;
+  createAdapterFromSavedWallet: (
+    walletKit: ITonWalletKit,
+    savedWallet: SavedWallet,
+  ) => Promise<WalletAdapter | undefined>;
 
-    // Wallet state actions
-    clearWallet: () => void;
-    updateBalance: () => Promise<void>;
+  // Wallet state actions
+  clearWallet: () => void;
+  updateBalance: () => Promise<void>;
 
-    // WebSocket streaming actions
-    startWebSocketStreaming: () => Promise<void>;
-    stopWebSocketStreaming: () => Promise<void>;
-    updateWebSocketSubscription: () => Promise<void>;
-    handleStreamingTransactions: (update: TransactionsUpdate) => void;
+  // WebSocket streaming actions
+  startWebSocketStreaming: () => Promise<void>;
+  stopWebSocketStreaming: () => Promise<void>;
+  updateWebSocketSubscription: () => Promise<void>;
+  handleStreamingTransactions: (update: TransactionsUpdate) => void;
 
-    // Events-based history
-    // addEvent: (event: unknown) => void;
-    loadEvents: (limit?: number, offset?: number) => Promise<void>;
+  // Events-based history
+  // addEvent: (event: unknown) => void;
+  loadEvents: (limit?: number, offset?: number) => Promise<void>;
 
-    // Getters
-    getDecryptedMnemonic: (walletId?: string) => Promise<string[] | null>;
-    getAvailableWallets: () => Wallet[];
-    getActiveWallet: () => SavedWallet | undefined;
+  // Getters
+  getDecryptedMnemonic: (walletId?: string) => Promise<string[] | null>;
+  getAvailableWallets: () => Wallet[];
+  getActiveWallet: () => SavedWallet | undefined;
 }
 
 // TON Connect slice - Connection requests, transactions, signing
 export interface TonConnectSlice {
-    tonConnect: {
-        requestQueue: RequestQueue;
-        pendingConnectRequestEvent?: ConnectionRequestEvent;
-        isConnectModalOpen: boolean;
-        pendingTransactionRequestEvent?: SendTransactionRequestEvent;
-        isTransactionModalOpen: boolean;
-        pendingSignDataRequestEvent?: SignDataRequestEvent;
-        isSignDataModalOpen: boolean;
-        pendingSignMessageRequestEvent?: SignMessageRequestEvent;
-        isSignMessageModalOpen: boolean;
-        disconnectedSessions: DisconnectNotification[];
-    };
+  tonConnect: {
+    requestQueue: RequestQueue;
+    pendingConnectRequestEvent?: ConnectionRequestEvent;
+    isConnectModalOpen: boolean;
+    pendingTransactionRequestEvent?: SendTransactionRequestEvent;
+    isTransactionModalOpen: boolean;
+    pendingSignDataRequestEvent?: SignDataRequestEvent;
+    isSignDataModalOpen: boolean;
+    pendingSignMessageRequestEvent?: SignMessageRequestEvent;
+    isSignMessageModalOpen: boolean;
+    disconnectedSessions: DisconnectNotification[];
+  };
 
-    // TON Connect actions
-    handleTonConnectUrl: (url: string) => Promise<void>;
-    showConnectRequest: (request: ConnectionRequestEvent) => void;
-    approveConnectRequest: (selectedWallet: Wallet) => Promise<void>;
-    rejectConnectRequest: (reason?: string) => Promise<void>;
-    closeConnectModal: () => void;
+  // TON Connect actions
+  handleTonConnectUrl: (url: string) => Promise<void>;
+  showConnectRequest: (request: ConnectionRequestEvent) => void;
+  approveConnectRequest: (selectedWallet: Wallet) => Promise<void>;
+  rejectConnectRequest: (reason?: string) => Promise<void>;
+  closeConnectModal: () => void;
 
-    // Transaction request actions
-    showTransactionRequest: (request: SendTransactionRequestEvent) => void;
-    approveTransactionRequest: () => Promise<{ signedBoc: string } | undefined>;
-    rejectTransactionRequest: (reason?: string) => Promise<void>;
-    closeTransactionModal: () => void;
+  // Transaction request actions
+  showTransactionRequest: (request: SendTransactionRequestEvent) => void;
+  approveTransactionRequest: () => Promise<{ signedBoc: string } | undefined>;
+  rejectTransactionRequest: (reason?: string) => Promise<void>;
+  closeTransactionModal: () => void;
 
-    // Sign data request actions
-    showSignDataRequest: (request: SignDataRequestEvent) => void;
-    approveSignDataRequest: () => Promise<void>;
-    rejectSignDataRequest: (reason?: string) => Promise<void>;
-    closeSignDataModal: () => void;
+  // Sign data request actions
+  showSignDataRequest: (request: SignDataRequestEvent) => void;
+  approveSignDataRequest: () => Promise<void>;
+  rejectSignDataRequest: (reason?: string) => Promise<void>;
+  closeSignDataModal: () => void;
 
-    // Sign message request actions
-    showSignMessageRequest: (request: SignMessageRequestEvent) => void;
-    approveSignMessageRequest: () => Promise<void>;
-    rejectSignMessageRequest: (reason?: string) => Promise<void>;
-    closeSignMessageModal: () => void;
+  // Sign message request actions
+  showSignMessageRequest: (request: SignMessageRequestEvent) => void;
+  approveSignMessageRequest: () => Promise<void>;
+  rejectSignMessageRequest: (reason?: string) => Promise<void>;
+  closeSignMessageModal: () => void;
 
-    // Disconnect event actions
-    handleDisconnectEvent: (event: DisconnectionEvent) => void;
-    clearDisconnectNotifications: () => void;
+  // Disconnect event actions
+  handleDisconnectEvent: (event: DisconnectionEvent) => void;
+  clearDisconnectNotifications: () => void;
 
-    // Queue management
-    enqueueRequest: (request: QueuedRequestData) => void;
-    processNextRequest: () => void;
-    clearExpiredRequests: () => void;
-    getCurrentRequest: () => QueuedRequest | undefined;
-    clearCurrentRequestFromQueue: () => void;
+  // Queue management
+  enqueueRequest: (request: QueuedRequestData) => void;
+  processNextRequest: () => void;
+  clearExpiredRequests: () => void;
+  getCurrentRequest: () => QueuedRequest | undefined;
+  clearCurrentRequestFromQueue: () => void;
 
-    // Setup listeners
-    setupTonConnectListeners: (walletKit: ITonWalletKit) => void;
+  // Setup listeners
+  setupTonConnectListeners: (walletKit: ITonWalletKit) => void;
 }
 
 // Jettons slice interface
 export interface JettonsSlice {
-    jettons: {
-        userJettons: Jetton[];
-        jettonTransfers: JettonTransfer[];
-        popularJettons: JettonInfo[];
-        isLoadingJettons: boolean;
-        isLoadingTransfers: boolean;
-        isLoadingPopular: boolean;
-        isRefreshing: boolean;
-        error: string | null;
-        transferError: string | null;
-        lastJettonsUpdate: number;
-        lastTransfersUpdate: number;
-        lastPopularUpdate: number;
-    };
+  jettons: {
+    userJettons: Jetton[];
+    jettonTransfers: JettonTransfer[];
+    popularJettons: JettonInfo[];
+    isLoadingJettons: boolean;
+    isLoadingTransfers: boolean;
+    isLoadingPopular: boolean;
+    isRefreshing: boolean;
+    error: string | null;
+    transferError: string | null;
+    lastJettonsUpdate: number;
+    lastTransfersUpdate: number;
+    lastPopularUpdate: number;
+  };
 
-    loadUserJettons: (userAddress?: string) => Promise<void>;
-    refreshJettons: (userAddress?: string) => Promise<void>;
-    updateJettonBalanceFromStream: (walletAddress: string, balance: string, decimals?: number) => void;
-    validateJettonAddress: (address: string) => boolean;
-    clearJettons: () => void;
-    getJettonByAddress: (jettonAddress: string) => Jetton | undefined;
-    formatJettonAmount: (amount: string, decimals: number) => string;
+  loadUserJettons: (userAddress?: string) => Promise<void>;
+  refreshJettons: (userAddress?: string) => Promise<void>;
+  updateJettonBalanceFromStream: (
+    walletAddress: string,
+    balance: string,
+    decimals?: number,
+  ) => void;
+  validateJettonAddress: (address: string) => boolean;
+  clearJettons: () => void;
+  getJettonByAddress: (jettonAddress: string) => Jetton | undefined;
+  formatJettonAmount: (amount: string, decimals: number) => string;
 }
 
 // NFTs slice interface
 export interface NftsSlice {
-    nfts: {
-        userNfts: NFT[];
-        isLoadingNfts: boolean;
-        isRefreshing: boolean;
-        error: string | null;
-        lastNftsUpdate: number;
-        hasMore: boolean;
-        offset: number;
-    };
+  nfts: {
+    userNfts: NFT[];
+    isLoadingNfts: boolean;
+    isRefreshing: boolean;
+    error: string | null;
+    lastNftsUpdate: number;
+    hasMore: boolean;
+    offset: number;
+  };
 
-    loadUserNfts: (userAddress?: string, limit?: number) => Promise<void>;
-    refreshNfts: (userAddress?: string) => Promise<void>;
-    loadMoreNfts: (userAddress?: string) => Promise<void>;
-    clearNfts: () => void;
-    getNftByAddress: (address: string) => NFT | undefined;
-    formatNftIndex: (index: string) => string;
+  loadUserNfts: (userAddress?: string, limit?: number) => Promise<void>;
+  refreshNfts: (userAddress?: string) => Promise<void>;
+  loadMoreNfts: (userAddress?: string) => Promise<void>;
+  clearNfts: () => void;
+  getNftByAddress: (address: string) => NFT | undefined;
+  formatNftIndex: (index: string) => string;
 }
 
 // Rates slice interface
 export interface RateEntry {
-    rate: number;
-    change24h?: number;
-    currency: 'USD';
+  rate: number;
+  change24h?: number;
+  currency: 'USD';
 }
 
 export interface RatesSlice {
-    rates: {
-        entries: Record<string, RateEntry>;
-        isLoading: boolean;
-        error: string | null;
-        lastUpdated: number;
-    };
+  rates: {
+    entries: Record<string, RateEntry>;
+    isLoading: boolean;
+    error: string | null;
+    lastUpdated: number;
+  };
 
-    loadRates: () => Promise<void>;
-    clearRates: () => void;
-    getRate: (key: string) => RateEntry | undefined;
+  loadRates: () => Promise<void>;
+  clearRates: () => void;
+  getRate: (key: string) => RateEntry | undefined;
 }
 
 // Swap slice interface
 export interface SwapState {
-    fromToken: SwapToken;
-    toToken: SwapToken;
-    amount: string;
-    destinationAddress: string;
-    currentQuote: SwapQuote | null;
-    isLoadingQuote: boolean;
-    isSwapping: boolean;
-    error: string | null;
-    slippageBps: number;
-    isReverseSwap: boolean;
-    /** Selected swap provider id (e.g. 'omniston', 'dedust'); quotes are fetched from it. */
-    providerId: string;
+  fromToken: SwapToken;
+  toToken: SwapToken;
+  amount: string;
+  destinationAddress: string;
+  currentQuote: SwapQuote | null;
+  isLoadingQuote: boolean;
+  isSwapping: boolean;
+  error: string | null;
+  slippageBps: number;
+  isReverseSwap: boolean;
+  /** Selected swap provider id (e.g. 'omniston', 'dedust'); quotes are fetched from it. */
+  providerId: string;
 }
 
 // Staking slice interface
 export interface StakingState {
-    amount: string;
-    providerId: string;
-    currentQuote: StakingQuote | null;
-    isLoadingQuote: boolean;
-    isStaking: boolean;
-    isUnstaking: boolean;
-    error: string | null;
-    unstakeMode: UnstakeModes;
-    stakedBalance: StakingBalance | null;
-    providerInfo: StakingProviderInfo | null;
+  amount: string;
+  providerId: string;
+  currentQuote: StakingQuote | null;
+  isLoadingQuote: boolean;
+  isStaking: boolean;
+  isUnstaking: boolean;
+  error: string | null;
+  unstakeMode: UnstakeModes;
+  stakedBalance: StakingBalance | null;
+  providerInfo: StakingProviderInfo | null;
 }
 
 export interface StakingSlice {
-    staking: StakingState;
+  staking: StakingState;
 
-    setStakingAmount: (amount: string) => void;
-    setStakingProviderId: (providerId: string) => void;
-    setUnstakeMode: (mode: UnstakeModes) => void;
-    getStakingQuote: (params: Omit<StakingQuoteParams, 'network'>) => Promise<void>;
-    stake: (params: Omit<StakeParams, 'userAddress'>) => Promise<boolean>;
-    unstake: (params: Omit<StakeParams, 'userAddress'>) => Promise<boolean>;
-    loadStakingData: (userAddress: string) => Promise<void>;
-    clearStaking: () => void;
-    validateStakingInputs: () => string | null;
+  setStakingAmount: (amount: string) => void;
+  setStakingProviderId: (providerId: string) => void;
+  setUnstakeMode: (mode: UnstakeModes) => void;
+  getStakingQuote: (
+    params: Omit<StakingQuoteParams, 'network'>,
+  ) => Promise<void>;
+  stake: (params: Omit<StakeParams, 'userAddress'>) => Promise<boolean>;
+  unstake: (params: Omit<StakeParams, 'userAddress'>) => Promise<boolean>;
+  loadStakingData: (userAddress: string) => Promise<void>;
+  clearStaking: () => void;
+  validateStakingInputs: () => string | null;
 }
 
 export interface GaslessState {
-    enabled: boolean;
-    feeAsset: string | null;
-    supportedAssets: GaslessSupportedAsset[];
-    relayAddress: string | null;
-    currentQuote: GaslessQuote | null;
-    isLoadingConfig: boolean;
-    isLoadingQuote: boolean;
-    isSending: boolean;
-    error: string | null;
+  enabled: boolean;
+  feeAsset: string | null;
+  supportedAssets: GaslessSupportedAsset[];
+  relayAddress: string | null;
+  currentQuote: GaslessQuote | null;
+  isLoadingConfig: boolean;
+  isLoadingQuote: boolean;
+  isSending: boolean;
+  error: string | null;
 }
 
 export interface GaslessQuoteRequest {
-    recipientAddress: string;
-    jettonAddress: string;
-    /** Amount to transfer in the jetton's smallest unit. */
-    transferAmount: string;
-    comment?: string;
+  recipientAddress: string;
+  jettonAddress: string;
+  /** Amount to transfer in the jetton's smallest unit. */
+  transferAmount: string;
+  comment?: string;
 }
 
 export interface GaslessSlice {
-    gasless: GaslessState;
+  gasless: GaslessState;
 
-    setGaslessEnabled: (enabled: boolean) => void;
-    setGaslessFeeAsset: (address: string) => void;
-    clearGaslessQuote: () => void;
-    loadGaslessConfig: () => Promise<void>;
-    getGaslessQuote: (params: GaslessQuoteRequest) => Promise<void>;
-    sendGasless: () => Promise<SendTransactionResponse>;
-    clearGasless: () => void;
+  setGaslessEnabled: (enabled: boolean) => void;
+  setGaslessFeeAsset: (address: string) => void;
+  clearGaslessQuote: () => void;
+  loadGaslessConfig: () => Promise<void>;
+  getGaslessQuote: (params: GaslessQuoteRequest) => Promise<void>;
+  sendGasless: () => Promise<SendTransactionResponse>;
+  clearGasless: () => void;
 }
 
 export interface SwapSlice {
-    swap: SwapState;
+  swap: SwapState;
 
-    setFromToken: (token: SwapToken) => void;
-    setToToken: (token: SwapToken) => void;
-    setSwapAmount: (amount: string) => void;
-    setDestinationAddress: (address: string) => void;
-    setIsReverseSwap: (isReverseSwap: boolean) => void;
-    setSlippageBps: (slippage: number) => void;
-    setSwapProviderId: (providerId: string) => void;
-    swapTokens: () => void;
-    getSwapQuote: () => Promise<void>;
-    executeSwap: () => Promise<boolean>;
-    clearSwap: () => void;
-    validateSwapInputs: () => string | null;
+  setFromToken: (token: SwapToken) => void;
+  setToToken: (token: SwapToken) => void;
+  setSwapAmount: (amount: string) => void;
+  setDestinationAddress: (address: string) => void;
+  setIsReverseSwap: (isReverseSwap: boolean) => void;
+  setSlippageBps: (slippage: number) => void;
+  setSwapProviderId: (providerId: string) => void;
+  swapTokens: () => void;
+  getSwapQuote: () => Promise<void>;
+  executeSwap: () => Promise<boolean>;
+  clearSwap: () => void;
+  validateSwapInputs: () => string | null;
 }
 
 // Combined app state
 export interface AppState
-    extends
-        AuthSlice,
-        WalletCoreSlice,
-        WalletManagementSlice,
-        TonConnectSlice,
-        JettonsSlice,
-        NftsSlice,
-        RatesSlice,
-        SwapSlice,
-        StakingSlice,
-        GaslessSlice {
-    isHydrated: boolean;
+  extends
+    AuthSlice,
+    WalletCoreSlice,
+    WalletManagementSlice,
+    TonConnectSlice,
+    JettonsSlice,
+    NftsSlice,
+    RatesSlice,
+    SwapSlice,
+    StakingSlice,
+    GaslessSlice {
+  isHydrated: boolean;
 }
 
 // Slice creator types
 export type AuthSliceCreator = StateCreator<AppState, [], [], AuthSlice>;
 
-export type WalletCoreSliceCreator = StateCreator<AppState, [], [], WalletCoreSlice>;
-
-export type WalletManagementSliceCreator = StateCreator<
-    AppState,
-    [['zustand/immer', never]],
-    [],
-    WalletManagementSlice
+export type WalletCoreSliceCreator = StateCreator<
+  AppState,
+  [],
+  [],
+  WalletCoreSlice
 >;
 
-export type TonConnectSliceCreator = StateCreator<AppState, [], [], TonConnectSlice>;
+export type WalletManagementSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  WalletManagementSlice
+>;
+
+export type TonConnectSliceCreator = StateCreator<
+  AppState,
+  [],
+  [],
+  TonConnectSlice
+>;
 
 export type JettonsSliceCreator = StateCreator<AppState, [], [], JettonsSlice>;
 
@@ -397,21 +415,39 @@ export type NftsSliceCreator = StateCreator<AppState, [], [], NftsSlice>;
 
 export type RatesSliceCreator = StateCreator<AppState, [], [], RatesSlice>;
 
-export type SwapSliceCreator = StateCreator<AppState, [['zustand/immer', never]], [], SwapSlice>;
+export type SwapSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  SwapSlice
+>;
 
-export type StakingSliceCreator = StateCreator<AppState, [['zustand/immer', never]], [], StakingSlice>;
+export type StakingSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  StakingSlice
+>;
 
-export type GaslessSliceCreator = StateCreator<AppState, [['zustand/immer', never]], [], GaslessSlice>;
+export type GaslessSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  GaslessSlice
+>;
 
 // Migration types
 export interface MigrationState {
-    version: number;
-    [key: string]: unknown;
+  version: number;
+  [key: string]: unknown;
 }
 
-export type MigrationFunction = (persistedState: unknown, version: number) => unknown;
+export type MigrationFunction = (
+  persistedState: unknown,
+  version: number,
+) => unknown;
 
 export type SetState = {
-    (state: AppState | Partial<AppState>): void;
-    (updater: (state: AppState) => void): void;
+  (state: AppState | Partial<AppState>): void;
+  (updater: (state: AppState) => void): void;
 };

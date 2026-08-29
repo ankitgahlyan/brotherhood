@@ -6,10 +6,13 @@
  *
  */
 
-export { OmnistonSwapProvider, createOmnistonProvider } from './OmnistonSwapProvider';
+export {
+  OmnistonSwapProvider,
+  createOmnistonProvider,
+} from './OmnistonSwapProvider';
 export type {
-    OmnistonSwapProviderConfig,
-    OmnistonProviderOptions,
-    OmnistonQuoteMetadata,
-    OmnistonReferrerOptions,
+  OmnistonSwapProviderConfig,
+  OmnistonProviderOptions,
+  OmnistonQuoteMetadata,
+  OmnistonReferrerOptions,
 } from './models';

@@ -13,19 +13,19 @@ import { Network } from '@ton/walletkit';
 import type { TonApiGaslessProviderConfig } from '@ton/walletkit/gasless/tonapi';
 
 const config: TonApiGaslessProviderConfig = {
-    chains: {
-        [Network.mainnet().chainId]: {
-            apiKey: process.env.TON_API_KEY_MAINNET, // optional Bearer token
-            endpoint: 'https://tonapi.io', // optional override; defaults to the network's public TonAPI endpoint
-        },
-        [Network.testnet().chainId]: { apiKey: process.env.TON_API_KEY_TESTNET },
+  chains: {
+    [Network.mainnet().chainId]: {
+      apiKey: process.env.TON_API_KEY_MAINNET, // optional Bearer token
+      endpoint: 'https://tonapi.io', // optional override; defaults to the network's public TonAPI endpoint
     },
-    providerId: 'tonapi', // optional id; defaults to 'tonapi'
-    sendRetries: 5, // optional override; defaults to 5
-    sendRetryDelayMs: 1000, // optional override; defaults to 1000
-    quoteRetries: 5, // optional override; defaults to 5
-    quoteRetryDelayMs: 1000, // optional override; defaults to 1000
-    configCacheTtlMs: 300000, // optional; in-memory /v2/gasless/config cache TTL, defaults to 5 min (0 disables)
+    [Network.testnet().chainId]: { apiKey: process.env.TON_API_KEY_TESTNET },
+  },
+  providerId: 'tonapi', // optional id; defaults to 'tonapi'
+  sendRetries: 5, // optional override; defaults to 5
+  sendRetryDelayMs: 1000, // optional override; defaults to 1000
+  quoteRetries: 5, // optional override; defaults to 5
+  quoteRetryDelayMs: 1000, // optional override; defaults to 1000
+  configCacheTtlMs: 300000, // optional; in-memory /v2/gasless/config cache TTL, defaults to 5 min (0 disables)
 };
 ```
 

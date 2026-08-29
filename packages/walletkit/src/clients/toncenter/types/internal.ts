@@ -10,40 +10,40 @@ import type { AccountStatus } from '../../../api/models';
 import type { RawStackItem } from '../../../utils';
 
 export interface InternalTransactionId {
-    lt: string;
-    hash: string;
+  lt: string;
+  hash: string;
 }
 
 export interface TonBlockIdExt {
-    workchain: number;
-    shard: string;
-    seqno: number;
-    root_hash: string;
-    file_hash: string;
+  workchain: number;
+  shard: string;
+  seqno: number;
+  root_hash: string;
+  file_hash: string;
 }
 
 export interface V2AddressInformation {
-    balance: string;
-    code: string;
-    data: string;
-    frozen_hash: string;
-    last_transaction_hash: string;
-    last_transaction_lt: string;
-    status: AccountStatus;
-    extra_currencies?: Array<{
-        id: number;
-        amount: string;
-    }>;
-    block_id?: TonBlockIdExt;
+  balance: string;
+  code: string;
+  data: string;
+  frozen_hash: string;
+  last_transaction_hash: string;
+  last_transaction_lt: string;
+  status: AccountStatus;
+  extra_currencies?: Array<{
+    id: number;
+    amount: string;
+  }>;
+  block_id?: TonBlockIdExt;
 }
 
 export interface V3RunGetMethodRequest {
-    gas_used: number;
-    stack: RawStackItem[];
-    exit_code: number;
+  gas_used: number;
+  stack: RawStackItem[];
+  exit_code: number;
 }
 
 export interface V2SendMessageResult {
-    message_hash: string;
-    message_hash_norm: string;
+  message_hash: string;
+  message_hash_norm: string;
 }

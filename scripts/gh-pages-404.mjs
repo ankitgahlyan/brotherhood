@@ -15,7 +15,9 @@ const CLIENT_INDEX = join(CLIENT_DIR, 'index.html');
 const CLIENT_404 = join(CLIENT_DIR, '404.html');
 
 if (!existsSync(WALLET_INDEX)) {
-  console.error(`[gh-pages-404] Missing ${WALLET_INDEX} — run \`bun run build\` first.`);
+  console.error(
+    `[gh-pages-404] Missing ${WALLET_INDEX} — run \`bun run build\` first.`,
+  );
   process.exit(1);
 }
 
@@ -27,4 +29,6 @@ mkdirSync(CLIENT_DIR, { recursive: true });
 cpSync(WALLET_DIST, CLIENT_DIR, { recursive: true });
 copyFileSync(CLIENT_INDEX, CLIENT_404);
 
-console.log(`[gh-pages-404] Successfully synchronized ${WALLET_DIST} -> ${CLIENT_DIR} with 404.html fallback.`);
+console.log(
+  `[gh-pages-404] Successfully synchronized ${WALLET_DIST} -> ${CLIENT_DIR} with 404.html fallback.`,
+);

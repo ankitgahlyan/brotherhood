@@ -11,10 +11,10 @@
  * See https://docs.tonapi.io/tonapi/rest-api/gasless.
  */
 export interface TonApiGaslessConfig {
-    relay_address: string;
-    gas_jettons: TonApiGaslessGasJetton[];
+  relay_address: string;
+  gas_jettons: TonApiGaslessGasJetton[];
 }
 
 export interface TonApiGaslessGasJetton {
-    master_id: string;
+  master_id: string;
 }

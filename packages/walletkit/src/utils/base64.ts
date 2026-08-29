@@ -11,18 +11,18 @@ import { asHex } from './hex';
 import { WalletKitError, ERROR_CODES } from '../errors';
 
 export function asBase64(data: string): Base64String {
-    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data)) {
-        throw new Error('Not a valid base64');
-    }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data)) {
+    throw new Error('Not a valid base64');
+  }
 
-    try {
-        // Validate by attempting to decode
-        ParseBase64(data);
-    } catch (_e) {
-        throw new Error('Not a valid base64');
-    }
+  try {
+    // Validate by attempting to decode
+    ParseBase64(data);
+  } catch (_e) {
+    throw new Error('Not a valid base64');
+  }
 
-    return data as Base64String;
+  return data as Base64String;
 }
 
 /**
@@ -32,7 +32,7 @@ export function asBase64(data: string): Base64String {
  * example: a-_ => a+/
  */
 export function Base64Normalize(data: string): string {
-    return data.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  return data.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
 }
 
 /**
@@ -42,9 +42,12 @@ export function Base64Normalize(data: string): string {
  * example: a+/ => a-_=
  */
 export function Base64NormalizeUrl(data: string): string {
-    const normalized = Base64Normalize(data);
-    const burl = normalized.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    return burl;
+  const normalized = Base64Normalize(data);
+  const burl = normalized
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  return burl;
 }
 
 /**
@@ -53,11 +56,16 @@ export function Base64NormalizeUrl(data: string): string {
  * @returns utf-8 string
  */
 export function ParseBase64(data: string): string {
-    if (typeof atob === 'undefined' && typeof Buffer === 'undefined') {
-        throw new WalletKitError(ERROR_CODES.CONFIGURATION_ERROR, 'atob function is not available in this environment');
-    }
-    data = Base64Normalize(data);
-    return typeof atob === 'function' ? atob(data) : Buffer.from(data, 'base64').toString('utf-8');
+  if (typeof atob === 'undefined' && typeof Buffer === 'undefined') {
+    throw new WalletKitError(
+      ERROR_CODES.CONFIGURATION_ERROR,
+      'atob function is not available in this environment',
+    );
+  }
+  data = Base64Normalize(data);
+  return typeof atob === 'function'
+    ? atob(data)
+    : Buffer.from(data, 'base64').toString('utf-8');
 }
 
 /**
@@ -66,37 +74,50 @@ export function ParseBase64(data: string): string {
  * @returns Hex
  */
 export function Base64ToHex(data: string): Hex {
-    if (!data) throw new WalletKitError(ERROR_CODES.VALIDATION_ERROR, 'Invalid hash: data is required');
+  if (!data)
+    throw new WalletKitError(
+      ERROR_CODES.VALIDATION_ERROR,
+      'Invalid hash: data is required',
+    );
 
-    const binary = Base64ToUint8Array(data);
-    if (!binary) throw new WalletKitError(ERROR_CODES.VALIDATION_ERROR, 'Invalid hash: binary is required');
+  const binary = Base64ToUint8Array(data);
+  if (!binary)
+    throw new WalletKitError(
+      ERROR_CODES.VALIDATION_ERROR,
+      'Invalid hash: binary is required',
+    );
 
-    // if (binary.length !== 32 && binary.length !== 64) {
-    //     throw new WalletKitError(
-    //         ERROR_CODES.VALIDATION_ERROR,
-    //         'Invalid hex length: expected 32 or 64 bytes',
-    //         undefined,
-    //         {
-    //             actualLength: binary.length,
-    //             expectedLength: [32, 64],
-    //         },
-    //     );
-    // }
-    return Uint8ArrayToHex(binary);
+  // if (binary.length !== 32 && binary.length !== 64) {
+  //     throw new WalletKitError(
+  //         ERROR_CODES.VALIDATION_ERROR,
+  //         'Invalid hex length: expected 32 or 64 bytes',
+  //         undefined,
+  //         {
+  //             actualLength: binary.length,
+  //             expectedLength: [32, 64],
+  //         },
+  //     );
+  // }
+  return Uint8ArrayToHex(binary);
 }
 
 export function Uint8ArrayToHex(data: Iterable<number>): Hex {
-    return asHex(
-        `0x${[...data]
-            .map((b) => {
-                if (b < 0 || b > 255)
-                    throw new WalletKitError(ERROR_CODES.VALIDATION_ERROR, 'Invalid byte: expected 0-255', undefined, {
-                        actualByte: b,
-                    });
-                return b.toString(16).padStart(2, '0');
-            })
-            .join('')}`,
-    );
+  return asHex(
+    `0x${[...data]
+      .map((b) => {
+        if (b < 0 || b > 255)
+          throw new WalletKitError(
+            ERROR_CODES.VALIDATION_ERROR,
+            'Invalid byte: expected 0-255',
+            undefined,
+            {
+              actualByte: b,
+            },
+          );
+        return b.toString(16).padStart(2, '0');
+      })
+      .join('')}`,
+  );
 }
 
 /**
@@ -105,16 +126,16 @@ export function Uint8ArrayToHex(data: Iterable<number>): Hex {
  * @returns Uint8Array
  */
 export function Base64ToUint8Array(data?: string | null): Uint8Array | null {
-    if (!data) return null;
-    const binary = ParseBase64(data);
-    const len = binary.length;
-    const bytes = new Uint8Array(len);
+  if (!data) return null;
+  const binary = ParseBase64(data);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
 
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
 
-    return bytes;
+  return bytes;
 }
 
 /**
@@ -123,16 +144,16 @@ export function Base64ToUint8Array(data?: string | null): Uint8Array | null {
  * @returns Base64 string
  */
 export function Uint8ArrayToBase64(data: Uint8Array): Base64String {
-    if (typeof btoa === 'undefined' && typeof Buffer === 'undefined') {
-        throw new Error('btoa is not available in this environment');
-    }
-    let binary = '';
-    for (let i = 0; i < data.length; i++) {
-        binary += String.fromCharCode(data[i]);
-    }
-    return typeof btoa === 'function'
-        ? (btoa(binary) as Base64String)
-        : (Buffer.from(data).toString('base64') as Base64String);
+  if (typeof btoa === 'undefined' && typeof Buffer === 'undefined') {
+    throw new Error('btoa is not available in this environment');
+  }
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return typeof btoa === 'function'
+    ? (btoa(binary) as Base64String)
+    : (Buffer.from(data).toString('base64') as Base64String);
 }
 
 /**
@@ -141,17 +162,17 @@ export function Uint8ArrayToBase64(data: Uint8Array): Base64String {
  * @returns Bigint
  */
 export function Base64ToBigInt(data?: string | null): bigint {
-    if (!data || data === '') return 0n;
-    const binary = ParseBase64(data);
+  if (!data || data === '') return 0n;
+  const binary = ParseBase64(data);
 
-    const len = binary.length;
-    let result = 0n;
+  const len = binary.length;
+  let result = 0n;
 
-    for (let i = 0; i < len; i++) {
-        result = (result << 8n) + BigInt(binary.charCodeAt(i));
-    }
+  for (let i = 0; i < len; i++) {
+    result = (result << 8n) + BigInt(binary.charCodeAt(i));
+  }
 
-    return result;
+  return result;
 }
 
 /**
@@ -160,15 +181,15 @@ export function Base64ToBigInt(data?: string | null): bigint {
  * @returns Base64 string
  */
 export function BigIntToBase64(data: bigint): string {
-    if (data === 0n) return '';
-    const bytes: number[] = [];
-    let temp = data;
-    while (temp > 0n) {
-        bytes.push(Number(temp & 0xffn));
-        temp >>= 8n;
-    }
-    const arr = new Uint8Array(bytes.reverse());
-    return Uint8ArrayToBase64(arr);
+  if (data === 0n) return '';
+  const bytes: number[] = [];
+  let temp = data;
+  while (temp > 0n) {
+    bytes.push(Number(temp & 0xffn));
+    temp >>= 8n;
+  }
+  const arr = new Uint8Array(bytes.reverse());
+  return Uint8ArrayToBase64(arr);
 }
 
 /**
@@ -177,15 +198,15 @@ export function BigIntToBase64(data: bigint): string {
  * @returns Bigint
  */
 export function Uint8ArrayToBigInt(data: Uint8Array): bigint {
-    let result = 0n;
-    for (let i = 0; i < data.length; i++) {
-        result = (result << 8n) + BigInt(data[i]);
-    }
-    return result;
+  let result = 0n;
+  for (let i = 0; i < data.length; i++) {
+    result = (result << 8n) + BigInt(data[i]);
+  }
+  return result;
 }
 
 export function HexToBigInt(data: Hex): bigint {
-    return BigInt(data);
+  return BigInt(data);
 }
 
 /**
@@ -194,12 +215,12 @@ export function HexToBigInt(data: Hex): bigint {
  * @returns Uint8Array
  */
 export function HexToUint8Array(data: Hex): Uint8Array {
-    const hex = data.slice(2); // Remove 0x prefix
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < hex.length; i += 2) {
-        bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
-    }
-    return bytes;
+  const hex = data.slice(2); // Remove 0x prefix
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  }
+  return bytes;
 }
 
 /**
@@ -208,5 +229,5 @@ export function HexToUint8Array(data: Hex): Uint8Array {
  * @returns Base64 string
  */
 export function HexToBase64(data: Hex): Base64String {
-    return Uint8ArrayToBase64(HexToUint8Array(data));
+  return Uint8ArrayToBase64(HexToUint8Array(data));
 }

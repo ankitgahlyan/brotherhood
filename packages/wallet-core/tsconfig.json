@@ -27,7 +27,5 @@
     ".stryker-tmp",
     "dist"
   ],
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }

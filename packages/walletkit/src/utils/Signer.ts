@@ -19,44 +19,46 @@ import type { WalletSigner } from '../api/interfaces';
  * Utility class for creating wallet signers from various sources
  */
 export class Signer {
-    /**
-     * Create a signer from a mnemonic phrase
-     * @param mnemonic - Mnemonic phrase as string or array of words
-     * @param options - Optional configuration for mnemonic type
-     * @returns Signer function with publicKey property
-     */
-    static async fromMnemonic(
-        mnemonic: string | string[],
-        options?: { type?: 'ton' | 'bip39' },
-    ): Promise<WalletSigner> {
-        const keyPair = await MnemonicToKeyPair(mnemonic, options?.type ?? 'ton');
-        const signer = createWalletSigner(keyPair.secretKey);
+  /**
+   * Create a signer from a mnemonic phrase
+   * @param mnemonic - Mnemonic phrase as string or array of words
+   * @param options - Optional configuration for mnemonic type
+   * @returns Signer function with publicKey property
+   */
+  static async fromMnemonic(
+    mnemonic: string | string[],
+    options?: { type?: 'ton' | 'bip39' },
+  ): Promise<WalletSigner> {
+    const keyPair = await MnemonicToKeyPair(mnemonic, options?.type ?? 'ton');
+    const signer = createWalletSigner(keyPair.secretKey);
 
-        // Attach publicKey to the signer function
-        return {
-            sign: signer,
-            publicKey: Uint8ArrayToHex(keyPair.publicKey),
-        };
-    }
+    // Attach publicKey to the signer function
+    return {
+      sign: signer,
+      publicKey: Uint8ArrayToHex(keyPair.publicKey),
+    };
+  }
 
-    /**
-     * Create a signer from a private key
-     * @param privateKey - Private key as hex string or Uint8Array
-     * @returns Signer function with publicKey property
-     */
-    static async fromPrivateKey(privateKey: string | Uint8Array): Promise<WalletSigner> {
-        const privateKeyBytes =
-            typeof privateKey === 'string'
-                ? Uint8Array.from(Buffer.from(privateKey.replace('0x', ''), 'hex'))
-                : privateKey;
+  /**
+   * Create a signer from a private key
+   * @param privateKey - Private key as hex string or Uint8Array
+   * @returns Signer function with publicKey property
+   */
+  static async fromPrivateKey(
+    privateKey: string | Uint8Array,
+  ): Promise<WalletSigner> {
+    const privateKeyBytes =
+      typeof privateKey === 'string'
+        ? Uint8Array.from(Buffer.from(privateKey.replace('0x', ''), 'hex'))
+        : privateKey;
 
-        const keyPair = keyPairFromSeed(Buffer.from(privateKeyBytes));
-        const signer = createWalletSigner(keyPair.secretKey);
+    const keyPair = keyPairFromSeed(Buffer.from(privateKeyBytes));
+    const signer = createWalletSigner(keyPair.secretKey);
 
-        // Attach publicKey to the signer function
-        return {
-            sign: signer,
-            publicKey: Uint8ArrayToHex(keyPair.publicKey),
-        };
-    }
+    // Attach publicKey to the signer function
+    return {
+      sign: signer,
+      publicKey: Uint8ArrayToHex(keyPair.publicKey),
+    };
+  }
 }

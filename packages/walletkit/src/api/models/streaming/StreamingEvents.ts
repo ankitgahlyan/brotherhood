@@ -11,7 +11,7 @@ import type { TransactionsUpdate } from './TransactionsUpdate';
 import type { JettonUpdate } from './JettonUpdate';
 
 export interface StreamingEvents {
-    'streaming:balance-update': BalanceUpdate;
-    'streaming:transactions': TransactionsUpdate;
-    'streaming:jettons-update': JettonUpdate;
+  'streaming:balance-update': BalanceUpdate;
+  'streaming:transactions': TransactionsUpdate;
+  'streaming:jettons-update': JettonUpdate;
 }

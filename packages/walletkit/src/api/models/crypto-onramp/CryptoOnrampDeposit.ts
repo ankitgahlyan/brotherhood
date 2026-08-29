@@ -15,38 +15,38 @@ import type { CryptoOnrampSourceCurrency } from './CryptoOnrampCurrency';
  * the provider then delivers the target crypto to the user's TON address.
  */
 export interface CryptoOnrampDeposit {
-    /**
-     * Deposit id
-     */
-    depositId: string;
+  /**
+   * Deposit id
+   */
+  depositId: string;
 
-    /**
-     * Deposit address on the source chain
-     */
-    address: string;
+  /**
+   * Deposit address on the source chain
+   */
+  address: string;
 
-    /**
-     * Exact amount of source crypto the user must send (in base units of `sourceCurrency.decimals`).
-     */
-    amount: string;
+  /**
+   * Exact amount of source crypto the user must send (in base units of `sourceCurrency.decimals`).
+   */
+  amount: string;
 
-    /**
-     * Source currency the user is sending. Mirrors the `sourceCurrency` from the originating quote.
-     */
-    sourceCurrency: CryptoOnrampSourceCurrency;
+  /**
+   * Source currency the user is sending. Mirrors the `sourceCurrency` from the originating quote.
+   */
+  sourceCurrency: CryptoOnrampSourceCurrency;
 
-    /**
-     * Optional memo / tag required by some chains (e.g. XRP, TON comment)
-     */
-    memo?: string;
+  /**
+   * Optional memo / tag required by some chains (e.g. XRP, TON comment)
+   */
+  memo?: string;
 
-    /**
-     * Unix timestamp (ms) after which the deposit offer is no longer valid
-     */
-    expiresAt?: number;
+  /**
+   * Unix timestamp (ms) after which the deposit offer is no longer valid
+   */
+  expiresAt?: number;
 
-    /**
-     * Identifier of the provider that issued this deposit
-     */
-    providerId: string;
+  /**
+   * Identifier of the provider that issued this deposit
+   */
+  providerId: string;
 }

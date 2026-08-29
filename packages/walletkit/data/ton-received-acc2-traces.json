@@ -354,16 +354,12 @@
     "0:BC1B748F5D26B74D857798FF4DD4252A2B79CF51B232AE41BE1F19E8CD9547B7": {
       "user_friendly": "UQC8G3SPXSa3TYV3mP9N1CUqK3nPUbIyrkG-HxnozZVHt2Iv",
       "domain": null,
-      "interfaces": [
-        "wallet_v5r1"
-      ]
+      "interfaces": ["wallet_v5r1"]
     },
     "0:CB04A1EC9CD6F0F795445DA1D21F346914C6FCBE3D3E5932F2477A88347BA492": {
       "user_friendly": "UQDLBKHsnNbw95VEXaHSHzRpFMb8vj0-WTLyR3qINHukkpMB",
       "domain": null,
-      "interfaces": [
-        "wallet_v5r1"
-      ]
+      "interfaces": ["wallet_v5r1"]
     }
   },
   "metadata": {}

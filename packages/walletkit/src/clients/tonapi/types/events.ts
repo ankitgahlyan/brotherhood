@@ -7,34 +7,34 @@
  */
 
 export interface TonApiActionSimplePreview {
-    name?: string;
-    description?: string;
-    value?: string;
-    value_image?: string;
-    accounts?: TonApiSimplePreviewAccount[];
+  name?: string;
+  description?: string;
+  value?: string;
+  value_image?: string;
+  accounts?: TonApiSimplePreviewAccount[];
 }
 
 export interface TonApiAction {
-    type?: string;
-    status?: 'ok' | 'failed';
-    simple_preview?: TonApiActionSimplePreview;
-    base_transactions?: string[];
-    [key: string]: unknown;
+  type?: string;
+  status?: 'ok' | 'failed';
+  simple_preview?: TonApiActionSimplePreview;
+  base_transactions?: string[];
+  [key: string]: unknown;
 }
 
 export interface TonApiAccountEvent {
-    event_id: string;
-    timestamp: number;
-    actions: TonApiAction[];
-    account: { address: string };
-    is_scam?: boolean;
-    lt?: string | number;
-    in_progress?: boolean;
+  event_id: string;
+  timestamp: number;
+  actions: TonApiAction[];
+  account: { address: string };
+  is_scam?: boolean;
+  lt?: string | number;
+  in_progress?: boolean;
 }
 
 export interface TonApiAccountEventsResponse {
-    events: TonApiAccountEvent[];
-    next_from?: number;
+  events: TonApiAccountEvent[];
+  next_from?: number;
 }
 
 export type TonApiSimplePreviewAccount = string | { address: string };

@@ -8,7 +8,10 @@
 
 import { ERROR_CODES, WalletKitError } from '../../errors';
 import type { JSBridgeInjectOptions } from '../../types/jsBridge';
-import { getDeviceInfoWithDefaults, getWalletInfoWithDefaults } from '../../utils/getDefaultWalletConfig';
+import {
+  getDeviceInfoWithDefaults,
+  getWalletInfoWithDefaults,
+} from '../../utils/getDefaultWalletConfig';
 import type { BridgeConfig } from '../core/BridgeConfig';
 import { validateBridgeConfig } from '../core/BridgeConfig';
 import { TonConnectBridge } from '../core/TonConnectBridge';
@@ -28,40 +31,40 @@ import { WindowAccessor } from './WindowAccessor';
  * Resolve jsBridgeKey from options
  */
 function resolveJsBridgeKey(options: JSBridgeInjectOptions): string {
-    // Direct jsBridgeKey takes precedence
-    if (options.jsBridgeKey) {
-        return options.jsBridgeKey;
-    }
+  // Direct jsBridgeKey takes precedence
+  if (options.jsBridgeKey) {
+    return options.jsBridgeKey;
+  }
 
-    // Try to extract from walletInfo
-    if (options.walletInfo) {
-        if ('jsBridgeKey' in options.walletInfo) {
-            return (options.walletInfo as { jsBridgeKey: string }).jsBridgeKey;
-        }
-        if ('name' in options.walletInfo) {
-            return options.walletInfo.name;
-        }
+  // Try to extract from walletInfo
+  if (options.walletInfo) {
+    if ('jsBridgeKey' in options.walletInfo) {
+      return (options.walletInfo as { jsBridgeKey: string }).jsBridgeKey;
     }
+    if ('name' in options.walletInfo) {
+      return options.walletInfo.name;
+    }
+  }
 
-    // Fallback
-    return 'unknown-wallet';
+  // Fallback
+  return 'unknown-wallet';
 }
 
 /**
  * Create bridge configuration from options
  */
 function createBridgeConfig(options: JSBridgeInjectOptions): BridgeConfig {
-    const deviceInfo = getDeviceInfoWithDefaults(options.deviceInfo);
-    const walletInfo = getWalletInfoWithDefaults(options.walletInfo);
-    const jsBridgeKey = resolveJsBridgeKey(options);
+  const deviceInfo = getDeviceInfoWithDefaults(options.deviceInfo);
+  const walletInfo = getWalletInfoWithDefaults(options.walletInfo);
+  const jsBridgeKey = resolveJsBridgeKey(options);
 
-    return {
-        deviceInfo,
-        walletInfo,
-        jsBridgeKey,
-        isWalletBrowser: options.isWalletBrowser ?? false,
-        protocolVersion: SUPPORTED_PROTOCOL_VERSION,
-    };
+  return {
+    deviceInfo,
+    walletInfo,
+    jsBridgeKey,
+    isWalletBrowser: options.isWalletBrowser ?? false,
+    protocolVersion: SUPPORTED_PROTOCOL_VERSION,
+  };
 }
 
 /**
@@ -73,59 +76,65 @@ function createBridgeConfig(options: JSBridgeInjectOptions): BridgeConfig {
  * @returns Cleanup function to remove bridge and stop watching
  */
 export function injectBridge(
-    window: Window,
-    options: JSBridgeInjectOptions,
-    argsTransport?: Transport | (() => Transport),
+  window: Window,
+  options: JSBridgeInjectOptions,
+  argsTransport?: Transport | (() => Transport),
 ): void {
-    // 1. Create and validate configuration
-    const config = createBridgeConfig(options);
-    validateBridgeConfig(config);
+  // 1. Create and validate configuration
+  const config = createBridgeConfig(options);
+  validateBridgeConfig(config);
 
-    let shouldInjectTonKey = undefined;
-    if (options.injectTonKey !== undefined) {
-        shouldInjectTonKey = options.injectTonKey;
-        // Redundant check, but keeping for clarity
-    } else if (options.isWalletBrowser === true) {
-        shouldInjectTonKey = true;
-    } else {
-        shouldInjectTonKey = true;
-    }
+  let shouldInjectTonKey = undefined;
+  if (options.injectTonKey !== undefined) {
+    shouldInjectTonKey = options.injectTonKey;
+    // Redundant check, but keeping for clarity
+  } else if (options.isWalletBrowser === true) {
+    shouldInjectTonKey = true;
+  } else {
+    shouldInjectTonKey = true;
+  }
 
-    // 2. Create window accessor
-    const windowAccessor = new WindowAccessor(window, {
-        bridgeKey: config.jsBridgeKey,
-        injectTonKey: shouldInjectTonKey,
-    });
+  // 2. Create window accessor
+  const windowAccessor = new WindowAccessor(window, {
+    bridgeKey: config.jsBridgeKey,
+    injectTonKey: shouldInjectTonKey,
+  });
 
-    // 3. Check if bridge already exists
-    if (windowAccessor.exists()) {
-         
-        console.log(`${config.jsBridgeKey}.tonconnect already exists, skipping injection`);
-        return;
-    }
-
-    let transport: Transport;
-    if (argsTransport) {
-        transport = typeof argsTransport === 'function' ? argsTransport() : argsTransport;
-    } else {
-        throw new WalletKitError(ERROR_CODES.INVALID_CONFIG, 'Transport is not configured');
-    }
-
-    // 5. Create bridge instance
-    const bridge = new TonConnectBridge(config, transport);
-
-    // 6. Inject bridge into window
-    windowAccessor.injectBridge(bridge);
-
-     
-    console.log(`TonConnect JS Bridge injected for ${config.jsBridgeKey} - forwarding to extension`);
-
-    // 7. Setup iframe watcher
-    const iframeWatcher = new IframeWatcher(() => {
-        transport.requestContentScriptInjection();
-    });
-    iframeWatcher.start();
-
-    // 8. Return cleanup function
+  // 3. Check if bridge already exists
+  if (windowAccessor.exists()) {
+    console.log(
+      `${config.jsBridgeKey}.tonconnect already exists, skipping injection`,
+    );
     return;
+  }
+
+  let transport: Transport;
+  if (argsTransport) {
+    transport =
+      typeof argsTransport === 'function' ? argsTransport() : argsTransport;
+  } else {
+    throw new WalletKitError(
+      ERROR_CODES.INVALID_CONFIG,
+      'Transport is not configured',
+    );
+  }
+
+  // 5. Create bridge instance
+  const bridge = new TonConnectBridge(config, transport);
+
+  // 6. Inject bridge into window
+  windowAccessor.injectBridge(bridge);
+
+  console.log(
+    `TonConnect JS Bridge injected for ${config.jsBridgeKey} - forwarding to extension`,
+  );
+
+  // 7. Setup iframe watcher
+  const iframeWatcher = new IframeWatcher(() => {
+    transport.requestContentScriptInjection();
+  });
+  iframeWatcher.start();
+
+  // 8. Return cleanup function
+  return;
 }

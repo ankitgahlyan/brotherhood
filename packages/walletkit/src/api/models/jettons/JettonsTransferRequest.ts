@@ -13,29 +13,29 @@ import type { TokenAmount } from '../core/TokenAmount';
  * Request parameters for transferring Jetton tokens.
  */
 export interface JettonsTransferRequest {
-    /**
-     * Jetton master contract address
-     */
-    jettonAddress: UserFriendlyAddress;
+  /**
+   * Jetton master contract address
+   */
+  jettonAddress: UserFriendlyAddress;
 
-    /**
-     * Amount to transfer in Jetton's smallest unit
-     */
-    transferAmount: TokenAmount;
+  /**
+   * Amount to transfer in Jetton's smallest unit
+   */
+  transferAmount: TokenAmount;
 
-    /**
-     * Recipient wallet address
-     */
-    recipientAddress: UserFriendlyAddress;
+  /**
+   * Recipient wallet address
+   */
+  recipientAddress: UserFriendlyAddress;
 
-    /**
-     * Address to receive the excess GRAM after the transfer.
-     * Defaults to the sender's address when omitted.
-     */
-    responseDestination?: UserFriendlyAddress;
+  /**
+   * Address to receive the excess GRAM after the transfer.
+   * Defaults to the sender's address when omitted.
+   */
+  responseDestination?: UserFriendlyAddress;
 
-    /**
-     * Human-readable comment attached to the transfer
-     */
-    comment?: string;
+  /**
+   * Human-readable comment attached to the transfer
+   */
+  comment?: string;
 }

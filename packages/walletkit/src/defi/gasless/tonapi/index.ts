@@ -6,5 +6,11 @@
  *
  */
 
-export { TonApiGaslessProvider, createTonApiGaslessProvider } from './TonApiGaslessProvider';
-export type { TonApiGaslessChainConfig, TonApiGaslessProviderConfig } from './models';
+export {
+  TonApiGaslessProvider,
+  createTonApiGaslessProvider,
+} from './TonApiGaslessProvider';
+export type {
+  TonApiGaslessChainConfig,
+  TonApiGaslessProviderConfig,
+} from './models';

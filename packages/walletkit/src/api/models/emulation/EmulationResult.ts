@@ -13,10 +13,10 @@ import type { EmulationResponse } from './EmulationResponse';
  * Contains the full emulation response including trace and actions.
  */
 export type EmulationResultSuccess = {
-    /** Discriminant tag indicating a successful emulation */
-    result: 'success';
-    /** The emulation response data including trace, actions, and messages */
-    emulationResult: EmulationResponse;
+  /** Discriminant tag indicating a successful emulation */
+  result: 'success';
+  /** The emulation response data including trace, actions, and messages */
+  emulationResult: EmulationResponse;
 };
 
 /**
@@ -24,10 +24,10 @@ export type EmulationResultSuccess = {
  * Contains the error code and message describing why emulation could not complete.
  */
 export type EmulationResultError = {
-    /** Discriminant tag indicating a failed emulation */
-    result: 'error';
-    /** Details of the error that caused emulation to fail */
-    emulationError: EmulationError;
+  /** Discriminant tag indicating a failed emulation */
+  result: 'error';
+  /** Details of the error that caused emulation to fail */
+  emulationError: EmulationError;
 };
 
 /**
@@ -40,14 +40,14 @@ export type EmulationResult = EmulationResultSuccess | EmulationResultError;
  * Error returned when transaction emulation fails.
  */
 export interface EmulationError {
-    /**
-     * Numeric error code
-     * @format int
-     */
-    code: number;
+  /**
+   * Numeric error code
+   * @format int
+   */
+  code: number;
 
-    /**
-     * Human-readable error message
-     */
-    message: string;
+  /**
+   * Human-readable error message
+   */
+  message: string;
 }

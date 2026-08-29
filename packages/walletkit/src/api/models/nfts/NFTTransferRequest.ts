@@ -13,23 +13,23 @@ import type { TokenAmount } from '../core/TokenAmount';
  * Request parameters for transferring an NFT to another address.
  */
 export interface NFTTransferRequest {
-    /**
-     * Contract address of the NFT to transfer
-     */
-    nftAddress: UserFriendlyAddress;
+  /**
+   * Contract address of the NFT to transfer
+   */
+  nftAddress: UserFriendlyAddress;
 
-    /**
-     * GRAM amount to attach for gas fees (default: 0.1 GRAM)
-     */
-    transferAmount?: TokenAmount;
+  /**
+   * GRAM amount to attach for gas fees (default: 0.1 GRAM)
+   */
+  transferAmount?: TokenAmount;
 
-    /**
-     * Recipient wallet address
-     */
-    recipientAddress: UserFriendlyAddress;
+  /**
+   * Recipient wallet address
+   */
+  recipientAddress: UserFriendlyAddress;
 
-    /**
-     * Human-readable comment attached to the transfer
-     */
-    comment?: string;
+  /**
+   * Human-readable comment attached to the transfer
+   */
+  comment?: string;
 }

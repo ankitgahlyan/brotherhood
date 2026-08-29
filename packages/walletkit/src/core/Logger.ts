@@ -39,47 +39,46 @@
  * Log levels enum for controlling logger verbosity
  */
 export enum LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARN = 2,
-    ERROR = 3,
-    NONE = 4,
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+  NONE = 4,
 }
 
 /**
  * Logger configuration interface
  */
 export interface LoggerConfig {
-    level: LogLevel;
-    prefix?: string;
-    enableTimestamp?: boolean;
-    enableStackTrace?: boolean;
-    parent?: Logger;
+  level: LogLevel;
+  prefix?: string;
+  enableTimestamp?: boolean;
+  enableStackTrace?: boolean;
+  parent?: Logger;
 }
 
 /**
  * Context object for structured logging
  */
 export interface LogContext {
-     
-    [key: string]: any;
+  [key: string]: any;
 }
 
 function getDefaultLogLevel(): LogLevel {
-    if (typeof process === 'undefined' || typeof process?.env === 'undefined') {
-        return LogLevel.ERROR;
-    }
-    return process?.env?.WALLETKIT_LOG_LEVEL === 'debug'
-        ? LogLevel.DEBUG
-        : process?.env?.WALLETKIT_LOG_LEVEL === 'none'
-          ? LogLevel.NONE
-          : process?.env?.WALLETKIT_LOG_LEVEL === 'info'
-            ? LogLevel.INFO
-            : process?.env?.WALLETKIT_LOG_LEVEL === 'warn'
-              ? LogLevel.WARN
-              : process?.env?.WALLETKIT_LOG_LEVEL === 'off'
-                ? LogLevel.NONE
-                : LogLevel.ERROR;
+  if (typeof process === 'undefined' || typeof process?.env === 'undefined') {
+    return LogLevel.ERROR;
+  }
+  return process?.env?.WALLETKIT_LOG_LEVEL === 'debug'
+    ? LogLevel.DEBUG
+    : process?.env?.WALLETKIT_LOG_LEVEL === 'none'
+      ? LogLevel.NONE
+      : process?.env?.WALLETKIT_LOG_LEVEL === 'info'
+        ? LogLevel.INFO
+        : process?.env?.WALLETKIT_LOG_LEVEL === 'warn'
+          ? LogLevel.WARN
+          : process?.env?.WALLETKIT_LOG_LEVEL === 'off'
+            ? LogLevel.NONE
+            : LogLevel.ERROR;
 }
 
 /**
@@ -87,178 +86,174 @@ function getDefaultLogLevel(): LogLevel {
  * Provides structured logging with configurable levels and context support
  */
 export class Logger {
-    private config: LoggerConfig;
-    private parent?: Logger;
-    private static defaultConfig: LoggerConfig = {
-        level: LogLevel.INFO,
-        prefix: 'TonWalletKit',
-        enableTimestamp: true,
-        enableStackTrace: false,
-    };
+  private config: LoggerConfig;
+  private parent?: Logger;
+  private static defaultConfig: LoggerConfig = {
+    level: LogLevel.INFO,
+    prefix: 'TonWalletKit',
+    enableTimestamp: true,
+    enableStackTrace: false,
+  };
 
-    constructor(config?: Partial<LoggerConfig>) {
-        this.parent = config?.parent;
-        this.config = { ...Logger.defaultConfig, ...config };
+  constructor(config?: Partial<LoggerConfig>) {
+    this.parent = config?.parent;
+    this.config = { ...Logger.defaultConfig, ...config };
 
-        // If we have a parent, inherit its configuration and build hierarchical prefix
-        if (this.parent) {
-            // Inherit parent's config but allow overrides
-            this.config = {
-                ...this.parent.config,
-                ...config,
-                // Build hierarchical prefix
-                prefix: this.buildHierarchicalPrefix(config?.prefix),
-            };
-        }
+    // If we have a parent, inherit its configuration and build hierarchical prefix
+    if (this.parent) {
+      // Inherit parent's config but allow overrides
+      this.config = {
+        ...this.parent.config,
+        ...config,
+        // Build hierarchical prefix
+        prefix: this.buildHierarchicalPrefix(config?.prefix),
+      };
+    }
+  }
+
+  /**
+   * Update logger configuration
+   */
+  configure(config: Partial<LoggerConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * Create a child logger with a prefix that inherits from this logger
+   */
+  createChild(prefix: string, config?: Partial<LoggerConfig>): Logger {
+    return new Logger({
+      ...config,
+      parent: this,
+      prefix,
+    });
+  }
+
+  /**
+   * Build hierarchical prefix by combining parent prefix with current prefix
+   */
+  private buildHierarchicalPrefix(currentPrefix?: string): string {
+    if (!this.parent || !currentPrefix) {
+      return currentPrefix || this.parent?.config.prefix || '';
     }
 
-    /**
-     * Update logger configuration
-     */
-    configure(config: Partial<LoggerConfig>): void {
-        this.config = { ...this.config, ...config };
+    const parentPrefix = this.parent.config.prefix;
+    if (!parentPrefix) {
+      return currentPrefix;
     }
 
-    /**
-     * Create a child logger with a prefix that inherits from this logger
-     */
-    createChild(prefix: string, config?: Partial<LoggerConfig>): Logger {
-        return new Logger({
-            ...config,
-            parent: this,
-            prefix,
-        });
+    return `${parentPrefix}:${currentPrefix}`;
+  }
+
+  /**
+   * Get the full hierarchical prefix for this logger
+   */
+  getPrefix(): string {
+    return this.config.prefix || '';
+  }
+
+  /**
+   * Get the parent logger if it exists
+   */
+  getParent(): Logger | undefined {
+    return this.parent;
+  }
+
+  /**
+   * Log debug messages
+   */
+  debug(message: string, context?: LogContext): void {
+    if (this.config.level <= LogLevel.DEBUG) {
+      this.log('DEBUG', message, context);
+    }
+  }
+
+  /**
+   * Log info messages
+   */
+  info(message: string, context?: LogContext): void {
+    if (this.config.level <= LogLevel.INFO) {
+      this.log('INFO', message, context);
+    }
+  }
+
+  /**
+   * Log warning messages
+   */
+  warn(message: string, context?: LogContext): void {
+    if (this.config.level <= LogLevel.WARN) {
+      this.log('WARN', message, context);
+    }
+  }
+
+  /**
+   * Log error messages
+   */
+  error(message: string, context?: LogContext): void {
+    if (this.config.level <= LogLevel.ERROR) {
+      this.log('ERROR', message, context);
+    }
+  }
+
+  /**
+   * Internal logging method
+   */
+  private log(level: string, message: string, context?: LogContext): void {
+    const timestamp = this.config.enableTimestamp
+      ? new Date().toISOString()
+      : '';
+    const prefix = this.config.prefix ? `[${this.config.prefix}]` : '';
+
+    let logMessage = '';
+
+    if (timestamp) {
+      logMessage += `${timestamp} `;
     }
 
-    /**
-     * Build hierarchical prefix by combining parent prefix with current prefix
-     */
-    private buildHierarchicalPrefix(currentPrefix?: string): string {
-        if (!this.parent || !currentPrefix) {
-            return currentPrefix || this.parent?.config.prefix || '';
-        }
-
-        const parentPrefix = this.parent.config.prefix;
-        if (!parentPrefix) {
-            return currentPrefix;
-        }
-
-        return `${parentPrefix}:${currentPrefix}`;
+    if (prefix) {
+      logMessage += `${prefix} `;
     }
 
-    /**
-     * Get the full hierarchical prefix for this logger
-     */
-    getPrefix(): string {
-        return this.config.prefix || '';
+    logMessage += `${level}: ${message}`;
+
+    const logArgs: any[] = [logMessage];
+
+    if (context && Object.keys(context).length > 0) {
+      logArgs.push(context);
     }
 
-    /**
-     * Get the parent logger if it exists
-     */
-    getParent(): Logger | undefined {
-        return this.parent;
+    // Use appropriate console method based on level
+    switch (level) {
+      case 'DEBUG':
+        console.debug(...logArgs);
+        break;
+      case 'INFO':
+        console.info(...logArgs);
+        break;
+      case 'WARN':
+        console.warn(...logArgs);
+        break;
+      case 'ERROR':
+        console.error(...logArgs);
+        if (this.config.enableStackTrace) {
+          console.trace();
+        }
+        break;
     }
-
-    /**
-     * Log debug messages
-     */
-    debug(message: string, context?: LogContext): void {
-        if (this.config.level <= LogLevel.DEBUG) {
-            this.log('DEBUG', message, context);
-        }
-    }
-
-    /**
-     * Log info messages
-     */
-    info(message: string, context?: LogContext): void {
-        if (this.config.level <= LogLevel.INFO) {
-            this.log('INFO', message, context);
-        }
-    }
-
-    /**
-     * Log warning messages
-     */
-    warn(message: string, context?: LogContext): void {
-        if (this.config.level <= LogLevel.WARN) {
-            this.log('WARN', message, context);
-        }
-    }
-
-    /**
-     * Log error messages
-     */
-    error(message: string, context?: LogContext): void {
-        if (this.config.level <= LogLevel.ERROR) {
-            this.log('ERROR', message, context);
-        }
-    }
-
-    /**
-     * Internal logging method
-     */
-    private log(level: string, message: string, context?: LogContext): void {
-        const timestamp = this.config.enableTimestamp ? new Date().toISOString() : '';
-        const prefix = this.config.prefix ? `[${this.config.prefix}]` : '';
-
-        let logMessage = '';
-
-        if (timestamp) {
-            logMessage += `${timestamp} `;
-        }
-
-        if (prefix) {
-            logMessage += `${prefix} `;
-        }
-
-        logMessage += `${level}: ${message}`;
-
-         
-        const logArgs: any[] = [logMessage];
-
-        if (context && Object.keys(context).length > 0) {
-            logArgs.push(context);
-        }
-
-        // Use appropriate console method based on level
-        switch (level) {
-            case 'DEBUG':
-                 
-                console.debug(...logArgs);
-                break;
-            case 'INFO':
-                 
-                console.info(...logArgs);
-                break;
-            case 'WARN':
-                 
-                console.warn(...logArgs);
-                break;
-            case 'ERROR':
-                 
-                console.error(...logArgs);
-                if (this.config.enableStackTrace) {
-                     
-                    console.trace();
-                }
-                break;
-        }
-    }
+  }
 }
 
 /**
  * Default logger instance
  */
 export const globalLogger = new Logger({
-    level: getDefaultLogLevel(),
-    enableStackTrace: true,
+  level: getDefaultLogLevel(),
+  enableStackTrace: true,
 });
 
 /**
  * Create a logger with custom configuration
  */
 export function createLogger(config?: Partial<LoggerConfig>): Logger {
-    return new Logger(config);
+  return new Logger(config);
 }

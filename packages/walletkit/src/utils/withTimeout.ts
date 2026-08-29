@@ -16,10 +16,19 @@
  * For real cancellation, the wrapped operation must support `AbortSignal` (and the
  * caller should pass one through directly, not via this helper).
  */
-export const withTimeout = <T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(`Execution timed out - ${timeoutMs}ms`)), timeoutMs);
-    });
-    return Promise.race([Promise.resolve(promise).finally(() => clearTimeout(timeoutId)), timeout]);
+export const withTimeout = <T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`Execution timed out - ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+  return Promise.race([
+    Promise.resolve(promise).finally(() => clearTimeout(timeoutId)),
+    timeout,
+  ]);
 };

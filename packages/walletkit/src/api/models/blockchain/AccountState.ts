@@ -22,50 +22,50 @@ import type { ExtraCurrencies } from '../core/ExtraCurrencies';
  * - `non-existing` — no on-chain record at all; balance is `'0'` and other fields omitted
  */
 export interface AccountState {
-    /**
-     * Canonical (bounceable) representation of the account address.
-     */
-    address: UserFriendlyAddress;
+  /**
+   * Canonical (bounceable) representation of the account address.
+   */
+  address: UserFriendlyAddress;
 
-    /**
-     * On-chain account status: `active`, `uninitialized`, `frozen`, or `non-existing`.
-     */
-    status: AccountStatus;
+  /**
+   * On-chain account status: `active`, `uninitialized`, `frozen`, or `non-existing`.
+   */
+  status: AccountStatus;
 
-    /**
-     * Balance in nano units as a decimal string (raw on-chain amount).
-     */
-    rawBalance: TokenAmount;
+  /**
+   * Balance in nano units as a decimal string (raw on-chain amount).
+   */
+  rawBalance: TokenAmount;
 
-    /**
-     * Balance formatted in GRAM (10^9 nano units = 1 GRAM).
-     */
-    balance: string;
+  /**
+   * Balance formatted in GRAM (10^9 nano units = 1 GRAM).
+   */
+  balance: string;
 
-    /**
-     * Additional currencies attached to the account, keyed by currency id.
-     * Empty object if there are none.
-     */
-    extraCurrencies: ExtraCurrencies;
+  /**
+   * Additional currencies attached to the account, keyed by currency id.
+   * Empty object if there are none.
+   */
+  extraCurrencies: ExtraCurrencies;
 
-    /**
-     * Base64-encoded contract code BOC. Omitted if the contract is not deployed.
-     */
-    code?: string;
+  /**
+   * Base64-encoded contract code BOC. Omitted if the contract is not deployed.
+   */
+  code?: string;
 
-    /**
-     * Base64-encoded contract data BOC. Omitted if the contract is not deployed.
-     */
-    data?: string;
+  /**
+   * Base64-encoded contract data BOC. Omitted if the contract is not deployed.
+   */
+  data?: string;
 
-    /**
-     * The most recent transaction applied to this account.
-     * Omitted if there have been no transactions (e.g. `non-existing` accounts).
-     */
-    lastTransaction?: TransactionId;
+  /**
+   * The most recent transaction applied to this account.
+   * Omitted if there have been no transactions (e.g. `non-existing` accounts).
+   */
+  lastTransaction?: TransactionId;
 
-    /**
-     * Hex hash of the pre-freeze account state. Present only when `status` is `frozen`.
-     */
-    frozenHash?: Hex;
+  /**
+   * Hex hash of the pre-freeze account state. Present only when `status` is `frozen`.
+   */
+  frozenHash?: Hex;
 }

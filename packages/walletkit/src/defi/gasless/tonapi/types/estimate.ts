@@ -11,25 +11,25 @@
  * See https://docs.tonapi.io/tonapi/rest-api/gasless.
  */
 export interface TonApiGaslessEstimateRequest {
-    wallet_address: string;
-    wallet_public_key: string;
-    messages: Array<{ boc: string }>;
+  wallet_address: string;
+  wallet_public_key: string;
+  messages: Array<{ boc: string }>;
 }
 
 /**
  * Wire-format response from `POST /v2/gasless/estimate/{master_id}`.
  */
 export interface TonApiGaslessEstimateResponse {
-    relay_address: string;
-    commission: string;
-    from: string;
-    valid_until: number;
-    messages: TonApiGaslessRawMessage[];
+  relay_address: string;
+  commission: string;
+  from: string;
+  valid_until: number;
+  messages: TonApiGaslessRawMessage[];
 }
 
 export interface TonApiGaslessRawMessage {
-    address: string;
-    amount: string;
-    payload?: string;
-    state_init?: string;
+  address: string;
+  amount: string;
+  payload?: string;
+  state_init?: string;
 }

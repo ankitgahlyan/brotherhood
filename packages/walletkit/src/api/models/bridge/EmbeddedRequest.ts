@@ -15,21 +15,24 @@ import type { SignMessageRequestEvent } from './SignMessageRequestEvent';
 /**
  * @discriminator method
  */
-export type EmbeddedRequest = SendTransactionEmbeddedRequest | SignMessageEmbeddedRequest | SignDataEmbeddedRequest;
+export type EmbeddedRequest =
+  | SendTransactionEmbeddedRequest
+  | SignMessageEmbeddedRequest
+  | SignDataEmbeddedRequest;
 
 export interface SendTransactionEmbeddedRequest {
-    method: 'sendTransaction';
-    transactionRequest: TransactionRequest;
+  method: 'sendTransaction';
+  transactionRequest: TransactionRequest;
 }
 
 export interface SignMessageEmbeddedRequest {
-    method: 'signMessage';
-    transactionRequest: TransactionRequest;
+  method: 'signMessage';
+  transactionRequest: TransactionRequest;
 }
 
 export interface SignDataEmbeddedRequest {
-    method: 'signData';
-    payload: SignDataPayload;
+  method: 'signData';
+  payload: SignDataPayload;
 }
 
 declare const embeddedConnectionResultBrand: unique symbol;
@@ -39,39 +42,41 @@ declare const embeddedConnectionResultBrand: unique symbol;
  * Created by approveConnectRequest when an embedded request is present.
  * Passed through to the action approval method which attaches the action result and sends it.
  */
-export type EmbeddedConnectionResult = { readonly [embeddedConnectionResultBrand]: never };
+export type EmbeddedConnectionResult = {
+  readonly [embeddedConnectionResultBrand]: never;
+};
 
 /**
  * @discriminator type
  */
 export type EmbeddedRequestEvent =
-    | EmbeddedSendTransactionRequestEvent
-    | EmbeddedSignMessageRequestEvent
-    | EmbeddedSignDataRequestEvent;
+  | EmbeddedSendTransactionRequestEvent
+  | EmbeddedSignMessageRequestEvent
+  | EmbeddedSignDataRequestEvent;
 
 export interface EmbeddedSendTransactionRequestEvent extends SendTransactionRequestEvent {
-    type: 'sendTransaction';
+  type: 'sendTransaction';
 
-    /**
-     * @format frozen
-     */
-    connectionResult: EmbeddedConnectionResult;
+  /**
+   * @format frozen
+   */
+  connectionResult: EmbeddedConnectionResult;
 }
 
 export interface EmbeddedSignMessageRequestEvent extends SignMessageRequestEvent {
-    type: 'signMessage';
+  type: 'signMessage';
 
-    /**
-     * @format frozen
-     */
-    connectionResult: EmbeddedConnectionResult;
+  /**
+   * @format frozen
+   */
+  connectionResult: EmbeddedConnectionResult;
 }
 
 export interface EmbeddedSignDataRequestEvent extends SignDataRequestEvent {
-    type: 'signData';
+  type: 'signData';
 
-    /**
-     * @format frozen
-     */
-    connectionResult: EmbeddedConnectionResult;
+  /**
+   * @format frozen
+   */
+  connectionResult: EmbeddedConnectionResult;
 }

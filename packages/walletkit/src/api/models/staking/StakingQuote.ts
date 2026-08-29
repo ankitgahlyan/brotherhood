@@ -15,48 +15,48 @@ import type { UnstakeModes } from './UnstakeMode';
  * Staking quote response with pricing information
  */
 export interface StakingQuote {
-    /**
-     * Direction of the quote (stake or unstake)
-     */
-    direction: StakingQuoteDirection;
+  /**
+   * Direction of the quote (stake or unstake)
+   */
+  direction: StakingQuoteDirection;
 
-    /**
-     * Amount of tokens being provided
-     */
-    rawAmountIn: TokenAmount;
+  /**
+   * Amount of tokens being provided
+   */
+  rawAmountIn: TokenAmount;
 
-    /**
-     * Estimated amount of tokens to be received
-     */
-    rawAmountOut: TokenAmount;
+  /**
+   * Estimated amount of tokens to be received
+   */
+  rawAmountOut: TokenAmount;
 
-    /**
-     * Formatted amount of tokens being provided
-     */
-    amountIn: string;
+  /**
+   * Formatted amount of tokens being provided
+   */
+  amountIn: string;
 
-    /**
-     * Formatted estimated amount of tokens to be received
-     */
-    amountOut: string;
+  /**
+   * Formatted estimated amount of tokens to be received
+   */
+  amountOut: string;
 
-    /**
-     * Network on which the staking will be executed
-     */
-    network: Network;
+  /**
+   * Network on which the staking will be executed
+   */
+  network: Network;
 
-    /**
-     * Identifier of the staking provider
-     */
-    providerId: string;
+  /**
+   * Identifier of the staking provider
+   */
+  providerId: string;
 
-    /**
-     * Mode of unstaking (if applicable)
-     */
-    unstakeMode?: UnstakeModes;
+  /**
+   * Mode of unstaking (if applicable)
+   */
+  unstakeMode?: UnstakeModes;
 
-    /**
-     * Provider-specific metadata for the quote
-     */
-    metadata?: unknown;
+  /**
+   * Provider-specific metadata for the quote
+   */
+  metadata?: unknown;
 }

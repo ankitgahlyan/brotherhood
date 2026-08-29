@@ -16,55 +16,58 @@ import type { SwapToken } from '../../../api/models';
 
 // Skip integration tests
 describe.skip('OmnistonSwapProvider.getQuote', () => {
-    const provider = new OmnistonSwapProvider({
-        defaultSlippageBps: 100,
-        quoteTimeoutMs: 30000,
+  const provider = new OmnistonSwapProvider({
+    defaultSlippageBps: 100,
+    quoteTimeoutMs: 30000,
+  });
+  const usdtQuoteParams = {
+    from: { address: 'ton', decimals: 9 } as SwapToken,
+    to: {
+      address: 'EQA2kCVNwVsil2EM2mB0SkXytxCqQjS4mttjDpnXmwG9T6bO',
+      decimals: 6,
+    } as SwapToken, // USDT
+    amount: '1000000000', // 1 GRAM
+    network: Network.mainnet(),
+  };
+
+  it('should return quote for GRAM to USDT swap', async () => {
+    const quote = await provider.getQuote(usdtQuoteParams);
+
+    expect(BigInt(quote.toAmount)).toBeGreaterThan(0);
+    expect(isOmnistonQuoteMetadata(quote.metadata)).toBeTruthy();
+  }, 30000);
+
+  it('should build tx for quote', async () => {
+    const quote = await provider.getQuote(usdtQuoteParams);
+    const randomBytes = Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
+    const randomAddress = Address.parseRaw(`0:${randomBytes.toString('hex')}`);
+    const userAddress = randomAddress.toString();
+    const tx = await provider.buildSwapTransaction({
+      quote,
+      userAddress,
     });
-    const usdtQuoteParams = {
-        from: { address: 'ton', decimals: 9 } as SwapToken,
-        to: { address: 'EQA2kCVNwVsil2EM2mB0SkXytxCqQjS4mttjDpnXmwG9T6bO', decimals: 6 } as SwapToken, // USDT
-        amount: '1000000000', // 1 GRAM
-        network: Network.mainnet(),
-    };
 
-    it('should return quote for GRAM to USDT swap', async () => {
-        const quote = await provider.getQuote(usdtQuoteParams);
+    expect(tx).toBeDefined();
+    expect(tx.messages).toBeDefined();
+    expect(Array.isArray(tx.messages)).toBe(true);
+    expect(tx.messages.length).toBeGreaterThan(0);
 
-        expect(BigInt(quote.toAmount)).toBeGreaterThan(0);
-        expect(isOmnistonQuoteMetadata(quote.metadata)).toBeTruthy();
-    }, 30000);
+    tx.messages.forEach((msg) => {
+      expect(msg.address).toBeDefined();
+      expect(typeof msg.address).toBe('string');
+      expect(msg.address.length).toBeGreaterThan(0);
+      expect(msg.amount).toBeDefined();
+      expect(typeof msg.amount).toBe('string');
+      expect(BigInt(msg.amount)).toBeGreaterThanOrEqual(0n);
+    });
 
-    it('should build tx for quote', async () => {
-        const quote = await provider.getQuote(usdtQuoteParams);
-        const randomBytes = Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
-        const randomAddress = Address.parseRaw(`0:${randomBytes.toString('hex')}`);
-        const userAddress = randomAddress.toString();
-        const tx = await provider.buildSwapTransaction({
-            quote,
-            userAddress,
-        });
+    if (tx.validUntil) {
+      expect(typeof tx.validUntil).toBe('number');
+      expect(tx.validUntil).toBeGreaterThan(Date.now() / 1000);
+    }
 
-        expect(tx).toBeDefined();
-        expect(tx.messages).toBeDefined();
-        expect(Array.isArray(tx.messages)).toBe(true);
-        expect(tx.messages.length).toBeGreaterThan(0);
-
-        tx.messages.forEach((msg) => {
-            expect(msg.address).toBeDefined();
-            expect(typeof msg.address).toBe('string');
-            expect(msg.address.length).toBeGreaterThan(0);
-            expect(msg.amount).toBeDefined();
-            expect(typeof msg.amount).toBe('string');
-            expect(BigInt(msg.amount)).toBeGreaterThanOrEqual(0n);
-        });
-
-        if (tx.validUntil) {
-            expect(typeof tx.validUntil).toBe('number');
-            expect(tx.validUntil).toBeGreaterThan(Date.now() / 1000);
-        }
-
-        if (tx.network) {
-            expect(tx.network).toBeDefined();
-        }
-    }, 30000);
+    if (tx.network) {
+      expect(tx.network).toBeDefined();
+    }
+  }, 30000);
 });

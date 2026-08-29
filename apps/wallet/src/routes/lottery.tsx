@@ -4,9 +4,9 @@ import { LotteryScreen } from '@/features/lottery';
 import { ProtectedRoute } from '@/core/routing';
 
 export const Route = createFileRoute('/lottery')({
-    component: () => (
-        <ProtectedRoute requiresWallet>
-            <LotteryScreen />
-        </ProtectedRoute>
-    ),
+  component: () => (
+    <ProtectedRoute requiresWallet>
+      <LotteryScreen />
+    </ProtectedRoute>
+  ),
 });

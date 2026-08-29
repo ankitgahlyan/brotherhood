@@ -14,20 +14,20 @@ import type { ToncenterTransaction } from '../../types/toncenter/emulation';
  * or action phases failed to execute successfully (including skipped actions).
  */
 export const isTransactionFailed = (tx: ToncenterTransaction): boolean => {
-    const desc = tx.description;
-    if (!desc) return false;
+  const desc = tx.description;
+  if (!desc) return false;
 
-    // Transaction aborted
-    if (desc.aborted) return true;
+  // Transaction aborted
+  if (desc.aborted) return true;
 
-    // Compute phase failed
-    if (desc.compute_ph?.success === false) return true;
+  // Compute phase failed
+  if (desc.compute_ph?.success === false) return true;
 
-    // Action phase failed completely
-    if (desc.action?.success === false) return true;
+  // Action phase failed completely
+  if (desc.action?.success === false) return true;
 
-    // Action phase skipped some actions (e.g. out of balance during sending)
-    if (desc.action && desc.action.skipped_actions > 0) return true;
+  // Action phase skipped some actions (e.g. out of balance during sending)
+  if (desc.action && desc.action.skipped_actions > 0) return true;
 
-    return false;
+  return false;
 };

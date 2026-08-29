@@ -64,7 +64,10 @@ async function startStaticServer(port) {
       try {
         const content = readFileSync(filePath);
         const ext = extname(filePath);
-        res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+        res.setHeader(
+          'Content-Type',
+          MIME_TYPES[ext] || 'application/octet-stream',
+        );
         res.writeHead(200);
         res.end(content);
       } catch {
@@ -84,7 +87,9 @@ let targetUrl = process.argv[2];
 
 if (!targetUrl) {
   try {
-    const check = await fetch('http://localhost:3000/brotherhood/').catch(() => null);
+    const check = await fetch('http://localhost:3000/brotherhood/').catch(
+      () => null,
+    );
     if (!check) {
       server = await startStaticServer(defaultPort);
     }

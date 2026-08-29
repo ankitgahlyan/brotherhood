@@ -9,4 +9,5 @@
 /**
  * Represents the status of a streaming notification.
  */
-export type StreamingUpdateStatus = 'pending' | 'confirmed' | 'finalized' | 'invalidated';
+export type StreamingUpdateStatus =
+  'pending' | 'confirmed' | 'finalized' | 'invalidated';

@@ -7,7 +7,12 @@
  */
 
 import { create } from 'zustand';
-import { devtools, persist, createJSONStorage, subscribeWithSelector } from 'zustand/middleware';
+import {
+  devtools,
+  persist,
+  createJSONStorage,
+  subscribeWithSelector,
+} from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 import { createAuthSlice } from './slices/authSlice';
@@ -27,272 +32,287 @@ import type { WalletKitConfig } from '../types/wallet';
 const STORE_VERSION = 2;
 
 export interface CreateWalletStoreOptions {
-    /**
-     * Storage adapter for persisting wallet data
-     * Use LocalStorageAdapter for web, AsyncStorageAdapter for React Native
-     */
-    storage?: StorageAdapter;
+  /**
+   * Storage adapter for persisting wallet data
+   * Use LocalStorageAdapter for web, AsyncStorageAdapter for React Native
+   */
+  storage?: StorageAdapter;
 
-    /**
-     * Enable Redux DevTools
-     */
-    enableDevtools?: boolean;
+  /**
+   * Enable Redux DevTools
+   */
+  enableDevtools?: boolean;
 
-    /**
-     * Custom logger function
-     */
-    logger?: {
-        info: (...args: unknown[]) => void;
-        warn: (...args: unknown[]) => void;
-        error: (...args: unknown[]) => void;
-    };
+  /**
+   * Custom logger function
+   */
+  logger?: {
+    info: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+    error: (...args: unknown[]) => void;
+  };
 
-    walletKitConfig?: WalletKitConfig;
+  walletKitConfig?: WalletKitConfig;
 }
 
 const createLogger = (customLogger?: CreateWalletStoreOptions['logger']) => {
-    if (customLogger) return customLogger;
+  if (customLogger) return customLogger;
 
-    return {
-         
-        info: (...args: unknown[]) => console.log('[WalletStore]', ...args),
-         
-        warn: (...args: unknown[]) => console.warn('[WalletStore]', ...args),
-         
-        error: (...args: unknown[]) => console.error('[WalletStore]', ...args),
-    };
+  return {
+    info: (...args: unknown[]) => console.log('[WalletStore]', ...args),
+
+    warn: (...args: unknown[]) => console.warn('[WalletStore]', ...args),
+
+    error: (...args: unknown[]) => console.error('[WalletStore]', ...args),
+  };
 };
 
-const migrate = (persistedState: unknown, fromVersion: number, log: ReturnType<typeof createLogger>): unknown => {
-    log.info('Migrating store from version', fromVersion, 'to', STORE_VERSION);
+const migrate = (
+  persistedState: unknown,
+  fromVersion: number,
+  log: ReturnType<typeof createLogger>,
+): unknown => {
+  log.info('Migrating store from version', fromVersion, 'to', STORE_VERSION);
 
-     
-    let state = persistedState as Record<string, any>;
+  let state = persistedState as Record<string, any>;
 
-    // Migration from v1 (old wallet slice) to v2 (split slices)
-    if (fromVersion < 2) {
-        // Move wallet state to walletManagement
-        const walletState = state.wallet || {};
+  // Migration from v1 (old wallet slice) to v2 (split slices)
+  if (fromVersion < 2) {
+    // Move wallet state to walletManagement
+    const walletState = state.wallet || {};
 
-        state = {
-            auth: state.auth || {},
-            walletCore: {
-                walletKit: null,
-                walletKitInitializer: null,
-            },
-            walletManagement: {
-                savedWallets: walletState.savedWallets || [],
-                activeWalletId: walletState.activeWalletId,
-                hasWallet: walletState.hasWallet || false,
-                isAuthenticated: false,
-                events: [],
-            },
-            tonConnect: {
-                requestQueue: walletState.requestQueue || {
-                    items: [],
-                    currentRequestId: undefined,
-                    isProcessing: false,
-                },
-                pendingConnectRequest: walletState.pendingConnectRequest,
-                isConnectModalOpen: walletState.isConnectModalOpen || false,
-                pendingTransactionRequest: walletState.pendingTransactionRequest,
-                isTransactionModalOpen: walletState.isTransactionModalOpen || false,
-                pendingSignDataRequest: walletState.pendingSignDataRequest,
-                isSignDataModalOpen: walletState.isSignDataModalOpen || false,
-                disconnectedSessions: walletState.disconnectedSessions || [],
-            },
-            jettons: state.jettons,
-            nfts: state.nfts,
-        };
-    }
+    state = {
+      auth: state.auth || {},
+      walletCore: {
+        walletKit: null,
+        walletKitInitializer: null,
+      },
+      walletManagement: {
+        savedWallets: walletState.savedWallets || [],
+        activeWalletId: walletState.activeWalletId,
+        hasWallet: walletState.hasWallet || false,
+        isAuthenticated: false,
+        events: [],
+      },
+      tonConnect: {
+        requestQueue: walletState.requestQueue || {
+          items: [],
+          currentRequestId: undefined,
+          isProcessing: false,
+        },
+        pendingConnectRequest: walletState.pendingConnectRequest,
+        isConnectModalOpen: walletState.isConnectModalOpen || false,
+        pendingTransactionRequest: walletState.pendingTransactionRequest,
+        isTransactionModalOpen: walletState.isTransactionModalOpen || false,
+        pendingSignDataRequest: walletState.pendingSignDataRequest,
+        isSignDataModalOpen: walletState.isSignDataModalOpen || false,
+        disconnectedSessions: walletState.disconnectedSessions || [],
+      },
+      jettons: state.jettons,
+      nfts: state.nfts,
+    };
+  }
 
-    return state;
+  return state;
 };
 
 /**
  * Creates a Zustand store for wallet management
  */
 export function createWalletStore(options: CreateWalletStoreOptions = {}) {
-    const { storage, enableDevtools = true, logger: customLogger, walletKitConfig } = options;
+  const {
+    storage,
+    enableDevtools = true,
+    logger: customLogger,
+    walletKitConfig,
+  } = options;
 
-    const log = createLogger(customLogger);
+  const log = createLogger(customLogger);
 
-    const store = create<AppState>()(
-        devtools(
-            subscribeWithSelector(
-                persist(
-                    immer((...a) => ({
-                        isHydrated: false,
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createAuthSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createWalletCoreSlice(walletKitConfig)(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createWalletManagementSlice(walletKitConfig)(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createTonConnectSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createJettonsSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createNftsSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createRatesSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createSwapSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createStakingSlice(...a),
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        ...createGaslessSlice(...a),
-                         
-                    })) as unknown as any,
-                    {
-                        name: 'demo-wallet-store',
-                        storage: storage ? createJSONStorage(() => storage) : createJSONStorage(() => localStorage),
-                        version: STORE_VERSION,
-                        migrate: (persistedState, fromVersion) => migrate(persistedState, fromVersion, log),
-                        partialize: (state) => ({
-                            auth: {
-                                isPasswordSet: state.auth.isPasswordSet,
-                                passwordHash: state.auth.passwordHash,
-                                persistPassword: state.auth.persistPassword,
-                                holdToSign: state.auth.holdToSign,
-                                showFastSend: state.auth.showFastSend,
-                                useWalletInterfaceType: state.auth.useWalletInterfaceType,
-                                ledgerAccountNumber: state.auth.ledgerAccountNumber,
-                                ...(state.auth.persistPassword && {
-                                    currentPassword: state.auth.currentPassword,
-                                }),
-                            },
-                            walletManagement: {
-                                hasWallet: state.walletManagement.hasWallet,
-                                savedWallets: state.walletManagement.savedWallets,
-                                activeWalletId: state.walletManagement.activeWalletId,
-                            },
-                            tonConnect: {
-                                requestQueue: {
-                                    items: state.tonConnect.requestQueue.items,
-                                },
-                                isSignDataModalOpen: state.tonConnect.isSignDataModalOpen,
-                                isTransactionModalOpen: state.tonConnect.isTransactionModalOpen,
-                                isConnectModalOpen: state.tonConnect.isConnectModalOpen,
-                                pendingSignDataRequest: state.tonConnect.pendingSignDataRequestEvent,
-                                pendingTransactionRequest: state.tonConnect.pendingTransactionRequestEvent,
-                                pendingConnectRequest: state.tonConnect.pendingConnectRequestEvent,
-                            },
-                        }),
-                        merge: (persistedState, currentState) => {
-                             
-                            const persisted = persistedState as any;
-
-                            const merged = {
-                                ...currentState,
-                                auth: {
-                                    ...currentState.auth,
-                                    ...persisted?.auth,
-                                    isUnlocked:
-                                        persisted?.auth?.persistPassword &&
-                                        persisted?.auth?.currentPassword &&
-                                        persisted?.auth?.isPasswordSet,
-                                },
-                                walletManagement: {
-                                    ...currentState.walletManagement,
-                                    savedWallets: persisted?.walletManagement?.savedWallets || [],
-                                    activeWalletId: persisted?.walletManagement?.activeWalletId,
-                                    hasWallet: (persisted?.walletManagement?.savedWallets?.length || 0) > 0,
-                                    localSeqnoByAddress: persisted?.walletManagement?.localSeqnoByAddress || {},
-                                    transactions: [],
-                                },
-                                tonConnect: {
-                                    ...currentState.tonConnect,
-                                    ...persisted?.tonConnect,
-                                    disconnectedSessions: [],
-                                    requestQueue: {
-                                        items: persisted?.tonConnect?.requestQueue?.items || [],
-                                        currentRequestId: undefined,
-                                        isProcessing: false,
-                                    },
-                                },
-                            };
-
-                            return merged as AppState;
-                        },
-                        onRehydrateStorage: () => (state, error) => {
-                            if (error) {
-                                log.error('Store rehydration error:', error);
-                                return;
-                            }
-
-                            if (!state) {
-                                return;
-                            }
-
-                            log.info('Store rehydrated successfully');
-
-                            // Set hydration flag
-                            state.isHydrated = true;
-
-                            // Call actions after rehydration
-                            if (state.clearExpiredRequests) {
-                                state.clearExpiredRequests();
-                            }
-
-                            // Load wallets after rehydration (fixes refresh on /send when loadSavedWalletsIntoKit ran before rehydration)
-                            if (
-                                state.walletCore.walletKit &&
-                                state.auth.currentPassword &&
-                                (state.walletManagement.savedWallets?.length ?? 0) > 0
-                            ) {
-                                void state.loadAllWallets();
-                            }
-
-                            // Resume processing if there are queued requests
-                            // if (
-                            //     state.tonConnect.requestQueue.items.length > 0 &&
-                            //     !state.tonConnect.requestQueue.isProcessing &&
-                            //     state.processNextRequest
-                            // ) {
-                            //     log.info('Resuming queue processing after rehydration');
-                            //     state.processNextRequest();
-                            // }
-
-                            const processTimeoutCallback = () => {
-                                if (
-                                    state.tonConnect.requestQueue.items.length > 0 &&
-                                    !state.tonConnect.requestQueue.isProcessing &&
-                                    state.processNextRequest
-                                ) {
-                                    log.info('Calling processNextRequest after timeout');
-                                    state.processNextRequest();
-                                }
-                                setTimeout(() => processTimeoutCallback(), 1000);
-                            };
-                            processTimeoutCallback();
-                            // setTimeout(() => {}, 1000);
-                        },
-                    },
-                ),
-            ),
-            {
-                enabled: enableDevtools,
-                serialize: {
-                    replacer: (_: unknown, value: unknown) => (typeof value === 'bigint' ? '' : value),
+  const store = create<AppState>()(
+    devtools(
+      subscribeWithSelector(
+        persist(
+          immer((...a) => ({
+            isHydrated: false,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createAuthSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createWalletCoreSlice(walletKitConfig)(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createWalletManagementSlice(walletKitConfig)(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createTonConnectSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createJettonsSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createNftsSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createRatesSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createSwapSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createStakingSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createGaslessSlice(...a),
+          })) as unknown as any,
+          {
+            name: 'demo-wallet-store',
+            storage: storage
+              ? createJSONStorage(() => storage)
+              : createJSONStorage(() => localStorage),
+            version: STORE_VERSION,
+            migrate: (persistedState, fromVersion) =>
+              migrate(persistedState, fromVersion, log),
+            partialize: (state) => ({
+              auth: {
+                isPasswordSet: state.auth.isPasswordSet,
+                passwordHash: state.auth.passwordHash,
+                persistPassword: state.auth.persistPassword,
+                holdToSign: state.auth.holdToSign,
+                showFastSend: state.auth.showFastSend,
+                useWalletInterfaceType: state.auth.useWalletInterfaceType,
+                ledgerAccountNumber: state.auth.ledgerAccountNumber,
+                ...(state.auth.persistPassword && {
+                  currentPassword: state.auth.currentPassword,
+                }),
+              },
+              walletManagement: {
+                hasWallet: state.walletManagement.hasWallet,
+                savedWallets: state.walletManagement.savedWallets,
+                activeWalletId: state.walletManagement.activeWalletId,
+              },
+              tonConnect: {
+                requestQueue: {
+                  items: state.tonConnect.requestQueue.items,
                 },
+                isSignDataModalOpen: state.tonConnect.isSignDataModalOpen,
+                isTransactionModalOpen: state.tonConnect.isTransactionModalOpen,
+                isConnectModalOpen: state.tonConnect.isConnectModalOpen,
+                pendingSignDataRequest:
+                  state.tonConnect.pendingSignDataRequestEvent,
+                pendingTransactionRequest:
+                  state.tonConnect.pendingTransactionRequestEvent,
+                pendingConnectRequest:
+                  state.tonConnect.pendingConnectRequestEvent,
+              },
+            }),
+            merge: (persistedState, currentState) => {
+              const persisted = persistedState as any;
+
+              const merged = {
+                ...currentState,
+                auth: {
+                  ...currentState.auth,
+                  ...persisted?.auth,
+                  isUnlocked:
+                    persisted?.auth?.persistPassword &&
+                    persisted?.auth?.currentPassword &&
+                    persisted?.auth?.isPasswordSet,
+                },
+                walletManagement: {
+                  ...currentState.walletManagement,
+                  savedWallets: persisted?.walletManagement?.savedWallets || [],
+                  activeWalletId: persisted?.walletManagement?.activeWalletId,
+                  hasWallet:
+                    (persisted?.walletManagement?.savedWallets?.length || 0) >
+                    0,
+                  localSeqnoByAddress:
+                    persisted?.walletManagement?.localSeqnoByAddress || {},
+                  transactions: [],
+                },
+                tonConnect: {
+                  ...currentState.tonConnect,
+                  ...persisted?.tonConnect,
+                  disconnectedSessions: [],
+                  requestQueue: {
+                    items: persisted?.tonConnect?.requestQueue?.items || [],
+                    currentRequestId: undefined,
+                    isProcessing: false,
+                  },
+                },
+              };
+
+              return merged as AppState;
             },
+            onRehydrateStorage: () => (state, error) => {
+              if (error) {
+                log.error('Store rehydration error:', error);
+                return;
+              }
+
+              if (!state) {
+                return;
+              }
+
+              log.info('Store rehydrated successfully');
+
+              // Set hydration flag
+              state.isHydrated = true;
+
+              // Call actions after rehydration
+              if (state.clearExpiredRequests) {
+                state.clearExpiredRequests();
+              }
+
+              // Load wallets after rehydration (fixes refresh on /send when loadSavedWalletsIntoKit ran before rehydration)
+              if (
+                state.walletCore.walletKit &&
+                state.auth.currentPassword &&
+                (state.walletManagement.savedWallets?.length ?? 0) > 0
+              ) {
+                void state.loadAllWallets();
+              }
+
+              // Resume processing if there are queued requests
+              // if (
+              //     state.tonConnect.requestQueue.items.length > 0 &&
+              //     !state.tonConnect.requestQueue.isProcessing &&
+              //     state.processNextRequest
+              // ) {
+              //     log.info('Resuming queue processing after rehydration');
+              //     state.processNextRequest();
+              // }
+
+              const processTimeoutCallback = () => {
+                if (
+                  state.tonConnect.requestQueue.items.length > 0 &&
+                  !state.tonConnect.requestQueue.isProcessing &&
+                  state.processNextRequest
+                ) {
+                  log.info('Calling processNextRequest after timeout');
+                  state.processNextRequest();
+                }
+                setTimeout(() => processTimeoutCallback(), 1000);
+              };
+              processTimeoutCallback();
+              // setTimeout(() => {}, 1000);
+            },
+          },
         ),
-    );
+      ),
+      {
+        enabled: enableDevtools,
+        serialize: {
+          replacer: (_: unknown, value: unknown) =>
+            typeof value === 'bigint' ? '' : value,
+        },
+      },
+    ),
+  );
 
-    const storeState = store.getState();
-    storeState.initializeWalletKit();
+  const storeState = store.getState();
+  storeState.initializeWalletKit();
 
-    return store;
+  return store;
 }

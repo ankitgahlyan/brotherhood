@@ -12,18 +12,18 @@ import type { Hex } from '../core/Primitives';
  * Node in the emulation execution tree.
  */
 export interface EmulationTraceNode {
-    /**
-     * Hex-encoded hash of the transaction at this node
-     */
-    txHash: Hex;
+  /**
+   * Hex-encoded hash of the transaction at this node
+   */
+  txHash: Hex;
 
-    /**
-     * Hex-encoded hash of the incoming message that triggered this transaction
-     */
-    inMsgHash?: Hex;
+  /**
+   * Hex-encoded hash of the incoming message that triggered this transaction
+   */
+  inMsgHash?: Hex;
 
-    /**
-     * Child nodes representing spawned messages
-     */
-    children: EmulationTraceNode[];
+  /**
+   * Child nodes representing spawned messages
+   */
+  children: EmulationTraceNode[];
 }

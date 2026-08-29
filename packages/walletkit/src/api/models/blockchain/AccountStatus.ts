@@ -6,4 +6,5 @@
  *
  */
 
-export type AccountStatus = 'uninitialized' | 'frozen' | 'active' | 'non-existing';
+export type AccountStatus =
+  'uninitialized' | 'frozen' | 'active' | 'non-existing';

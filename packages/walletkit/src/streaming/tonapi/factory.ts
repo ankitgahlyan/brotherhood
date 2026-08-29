@@ -13,7 +13,7 @@ import type { TonApiStreamingProviderConfig } from './models';
 export type TonApiStreamingFactoryConfig = TonApiStreamingProviderConfig;
 
 export const createTonApiStreamingProvider =
-    (config: TonApiStreamingFactoryConfig): StreamingProviderFactory =>
-    (ctx) => {
-        return new TonApiStreamingProvider(ctx, config);
-    };
+  (config: TonApiStreamingFactoryConfig): StreamingProviderFactory =>
+  (ctx) => {
+    return new TonApiStreamingProvider(ctx, config);
+  };

@@ -9,6 +9,6 @@
 import type { TonApiTransaction } from './transactions';
 
 export interface TonApiTrace {
-    transaction: TonApiTransaction;
-    children?: TonApiTrace[];
+  transaction: TonApiTransaction;
+  children?: TonApiTrace[];
 }

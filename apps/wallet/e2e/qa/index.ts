@@ -15,17 +15,17 @@ export { launchPersistentContext, testWith } from './test';
 export { getExtensionId } from './util';
 
 export interface ConfigFixture {
-    appUrl: string;
-    walletSource?: string;
-    mnemonic?: string;
+  appUrl: string;
+  walletSource?: string;
+  mnemonic?: string;
 }
 
 import type { TonConnectWidget } from './TonConnectWidget';
 import type { DemoWallet } from '../demo-wallet';
 
 export type TestFixture = {
-    context: BrowserContext;
-    wallet: DemoWallet;
-    widget: TonConnectWidget;
-    app: Page;
+  context: BrowserContext;
+  wallet: DemoWallet;
+  widget: TonConnectWidget;
+  app: Page;
 };

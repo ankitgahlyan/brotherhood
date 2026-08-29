@@ -15,177 +15,191 @@ import type { SetState, JettonsSliceCreator } from '../../types/store';
 const log = createComponentLogger('JettonsSlice');
 
 export interface JettonsState {
-    userJettons: Jetton[];
-    jettonTransfers: JettonTransfer[];
-    popularJettons: JettonInfo[];
-    isLoadingJettons: boolean;
-    isLoadingTransfers: boolean;
-    isLoadingPopular: boolean;
-    isRefreshing: boolean;
-    error: string | null;
-    transferError: string | null;
-    lastJettonsUpdate: number;
-    lastTransfersUpdate: number;
-    lastPopularUpdate: number;
+  userJettons: Jetton[];
+  jettonTransfers: JettonTransfer[];
+  popularJettons: JettonInfo[];
+  isLoadingJettons: boolean;
+  isLoadingTransfers: boolean;
+  isLoadingPopular: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  transferError: string | null;
+  lastJettonsUpdate: number;
+  lastTransfersUpdate: number;
+  lastPopularUpdate: number;
 }
 
-export const createJettonsSlice: JettonsSliceCreator = (set: SetState, get) => ({
-    jettons: {
-        userJettons: [],
-        jettonTransfers: [],
-        popularJettons: [],
-        isLoadingJettons: false,
-        isLoadingTransfers: false,
-        isLoadingPopular: false,
-        isRefreshing: false,
-        error: null,
-        transferError: null,
-        lastJettonsUpdate: 0,
-        lastTransfersUpdate: 0,
-        lastPopularUpdate: 0,
-    },
+export const createJettonsSlice: JettonsSliceCreator = (
+  set: SetState,
+  get,
+) => ({
+  jettons: {
+    userJettons: [],
+    jettonTransfers: [],
+    popularJettons: [],
+    isLoadingJettons: false,
+    isLoadingTransfers: false,
+    isLoadingPopular: false,
+    isRefreshing: false,
+    error: null,
+    transferError: null,
+    lastJettonsUpdate: 0,
+    lastTransfersUpdate: 0,
+    lastPopularUpdate: 0,
+  },
 
-    loadUserJettons: async (userAddress?: string) => {
-        const state = get();
-        const address = userAddress || state.walletManagement.address;
+  loadUserJettons: async (userAddress?: string) => {
+    const state = get();
+    const address = userAddress || state.walletManagement.address;
 
-        if (!address) {
-            log.warn('No user address available to load jettons');
-            return;
-        }
+    if (!address) {
+      log.warn('No user address available to load jettons');
+      return;
+    }
 
-        if (!state.walletCore.walletKit) {
-            log.warn('WalletKit not initialized');
-            return;
-        }
+    if (!state.walletCore.walletKit) {
+      log.warn('WalletKit not initialized');
+      return;
+    }
 
-        set((state) => {
-            state.jettons.isLoadingJettons = true;
-            state.jettons.error = null;
+    set((state) => {
+      state.jettons.isLoadingJettons = true;
+      state.jettons.error = null;
+    });
+
+    try {
+      log.info('Loading user jettons', { address });
+
+      const jettonsResponse =
+        await state.walletManagement.currentWallet?.getJettons({
+          pagination: {
+            limit: 10,
+            offset: 0,
+          },
         });
 
-        try {
-            log.info('Loading user jettons', { address });
+      if (!jettonsResponse) {
+        throw new Error('Failed to load user jettons');
+      }
 
-            const jettonsResponse = await state.walletManagement.currentWallet?.getJettons({
-                pagination: {
-                    limit: 10,
-                    offset: 0,
-                },
-            });
+      set((state) => {
+        state.jettons.userJettons = jettonsResponse.jettons;
+        state.jettons.lastJettonsUpdate = Date.now();
+        state.jettons.isLoadingJettons = false;
+        state.jettons.error = null;
+      });
 
-            if (!jettonsResponse) {
-                throw new Error('Failed to load user jettons');
-            }
+      log.info('Successfully loaded user jettons', {
+        count: jettonsResponse.jettons.length,
+      });
+    } catch (error) {
+      log.error('Failed to load user jettons:', error);
 
-            set((state) => {
-                state.jettons.userJettons = jettonsResponse.jettons;
-                state.jettons.lastJettonsUpdate = Date.now();
-                state.jettons.isLoadingJettons = false;
-                state.jettons.error = null;
-            });
+      const errorMessage =
+        error instanceof JettonError
+          ? `Jettons error: ${error.message} (${error.code})`
+          : error instanceof Error
+            ? error.message
+            : 'Failed to load jettons';
 
-            log.info('Successfully loaded user jettons', { count: jettonsResponse.jettons.length });
-        } catch (error) {
-            log.error('Failed to load user jettons:', error);
+      set((state) => {
+        state.jettons.isLoadingJettons = false;
+        state.jettons.error = errorMessage;
+      });
+    }
+  },
 
-            const errorMessage =
-                error instanceof JettonError
-                    ? `Jettons error: ${error.message} (${error.code})`
-                    : error instanceof Error
-                      ? error.message
-                      : 'Failed to load jettons';
+  refreshJettons: async (userAddress?: string) => {
+    const state = get();
+    const address = userAddress || state.walletManagement.address;
 
-            set((state) => {
-                state.jettons.isLoadingJettons = false;
-                state.jettons.error = errorMessage;
-            });
+    if (!address) {
+      return;
+    }
+
+    set((state) => {
+      state.jettons.isRefreshing = true;
+    });
+
+    try {
+      await get().loadUserJettons(address);
+    } finally {
+      set((state) => {
+        state.jettons.isRefreshing = false;
+      });
+    }
+  },
+
+  updateJettonBalanceFromStream: (
+    walletAddress: string,
+    balance: string,
+    decimals?: number,
+  ) => {
+    set((state) => {
+      const jetton = state.jettons.userJettons.find((j) =>
+        compareAddress(j.walletAddress, walletAddress),
+      );
+      if (jetton) {
+        jetton.balance = balance;
+        if (typeof decimals === 'number') {
+          jetton.decimalsNumber = decimals;
         }
-    },
+        state.jettons.lastJettonsUpdate = Date.now();
+      }
+    });
+  },
 
-    refreshJettons: async (userAddress?: string) => {
-        const state = get();
-        const address = userAddress || state.walletManagement.address;
+  validateJettonAddress: (address: string): boolean => {
+    const state = get();
+    if (!state.walletCore.walletKit) {
+      log.warn('WalletKit not initialized');
+      return false;
+    }
+    return state.walletCore.walletKit.jettons.validateJettonAddress(address);
+  },
 
-        if (!address) {
-            return;
-        }
+  clearJettons: () => {
+    set((state) => {
+      state.jettons.userJettons = [];
+      state.jettons.jettonTransfers = [];
+      state.jettons.popularJettons = [];
+      state.jettons.isLoadingJettons = false;
+      state.jettons.isLoadingTransfers = false;
+      state.jettons.isLoadingPopular = false;
+      state.jettons.isRefreshing = false;
+      state.jettons.error = null;
+      state.jettons.transferError = null;
+      state.jettons.lastJettonsUpdate = 0;
+      state.jettons.lastTransfersUpdate = 0;
+      state.jettons.lastPopularUpdate = 0;
+    });
+  },
 
-        set((state) => {
-            state.jettons.isRefreshing = true;
-        });
+  getJettonByAddress: (jettonAddress: string): Jetton | undefined => {
+    const state = get();
+    return state.jettons.userJettons.find((j) => j.address === jettonAddress);
+  },
 
-        try {
-            await get().loadUserJettons(address);
-        } finally {
-            set((state) => {
-                state.jettons.isRefreshing = false;
-            });
-        }
-    },
+  formatJettonAmount: (amount: string, decimals: number): string => {
+    try {
+      const amountBigInt = BigInt(amount);
+      const divisor = BigInt(10 ** decimals);
+      const wholePart = amountBigInt / divisor;
+      const fractionalPart = amountBigInt % divisor;
 
-    updateJettonBalanceFromStream: (walletAddress: string, balance: string, decimals?: number) => {
-        set((state) => {
-            const jetton = state.jettons.userJettons.find((j) => compareAddress(j.walletAddress, walletAddress));
-            if (jetton) {
-                jetton.balance = balance;
-                if (typeof decimals === 'number') {
-                    jetton.decimalsNumber = decimals;
-                }
-                state.jettons.lastJettonsUpdate = Date.now();
-            }
-        });
-    },
+      if (fractionalPart === 0n) {
+        return wholePart.toString();
+      }
 
-    validateJettonAddress: (address: string): boolean => {
-        const state = get();
-        if (!state.walletCore.walletKit) {
-            log.warn('WalletKit not initialized');
-            return false;
-        }
-        return state.walletCore.walletKit.jettons.validateJettonAddress(address);
-    },
+      const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+      const trimmedFractional = fractionalStr.replace(/0+$/, '');
 
-    clearJettons: () => {
-        set((state) => {
-            state.jettons.userJettons = [];
-            state.jettons.jettonTransfers = [];
-            state.jettons.popularJettons = [];
-            state.jettons.isLoadingJettons = false;
-            state.jettons.isLoadingTransfers = false;
-            state.jettons.isLoadingPopular = false;
-            state.jettons.isRefreshing = false;
-            state.jettons.error = null;
-            state.jettons.transferError = null;
-            state.jettons.lastJettonsUpdate = 0;
-            state.jettons.lastTransfersUpdate = 0;
-            state.jettons.lastPopularUpdate = 0;
-        });
-    },
-
-    getJettonByAddress: (jettonAddress: string): Jetton | undefined => {
-        const state = get();
-        return state.jettons.userJettons.find((j) => j.address === jettonAddress);
-    },
-
-    formatJettonAmount: (amount: string, decimals: number): string => {
-        try {
-            const amountBigInt = BigInt(amount);
-            const divisor = BigInt(10 ** decimals);
-            const wholePart = amountBigInt / divisor;
-            const fractionalPart = amountBigInt % divisor;
-
-            if (fractionalPart === 0n) {
-                return wholePart.toString();
-            }
-
-            const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-            const trimmedFractional = fractionalStr.replace(/0+$/, '');
-
-            return trimmedFractional ? `${wholePart}.${trimmedFractional}` : wholePart.toString();
-        } catch (error) {
-            log.error('Error formatting jetton amount:', error);
-            return '0';
-        }
-    },
+      return trimmedFractional
+        ? `${wholePart}.${trimmedFractional}`
+        : wholePart.toString();
+    } catch (error) {
+      log.error('Error formatting jetton amount:', error);
+      return '0';
+    }
+  },
 });

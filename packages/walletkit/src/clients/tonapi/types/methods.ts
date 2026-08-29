@@ -7,30 +7,30 @@
  */
 
 export interface TonApiTvmStackRecord {
-    type: 'cell' | 'num' | 'nan' | 'null' | 'tuple' | 'slice';
-    cell?: string;
-    slice?: string;
-    num?: string;
-    tuple?: TonApiTvmStackRecord[];
+  type: 'cell' | 'num' | 'nan' | 'null' | 'tuple' | 'slice';
+  cell?: string;
+  slice?: string;
+  num?: string;
+  tuple?: TonApiTvmStackRecord[];
 }
 
 export interface TonApiMethodExecutionResult {
-    success: boolean;
-    exit_code: number;
-    stack: TonApiTvmStackRecord[];
-    decoded: unknown;
+  success: boolean;
+  exit_code: number;
+  stack: TonApiTvmStackRecord[];
+  decoded: unknown;
 }
 
 export type TonApiExecGetMethodArgType =
-    | 'nan'
-    | 'null'
-    | 'tinyint'
-    | 'int257'
-    | 'slice'
-    | 'cell_boc_base64'
-    | 'slice_boc_hex';
+  | 'nan'
+  | 'null'
+  | 'tinyint'
+  | 'int257'
+  | 'slice'
+  | 'cell_boc_base64'
+  | 'slice_boc_hex';
 
 export interface TonApiExecGetMethodArg {
-    type: TonApiExecGetMethodArgType;
-    value: string;
+  type: TonApiExecGetMethodArgType;
+  value: string;
 }

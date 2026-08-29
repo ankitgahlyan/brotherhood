@@ -12,8 +12,9 @@ import { ExtensionStorageAdapter } from '@ton/walletkit';
 
 import { createSendMessageToExtensionContent } from './extension';
 
-export const SendMessageToExtensionContent = createSendMessageToExtensionContent(sendMessage);
+export const SendMessageToExtensionContent =
+  createSendMessageToExtensionContent(sendMessage);
 
 export function CreateExtensionStorageAdapter() {
-    return new ExtensionStorageAdapter({}, browser.storage.local);
+  return new ExtensionStorageAdapter({}, browser.storage.local);
 }

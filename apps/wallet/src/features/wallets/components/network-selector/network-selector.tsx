@@ -13,90 +13,100 @@ import { Segmented } from '@/core/components/ui/segmented';
 import type { SegmentedOption } from '@/core/components/ui/segmented';
 
 interface NetworkSelectorProps {
-    value: NetworkType;
-    onChange: (network: NetworkType) => void;
-    label?: string;
-    compact?: boolean;
+  value: NetworkType;
+  onChange: (network: NetworkType) => void;
+  label?: string;
+  compact?: boolean;
 }
 
 const COMPACT_OPTIONS: SegmentedOption<NetworkType>[] = [
-    { value: 'mainnet', label: 'Mainnet', testId: 'network-select-mainnet' },
-    { value: 'testnet', label: 'Testnet', testId: 'network-select-testnet' },
-    { value: 'tetra', label: 'Tetra', testId: 'network-select-tetra' },
+  { value: 'mainnet', label: 'Mainnet', testId: 'network-select-mainnet' },
+  { value: 'testnet', label: 'Testnet', testId: 'network-select-testnet' },
+  { value: 'tetra', label: 'Tetra', testId: 'network-select-tetra' },
 ];
 
 export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
-    value,
-    onChange,
-    label = 'Network',
-    compact = false,
+  value,
+  onChange,
+  label = 'Network',
+  compact = false,
 }) => {
-    if (compact) {
-        return (
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{label}</span>
-                <Segmented value={value} onChange={onChange} options={COMPACT_OPTIONS} />
-            </div>
-        );
-    }
-
+  if (compact) {
     return (
-        <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground">{label}</label>
-            <div className="grid grid-cols-3 gap-3">
-                <button
-                    type="button"
-                    data-testid="network-select-mainnet"
-                    onClick={() => onChange('mainnet')}
-                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
-                        value === 'mainnet'
-                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
-                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
-                    }`}
-                >
-                    <div className="flex flex-col items-center space-y-1">
-                        <span className="font-semibold">Mainnet</span>
-                        <span className="text-xs text-muted-foreground">Real transactions</span>
-                    </div>
-                </button>
-                <button
-                    type="button"
-                    data-testid="network-select-testnet"
-                    onClick={() => onChange('testnet')}
-                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
-                        value === 'testnet'
-                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
-                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
-                    }`}
-                >
-                    <div className="flex flex-col items-center space-y-1">
-                        <span className="font-semibold">Testnet</span>
-                        <span className="text-xs text-muted-foreground">For development</span>
-                    </div>
-                </button>
-                <button
-                    type="button"
-                    data-testid="network-select-tetra"
-                    onClick={() => onChange('tetra')}
-                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
-                        value === 'tetra'
-                            ? 'bg-blue-500/10 text-blue-500 border-blue-500'
-                            : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
-                    }`}
-                >
-                    <div className="flex flex-col items-center space-y-1">
-                        <span className="font-semibold">Tetra</span>
-                        <span className="text-xs text-muted-foreground">Tetra network</span>
-                    </div>
-                </button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-                {value === 'mainnet'
-                    ? 'Use mainnet for real transactions with real TON.'
-                    : value === 'testnet'
-                      ? 'Use testnet for development and testing with test TON.'
-                      : 'Use Tetra network for Tetra transactions.'}
-            </p>
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <Segmented
+          value={value}
+          onChange={onChange}
+          options={COMPACT_OPTIONS}
+        />
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-foreground">
+        {label}
+      </label>
+      <div className="grid grid-cols-3 gap-3">
+        <button
+          type="button"
+          data-testid="network-select-mainnet"
+          onClick={() => onChange('mainnet')}
+          className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
+            value === 'mainnet'
+              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
+          }`}
+        >
+          <div className="flex flex-col items-center space-y-1">
+            <span className="font-semibold">Mainnet</span>
+            <span className="text-xs text-muted-foreground">
+              Real transactions
+            </span>
+          </div>
+        </button>
+        <button
+          type="button"
+          data-testid="network-select-testnet"
+          onClick={() => onChange('testnet')}
+          className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
+            value === 'testnet'
+              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
+          }`}
+        >
+          <div className="flex flex-col items-center space-y-1">
+            <span className="font-semibold">Testnet</span>
+            <span className="text-xs text-muted-foreground">
+              For development
+            </span>
+          </div>
+        </button>
+        <button
+          type="button"
+          data-testid="network-select-tetra"
+          onClick={() => onChange('tetra')}
+          className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
+            value === 'tetra'
+              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
+          }`}
+        >
+          <div className="flex flex-col items-center space-y-1">
+            <span className="font-semibold">Tetra</span>
+            <span className="text-xs text-muted-foreground">Tetra network</span>
+          </div>
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        {value === 'mainnet'
+          ? 'Use mainnet for real transactions with real TON.'
+          : value === 'testnet'
+            ? 'Use testnet for development and testing with test TON.'
+            : 'Use Tetra network for Tetra transactions.'}
+      </p>
+    </div>
+  );
 };

@@ -13,45 +13,45 @@ import type { SwapToken } from './SwapToken';
  * Base parameters for requesting a swap quote
  */
 export interface SwapQuoteParams<TProviderOptions = unknown> {
-    /**
-     * Amount of tokens to swap (incoming or outgoing depending on isReverseSwap)
-     */
-    amount: string;
+  /**
+   * Amount of tokens to swap (incoming or outgoing depending on isReverseSwap)
+   */
+  amount: string;
 
-    /**
-     * Token to swap from
-     */
-    from: SwapToken;
+  /**
+   * Token to swap from
+   */
+  from: SwapToken;
 
-    /**
-     * Token to swap to
-     */
-    to: SwapToken;
+  /**
+   * Token to swap to
+   */
+  to: SwapToken;
 
-    /**
-     * Network on which the swap will be executed
-     */
-    network: Network;
+  /**
+   * Network on which the swap will be executed
+   */
+  network: Network;
 
-    /**
-     * Slippage tolerance in basis points (1 bp = 0.01%)
-     * @format int
-     */
-    slippageBps?: number;
+  /**
+   * Slippage tolerance in basis points (1 bp = 0.01%)
+   * @format int
+   */
+  slippageBps?: number;
 
-    /**
-     * Maximum number of outgoing messages
-     * @format int
-     */
-    maxOutgoingMessages?: number;
+  /**
+   * Maximum number of outgoing messages
+   * @format int
+   */
+  maxOutgoingMessages?: number;
 
-    /**
-     * Provider-specific options
-     */
-    providerOptions?: TProviderOptions;
+  /**
+   * Provider-specific options
+   */
+  providerOptions?: TProviderOptions;
 
-    /**
-     * If true, amount is the amount to receive (buy). If false, amount is the amount to spend (sell).
-     */
-    isReverseSwap?: boolean;
+  /**
+   * If true, amount is the amount to receive (buy). If false, amount is the amount to spend (sell).
+   */
+  isReverseSwap?: boolean;
 }

@@ -14,12 +14,12 @@ import { getTxOpcode } from './getTxOpcode';
  * Returns true if the trace contains at least one transaction with ANY of the trigger opcodes.
  */
 export const createTraceTypeDetector = (triggerOpcodes: Set<string>) => {
-    return (transactions: Record<string, ToncenterTransaction>): boolean => {
-        for (const tx of Object.values(transactions)) {
-            const opcode = getTxOpcode(tx);
-            if (opcode && triggerOpcodes.has(opcode)) return true;
-        }
+  return (transactions: Record<string, ToncenterTransaction>): boolean => {
+    for (const tx of Object.values(transactions)) {
+      const opcode = getTxOpcode(tx);
+      if (opcode && triggerOpcodes.has(opcode)) return true;
+    }
 
-        return false;
-    };
+    return false;
+  };
 };

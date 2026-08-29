@@ -7,10 +7,10 @@
  */
 
 export type RawStackItem =
-    | { type: 'null' }
-    | { type: 'num'; value: string }
-    | { type: 'cell'; value: string }
-    | { type: 'slice'; value: string }
-    | { type: 'builder'; value: string }
-    | { type: 'tuple'; value: RawStackItem[] }
-    | { type: 'list'; value: RawStackItem[] };
+  | { type: 'null' }
+  | { type: 'num'; value: string }
+  | { type: 'cell'; value: string }
+  | { type: 'slice'; value: string }
+  | { type: 'builder'; value: string }
+  | { type: 'tuple'; value: RawStackItem[] }
+  | { type: 'list'; value: RawStackItem[] };

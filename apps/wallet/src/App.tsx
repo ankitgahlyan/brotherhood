@@ -15,15 +15,15 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { router } from './router';
 import { queryClient } from '@/lib/brotherhood/ton';
 import {
-    DISABLE_AUTO_EMULATION,
-    DISABLE_HTTP_BRIDGE,
-    DISABLE_MANIFEST_DOMAIN_CHECK,
-    DISABLE_NETWORK_SEND,
-    ENV_BRIDGE_URL,
-    ENV_TON_API_KEY_MAINNET,
-    ENV_TON_API_KEY_TESTNET,
-    ENV_TON_API_KEY_TETRA,
-    ENV_TON_API_PROVIDER,
+  DISABLE_AUTO_EMULATION,
+  DISABLE_HTTP_BRIDGE,
+  DISABLE_MANIFEST_DOMAIN_CHECK,
+  DISABLE_NETWORK_SEND,
+  ENV_BRIDGE_URL,
+  ENV_TON_API_KEY_MAINNET,
+  ENV_TON_API_KEY_TESTNET,
+  ENV_TON_API_KEY_TETRA,
+  ENV_TON_API_PROVIDER,
 } from '@/core/lib/env';
 
 import './App.css';
@@ -35,46 +35,51 @@ import './storePatch';
  */
 const createWebLedgerTransport = () => TransportWebHID.create();
 
-const getPlatform = (): 'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | undefined => {
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('ipad')) return 'ipad';
-    if (ua.includes('iphone')) return 'ios';
-    if (ua.includes('android')) return 'android';
-    if (ua.includes('mac')) return 'macos';
-    if (ua.includes('win')) return 'windows';
-    if (ua.includes('linux')) return 'linux';
-    return undefined;
+const getPlatform = ():
+  'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | undefined => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('ipad')) return 'ipad';
+  if (ua.includes('iphone')) return 'ios';
+  if (ua.includes('android')) return 'android';
+  if (ua.includes('mac')) return 'macos';
+  if (ua.includes('win')) return 'windows';
+  if (ua.includes('linux')) return 'linux';
+  return undefined;
 };
 
 const walletKitConfig: WalletKitConfig = {
-    disableHttpBridge: DISABLE_HTTP_BRIDGE,
-    disableNetworkSend: DISABLE_NETWORK_SEND,
-    disableManifestDomainCheck: DISABLE_MANIFEST_DOMAIN_CHECK,
-    bridgeUrl: ENV_BRIDGE_URL,
-    tonApiProvider: ENV_TON_API_PROVIDER,
-    tonApiKeyMainnet: ENV_TON_API_KEY_MAINNET,
-    tonApiKeyTestnet: ENV_TON_API_KEY_TESTNET,
-    tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
-    createLedgerTransport: createWebLedgerTransport,
-    analytics: {
-        appInfo: {
-            env: 'web',
-            platform: getPlatform(),
-            browser: navigator.userAgent,
-            getLocale: () => navigator.language,
-        },
+  disableHttpBridge: DISABLE_HTTP_BRIDGE,
+  disableNetworkSend: DISABLE_NETWORK_SEND,
+  disableManifestDomainCheck: DISABLE_MANIFEST_DOMAIN_CHECK,
+  bridgeUrl: ENV_BRIDGE_URL,
+  tonApiProvider: ENV_TON_API_PROVIDER,
+  tonApiKeyMainnet: ENV_TON_API_KEY_MAINNET,
+  tonApiKeyTestnet: ENV_TON_API_KEY_TESTNET,
+  tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
+  createLedgerTransport: createWebLedgerTransport,
+  analytics: {
+    appInfo: {
+      env: 'web',
+      platform: getPlatform(),
+      browser: navigator.userAgent,
+      getLocale: () => navigator.language,
     },
-    disableAutoEmulation: DISABLE_AUTO_EMULATION,
+  },
+  disableAutoEmulation: DISABLE_AUTO_EMULATION,
 };
 
 export function App() {
-    return (
-        <QueryClientProvider client={queryClient}>
-            <WalletProvider storage={localStorage} walletKitConfig={walletKitConfig} enableDevtools={false}>
-                <RouterProvider router={router} />
-            </WalletProvider>
-        </QueryClientProvider>
-    );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WalletProvider
+        storage={localStorage}
+        walletKitConfig={walletKitConfig}
+        enableDevtools={false}
+      >
+        <RouterProvider router={router} />
+      </WalletProvider>
+    </QueryClientProvider>
+  );
 }
 
 export default App;

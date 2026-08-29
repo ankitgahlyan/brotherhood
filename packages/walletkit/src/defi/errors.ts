@@ -7,25 +7,25 @@
  */
 
 export enum DefiErrorCode {
-    ProviderNotFound = 'PROVIDER_NOT_FOUND',
-    NoDefaultProvider = 'NO_DEFAULT_PROVIDER',
-    NetworkError = 'NETWORK_ERROR',
-    UnsupportedNetwork = 'UNSUPPORTED_NETWORK',
-    InvalidParams = 'INVALID_PARAMS',
-    InvalidProvider = 'INVALID_PROVIDER',
-    Unknown = 'UNKNOWN',
+  ProviderNotFound = 'PROVIDER_NOT_FOUND',
+  NoDefaultProvider = 'NO_DEFAULT_PROVIDER',
+  NetworkError = 'NETWORK_ERROR',
+  UnsupportedNetwork = 'UNSUPPORTED_NETWORK',
+  InvalidParams = 'INVALID_PARAMS',
+  InvalidProvider = 'INVALID_PROVIDER',
+  Unknown = 'UNKNOWN',
 }
 
 export class DefiError extends Error {
-    public readonly code: string;
-    public readonly details?: unknown;
+  public readonly code: string;
+  public readonly details?: unknown;
 
-    constructor(message: string, code: string, details?: unknown) {
-        super(message);
-        this.name = 'DefiError';
-        this.code = code;
-        this.details = details;
-    }
+  constructor(message: string, code: string, details?: unknown) {
+    super(message);
+    this.name = 'DefiError';
+    this.code = code;
+    this.details = details;
+  }
 }
 
 /**
@@ -35,5 +35,7 @@ export class DefiError extends Error {
  * public API always throws a `DefiError`.
  */
 export function toDefiError(error: unknown, message: string): DefiError {
-    return error instanceof DefiError ? error : new DefiError(message, DefiErrorCode.Unknown, error);
+  return error instanceof DefiError
+    ? error
+    : new DefiError(message, DefiErrorCode.Unknown, error);
 }

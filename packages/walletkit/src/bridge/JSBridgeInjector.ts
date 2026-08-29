@@ -10,27 +10,33 @@ import type { JSBridgeInjectOptions } from '../types/jsBridge';
 import { injectBridge } from './injection/BridgeInjector';
 import type { Transport } from './transport/Transport';
 import {
-    INJECT_CONTENT_SCRIPT,
-    TONCONNECT_BRIDGE_EVENT,
-    TONCONNECT_BRIDGE_REQUEST,
-    TONCONNECT_BRIDGE_RESPONSE,
+  INJECT_CONTENT_SCRIPT,
+  TONCONNECT_BRIDGE_EVENT,
+  TONCONNECT_BRIDGE_REQUEST,
+  TONCONNECT_BRIDGE_RESPONSE,
 } from './utils/messageTypes';
-import { DEFAULT_REQUEST_TIMEOUT, RESTORE_CONNECTION_TIMEOUT } from './utils/timeouts';
+import {
+  DEFAULT_REQUEST_TIMEOUT,
+  RESTORE_CONNECTION_TIMEOUT,
+} from './utils/timeouts';
 import { ExtensionTransport } from './transport/ExtensionTransport';
-import type { MessageSender, MessageListener } from './transport/ExtensionTransport';
+import type {
+  MessageSender,
+  MessageListener,
+} from './transport/ExtensionTransport';
 
 export {
-    type JSBridgeInjectOptions,
-    type Transport,
-    TONCONNECT_BRIDGE_EVENT,
-    RESTORE_CONNECTION_TIMEOUT,
-    DEFAULT_REQUEST_TIMEOUT,
-    TONCONNECT_BRIDGE_REQUEST,
-    TONCONNECT_BRIDGE_RESPONSE,
-    INJECT_CONTENT_SCRIPT,
-    type MessageSender,
-    type MessageListener,
-    ExtensionTransport,
+  type JSBridgeInjectOptions,
+  type Transport,
+  TONCONNECT_BRIDGE_EVENT,
+  RESTORE_CONNECTION_TIMEOUT,
+  DEFAULT_REQUEST_TIMEOUT,
+  TONCONNECT_BRIDGE_REQUEST,
+  TONCONNECT_BRIDGE_RESPONSE,
+  INJECT_CONTENT_SCRIPT,
+  type MessageSender,
+  type MessageListener,
+  ExtensionTransport,
 };
 
 /**
@@ -41,9 +47,9 @@ export {
  * @param options - Configuration options for the bridge
  */
 export function injectBridgeCode(
-    window: Window,
-    options: JSBridgeInjectOptions,
-    transport?: Transport | (() => Transport),
+  window: Window,
+  options: JSBridgeInjectOptions,
+  transport?: Transport | (() => Transport),
 ): void {
-    injectBridge(window, options, transport);
+  injectBridge(window, options, transport);
 }

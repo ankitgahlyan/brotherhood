@@ -12,24 +12,24 @@ import type { TokenAmount } from '../core/TokenAmount';
  * Dynamic staking information for a provider
  */
 export interface StakingProviderInfo {
-    /**
-     * Annual Percentage Yield in basis points (100 = 1%)
-     */
-    apy: number;
+  /**
+   * Annual Percentage Yield in basis points (100 = 1%)
+   */
+  apy: number;
 
-    /**
-     * Amount available for instant unstake
-     */
-    rawInstantUnstakeAvailable?: TokenAmount;
+  /**
+   * Amount available for instant unstake
+   */
+  rawInstantUnstakeAvailable?: TokenAmount;
 
-    /**
-     * Amount available for instant unstake
-     */
-    instantUnstakeAvailable?: string;
+  /**
+   * Amount available for instant unstake
+   */
+  instantUnstakeAvailable?: string;
 
-    /**
-     * Exchange rate between stakeToken and receiveToken (e.g. 1 GRAM = 0.95 tsTON).
-     * Undefined when there is no receiveToken (direct/custodial staking).
-     */
-    exchangeRate?: string;
+  /**
+   * Exchange rate between stakeToken and receiveToken (e.g. 1 GRAM = 0.95 tsTON).
+   * Undefined when there is no receiveToken (direct/custodial staking).
+   */
+  exchangeRate?: string;
 }

@@ -8,17 +8,22 @@
 
 type ObjectWithMessage = { message: string } & { [key: string]: unknown };
 
-const isObjectWithMessage = (toBeDetermined: unknown): toBeDetermined is ObjectWithMessage =>
-    !!toBeDetermined && !!(toBeDetermined as ObjectWithMessage).message;
+const isObjectWithMessage = (
+  toBeDetermined: unknown,
+): toBeDetermined is ObjectWithMessage =>
+  !!toBeDetermined && !!(toBeDetermined as ObjectWithMessage).message;
 
-export const getErrorMessage = (error: unknown, defaultMessage?: string): string => {
-    if (typeof error === 'string') {
-        return error;
-    }
+export const getErrorMessage = (
+  error: unknown,
+  defaultMessage?: string,
+): string => {
+  if (typeof error === 'string') {
+    return error;
+  }
 
-    if (error instanceof Error || isObjectWithMessage(error)) {
-        return error.message;
-    }
+  if (error instanceof Error || isObjectWithMessage(error)) {
+    return error.message;
+  }
 
-    return defaultMessage || 'Error occurred';
+  return defaultMessage || 'Error occurred';
 };

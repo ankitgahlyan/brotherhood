@@ -11,33 +11,36 @@ import { LRUCache } from 'lru-cache';
 import { CACHE_TIMEOUT } from './constants';
 
 export class StakingCache {
-     
-    private cache: LRUCache<string, any>;
-    private readonly defaultTtl: number;
+  private cache: LRUCache<string, any>;
+  private readonly defaultTtl: number;
 
-    constructor(maxSize: number = 100, defaultTtl: number = CACHE_TIMEOUT) {
-        this.defaultTtl = defaultTtl;
-        this.cache = new LRUCache({
-            max: maxSize,
-        });
+  constructor(maxSize: number = 100, defaultTtl: number = CACHE_TIMEOUT) {
+    this.defaultTtl = defaultTtl;
+    this.cache = new LRUCache({
+      max: maxSize,
+    });
+  }
+
+  async get<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttl: number = this.defaultTtl,
+  ): Promise<T> {
+    const cached = this.cache.get(key);
+    if (cached !== undefined) {
+      return cached as T;
     }
 
-    async get<T>(key: string, fetcher: () => Promise<T>, ttl: number = this.defaultTtl): Promise<T> {
-        const cached = this.cache.get(key);
-        if (cached !== undefined) {
-            return cached as T;
-        }
+    const value = await fetcher();
+    this.cache.set(key, value, { ttl });
+    return value;
+  }
 
-        const value = await fetcher();
-        this.cache.set(key, value, { ttl });
-        return value;
-    }
+  clear(): void {
+    this.cache.clear();
+  }
 
-    clear(): void {
-        this.cache.clear();
-    }
-
-    invalidate(key: string): void {
-        this.cache.delete(key);
-    }
+  invalidate(key: string): void {
+    this.cache.delete(key);
+  }
 }

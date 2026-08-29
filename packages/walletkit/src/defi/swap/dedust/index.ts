@@ -8,13 +8,13 @@
 
 export { DeDustSwapProvider, createDeDustProvider } from './DeDustSwapProvider';
 export type {
-    DeDustSwapProviderConfig,
-    DeDustProviderOptions,
-    DeDustQuoteMetadata,
-    DeDustReferralOptions,
-    DeDustQuoteResponse,
-    DeDustRouteStep,
-    DeDustSwapData,
+  DeDustSwapProviderConfig,
+  DeDustProviderOptions,
+  DeDustQuoteMetadata,
+  DeDustReferralOptions,
+  DeDustQuoteResponse,
+  DeDustRouteStep,
+  DeDustSwapData,
 } from './models';
 export type { DeDustSwapResponse } from './DeDustPrivateTypes';
 export { isDeDustQuoteMetadata } from './utils';

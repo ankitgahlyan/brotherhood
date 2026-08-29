@@ -12,8 +12,8 @@ import type { Base64String } from '../core/Primitives';
  * Response after user approves a transaction request.
  */
 export interface SendTransactionApprovalResponse {
-    /**
-     * Signed transaction in BOC (Bag of Cells) format, encoded in Base64
-     */
-    signedBoc: Base64String;
+  /**
+   * Signed transaction in BOC (Bag of Cells) format, encoded in Base64
+   */
+  signedBoc: Base64String;
 }

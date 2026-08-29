@@ -48,42 +48,45 @@ npm install @ton/walletkit
 
 ```ts
 import {
-    TonWalletKit, // Main SDK class
-    Signer, // Handles cryptographic signing
-    WalletV5R1Adapter, // Latest wallet version (recommended)
-    Network, // Network configuration (mainnet/testnet)
-    MemoryStorageAdapter,
+  TonWalletKit, // Main SDK class
+  Signer, // Handles cryptographic signing
+  WalletV5R1Adapter, // Latest wallet version (recommended)
+  Network, // Network configuration (mainnet/testnet)
+  MemoryStorageAdapter,
 } from '@ton/walletkit';
 
-import { getTonConnectDeviceInfo, getTonConnectWalletManifest } from './wallet-manifest';
+import {
+  getTonConnectDeviceInfo,
+  getTonConnectWalletManifest,
+} from './wallet-manifest';
 
 const kit = new TonWalletKit({
-    deviceInfo: getTonConnectDeviceInfo(),
-    walletManifest: getTonConnectWalletManifest(),
-    storage: new MemoryStorageAdapter({}),
-    // Multi-network API configuration
-    networks: {
-        [Network.mainnet().chainId]: {
-            apiClient: {
-                // Optional API key for Toncenter get on https://t.me/toncenter
-                key: process.env.APP_TONCENTER_KEY,
-                url: 'https://toncenter.com', // default
-                // or use self-hosted from https://github.com/toncenter/ton-http-api
-            },
-        },
-        // Optionally configure testnet as well
-        // [CHAIN.TESTNET]: {
-        //   apiClient: {
-        //     key: process.env.APP_TONCENTER_KEY_TESTNET,
-        //     url: 'https://testnet.toncenter.com',
-        //   },
-        // },
+  deviceInfo: getTonConnectDeviceInfo(),
+  walletManifest: getTonConnectWalletManifest(),
+  storage: new MemoryStorageAdapter({}),
+  // Multi-network API configuration
+  networks: {
+    [Network.mainnet().chainId]: {
+      apiClient: {
+        // Optional API key for Toncenter get on https://t.me/toncenter
+        key: process.env.APP_TONCENTER_KEY,
+        url: 'https://toncenter.com', // default
+        // or use self-hosted from https://github.com/toncenter/ton-http-api
+      },
     },
-    bridge: {
-        // TON Connect bridge for dApp communication
-        bridgeUrl: 'https://connect.ton.org/bridge',
-        // or use self-hosted bridge from https://github.com/ton-connect/bridge
-    },
+    // Optionally configure testnet as well
+    // [CHAIN.TESTNET]: {
+    //   apiClient: {
+    //     key: process.env.APP_TONCENTER_KEY_TESTNET,
+    //     url: 'https://testnet.toncenter.com',
+    //   },
+    // },
+  },
+  bridge: {
+    // TON Connect bridge for dApp communication
+    bridgeUrl: 'https://connect.ton.org/bridge',
+    // or use self-hosted bridge from https://github.com/ton-connect/bridge
+  },
 });
 
 // Wait for initialization to complete
@@ -94,14 +97,14 @@ const mnemonic = process.env.WALLET_MNEMONIC!.split(' ');
 const signer = await Signer.fromMnemonic(mnemonic, { type: 'ton' });
 
 const walletV5R1Adapter = await WalletV5R1Adapter.create(signer, {
-    client: kit.getApiClient(Network.mainnet()),
-    network: Network.mainnet(),
+  client: kit.getApiClient(Network.mainnet()),
+  network: Network.mainnet(),
 });
 
 const walletV5R1 = await kit.addWallet(walletV5R1Adapter);
 if (walletV5R1) {
-    console.log('V5R1 Address:', walletV5R1.getAddress());
-    console.log('V5R1 Balance:', await walletV5R1.getBalance());
+  console.log('V5R1 Address:', walletV5R1.getAddress());
+  console.log('V5R1 Balance:', await walletV5R1.getBalance());
 }
 ```
 
@@ -122,69 +125,70 @@ Register callbacks that show UI and then approve or reject via kit methods. Note
 ```ts
 // Connect requests - triggered when a dApp wants to connect
 kit.onConnectRequest(async (event: ConnectionRequestEvent) => {
-    try {
-        // Use event.preview to display dApp info in your UI
-        const name = event.dAppInfo?.name;
-        if (yourConfirmLogic(`Connect to ${name}?`)) {
-            const selectedWalletId = getSelectedWalletId();
-            const wallet = kit.getWallet(selectedWalletId);
-            if (!wallet) {
-                console.error('Selected wallet not found');
-                await kit.rejectConnectRequest(event, 'No wallet available');
-                return;
-            }
-            console.log(`Using wallet ID: ${wallet.getWalletId()}, address: ${wallet.getAddress()}`);
+  try {
+    // Use event.preview to display dApp info in your UI
+    const name = event.dAppInfo?.name;
+    if (yourConfirmLogic(`Connect to ${name}?`)) {
+      const selectedWalletId = getSelectedWalletId();
+      const wallet = kit.getWallet(selectedWalletId);
+      if (!wallet) {
+        console.error('Selected wallet not found');
+        await kit.rejectConnectRequest(event, 'No wallet available');
+        return;
+      }
+      console.log(
+        `Using wallet ID: ${wallet.getWalletId()}, address: ${wallet.getAddress()}`,
+      );
 
-            // Set walletId on the request before approving
-            event.walletId = wallet.getWalletId();
-            await kit.approveConnectRequest(event);
-        } else {
-            await kit.rejectConnectRequest(event, 'User rejected');
-        }
-    } catch (error) {
-        console.error('Connect request failed:', error);
-        await kit.rejectConnectRequest(event, 'Error processing request');
+      // Set walletId on the request before approving
+      event.walletId = wallet.getWalletId();
+      await kit.approveConnectRequest(event);
+    } else {
+      await kit.rejectConnectRequest(event, 'User rejected');
     }
+  } catch (error) {
+    console.error('Connect request failed:', error);
+    await kit.rejectConnectRequest(event, 'Error processing request');
+  }
 });
 
 // Transaction requests - triggered when a dApp wants to execute a transaction
 kit.onTransactionRequest(async (event: SendTransactionRequestEvent) => {
-    try {
-        // Use tx.preview.moneyFlow.ourTransfers to show net asset changes
-        // Each transfer shows positive amounts for incoming, negative for outgoing
-        if (yourConfirmLogic('Do you confirm this transaction?')) {
-            await kit.approveTransactionRequest(event);
-        } else {
-            await kit.rejectTransactionRequest(event, 'User rejected');
-        }
-    } catch (error) {
-        console.error('Transaction request failed:', error);
-        await kit.rejectTransactionRequest(event, 'Error processing request');
+  try {
+    // Use tx.preview.moneyFlow.ourTransfers to show net asset changes
+    // Each transfer shows positive amounts for incoming, negative for outgoing
+    if (yourConfirmLogic('Do you confirm this transaction?')) {
+      await kit.approveTransactionRequest(event);
+    } else {
+      await kit.rejectTransactionRequest(event, 'User rejected');
     }
+  } catch (error) {
+    console.error('Transaction request failed:', error);
+    await kit.rejectTransactionRequest(event, 'Error processing request');
+  }
 });
 
 // Sign data requests - triggered when a dApp wants to sign arbitrary data
 kit.onSignDataRequest(async (event: SignDataRequestEvent) => {
-    try {
-        // Use event.preview.kind to determine how to display the data
-        if (yourConfirmLogic('Sign this data?')) {
-            await kit.approveSignDataRequest(event);
-        } else {
-            await kit.rejectSignDataRequest(event, 'User rejected');
-        }
-    } catch (error) {
-        console.error('Sign data request failed:', error);
-        await kit.rejectSignDataRequest(event, 'Error processing request');
+  try {
+    // Use event.preview.kind to determine how to display the data
+    if (yourConfirmLogic('Sign this data?')) {
+      await kit.approveSignDataRequest(event);
+    } else {
+      await kit.rejectSignDataRequest(event, 'User rejected');
     }
+  } catch (error) {
+    console.error('Sign data request failed:', error);
+    await kit.rejectSignDataRequest(event, 'Error processing request');
+  }
 });
 
 // Disconnect events - triggered when a dApp disconnects
 kit.onDisconnect((event: DisconnectionEvent) => {
-    // Clean up any UI state related to this connection
-    console.log(`Disconnected from wallet: ${event.walletAddress}`);
+  // Clean up any UI state related to this connection
+  console.log(`Disconnected from wallet: ${event.walletAddress}`);
 });
 ```
-
 
 ### Handle TON Connect links
 
@@ -193,8 +197,8 @@ When users scan a QR code or click a deep link from a dApp, pass the TON Connect
 ```ts
 // Example: from a QR scanner, deep link, or URL parameter
 async function onTonConnectLink(url: string) {
-    // url format: tc://connect?...
-    await kit.handleTonConnectUrl(url);
+  // url format: tc://connect?...
+  await kit.handleTonConnectUrl(url);
 }
 ```
 
@@ -204,8 +208,8 @@ async function onTonConnectLink(url: string) {
 const selectedWalletId = getSelectedWalletId();
 const wallet = kit.getWallet(selectedWalletId);
 if (!wallet) {
-    console.error('Selected wallet not found');
-    return;
+  console.error('Selected wallet not found');
+  return;
 }
 // Query balance
 const balance = await wallet.getBalance();
@@ -220,20 +224,20 @@ Render Connect preview:
 
 ```ts
 function renderConnectPreview(req: ConnectionRequestEvent) {
-    const name = req.preview.dAppInfo?.name ?? req.dAppInfo?.name;
-    const description = req.preview.dAppInfo?.description;
-    const iconUrl = req.preview.dAppInfo?.iconUrl;
-    const permissions = req.preview.permissions ?? [];
+  const name = req.preview.dAppInfo?.name ?? req.dAppInfo?.name;
+  const description = req.preview.dAppInfo?.description;
+  const iconUrl = req.preview.dAppInfo?.iconUrl;
+  const permissions = req.preview.permissions ?? [];
 
-    return {
-        title: `Connect to ${name}?`,
-        iconUrl,
-        description,
-        permissions: permissions.map((p) => ({
-            title: p.title,
-            description: p.description,
-        })),
-    };
+  return {
+    title: `Connect to ${name}?`,
+    iconUrl,
+    description,
+    permissions: permissions.map((p) => ({
+      title: p.title,
+      description: p.description,
+    })),
+  };
 }
 ```
 
@@ -244,30 +248,33 @@ import type { TransactionEmulatedPreview } from '@ton/walletkit';
 import { AssetType, Result } from '@ton/walletkit';
 
 function summarizeTransaction(preview: TransactionEmulatedPreview) {
-    if (preview.result === Result.failure) {
-        return {
-            kind: 'error',
-            message: preview?.error?.message ?? 'Unknown error',
-        };
-    }
-
-    // MoneyFlow now provides ourTransfers - a simplified array of net asset changes
-    const transfers = preview.moneyFlow ? preview.moneyFlow.ourTransfers : []; // Array of TransactionTraceMoneyFlow
-
-    // Each transfer has:
-    // - assetType: 'ton' | 'jetton' | 'nft'
-    // - amount: string (positive for incoming, negative for outgoing)
-    // - tokenAddress?: string (jetton master address, if type === 'jetton' or 'nft')
-
+  if (preview.result === Result.failure) {
     return {
-        kind: 'success' as const,
-        transfers: transfers.map((transfer) => ({
-            assetType: transfer.assetType,
-            jettonAddress: transfer.assetType === AssetType.ton ? 'GRAM' : (transfer.tokenAddress ?? ''),
-            amount: transfer.amount, // string, can be positive or negative
-            isIncoming: BigInt(transfer.amount) >= 0n,
-        })),
+      kind: 'error',
+      message: preview?.error?.message ?? 'Unknown error',
     };
+  }
+
+  // MoneyFlow now provides ourTransfers - a simplified array of net asset changes
+  const transfers = preview.moneyFlow ? preview.moneyFlow.ourTransfers : []; // Array of TransactionTraceMoneyFlow
+
+  // Each transfer has:
+  // - assetType: 'ton' | 'jetton' | 'nft'
+  // - amount: string (positive for incoming, negative for outgoing)
+  // - tokenAddress?: string (jetton master address, if type === 'jetton' or 'nft')
+
+  return {
+    kind: 'success' as const,
+    transfers: transfers.map((transfer) => ({
+      assetType: transfer.assetType,
+      jettonAddress:
+        transfer.assetType === AssetType.ton
+          ? 'GRAM'
+          : (transfer.tokenAddress ?? ''),
+      amount: transfer.amount, // string, can be positive or negative
+      isIncoming: BigInt(transfer.amount) >= 0n,
+    })),
+  };
 }
 ```
 
@@ -278,25 +285,28 @@ import type { TransactionTraceMoneyFlowItem } from '@ton/walletkit';
 import { AssetType } from '@ton/walletkit';
 
 function renderMoneyFlow(transfers: TransactionTraceMoneyFlowItem[]) {
-    if (transfers.length === 0) {
-        return <div>This transaction doesn't involve any token transfers</div>;
-    }
+  if (transfers.length === 0) {
+    return <div>This transaction doesn't involve any token transfers</div>;
+  }
 
-    return transfers.map((transfer: TransactionTraceMoneyFlowItem) => {
-        const amount = BigInt(transfer.amount);
-        const isIncoming = amount >= 0n;
-        const jettonAddress = transfer.assetType === AssetType.ton ? 'GRAM' : (transfer.tokenAddress ?? '');
+  return transfers.map((transfer: TransactionTraceMoneyFlowItem) => {
+    const amount = BigInt(transfer.amount);
+    const isIncoming = amount >= 0n;
+    const jettonAddress =
+      transfer.assetType === AssetType.ton
+        ? 'GRAM'
+        : (transfer.tokenAddress ?? '');
 
-        return (
-            <div key={jettonAddress}>
-                <span>
-                    {isIncoming ? '+' : ''}
-                    {transfer.amount}
-                </span>
-                <span>{jettonAddress}</span>
-            </div>
-        );
-    });
+    return (
+      <div key={jettonAddress}>
+        <span>
+          {isIncoming ? '+' : ''}
+          {transfer.amount}
+        </span>
+        <span>{jettonAddress}</span>
+      </div>
+    );
+  });
 }
 ```
 
@@ -304,19 +314,19 @@ Render Sign-Data preview:
 
 ```ts
 function renderSignDataPreview(preview: SignDataPreview) {
-    switch (preview.type) {
-        case 'text':
-            return { type: 'text', content: preview.value.content };
-        case 'binary':
-            return { type: 'binary', content: preview.value.content };
-        case 'cell':
-            return {
-                type: 'cell',
-                content: preview.value.content,
-                schema: preview.value.schema,
-                parsed: preview.value.parsed,
-            };
-    }
+  switch (preview.type) {
+    case 'text':
+      return { type: 'text', content: preview.value.content };
+    case 'binary':
+      return { type: 'binary', content: preview.value.content };
+    case 'cell':
+      return {
+        type: 'cell',
+        content: preview.value.content,
+        schema: preview.value.schema,
+        parsed: preview.value.parsed,
+      };
+  }
 }
 ```
 
@@ -340,10 +350,10 @@ const from = kit.getWallet(getSelectedWalletAddress());
 if (!from) throw new Error('No wallet');
 
 const tonTransfer: TONTransferRequest = {
-    recipientAddress: 'EQC...recipient...',
-    transferAmount: (1n * 10n ** 9n).toString(), // 1 GRAM in nano units
-    // Optional comment OR body (base64 BOC), not both
-    comment: 'Thanks!',
+  recipientAddress: 'EQC...recipient...',
+  transferAmount: (1n * 10n ** 9n).toString(), // 1 GRAM in nano units
+  // Optional comment OR body (base64 BOC), not both
+  comment: 'Thanks!',
 };
 
 // 1) Build transaction content
@@ -362,10 +372,10 @@ const wallet = kit.getWallet(getSelectedWalletAddress());
 if (!wallet) throw new Error('No wallet');
 
 const jettonTransfer: JettonsTransferRequest = {
-    recipientAddress: 'EQC...recipient...',
-    jettonAddress: 'EQD...jetton-master...',
-    transferAmount: '1000000000', // raw amount per token decimals
-    comment: 'Payment',
+  recipientAddress: 'EQC...recipient...',
+  jettonAddress: 'EQD...jetton-master...',
+  transferAmount: '1000000000', // raw amount per token decimals
+  comment: 'Payment',
 };
 
 const tx = await wallet.createTransferJettonTransaction(jettonTransfer);
@@ -373,6 +383,7 @@ await kit.handleNewTransaction(wallet, tx);
 ```
 
 **Notes:**
+
 - `amount` is the raw integer amount (apply jetton decimals yourself)
 - The transaction includes GRAM for gas automatically
 
@@ -385,10 +396,10 @@ const wallet = kit.getWallet(getSelectedWalletAddress());
 if (!wallet) throw new Error('No wallet');
 
 const nftTransfer: NFTTransferRequest = {
-    nftAddress: 'EQD...nft-item...',
-    recipientAddress: 'EQC...recipient...',
-    transferAmount: '1', // GRAM used to invoke NFT transfer (nano units)
-    comment: 'Gift',
+  nftAddress: 'EQD...nft-item...',
+  recipientAddress: 'EQC...recipient...',
+  transferAmount: '1', // GRAM used to invoke NFT transfer (nano units)
+  comment: 'Gift',
 };
 
 const tx = await wallet.createTransferNftTransaction(nftTransfer);
@@ -409,47 +420,47 @@ Note: The `getNfts` method returns `NFTsResponse` with a `nfts` field (not `item
 
 ```ts
 type AppState = {
-    connectModal?: { request: ConnectionRequestEvent };
-    txModal?: { request: SendTransactionRequestEvent };
+  connectModal?: { request: ConnectionRequestEvent };
+  txModal?: { request: SendTransactionRequestEvent };
 };
 
 const state: AppState = {};
 
 kit.onConnectRequest((req) => {
-    state.connectModal = { request: req };
+  state.connectModal = { request: req };
 });
 
 kit.onTransactionRequest((tx) => {
-    state.txModal = { request: tx };
+  state.txModal = { request: tx };
 });
 
 async function approveConnect() {
-    if (!state.connectModal) return;
-    const address = getSelectedWalletAddress();
-    const wallet = kit.getWallet(address);
-    if (!wallet) return;
-    // Set wallet address on the request
-    state.connectModal.request.walletAddress = wallet.getAddress();
-    await kit.approveConnectRequest(state.connectModal.request);
-    state.connectModal = undefined;
+  if (!state.connectModal) return;
+  const address = getSelectedWalletAddress();
+  const wallet = kit.getWallet(address);
+  if (!wallet) return;
+  // Set wallet address on the request
+  state.connectModal.request.walletAddress = wallet.getAddress();
+  await kit.approveConnectRequest(state.connectModal.request);
+  state.connectModal = undefined;
 }
 
 async function rejectConnect() {
-    if (!state.connectModal) return;
-    await kit.rejectConnectRequest(state.connectModal.request, 'User rejected');
-    state.connectModal = undefined;
+  if (!state.connectModal) return;
+  await kit.rejectConnectRequest(state.connectModal.request, 'User rejected');
+  state.connectModal = undefined;
 }
 
 async function approveTx() {
-    if (!state.txModal) return;
-    await kit.approveTransactionRequest(state.txModal.request);
-    state.txModal = undefined;
+  if (!state.txModal) return;
+  await kit.approveTransactionRequest(state.txModal.request);
+  state.txModal = undefined;
 }
 
 async function rejectTx() {
-    if (!state.txModal) return;
-    await kit.rejectTransactionRequest(state.txModal.request, 'User rejected');
-    state.txModal = undefined;
+  if (!state.txModal) return;
+  await kit.rejectTransactionRequest(state.txModal.request, 'User rejected');
+  state.txModal = undefined;
 }
 ```
 
@@ -482,4 +493,3 @@ This file is auto-generated. Do not edit manually.
 Changes will be overwritten when running the docs update script.
 Source template: template/packages/walletkit/README.md
 -->
-

@@ -13,8 +13,8 @@ export const DEFAULT_PROVIDER_ID = 'tonapi';
 
 /** Static metadata returned by `TonApiGaslessProvider.getMetadata()`. */
 export const DEFAULT_METADATA: GaslessProviderMetadata = {
-    name: 'TonAPI',
-    url: 'https://tonapi.io',
+  name: 'TonAPI',
+  url: 'https://tonapi.io',
 };
 
 /** Default number of retries for `/v2/gasless/send` on transient failures (5xx / network). */

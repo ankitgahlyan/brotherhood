@@ -5,8 +5,8 @@
 ## Flow
 
 1. **Discover** – call `getConfig` to fetch the relay address and the assets the relayer accepts as fee payment (omit if the dApp already knows which asset it wants to charge).
-2. **Quote** – call `getQuote` with your messages and chosen fee asset. The relayer returns *wrapped* messages, a fee, and a `validUntil` window.
-3. **Sign** – pass the wrapped messages to `wallet.signMessage` (TonConnect `SignMessage` feature). The wallet returns a signed *internal-message* BoC.
+2. **Quote** – call `getQuote` with your messages and chosen fee asset. The relayer returns _wrapped_ messages, a fee, and a `validUntil` window.
+3. **Sign** – pass the wrapped messages to `wallet.signMessage` (TonConnect `SignMessage` feature). The wallet returns a signed _internal-message_ BoC.
 4. **Send** – submit the signed BoC via `sendTransaction`; the relayer converts it to an external message, pays the gas, and broadcasts.
 
 ## Quick Start
@@ -16,17 +16,19 @@ import { TonWalletKit, Network } from '@ton/walletkit';
 import { createTonApiGaslessProvider } from '@ton/walletkit/gasless/tonapi';
 
 const kit = new TonWalletKit({
-    networks: {
-        [Network.mainnet().chainId]: { apiClient: { url: 'https://toncenter.com' } },
+  networks: {
+    [Network.mainnet().chainId]: {
+      apiClient: { url: 'https://toncenter.com' },
     },
+  },
 });
 
 kit.gasless.registerProvider(
-    createTonApiGaslessProvider({
-        chains: {
-            [Network.mainnet().chainId]: { apiKey: process.env.TON_API_KEY },
-        },
-    }),
+  createTonApiGaslessProvider({
+    chains: {
+      [Network.mainnet().chainId]: { apiKey: process.env.TON_API_KEY },
+    },
+  }),
 );
 ```
 
@@ -46,27 +48,27 @@ const config = await kit.gasless.getConfig();
 const feeAsset = config.supportedAssets[0].address;
 
 const quote = await kit.gasless.getQuote({
-    feeAsset,
-    walletAddress: wallet.getAddress(),
-    walletPublicKey: wallet.getPublicKey(),
-    messages: [
-        {
-            address: 'EQ...jetton_wallet_address',
-            amount: '60000000', // 0.06 GRAM gas
-            payload: jettonTransferPayloadBase64,
-        },
-    ],
+  feeAsset,
+  walletAddress: wallet.getAddress(),
+  walletPublicKey: wallet.getPublicKey(),
+  messages: [
+    {
+      address: 'EQ...jetton_wallet_address',
+      amount: '60000000', // 0.06 GRAM gas
+      payload: jettonTransferPayloadBase64,
+    },
+  ],
 });
 
 const { internalBoc } = await wallet.signMessage({
-    messages: quote.messages,
-    validUntil: quote.validUntil,
+  messages: quote.messages,
+  validUntil: quote.validUntil,
 });
 
 const { normalizedHash } = await kit.gasless.sendTransaction({
-    network: wallet.getNetwork(),
-    walletPublicKey: wallet.getPublicKey(),
-    internalBoc,
+  network: wallet.getNetwork(),
+  walletPublicKey: wallet.getPublicKey(),
+  internalBoc,
 });
 ```
 
@@ -76,16 +78,16 @@ The `validUntil` timestamp is set by the relayer (typically ~2 minutes). In `@to
 
 `GaslessError` extends `DefiError`. The codes are exposed via the `GaslessErrorCode` enum:
 
-| Code | Meaning |
-|---|---|
-| `UNSUPPORTED_OPERATION` | The provider does not implement the requested mode (e.g. a jetton-fee-only provider called without `feeAsset`). |
-| `QUOTE_FAILED` | Relayer rejected the quote (insufficient liquidity, malformed messages, …). |
-| `SEND_FAILED` | Relayer rejected the signed BoC, or all retries were exhausted. |
-| `CONFIG_FAILED` | Failed to fetch the relayer's configuration (relay address + accepted fee assets). |
-| `SIGN_MESSAGE_NOT_SUPPORTED` | Connected wallet does not implement the `SignMessage` feature. Surfaced by the higher-level `sendGaslessTransaction` action in `@ton/appkit`. |
-| `TOO_MANY_MESSAGES` | The quote carries more messages than the wallet's advertised `SignMessage.maxMessages` cap. Surfaced by `sendGaslessTransaction` in `@ton/appkit`. |
-| `QUOTE_EXPIRED` | The quote's `validUntil` window has already passed. Surfaced by `sendGaslessTransaction` in `@ton/appkit` before signing, so the wallet is not prompted for a quote the relayer would reject. |
-| `WALLET_MISMATCH` | The quote was issued for a different address than the selected wallet. Surfaced by `sendGaslessTransaction` in `@ton/appkit`. |
+| Code                         | Meaning                                                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UNSUPPORTED_OPERATION`      | The provider does not implement the requested mode (e.g. a jetton-fee-only provider called without `feeAsset`).                                                                               |
+| `QUOTE_FAILED`               | Relayer rejected the quote (insufficient liquidity, malformed messages, …).                                                                                                                   |
+| `SEND_FAILED`                | Relayer rejected the signed BoC, or all retries were exhausted.                                                                                                                               |
+| `CONFIG_FAILED`              | Failed to fetch the relayer's configuration (relay address + accepted fee assets).                                                                                                            |
+| `SIGN_MESSAGE_NOT_SUPPORTED` | Connected wallet does not implement the `SignMessage` feature. Surfaced by the higher-level `sendGaslessTransaction` action in `@ton/appkit`.                                                 |
+| `TOO_MANY_MESSAGES`          | The quote carries more messages than the wallet's advertised `SignMessage.maxMessages` cap. Surfaced by `sendGaslessTransaction` in `@ton/appkit`.                                            |
+| `QUOTE_EXPIRED`              | The quote's `validUntil` window has already passed. Surfaced by `sendGaslessTransaction` in `@ton/appkit` before signing, so the wallet is not prompted for a quote the relayer would reject. |
+| `WALLET_MISMATCH`            | The quote was issued for a different address than the selected wallet. Surfaced by `sendGaslessTransaction` in `@ton/appkit`.                                                                 |
 
 ## Creating a Custom Gasless Provider
 
@@ -93,38 +95,40 @@ To target a different relayer, extend `GaslessProvider`:
 
 ```typescript
 import {
-    GaslessProvider,
-    type GaslessProviderMetadata,
-    type GaslessQuoteParams,
-    type GaslessQuote,
-    type GaslessSendParams,
-    type GaslessSendResponse,
-    type GaslessConfig,
-    type Network,
+  GaslessProvider,
+  type GaslessProviderMetadata,
+  type GaslessQuoteParams,
+  type GaslessQuote,
+  type GaslessSendParams,
+  type GaslessSendResponse,
+  type GaslessConfig,
+  type Network,
 } from '@ton/walletkit';
 
 export class MyGaslessProvider extends GaslessProvider {
-    readonly providerId = 'my-relayer';
+  readonly providerId = 'my-relayer';
 
-    getSupportedNetworks(): Network[] {
-        return [Network.mainnet()];
-    }
+  getSupportedNetworks(): Network[] {
+    return [Network.mainnet()];
+  }
 
-    async getMetadata(): Promise<GaslessProviderMetadata> {
-        return { name: 'My Relayer', url: 'https://my-relayer.example' };
-    }
+  async getMetadata(): Promise<GaslessProviderMetadata> {
+    return { name: 'My Relayer', url: 'https://my-relayer.example' };
+  }
 
-    async getConfig(): Promise<GaslessConfig> {
-        // …
-    }
+  async getConfig(): Promise<GaslessConfig> {
+    // …
+  }
 
-    async getQuote(params: GaslessQuoteParams): Promise<GaslessQuote> {
-        // …
-    }
+  async getQuote(params: GaslessQuoteParams): Promise<GaslessQuote> {
+    // …
+  }
 
-    async sendTransaction(params: GaslessSendParams): Promise<GaslessSendResponse> {
-        // …
-    }
+  async sendTransaction(
+    params: GaslessSendParams,
+  ): Promise<GaslessSendResponse> {
+    // …
+  }
 }
 ```
 
@@ -137,16 +141,21 @@ export class MyGaslessProvider extends GaslessProvider {
 ### GaslessManager
 
 #### `getMetadata(providerId?)`
+
 Static metadata for the gasless provider: `{ name, logo?, url? }`. Useful for rendering provider info in the UI.
 
 #### `getConfig(network?, providerId?)`
+
 Fetch the relayer's configuration on a network: `{ relayAddress, supportedAssets }`. `network` defaults to the provider's first supported network.
 
 #### `getQuote(params, providerId?)`
+
 Wrap caller's messages with relayer fee-collection logic. Returns wrapped messages, fee, and `validUntil`. Pass `feeAsset` to choose a jetton master (omit for free / sponsored providers).
 
 #### `sendTransaction(params, providerId?)`
+
 Submit a signed internal-message BoC to the relayer. Returns a `GaslessSendResponse` (`{ boc, normalizedBoc, normalizedHash, internalBoc }`) — a strict superset of the regular `SendTransactionResponse`.
 
 #### `registerProvider(provider)` / `setDefaultProvider(providerId)`
+
 Standard `DefiManager` lifecycle methods.

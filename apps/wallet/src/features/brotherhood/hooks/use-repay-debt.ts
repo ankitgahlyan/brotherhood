@@ -9,54 +9,64 @@
 import { useCallback } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { RepayDebt } from '@/contracts/brotherhood/FossFiWallet.gen';
+import { RepayDebt } from '@wrappers/FossFiWallet.gen';
 import { parseUnits } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 
 export interface UseRepayDebtParams {
-    wallet: Wallet | null | undefined;
-    walletKit: ITonWalletKit | null;
-    walletAddress: string | null;
-    amount: string;
-    network: Network;
+  wallet: Wallet | null | undefined;
+  walletKit: ITonWalletKit | null;
+  walletAddress: string | null;
+  amount: string;
+  network: Network;
 }
 
 export interface UseRepayDebtResult {
-    send: () => Promise<void>;
-    isDisabled: boolean;
-    isSending: boolean;
-    error: string | null;
+  send: () => Promise<void>;
+  isDisabled: boolean;
+  isSending: boolean;
+  error: string | null;
 }
 
 export function useRepayDebt({
-    wallet,
-    walletKit,
-    walletAddress,
-    amount,
-    network,
+  wallet,
+  walletKit,
+  walletAddress,
+  amount,
+  network,
 }: UseRepayDebtParams): UseRepayDebtResult {
-    const { send: sendTx, isSending, error } = useBrotherhoodTransaction(wallet, walletKit);
+  const {
+    send: sendTx,
+    isSending,
+    error,
+  } = useBrotherhoodTransaction(wallet, walletKit);
 
-    const send = useCallback(async () => {
-        if (!walletAddress) throw new Error('No wallet address');
-        const ownerAddr = Address.parse(walletAddress);
-        const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-        const amountNano = parseUnits(amount, 9);
+  const send = useCallback(async () => {
+    if (!walletAddress) throw new Error('No wallet address');
+    const ownerAddr = Address.parse(walletAddress);
+    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+    const amountNano = parseUnits(amount, 9);
 
-        const payload = RepayDebt.toCell(
-            RepayDebt.create({
-                queryId: 0n,
-                amount: amountNano,
-            })
-        );
+    const payload = RepayDebt.toCell(
+      RepayDebt.create({
+        queryId: 0n,
+        amount: amountNano,
+      }),
+    );
 
-        await sendTx([{ toAddress: fiWalletAddr.toString(), amount: GAS.REPAY, payload }]);
-    }, [walletAddress, amount, network, sendTx]);
+    await sendTx([
+      { toAddress: fiWalletAddr.toString(), amount: GAS.REPAY, payload },
+    ]);
+  }, [walletAddress, amount, network, sendTx]);
 
-    const isDisabled =
-        !wallet || !walletAddress || !amount || parseFloat(amount) <= 0 || isSending;
+  const isDisabled =
+    !wallet ||
+    !walletAddress ||
+    !amount ||
+    parseFloat(amount) <= 0 ||
+    isSending;
 
-    return { send, isDisabled, isSending, error };
+  return { send, isDisabled, isSending, error };
 }

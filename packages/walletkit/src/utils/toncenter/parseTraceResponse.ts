@@ -15,33 +15,35 @@ import { isFailedTrace } from './isFailedTrace';
  * Helper to parse ToncenterTracesResponse into TransactionStatusResponse.
  * Returns null if no traces are found.
  */
-export const parseTraceResponse = (response: ToncenterTracesResponse): TransactionStatusResponse | null => {
-    if (!response.traces || response.traces.length === 0) {
-        return null;
+export const parseTraceResponse = (
+  response: ToncenterTracesResponse,
+): TransactionStatusResponse | null => {
+  if (!response.traces || response.traces.length === 0) {
+    return null;
+  }
+
+  const trace = response.traces[0];
+  const traceInfo = trace.trace_info;
+
+  const isEffectivelyCompleted =
+    traceInfo.trace_state === 'complete' ||
+    (traceInfo.trace_state === 'pending' && traceInfo.pending_messages === 0);
+
+  let status: TransactionStatus = 'pending';
+
+  // Only check for completion if the transaction is not pending
+  if (traceInfo.pending_messages === 0) {
+    if (isFailedTrace(response)) {
+      status = 'failed';
+    } else if (isEffectivelyCompleted) {
+      status = 'completed';
     }
+  }
 
-    const trace = response.traces[0];
-    const traceInfo = trace.trace_info;
-
-    const isEffectivelyCompleted =
-        traceInfo.trace_state === 'complete' ||
-        (traceInfo.trace_state === 'pending' && traceInfo.pending_messages === 0);
-
-    let status: TransactionStatus = 'pending';
-
-    // Only check for completion if the transaction is not pending
-    if (traceInfo.pending_messages === 0) {
-        if (isFailedTrace(response)) {
-            status = 'failed';
-        } else if (isEffectivelyCompleted) {
-            status = 'completed';
-        }
-    }
-
-    return {
-        status,
-        totalMessages: traceInfo.messages,
-        pendingMessages: traceInfo.pending_messages,
-        onchainMessages: traceInfo.messages - traceInfo.pending_messages,
-    };
+  return {
+    status,
+    totalMessages: traceInfo.messages,
+    pendingMessages: traceInfo.pending_messages,
+    onchainMessages: traceInfo.messages - traceInfo.pending_messages,
+  };
 };

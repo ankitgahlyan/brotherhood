@@ -16,8 +16,8 @@
  * @returns true if the host is valid, false otherwise
  */
 export function isValidHost(host: string): boolean {
-    if (host.indexOf('.') === -1) return false;
-    if (host.startsWith('.') || host.endsWith('.')) return false;
-    const parts = host.split('.');
-    return parts.every((part) => part.length > 0);
+  if (host.indexOf('.') === -1) return false;
+  if (host.startsWith('.') || host.endsWith('.')) return false;
+  const parts = host.split('.');
+  return parts.every((part) => part.length > 0);
 }

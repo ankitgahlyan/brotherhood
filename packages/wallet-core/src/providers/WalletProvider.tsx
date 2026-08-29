@@ -14,10 +14,12 @@ import { createWalletStore } from '../store/createWalletStore';
 import type { CreateWalletStoreOptions } from '../store/createWalletStore';
 import type { AppState } from '../types/store';
 
-export const WalletStoreContext = createContext<StoreApi<AppState> | null>(null);
+export const WalletStoreContext = createContext<StoreApi<AppState> | null>(
+  null,
+);
 
 export interface WalletProviderProps extends CreateWalletStoreOptions {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -36,11 +38,20 @@ export interface WalletProviderProps extends CreateWalletStoreOptions {
  * }
  * ```
  */
-export function WalletProvider({ children, storage, enableDevtools, walletKitConfig }: WalletProviderProps) {
-    const store = useMemo(
-        () => createWalletStore({ storage, enableDevtools, walletKitConfig }),
-        [storage, enableDevtools, walletKitConfig],
-    );
+export function WalletProvider({
+  children,
+  storage,
+  enableDevtools,
+  walletKitConfig,
+}: WalletProviderProps) {
+  const store = useMemo(
+    () => createWalletStore({ storage, enableDevtools, walletKitConfig }),
+    [storage, enableDevtools, walletKitConfig],
+  );
 
-    return <WalletStoreContext.Provider value={store}>{children}</WalletStoreContext.Provider>;
+  return (
+    <WalletStoreContext.Provider value={store}>
+      {children}
+    </WalletStoreContext.Provider>
+  );
 }

@@ -7,24 +7,24 @@
  */
 
 export interface TonApiDnsResolveResponse {
-    wallet?: {
-        address: string;
-        account: {
-            address: string;
-            name?: string;
-            is_scam: boolean;
-            is_wallet: boolean;
-        };
-        is_wallet: boolean;
-        has_method_pubkey: boolean;
-        has_method_seqno: boolean;
-        names: string[];
+  wallet?: {
+    address: string;
+    account: {
+      address: string;
+      name?: string;
+      is_scam: boolean;
+      is_wallet: boolean;
     };
-    next_resolver?: string;
-    sites: string[];
-    storage?: string;
+    is_wallet: boolean;
+    has_method_pubkey: boolean;
+    has_method_seqno: boolean;
+    names: string[];
+  };
+  next_resolver?: string;
+  sites: string[];
+  storage?: string;
 }
 
 export interface TonApiDnsBackresolveResponse {
-    domains: string[];
+  domains: string[];
 }

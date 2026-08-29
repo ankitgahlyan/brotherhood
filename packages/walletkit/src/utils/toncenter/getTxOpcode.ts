@@ -12,8 +12,8 @@ import type { ToncenterTransaction } from '../../types/toncenter/emulation';
  * Returns the resolved opcode for a transaction.
  */
 export const getTxOpcode = (tx: ToncenterTransaction): string | null => {
-    const msg = tx.in_msg;
-    if (!msg) return null;
+  const msg = tx.in_msg;
+  if (!msg) return null;
 
-    return msg.opcode ?? null;
+  return msg.opcode ?? null;
 };

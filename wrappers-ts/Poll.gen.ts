@@ -120,6 +120,43 @@ type uint33 = bigint
 type uint64 = bigint
 
 /**
+ > struct (0xd53276db) ReturnExcessesBack {
+ >     queryId: uint64
+ > }
+ */
+export interface ReturnExcessesBack {
+    readonly $: 'ReturnExcessesBack'
+    queryId: uint64
+}
+
+export const ReturnExcessesBack = {
+    PREFIX: 0xd53276db,
+
+    create(args: {
+        queryId: uint64
+    }): ReturnExcessesBack {
+        return {
+            $: 'ReturnExcessesBack',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ReturnExcessesBack {
+        loadAndCheckPrefix32(s, 0xd53276db, 'ReturnExcessesBack');
+        return {
+            $: 'ReturnExcessesBack',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: ReturnExcessesBack, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: ReturnExcessesBack): c.Cell {
+        return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
+    }
+}
+
+/**
  > struct (0x00001007) TopUpTons {
  > }
  */
@@ -491,7 +528,6 @@ export const CleanupProposalVotes = {
  >     proposerOwner: address
  >     daoProxyAddress: address
  >     fiAddress: address
- >     walletLibRef: cell
  >     targetMsg: cell
  >     yesVotes: uint33
  >     noVotes: uint33
@@ -506,7 +542,6 @@ export interface PollStore {
     proposerOwner: c.Address
     daoProxyAddress: c.Address
     fiAddress: c.Address
-    walletLibRef: c.Cell
     targetMsg: c.Cell
     yesVotes: uint33 /* = 0 */
     noVotes: uint33 /* = 0 */
@@ -521,7 +556,6 @@ export const PollStore = {
         proposerOwner: c.Address
         daoProxyAddress: c.Address
         fiAddress: c.Address
-        walletLibRef: c.Cell
         targetMsg: c.Cell
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
@@ -546,7 +580,6 @@ export const PollStore = {
             proposerOwner: s.loadAddress(),
             daoProxyAddress: s.loadAddress(),
             fiAddress: s.loadAddress(),
-            walletLibRef: s.loadRef(),
             targetMsg: s.loadRef(),
             yesVotes: s.loadUintBig(33),
             noVotes: s.loadUintBig(33),
@@ -560,7 +593,6 @@ export const PollStore = {
         b.storeAddress(self.proposerOwner);
         b.storeAddress(self.daoProxyAddress);
         b.storeAddress(self.fiAddress);
-        b.storeRef(self.walletLibRef);
         b.storeRef(self.targetMsg);
         b.storeUint(self.yesVotes, 33);
         b.storeUint(self.noVotes, 33);
@@ -612,7 +644,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Poll implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAA5UAART/APSkE/S88sgLAQIBYgIDAgLEBAUCAVgPEAH31/EjHLWmPmJBrpOEPxydpj4DAiH7dRyFpn5jpn5jrhQB2omhrH/0kfSR9JGpqaZBpkATMEOEASYDSgO9LEGEASNLvcQPkZwt9KQp9KQl9KWZmZZBlkGdk9qpImHFwGHAQY4BImHAQdqJoaZ/9JH0kfSRqammQaZBpkGmPwYAB6xXGEAD/tcKAAvXLCAAAIfcjhkQeV8JbCLIz4UI+lKBEA7PC47LP8mAQvsA4NcsIAAAgHyOLTI7+JImxwXy4rzTPzHXCyAIyMs/F/pSFfpSE/pSzMzLIMsgyyASyx/KAMntVODXLCAAAIf04wJsktcsIAAAh/zjAmwh1ywgAACAPDGRMOAHCAkD/jwL0z/TP/pI0wABktIAkm0B4tcKAIiIAcjMzM+IAALJcMjLf8ltbW0CyPpU+lT6VMmNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARtVhDI+lIKCgsAHjAy+CNYvpOzwwCSMHDiMAAOhA8BxwDy9AAAAfoT+lL6UvQAySbI+lISzMzJbW1tyPQAcM8LP8ltyPQAcM8LNMkDyPQAEvQAzMzJyI0FAAAAAAQAAAAAAAAABAFAAAAAgAAEzxYUzBLMzMzJeFO0VBMyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1D4kscF8uK8LgwD/vLS7/gjVhC58uLyIW6bMSCSBqSUBaQFBuKOE2a9niCUBqQFpZQGpQWk4gUG3gbi+CiII8j6UhL6Us+EgMmCCTEtAMjPiYgBUyPIz4TQzMz5Fs8L/wH6AoEAjM8LcBLMzM+QAABD9iTPCz8Tyz8WygAV+lLJgBH7ACGRceMNJLsRDQ4AECGqAKYCc6kEALaUKrPDAJFw4o4xOn/Iz5AAAEA2G8s/Kc8LP1KA+lIrzwsfJc8UJM8UycjPhQhSgPpScc8LbszJgEL7AJEw4gjIyz8X+lIV+lIT+lLMzMsgyyDLIBLLH8oAye1UAUO5zO+CiIAsj6UvpSz4SAyQHIz4TQzMz5FsjPigBAy//PUIEQA1unm+1E0NM/+kj6SPpI1NTTINMg0yDTH9IA0YCEICcwyc+jfSFHRQ2bLH0TtPECfvP/i8TGXHT3BZnsag5kk=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEwEAA8oAART/APSkE/S88sgLAQIBYgIDAgLEBAUCAVgQEQH31/EjHK+mPmJBrpOEPxyXpj4DAiH7dRx/pn5jpn5jrhQB2omhrH/0kfSR9JGppkGmQBEwQ4QBJgNKA70sQYQBI0u9xA2RnCv0pCf0pfSlmZZBlkGdk9qpImHFwGHAQY4BImHAQdqJoaZ/9JH0kfSRqaZBpkGmQaY/rhQAFQYAB6xXGEAD/InXJ44ZEGhfCGwiyM+FCPpSgRAOzwuOyz/JgEL7AODXLCAAAIB8jiwyOviSJccF8uK80z8x1wsgB8jLPxb6UhT6UhL6UszLIMsgyyASyx/KAMntVODXLCAAAIf04wI5Xwcy1ywgAACH/OMCMdcsIAAAgDwxkTDghA8BxwDy9AcICQAIAAAQ+wT8OwrTP9M/+kjTAAGS0gCSbQHi1woAiIiIAcjMzM+IAALJcMjLf8ltbW0CyPpU+lT6VMmNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARtVhDIDwoKCwBKMviSIccF8uK8AdcLP8jPhQgS+lKCENUydtvPC47LP8mBAKD7AAAAAfz6UhP6UvpS9ADJJ8j6UhLMzMltbW3I9ABwzws/yW3I9ABwzws0yQPI9AAS9ADMzMnIjQUAAAAABAAAAAAAAAAEAUAAAACAAATPFhTMEszMzMl4JVQSMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989Q+JLHBfLivC0MA/zy0u/4Iy+58uLyIW6bMSCSBqSUBaQFBuKOE2a9niCUBqQFpZQGpQWk4gUG3gbi+CiII8j6UhL6Us+EgMmCCTEtAMjPiYgBUyPIz4TQzMz5Fs8L/wH6AoEAjM8LcBLMzM+QAABD9iTPCz8Tyz8WygAV+lLJgBH7ACGRceMNJLsSDQ4AECGqAKYCc6kEAbaUKbPDAJFw4o6yOX+IyM+QAABANhvLPynPCz9SgPpSK88LHxrMJM8UycjPhQhScPpScc8LbszJgQCw+wCRMOIHyMs/FvpSFPpSEvpSzMsgyyDLIBLLH8oAye1UDwhCAmuB0iRvWiezKR8JA07jvnr62qqpRLe04lQZUFrSf92GAUO5zO+CiIAsj6UvpSz4SAyQHIz4TQzMz5FsjPigBAy//PUIEgAzunm+1E0NM/+kj6SPpI1NMg0yDTINMf0gDRgIQgIXH49hkYExuXTBimAhhGcntLYUs+cFkx1tzV0rfkvKaA==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
@@ -637,7 +669,6 @@ export class Poll implements c.Contract {
         proposerOwner: c.Address
         daoProxyAddress: c.Address
         fiAddress: c.Address
-        walletLibRef: c.Cell
         targetMsg: c.Cell
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
@@ -752,14 +783,13 @@ export class Poll implements c.Contract {
     }
 
     async getPollData(provider: ContractProvider): Promise<PollStore> {
-        const r = StackReader.fromGetMethod(11, await provider.get('get_poll_data', []));
+        const r = StackReader.fromGetMethod(10, await provider.get('get_poll_data', []));
         return ({
             $: 'PollStore',
             proposalId: r.readBigInt(),
             proposerOwner: r.readSlice().loadAddress(),
             daoProxyAddress: r.readSlice().loadAddress(),
             fiAddress: r.readSlice().loadAddress(),
-            walletLibRef: r.readCell(),
             targetMsg: r.readCell(),
             yesVotes: r.readBigInt(),
             noVotes: r.readBigInt(),

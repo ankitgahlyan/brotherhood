@@ -10,6 +10,6 @@ import type { AddressBook } from '../core/AddressBook';
 import type { Transaction } from './Transaction';
 
 export interface TransactionsResponse {
-    transactions: Transaction[];
-    addressBook: AddressBook;
+  transactions: Transaction[];
+  addressBook: AddressBook;
 }

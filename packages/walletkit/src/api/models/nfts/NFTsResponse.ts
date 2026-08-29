@@ -13,12 +13,12 @@ import type { NFT } from './NFT';
  * Response containing a list of NFT tokens.
  */
 export interface NFTsResponse {
-    /**
-     * Address book entries related to the NFTs
-     */
-    addressBook?: AddressBook;
-    /**
-     * List of NFTs
-     */
-    nfts: NFT[];
+  /**
+   * Address book entries related to the NFTs
+   */
+  addressBook?: AddressBook;
+  /**
+   * List of NFTs
+   */
+  nfts: NFT[];
 }

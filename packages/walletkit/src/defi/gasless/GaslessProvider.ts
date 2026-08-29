@@ -8,13 +8,13 @@
 
 import type { GaslessProviderInterface } from '../../api/interfaces';
 import type {
-    GaslessConfig,
-    GaslessProviderMetadata,
-    GaslessQuote,
-    GaslessQuoteParams,
-    GaslessSendParams,
-    GaslessSendResponse,
-    Network,
+  GaslessConfig,
+  GaslessProviderMetadata,
+  GaslessQuote,
+  GaslessQuoteParams,
+  GaslessSendParams,
+  GaslessSendResponse,
+  Network,
 } from '../../api/models';
 
 /**
@@ -36,12 +36,14 @@ import type {
  * ```
  */
 export abstract class GaslessProvider implements GaslessProviderInterface {
-    readonly type = 'gasless';
-    abstract readonly providerId: string;
+  readonly type = 'gasless';
+  abstract readonly providerId: string;
 
-    abstract getSupportedNetworks(): Network[];
-    abstract getMetadata(): Promise<GaslessProviderMetadata>;
-    abstract getConfig(network: Network): Promise<GaslessConfig>;
-    abstract getQuote(params: GaslessQuoteParams): Promise<GaslessQuote>;
-    abstract sendTransaction(params: GaslessSendParams): Promise<GaslessSendResponse>;
+  abstract getSupportedNetworks(): Network[];
+  abstract getMetadata(): Promise<GaslessProviderMetadata>;
+  abstract getConfig(network: Network): Promise<GaslessConfig>;
+  abstract getQuote(params: GaslessQuoteParams): Promise<GaslessQuote>;
+  abstract sendTransaction(
+    params: GaslessSendParams,
+  ): Promise<GaslessSendResponse>;
 }

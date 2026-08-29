@@ -8,31 +8,41 @@
 
 // Validation module exports
 
-export type { ValidationResult, ValidationRule, ValidationContext, FieldValidationError } from './types';
-
-export { validateWallet, validatePublicKey, validateWalletVersion, validateWalletMethods } from './wallet';
+export type {
+  ValidationResult,
+  ValidationRule,
+  ValidationContext,
+  FieldValidationError,
+} from './types';
 
 export {
-    validateBridgeEvent,
-    validateConnectEventParams,
-    validateTransactionEventParams,
-    validateSignDataEventParams,
+  validateWallet,
+  validatePublicKey,
+  validateWalletVersion,
+  validateWalletMethods,
+} from './wallet';
+
+export {
+  validateBridgeEvent,
+  validateConnectEventParams,
+  validateTransactionEventParams,
+  validateSignDataEventParams,
 } from './events';
 
 export {
-    validateTonAddress,
-    validateRawAddress,
-    validateBouncableAddress,
-    validateNonBouncableAddress,
-    detectAddressFormat,
+  validateTonAddress,
+  validateRawAddress,
+  validateBouncableAddress,
+  validateNonBouncableAddress,
+  detectAddressFormat,
 } from './address';
 
 export {
-    validateTransactionMessages,
-    validateTransactionMessage,
-    validateMessageObject,
-    validateTransactionRequest,
-    validateBOC,
-    isValidNanoAmount,
-    estimateTransactionFees,
+  validateTransactionMessages,
+  validateTransactionMessage,
+  validateMessageObject,
+  validateTransactionRequest,
+  validateBOC,
+  isValidNanoAmount,
+  estimateTransactionFees,
 } from './transaction';

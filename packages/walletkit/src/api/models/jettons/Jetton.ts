@@ -14,56 +14,56 @@ import type { TokenInfo } from '../core/TokenInfo';
  * Jetton fungible token on the TON blockchain (TEP-74 standard).
  */
 export interface Jetton {
-    /**
-     * The Jetton contract address
-     */
-    address: UserFriendlyAddress;
+  /**
+   * The Jetton contract address
+   */
+  address: UserFriendlyAddress;
 
-    /**
-     * The Jetton wallet address
-     */
-    walletAddress: UserFriendlyAddress;
+  /**
+   * The Jetton wallet address
+   */
+  walletAddress: UserFriendlyAddress;
 
-    /**
-     * The current jetton balance
-     */
-    balance: TokenAmount;
+  /**
+   * The current jetton balance
+   */
+  balance: TokenAmount;
 
-    /**
-     * Information about the token
-     */
-    info: TokenInfo;
+  /**
+   * Information about the token
+   */
+  info: TokenInfo;
 
-    /**
-     * The number of decimal places used by the token
-     * @format int
-     */
-    decimalsNumber?: number;
+  /**
+   * The number of decimal places used by the token
+   * @format int
+   */
+  decimalsNumber?: number;
 
-    /**
-     * Indicates if the jetton is verified
-     */
-    isVerified: boolean;
+  /**
+   * Indicates if the jetton is verified
+   */
+  isVerified: boolean;
 
-    /**
-     * Current prices of the jetton in various currencies
-     */
-    prices: JettonPrice[];
+  /**
+   * Current prices of the jetton in various currencies
+   */
+  prices: JettonPrice[];
 
-    /**
-     * Additional arbitrary data related to the jetton
-     */
-    extra?: { [key: string]: unknown };
+  /**
+   * Additional arbitrary data related to the jetton
+   */
+  extra?: { [key: string]: unknown };
 }
 
 export interface JettonPrice {
-    /**
-     * Price in smallest units of the currency
-     * @format bigInt
-     */
-    value: string;
-    /**
-     * Currency code (e.g., "USD", "EUR")
-     */
-    currency: string;
+  /**
+   * Price in smallest units of the currency
+   * @format bigInt
+   */
+  value: string;
+  /**
+   * Currency code (e.g., "USD", "EUR")
+   */
+  currency: string;
 }

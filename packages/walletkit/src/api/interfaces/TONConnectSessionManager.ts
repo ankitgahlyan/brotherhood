@@ -17,53 +17,61 @@ import type { Wallet } from '.';
  * Provides interface for session CRUD operations and lifecycle management.
  */
 export interface TONConnectSessionManager {
-    /**
-     * Initialize the session manager
-     * Needed for backward compatibility with existing codebase
-     * Used to ensure that sessions are reloaded fro mstorage to local cache in browser extension
-     * */
-    initialize(): Promise<void>;
+  /**
+   * Initialize the session manager
+   * Needed for backward compatibility with existing codebase
+   * Used to ensure that sessions are reloaded fro mstorage to local cache in browser extension
+   * */
+  initialize(): Promise<void>;
 
-    /**
-     * Create a new session
-     * @param sessionId - Unique session identifier
-     * @param dAppInfo - Information about the dApp (name, url, iconUrl, description)
-     * @param wallet - The wallet to associate with this session
-     * @param options - Additional options for session creation
-     */
-    createSession(
-        sessionId: string,
-        dAppInfo: DAppInfo,
-        wallet: Wallet,
-        isJsBridge: boolean,
-    ): Promise<TONConnectSession>;
+  /**
+   * Create a new session
+   * @param sessionId - Unique session identifier
+   * @param dAppInfo - Information about the dApp (name, url, iconUrl, description)
+   * @param wallet - The wallet to associate with this session
+   * @param options - Additional options for session creation
+   */
+  createSession(
+    sessionId: string,
+    dAppInfo: DAppInfo,
+    wallet: Wallet,
+    isJsBridge: boolean,
+  ): Promise<TONConnectSession>;
 
-    /**
-     * Get session by ID
-     * @param sessionId - The session ID to retrieve
-     */
-    getSession(sessionId: string): Promise<TONConnectSession | undefined>;
+  /**
+   * Get session by ID
+   * @param sessionId - The session ID to retrieve
+   */
+  getSession(sessionId: string): Promise<TONConnectSession | undefined>;
 
-    /**
-     * Get sessions as array filtered by optional parameters
-     * @param parameters - parameters to find sessions
-     */
-    getSessions(filter?: { walletId?: WalletId; domain?: string; isJsBridge?: boolean }): Promise<TONConnectSession[]>;
+  /**
+   * Get sessions as array filtered by optional parameters
+   * @param parameters - parameters to find sessions
+   */
+  getSessions(filter?: {
+    walletId?: WalletId;
+    domain?: string;
+    isJsBridge?: boolean;
+  }): Promise<TONConnectSession[]>;
 
-    /**
-     * Remove session by ID
-     * @param sessionId - The session ID to remove
-     */
-    removeSession(sessionId: string): Promise<void>;
+  /**
+   * Remove session by ID
+   * @param sessionId - The session ID to remove
+   */
+  removeSession(sessionId: string): Promise<void>;
 
-    /**
-     * Remove all sessions for a optional parameters
-     * @param parameters - parameters to remove sessions
-     */
-    removeSessions(filter?: { walletId?: WalletId; domain?: string; isJsBridge?: boolean }): Promise<void>;
+  /**
+   * Remove all sessions for a optional parameters
+   * @param parameters - parameters to remove sessions
+   */
+  removeSessions(filter?: {
+    walletId?: WalletId;
+    domain?: string;
+    isJsBridge?: boolean;
+  }): Promise<void>;
 
-    /**
-     * Clear all sessions
-     */
-    clearSessions(): Promise<void>;
+  /**
+   * Clear all sessions
+   */
+  clearSessions(): Promise<void>;
 }

@@ -18,64 +18,64 @@ import type { StructuredItem } from './StructuredItem';
  * Contains `messages` or `items`. If items are present, but messages are not — wallet app is responsible for resolving items into messages.
  */
 export interface TransactionRequest {
-    /**
-     * List of messages to include in the transaction
-     */
-    messages: TransactionRequestMessage[];
+  /**
+   * List of messages to include in the transaction
+   */
+  messages: TransactionRequestMessage[];
 
-    /**
-     * List of structured items (ton/jetton/nft) as an alternative to raw messages.
-     * When present, the wallet app is responsible for resolving items into messages.
-     */
-    items?: StructuredItem[];
+  /**
+   * List of structured items (ton/jetton/nft) as an alternative to raw messages.
+   * When present, the wallet app is responsible for resolving items into messages.
+   */
+  items?: StructuredItem[];
 
-    /**
-     * Network to execute the transaction on
-     */
-    network?: Network;
+  /**
+   * Network to execute the transaction on
+   */
+  network?: Network;
 
-    /**
-     * Unix timestamp after which the transaction becomes invalid
-     */
-    validUntil?: number;
+  /**
+   * Unix timestamp after which the transaction becomes invalid
+   */
+  validUntil?: number;
 
-    /**
-     * Sender wallet address in received format(raw, user friendly)
-     */
-    fromAddress?: string;
+  /**
+   * Sender wallet address in received format(raw, user friendly)
+   */
+  fromAddress?: string;
 }
 
 /**
  * Individual message within a transaction request.
  */
 export interface TransactionRequestMessage {
-    /**
-     * Recipient wallet address in format received from caller (raw, user friendly)
-     */
-    address: string;
+  /**
+   * Recipient wallet address in format received from caller (raw, user friendly)
+   */
+  address: string;
 
-    /**
-     * Amount to transfer in nanos
-     */
-    amount: TokenAmount;
+  /**
+   * Amount to transfer in nanos
+   */
+  amount: TokenAmount;
 
-    /**
-     * Send mode flags controlling message behavior
-     */
-    mode?: SendMode;
+  /**
+   * Send mode flags controlling message behavior
+   */
+  mode?: SendMode;
 
-    /**
-     * Additional currencies to include in the transfer
-     */
-    extraCurrency?: ExtraCurrencies;
+  /**
+   * Additional currencies to include in the transfer
+   */
+  extraCurrency?: ExtraCurrencies;
 
-    /**
-     * Initial state for deploying a new contract, encoded in Base64
-     */
-    stateInit?: Base64String;
+  /**
+   * Initial state for deploying a new contract, encoded in Base64
+   */
+  stateInit?: Base64String;
 
-    /**
-     * Message payload data encoded in Base64
-     */
-    payload?: Base64String;
+  /**
+   * Message payload data encoded in Base64
+   */
+  payload?: Base64String;
 }

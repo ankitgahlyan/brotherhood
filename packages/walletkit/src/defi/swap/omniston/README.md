@@ -8,10 +8,10 @@ For detailed information about Omniston features and capabilities, see the [offi
 
 ```ts
 kit.registerProvider(
-    createOmnistonProvider({
-        defaultSlippageBps: 100, // 1%
-        quoteTimeoutMs: 10000,
-    }),
+  createOmnistonProvider({
+    defaultSlippageBps: 100, // 1%
+    quoteTimeoutMs: 10000,
+  }),
 );
 ```
 
@@ -19,13 +19,13 @@ kit.registerProvider(
 
 ```typescript
 interface OmnistonSwapProviderConfig {
-    providerId?: string;          // Default: 'omniston'
-    apiUrl?: string;              // Default: 'wss://omni-ws.ston.fi'
-    defaultSlippageBps?: number;  // Default: 100 (1%)
-    quoteTimeoutMs?: number;      // Default: 10000ms
-    referrerAddress?: string;     // Optional referrer address
-    referrerFeeBps?: number;      // Referrer fee in bps
-    flexibleReferrerFee?: boolean; // Default: false
+  providerId?: string; // Default: 'omniston'
+  apiUrl?: string; // Default: 'wss://omni-ws.ston.fi'
+  defaultSlippageBps?: number; // Default: 100 (1%)
+  quoteTimeoutMs?: number; // Default: 10000ms
+  referrerAddress?: string; // Optional referrer address
+  referrerFeeBps?: number; // Referrer fee in bps
+  flexibleReferrerFee?: boolean; // Default: false
 }
 ```
 
@@ -36,16 +36,16 @@ interface OmnistonSwapProviderConfig {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '0.1',
-    network: Network.mainnet(),
-    maxOutgoingMessages: 1,
+  from: GRAM,
+  to: USDT,
+  amount: '0.1',
+  network: Network.mainnet(),
+  maxOutgoingMessages: 1,
 });
 ```
 
@@ -54,19 +54,19 @@ const quote = await getSwapQuote(appKit, {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '0.1',
-    network: Network.mainnet(),
-    providerOptions: {
-        referrerAddress: 'EQ...',
-        referrerFeeBps: 10, // 0.1%
-    } as OmnistonProviderOptions,
+  from: GRAM,
+  to: USDT,
+  amount: '0.1',
+  network: Network.mainnet(),
+  providerOptions: {
+    referrerAddress: 'EQ...',
+    referrerFeeBps: 10, // 0.1%
+  } as OmnistonProviderOptions,
 });
 ```
 
@@ -75,37 +75,37 @@ const quote = await getSwapQuote(appKit, {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 // Global referrer in config
 appKit.registerProvider(
-    createOmnistonProvider({
-        referrerAddress: 'EQ...global',
-        referrerFeeBps: 10,
-    }),
+  createOmnistonProvider({
+    referrerAddress: 'EQ...global',
+    referrerFeeBps: 10,
+  }),
 );
 
 // Override for specific quote
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '1000000000',
-    network: Network.mainnet(),
-    providerOptions: {
-        referrerAddress: 'EQ...different', // Uses this instead of global
-        referrerFeeBps: 20,
-    } as OmnistonProviderOptions,
+  from: GRAM,
+  to: USDT,
+  amount: '1000000000',
+  network: Network.mainnet(),
+  providerOptions: {
+    referrerAddress: 'EQ...different', // Uses this instead of global
+    referrerFeeBps: 20,
+  } as OmnistonProviderOptions,
 });
 
 // Or use global settings by omitting providerOptions
 const quote2 = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '0.1',
-    network: Network.mainnet(),
-    // Uses global referrer from config
+  from: GRAM,
+  to: USDT,
+  amount: '0.1',
+  network: Network.mainnet(),
+  // Uses global referrer from config
 });
 ```
 
@@ -121,4 +121,3 @@ This file is auto-generated. Do not edit manually.
 Changes will be overwritten when running the docs update script.
 Source template: template/packages/walletkit/src/defi/swap/omniston/README.md
 -->
-

@@ -16,6 +16,6 @@ import type { UserFriendlyAddress } from '../core/Primitives';
  * advertise NFT items or other assets without re-shaping the model.
  */
 export interface GaslessSupportedAsset {
-    /** Asset address — jetton master, NFT item, etc. */
-    address: UserFriendlyAddress;
+  /** Asset address — jetton master, NFT item, etc. */
+  address: UserFriendlyAddress;
 }

@@ -16,13 +16,13 @@ import type { SendTransactionRequestEventPreview } from './SendTransactionReques
  * without broadcasting it on-chain.
  */
 export interface SignMessageRequestEvent extends BridgeEvent {
-    /**
-     * Preview information for UI display
-     */
-    preview: SendTransactionRequestEventPreview;
+  /**
+   * Preview information for UI display
+   */
+  preview: SendTransactionRequestEventPreview;
 
-    /**
-     * Raw transaction request data
-     */
-    request: TransactionRequest;
+  /**
+   * Raw transaction request data
+   */
+  request: TransactionRequest;
 }

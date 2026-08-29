@@ -8,53 +8,67 @@
 
 import type { ApiClient } from './ApiClient';
 import type {
-    TokenAmount,
-    TONTransferRequest,
-    TransactionEmulatedPreview,
-    TransactionRequest,
-    SendTransactionResponse,
-    JettonsRequest,
-    UserFriendlyAddress,
-    JettonsResponse,
-    JettonsTransferRequest,
-    NFTsResponse,
-    NFTsRequest,
-    NFT,
-    NFTTransferRequest,
-    NFTRawTransferRequest,
-    TransactionPreviewOptions,
+  TokenAmount,
+  TONTransferRequest,
+  TransactionEmulatedPreview,
+  TransactionRequest,
+  SendTransactionResponse,
+  JettonsRequest,
+  UserFriendlyAddress,
+  JettonsResponse,
+  JettonsTransferRequest,
+  NFTsResponse,
+  NFTsRequest,
+  NFT,
+  NFTTransferRequest,
+  NFTRawTransferRequest,
+  TransactionPreviewOptions,
 } from '../models';
 import type { WalletAdapter } from './WalletAdapter';
 
 export type Wallet = WalletAdapter &
-    WalletTonInterface &
-    WalletJettonInterface &
-    WalletNftInterface & { client: ApiClient };
+  WalletTonInterface &
+  WalletJettonInterface &
+  WalletNftInterface & { client: ApiClient };
 
 export interface WalletTonInterface {
-    createTransferTonTransaction(params: TONTransferRequest): Promise<TransactionRequest>;
-    createTransferMultiTonTransaction(params: [TONTransferRequest]): Promise<TransactionRequest>;
+  createTransferTonTransaction(
+    params: TONTransferRequest,
+  ): Promise<TransactionRequest>;
+  createTransferMultiTonTransaction(
+    params: [TONTransferRequest],
+  ): Promise<TransactionRequest>;
 
-    getTransactionPreview(
-        data: TransactionRequest | Promise<TransactionRequest>,
-        options?: TransactionPreviewOptions,
-    ): Promise<TransactionEmulatedPreview>;
+  getTransactionPreview(
+    data: TransactionRequest | Promise<TransactionRequest>,
+    options?: TransactionPreviewOptions,
+  ): Promise<TransactionEmulatedPreview>;
 
-    sendTransaction(request: TransactionRequest): Promise<SendTransactionResponse>;
+  sendTransaction(
+    request: TransactionRequest,
+  ): Promise<SendTransactionResponse>;
 
-    getBalance(): Promise<TokenAmount>;
+  getBalance(): Promise<TokenAmount>;
 }
 
 export interface WalletJettonInterface {
-    createTransferJettonTransaction(params: JettonsTransferRequest): Promise<TransactionRequest>;
-    getJettonBalance(jettonAddress: UserFriendlyAddress): Promise<TokenAmount>;
-    getJettonWalletAddress(jettonAddress: UserFriendlyAddress): Promise<UserFriendlyAddress>;
-    getJettons(params?: JettonsRequest): Promise<JettonsResponse>;
+  createTransferJettonTransaction(
+    params: JettonsTransferRequest,
+  ): Promise<TransactionRequest>;
+  getJettonBalance(jettonAddress: UserFriendlyAddress): Promise<TokenAmount>;
+  getJettonWalletAddress(
+    jettonAddress: UserFriendlyAddress,
+  ): Promise<UserFriendlyAddress>;
+  getJettons(params?: JettonsRequest): Promise<JettonsResponse>;
 }
 
 export interface WalletNftInterface {
-    createTransferNftTransaction(params: NFTTransferRequest): Promise<TransactionRequest>;
-    createTransferNftRawTransaction(params: NFTRawTransferRequest): Promise<TransactionRequest>;
-    getNfts(params: NFTsRequest): Promise<NFTsResponse>;
-    getNft(address: UserFriendlyAddress): Promise<NFT | undefined>;
+  createTransferNftTransaction(
+    params: NFTTransferRequest,
+  ): Promise<TransactionRequest>;
+  createTransferNftRawTransaction(
+    params: NFTRawTransferRequest,
+  ): Promise<TransactionRequest>;
+  getNfts(params: NFTsRequest): Promise<NFTsResponse>;
+  getNft(address: UserFriendlyAddress): Promise<NFT | undefined>;
 }

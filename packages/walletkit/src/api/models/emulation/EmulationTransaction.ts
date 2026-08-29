@@ -16,412 +16,412 @@ import type { EmulationMessage } from './EmulationMessage';
  * State of an account at a specific point in an emulated transaction.
  */
 export interface EmulationAccountState {
-    /**
-     * Hex-encoded hash of the account state, if available
-     */
-    hash?: Hex;
+  /**
+   * Hex-encoded hash of the account state, if available
+   */
+  hash?: Hex;
 
-    /**
-     * Account balance in nano units
-     */
-    balance: TokenAmount;
+  /**
+   * Account balance in nano units
+   */
+  balance: TokenAmount;
 
-    /**
-     * Extra currencies held by the account, if any
-     */
-    extraCurrencies?: ExtraCurrencies;
+  /**
+   * Extra currencies held by the account, if any
+   */
+  extraCurrencies?: ExtraCurrencies;
 
-    /**
-     * Account status
-     */
-    accountStatus: AccountStatus;
+  /**
+   * Account status
+   */
+  accountStatus: AccountStatus;
 
-    /**
-     * Hex-encoded hash of the frozen account state, if frozen
-     */
-    frozenHash?: Hex;
+  /**
+   * Hex-encoded hash of the frozen account state, if frozen
+   */
+  frozenHash?: Hex;
 
-    /**
-     * Hex-encoded hash of the contract data cell
-     */
-    dataHash?: Hex;
+  /**
+   * Hex-encoded hash of the contract data cell
+   */
+  dataHash?: Hex;
 
-    /**
-     * Hex-encoded hash of the contract code cell
-     */
-    codeHash?: Hex;
+  /**
+   * Hex-encoded hash of the contract code cell
+   */
+  codeHash?: Hex;
 }
 
 /**
  * Reference to a block in the TON blockchain.
  */
 export interface EmulationBlockRef {
-    /**
-     * Workchain identifier
-     * @format int
-     */
-    workchain: number;
+  /**
+   * Workchain identifier
+   * @format int
+   */
+  workchain: number;
 
-    /**
-     * Shard identifier
-     */
-    shard: string;
+  /**
+   * Shard identifier
+   */
+  shard: string;
 
-    /**
-     * Block sequence number
-     * @format int
-     */
-    seqno: number;
+  /**
+   * Block sequence number
+   * @format int
+   */
+  seqno: number;
 }
 
 /**
  * Storage phase of transaction execution.
  */
 export interface EmulationStoragePhase {
-    /**
-     * Storage fees collected during this phase in nano units
-     */
-    storageFeesCollected: TokenAmount;
+  /**
+   * Storage fees collected during this phase in nano units
+   */
+  storageFeesCollected: TokenAmount;
 
-    /**
-     * Account status change applied during the storage phase
-     */
-    statusChange: string;
+  /**
+   * Account status change applied during the storage phase
+   */
+  statusChange: string;
 }
 
 /**
  * Credit phase of transaction execution.
  */
 export interface EmulationCreditPhase {
-    /**
-     * Amount credited to the account in nano units
-     */
-    credit: TokenAmount;
+  /**
+   * Amount credited to the account in nano units
+   */
+  credit: TokenAmount;
 }
 
 /**
  * Compute phase of transaction execution (TVM execution).
  */
 export interface EmulationComputePhase {
-    /**
-     * Whether the compute phase was skipped
-     */
-    isSkipped: boolean;
+  /**
+   * Whether the compute phase was skipped
+   */
+  isSkipped: boolean;
 
-    /**
-     * Whether the TVM execution succeeded
-     */
-    isSuccess: boolean;
+  /**
+   * Whether the TVM execution succeeded
+   */
+  isSuccess: boolean;
 
-    /**
-     * Whether the message state was used during compute
-     */
-    isMsgStateUsed: boolean;
+  /**
+   * Whether the message state was used during compute
+   */
+  isMsgStateUsed: boolean;
 
-    /**
-     * Whether the account was activated during compute
-     */
-    isAccountActivated: boolean;
+  /**
+   * Whether the account was activated during compute
+   */
+  isAccountActivated: boolean;
 
-    /**
-     * Gas fees charged in nano units
-     */
-    gasFees: TokenAmount;
+  /**
+   * Gas fees charged in nano units
+   */
+  gasFees: TokenAmount;
 
-    /**
-     * Total gas consumed
-     */
-    gasUsed: string;
+  /**
+   * Total gas consumed
+   */
+  gasUsed: string;
 
-    /**
-     * Gas limit for this execution
-     */
-    gasLimit: string;
+  /**
+   * Gas limit for this execution
+   */
+  gasLimit: string;
 
-    /**
-     * Gas credit, if any
-     */
-    gasCredit?: string;
+  /**
+   * Gas credit, if any
+   */
+  gasCredit?: string;
 
-    /**
-     * Compute execution mode
-     * @format int
-     */
-    mode: number;
+  /**
+   * Compute execution mode
+   * @format int
+   */
+  mode: number;
 
-    /**
-     * TVM exit code
-     * @format int
-     */
-    exitCode: number;
+  /**
+   * TVM exit code
+   * @format int
+   */
+  exitCode: number;
 
-    /**
-     * Number of TVM steps executed
-     * @format int
-     */
-    vmSteps: number;
+  /**
+   * Number of TVM steps executed
+   * @format int
+   */
+  vmSteps: number;
 
-    /**
-     * Hex-encoded hash of the initial VM state
-     */
-    vmInitStateHash?: Hex;
+  /**
+   * Hex-encoded hash of the initial VM state
+   */
+  vmInitStateHash?: Hex;
 
-    /**
-     * Hex-encoded hash of the final VM state
-     */
-    vmFinalStateHash?: Hex;
+  /**
+   * Hex-encoded hash of the final VM state
+   */
+  vmFinalStateHash?: Hex;
 }
 
 /**
  * Total size of messages created in the action phase.
  */
 export interface EmulationActionMessageSize {
-    /**
-     * Number of cells used
-     * @format int
-     */
-    cells: number;
+  /**
+   * Number of cells used
+   * @format int
+   */
+  cells: number;
 
-    /**
-     * Number of bits used
-     * @format int
-     */
-    bits: number;
+  /**
+   * Number of bits used
+   * @format int
+   */
+  bits: number;
 }
 
 /**
  * Action phase of transaction execution (outgoing message sending).
  */
 export interface EmulationActionPhase {
-    /**
-     * Whether the action phase succeeded
-     */
-    isSuccess: boolean;
+  /**
+   * Whether the action phase succeeded
+   */
+  isSuccess: boolean;
 
-    /**
-     * Whether the action list was valid
-     */
-    isValid: boolean;
+  /**
+   * Whether the action list was valid
+   */
+  isValid: boolean;
 
-    /**
-     * Whether the transaction failed due to insufficient funds
-     */
-    hasNoFunds: boolean;
+  /**
+   * Whether the transaction failed due to insufficient funds
+   */
+  hasNoFunds: boolean;
 
-    /**
-     * Account status change applied during the action phase
-     */
-    statusChange: string;
+  /**
+   * Account status change applied during the action phase
+   */
+  statusChange: string;
 
-    /**
-     * Total forwarding fees charged in nano units
-     */
-    totalFwdFees?: TokenAmount;
+  /**
+   * Total forwarding fees charged in nano units
+   */
+  totalFwdFees?: TokenAmount;
 
-    /**
-     * Total action fees charged in nano units
-     */
-    totalActionFees?: TokenAmount;
+  /**
+   * Total action fees charged in nano units
+   */
+  totalActionFees?: TokenAmount;
 
-    /**
-     * Result code of the action phase
-     * @format int
-     */
-    resultCode: number;
+  /**
+   * Result code of the action phase
+   * @format int
+   */
+  resultCode: number;
 
-    /**
-     * Total number of actions processed
-     * @format int
-     */
-    totalActions: number;
+  /**
+   * Total number of actions processed
+   * @format int
+   */
+  totalActions: number;
 
-    /**
-     * Number of special actions executed
-     * @format int
-     */
-    specActions: number;
+  /**
+   * Number of special actions executed
+   * @format int
+   */
+  specActions: number;
 
-    /**
-     * Number of actions skipped
-     * @format int
-     */
-    skippedActions: number;
+  /**
+   * Number of actions skipped
+   * @format int
+   */
+  skippedActions: number;
 
-    /**
-     * Number of messages created
-     * @format int
-     */
-    msgsCreated: number;
+  /**
+   * Number of messages created
+   * @format int
+   */
+  msgsCreated: number;
 
-    /**
-     * Hex-encoded hash of the action list
-     */
-    actionListHash?: Hex;
+  /**
+   * Hex-encoded hash of the action list
+   */
+  actionListHash?: Hex;
 
-    /**
-     * Total size of all messages created
-     */
-    totalMsgSize: EmulationActionMessageSize;
+  /**
+   * Total size of all messages created
+   */
+  totalMsgSize: EmulationActionMessageSize;
 }
 
 /**
  * Detailed description of all execution phases in an emulated transaction.
  */
 export interface EmulationTransactionDescription {
-    /**
-     * Transaction type (e.g. "ord", "ticktock", "storage")
-     */
-    type: string;
+  /**
+   * Transaction type (e.g. "ord", "ticktock", "storage")
+   */
+  type: string;
 
-    /**
-     * Whether the transaction was aborted
-     */
-    isAborted: boolean;
+  /**
+   * Whether the transaction was aborted
+   */
+  isAborted: boolean;
 
-    /**
-     * Whether the account was destroyed by this transaction
-     */
-    isDestroyed: boolean;
+  /**
+   * Whether the account was destroyed by this transaction
+   */
+  isDestroyed: boolean;
 
-    /**
-     * Whether the credit phase was executed before the storage phase
-     */
-    isCreditFirst: boolean;
+  /**
+   * Whether the credit phase was executed before the storage phase
+   */
+  isCreditFirst: boolean;
 
-    /**
-     * Whether this was a tock transaction
-     */
-    isTock: boolean;
+  /**
+   * Whether this was a tock transaction
+   */
+  isTock: boolean;
 
-    /**
-     * Whether a contract was installed in this transaction
-     */
-    isInstalled: boolean;
+  /**
+   * Whether a contract was installed in this transaction
+   */
+  isInstalled: boolean;
 
-    /**
-     * Storage phase data
-     */
-    storagePhase: EmulationStoragePhase;
+  /**
+   * Storage phase data
+   */
+  storagePhase: EmulationStoragePhase;
 
-    /**
-     * Credit phase data, present only if credit was processed
-     */
-    creditPhase?: EmulationCreditPhase;
+  /**
+   * Credit phase data, present only if credit was processed
+   */
+  creditPhase?: EmulationCreditPhase;
 
-    /**
-     * Compute phase data (TVM execution)
-     */
-    computePhase: EmulationComputePhase;
+  /**
+   * Compute phase data (TVM execution)
+   */
+  computePhase: EmulationComputePhase;
 
-    /**
-     * Action phase data, present only if actions were executed
-     */
-    actionPhase?: EmulationActionPhase;
+  /**
+   * Action phase data, present only if actions were executed
+   */
+  actionPhase?: EmulationActionPhase;
 }
 
 /**
  * Transaction within an emulated trace.
  */
 export interface EmulationTransaction {
-    /**
-     * Address of the account that executed this transaction
-     */
-    account: UserFriendlyAddress;
+  /**
+   * Address of the account that executed this transaction
+   */
+  account: UserFriendlyAddress;
 
-    /**
-     * Hex-encoded transaction hash
-     */
-    hash: Hex;
+  /**
+   * Hex-encoded transaction hash
+   */
+  hash: Hex;
 
-    /**
-     * Logical time of the transaction
-     */
-    lt: LogicalTime;
+  /**
+   * Logical time of the transaction
+   */
+  lt: LogicalTime;
 
-    /**
-     * Unix timestamp of the transaction
-     * @format timestamp
-     */
-    now: number;
+  /**
+   * Unix timestamp of the transaction
+   * @format timestamp
+   */
+  now: number;
 
-    /**
-     * Masterchain block sequence number
-     * @format int
-     */
-    mcBlockSeqno: number;
+  /**
+   * Masterchain block sequence number
+   * @format int
+   */
+  mcBlockSeqno: number;
 
-    /**
-     * Hex-encoded external message hash of the root trace
-     */
-    traceExternalHash: Hex;
+  /**
+   * Hex-encoded external message hash of the root trace
+   */
+  traceExternalHash: Hex;
 
-    /**
-     * Hex-encoded hash of the previous transaction on this account
-     */
-    prevTransHash?: Hex;
+  /**
+   * Hex-encoded hash of the previous transaction on this account
+   */
+  prevTransHash?: Hex;
 
-    /**
-     * Logical time of the previous transaction on this account
-     */
-    prevTransLt?: LogicalTime;
+  /**
+   * Logical time of the previous transaction on this account
+   */
+  prevTransLt?: LogicalTime;
 
-    /**
-     * Account status before this transaction was applied
-     */
-    origStatus: AccountStatus;
+  /**
+   * Account status before this transaction was applied
+   */
+  origStatus: AccountStatus;
 
-    /**
-     * Account status after this transaction was applied
-     */
-    endStatus: AccountStatus;
+  /**
+   * Account status after this transaction was applied
+   */
+  endStatus: AccountStatus;
 
-    /**
-     * Total fees paid in nano units
-     */
-    totalFees: TokenAmount;
+  /**
+   * Total fees paid in nano units
+   */
+  totalFees: TokenAmount;
 
-    /**
-     * Extra currencies paid as fees
-     */
-    totalFeesExtraCurrencies: ExtraCurrencies;
+  /**
+   * Extra currencies paid as fees
+   */
+  totalFeesExtraCurrencies: ExtraCurrencies;
 
-    /**
-     * Detailed breakdown of transaction execution phases
-     */
-    description: EmulationTransactionDescription;
+  /**
+   * Detailed breakdown of transaction execution phases
+   */
+  description: EmulationTransactionDescription;
 
-    /**
-     * Block reference where this transaction was included
-     */
-    blockRef: EmulationBlockRef;
+  /**
+   * Block reference where this transaction was included
+   */
+  blockRef: EmulationBlockRef;
 
-    /**
-     * Incoming message that triggered this transaction, or undefined for tick-tock transactions
-     */
-    inMsg?: EmulationMessage;
+  /**
+   * Incoming message that triggered this transaction, or undefined for tick-tock transactions
+   */
+  inMsg?: EmulationMessage;
 
-    /**
-     * Outgoing messages produced by this transaction
-     */
-    outMsgs: EmulationMessage[];
+  /**
+   * Outgoing messages produced by this transaction
+   */
+  outMsgs: EmulationMessage[];
 
-    /**
-     * Account state before the transaction was applied
-     */
-    accountStateBefore: EmulationAccountState;
+  /**
+   * Account state before the transaction was applied
+   */
+  accountStateBefore: EmulationAccountState;
 
-    /**
-     * Account state after the transaction was applied
-     */
-    accountStateAfter: EmulationAccountState;
+  /**
+   * Account state after the transaction was applied
+   */
+  accountStateAfter: EmulationAccountState;
 
-    /**
-     * Whether this transaction was produced by emulation rather than executed on-chain
-     */
-    isEmulated: boolean;
+  /**
+   * Whether this transaction was produced by emulation rather than executed on-chain
+   */
+  isEmulated: boolean;
 
-    /**
-     * Trace identifier, if available
-     */
-    traceId?: string;
+  /**
+   * Trace identifier, if available
+   */
+  traceId?: string;
 }

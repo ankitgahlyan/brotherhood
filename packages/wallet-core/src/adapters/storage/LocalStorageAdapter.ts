@@ -12,15 +12,15 @@ import type { StorageAdapter } from './types';
  * Storage adapter for web applications using localStorage
  */
 export class LocalStorageAdapter implements StorageAdapter {
-    getItem(name: string): string | null {
-        return localStorage.getItem(name);
-    }
+  getItem(name: string): string | null {
+    return localStorage.getItem(name);
+  }
 
-    setItem(name: string, value: string): void {
-        localStorage.setItem(name, value);
-    }
+  setItem(name: string, value: string): void {
+    localStorage.setItem(name, value);
+  }
 
-    removeItem(name: string): void {
-        localStorage.removeItem(name);
-    }
+  removeItem(name: string): void {
+    localStorage.removeItem(name);
+  }
 }

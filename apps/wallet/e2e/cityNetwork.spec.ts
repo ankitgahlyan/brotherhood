@@ -11,48 +11,54 @@ import { label, suite, tags } from 'allure-js-commons';
 import { testWithDemoWalletFixture } from './demo-wallet';
 
 const test = testWithDemoWalletFixture({
-    appUrl: process.env.DAPP_URL ?? 'https://allure-test-runner.vercel.app/e2e',
+  appUrl: process.env.DAPP_URL ?? 'https://allure-test-runner.vercel.app/e2e',
 });
 
 test.describe('City & Location Registry Feature UI', () => {
-    test('should render City Network screen and navigate tabs', async ({ wallet }) => {
-        await suite('City Network Features');
-        await label('sub-suite', 'City Registry');
-        await tags('city-network', 'automated', 'ui');
+  test('should render City Network screen and navigate tabs', async ({
+    wallet,
+  }) => {
+    await suite('City Network Features');
+    await label('sub-suite', 'City Registry');
+    await tags('city-network', 'automated', 'ui');
 
-        const app = await wallet.open();
+    const app = await wallet.open();
 
-        await app.getByTestId('city-network-button').click();
-        await expect(app.getByTestId('city-tab-cities')).toBeVisible();
+    await app.getByTestId('city-network-button').click();
+    await expect(app.getByTestId('city-tab-cities')).toBeVisible();
 
-        await app.getByTestId('city-tab-city-detail').click();
-        await expect(app.getByTestId('city-citymap-input')).toBeVisible();
+    await app.getByTestId('city-tab-city-detail').click();
+    await expect(app.getByTestId('city-citymap-input')).toBeVisible();
 
-        await app.getByTestId('city-tab-register-city').click();
-        await expect(app.getByTestId('city-register-city-submit')).toBeVisible();
+    await app.getByTestId('city-tab-register-city').click();
+    await expect(app.getByTestId('city-register-city-submit')).toBeVisible();
 
-        await app.getByTestId('city-tab-manage-member').click();
-        await expect(app.getByTestId('city-manage-register-submit')).toBeVisible();
+    await app.getByTestId('city-tab-manage-member').click();
+    await expect(app.getByTestId('city-manage-register-submit')).toBeVisible();
 
-        await wallet.close();
-    });
+    await wallet.close();
+  });
 
-    test('should validate register city inputs', async ({ wallet }) => {
-        await suite('City Network Features');
-        await label('sub-suite', 'Register City Validation');
-        await tags('city-network', 'automated', 'validation');
+  test('should validate register city inputs', async ({ wallet }) => {
+    await suite('City Network Features');
+    await label('sub-suite', 'Register City Validation');
+    await tags('city-network', 'automated', 'validation');
 
-        const app = await wallet.open();
-        await app.getByTestId('city-network-button').click();
-        await app.getByTestId('city-tab-register-city').click();
+    const app = await wallet.open();
+    await app.getByTestId('city-network-button').click();
+    await app.getByTestId('city-tab-register-city').click();
 
-        const submitBtn = app.getByTestId('city-register-city-submit');
-        await expect(submitBtn).toBeDisabled();
+    const submitBtn = app.getByTestId('city-register-city-submit');
+    await expect(submitBtn).toBeDisabled();
 
-        await app.getByTestId('city-register-location-addr').fill('0:0000000000000000000000000000000000000000000000000000000000000000');
-        await app.getByTestId('city-register-city-name').fill('Tokyo');
+    await app
+      .getByTestId('city-register-location-addr')
+      .fill(
+        '0:0000000000000000000000000000000000000000000000000000000000000000',
+      );
+    await app.getByTestId('city-register-city-name').fill('Tokyo');
 
-        await expect(submitBtn).toBeEnabled();
-        await wallet.close();
-    });
+    await expect(submitBtn).toBeEnabled();
+    await wallet.close();
+  });
 });

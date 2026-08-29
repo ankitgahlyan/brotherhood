@@ -12,15 +12,15 @@ import type { DeDustQuoteResponse } from '../DeDustPrivateTypes';
  * Metadata stored in SwapQuote for DeDust provider
  */
 export interface DeDustQuoteMetadata {
-    /**
-     * Raw quote response from API
-     * @format frozen
-     */
-    quoteResponse: DeDustQuoteResponse;
+  /**
+   * Raw quote response from API
+   * @format frozen
+   */
+  quoteResponse: DeDustQuoteResponse;
 
-    /**
-     * Slippage used for the quote in basis points
-     * @format int
-     */
-    slippageBps: number;
+  /**
+   * Slippage used for the quote in basis points
+   * @format int
+   */
+  slippageBps: number;
 }

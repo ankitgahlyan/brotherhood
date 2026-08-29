@@ -116,16 +116,19 @@ DEBUG=walletkit:* pnpm dev
 ### Common Issues
 
 **Bridge Connection Fails**
+
 - Check `bridgeUrl` is correct
 - Verify network connectivity
 - Inspect browser console for errors
 
 **Transaction Preview Empty**
+
 - Ensure wallet has GRAM balance for fees
 - Check transaction BOC is valid
 - Look for emulation errors in preview
 
 **Wallet Not Found**
+
 - Verify wallet address format
 - Check wallet was added via `addWallet()`
 - Confirm storage adapter is working
@@ -133,6 +136,7 @@ DEBUG=walletkit:* pnpm dev
 ## E2E Testing
 
 ### (Optional) Run TON Connect Bridge Locally
+
 ```bash
 docker compose -f docker-compose.bridge.yml up -d
 # check
@@ -179,6 +183,7 @@ VITE_BRIDGE_URL="https://connect.ton.org/bridge" # (optional) use custom url bri
 ```
 
 ### Install and Build Dependencies
+
 ```bash
 pnpm install
 pnpm --filter demo-wallet e2e:deps
@@ -186,6 +191,7 @@ pnpm build
 ```
 
 ### Run Test Specs
+
 ```bash
 pnpm demo-wallet e2e
 # or

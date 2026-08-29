@@ -12,4 +12,5 @@ import type { OmnistonSwapOptions } from './OmnistonSwapOptions';
 /**
  * Provider-specific options for Omniston swap operations
  */
-export type OmnistonProviderOptions = OmnistonSwapOptions & OmnistonReferrerOptions;
+export type OmnistonProviderOptions = OmnistonSwapOptions &
+  OmnistonReferrerOptions;

@@ -10,16 +10,16 @@
  * Base interface shared by all provider types.
  */
 export interface BaseProvider {
-    readonly providerId: string;
-    readonly type: string;
+  readonly providerId: string;
+  readonly type: string;
 }
 
 export interface BaseProviderUpdate {
-    providerId: string;
-    type: string;
+  providerId: string;
+  type: string;
 }
 
 export interface BaseProviderEvents {
-    'provider:registered': BaseProviderUpdate;
-    'provider:default-changed': BaseProviderUpdate;
+  'provider:registered': BaseProviderUpdate;
+  'provider:default-changed': BaseProviderUpdate;
 }

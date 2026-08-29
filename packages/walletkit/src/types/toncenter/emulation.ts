@@ -10,171 +10,171 @@ import type { AddressBookRowV3, MetadataV3 } from './v3/AddressBookRowV3';
 import type { EmulationAction } from '../../clients/toncenter/types/raw-emulation';
 
 export type {
-    EmulationAddressMetadata,
-    EmulationTokenInfo,
-    EmulationTokenInfoBase,
-    EmulationTokenInfoWallets,
-    EmulationTokenInfoMasters,
+  EmulationAddressMetadata,
+  EmulationTokenInfo,
+  EmulationTokenInfoBase,
+  EmulationTokenInfoWallets,
+  EmulationTokenInfoMasters,
 } from '../../clients/toncenter/types/metadata';
 export type {
-    ToncenterResponseJettonMasters,
-    ToncenterResponseJettonWallets,
-    ToncenterJettonWallet,
+  ToncenterResponseJettonMasters,
+  ToncenterResponseJettonWallets,
+  ToncenterJettonWallet,
 } from '../../clients/toncenter/types/jettons';
 
 export interface ToncenterTracesResponse extends MetadataV3 {
-    traces: ToncenterTraceItem[];
+  traces: ToncenterTraceItem[];
 }
 
 export interface ToncenterTransactionsResponse {
-    transactions: ToncenterTransaction[];
-    address_book: Record<string, AddressBookRowV3>;
+  transactions: ToncenterTransaction[];
+  address_book: Record<string, AddressBookRowV3>;
 }
 
 export interface ToncenterTraceItem {
-    actions?: EmulationAction[];
-    end_lt: string;
-    end_utime: number;
-    external_hash: string;
-    is_incomplete: boolean;
-    mc_seqno_end: string;
-    mc_seqno_start: string;
-    start_lt: string;
-    start_utime: number;
-    trace: EmulationTraceNode;
-    trace_id: string;
-    trace_info: TraceMeta;
-    transactions: Record<string, ToncenterTransaction>;
-    transactions_order: string[];
-    warning: string;
+  actions?: EmulationAction[];
+  end_lt: string;
+  end_utime: number;
+  external_hash: string;
+  is_incomplete: boolean;
+  mc_seqno_end: string;
+  mc_seqno_start: string;
+  start_lt: string;
+  start_utime: number;
+  trace: EmulationTraceNode;
+  trace_id: string;
+  trace_info: TraceMeta;
+  transactions: Record<string, ToncenterTransaction>;
+  transactions_order: string[];
+  warning: string;
 }
 
 export interface TraceMeta {
-    classification_state: string;
-    messages: number;
-    pending_messages: number;
-    trace_state: string;
-    transactions: number;
+  classification_state: string;
+  messages: number;
+  pending_messages: number;
+  trace_state: string;
+  transactions: number;
 }
 
 // Trace tree
 export interface EmulationTraceNode {
-    tx_hash: string;
-    in_msg_hash: string | null;
-    children: EmulationTraceNode[];
+  tx_hash: string;
+  in_msg_hash: string | null;
+  children: EmulationTraceNode[];
 }
 
 // Transactions map value (for emulation endpoint)
 export interface ToncenterTransaction {
-    account: string;
-    hash: string;
-    lt: string;
-    now: number;
-    mc_block_seqno: number;
-    trace_external_hash: string;
-    prev_trans_hash: string | null;
-    prev_trans_lt: string | null;
-    orig_status: EmulationAccountStatus | string;
-    end_status: EmulationAccountStatus | string;
-    total_fees: string;
-    total_fees_extra_currencies: Record<string, string>;
-    description: EmulationTransactionDescription;
-    block_ref: EmulationBlockRef;
-    in_msg: EmulationMessage | null;
-    out_msgs: EmulationMessage[];
-    account_state_before: EmulationAccountState;
-    account_state_after: EmulationAccountState;
-    emulated: boolean;
-    trace_id?: string;
+  account: string;
+  hash: string;
+  lt: string;
+  now: number;
+  mc_block_seqno: number;
+  trace_external_hash: string;
+  prev_trans_hash: string | null;
+  prev_trans_lt: string | null;
+  orig_status: EmulationAccountStatus | string;
+  end_status: EmulationAccountStatus | string;
+  total_fees: string;
+  total_fees_extra_currencies: Record<string, string>;
+  description: EmulationTransactionDescription;
+  block_ref: EmulationBlockRef;
+  in_msg: EmulationMessage | null;
+  out_msgs: EmulationMessage[];
+  account_state_before: EmulationAccountState;
+  account_state_after: EmulationAccountState;
+  emulated: boolean;
+  trace_id?: string;
 }
 
 export type EmulationAccountStatus = 'active' | 'frozen' | 'uninit';
 
 export interface EmulationBlockRef {
-    workchain: number;
-    shard: string;
-    seqno: number;
+  workchain: number;
+  shard: string;
+  seqno: number;
 }
 
 export interface EmulationTransactionDescription {
-    type: string; // e.g. "ord"
-    aborted: boolean;
-    destroyed: boolean;
-    credit_first: boolean;
-    is_tock: boolean;
-    installed: boolean;
-    storage_ph: {
-        storage_fees_collected: string;
-        status_change: 'unchanged' | string;
+  type: string; // e.g. "ord"
+  aborted: boolean;
+  destroyed: boolean;
+  credit_first: boolean;
+  is_tock: boolean;
+  installed: boolean;
+  storage_ph: {
+    storage_fees_collected: string;
+    status_change: 'unchanged' | string;
+  };
+  credit_ph?: {
+    credit: string;
+  };
+  compute_ph: {
+    skipped: boolean;
+    success: boolean;
+    msg_state_used: boolean;
+    account_activated: boolean;
+    gas_fees: string;
+    gas_used: string;
+    gas_limit: string;
+    gas_credit?: string;
+    mode: number;
+    exit_code: number;
+    vm_steps: number;
+    vm_init_state_hash: string;
+    vm_final_state_hash: string;
+  };
+  action: {
+    success: boolean;
+    valid: boolean;
+    no_funds: boolean;
+    status_change: 'unchanged' | string;
+    total_fwd_fees?: string;
+    total_action_fees?: string;
+    result_code: number;
+    tot_actions: number;
+    spec_actions: number;
+    skipped_actions: number;
+    msgs_created: number;
+    action_list_hash: string;
+    tot_msg_size: {
+      cells: string;
+      bits: string;
     };
-    credit_ph?: {
-        credit: string;
-    };
-    compute_ph: {
-        skipped: boolean;
-        success: boolean;
-        msg_state_used: boolean;
-        account_activated: boolean;
-        gas_fees: string;
-        gas_used: string;
-        gas_limit: string;
-        gas_credit?: string;
-        mode: number;
-        exit_code: number;
-        vm_steps: number;
-        vm_init_state_hash: string;
-        vm_final_state_hash: string;
-    };
-    action: {
-        success: boolean;
-        valid: boolean;
-        no_funds: boolean;
-        status_change: 'unchanged' | string;
-        total_fwd_fees?: string;
-        total_action_fees?: string;
-        result_code: number;
-        tot_actions: number;
-        spec_actions: number;
-        skipped_actions: number;
-        msgs_created: number;
-        action_list_hash: string;
-        tot_msg_size: {
-            cells: string;
-            bits: string;
-        };
-    };
+  };
 }
 
 export interface EmulationMessage {
+  hash: string;
+  source: string | null;
+  destination: string;
+  value: string | null;
+  value_extra_currencies: Record<string, string>;
+  fwd_fee: string | null;
+  ihr_fee: string | null;
+  created_lt: string | null;
+  created_at: string | null;
+  opcode: string | null;
+  ihr_disabled: boolean | null;
+  bounce: boolean | null;
+  bounced: boolean | null;
+  import_fee: string | null;
+  message_content: {
     hash: string;
-    source: string | null;
-    destination: string;
-    value: string | null;
-    value_extra_currencies: Record<string, string>;
-    fwd_fee: string | null;
-    ihr_fee: string | null;
-    created_lt: string | null;
-    created_at: string | null;
-    opcode: string | null;
-    ihr_disabled: boolean | null;
-    bounce: boolean | null;
-    bounced: boolean | null;
-    import_fee: string | null;
-    message_content: {
-        hash: string;
-        body: string; // base64-encoded body
-        decoded: unknown | null;
-    };
-    init_state: unknown | null;
-    hash_norm?: string; // present on external message in some responses
+    body: string; // base64-encoded body
+    decoded: unknown | null;
+  };
+  init_state: unknown | null;
+  hash_norm?: string; // present on external message in some responses
 }
 
 export interface EmulationAccountState {
-    hash: string;
-    balance: string;
-    extra_currencies: Record<string, string> | null;
-    account_status: EmulationAccountStatus | string;
-    frozen_hash: string | null;
-    data_hash: string | null;
-    code_hash: string | null;
+  hash: string;
+  balance: string;
+  extra_currencies: Record<string, string> | null;
+  account_status: EmulationAccountStatus | string;
+  frozen_hash: string | null;
+  data_hash: string | null;
+  code_hash: string | null;
 }

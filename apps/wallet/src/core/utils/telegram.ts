@@ -6,29 +6,33 @@
  *
  */
 
-import { init, openTelegramLink as openTgLink, retrieveLaunchParams } from '@telegram-apps/sdk';
+import {
+  init,
+  openTelegramLink as openTgLink,
+  retrieveLaunchParams,
+} from '@telegram-apps/sdk';
 
 // Initialize the SDK so its helpers can reach the native Telegram client.
 try {
-    init();
+  init();
 } catch {
-    /* not inside a Telegram Mini App */
+  /* not inside a Telegram Mini App */
 }
 
 /** Telegram user id from the Mini App launch params, or undefined outside Telegram. */
 export function getTelegramId(): number | undefined {
-    try {
-        return retrieveLaunchParams(true).tgWebAppData?.user?.id;
-    } catch {
-        return undefined;
-    }
+  try {
+    return retrieveLaunchParams(true).tgWebAppData?.user?.id;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Open a t.me link inside Telegram, falling back to a new browser tab. */
 export function openTelegramLink(url: string): void {
-    if (openTgLink.isAvailable()) {
-        openTgLink(url);
-        return;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
+  if (openTgLink.isAvailable()) {
+    openTgLink(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
 }

@@ -13,22 +13,22 @@ import { useJettons } from '@demo/wallet-core';
 import { getFormattedJettonInfo } from '../utils/jetton';
 
 export const useFormatJetton = () => {
-    const { formatJettonAmount } = useJettons();
+  const { formatJettonAmount } = useJettons();
 
-    return useCallback(
-        (jetton: Jetton) => {
-            return getFormattedJettonInfo(formatJettonAmount)(jetton);
-        },
-        [formatJettonAmount],
-    );
+  return useCallback(
+    (jetton: Jetton) => {
+      return getFormattedJettonInfo(formatJettonAmount)(jetton);
+    },
+    [formatJettonAmount],
+  );
 };
 
 export const useFormattedJetton = (jetton?: Jetton | null) => {
-    const formatJetton = useFormatJetton();
+  const formatJetton = useFormatJetton();
 
-    return useMemo(() => {
-        if (!jetton) return;
+  return useMemo(() => {
+    if (!jetton) return;
 
-        return formatJetton(jetton);
-    }, [formatJetton, jetton]);
+    return formatJetton(jetton);
+  }, [formatJetton, jetton]);
 };

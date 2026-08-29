@@ -20,40 +20,42 @@
  * // 420000000000n
  */
 export function parseUnits(value: string, decimals: number) {
-    let [integer, fraction = '0'] = value.split('.');
+  let [integer, fraction = '0'] = value.split('.');
 
-    const negative = integer.startsWith('-');
-    if (negative) integer = integer.slice(1);
+  const negative = integer.startsWith('-');
+  if (negative) integer = integer.slice(1);
 
-    // trim leading zeros.
-    fraction = fraction.replace(/(0+)$/, '');
+  // trim leading zeros.
+  fraction = fraction.replace(/(0+)$/, '');
 
-    // round off if the fraction is larger than the number of decimals.
-    if (decimals === 0) {
-        if (Math.round(Number(`.${fraction}`)) === 1) integer = `${BigInt(integer) + 1n}`;
-        fraction = '';
-    } else if (fraction.length > decimals) {
-        const [left, unit, right] = [
-            fraction.slice(0, decimals - 1),
-            fraction.slice(decimals - 1, decimals),
-            fraction.slice(decimals),
-        ];
+  // round off if the fraction is larger than the number of decimals.
+  if (decimals === 0) {
+    if (Math.round(Number(`.${fraction}`)) === 1)
+      integer = `${BigInt(integer) + 1n}`;
+    fraction = '';
+  } else if (fraction.length > decimals) {
+    const [left, unit, right] = [
+      fraction.slice(0, decimals - 1),
+      fraction.slice(decimals - 1, decimals),
+      fraction.slice(decimals),
+    ];
 
-        const rounded = Math.round(Number(`${unit}.${right}`));
-        if (rounded > 9) fraction = `${BigInt(left) + BigInt(1)}0`.padStart(left.length + 1, '0');
-        else fraction = `${left}${rounded}`;
+    const rounded = Math.round(Number(`${unit}.${right}`));
+    if (rounded > 9)
+      fraction = `${BigInt(left) + BigInt(1)}0`.padStart(left.length + 1, '0');
+    else fraction = `${left}${rounded}`;
 
-        if (fraction.length > decimals) {
-            fraction = fraction.slice(1);
-            integer = `${BigInt(integer) + 1n}`;
-        }
-
-        fraction = fraction.slice(0, decimals);
-    } else {
-        fraction = fraction.padEnd(decimals, '0');
+    if (fraction.length > decimals) {
+      fraction = fraction.slice(1);
+      integer = `${BigInt(integer) + 1n}`;
     }
 
-    return BigInt(`${negative ? '-' : ''}${integer}${fraction}`);
+    fraction = fraction.slice(0, decimals);
+  } else {
+    fraction = fraction.padEnd(decimals, '0');
+  }
+
+  return BigInt(`${negative ? '-' : ''}${integer}${fraction}`);
 }
 
 /**
@@ -68,38 +70,42 @@ export function parseUnits(value: string, decimals: number) {
  * // '420'
  */
 export function formatUnits(value: bigint | string, decimals: number) {
-    let display = value.toString();
+  let display = value.toString();
 
-    const negative = display.startsWith('-');
-    if (negative) display = display.slice(1);
+  const negative = display.startsWith('-');
+  if (negative) display = display.slice(1);
 
-    display = display.padStart(decimals, '0');
+  display = display.padStart(decimals, '0');
 
-    const integer = display.slice(0, display.length - decimals);
-    let fraction = display.slice(display.length - decimals);
-    fraction = fraction.replace(/(0+)$/, '');
-    return `${negative ? '-' : ''}${integer || '0'}${fraction ? `.${fraction}` : ''}`;
+  const integer = display.slice(0, display.length - decimals);
+  let fraction = display.slice(display.length - decimals);
+  fraction = fraction.replace(/(0+)$/, '');
+  return `${negative ? '-' : ''}${integer || '0'}${fraction ? `.${fraction}` : ''}`;
 }
 
 export function parseTon(value: string) {
-    return parseUnits(value, 9);
+  return parseUnits(value, 9);
 }
 export function formatTon(value: bigint | string) {
-    return formatUnits(value, 9);
+  return formatUnits(value, 9);
 }
 
 export function formatNanoTonAmount(value?: bigint | string) {
-    try {
-        return `${formatTon(value ?? '0')} GRAM`;
-    } catch {
-        return `${value ?? '0'} nanotons`;
-    }
+  try {
+    return `${formatTon(value ?? '0')} GRAM`;
+  } catch {
+    return `${value ?? '0'} nanotons`;
+  }
 }
 
-export function formatTokenAmount(value: bigint | string, decimals = 9, symbol?: string) {
-    try {
-        return `${formatUnits(value, decimals)}${symbol ? ` ${symbol}` : ''}`;
-    } catch {
-        return `${value}${symbol ? ` ${symbol}` : ''}`;
-    }
+export function formatTokenAmount(
+  value: bigint | string,
+  decimals = 9,
+  symbol?: string,
+) {
+  try {
+    return `${formatUnits(value, decimals)}${symbol ? ` ${symbol}` : ''}`;
+  } catch {
+    return `${value}${symbol ? ` ${symbol}` : ''}`;
+  }
 }

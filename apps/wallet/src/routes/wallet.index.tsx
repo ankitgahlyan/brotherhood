@@ -4,9 +4,9 @@ import { WalletDashboard } from '@/features/dashboard';
 import { ProtectedRoute } from '@/core/routing';
 
 export const Route = createFileRoute('/wallet/')({
-    component: () => (
-        <ProtectedRoute requiresWallet>
-            <WalletDashboard />
-        </ProtectedRoute>
-    ),
+  component: () => (
+    <ProtectedRoute requiresWallet>
+      <WalletDashboard />
+    </ProtectedRoute>
+  ),
 });

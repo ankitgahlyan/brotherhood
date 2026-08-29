@@ -12,30 +12,30 @@ import type { Hex } from '../core/Primitives';
  * Information about the latest masterchain block.
  */
 export interface MasterchainInfo {
-    /**
-     * Sequence number of the masterchain block
-     * @format int
-     */
-    seqno: number;
+  /**
+   * Sequence number of the masterchain block
+   * @format int
+   */
+  seqno: number;
 
-    /**
-     * Shard identifier of the block
-     */
-    shard: string;
+  /**
+   * Shard identifier of the block
+   */
+  shard: string;
 
-    /**
-     * Workchain ID of the block
-     * @format int
-     */
-    workchain: number;
+  /**
+   * Workchain ID of the block
+   * @format int
+   */
+  workchain: number;
 
-    /**
-     * File hash of the block
-     */
-    fileHash: Hex;
+  /**
+   * File hash of the block
+   */
+  fileHash: Hex;
 
-    /**
-     * Root hash of the block
-     */
-    rootHash: Hex;
+  /**
+   * Root hash of the block
+   */
+  rootHash: Hex;
 }

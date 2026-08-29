@@ -17,27 +17,31 @@ import { ScreenHeader } from '@/core/components/shared/screen-header';
 
 /** Full assets page: every token on the active wallet's balance (TON + all jettons). */
 export const AssetsScreen: FC = () => {
-    const navigate = useNavigate();
-    const { tonRow, jettonRows, assetsReady } = useAssetRows();
+  const navigate = useNavigate();
+  const { tonRow, jettonRows, assetsReady } = useAssetRows();
 
-    return (
-        <NewLayout header={<ScreenHeader title="Assets" onBack={() => navigate('/wallet')} />}>
-            <div className="space-y-1">
-                {assetsReady && tonRow ? (
-                    <>
-                        <AssetRow {...tonRow} />
-                        {jettonRows.map((row) => (
-                            <AssetRow key={row.id} {...row} />
-                        ))}
-                    </>
-                ) : (
-                    <>
-                        <AssetRowSkeleton />
-                        <AssetRowSkeleton />
-                        <AssetRowSkeleton />
-                    </>
-                )}
-            </div>
-        </NewLayout>
-    );
+  return (
+    <NewLayout
+      header={
+        <ScreenHeader title="Assets" onBack={() => navigate('/wallet')} />
+      }
+    >
+      <div className="space-y-1">
+        {assetsReady && tonRow ? (
+          <>
+            <AssetRow {...tonRow} />
+            {jettonRows.map((row) => (
+              <AssetRow key={row.id} {...row} />
+            ))}
+          </>
+        ) : (
+          <>
+            <AssetRowSkeleton />
+            <AssetRowSkeleton />
+            <AssetRowSkeleton />
+          </>
+        )}
+      </div>
+    </NewLayout>
+  );
 };

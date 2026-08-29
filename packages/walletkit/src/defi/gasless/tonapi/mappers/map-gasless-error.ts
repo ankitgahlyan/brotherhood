@@ -29,35 +29,35 @@ import { GaslessError } from '../../errors';
 // const TONAPI_FEE_JETTON_UNRESOLVED_CODE = 40007;
 
 export const mapTonApiGaslessError = (
-    error: unknown,
-    fallbackCode: GaslessErrorCode,
-    fallbackMessage: string,
+  error: unknown,
+  fallbackCode: GaslessErrorCode,
+  fallbackMessage: string,
 ): GaslessError => {
-    // Pre-classified `GaslessError`s (e.g. thrown from `getClient` for a
-    // non-configured chain) pass through unchanged.
-    if (error instanceof GaslessError) {
-        return error;
-    }
+  // Pre-classified `GaslessError`s (e.g. thrown from `getClient` for a
+  // non-configured chain) pass through unchanged.
+  if (error instanceof GaslessError) {
+    return error;
+  }
 
-    // Numeric error_code mapping disabled (see note at top of file):
-    // if (error instanceof TonClientError) {
-    //     const body = error.details as TonApiErrorBody | undefined;
-    //     if (body && typeof body === 'object' && body.error_code === TONAPI_UNSUPPORTED_FEE_ASSET_CODE) {
-    //         return new GaslessError(
-    //             body.error ?? 'Fee asset is not supported by the gasless relayer',
-    //             GaslessErrorCode.UnsupportedFeeAsset,
-    //             error,
-    //         );
-    //     }
-    //     if (body && typeof body === 'object' && body.error_code === TONAPI_FEE_JETTON_UNRESOLVED_CODE) {
-    //         return new GaslessError(
-    //             'You have never held the selected fee asset, so the relayer could not resolve its jetton wallet. Choose a fee asset you already own.',
-    //             GaslessErrorCode.FeeAssetNotOwned,
-    //             error,
-    //         );
-    //     }
-    // }
+  // Numeric error_code mapping disabled (see note at top of file):
+  // if (error instanceof TonClientError) {
+  //     const body = error.details as TonApiErrorBody | undefined;
+  //     if (body && typeof body === 'object' && body.error_code === TONAPI_UNSUPPORTED_FEE_ASSET_CODE) {
+  //         return new GaslessError(
+  //             body.error ?? 'Fee asset is not supported by the gasless relayer',
+  //             GaslessErrorCode.UnsupportedFeeAsset,
+  //             error,
+  //         );
+  //     }
+  //     if (body && typeof body === 'object' && body.error_code === TONAPI_FEE_JETTON_UNRESOLVED_CODE) {
+  //         return new GaslessError(
+  //             'You have never held the selected fee asset, so the relayer could not resolve its jetton wallet. Choose a fee asset you already own.',
+  //             GaslessErrorCode.FeeAssetNotOwned,
+  //             error,
+  //         );
+  //     }
+  // }
 
-    const message = error instanceof Error ? error.message : fallbackMessage;
-    return new GaslessError(message, fallbackCode, error);
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  return new GaslessError(message, fallbackCode, error);
 };

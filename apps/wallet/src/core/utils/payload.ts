@@ -9,14 +9,14 @@
 import { Cell } from '@ton/core';
 
 export function decodeTextCommentPayload(payload: string): string | null {
-    try {
-        const slice = Cell.fromBase64(payload).beginParse();
-        if (slice.remainingBits < 32) return null;
-        const op = slice.loadUint(32);
-        if (op !== 0) return null;
-        const text = slice.loadStringTail();
-        return text.length > 0 ? text : null;
-    } catch {
-        return null;
-    }
+  try {
+    const slice = Cell.fromBase64(payload).beginParse();
+    if (slice.remainingBits < 32) return null;
+    const op = slice.loadUint(32);
+    if (op !== 0) return null;
+    const text = slice.loadStringTail();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
 }

@@ -12,17 +12,17 @@ import type { Hex } from '../core/Primitives';
  * Response after user approves a sign data request.
  */
 export interface SignDataApprovalResponse {
-    /**
-     * Cryptographic signature of the signed data in hexadecimal format
-     */
-    signature: Hex;
-    /**
-     * Timestamp when the data was signed
-     * @format int
-     */
-    timestamp: number;
-    /**
-     * Domain associated with the sign request
-     */
-    domain: string;
+  /**
+   * Cryptographic signature of the signed data in hexadecimal format
+   */
+  signature: Hex;
+  /**
+   * Timestamp when the data was signed
+   * @format int
+   */
+  timestamp: number;
+  /**
+   * Domain associated with the sign request
+   */
+  domain: string;
 }

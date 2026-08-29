@@ -11,7 +11,7 @@ export type WalletSetupMode = 'create' | 'import' | 'ledger';
 
 /** Single source of truth mapping a setup mode to its dedicated route. */
 export const WALLET_SETUP_ROUTE: Record<WalletSetupMode, string> = {
-    create: '/create-wallet',
-    import: '/import-wallet',
-    ledger: '/ledger',
+  create: '/create-wallet',
+  import: '/import-wallet',
+  ledger: '/ledger',
 };

@@ -12,41 +12,41 @@ import type { CSSProperties, RefObject } from 'react';
 export type InputSize = 's' | 'm' | 'l';
 
 interface ResizeMetrics {
-    maxFontSize: number;
-    minFontSize: number;
-    lineHeightRatio: number;
-    parentFontSize: number;
+  maxFontSize: number;
+  minFontSize: number;
+  lineHeightRatio: number;
+  parentFontSize: number;
 }
 
 const readResizeMetrics = (
-    maxSpan: HTMLSpanElement,
-    minSpan: HTMLSpanElement,
-    input: HTMLInputElement,
+  maxSpan: HTMLSpanElement,
+  minSpan: HTMLSpanElement,
+  input: HTMLInputElement,
 ): ResizeMetrics => {
-    const maxStyle = getComputedStyle(maxSpan);
-    const maxFontSize = parseFloat(maxStyle.fontSize);
-    const lineHeightRatio = parseFloat(maxStyle.lineHeight) / maxFontSize;
+  const maxStyle = getComputedStyle(maxSpan);
+  const maxFontSize = parseFloat(maxStyle.fontSize);
+  const lineHeightRatio = parseFloat(maxStyle.lineHeight) / maxFontSize;
 
-    return {
-        maxFontSize,
-        minFontSize: parseFloat(getComputedStyle(minSpan).fontSize),
-        lineHeightRatio,
-        parentFontSize: parseFloat(getComputedStyle(input.parentElement!).fontSize),
-    };
+  return {
+    maxFontSize,
+    minFontSize: parseFloat(getComputedStyle(minSpan).fontSize),
+    lineHeightRatio,
+    parentFontSize: parseFloat(getComputedStyle(input.parentElement!).fontSize),
+  };
 };
 
 interface UseInputResizeOptions {
-    resizable?: boolean;
-    contextSize: InputSize;
-    value?: string | number | readonly string[];
+  resizable?: boolean;
+  contextSize: InputSize;
+  value?: string | number | readonly string[];
 }
 
 interface UseInputResizeResult {
-    inputRef: RefObject<HTMLInputElement | null>;
-    measureMaxRef: RefObject<HTMLSpanElement | null>;
-    measureMinRef: RefObject<HTMLSpanElement | null>;
-    resizeStyle: CSSProperties | undefined;
-    adjustSize: () => void;
+  inputRef: RefObject<HTMLInputElement | null>;
+  measureMaxRef: RefObject<HTMLSpanElement | null>;
+  measureMinRef: RefObject<HTMLSpanElement | null>;
+  resizeStyle: CSSProperties | undefined;
+  adjustSize: () => void;
 }
 
 /**
@@ -54,48 +54,62 @@ interface UseInputResizeResult {
  * mirroring the appkit-react input. Measures the text at the max font via a hidden
  * span and applies the resulting font-size inline.
  */
-export const useInputResize = ({ resizable, contextSize, value }: UseInputResizeOptions): UseInputResizeResult => {
-    const inputRef = useRef<HTMLInputElement>(null);
-    const measureMaxRef = useRef<HTMLSpanElement>(null);
-    const measureMinRef = useRef<HTMLSpanElement>(null);
-    const [fontSizeEm, setFontSizeEm] = useState<number | undefined>(undefined);
-    const lineHeightRatioRef = useRef<number>(1.25);
+export const useInputResize = ({
+  resizable,
+  contextSize,
+  value,
+}: UseInputResizeOptions): UseInputResizeResult => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const measureMaxRef = useRef<HTMLSpanElement>(null);
+  const measureMinRef = useRef<HTMLSpanElement>(null);
+  const [fontSizeEm, setFontSizeEm] = useState<number | undefined>(undefined);
+  const lineHeightRatioRef = useRef<number>(1.25);
 
-    const adjustSize = useCallback(() => {
-        if (!resizable || !inputRef.current || !measureMaxRef.current || !measureMinRef.current) return;
-        const availableWidth = inputRef.current.clientWidth;
-        if (availableWidth === 0) return;
+  const adjustSize = useCallback(() => {
+    if (
+      !resizable ||
+      !inputRef.current ||
+      !measureMaxRef.current ||
+      !measureMinRef.current
+    )
+      return;
+    const availableWidth = inputRef.current.clientWidth;
+    if (availableWidth === 0) return;
 
-        const textWidth = measureMaxRef.current.offsetWidth;
-        const { maxFontSize, minFontSize, lineHeightRatio, parentFontSize } = readResizeMetrics(
-            measureMaxRef.current,
-            measureMinRef.current,
-            inputRef.current,
-        );
+    const textWidth = measureMaxRef.current.offsetWidth;
+    const { maxFontSize, minFontSize, lineHeightRatio, parentFontSize } =
+      readResizeMetrics(
+        measureMaxRef.current,
+        measureMinRef.current,
+        inputRef.current,
+      );
 
-        const ratio = textWidth > 0 ? availableWidth / textWidth : 1;
-        const scaledPx = Math.min(maxFontSize, Math.max(minFontSize, maxFontSize * ratio));
-        setFontSizeEm(scaledPx / parentFontSize);
-        lineHeightRatioRef.current = lineHeightRatio;
-    }, [resizable]);
+    const ratio = textWidth > 0 ? availableWidth / textWidth : 1;
+    const scaledPx = Math.min(
+      maxFontSize,
+      Math.max(minFontSize, maxFontSize * ratio),
+    );
+    setFontSizeEm(scaledPx / parentFontSize);
+    lineHeightRatioRef.current = lineHeightRatio;
+  }, [resizable]);
 
-    // Re-measure when the controlled value or context size changes.
-    useLayoutEffect(adjustSize, [adjustSize, contextSize, value]);
+  // Re-measure when the controlled value or context size changes.
+  useLayoutEffect(adjustSize, [adjustSize, contextSize, value]);
 
-    // Re-measure on container resize (observe the parent, not the input itself,
-    // to avoid a feedback loop when the font-size change triggers the observer).
-    useLayoutEffect(() => {
-        const parent = inputRef.current?.parentElement;
-        if (!resizable || !parent) return;
-        const observer = new ResizeObserver(adjustSize);
-        observer.observe(parent);
-        return () => observer.disconnect();
-    }, [resizable, adjustSize]);
+  // Re-measure on container resize (observe the parent, not the input itself,
+  // to avoid a feedback loop when the font-size change triggers the observer).
+  useLayoutEffect(() => {
+    const parent = inputRef.current?.parentElement;
+    if (!resizable || !parent) return;
+    const observer = new ResizeObserver(adjustSize);
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, [resizable, adjustSize]);
 
-    const resizeStyle: CSSProperties | undefined =
-        resizable && fontSizeEm !== undefined
-            ? { fontSize: `${fontSizeEm}em`, lineHeight: lineHeightRatioRef.current }
-            : undefined;
+  const resizeStyle: CSSProperties | undefined =
+    resizable && fontSizeEm !== undefined
+      ? { fontSize: `${fontSizeEm}em`, lineHeight: lineHeightRatioRef.current }
+      : undefined;
 
-    return { inputRef, measureMaxRef, measureMinRef, resizeStyle, adjustSize };
+  return { inputRef, measureMaxRef, measureMinRef, resizeStyle, adjustSize };
 };

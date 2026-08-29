@@ -21,9 +21,7 @@ const pwaManifest: Partial<ManifestOptions> = {
   orientation: 'portrait',
   theme_color: '#0b0e14',
   background_color: '#0b0e14',
-  icons: [
-    { src: `${base}favicon.svg`, sizes: 'any', type: 'image/svg+xml' },
-  ],
+  icons: [{ src: `${base}favicon.svg`, sizes: 'any', type: 'image/svg+xml' }],
 };
 
 export default defineConfig({
@@ -52,16 +50,49 @@ export default defineConfig({
     alias: {
       '@': path.resolve(projectRoot, './src'),
       '@wrappers': path.resolve(projectRoot, '../../wrappers-ts'),
-      '@ton/walletkit/swap/omniston': path.resolve(projectRoot, '../../packages/walletkit/src/defi/swap/omniston/index.ts'),
-      '@ton/walletkit/swap/dedust': path.resolve(projectRoot, '../../packages/walletkit/src/defi/swap/dedust/index.ts'),
-      '@ton/walletkit/staking/tonstakers': path.resolve(projectRoot, '../../packages/walletkit/src/defi/staking/tonstakers/index.ts'),
-      '@ton/walletkit/gasless/tonapi': path.resolve(projectRoot, '../../packages/walletkit/src/defi/gasless/tonapi/index.ts'),
-      '@ton/walletkit/crypto-onramp/decent': path.resolve(projectRoot, '../../packages/walletkit/src/defi/crypto-onramp/decent/index.ts'),
-      '@ton/walletkit/crypto-onramp/layerswap': path.resolve(projectRoot, '../../packages/walletkit/src/defi/crypto-onramp/layerswap/index.ts'),
-      '@ton/walletkit/bridge': path.resolve(projectRoot, '../../packages/walletkit/src/bridge/JSBridgeInjector.ts'),
-      '@ton/walletkit': path.resolve(projectRoot, '../../packages/walletkit/src/index.ts'),
-      '@demo/v4ledger-adapter': path.resolve(projectRoot, '../../packages/v4ledger-adapter/src/index.ts'),
-      '@demo/wallet-core': path.resolve(projectRoot, '../../packages/wallet-core/src/index.ts'),
+      '@ton/core': path.resolve(projectRoot, './node_modules/@ton/core'),
+      '@ton/crypto': path.resolve(projectRoot, './node_modules/@ton/crypto'),
+      '@ton/ton': path.resolve(projectRoot, './node_modules/@ton/ton'),
+      '@ton/walletkit/swap/omniston': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/swap/omniston/index.ts',
+      ),
+      '@ton/walletkit/swap/dedust': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/swap/dedust/index.ts',
+      ),
+      '@ton/walletkit/staking/tonstakers': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/staking/tonstakers/index.ts',
+      ),
+      '@ton/walletkit/gasless/tonapi': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/gasless/tonapi/index.ts',
+      ),
+      '@ton/walletkit/crypto-onramp/decent': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/crypto-onramp/decent/index.ts',
+      ),
+      '@ton/walletkit/crypto-onramp/layerswap': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/defi/crypto-onramp/layerswap/index.ts',
+      ),
+      '@ton/walletkit/bridge': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/bridge/JSBridgeInjector.ts',
+      ),
+      '@ton/walletkit': path.resolve(
+        projectRoot,
+        '../../packages/walletkit/src/index.ts',
+      ),
+      '@demo/v4ledger-adapter': path.resolve(
+        projectRoot,
+        '../../packages/v4ledger-adapter/src/index.ts',
+      ),
+      '@demo/wallet-core': path.resolve(
+        projectRoot,
+        '../../packages/wallet-core/src/index.ts',
+      ),
     },
   },
 });

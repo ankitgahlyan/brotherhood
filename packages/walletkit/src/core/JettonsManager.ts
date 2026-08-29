@@ -25,26 +25,26 @@ const log = globalLogger.createChild('JettonsManager');
 const GRAM_ADDRESS = 'TON';
 
 function isTonAddress(address: string): boolean {
-    return address.toLowerCase() === 'ton';
+  return address.toLowerCase() === 'ton';
 }
 
 const TON_INFO: JettonInfo = {
-    address: GRAM_ADDRESS,
-    name: 'Gram',
-    symbol: 'GRAM',
-    description: 'The Open Network native token',
-    decimals: 9,
-    totalSupply: '5000000000000000000',
-    verification: {
-        verified: true,
-        source: 'manual' as const,
-    },
+  address: GRAM_ADDRESS,
+  name: 'Gram',
+  symbol: 'GRAM',
+  description: 'The Open Network native token',
+  decimals: 9,
+  totalSupply: '5000000000000000000',
+  verification: {
+    verified: true,
+    source: 'manual' as const,
+  },
 };
 /**
  * Creates a cache key that includes the network ID
  */
 function createCacheKey(network: Network, address: string): string {
-    return `${network.chainId}:${address}`;
+  return `${network.chainId}:${address}`;
 }
 
 /**
@@ -52,295 +52,339 @@ function createCacheKey(network: Network, address: string): string {
  * Jettons are cached per network to support multi-network scenarios
  */
 export class JettonsManager implements JettonsAPI {
-    private cache: LRUCache<string, JettonInfo>;
-    private readonly DEFAULT_TIMEOUT = 10000; // 10 seconds
+  private cache: LRUCache<string, JettonInfo>;
+  private readonly DEFAULT_TIMEOUT = 10000; // 10 seconds
 
-    constructor(
-        cacheSize: number = 10000,
-        private eventEmitter: WalletKitEventEmitter,
-        private networkManager: NetworkManager,
-    ) {
-        this.cache = new LRUCache({
-            max: cacheSize,
-            ttl: 1000 * 60 * 10, // 10 minutes TTL
+  constructor(
+    cacheSize: number = 10000,
+    private eventEmitter: WalletKitEventEmitter,
+    private networkManager: NetworkManager,
+  ) {
+    this.cache = new LRUCache({
+      max: cacheSize,
+      ttl: 1000 * 60 * 10, // 10 minutes TTL
+    });
+
+    // Add GRAM for all configured networks
+    for (const network of this.networkManager.getConfiguredNetworks()) {
+      this.addTonToCache(network);
+    }
+
+    log.info('JettonsManager initialized', { cacheSize });
+  }
+
+  /**
+   * Add GRAM native token to cache for a specific network
+   */
+  private addTonToCache(network: Network): void {
+    const cacheKey = createCacheKey(network, GRAM_ADDRESS);
+    this.cache.set(cacheKey, TON_INFO);
+  }
+
+  /**
+   * Get jetton information by address for a specific network
+   * @param jettonAddress - The jetton master address
+   * @param network - The network to query (required)
+   */
+  async getJettonInfo(
+    jettonAddress: string,
+    network: Network,
+  ): Promise<JettonInfo | null> {
+    const targetNetwork = network;
+
+    if (isTonAddress(jettonAddress)) {
+      return TON_INFO;
+    }
+
+    try {
+      const cacheKey = this.normalizedCacheKey(targetNetwork, jettonAddress);
+      const cachedInfo = this.cache.get(cacheKey);
+
+      if (cachedInfo) {
+        log.debug('Jetton info found in cache', {
+          jettonAddress: jettonAddress,
+          network: targetNetwork,
         });
+        return cachedInfo;
+      }
 
-        // Add GRAM for all configured networks
-        for (const network of this.networkManager.getConfiguredNetworks()) {
-            this.addTonToCache(network);
-        }
+      log.debug('Jetton info not found in cache', {
+        jettonAddress: jettonAddress,
+        network: targetNetwork,
+      });
 
-        log.info('JettonsManager initialized', { cacheSize });
-    }
+      const address = asMaybeAddressFriendly(jettonAddress);
 
-    /**
-     * Add GRAM native token to cache for a specific network
-     */
-    private addTonToCache(network: Network): void {
-        const cacheKey = createCacheKey(network, GRAM_ADDRESS);
-        this.cache.set(cacheKey, TON_INFO);
-    }
+      if (!address) {
+        log.error('Invalid jetton address format', {
+          jettonAddress,
+          network: targetNetwork,
+        });
+        return null;
+      }
 
-    /**
-     * Get jetton information by address for a specific network
-     * @param jettonAddress - The jetton master address
-     * @param network - The network to query (required)
-     */
-    async getJettonInfo(jettonAddress: string, network: Network): Promise<JettonInfo | null> {
-        const targetNetwork = network;
+      const apiClient = this.networkManager.getClient(targetNetwork);
+      const jettonFromApi = await apiClient.jettonsByAddress({
+        address: address,
+        offset: 0,
+        limit: 1,
+      });
 
-        if (isTonAddress(jettonAddress)) {
-            return TON_INFO;
-        }
+      if (
+        jettonFromApi &&
+        jettonFromApi?.jetton_masters?.length > 0 &&
+        jettonFromApi?.jetton_masters?.[0]
+      ) {
+        const jetton = jettonFromApi?.jetton_masters?.[0];
+        const metadata = jettonFromApi?.metadata?.[jetton.address];
+        const tokenInfo = metadata?.token_info?.find(
+          (t) => t.valid && t.type === 'jetton_masters',
+        ) as EmulationTokenInfoMasters | undefined;
 
+        let decimals: number;
         try {
-            const cacheKey = this.normalizedCacheKey(targetNetwork, jettonAddress);
-            const cachedInfo = this.cache.get(cacheKey);
-
-            if (cachedInfo) {
-                log.debug('Jetton info found in cache', { jettonAddress: jettonAddress, network: targetNetwork });
-                return cachedInfo;
-            }
-
-            log.debug('Jetton info not found in cache', { jettonAddress: jettonAddress, network: targetNetwork });
-
-            const address = asMaybeAddressFriendly(jettonAddress);
-
-            if (!address) {
-                log.error('Invalid jetton address format', { jettonAddress, network: targetNetwork });
-                return null;
-            }
-
-            const apiClient = this.networkManager.getClient(targetNetwork);
-            const jettonFromApi = await apiClient.jettonsByAddress({
-                address: address,
-                offset: 0,
-                limit: 1,
-            });
-
-            if (jettonFromApi && jettonFromApi?.jetton_masters?.length > 0 && jettonFromApi?.jetton_masters?.[0]) {
-                const jetton = jettonFromApi?.jetton_masters?.[0];
-                const metadata = jettonFromApi?.metadata?.[jetton.address];
-                const tokenInfo = metadata?.token_info?.find((t) => t.valid && t.type === 'jetton_masters') as
-                    | EmulationTokenInfoMasters
-                    | undefined;
-
-                let decimals: number;
-                try {
-                    decimals = parseInt(tokenInfo?.extra.decimals as string, 10);
-                } catch {
-                    decimals = 9;
-                }
-
-                const result: JettonInfo = {
-                    address: jetton.address,
-                    name: tokenInfo?.name ?? '',
-                    symbol: tokenInfo?.symbol ?? '',
-                    description: tokenInfo?.description ?? '',
-                    decimals: decimals,
-                    image: tokenInfo?.image,
-                    uri: tokenInfo?.extra?.uri,
-                    totalSupply: '0',
-                };
-                this.cache.set(cacheKey, result);
-
-                return result;
-            }
-            return null;
-        } catch (error) {
-            log.error('Error getting jetton info', { error, jettonAddress, network: targetNetwork });
-            return null;
-        }
-    }
-
-    /**
-     * Get jettons for a specific address on a specific network
-     * @param userAddress - The user's wallet address
-     * @param network - The network to query (required)
-     * @param offset - Pagination offset
-     * @param limit - Pagination limit
-     */
-    async getAddressJettons(
-        userAddress: string,
-        network: Network,
-        offset: number = 0,
-        limit: number = 50,
-    ): Promise<Jetton[]> {
-        const targetNetwork = network;
-
-        try {
-            const apiClient = this.networkManager.getClient(targetNetwork);
-
-            log.debug('Getting address jettons', {
-                userAddress: userAddress,
-                network: targetNetwork,
-                offset,
-                limit,
-            });
-
-            const response = await apiClient.jettonsByOwnerAddress({
-                ownerAddress: userAddress,
-                offset,
-                limit,
-            });
-
-            if (!response.jettons) {
-                return [];
-            }
-
-            const addressJettons: Jetton[] = [];
-
-            for (const item of response.jettons) {
-                addressJettons.push(item);
-            }
-
-            log.debug('Retrieved address jettons', { count: addressJettons.length, network: targetNetwork });
-            return addressJettons;
-        } catch (error) {
-            log.error('Failed to get address jettons', { error, userAddress, network: targetNetwork });
-            throw new JettonError(
-                `Failed to get jettons for address: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                JettonErrorCode.NETWORK_ERROR,
-                error,
-            );
-        }
-    }
-
-    /**
-     * Add jetton info to cache from emulation data for a specific network
-     */
-    addJettonFromEmulation(network: Network, jettonAddress: string, emulationInfo: EmulationTokenInfoMasters): void {
-        try {
-            const cacheKey = this.normalizedCacheKey(network, jettonAddress);
-
-            const jettonInfo: JettonInfo = {
-                address: jettonAddress,
-                name: emulationInfo.name,
-                symbol: emulationInfo.symbol,
-                description: emulationInfo.description,
-                image: emulationInfo.image,
-                decimals:
-                    typeof emulationInfo.extra.decimals === 'string'
-                        ? parseInt(emulationInfo.extra.decimals, 10)
-                        : (emulationInfo.extra.decimals as number),
-                uri: emulationInfo.extra.uri,
-            };
-
-            this.cache.set(cacheKey, jettonInfo);
-            log.debug('Added jetton info from emulation to cache', {
-                jettonAddress: jettonAddress,
-                network,
-                name: jettonInfo.name,
-                symbol: jettonInfo.symbol,
-            });
-        } catch (error) {
-            log.error('Error adding jetton from emulation', { error, jettonAddress, network });
-        }
-    }
-
-    /**
-     * Add multiple jettons from emulation metadata for a specific network
-     */
-    addJettonsFromEmulationMetadata(
-        network: Network,
-        metadata: Record<
-            string,
-            {
-                is_indexed: boolean;
-                token_info?: unknown[];
-            }
-        >,
-    ): void {
-        try {
-            let addedCount = 0;
-
-            for (const [jettonAddress, addressMetadata] of Object.entries(metadata)) {
-                if (!addressMetadata.is_indexed || !addressMetadata.token_info) {
-                    continue;
-                }
-
-                const jettonMasterInfo = addressMetadata.token_info.find(
-                    (info: unknown) =>
-                        typeof info === 'object' &&
-                        info !== null &&
-                        'type' in info &&
-                        (info as { type: string }).type === 'jetton_masters',
-                ) as EmulationTokenInfoMasters | undefined;
-
-                if (jettonMasterInfo) {
-                    log.debug('Adding jetton from emulation metadata', { jettonAddress, network });
-                    this.addJettonFromEmulation(network, jettonAddress, jettonMasterInfo);
-                    addedCount++;
-                }
-            }
-
-            if (addedCount > 0) {
-                log.info('Added jettons from emulation metadata', { addedCount, network });
-            }
-        } catch (error) {
-            log.error('Error adding jettons from emulation metadata', { error, network });
-        }
-    }
-
-    /**
-     * Normalize jetton address for consistent caching
-     */
-    private normalizedCacheKey(network: Network, address: string): string {
-        if (isTonAddress(address)) {
-            return createCacheKey(network, GRAM_ADDRESS);
-        }
-        return createCacheKey(network, Address.parse(address).toString());
-    }
-
-    /**
-     * Get cache statistics
-     */
-    getCacheStats(): { size: number; capacity: number } {
-        return {
-            size: this.cache.size,
-            capacity: this.cache.max,
-        };
-    }
-
-    /**
-     * Validate jetton address format
-     */
-    validateJettonAddress(address: string): boolean {
-        try {
-            if (isTonAddress(address)) {
-                return true;
-            }
-
-            // Use TON Address parsing to validate
-            Address.parse(address);
-            return true;
+          decimals = parseInt(tokenInfo?.extra.decimals as string, 10);
         } catch {
-            return false;
+          decimals = 9;
         }
-    }
 
-    /**
-     * Clear the jetton cache for all networks or a specific network
-     */
-    clearCache(network?: Network): void {
-        if (network) {
-            // Clear only entries for the specific network
-            for (const key of this.cache.keys()) {
-                if (key.startsWith(`${network.chainId}:`)) {
-                    this.cache.delete(key);
-                }
-            }
-            // Re-add GRAM for this network
-            this.addTonToCache(network);
-            log.info('Jetton cache cleared for network', { network });
-        } else {
-            // Clear all entries
-            this.cache.clear();
-            // Re-add GRAM for all configured networks
-            for (const net of this.networkManager.getConfiguredNetworks()) {
-                this.addTonToCache(net);
-            }
-            log.info('Jetton cache cleared for all networks');
-        }
+        const result: JettonInfo = {
+          address: jetton.address,
+          name: tokenInfo?.name ?? '',
+          symbol: tokenInfo?.symbol ?? '',
+          description: tokenInfo?.description ?? '',
+          decimals: decimals,
+          image: tokenInfo?.image,
+          uri: tokenInfo?.extra?.uri,
+          totalSupply: '0',
+        };
+        this.cache.set(cacheKey, result);
+
+        return result;
+      }
+      return null;
+    } catch (error) {
+      log.error('Error getting jetton info', {
+        error,
+        jettonAddress,
+        network: targetNetwork,
+      });
+      return null;
     }
+  }
+
+  /**
+   * Get jettons for a specific address on a specific network
+   * @param userAddress - The user's wallet address
+   * @param network - The network to query (required)
+   * @param offset - Pagination offset
+   * @param limit - Pagination limit
+   */
+  async getAddressJettons(
+    userAddress: string,
+    network: Network,
+    offset: number = 0,
+    limit: number = 50,
+  ): Promise<Jetton[]> {
+    const targetNetwork = network;
+
+    try {
+      const apiClient = this.networkManager.getClient(targetNetwork);
+
+      log.debug('Getting address jettons', {
+        userAddress: userAddress,
+        network: targetNetwork,
+        offset,
+        limit,
+      });
+
+      const response = await apiClient.jettonsByOwnerAddress({
+        ownerAddress: userAddress,
+        offset,
+        limit,
+      });
+
+      if (!response.jettons) {
+        return [];
+      }
+
+      const addressJettons: Jetton[] = [];
+
+      for (const item of response.jettons) {
+        addressJettons.push(item);
+      }
+
+      log.debug('Retrieved address jettons', {
+        count: addressJettons.length,
+        network: targetNetwork,
+      });
+      return addressJettons;
+    } catch (error) {
+      log.error('Failed to get address jettons', {
+        error,
+        userAddress,
+        network: targetNetwork,
+      });
+      throw new JettonError(
+        `Failed to get jettons for address: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        JettonErrorCode.NETWORK_ERROR,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Add jetton info to cache from emulation data for a specific network
+   */
+  addJettonFromEmulation(
+    network: Network,
+    jettonAddress: string,
+    emulationInfo: EmulationTokenInfoMasters,
+  ): void {
+    try {
+      const cacheKey = this.normalizedCacheKey(network, jettonAddress);
+
+      const jettonInfo: JettonInfo = {
+        address: jettonAddress,
+        name: emulationInfo.name,
+        symbol: emulationInfo.symbol,
+        description: emulationInfo.description,
+        image: emulationInfo.image,
+        decimals:
+          typeof emulationInfo.extra.decimals === 'string'
+            ? parseInt(emulationInfo.extra.decimals, 10)
+            : (emulationInfo.extra.decimals as number),
+        uri: emulationInfo.extra.uri,
+      };
+
+      this.cache.set(cacheKey, jettonInfo);
+      log.debug('Added jetton info from emulation to cache', {
+        jettonAddress: jettonAddress,
+        network,
+        name: jettonInfo.name,
+        symbol: jettonInfo.symbol,
+      });
+    } catch (error) {
+      log.error('Error adding jetton from emulation', {
+        error,
+        jettonAddress,
+        network,
+      });
+    }
+  }
+
+  /**
+   * Add multiple jettons from emulation metadata for a specific network
+   */
+  addJettonsFromEmulationMetadata(
+    network: Network,
+    metadata: Record<
+      string,
+      {
+        is_indexed: boolean;
+        token_info?: unknown[];
+      }
+    >,
+  ): void {
+    try {
+      let addedCount = 0;
+
+      for (const [jettonAddress, addressMetadata] of Object.entries(metadata)) {
+        if (!addressMetadata.is_indexed || !addressMetadata.token_info) {
+          continue;
+        }
+
+        const jettonMasterInfo = addressMetadata.token_info.find(
+          (info: unknown) =>
+            typeof info === 'object' &&
+            info !== null &&
+            'type' in info &&
+            (info as { type: string }).type === 'jetton_masters',
+        ) as EmulationTokenInfoMasters | undefined;
+
+        if (jettonMasterInfo) {
+          log.debug('Adding jetton from emulation metadata', {
+            jettonAddress,
+            network,
+          });
+          this.addJettonFromEmulation(network, jettonAddress, jettonMasterInfo);
+          addedCount++;
+        }
+      }
+
+      if (addedCount > 0) {
+        log.info('Added jettons from emulation metadata', {
+          addedCount,
+          network,
+        });
+      }
+    } catch (error) {
+      log.error('Error adding jettons from emulation metadata', {
+        error,
+        network,
+      });
+    }
+  }
+
+  /**
+   * Normalize jetton address for consistent caching
+   */
+  private normalizedCacheKey(network: Network, address: string): string {
+    if (isTonAddress(address)) {
+      return createCacheKey(network, GRAM_ADDRESS);
+    }
+    return createCacheKey(network, Address.parse(address).toString());
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): { size: number; capacity: number } {
+    return {
+      size: this.cache.size,
+      capacity: this.cache.max,
+    };
+  }
+
+  /**
+   * Validate jetton address format
+   */
+  validateJettonAddress(address: string): boolean {
+    try {
+      if (isTonAddress(address)) {
+        return true;
+      }
+
+      // Use TON Address parsing to validate
+      Address.parse(address);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clear the jetton cache for all networks or a specific network
+   */
+  clearCache(network?: Network): void {
+    if (network) {
+      // Clear only entries for the specific network
+      for (const key of this.cache.keys()) {
+        if (key.startsWith(`${network.chainId}:`)) {
+          this.cache.delete(key);
+        }
+      }
+      // Re-add GRAM for this network
+      this.addTonToCache(network);
+      log.info('Jetton cache cleared for network', { network });
+    } else {
+      // Clear all entries
+      this.cache.clear();
+      // Re-add GRAM for all configured networks
+      for (const net of this.networkManager.getConfiguredNetworks()) {
+        this.addTonToCache(net);
+      }
+      log.info('Jetton cache cleared for all networks');
+    }
+  }
 }

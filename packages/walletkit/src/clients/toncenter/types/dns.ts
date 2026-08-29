@@ -10,16 +10,16 @@ import type { UserFriendlyAddress } from '../../../api/models';
 import type { AddressBookRow } from './nfts';
 
 export interface DnsRecord {
-    dnsNextResolver: string | null;
-    dnsSiteAdnl: string | null;
-    dnsStorageBagId: string | null;
-    dnsWallet: UserFriendlyAddress | null;
-    domain: string;
-    nftItemAddress: UserFriendlyAddress;
-    nftItemOwner: UserFriendlyAddress;
+  dnsNextResolver: string | null;
+  dnsSiteAdnl: string | null;
+  dnsStorageBagId: string | null;
+  dnsWallet: UserFriendlyAddress | null;
+  domain: string;
+  nftItemAddress: UserFriendlyAddress;
+  nftItemOwner: UserFriendlyAddress;
 }
 
 export interface DnsRecords {
-    addressBook: { [key: string]: AddressBookRow };
-    records: DnsRecord[];
+  addressBook: { [key: string]: AddressBookRow };
+  records: DnsRecord[];
 }

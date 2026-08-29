@@ -4,9 +4,9 @@ import { Staking } from '@/features/staking';
 import { ProtectedRoute } from '@/core/routing';
 
 export const Route = createFileRoute('/staking')({
-    component: () => (
-        <ProtectedRoute requiresWallet>
-            <Staking />
-        </ProtectedRoute>
-    ),
+  component: () => (
+    <ProtectedRoute requiresWallet>
+      <Staking />
+    </ProtectedRoute>
+  ),
 });

@@ -17,307 +17,309 @@ import type { AppState } from '../types/store';
  * Hook to access the wallet store
  */
 export function useWalletStore<T>(selector: (state: AppState) => T): T {
-    const store = useContext(WalletStoreContext);
-    if (!store) {
-        throw new Error('useWalletStore must be used within WalletProvider');
-    }
-    return useStore(store, selector);
+  const store = useContext(WalletStoreContext);
+  if (!store) {
+    throw new Error('useWalletStore must be used within WalletProvider');
+  }
+  return useStore(store, selector);
 }
 
 /**
  * Hook to access WalletKit instance
  */
 export const useWalletKit = () => {
-    return useWalletStore((state) => state.walletCore.walletKit);
+  return useWalletStore((state) => state.walletCore.walletKit);
 };
 
 /**
  * Hook for authentication state and actions
  */
 export const useAuth = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            isPasswordSet: state.auth.isPasswordSet,
-            isUnlocked: state.auth.isUnlocked,
-            persistPassword: state.auth.persistPassword,
-            holdToSign: state.auth.holdToSign,
-            showFastSend: state.auth.showFastSend,
-            useWalletInterfaceType: state.auth.useWalletInterfaceType,
-            ledgerAccountNumber: state.auth.ledgerAccountNumber,
-            setPassword: state.setPassword,
-            unlock: state.unlock,
-            lock: state.lock,
-            reset: state.reset,
-            setPersistPassword: state.setPersistPassword,
-            setHoldToSign: state.setHoldToSign,
-            setShowFastSend: state.setShowFastSend,
-            setUseWalletInterfaceType: state.setUseWalletInterfaceType,
-            setLedgerAccountNumber: state.setLedgerAccountNumber,
-            createLedgerWallet: state.createLedgerWallet,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      isPasswordSet: state.auth.isPasswordSet,
+      isUnlocked: state.auth.isUnlocked,
+      persistPassword: state.auth.persistPassword,
+      holdToSign: state.auth.holdToSign,
+      showFastSend: state.auth.showFastSend,
+      useWalletInterfaceType: state.auth.useWalletInterfaceType,
+      ledgerAccountNumber: state.auth.ledgerAccountNumber,
+      setPassword: state.setPassword,
+      unlock: state.unlock,
+      lock: state.lock,
+      reset: state.reset,
+      setPersistPassword: state.setPersistPassword,
+      setHoldToSign: state.setHoldToSign,
+      setShowFastSend: state.setShowFastSend,
+      setUseWalletInterfaceType: state.setUseWalletInterfaceType,
+      setLedgerAccountNumber: state.setLedgerAccountNumber,
+      createLedgerWallet: state.createLedgerWallet,
+    })),
+  );
 };
 
 /**
  * Hook for wallet state and management
  */
 export const useWallet = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            isAuthenticated: state.walletManagement.isAuthenticated,
-            hasWallet: state.walletManagement.hasWallet,
-            address: state.walletManagement.address,
-            isStreamingConnected: state.walletManagement.isStreamingConnected,
-            balance: state.walletManagement.balance,
-            publicKey: state.walletManagement.publicKey,
-            events: state.walletManagement.events,
-            pendingTransactions: state.walletManagement.pendingTransactions,
-            currentWallet: state.walletManagement.currentWallet,
-            savedWallets: state.walletManagement.savedWallets,
-            activeWalletId: state.walletManagement.activeWalletId,
-            loadAllWallets: state.loadAllWallets,
-            createWallet: state.createWallet,
-            importWallet: state.importWallet,
-            clearWallet: state.clearWallet,
-            updateBalance: state.updateBalance,
-            loadEvents: state.loadEvents,
-            getDecryptedMnemonic: state.getDecryptedMnemonic,
-            getAvailableWallets: state.getAvailableWallets,
-            getActiveWallet: state.getActiveWallet,
-            switchWallet: state.switchWallet,
-            removeWallet: state.removeWallet,
-            renameWallet: state.renameWallet,
-            createLedgerWallet: state.createLedgerWallet,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      isAuthenticated: state.walletManagement.isAuthenticated,
+      hasWallet: state.walletManagement.hasWallet,
+      address: state.walletManagement.address,
+      isStreamingConnected: state.walletManagement.isStreamingConnected,
+      balance: state.walletManagement.balance,
+      publicKey: state.walletManagement.publicKey,
+      events: state.walletManagement.events,
+      pendingTransactions: state.walletManagement.pendingTransactions,
+      currentWallet: state.walletManagement.currentWallet,
+      savedWallets: state.walletManagement.savedWallets,
+      activeWalletId: state.walletManagement.activeWalletId,
+      loadAllWallets: state.loadAllWallets,
+      createWallet: state.createWallet,
+      importWallet: state.importWallet,
+      clearWallet: state.clearWallet,
+      updateBalance: state.updateBalance,
+      loadEvents: state.loadEvents,
+      getDecryptedMnemonic: state.getDecryptedMnemonic,
+      getAvailableWallets: state.getAvailableWallets,
+      getActiveWallet: state.getActiveWallet,
+      switchWallet: state.switchWallet,
+      removeWallet: state.removeWallet,
+      renameWallet: state.renameWallet,
+      createLedgerWallet: state.createLedgerWallet,
+    })),
+  );
 };
 
 /**
  * Hook for TON Connect state and actions
  */
 export const useTonConnect = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            pendingConnectRequest: state.tonConnect.pendingConnectRequestEvent,
-            isConnectModalOpen: state.tonConnect.isConnectModalOpen,
-            handleTonConnectUrl: state.handleTonConnectUrl,
-            showConnectRequest: state.showConnectRequest,
-            approveConnectRequest: state.approveConnectRequest,
-            rejectConnectRequest: state.rejectConnectRequest,
-            closeConnectModal: state.closeConnectModal,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      pendingConnectRequest: state.tonConnect.pendingConnectRequestEvent,
+      isConnectModalOpen: state.tonConnect.isConnectModalOpen,
+      handleTonConnectUrl: state.handleTonConnectUrl,
+      showConnectRequest: state.showConnectRequest,
+      approveConnectRequest: state.approveConnectRequest,
+      rejectConnectRequest: state.rejectConnectRequest,
+      closeConnectModal: state.closeConnectModal,
+    })),
+  );
 };
 
 /**
  * Hook for transaction requests
  */
 export const useTransactionRequests = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            pendingTransactionRequest: state.tonConnect.pendingTransactionRequestEvent,
-            isTransactionModalOpen: state.tonConnect.isTransactionModalOpen,
-            showTransactionRequest: state.showTransactionRequest,
-            approveTransactionRequest: state.approveTransactionRequest,
-            rejectTransactionRequest: state.rejectTransactionRequest,
-            closeTransactionModal: state.closeTransactionModal,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      pendingTransactionRequest:
+        state.tonConnect.pendingTransactionRequestEvent,
+      isTransactionModalOpen: state.tonConnect.isTransactionModalOpen,
+      showTransactionRequest: state.showTransactionRequest,
+      approveTransactionRequest: state.approveTransactionRequest,
+      rejectTransactionRequest: state.rejectTransactionRequest,
+      closeTransactionModal: state.closeTransactionModal,
+    })),
+  );
 };
 
 /**
  * Hook for sign data requests
  */
 export const useSignDataRequests = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            pendingSignDataRequest: state.tonConnect.pendingSignDataRequestEvent,
-            isSignDataModalOpen: state.tonConnect.isSignDataModalOpen,
-            showSignDataRequest: state.showSignDataRequest,
-            approveSignDataRequest: state.approveSignDataRequest,
-            rejectSignDataRequest: state.rejectSignDataRequest,
-            closeSignDataModal: state.closeSignDataModal,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      pendingSignDataRequest: state.tonConnect.pendingSignDataRequestEvent,
+      isSignDataModalOpen: state.tonConnect.isSignDataModalOpen,
+      showSignDataRequest: state.showSignDataRequest,
+      approveSignDataRequest: state.approveSignDataRequest,
+      rejectSignDataRequest: state.rejectSignDataRequest,
+      closeSignDataModal: state.closeSignDataModal,
+    })),
+  );
 };
 
 /**
  * Hook for sign message requests
  */
 export const useSignMessageRequests = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            pendingSignMessageRequest: state.tonConnect.pendingSignMessageRequestEvent,
-            isSignMessageModalOpen: state.tonConnect.isSignMessageModalOpen,
-            showSignMessageRequest: state.showSignMessageRequest,
-            approveSignMessageRequest: state.approveSignMessageRequest,
-            rejectSignMessageRequest: state.rejectSignMessageRequest,
-            closeSignMessageModal: state.closeSignMessageModal,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      pendingSignMessageRequest:
+        state.tonConnect.pendingSignMessageRequestEvent,
+      isSignMessageModalOpen: state.tonConnect.isSignMessageModalOpen,
+      showSignMessageRequest: state.showSignMessageRequest,
+      approveSignMessageRequest: state.approveSignMessageRequest,
+      rejectSignMessageRequest: state.rejectSignMessageRequest,
+      closeSignMessageModal: state.closeSignMessageModal,
+    })),
+  );
 };
 
 /**
  * Hook for disconnect events
  */
 export const useDisconnectEvents = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            disconnectedSessions: state.tonConnect.disconnectedSessions || [],
-            handleDisconnectEvent: state.handleDisconnectEvent,
-            clearDisconnectNotifications: state.clearDisconnectNotifications,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      disconnectedSessions: state.tonConnect.disconnectedSessions || [],
+      handleDisconnectEvent: state.handleDisconnectEvent,
+      clearDisconnectNotifications: state.clearDisconnectNotifications,
+    })),
+  );
 };
 
 /**
  * Hook for NFTs
  */
 export const useNfts = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            userNfts: state.nfts.userNfts,
-            lastNftsUpdate: state.nfts.lastNftsUpdate,
-            isLoadingNfts: state.nfts.isLoadingNfts,
-            isRefreshing: state.nfts.isRefreshing,
-            error: state.nfts.error,
-            hasMore: state.nfts.hasMore,
-            offset: state.nfts.offset,
-            loadUserNfts: state.loadUserNfts,
-            refreshNfts: state.refreshNfts,
-            loadMoreNfts: state.loadMoreNfts,
-            clearNfts: state.clearNfts,
-            getNftByAddress: state.getNftByAddress,
-            formatNftIndex: state.formatNftIndex,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      userNfts: state.nfts.userNfts,
+      lastNftsUpdate: state.nfts.lastNftsUpdate,
+      isLoadingNfts: state.nfts.isLoadingNfts,
+      isRefreshing: state.nfts.isRefreshing,
+      error: state.nfts.error,
+      hasMore: state.nfts.hasMore,
+      offset: state.nfts.offset,
+      loadUserNfts: state.loadUserNfts,
+      refreshNfts: state.refreshNfts,
+      loadMoreNfts: state.loadMoreNfts,
+      clearNfts: state.clearNfts,
+      getNftByAddress: state.getNftByAddress,
+      formatNftIndex: state.formatNftIndex,
+    })),
+  );
 };
 
 /**
  * Hook for Jettons
  */
 export const useJettons = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            userJettons: state.jettons.userJettons,
-            jettonTransfers: state.jettons.jettonTransfers,
-            popularJettons: state.jettons.popularJettons,
-            lastJettonsUpdate: state.jettons.lastJettonsUpdate,
-            isLoadingJettons: state.jettons.isLoadingJettons,
-            isLoadingTransfers: state.jettons.isLoadingTransfers,
-            isLoadingPopular: state.jettons.isLoadingPopular,
-            isRefreshing: state.jettons.isRefreshing,
-            error: state.jettons.error,
-            transferError: state.jettons.transferError,
-            loadUserJettons: state.loadUserJettons,
-            refreshJettons: state.refreshJettons,
-            validateJettonAddress: state.validateJettonAddress,
-            clearJettons: state.clearJettons,
-            getJettonByAddress: state.getJettonByAddress,
-            formatJettonAmount: state.formatJettonAmount,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      userJettons: state.jettons.userJettons,
+      jettonTransfers: state.jettons.jettonTransfers,
+      popularJettons: state.jettons.popularJettons,
+      lastJettonsUpdate: state.jettons.lastJettonsUpdate,
+      isLoadingJettons: state.jettons.isLoadingJettons,
+      isLoadingTransfers: state.jettons.isLoadingTransfers,
+      isLoadingPopular: state.jettons.isLoadingPopular,
+      isRefreshing: state.jettons.isRefreshing,
+      error: state.jettons.error,
+      transferError: state.jettons.transferError,
+      loadUserJettons: state.loadUserJettons,
+      refreshJettons: state.refreshJettons,
+      validateJettonAddress: state.validateJettonAddress,
+      clearJettons: state.clearJettons,
+      getJettonByAddress: state.getJettonByAddress,
+      formatJettonAmount: state.formatJettonAmount,
+    })),
+  );
 };
 
 /**
  * Hook for Rates (USD prices and 24h change per asset key)
  */
 export const useRates = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            entries: state.rates.entries,
-            isLoading: state.rates.isLoading,
-            error: state.rates.error,
-            lastUpdated: state.rates.lastUpdated,
-            loadRates: state.loadRates,
-            clearRates: state.clearRates,
-            getRate: state.getRate,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      entries: state.rates.entries,
+      isLoading: state.rates.isLoading,
+      error: state.rates.error,
+      lastUpdated: state.rates.lastUpdated,
+      loadRates: state.loadRates,
+      clearRates: state.clearRates,
+      getRate: state.getRate,
+    })),
+  );
 };
 
 /**
  * Hook for Swap
  */
 export const useSwap = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            fromToken: state.swap.fromToken,
-            toToken: state.swap.toToken,
-            amount: state.swap.amount,
-            destinationAddress: state.swap.destinationAddress,
-            currentQuote: state.swap.currentQuote,
-            isLoadingQuote: state.swap.isLoadingQuote,
-            isSwapping: state.swap.isSwapping,
-            error: state.swap.error,
-            slippageBps: state.swap.slippageBps,
-            isReverseSwap: state.swap.isReverseSwap,
-            providerId: state.swap.providerId,
-            setFromToken: state.setFromToken,
-            setToToken: state.setToToken,
-            setSwapAmount: state.setSwapAmount,
-            setDestinationAddress: state.setDestinationAddress,
-            setSlippageBps: state.setSlippageBps,
-            setSwapProviderId: state.setSwapProviderId,
-            setIsReverseSwap: state.setIsReverseSwap,
-            swapTokens: state.swapTokens,
-            getSwapQuote: state.getSwapQuote,
-            executeSwap: state.executeSwap,
-            clearSwap: state.clearSwap,
-            validateSwapInputs: state.validateSwapInputs,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      fromToken: state.swap.fromToken,
+      toToken: state.swap.toToken,
+      amount: state.swap.amount,
+      destinationAddress: state.swap.destinationAddress,
+      currentQuote: state.swap.currentQuote,
+      isLoadingQuote: state.swap.isLoadingQuote,
+      isSwapping: state.swap.isSwapping,
+      error: state.swap.error,
+      slippageBps: state.swap.slippageBps,
+      isReverseSwap: state.swap.isReverseSwap,
+      providerId: state.swap.providerId,
+      setFromToken: state.setFromToken,
+      setToToken: state.setToToken,
+      setSwapAmount: state.setSwapAmount,
+      setDestinationAddress: state.setDestinationAddress,
+      setSlippageBps: state.setSlippageBps,
+      setSwapProviderId: state.setSwapProviderId,
+      setIsReverseSwap: state.setIsReverseSwap,
+      swapTokens: state.swapTokens,
+      getSwapQuote: state.getSwapQuote,
+      executeSwap: state.executeSwap,
+      clearSwap: state.clearSwap,
+      validateSwapInputs: state.validateSwapInputs,
+    })),
+  );
 };
 /**
  * Hook for Gasless transfers
  */
 export const useGasless = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            enabled: state.gasless.enabled,
-            feeAsset: state.gasless.feeAsset,
-            supportedAssets: state.gasless.supportedAssets,
-            relayAddress: state.gasless.relayAddress,
-            currentQuote: state.gasless.currentQuote,
-            isLoadingConfig: state.gasless.isLoadingConfig,
-            isLoadingQuote: state.gasless.isLoadingQuote,
-            isSending: state.gasless.isSending,
-            error: state.gasless.error,
-            setGaslessEnabled: state.setGaslessEnabled,
-            setGaslessFeeAsset: state.setGaslessFeeAsset,
-            clearGaslessQuote: state.clearGaslessQuote,
-            loadGaslessConfig: state.loadGaslessConfig,
-            getGaslessQuote: state.getGaslessQuote,
-            sendGasless: state.sendGasless,
-            clearGasless: state.clearGasless,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      enabled: state.gasless.enabled,
+      feeAsset: state.gasless.feeAsset,
+      supportedAssets: state.gasless.supportedAssets,
+      relayAddress: state.gasless.relayAddress,
+      currentQuote: state.gasless.currentQuote,
+      isLoadingConfig: state.gasless.isLoadingConfig,
+      isLoadingQuote: state.gasless.isLoadingQuote,
+      isSending: state.gasless.isSending,
+      error: state.gasless.error,
+      setGaslessEnabled: state.setGaslessEnabled,
+      setGaslessFeeAsset: state.setGaslessFeeAsset,
+      clearGaslessQuote: state.clearGaslessQuote,
+      loadGaslessConfig: state.loadGaslessConfig,
+      getGaslessQuote: state.getGaslessQuote,
+      sendGasless: state.sendGasless,
+      clearGasless: state.clearGasless,
+    })),
+  );
 };
 /**
  * Hook for Staking
  */
 export const useStaking = () => {
-    return useWalletStore(
-        useShallow((state) => ({
-            amount: state.staking.amount,
-            providerId: state.staking.providerId,
-            currentQuote: state.staking.currentQuote,
-            isLoadingQuote: state.staking.isLoadingQuote,
-            isStaking: state.staking.isStaking,
-            isUnstaking: state.staking.isUnstaking,
-            error: state.staking.error,
-            stakedBalance: state.staking.stakedBalance,
-            providerInfo: state.staking.providerInfo,
-            unstakeMode: state.staking.unstakeMode,
-            setStakingAmount: state.setStakingAmount,
-            setStakingProviderId: state.setStakingProviderId,
-            setUnstakeMode: state.setUnstakeMode,
-            getStakingQuote: state.getStakingQuote,
-            stake: state.stake,
-            unstake: state.unstake,
-            loadStakingData: state.loadStakingData,
-            clearStaking: state.clearStaking,
-            validateStakingInputs: state.validateStakingInputs,
-        })),
-    );
+  return useWalletStore(
+    useShallow((state) => ({
+      amount: state.staking.amount,
+      providerId: state.staking.providerId,
+      currentQuote: state.staking.currentQuote,
+      isLoadingQuote: state.staking.isLoadingQuote,
+      isStaking: state.staking.isStaking,
+      isUnstaking: state.staking.isUnstaking,
+      error: state.staking.error,
+      stakedBalance: state.staking.stakedBalance,
+      providerInfo: state.staking.providerInfo,
+      unstakeMode: state.staking.unstakeMode,
+      setStakingAmount: state.setStakingAmount,
+      setStakingProviderId: state.setStakingProviderId,
+      setUnstakeMode: state.setUnstakeMode,
+      getStakingQuote: state.getStakingQuote,
+      stake: state.stake,
+      unstake: state.unstake,
+      loadStakingData: state.loadStakingData,
+      clearStaking: state.clearStaking,
+      validateStakingInputs: state.validateStakingInputs,
+    })),
+  );
 };

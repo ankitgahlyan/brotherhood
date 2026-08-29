@@ -16,49 +16,49 @@ import type { EmulationTransaction } from './EmulationTransaction';
  * Unified emulation response model, normalised from either Toncenter or TonAPI sources.
  */
 export interface EmulationResponse {
-    /**
-     * Masterchain block sequence number used during emulation
-     * @format int
-     */
-    mcBlockSeqno: number;
+  /**
+   * Masterchain block sequence number used during emulation
+   * @format int
+   */
+  mcBlockSeqno: number;
 
-    /**
-     * Root node of the transaction execution tree
-     */
-    trace: EmulationTraceNode;
+  /**
+   * Root node of the transaction execution tree
+   */
+  trace: EmulationTraceNode;
 
-    /**
-     * Map of transaction hashes to transaction details
-     */
-    transactions: { [key: string]: EmulationTransaction };
+  /**
+   * Map of transaction hashes to transaction details
+   */
+  transactions: { [key: string]: EmulationTransaction };
 
-    /**
-     * High-level actions extracted from the trace
-     */
-    actions: EmulationAction[];
+  /**
+   * High-level actions extracted from the trace
+   */
+  actions: EmulationAction[];
 
-    /**
-     * Random seed used during emulation, hex-encoded
-     */
-    randSeed: Hex;
+  /**
+   * Random seed used during emulation, hex-encoded
+   */
+  randSeed: Hex;
 
-    /**
-     * Whether the trace is incomplete due to limits or errors
-     */
-    isIncomplete: boolean;
+  /**
+   * Whether the trace is incomplete due to limits or errors
+   */
+  isIncomplete: boolean;
 
-    /**
-     * Map of code cell hashes to their BOC base64 representations
-     */
-    codeCells: { [key: string]: Base64String };
+  /**
+   * Map of code cell hashes to their BOC base64 representations
+   */
+  codeCells: { [key: string]: Base64String };
 
-    /**
-     * Map of data cell hashes to their BOC base64 representations
-     */
-    dataCells: { [key: string]: Base64String };
+  /**
+   * Map of data cell hashes to their BOC base64 representations
+   */
+  dataCells: { [key: string]: Base64String };
 
-    /**
-     * Address book mapping raw addresses to human-readable metadata
-     */
-    addressBook: { [key: string]: EmulationAddressBookEntry };
+  /**
+   * Address book mapping raw addresses to human-readable metadata
+   */
+  addressBook: { [key: string]: EmulationAddressBookEntry };
 }

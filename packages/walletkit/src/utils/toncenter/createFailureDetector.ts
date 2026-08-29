@@ -20,21 +20,21 @@ import { isTransactionFailed } from './isTransactionFailed';
  * the entire trace is considered failed.
  */
 export const createFailureDetector = (nonCriticalOpcodes: Set<string>) => {
-    return (transactions: Record<string, ToncenterTransaction>): boolean => {
-        for (const tx of Object.values(transactions)) {
-            if (isTransactionFailed(tx)) {
-                const opcode = getTxOpcode(tx);
+  return (transactions: Record<string, ToncenterTransaction>): boolean => {
+    for (const tx of Object.values(transactions)) {
+      if (isTransactionFailed(tx)) {
+        const opcode = getTxOpcode(tx);
 
-                // If the opcode is known and in the non-critical list, ignore the abort
-                if (opcode && nonCriticalOpcodes.has(opcode)) {
-                    continue;
-                }
-
-                // Otherwise, the abort means the trace failed
-                return true;
-            }
+        // If the opcode is known and in the non-critical list, ignore the abort
+        if (opcode && nonCriticalOpcodes.has(opcode)) {
+          continue;
         }
 
-        return false;
-    };
+        // Otherwise, the abort means the trace failed
+        return true;
+      }
+    }
+
+    return false;
+  };
 };

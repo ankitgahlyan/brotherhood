@@ -2,10 +2,9 @@ import { TonClient } from '@ton/ton';
 import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
-import { FossFiWallet } from '@/contracts/brotherhood/FossFiWallet.gen';
-import { PersonalMinter } from '@/contracts/brotherhood/Personal.gen';
-import { PersonalWallet } from '@/contracts/brotherhood/PersonalWallet.gen';
-// import { Addresses, FiWalletStore, NomInAddrs, ReportInfo, TimeStamps, TrustedAddrs } from '@/contracts/brotherhood/FossFiWallet.gen';
+import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { PersonalMinter } from '@wrappers/Personal.gen';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 
 export type { Network } from './config';
 
@@ -83,7 +82,10 @@ export async function getWalletAddress( // todo: calc offchain
   }
 }
 
-export async function getFiWalletAddress(ownerAddress: Address, _network?: Network): Promise<Address> {
+export async function getFiWalletAddress(
+  ownerAddress: Address,
+  _network?: Network,
+): Promise<Address> {
   return getWalletAddress(ownerAddress);
 }
 

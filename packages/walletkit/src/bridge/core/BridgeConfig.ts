@@ -13,54 +13,54 @@ import type { WalletId } from '../../utils';
  * Configuration for the TonConnect JS Bridge
  */
 export interface BridgeConfig {
-    /**
-     * Device information as per TonConnect spec
-     */
-    deviceInfo: DeviceInfo;
+  /**
+   * Device information as per TonConnect spec
+   */
+  deviceInfo: DeviceInfo;
 
-    /**
-     * Wallet information as per TonConnect spec
-     */
-    walletInfo: WalletInfo;
+  /**
+   * Wallet information as per TonConnect spec
+   */
+  walletInfo: WalletInfo;
 
-    /**
-     * Key used to inject bridge into window object (e.g., 'ton', 'mywallet')
-     */
-    jsBridgeKey: string;
+  /**
+   * Key used to inject bridge into window object (e.g., 'ton', 'mywallet')
+   */
+  jsBridgeKey: string;
 
-    /**
-     * Whether this is a wallet browser environment
-     */
-    isWalletBrowser: boolean;
+  /**
+   * Whether this is a wallet browser environment
+   */
+  isWalletBrowser: boolean;
 
-    /**
-     * Protocol version to support
-     */
-    protocolVersion: number;
+  /**
+   * Protocol version to support
+   */
+  protocolVersion: number;
 
-    /**
-     * Id of wallet assosiated with dApp connection in bridge
-     */
-    walletId?: WalletId;
+  /**
+   * Id of wallet assosiated with dApp connection in bridge
+   */
+  walletId?: WalletId;
 }
 
 /**
  * Validates and normalizes bridge configuration
  */
 export function validateBridgeConfig(config: BridgeConfig): void {
-    if (!config.deviceInfo) {
-        throw new Error('deviceInfo is required');
-    }
+  if (!config.deviceInfo) {
+    throw new Error('deviceInfo is required');
+  }
 
-    if (!config.walletInfo) {
-        throw new Error('walletInfo is required');
-    }
+  if (!config.walletInfo) {
+    throw new Error('walletInfo is required');
+  }
 
-    if (!config.jsBridgeKey || typeof config.jsBridgeKey !== 'string') {
-        throw new Error('jsBridgeKey must be a non-empty string');
-    }
+  if (!config.jsBridgeKey || typeof config.jsBridgeKey !== 'string') {
+    throw new Error('jsBridgeKey must be a non-empty string');
+  }
 
-    if (config.protocolVersion < 2) {
-        throw new Error('protocolVersion must be at least 2');
-    }
+  if (config.protocolVersion < 2) {
+    throw new Error('protocolVersion must be at least 2');
+  }
 }

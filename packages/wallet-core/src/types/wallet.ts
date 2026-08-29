@@ -7,13 +7,13 @@
  */
 
 import type {
-    ConnectionRequestEvent,
-    JSBridgeTransportFunction,
-    StorageAdapter as KitStorageAdapter,
-    SignDataRequestEvent,
-    SignMessageRequestEvent,
-    SendTransactionRequestEvent,
-    AnalyticsManagerOptions,
+  ConnectionRequestEvent,
+  JSBridgeTransportFunction,
+  StorageAdapter as KitStorageAdapter,
+  SignDataRequestEvent,
+  SignMessageRequestEvent,
+  SendTransactionRequestEvent,
+  AnalyticsManagerOptions,
 } from '@ton/walletkit';
 import type Transport from '@ledgerhq/hw-transport';
 
@@ -27,121 +27,121 @@ import type { NetworkType } from '../utils/network';
 export type CreateLedgerTransportFunction = () => Promise<Transport>;
 
 export interface SavedWallet {
-    id: string;
-    name: string;
-    address: string;
-    publicKey: string;
-    encryptedMnemonic?: string;
-    ledgerConfig?: LedgerConfig;
-    walletType: 'mnemonic' | 'signer' | 'ledger';
-    walletInterfaceType: 'signer' | 'mnemonic' | 'ledger';
-    version?: 'v5r1' | 'v4r2';
-    network: NetworkType;
-    createdAt: number;
-    /** WalletKit wallet ID */
-    kitWalletId?: string;
+  id: string;
+  name: string;
+  address: string;
+  publicKey: string;
+  encryptedMnemonic?: string;
+  ledgerConfig?: LedgerConfig;
+  walletType: 'mnemonic' | 'signer' | 'ledger';
+  walletInterfaceType: 'signer' | 'mnemonic' | 'ledger';
+  version?: 'v5r1' | 'v4r2';
+  network: NetworkType;
+  createdAt: number;
+  /** WalletKit wallet ID */
+  kitWalletId?: string;
 }
 
 export interface AuthState {
-    auth: {
-        currentPassword?: string;
-        passwordHash?: number[];
-        isPasswordSet?: boolean;
-        isUnlocked?: boolean;
-        persistPassword?: boolean;
-        holdToSign?: boolean;
-        showFastSend?: boolean;
-        useWalletInterfaceType?: 'signer' | 'mnemonic' | 'ledger';
-        ledgerAccountNumber?: number;
-    };
+  auth: {
+    currentPassword?: string;
+    passwordHash?: number[];
+    isPasswordSet?: boolean;
+    isUnlocked?: boolean;
+    persistPassword?: boolean;
+    holdToSign?: boolean;
+    showFastSend?: boolean;
+    useWalletInterfaceType?: 'signer' | 'mnemonic' | 'ledger';
+    ledgerAccountNumber?: number;
+  };
 }
 
 export interface PreviewTransaction {
-    id: string;
-    messageHash: string;
-    type: 'send' | 'receive';
-    amount: string;
-    address: string;
-    timestamp: number;
-    status: 'pending' | 'confirmed' | 'failed';
-    traceId?: string;
-    externalMessageHash?: string;
+  id: string;
+  messageHash: string;
+  type: 'send' | 'receive';
+  amount: string;
+  address: string;
+  timestamp: number;
+  status: 'pending' | 'confirmed' | 'failed';
+  traceId?: string;
+  externalMessageHash?: string;
 }
 
 export interface DisconnectNotification {
-    walletAddress: string;
-    reason?: string;
-    timestamp: number;
+  walletAddress: string;
+  reason?: string;
+  timestamp: number;
 }
 
 export interface QueueRequestBase {
-    id: string;
-    timestamp: number;
-    expiresAt: number;
+  id: string;
+  timestamp: number;
+  expiresAt: number;
 }
 
 export interface QueuedRequestConnect {
-    type: 'connect';
-    request: ConnectionRequestEvent;
+  type: 'connect';
+  request: ConnectionRequestEvent;
 }
 
 export interface QueuedRequestTransaction {
-    type: 'transaction';
-    request: SendTransactionRequestEvent;
+  type: 'transaction';
+  request: SendTransactionRequestEvent;
 }
 
 export interface QueuedRequestSignData {
-    type: 'signData';
-    request: SignDataRequestEvent;
+  type: 'signData';
+  request: SignDataRequestEvent;
 }
 
 export interface QueuedRequestSignMessage {
-    type: 'signMessage';
-    request: SignMessageRequestEvent;
+  type: 'signMessage';
+  request: SignMessageRequestEvent;
 }
 
 export type QueuedRequestData =
-    | QueuedRequestConnect
-    | QueuedRequestTransaction
-    | QueuedRequestSignData
-    | QueuedRequestSignMessage;
+  | QueuedRequestConnect
+  | QueuedRequestTransaction
+  | QueuedRequestSignData
+  | QueuedRequestSignMessage;
 
 export type QueuedRequest = QueueRequestBase & QueuedRequestData;
 
 export interface RequestQueue {
-    items: QueuedRequest[];
-    currentRequestId?: string;
-    isProcessing: boolean;
+  items: QueuedRequest[];
+  currentRequestId?: string;
+  isProcessing: boolean;
 }
 
 export interface LedgerConfig {
-    publicKey: string;
-    path: number[];
-    walletId: number;
-    version: string;
-    network: string;
-    workchain: number;
-    accountIndex: number;
+  publicKey: string;
+  path: number[];
+  walletId: number;
+  version: string;
+  network: string;
+  workchain: number;
+  accountIndex: number;
 }
 
 export interface WalletKitConfig {
-    storage?: KitStorageAdapter;
-    jsBridgeTransport?: JSBridgeTransportFunction;
-    disableHttpBridge?: boolean;
-    disableNetworkSend?: boolean;
-    disableManifestDomainCheck?: boolean;
-    bridgeUrl?: string;
-    tonApiProvider?: 'tonapi' | 'toncenter';
-    tonApiKeyMainnet?: string;
-    tonApiKeyTestnet?: string;
-    tonApiKeyTetra?: string;
-    analytics?: AnalyticsManagerOptions;
-    disableAutoEmulation?: boolean;
-    /**
-     * Factory function to create Ledger transport.
-     * For web: () => TransportWebHID.create()
-     * For React Native: () => TransportBLE.open(deviceId)
-     * If not provided, Ledger functionality will not be available.
-     */
-    createLedgerTransport?: CreateLedgerTransportFunction;
+  storage?: KitStorageAdapter;
+  jsBridgeTransport?: JSBridgeTransportFunction;
+  disableHttpBridge?: boolean;
+  disableNetworkSend?: boolean;
+  disableManifestDomainCheck?: boolean;
+  bridgeUrl?: string;
+  tonApiProvider?: 'tonapi' | 'toncenter';
+  tonApiKeyMainnet?: string;
+  tonApiKeyTestnet?: string;
+  tonApiKeyTetra?: string;
+  analytics?: AnalyticsManagerOptions;
+  disableAutoEmulation?: boolean;
+  /**
+   * Factory function to create Ledger transport.
+   * For web: () => TransportWebHID.create()
+   * For React Native: () => TransportBLE.open(deviceId)
+   * If not provided, Ledger functionality will not be available.
+   */
+  createLedgerTransport?: CreateLedgerTransportFunction;
 }

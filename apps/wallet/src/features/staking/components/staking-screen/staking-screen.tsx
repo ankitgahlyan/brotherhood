@@ -17,20 +17,22 @@ import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
 export const Staking: FC = () => {
-    const navigate = useNavigate();
-    const { address } = useWallet();
-    const { clearStaking, loadStakingData } = useStaking();
+  const navigate = useNavigate();
+  const { address } = useWallet();
+  const { clearStaking, loadStakingData } = useStaking();
 
-    useEffect(() => {
-        if (address) {
-            loadStakingData(address);
-        }
-        return () => clearStaking();
-    }, [address, loadStakingData, clearStaking]);
+  useEffect(() => {
+    if (address) {
+      loadStakingData(address);
+    }
+    return () => clearStaking();
+  }, [address, loadStakingData, clearStaking]);
 
-    return (
-        <NewLayout header={<ScreenHeader title="Stake" onBack={() => navigate('/wallet')} />}>
-            <StakingInterface />
-        </NewLayout>
-    );
+  return (
+    <NewLayout
+      header={<ScreenHeader title="Stake" onBack={() => navigate('/wallet')} />}
+    >
+      <StakingInterface />
+    </NewLayout>
+  );
 };

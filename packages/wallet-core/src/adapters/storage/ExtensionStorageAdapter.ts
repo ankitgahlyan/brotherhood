@@ -20,24 +20,24 @@ import type { StorageAdapter } from './types';
  * ```
  */
 export class ExtensionStorageAdapter implements StorageAdapter {
-    constructor(
-        private extensionStorage: {
-            get: (keys: string | string[]) => Promise<{ [key: string]: unknown }>;
-            set: (items: { [key: string]: unknown }) => Promise<void>;
-            remove: (keys: string | string[]) => Promise<void>;
-        },
-    ) {}
+  constructor(
+    private extensionStorage: {
+      get: (keys: string | string[]) => Promise<{ [key: string]: unknown }>;
+      set: (items: { [key: string]: unknown }) => Promise<void>;
+      remove: (keys: string | string[]) => Promise<void>;
+    },
+  ) {}
 
-    async getItem(name: string): Promise<string | null> {
-        const result = await this.extensionStorage.get(name);
-        return result[name] as string | null;
-    }
+  async getItem(name: string): Promise<string | null> {
+    const result = await this.extensionStorage.get(name);
+    return result[name] as string | null;
+  }
 
-    async setItem(name: string, value: string): Promise<void> {
-        await this.extensionStorage.set({ [name]: value });
-    }
+  async setItem(name: string, value: string): Promise<void> {
+    await this.extensionStorage.set({ [name]: value });
+  }
 
-    async removeItem(name: string): Promise<void> {
-        await this.extensionStorage.remove(name);
-    }
+  async removeItem(name: string): Promise<void> {
+    await this.extensionStorage.remove(name);
+  }
 }

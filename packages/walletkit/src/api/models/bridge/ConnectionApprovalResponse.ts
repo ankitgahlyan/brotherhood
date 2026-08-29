@@ -12,20 +12,20 @@ import type { Base64String } from '../core/Primitives';
  * Response after user approves a connection request.
  */
 export interface ConnectionApprovalResponse {
-    proof?: ConnectionApprovalProof;
+  proof?: ConnectionApprovalProof;
 }
 
 export interface ConnectionApprovalProof {
-    signature: Base64String;
-    timestamp: number;
-    domain: ConnectionApprovalProofDomain;
-    payload: string;
+  signature: Base64String;
+  timestamp: number;
+  domain: ConnectionApprovalProofDomain;
+  payload: string;
 }
 
 export interface ConnectionApprovalProofDomain {
-    /**
-     * @format int
-     */
-    lengthBytes: number;
-    value: string;
+  /**
+   * @format int
+   */
+  lengthBytes: number;
+  value: string;
 }

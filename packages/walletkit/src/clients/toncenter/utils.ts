@@ -13,29 +13,33 @@ import type { InternalTransactionId } from './types/internal';
 import type { TransactionId } from '../../api/models';
 
 export const padBase64 = (data: string): string => {
-    return data.padEnd(data.length + (4 - (data.length % 4)), '=');
+  return data.padEnd(data.length + (4 - (data.length % 4)), '=');
 };
 
-export const parseMsgSizeCount = (value: string | undefined): number | undefined => {
-    if (value === undefined) return undefined;
-    const num = Number(value);
-    if (!Number.isFinite(num)) return undefined;
-    return Math.trunc(num);
+export const parseMsgSizeCount = (
+  value: string | undefined,
+): number | undefined => {
+  if (value === undefined) return undefined;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return undefined;
+  return Math.trunc(num);
 };
 
 export const prepareAddress = (address: Address | string): string => {
-    if (address instanceof Address) {
-        address = address.toString();
-    }
-    return address;
+  if (address instanceof Address) {
+    address = address.toString();
+  }
+  return address;
 };
 
-export const parseInternalTransactionId = (data: InternalTransactionId): TransactionId | null => {
-    if (data.hash !== 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=') {
-        return {
-            lt: data.lt,
-            hash: Base64ToHex(data.hash),
-        };
-    }
-    return null;
+export const parseInternalTransactionId = (
+  data: InternalTransactionId,
+): TransactionId | null => {
+  if (data.hash !== 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=') {
+    return {
+      lt: data.lt,
+      hash: Base64ToHex(data.hash),
+    };
+  }
+  return null;
 };

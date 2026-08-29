@@ -9,7 +9,7 @@
 import type { RawStackItem } from '../core/RawStackItem';
 
 export interface GetMethodResult {
-    gasUsed: number;
-    stack: RawStackItem[];
-    exitCode: number;
+  gasUsed: number;
+  stack: RawStackItem[];
+  exitCode: number;
 }

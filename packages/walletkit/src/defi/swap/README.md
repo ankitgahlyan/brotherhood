@@ -9,18 +9,18 @@ import { TonWalletKit, Network } from '@ton/walletkit';
 import { createOmnistonProvider } from '@ton/walletkit/swap/omniston';
 
 const kit = new TonWalletKit({
-    networks: {
-        [Network.mainnet().chainId]: {
-            apiClient: { url: 'https://toncenter.com', key: 'optional-api-key' },
-        },
+  networks: {
+    [Network.mainnet().chainId]: {
+      apiClient: { url: 'https://toncenter.com', key: 'optional-api-key' },
     },
+  },
 });
 
 kit.swap.registerProvider(
-    createOmnistonProvider({
-        defaultSlippageBps: 100, // 1%
-        quoteTimeoutMs: 10000,
-    }),
+  createOmnistonProvider({
+    defaultSlippageBps: 100, // 1%
+    quoteTimeoutMs: 10000,
+  }),
 );
 kit.swap.setDefaultProvider('omniston');
 ```
@@ -31,14 +31,14 @@ All providers use the same base parameters for `getQuote`:
 
 ```typescript
 interface SwapQuoteParams<TProviderOptions = unknown> {
-    from: SwapToken;
-    to: SwapToken;
-    amount: string;
-    network: Network;
-    slippageBps?: number;
-    maxOutgoingMessages?: number;
-    isReverseSwap?: boolean;
-    providerOptions?: TProviderOptions;
+  from: SwapToken;
+  to: SwapToken;
+  amount: string;
+  network: Network;
+  slippageBps?: number;
+  maxOutgoingMessages?: number;
+  isReverseSwap?: boolean;
+  providerOptions?: TProviderOptions;
 }
 ```
 
@@ -65,15 +65,18 @@ import { Network } from '@ton/walletkit';
 import type { OmnistonProviderOptions } from '@ton/walletkit/swap/omniston';
 
 const quote = await kit.swap.getQuote({
-    from: { address: 'ton', decimals: 9 },
-    to: { address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', decimals: 6 },
-    amount: '1000000000',
-    network: Network.mainnet(),
-    slippageBps: 100,
-    providerOptions: {
-        referrerAddress: 'EQ...',
-        referrerFeeBps: 10,
-    } as OmnistonProviderOptions,
+  from: { address: 'ton', decimals: 9 },
+  to: {
+    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+    decimals: 6,
+  },
+  amount: '1000000000',
+  network: Network.mainnet(),
+  slippageBps: 100,
+  providerOptions: {
+    referrerAddress: 'EQ...',
+    referrerFeeBps: 10,
+  } as OmnistonProviderOptions,
 });
 
 console.log('You will receive:', quote.toAmount);
@@ -84,9 +87,9 @@ console.log('Minimum received:', quote.minReceived);
 
 ```typescript
 const transaction = await kit.swap.buildSwapTransaction({
-    quote,
-    userAddress: 'EQ...',
-    destinationAddress: 'EQ...',
+  quote,
+  userAddress: 'EQ...',
+  destinationAddress: 'EQ...',
 });
 
 await kit.handleNewTransaction(wallet, transaction);
@@ -98,30 +101,44 @@ To create your own swap provider, extend the `SwapProvider` base class (exported
 
 ```typescript
 import {
-    SwapProvider,
-    type SwapQuoteParams,
-    type SwapQuote,
-    type SwapParams,
-    type TransactionRequest,
+  SwapProvider,
+  type SwapQuoteParams,
+  type SwapQuote,
+  type SwapParams,
+  type TransactionRequest,
 } from '@ton/walletkit';
 
 interface MyProviderOptions {
-    customParam?: string;
+  customParam?: string;
 }
 
 export class MySwapProvider extends SwapProvider<MyProviderOptions> {
-    readonly providerId = 'my-provider';
+  readonly providerId = 'my-provider';
 
-    async getQuote(params: SwapQuoteParams<MyProviderOptions>): Promise<SwapQuote> {
-        const { from, to, amount, network, providerOptions } = params;
-        // Implement quote logic...
-        return { fromToken: from, toToken: to, fromAmount: amount, toAmount: '0', network, /* ... */ };
-    }
+  async getQuote(
+    params: SwapQuoteParams<MyProviderOptions>,
+  ): Promise<SwapQuote> {
+    const { from, to, amount, network, providerOptions } = params;
+    // Implement quote logic...
+    return {
+      fromToken: from,
+      toToken: to,
+      fromAmount: amount,
+      toAmount: '0',
+      network /* ... */,
+    };
+  }
 
-    async buildSwapTransaction(params: SwapParams<MyProviderOptions>): Promise<TransactionRequest> {
-        // Build transaction...
-        return { fromAddress: params.userAddress, messages: [], network: params.quote.network };
-    }
+  async buildSwapTransaction(
+    params: SwapParams<MyProviderOptions>,
+  ): Promise<TransactionRequest> {
+    // Build transaction...
+    return {
+      fromAddress: params.userAddress,
+      messages: [],
+      network: params.quote.network,
+    };
+  }
 }
 ```
 
@@ -135,26 +152,32 @@ export class MySwapProvider extends SwapProvider<MyProviderOptions> {
 ### SwapManager
 
 #### `getQuote(params, providerId?)`
+
 Get a quote for token swap.
 
 **Parameters:**
+
 - `params: SwapQuoteParams<TProviderOptions>` – `from`, `to`, `amount`, `network`, `slippageBps?`, `providerOptions?`
 - `providerId?: string` – Provider name (uses default if not specified)
 
 **Returns:** `Promise<SwapQuote>`
 
 #### `buildSwapTransaction(params)`
+
 Build transaction for executing swap. The provider is resolved from `params.quote.providerId`, or the manager default if that field is missing.
 
 **Parameters:**
+
 - `params: SwapParams<TProviderOptions>` – `quote`, `userAddress`, `destinationAddress?`, `providerOptions?`
 
 **Returns:** `Promise<TransactionRequest>`
 
 #### `registerProvider(provider)`
+
 Register a new swap provider.
 
 #### `setDefaultProvider(providerId)`
+
 Set default provider for swap operations.
 
 ## Examples
@@ -166,4 +189,3 @@ This file is auto-generated. Do not edit manually.
 Changes will be overwritten when running the docs update script.
 Source template: template/packages/walletkit/src/defi/swap/README.md
 -->
-

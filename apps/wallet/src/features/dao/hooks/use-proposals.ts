@@ -9,67 +9,82 @@
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
-import { Dao } from '@/contracts/brotherhood/Dao.gen';
+import { Poll } from '@wrappers/Poll.gen';
+import { DaoProxy, type DaoProxyStore } from '@wrappers/DaoProxy.gen';
 import { network } from '@/lib/brotherhood/config';
 
 export interface ProposalItem {
-    id: string;
-    proposer: string;
-    yesVotes: bigint;
-    noVotes: bigint;
-    deadline: number;
-    executed: boolean;
+  id: string;
+  proposer: string;
+  yesVotes: bigint;
+  noVotes: bigint;
+  totalAccounts: bigint;
+  deadline: number;
+  executed: boolean;
+  daoProxyAddress: string;
+  fiAddress: string;
 }
 
 export interface UseProposalsResult {
-    totalAccounts: bigint | null;
-    proposalCount: bigint | null;
-    proposals: ProposalItem[];
-    isLoading: boolean;
-    refetch: () => void;
+  totalAccounts: bigint | null;
+  proposalCount: bigint | null;
+  proposals: ProposalItem[];
+  daoProxy: DaoProxyStore | null;
+  isLoading: boolean;
+  refetch: () => void;
 }
 
-export function useProposals(daoAddressString: string | null): UseProposalsResult {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['dao-proposals', daoAddressString],
-        queryFn: async () => {
-            if (!daoAddressString) return null;
-            const daoAddr = Address.parse(daoAddressString);
-            const client = getTonClient(network);
-            const daoContract = client.open(Dao.fromAddress(daoAddr));
+export function useProposals(addressString: string | null): UseProposalsResult {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['dao-proposals', addressString],
+    queryFn: async () => {
+      if (!addressString) return null;
+      const targetAddr = Address.parse(addressString);
+      const client = getTonClient(network);
 
-            const store = await daoContract.getDaoData();
-            const proposalsList: ProposalItem[] = [];
+      // Try loading as Poll first
+      try {
+        const pollContract = client.open(Poll.fromAddress(targetAddr));
+        const pollStore = await pollContract.getPollData();
+        return {
+          totalAccounts: pollStore.totalAccounts,
+          proposalCount: 1n,
+          daoProxy: null,
+          proposals: [
+            {
+              id: pollStore.proposalId.toString(),
+              proposer: pollStore.proposerOwner.toString(),
+              yesVotes: pollStore.yesVotes,
+              noVotes: pollStore.noVotes,
+              totalAccounts: pollStore.totalAccounts,
+              deadline: Number(pollStore.expiresAt),
+              executed: pollStore.executed,
+              daoProxyAddress: pollStore.daoProxyAddress.toString(),
+              fiAddress: pollStore.fiAddress.toString(),
+            },
+          ],
+        };
+      } catch {
+        // If not a Poll, try loading as DaoProxy
+        const daoProxyContract = client.open(DaoProxy.fromAddress(targetAddr));
+        const daoStore = await daoProxyContract.getDaoProxyData();
+        return {
+          totalAccounts: null,
+          proposalCount: daoStore.pollCount,
+          daoProxy: daoStore,
+          proposals: [],
+        };
+      }
+    },
+    enabled: Boolean(addressString),
+  });
 
-            const keys = store.proposals.keys();
-            for (const k of keys) {
-                const p = store.proposals.get(k);
-                if (p) {
-                    proposalsList.push({
-                        id: k.toString(),
-                        proposer: p.proposerOwner.toString(),
-                        yesVotes: p.yesVotes,
-                        noVotes: p.noVotes,
-                        deadline: Number(p.expiresAt),
-                        executed: false,
-                    });
-                }
-            }
-
-            return {
-                totalAccounts: store.totalAccounts,
-                proposalCount: store.proposalCount,
-                proposals: proposalsList,
-            };
-        },
-        enabled: Boolean(daoAddressString),
-    });
-
-    return {
-        totalAccounts: data?.totalAccounts ?? null,
-        proposalCount: data?.proposalCount ?? null,
-        proposals: data?.proposals ?? [],
-        isLoading,
-        refetch,
-    };
+  return {
+    totalAccounts: data?.totalAccounts ?? null,
+    proposalCount: data?.proposalCount ?? null,
+    proposals: data?.proposals ?? [],
+    daoProxy: data?.daoProxy ?? null,
+    isLoading,
+    refetch,
+  };
 }

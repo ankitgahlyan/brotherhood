@@ -6,15 +6,18 @@
  *
  */
 
-import type { GaslessAPI, GaslessProviderInterface } from '../../api/interfaces';
 import type {
-    GaslessConfig,
-    GaslessProviderMetadata,
-    GaslessQuote,
-    GaslessQuoteParams,
-    GaslessSendParams,
-    GaslessSendResponse,
-    Network,
+  GaslessAPI,
+  GaslessProviderInterface,
+} from '../../api/interfaces';
+import type {
+  GaslessConfig,
+  GaslessProviderMetadata,
+  GaslessQuote,
+  GaslessQuoteParams,
+  GaslessSendParams,
+  GaslessSendResponse,
+  Network,
 } from '../../api/models';
 import { globalLogger } from '../../core/Logger';
 import type { ProviderFactoryContext } from '../../types/factory';
@@ -29,81 +32,99 @@ const log = globalLogger.createChild('GaslessManager');
  * Allows registration of multiple gasless providers and provides a unified API.
  * Providers can be switched dynamically.
  */
-export class GaslessManager extends DefiManager<GaslessProviderInterface> implements GaslessAPI {
-    constructor(createFactoryContext: () => ProviderFactoryContext) {
-        super(createFactoryContext);
+export class GaslessManager
+  extends DefiManager<GaslessProviderInterface>
+  implements GaslessAPI
+{
+  constructor(createFactoryContext: () => ProviderFactoryContext) {
+    super(createFactoryContext);
+  }
+
+  /**
+   * Get static metadata for a gasless provider (display name, logo, url).
+   */
+  async getMetadata(providerId?: string): Promise<GaslessProviderMetadata> {
+    const selectedProviderId = providerId ?? this.defaultProviderId;
+    log.debug('Getting gasless provider metadata', {
+      providerId: selectedProviderId,
+    });
+
+    try {
+      return await this.getProvider(selectedProviderId).getMetadata();
+    } catch (error) {
+      log.error('Failed to get gasless provider metadata', { error });
+      throw toDefiError(error, 'Failed to get gasless provider metadata');
     }
+  }
 
-    /**
-     * Get static metadata for a gasless provider (display name, logo, url).
-     */
-    async getMetadata(providerId?: string): Promise<GaslessProviderMetadata> {
-        const selectedProviderId = providerId ?? this.defaultProviderId;
-        log.debug('Getting gasless provider metadata', { providerId: selectedProviderId });
+  /**
+   * Fetch the relayer's configuration (relay address + accepted fee assets).
+   *
+   * `network` defaults to the provider's first supported network.
+   */
+  async getConfig(
+    network?: Network,
+    providerId?: string,
+  ): Promise<GaslessConfig> {
+    const provider = this.getProvider(providerId ?? this.defaultProviderId);
+    const targetNetwork = network ?? provider.getSupportedNetworks()[0];
+    log.debug('Getting gasless config', {
+      network: targetNetwork?.chainId,
+      providerId: providerId ?? this.defaultProviderId,
+    });
 
-        try {
-            return await this.getProvider(selectedProviderId).getMetadata();
-        } catch (error) {
-            log.error('Failed to get gasless provider metadata', { error });
-            throw toDefiError(error, 'Failed to get gasless provider metadata');
-        }
+    try {
+      return await provider.getConfig(targetNetwork);
+    } catch (error) {
+      log.error('Failed to get gasless config', { error });
+      throw toDefiError(error, 'Failed to get gasless config');
     }
+  }
 
-    /**
-     * Fetch the relayer's configuration (relay address + accepted fee assets).
-     *
-     * `network` defaults to the provider's first supported network.
-     */
-    async getConfig(network?: Network, providerId?: string): Promise<GaslessConfig> {
-        const provider = this.getProvider(providerId ?? this.defaultProviderId);
-        const targetNetwork = network ?? provider.getSupportedNetworks()[0];
-        log.debug('Getting gasless config', {
-            network: targetNetwork?.chainId,
-            providerId: providerId ?? this.defaultProviderId,
-        });
+  /**
+   * Quote fees and obtain relayer-wrapped messages for signing.
+   */
+  async getQuote(
+    params: GaslessQuoteParams,
+    providerId?: string,
+  ): Promise<GaslessQuote> {
+    log.debug('Quoting gasless transaction', {
+      network: params.network.chainId,
+      walletAddress: params.walletAddress,
+      feeAsset: params.feeAsset,
+      messagesCount: params.messages.length,
+      providerId: providerId ?? this.defaultProviderId,
+    });
 
-        try {
-            return await provider.getConfig(targetNetwork);
-        } catch (error) {
-            log.error('Failed to get gasless config', { error });
-            throw toDefiError(error, 'Failed to get gasless config');
-        }
+    try {
+      return await this.getProvider(
+        providerId ?? this.defaultProviderId,
+      ).getQuote(params);
+    } catch (error) {
+      log.error('Failed to quote gasless transaction', { error, params });
+      throw toDefiError(error, 'Failed to quote gasless transaction');
     }
+  }
 
-    /**
-     * Quote fees and obtain relayer-wrapped messages for signing.
-     */
-    async getQuote(params: GaslessQuoteParams, providerId?: string): Promise<GaslessQuote> {
-        log.debug('Quoting gasless transaction', {
-            network: params.network.chainId,
-            walletAddress: params.walletAddress,
-            feeAsset: params.feeAsset,
-            messagesCount: params.messages.length,
-            providerId: providerId ?? this.defaultProviderId,
-        });
+  /**
+   * Submit a signed transaction BoC to the relayer.
+   */
+  async sendTransaction(
+    params: GaslessSendParams,
+    providerId?: string,
+  ): Promise<GaslessSendResponse> {
+    log.debug('Sending gasless transaction', {
+      network: params.network.chainId,
+      providerId: providerId ?? this.defaultProviderId,
+    });
 
-        try {
-            return await this.getProvider(providerId ?? this.defaultProviderId).getQuote(params);
-        } catch (error) {
-            log.error('Failed to quote gasless transaction', { error, params });
-            throw toDefiError(error, 'Failed to quote gasless transaction');
-        }
+    try {
+      return await this.getProvider(
+        providerId ?? this.defaultProviderId,
+      ).sendTransaction(params);
+    } catch (error) {
+      log.error('Failed to send gasless transaction', { error });
+      throw toDefiError(error, 'Failed to send gasless transaction');
     }
-
-    /**
-     * Submit a signed transaction BoC to the relayer.
-     */
-    async sendTransaction(params: GaslessSendParams, providerId?: string): Promise<GaslessSendResponse> {
-        log.debug('Sending gasless transaction', {
-            network: params.network.chainId,
-            providerId: providerId ?? this.defaultProviderId,
-        });
-
-        try {
-            return await this.getProvider(providerId ?? this.defaultProviderId).sendTransaction(params);
-        } catch (error) {
-            log.error('Failed to send gasless transaction', { error });
-            throw toDefiError(error, 'Failed to send gasless transaction');
-        }
-    }
+  }
 }

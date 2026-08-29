@@ -6,13 +6,18 @@
  *
  */
 
-import type { Network, StakingProviderMetadata, TransactionRequest, UserFriendlyAddress } from '../../api/models';
 import type {
-    StakeParams,
-    StakingBalance,
-    StakingProviderInfo,
-    StakingQuoteParams,
-    StakingQuote,
+  Network,
+  StakingProviderMetadata,
+  TransactionRequest,
+  UserFriendlyAddress,
+} from '../../api/models';
+import type {
+  StakeParams,
+  StakingBalance,
+  StakingProviderInfo,
+  StakingQuoteParams,
+  StakingQuote,
 } from '../../api/models';
 import type { StakingProviderInterface } from '../../api/interfaces';
 
@@ -23,45 +28,54 @@ import type { StakingProviderInterface } from '../../api/interfaces';
  * Users can extend this class to create custom staking providers.
  */
 export abstract class StakingProvider implements StakingProviderInterface {
-    readonly type = 'staking';
-    readonly providerId: string;
+  readonly type = 'staking';
+  readonly providerId: string;
 
-    constructor(providerId: string) {
-        this.providerId = providerId;
-    }
+  constructor(providerId: string) {
+    this.providerId = providerId;
+  }
 
-    abstract getSupportedNetworks(): Network[];
+  abstract getSupportedNetworks(): Network[];
 
-    /**
-     * Get a quote for staking or unstaking
-     * @param params - Quote parameters including direction and amount
-     */
-    abstract getQuote(params: StakingQuoteParams): Promise<StakingQuote>;
+  /**
+   * Get a quote for staking or unstaking
+   * @param params - Quote parameters including direction and amount
+   */
+  abstract getQuote(params: StakingQuoteParams): Promise<StakingQuote>;
 
-    /**
-     * Build a transaction for staking
-     * @param params - Staking parameters including amount and user address
-     * @returns Promise resolving to transaction request ready to be signed
-     */
-    abstract buildStakeTransaction(params: StakeParams): Promise<TransactionRequest>;
+  /**
+   * Build a transaction for staking
+   * @param params - Staking parameters including amount and user address
+   * @returns Promise resolving to transaction request ready to be signed
+   */
+  abstract buildStakeTransaction(
+    params: StakeParams,
+  ): Promise<TransactionRequest>;
 
-    /**
-     * Get staked balance for a user
-     * @param userAddress - User address to fetch balance for
-     * @param network - Optional network to use for balance query
-     */
-    abstract getStakedBalance(userAddress: UserFriendlyAddress, network?: Network): Promise<StakingBalance>;
+  /**
+   * Get staked balance for a user
+   * @param userAddress - User address to fetch balance for
+   * @param network - Optional network to use for balance query
+   */
+  abstract getStakedBalance(
+    userAddress: UserFriendlyAddress,
+    network?: Network,
+  ): Promise<StakingBalance>;
 
-    /**
-     * Get staking information for a network
-     * @param network - Optional network to fetch info for
-     */
-    abstract getStakingProviderInfo(network?: Network): Promise<StakingProviderInfo>;
+  /**
+   * Get staking information for a network
+   * @param network - Optional network to fetch info for
+   */
+  abstract getStakingProviderInfo(
+    network?: Network,
+  ): Promise<StakingProviderInfo>;
 
-    /**
-     * Get staking provider metadata
-     * @param network - Optional network to fetch info for
-     * @returns Staking provider metadata
-     */
-    abstract getStakingProviderMetadata(network?: Network): StakingProviderMetadata;
+  /**
+   * Get staking provider metadata
+   * @param network - Optional network to fetch info for
+   * @returns Staking provider metadata
+   */
+  abstract getStakingProviderMetadata(
+    network?: Network,
+  ): StakingProviderMetadata;
 }

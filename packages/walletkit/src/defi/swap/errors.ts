@@ -9,19 +9,19 @@
 import { DefiError } from '../errors';
 
 export enum SwapErrorCode {
-    InvalidQuote = 'INVALID_QUOTE',
-    InsufficientLiquidity = 'INSUFFICIENT_LIQUIDITY',
-    QuoteExpired = 'QUOTE_EXPIRED',
-    BuildTxFailed = 'BUILD_TX_FAILED',
-    NetworkError = 'NETWORK_ERROR',
+  InvalidQuote = 'INVALID_QUOTE',
+  InsufficientLiquidity = 'INSUFFICIENT_LIQUIDITY',
+  QuoteExpired = 'QUOTE_EXPIRED',
+  BuildTxFailed = 'BUILD_TX_FAILED',
+  NetworkError = 'NETWORK_ERROR',
 }
 
 export class SwapError extends DefiError {
-    public readonly code: SwapErrorCode;
+  public readonly code: SwapErrorCode;
 
-    constructor(message: string, code: SwapErrorCode, details?: unknown) {
-        super(message, code, details);
-        this.name = 'SwapError';
-        this.code = code;
-    }
+  constructor(message: string, code: SwapErrorCode, details?: unknown) {
+    super(message, code, details);
+    this.name = 'SwapError';
+    this.code = code;
+  }
 }

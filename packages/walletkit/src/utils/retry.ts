@@ -10,35 +10,35 @@ import { delay } from './delay';
 
 // Function to call ton api untill we get response.
 // Because testnet is pretty unstable we need to make sure response is final
- 
+
 export async function CallForSuccess<T extends (...args: any[]) => any>(
-    toCall: T,
-    attempts = 20,
-    delayMs = 100,
-    shouldRetry?: (error: unknown) => boolean,
+  toCall: T,
+  attempts = 20,
+  delayMs = 100,
+  shouldRetry?: (error: unknown) => boolean,
 ): Promise<ReturnType<T>> {
-    if (typeof toCall !== 'function') {
-        throw new Error('unknown input');
+  if (typeof toCall !== 'function') {
+    throw new Error('unknown input');
+  }
+
+  let i = 0;
+  let lastError: unknown;
+
+  while (i < attempts) {
+    try {
+      const res = await toCall();
+      return res;
+    } catch (err) {
+      lastError = err;
+
+      if (typeof shouldRetry === 'function' && shouldRetry(err) === false) {
+        throw err;
+      }
+
+      i++;
+      await delay(delayMs);
     }
+  }
 
-    let i = 0;
-    let lastError: unknown;
-
-    while (i < attempts) {
-        try {
-            const res = await toCall();
-            return res;
-        } catch (err) {
-            lastError = err;
-
-            if (typeof shouldRetry === 'function' && shouldRetry(err) === false) {
-                throw err;
-            }
-
-            i++;
-            await delay(delayMs);
-        }
-    }
-
-    throw lastError;
+  throw lastError;
 }

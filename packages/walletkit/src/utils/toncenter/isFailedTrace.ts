@@ -11,18 +11,18 @@ import { createTraceTypeDetector } from './createTraceTypeDetector';
 import { createFailureDetector } from './createFailureDetector';
 
 interface TraceConfig {
-    triggerOpcodes: Set<string>;
-    safeToSkipOpcodes: Set<string>;
+  triggerOpcodes: Set<string>;
+  safeToSkipOpcodes: Set<string>;
 }
 
 const KNOWN_TRACE_TYPES: TraceConfig[] = [
-    {
-        triggerOpcodes: new Set(['0x0f8a7ea5']), // jetton_transfer initiates the flow
-        safeToSkipOpcodes: new Set([
-            '0x7362d09c', // jetton_notify
-            '0xd53276db', // excess
-        ]),
-    },
+  {
+    triggerOpcodes: new Set(['0x0f8a7ea5']), // jetton_transfer initiates the flow
+    safeToSkipOpcodes: new Set([
+      '0x7362d09c', // jetton_notify
+      '0xd53276db', // excess
+    ]),
+  },
 ];
 
 /**
@@ -39,19 +39,21 @@ const KNOWN_TRACE_TYPES: TraceConfig[] = [
  * @returns `true` if the trace is considered failed
  */
 export const isFailedTrace = (tx: ToncenterTracesResponse): boolean => {
-    const trace = tx.traces?.[0];
-    if (!trace) return false;
+  const trace = tx.traces?.[0];
+  if (!trace) return false;
 
-    const transactions = trace.transactions ?? {};
-    if (Object.keys(transactions).length === 0) return false;
+  const transactions = trace.transactions ?? {};
+  if (Object.keys(transactions).length === 0) return false;
 
-    for (const config of KNOWN_TRACE_TYPES) {
-        const isMatch = createTraceTypeDetector(config.triggerOpcodes)(transactions);
-        if (isMatch) {
-            return createFailureDetector(config.safeToSkipOpcodes)(transactions);
-        }
+  for (const config of KNOWN_TRACE_TYPES) {
+    const isMatch = createTraceTypeDetector(config.triggerOpcodes)(
+      transactions,
+    );
+    if (isMatch) {
+      return createFailureDetector(config.safeToSkipOpcodes)(transactions);
     }
+  }
 
-    // Fallback for unknown types: check all transactions with an empty whitelist
-    return createFailureDetector(new Set())(transactions);
+  // Fallback for unknown types: check all transactions with an empty whitelist
+  return createFailureDetector(new Set())(transactions);
 };

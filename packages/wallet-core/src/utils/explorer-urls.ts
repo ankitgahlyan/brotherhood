@@ -9,24 +9,30 @@
 import type { NetworkType } from './network';
 
 const getPrefix = (network: NetworkType): string => {
-    if (network === 'testnet') return 'testnet.';
-    if (network === 'tetra') return 'tetra.';
-    return '';
+  if (network === 'testnet') return 'testnet.';
+  if (network === 'tetra') return 'tetra.';
+  return '';
 };
 
-export function getTransactionExplorerUrls(hash: string, network: NetworkType): { tonScan: string; tonViewer: string } {
-    const prefix = getPrefix(network);
-    const hashClean = hash.startsWith('0x') ? hash.slice(2) : hash;
-    return {
-        tonScan: `https://${prefix}tonscan.org/tx/${hashClean}`,
-        tonViewer: `https://${prefix}tonviewer.com/transaction/${hashClean}`,
-    };
+export function getTransactionExplorerUrls(
+  hash: string,
+  network: NetworkType,
+): { tonScan: string; tonViewer: string } {
+  const prefix = getPrefix(network);
+  const hashClean = hash.startsWith('0x') ? hash.slice(2) : hash;
+  return {
+    tonScan: `https://${prefix}tonscan.org/tx/${hashClean}`,
+    tonViewer: `https://${prefix}tonviewer.com/transaction/${hashClean}`,
+  };
 }
 
-export function getAddressExplorerUrls(address: string, network: NetworkType): { tonScan: string; tonViewer: string } {
-    const prefix = getPrefix(network);
-    return {
-        tonScan: `https://${prefix}tonscan.org/address/${address}`,
-        tonViewer: `https://${prefix}tonviewer.com/${address}`,
-    };
+export function getAddressExplorerUrls(
+  address: string,
+  network: NetworkType,
+): { tonScan: string; tonViewer: string } {
+  const prefix = getPrefix(network);
+  return {
+    tonScan: `https://${prefix}tonscan.org/address/${address}`,
+    tonViewer: `https://${prefix}tonviewer.com/${address}`,
+  };
 }

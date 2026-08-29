@@ -11,54 +11,56 @@ import type { AddressBookEntry } from '../../../api/models/core/AddressBook';
 import { asAddressFriendly } from '../../../utils/address';
 import type { TonApiJettonsBalances } from '../types/jettons';
 
-export function mapUserJettons(rawResponse: TonApiJettonsBalances): JettonsResponse {
-    const addressBook: Record<string, AddressBookEntry> = {};
+export function mapUserJettons(
+  rawResponse: TonApiJettonsBalances,
+): JettonsResponse {
+  const addressBook: Record<string, AddressBookEntry> = {};
 
-    const userJettons: Jetton[] = rawResponse.balances.map((wallet) => {
-        const isVerified = wallet.jetton.verification === 'whitelist';
+  const userJettons: Jetton[] = rawResponse.balances.map((wallet) => {
+    const isVerified = wallet.jetton.verification === 'whitelist';
 
-        if (wallet.wallet_address) {
-            const address = asAddressFriendly(wallet.wallet_address.address);
-            if (!addressBook[address]) {
-                addressBook[address] = {
-                    address: address,
-                    domain: wallet.wallet_address.name ?? undefined,
-                    interfaces: [],
-                };
-            }
-        }
-
-        const jetton: Jetton = {
-            address: asAddressFriendly(wallet.jetton.address),
-            walletAddress: asAddressFriendly(wallet.wallet_address.address),
-            balance: wallet.balance,
-            info: {
-                name: wallet.jetton.name,
-                description: wallet.jetton.description ?? '',
-                image: {
-                    url: wallet.jetton.image,
-                },
-                symbol: wallet.jetton.symbol,
-            },
-            decimalsNumber: wallet.jetton.decimals,
-            prices: wallet.price
-                ? Object.entries(wallet.price.prices).map(([currency, value]) => ({
-                      value: value.toString(),
-                      currency: currency.toUpperCase(),
-                  }))
-                : [
-                      {
-                          value: '0',
-                          currency: 'USD',
-                      },
-                  ],
-            isVerified: isVerified,
+    if (wallet.wallet_address) {
+      const address = asAddressFriendly(wallet.wallet_address.address);
+      if (!addressBook[address]) {
+        addressBook[address] = {
+          address: address,
+          domain: wallet.wallet_address.name ?? undefined,
+          interfaces: [],
         };
-        return jetton;
-    });
+      }
+    }
 
-    return {
-        jettons: userJettons,
-        addressBook,
+    const jetton: Jetton = {
+      address: asAddressFriendly(wallet.jetton.address),
+      walletAddress: asAddressFriendly(wallet.wallet_address.address),
+      balance: wallet.balance,
+      info: {
+        name: wallet.jetton.name,
+        description: wallet.jetton.description ?? '',
+        image: {
+          url: wallet.jetton.image,
+        },
+        symbol: wallet.jetton.symbol,
+      },
+      decimalsNumber: wallet.jetton.decimals,
+      prices: wallet.price
+        ? Object.entries(wallet.price.prices).map(([currency, value]) => ({
+            value: value.toString(),
+            currency: currency.toUpperCase(),
+          }))
+        : [
+            {
+              value: '0',
+              currency: 'USD',
+            },
+          ],
+      isVerified: isVerified,
     };
+    return jetton;
+  });
+
+  return {
+    jettons: userJettons,
+    addressBook,
+  };
 }

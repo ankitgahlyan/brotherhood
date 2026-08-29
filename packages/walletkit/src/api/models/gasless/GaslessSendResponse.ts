@@ -16,6 +16,6 @@ import type { SendTransactionResponse } from '../transactions/SendTransactionRes
  * the relayer to wrap.
  */
 export interface GaslessSendResponse extends SendTransactionResponse {
-    /** Signed internal-message BoC produced by `wallet.signMessage`. */
-    internalBoc: Base64String;
+  /** Signed internal-message BoC produced by `wallet.signMessage`. */
+  internalBoc: Base64String;
 }

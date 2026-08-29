@@ -6,12 +6,22 @@
  *
  */
 
-import type { GaslessSendParams, SendTransactionResponse } from '../../../../api/models';
+import type {
+  GaslessSendParams,
+  SendTransactionResponse,
+} from '../../../../api/models';
 import { asHex } from '../../../../utils/hex';
 import { getNormalizedExtMessageHash } from '../../../../utils/getNormalizedExtMessageHash';
 import { GaslessError, GaslessErrorCode } from '../../errors';
-import { hexBocToBase64, internalBocToExternalMessageBoc, stripHexPrefix } from '../utils';
-import type { TonApiGaslessSendRequest, TonApiGaslessSendResponse } from '../types/send';
+import {
+  hexBocToBase64,
+  internalBocToExternalMessageBoc,
+  stripHexPrefix,
+} from '../utils';
+import type {
+  TonApiGaslessSendRequest,
+  TonApiGaslessSendResponse,
+} from '../types/send';
 
 /**
  * Domain → wire: build the JSON body for `POST /v2/gasless/send`.
@@ -19,10 +29,14 @@ import type { TonApiGaslessSendRequest, TonApiGaslessSendResponse } from '../typ
  * The signed internal-message BoC (returned by `wallet.signMessage`) is
  * unwrapped into an external message BoC that the relayer can broadcast.
  */
-export const buildGaslessSendRequest = (params: GaslessSendParams): TonApiGaslessSendRequest => ({
-    // `asHex` validates the public key before stripping the prefix.
-    wallet_public_key: stripHexPrefix(asHex(params.walletPublicKey)),
-    boc: internalBocToExternalMessageBoc(params.internalBoc).toBoc().toString('hex'),
+export const buildGaslessSendRequest = (
+  params: GaslessSendParams,
+): TonApiGaslessSendRequest => ({
+  // `asHex` validates the public key before stripping the prefix.
+  wallet_public_key: stripHexPrefix(asHex(params.walletPublicKey)),
+  boc: internalBocToExternalMessageBoc(params.internalBoc)
+    .toBoc()
+    .toString('hex'),
 });
 
 /**
@@ -37,25 +51,32 @@ export const buildGaslessSendRequest = (params: GaslessSendParams): TonApiGasles
  * and normalize via `getNormalizedExtMessageHash` to yield the same
  * `{ boc, normalizedBoc, normalizedHash }` triple as `wallet.sendTransaction`.
  */
-export const mapGaslessSend = (raw: TonApiGaslessSendResponse): SendTransactionResponse => {
-    if (!raw.external) {
-        throw new GaslessError('Relayer did not return the broadcasted external message', GaslessErrorCode.SendFailed, {
-            protocolName: raw.protocol_name,
-        });
-    }
+export const mapGaslessSend = (
+  raw: TonApiGaslessSendResponse,
+): SendTransactionResponse => {
+  if (!raw.external) {
+    throw new GaslessError(
+      'Relayer did not return the broadcasted external message',
+      GaslessErrorCode.SendFailed,
+      {
+        protocolName: raw.protocol_name,
+      },
+    );
+  }
 
-    try {
-        const boc = hexBocToBase64(raw.external);
-        const { hash: normalizedHash, boc: normalizedBoc } = getNormalizedExtMessageHash(boc);
-        return { boc, normalizedBoc, normalizedHash };
-    } catch (cause) {
-        // Guards the OpenAPI-divergence risk: if TonAPI ever returns a bare hash
-        // (or anything that isn't a parseable external-in BoC), fail loudly with a
-        // typed error instead of crashing cryptically or returning a wrong hash.
-        throw new GaslessError(
-            'Relayer `external` is not a parseable external-message BoC — TonAPI response format may have changed.',
-            GaslessErrorCode.SendFailed,
-            { external: raw.external, cause },
-        );
-    }
+  try {
+    const boc = hexBocToBase64(raw.external);
+    const { hash: normalizedHash, boc: normalizedBoc } =
+      getNormalizedExtMessageHash(boc);
+    return { boc, normalizedBoc, normalizedHash };
+  } catch (cause) {
+    // Guards the OpenAPI-divergence risk: if TonAPI ever returns a bare hash
+    // (or anything that isn't a parseable external-in BoC), fail loudly with a
+    // typed error instead of crashing cryptically or returning a wrong hash.
+    throw new GaslessError(
+      'Relayer `external` is not a parseable external-message BoC — TonAPI response format may have changed.',
+      GaslessErrorCode.SendFailed,
+      { external: raw.external, cause },
+    );
+  }
 };

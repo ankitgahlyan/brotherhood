@@ -12,64 +12,64 @@ import type { Page } from '@playwright/test';
 import { TEST_PASSWORD } from '../constants';
 
 export function isExtensionWalletSource(source: string): boolean {
-    return !source.includes('http');
+  return !source.includes('http');
 }
 
 export abstract class WalletApp {
-    private current?: Page;
+  private current?: Page;
 
-    /**
-     * Creates an instance of WalletApp
-     *
-     * @param context - The Playwright BrowserContext in which the extension is running
-     * @param source - The ID of the extension or url web app
-     * @param password - The password for the Wallet
-     */
-    constructor(
-        readonly context: BrowserContext,
-        readonly source: string,
-        readonly password: string = TEST_PASSWORD,
-    ) {
-        this.context = context;
-        this.source = source;
-        this.password = password;
+  /**
+   * Creates an instance of WalletApp
+   *
+   * @param context - The Playwright BrowserContext in which the extension is running
+   * @param source - The ID of the extension or url web app
+   * @param password - The password for the Wallet
+   */
+  constructor(
+    readonly context: BrowserContext,
+    readonly source: string,
+    readonly password: string = TEST_PASSWORD,
+  ) {
+    this.context = context;
+    this.source = source;
+    this.password = password;
+  }
+
+  get isExtension(): boolean {
+    return isExtensionWalletSource(this.source);
+  }
+
+  async open(): Promise<Page> {
+    if (!this.current) {
+      this.current = await this.context.newPage();
+      await this.current.goto(this.onboardingPage, {
+        waitUntil: 'load',
+      });
     }
+    return this.current;
+  }
 
-    get isExtension(): boolean {
-        return isExtensionWalletSource(this.source);
+  async close(): Promise<void> {
+    if (this.current) {
+      await this.current.close();
+      this.current = undefined;
     }
+  }
 
-    async open(): Promise<Page> {
-        if (!this.current) {
-            this.current = await this.context.newPage();
-            await this.current.goto(this.onboardingPage, {
-                waitUntil: 'load',
-            });
-        }
-        return this.current;
-    }
+  abstract get onboardingPage(): string;
 
-    async close(): Promise<void> {
-        if (this.current) {
-            await this.current.close();
-            this.current = undefined;
-        }
-    }
+  /**
+   * Imports a wallet using the given seed phrase
+   *
+   * @param mnemonic - The seed phrase to import
+   */
+  abstract importWallet(mnemonic: string): Promise<void>;
 
-    abstract get onboardingPage(): string;
+  abstract connect(confirm?: boolean): Promise<void>;
 
-    /**
-     * Imports a wallet using the given seed phrase
-     *
-     * @param mnemonic - The seed phrase to import
-     */
-    abstract importWallet(mnemonic: string): Promise<void>;
+  abstract connectBy(url: string): Promise<void>;
 
-    abstract connect(confirm?: boolean): Promise<void>;
+  abstract accept(confirm?: boolean): Promise<void>;
 
-    abstract connectBy(url: string): Promise<void>;
-
-    abstract accept(confirm?: boolean): Promise<void>;
-
-    abstract signData(confirm?: boolean): Promise<void>;
+  abstract signData(confirm?: boolean): Promise<void>;
 }

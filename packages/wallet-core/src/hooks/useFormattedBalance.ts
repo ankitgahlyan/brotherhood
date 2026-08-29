@@ -11,12 +11,18 @@ import { useMemo } from 'react';
 import { useWallet } from './useWalletStore';
 import { formatUnits } from '../utils';
 
-export const useFormattedAmount = (amount: string | undefined, decimals: number) => {
-    return useMemo(() => formatUnits(amount || '0', decimals), [amount, decimals]);
+export const useFormattedAmount = (
+  amount: string | undefined,
+  decimals: number,
+) => {
+  return useMemo(
+    () => formatUnits(amount || '0', decimals),
+    [amount, decimals],
+  );
 };
 
 export const useFormattedTonBalance = () => {
-    const { balance } = useWallet();
+  const { balance } = useWallet();
 
-    return useFormattedAmount(balance, 9);
+  return useFormattedAmount(balance, 9);
 };

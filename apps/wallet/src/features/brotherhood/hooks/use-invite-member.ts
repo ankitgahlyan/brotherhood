@@ -15,53 +15,58 @@ import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 
 export interface UseInviteMemberParams {
-    wallet: Wallet | null | undefined;
-    walletKit: ITonWalletKit | null;
-    walletAddress: string | null;
-    invitee: string;
-    username: string;
-    city: string;
-    cityLetter: number;
-    network: Network;
+  wallet: Wallet | null | undefined;
+  walletKit: ITonWalletKit | null;
+  walletAddress: string | null;
+  invitee: string;
+  username: string;
+  h3Cell: string;
+  country: number;
+  network: Network;
 }
 
 export interface UseInviteMemberResult {
-    send: () => Promise<void>;
-    isDisabled: boolean;
-    isSending: boolean;
-    error: string | null;
+  send: () => Promise<void>;
+  isDisabled: boolean;
+  isSending: boolean;
+  error: string | null;
 }
 
 export function useInviteMember({
-    wallet,
-    walletKit,
-    walletAddress,
-    invitee,
-    username,
-    city,
-    cityLetter,
-    network,
+  wallet,
+  walletKit,
+  walletAddress,
+  invitee,
+  username,
+  h3Cell,
+  country,
+  network,
 }: UseInviteMemberParams): UseInviteMemberResult {
-    const { send: sendTx, isSending, error } = useBrotherhoodTransaction(wallet, walletKit);
+  const {
+    send: sendTx,
+    isSending,
+    error,
+  } = useBrotherhoodTransaction(wallet, walletKit);
 
-    const send = useCallback(async () => {
-        if (!walletAddress) throw new Error('No wallet address');
-        const ownerAddr = Address.parse(walletAddress);
-        const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-        const inviteeAddr = Address.parse(invitee);
+  const send = useCallback(async () => {
+    if (!walletAddress) throw new Error('No wallet address');
+    const ownerAddr = Address.parse(walletAddress);
+    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+    const inviteeAddr = Address.parse(invitee);
 
-        const payload = buildInviteBody({
-            transferRecipient: inviteeAddr,
-            username,
-            city,
-            cityLetter,
-        });
+    const payload = buildInviteBody({
+      transferRecipient: inviteeAddr,
+      username,
+      h3Cell,
+      country,
+    });
 
-        await sendTx([{ toAddress: fiWalletAddr.toString(), amount: GAS.INVITE, payload }]);
-    }, [walletAddress, invitee, username, city, cityLetter, network, sendTx]);
+    await sendTx([
+      { toAddress: fiWalletAddr.toString(), amount: GAS.INVITE, payload },
+    ]);
+  }, [walletAddress, invitee, username, h3Cell, country, network, sendTx]);
 
-    const isDisabled =
-        !wallet || !walletAddress || !invitee || isSending;
+  const isDisabled = !wallet || !walletAddress || !invitee || isSending;
 
-    return { send, isDisabled, isSending, error };
+  return { send, isDisabled, isSending, error };
 }

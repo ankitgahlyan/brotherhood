@@ -22,69 +22,75 @@ const log = globalLogger.createChild('SwapManager');
  * Allows registration of multiple swap providers and provides a unified API
  * for swap operations. Providers can be switched dynamically.
  */
-export class SwapManager extends DefiManager<SwapProviderInterface> implements SwapAPI {
-    constructor(createFactoryContext: () => ProviderFactoryContext) {
-        super(createFactoryContext);
+export class SwapManager
+  extends DefiManager<SwapProviderInterface>
+  implements SwapAPI
+{
+  constructor(createFactoryContext: () => ProviderFactoryContext) {
+    super(createFactoryContext);
+  }
+
+  /**
+   * Get a quote for swapping tokens
+   * @param params - Quote parameters
+   * @param providerId - Optional provider name to use
+   * @returns Promise resolving to swap quote
+   */
+  async getQuote<TProviderOptions = unknown>(
+    params: SwapQuoteParams<TProviderOptions>,
+    providerId?: string,
+  ): Promise<SwapQuote> {
+    log.debug('Getting swap quote', {
+      fromToken: params.from,
+      toToken: params.to,
+      amount: params.amount,
+      isReverseSwap: params.isReverseSwap,
+      providerId: providerId || this.defaultProviderId,
+    });
+
+    try {
+      const quote = await this.getProvider(
+        providerId || this.defaultProviderId,
+      ).getQuote(params);
+
+      log.debug('Received swap quote', {
+        fromAmount: quote.fromAmount,
+        toAmount: quote.toAmount,
+        priceImpact: quote.priceImpact,
+      });
+
+      return quote;
+    } catch (error) {
+      log.error('Failed to get swap quote', { error, params });
+      throw toDefiError(error, 'Failed to get swap quote');
     }
+  }
 
-    /**
-     * Get a quote for swapping tokens
-     * @param params - Quote parameters
-     * @param providerId - Optional provider name to use
-     * @returns Promise resolving to swap quote
-     */
-    async getQuote<TProviderOptions = unknown>(
-        params: SwapQuoteParams<TProviderOptions>,
-        providerId?: string,
-    ): Promise<SwapQuote> {
-        log.debug('Getting swap quote', {
-            fromToken: params.from,
-            toToken: params.to,
-            amount: params.amount,
-            isReverseSwap: params.isReverseSwap,
-            providerId: providerId || this.defaultProviderId,
-        });
+  /**
+   * Build a transaction for executing a swap
+   * @param params - Swap parameters including quote
+   * @returns Promise resolving to transaction request
+   */
+  async buildSwapTransaction<TProviderOptions = unknown>(
+    params: SwapParams<TProviderOptions>,
+  ): Promise<TransactionRequest> {
+    const providerId = params.quote.providerId || this.defaultProviderId;
 
-        try {
-            const quote = await this.getProvider(providerId || this.defaultProviderId).getQuote(params);
+    log.debug('Building swap transaction', {
+      providerId,
+      userAddress: params.userAddress,
+    });
 
-            log.debug('Received swap quote', {
-                fromAmount: quote.fromAmount,
-                toAmount: quote.toAmount,
-                priceImpact: quote.priceImpact,
-            });
+    try {
+      const transaction =
+        await this.getProvider(providerId).buildSwapTransaction(params);
 
-            return quote;
-        } catch (error) {
-            log.error('Failed to get swap quote', { error, params });
-            throw toDefiError(error, 'Failed to get swap quote');
-        }
+      log.debug('Built swap transaction', params.quote);
+
+      return transaction;
+    } catch (error) {
+      log.error('Failed to build swap transaction', { error, params });
+      throw toDefiError(error, 'Failed to build swap transaction');
     }
-
-    /**
-     * Build a transaction for executing a swap
-     * @param params - Swap parameters including quote
-     * @returns Promise resolving to transaction request
-     */
-    async buildSwapTransaction<TProviderOptions = unknown>(
-        params: SwapParams<TProviderOptions>,
-    ): Promise<TransactionRequest> {
-        const providerId = params.quote.providerId || this.defaultProviderId;
-
-        log.debug('Building swap transaction', {
-            providerId,
-            userAddress: params.userAddress,
-        });
-
-        try {
-            const transaction = await this.getProvider(providerId).buildSwapTransaction(params);
-
-            log.debug('Built swap transaction', params.quote);
-
-            return transaction;
-        } catch (error) {
-            log.error('Failed to build swap transaction', { error, params });
-            throw toDefiError(error, 'Failed to build swap transaction');
-        }
-    }
+  }
 }

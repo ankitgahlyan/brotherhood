@@ -12,14 +12,14 @@
 export type SignatureDomain = SignatureDomainL2 | SignatureDomainEmpty;
 
 export type SignatureDomainL2 = {
-    type: 'l2';
+  type: 'l2';
 
-    /**
-     * @format int
-     */
-    globalId: number;
+  /**
+   * @format int
+   */
+  globalId: number;
 };
 
 export type SignatureDomainEmpty = {
-    type: 'empty';
+  type: 'empty';
 };

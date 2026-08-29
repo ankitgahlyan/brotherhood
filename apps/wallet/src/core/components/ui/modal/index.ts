@@ -6,5 +6,12 @@
  *
  */
 
-export { Modal, ModalContainer, ModalHeader, ModalTitle, ModalBody, ModalFooter } from './modal';
+export {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalTitle,
+  ModalBody,
+  ModalFooter,
+} from './modal';
 export type { ModalContainerProps } from './modal';

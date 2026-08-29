@@ -337,7 +337,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Voter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEAwgABFP8A9KQT9LzyyAsBAgFiAgMBzND4kfJAIO1E0PpI+kjSANcKAATXLCAAAIfsjjQ1+JIixwXy4rwE038x0gD6SDAjxwXy4rwElVEjusMAkjJw4pPywvXgyPpS+lLPg8oAye1U4DRbAdcsIAAAh/wx4wIwhA8BxwDy9AQAHaDEs9qJofSR9JGkAaQBowBoMfiSIccF8uK8yM+FCPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAKD7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEAugABFP8A9KQT9LzyyAsBAgFiAgMBvND4kfJAIO1E0PpI+kjSANcKAATXLCAAAIfsjiw1+JIixwXy4rwE038x1woABJVRI7rDAJIycOKT8sL14Mj6UvpSz4PKAMntVOA0WwHXLCAAAIf8MeMCMIQPAccA8vQEAB2gxLPaiaH0kfSRpAGkAaMAaDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wA=');
 
     static Errors = {
         'Errors.IncorrectSender': 700,

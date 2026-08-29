@@ -9,9 +9,9 @@
 import type { AppState } from '@demo/wallet-core';
 
 declare global {
-    interface Window {
-        __store: AppState;
-    }
+  interface Window {
+    __store: AppState;
+  }
 }
 
 // Note: HMR for store is disabled when using WalletProvider
@@ -19,6 +19,6 @@ declare global {
 // If you need to debug the store, use Redux DevTools (enabled by default)
 
 if (import.meta.hot && typeof window !== 'undefined') {
-    // Store current state for debugging
-    import.meta.hot.accept();
+  // Store current state for debugging
+  import.meta.hot.accept();
 }

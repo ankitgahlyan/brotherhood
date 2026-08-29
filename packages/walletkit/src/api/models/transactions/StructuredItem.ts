@@ -16,38 +16,39 @@ export type StructuredItemType = 'ton' | 'jetton' | 'nft';
 /**
  * @discriminator type
  */
-export type StructuredItem = TonTransferItem | JettonTransferItem | NftTransferItem;
+export type StructuredItem =
+  TonTransferItem | JettonTransferItem | NftTransferItem;
 
 export interface TonTransferItem {
-    type: 'ton';
-    address: string;
-    amount: string;
-    payload?: Base64String;
-    stateInit?: Base64String;
-    extraCurrency?: ExtraCurrencies;
+  type: 'ton';
+  address: string;
+  amount: string;
+  payload?: Base64String;
+  stateInit?: Base64String;
+  extraCurrency?: ExtraCurrencies;
 }
 
 export interface JettonTransferItem {
-    type: 'jetton';
-    master: string;
-    destination: string;
-    amount: string;
-    attachAmount?: string;
-    queryId?: string;
-    responseDestination?: string;
-    customPayload?: Base64String;
-    forwardAmount?: string;
-    forwardPayload?: Base64String;
+  type: 'jetton';
+  master: string;
+  destination: string;
+  amount: string;
+  attachAmount?: string;
+  queryId?: string;
+  responseDestination?: string;
+  customPayload?: Base64String;
+  forwardAmount?: string;
+  forwardPayload?: Base64String;
 }
 
 export interface NftTransferItem {
-    type: 'nft';
-    nftAddress: string;
-    newOwner: string;
-    attachAmount?: string;
-    queryId?: string;
-    responseDestination?: string;
-    customPayload?: Base64String;
-    forwardAmount?: string;
-    forwardPayload?: Base64String;
+  type: 'nft';
+  nftAddress: string;
+  newOwner: string;
+  attachAmount?: string;
+  queryId?: string;
+  responseDestination?: string;
+  customPayload?: Base64String;
+  forwardAmount?: string;
+  forwardPayload?: Base64String;
 }

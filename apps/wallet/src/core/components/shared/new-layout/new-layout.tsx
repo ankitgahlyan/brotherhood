@@ -9,15 +9,15 @@
 import React from 'react';
 
 interface NewLayoutProps {
-    header?: React.ReactNode;
-    children: React.ReactNode;
+  header?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const NewLayout: React.FC<NewLayoutProps> = ({ header, children }) => (
-    <div className="min-h-screen bg-background text-foreground select-none">
-        <div className="max-w-md mx-auto">
-            {header}
-            <main className="px-4 pb-6">{children}</main>
-        </div>
+  <div className="min-h-screen bg-background text-foreground select-none">
+    <div className="max-w-md mx-auto">
+      {header}
+      <main className="px-4 pb-6">{children}</main>
     </div>
+  </div>
 );

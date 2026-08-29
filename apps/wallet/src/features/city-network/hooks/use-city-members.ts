@@ -9,49 +9,72 @@
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
-import { CityMap } from '@/contracts/brotherhood/CityMap.gen';
+import { Location } from '@wrappers/Location.gen';
 import { network } from '@/lib/brotherhood/config';
 
-export interface UseCityMembersResult {
-    cityName: string | null;
-    members: string[];
-    isLoading: boolean;
-    refetch: () => void;
+export interface UseLocationMembersResult {
+  h3Cell: string | null;
+  members: string[];
+  isTargetMember: boolean | null;
+  isLoading: boolean;
+  refetch: () => void;
 }
 
-export function useCityMembers(cityMapAddressString: string | null): UseCityMembersResult {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['city-members', cityMapAddressString],
-        queryFn: async () => {
-            if (!cityMapAddressString) return null;
-            const cityMapAddr = Address.parse(cityMapAddressString);
-            const client = getTonClient(network);
-            const cityMapContract = client.open(CityMap.fromAddress(cityMapAddr));
+export function useLocationMembers(
+  locationAddressString: string | null,
+  targetMemberAddressString?: string | null,
+): UseLocationMembersResult {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      'location-members',
+      locationAddressString,
+      targetMemberAddressString,
+    ],
+    queryFn: async () => {
+      if (!locationAddressString) return null;
+      const locAddr = Address.parse(locationAddressString);
+      const client = getTonClient(network);
+      const locationContract = client.open(Location.fromAddress(locAddr));
 
-            const [cityName, dict] = await Promise.all([
-                cityMapContract.getCityName().catch(() => null),
-                cityMapContract.getMembers().catch(() => null),
-            ]);
+      const [h3Cell, dict] = await Promise.all([
+        locationContract.getH3Cell().catch(() => null),
+        locationContract.getMembers().catch(() => null),
+      ]);
 
-            const memberAddrs: string[] = [];
-            if (dict) {
-                for (const key of dict.keys()) {
-                    memberAddrs.push(key.toString());
-                }
-            }
+      let isTargetMember: boolean | null = null;
+      if (targetMemberAddressString) {
+        try {
+          const target = Address.parse(targetMemberAddressString);
+          isTargetMember = await locationContract.getIsMember(target);
+        } catch {
+          isTargetMember = false;
+        }
+      }
 
-            return {
-                cityName,
-                members: memberAddrs,
-            };
-        },
-        enabled: Boolean(cityMapAddressString),
-    });
+      const memberAddrs: string[] = [];
+      if (dict) {
+        for (const key of dict.keys()) {
+          memberAddrs.push(key.toString());
+        }
+      }
 
-    return {
-        cityName: data?.cityName ?? null,
-        members: data?.members ?? [],
-        isLoading,
-        refetch,
-    };
+      return {
+        h3Cell,
+        members: memberAddrs,
+        isTargetMember,
+      };
+    },
+    enabled: Boolean(locationAddressString),
+  });
+
+  return {
+    h3Cell: data?.h3Cell ?? null,
+    members: data?.members ?? [],
+    isTargetMember: data?.isTargetMember ?? null,
+    isLoading,
+    refetch,
+  };
 }
+
+// Backwards compatibility alias
+export const useCityMembers = useLocationMembers;

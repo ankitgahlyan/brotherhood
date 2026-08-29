@@ -9,9 +9,9 @@
 const VERSION = '0.0.3';
 
 export function getVersion(): string {
-    return VERSION;
+  return VERSION;
 }
 
 export function getEventsSubsystem(): string {
-    return 'wallet';
+  return 'wallet';
 }

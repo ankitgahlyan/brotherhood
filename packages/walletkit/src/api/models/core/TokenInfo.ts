@@ -13,28 +13,28 @@ import type { TokenAnimation } from './TokenAnimation';
  * Display information for a token (GRAM, Jetton, or NFT).
  */
 export interface TokenInfo {
-    /**
-     * Display name of the token
-     */
-    name?: string;
+  /**
+   * Display name of the token
+   */
+  name?: string;
 
-    /**
-     * Human-readable description of the token
-     */
-    description?: string;
+  /**
+   * Human-readable description of the token
+   */
+  description?: string;
 
-    /**
-     * Token image in various sizes
-     */
-    image?: TokenImage;
+  /**
+   * Token image in various sizes
+   */
+  image?: TokenImage;
 
-    /**
-     * Animated media associated with the token
-     */
-    animation?: TokenAnimation;
+  /**
+   * Animated media associated with the token
+   */
+  animation?: TokenAnimation;
 
-    /**
-     * Ticker symbol of the token (e.g., "GRAM", "USDT")
-     */
-    symbol?: string;
+  /**
+   * Ticker symbol of the token (e.g., "GRAM", "USDT")
+   */
+  symbol?: string;
 }

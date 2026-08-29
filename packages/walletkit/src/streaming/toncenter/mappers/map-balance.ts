@@ -16,12 +16,14 @@ import { formatUnits } from '../../../utils/units';
  * @param notification - Raw notification from Toncenter WebSocket
  * @returns BalanceUpdate object
  */
-export const mapBalance = (notification: StreamingV2AccountStateNotification): BalanceUpdate => {
-    return {
-        type: 'balance',
-        address: asAddressFriendly(notification.account),
-        rawBalance: notification.state.balance,
-        balance: formatUnits(notification.state.balance, 9),
-        status: notification.finality,
-    };
+export const mapBalance = (
+  notification: StreamingV2AccountStateNotification,
+): BalanceUpdate => {
+  return {
+    type: 'balance',
+    address: asAddressFriendly(notification.account),
+    rawBalance: notification.state.balance,
+    balance: formatUnits(notification.state.balance, 9),
+    status: notification.finality,
+  };
 };

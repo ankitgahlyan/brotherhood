@@ -20,23 +20,23 @@ import type { StorageAdapter } from './types';
  * ```
  */
 export class AsyncStorageAdapter implements StorageAdapter {
-    constructor(
-        private asyncStorage: {
-            getItem: (key: string) => Promise<string | null>;
-            setItem: (key: string, value: string) => Promise<void>;
-            removeItem: (key: string) => Promise<void>;
-        },
-    ) {}
+  constructor(
+    private asyncStorage: {
+      getItem: (key: string) => Promise<string | null>;
+      setItem: (key: string, value: string) => Promise<void>;
+      removeItem: (key: string) => Promise<void>;
+    },
+  ) {}
 
-    async getItem(name: string): Promise<string | null> {
-        return this.asyncStorage.getItem(name);
-    }
+  async getItem(name: string): Promise<string | null> {
+    return this.asyncStorage.getItem(name);
+  }
 
-    async setItem(name: string, value: string): Promise<void> {
-        return this.asyncStorage.setItem(name, value);
-    }
+  async setItem(name: string, value: string): Promise<void> {
+    return this.asyncStorage.setItem(name, value);
+  }
 
-    async removeItem(name: string): Promise<void> {
-        return this.asyncStorage.removeItem(name);
-    }
+  async removeItem(name: string): Promise<void> {
+    return this.asyncStorage.removeItem(name);
+  }
 }

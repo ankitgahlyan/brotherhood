@@ -7,12 +7,12 @@
  */
 
 declare global {
-    // global chrome for browser extensions
-    const chrome: {
-        runtime: {
-            id: string;
-        };
+  // global chrome for browser extensions
+  const chrome: {
+    runtime: {
+      id: string;
     };
+  };
 }
 
 /**
@@ -20,35 +20,41 @@ declare global {
  * (Chrome Extension, Firefox Extension, etc.)
  */
 export function isExtension(): boolean {
-    // Check if running in React Native
-    if (isReactNative()) {
-        return false;
-    }
-
-     
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-        return true;
-    }
-
-    // @ts-expect-error check for Firefox extension
-     
-    if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.id) {
-        return true;
-    }
-
+  // Check if running in React Native
+  if (isReactNative()) {
     return false;
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+    return true;
+  }
+
+  // @ts-expect-error check for Firefox extension
+
+  if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.id) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
  * Checks if the code is running in a web browser (not extension, not React Native)
  */
 export function isWeb(): boolean {
-    return typeof window !== 'undefined' && typeof navigator !== 'undefined' && !isExtension() && !isReactNative();
+  return (
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    !isExtension() &&
+    !isReactNative()
+  );
 }
 
 /**
  * Checks if the code is running in React Native
  */
 export function isReactNative(): boolean {
-    return typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+  return (
+    typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
+  );
 }

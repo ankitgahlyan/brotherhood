@@ -11,9 +11,9 @@ export const UNSTAKE_MODE_WHEN_AVAILABLE = 'WHEN_AVAILABLE'; // when_available -
 export const UNSTAKE_MODE_ROUND_END = 'ROUND_END'; // round_end - withdraw at the end of the round for best rate(~18 hours)
 
 export const UnstakeMode = {
-    INSTANT: UNSTAKE_MODE_INSTANT,
-    WHEN_AVAILABLE: UNSTAKE_MODE_WHEN_AVAILABLE,
-    ROUND_END: UNSTAKE_MODE_ROUND_END,
+  INSTANT: UNSTAKE_MODE_INSTANT,
+  WHEN_AVAILABLE: UNSTAKE_MODE_WHEN_AVAILABLE,
+  ROUND_END: UNSTAKE_MODE_ROUND_END,
 } as const;
 
 /**

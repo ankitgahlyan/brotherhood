@@ -7,96 +7,96 @@
  */
 
 export interface TonApiTransactionsResponse {
-    transactions: TonApiTransaction[];
+  transactions: TonApiTransaction[];
 }
 
 export interface TonApiExtraCurrency {
-    id: number | string;
-    amount: string | number;
+  id: number | string;
+  amount: string | number;
 }
 
 export interface TonApiAccountRef {
-    address: string;
-    name?: string;
-    is_scam?: boolean;
-    is_wallet?: boolean;
+  address: string;
+  name?: string;
+  is_scam?: boolean;
+  is_wallet?: boolean;
 }
 
 export interface TonApiMessage {
-    hash: string;
-    source?: TonApiAccountRef;
-    destination?: TonApiAccountRef;
-    value?: string | number | null;
-    value_extra?: TonApiExtraCurrency[];
-    fwd_fee?: string | number | null;
-    ihr_fee?: string | number | null;
-    created_lt?: string | number | null;
-    created_at?: string | number | null;
-    op_code?: string | null;
-    ihr_disabled?: boolean | null;
-    bounce?: boolean | null;
-    bounced?: boolean | null;
-    import_fee?: string | number | null;
-    decoded_body?: unknown;
+  hash: string;
+  source?: TonApiAccountRef;
+  destination?: TonApiAccountRef;
+  value?: string | number | null;
+  value_extra?: TonApiExtraCurrency[];
+  fwd_fee?: string | number | null;
+  ihr_fee?: string | number | null;
+  created_lt?: string | number | null;
+  created_at?: string | number | null;
+  op_code?: string | null;
+  ihr_disabled?: boolean | null;
+  bounce?: boolean | null;
+  bounced?: boolean | null;
+  import_fee?: string | number | null;
+  decoded_body?: unknown;
 
-    // hex boc of inMessage
-    raw: string;
+  // hex boc of inMessage
+  raw: string;
 
-    // hex boc of inMessage.body
-    raw_body: string;
+  // hex boc of inMessage.body
+  raw_body: string;
 }
 
 export interface TonApiPhaseStorage {
-    storage_fees_collected?: string | number;
-    status_change?: string;
+  storage_fees_collected?: string | number;
+  status_change?: string;
 }
 
 export interface TonApiPhaseCredit {
-    credit?: string | number;
+  credit?: string | number;
 }
 
 export interface TonApiPhaseCompute {
-    skipped?: boolean;
-    success?: boolean;
-    gas_fees?: string | number;
-    gas_used?: string | number;
-    exit_code?: number;
-    exit_code_description?: string;
-    vm_steps?: number;
+  skipped?: boolean;
+  success?: boolean;
+  gas_fees?: string | number;
+  gas_used?: string | number;
+  exit_code?: number;
+  exit_code_description?: string;
+  vm_steps?: number;
 }
 
 export interface TonApiPhaseAction {
-    success?: boolean;
-    fwd_fees?: string | number;
-    total_fees?: string | number;
-    result_code?: number;
-    total_actions?: number;
-    skipped_actions?: number;
+  success?: boolean;
+  fwd_fees?: string | number;
+  total_fees?: string | number;
+  result_code?: number;
+  total_actions?: number;
+  skipped_actions?: number;
 }
 
 export interface TonApiTransaction {
-    hash: string;
-    lt: string | number;
-    account: TonApiAccountRef;
-    end_balance?: string | number;
-    success?: boolean;
-    utime?: number;
-    orig_status?: string;
-    end_status?: string;
-    total_fees?: string | number;
-    transaction_type?: string;
-    state_update_old?: string;
-    state_update_new?: string;
-    out_msgs?: TonApiMessage[];
-    in_msg?: TonApiMessage;
-    prev_trans_hash?: string | null;
-    prev_trans_lt?: string | number | null;
-    block?: string;
-    aborted?: boolean;
-    destroyed?: boolean;
-    raw?: string;
-    storage_phase?: TonApiPhaseStorage;
-    credit_phase?: TonApiPhaseCredit;
-    compute_phase?: TonApiPhaseCompute;
-    action_phase?: TonApiPhaseAction;
+  hash: string;
+  lt: string | number;
+  account: TonApiAccountRef;
+  end_balance?: string | number;
+  success?: boolean;
+  utime?: number;
+  orig_status?: string;
+  end_status?: string;
+  total_fees?: string | number;
+  transaction_type?: string;
+  state_update_old?: string;
+  state_update_new?: string;
+  out_msgs?: TonApiMessage[];
+  in_msg?: TonApiMessage;
+  prev_trans_hash?: string | null;
+  prev_trans_lt?: string | number | null;
+  block?: string;
+  aborted?: boolean;
+  destroyed?: boolean;
+  raw?: string;
+  storage_phase?: TonApiPhaseStorage;
+  credit_phase?: TonApiPhaseCredit;
+  compute_phase?: TonApiPhaseCompute;
+  action_phase?: TonApiPhaseAction;
 }

@@ -14,6 +14,8 @@ import type { TokenImage } from '@ton/walletkit';
  * picks the first usable one.
  */
 export const tokenImageUrls = (image: TokenImage | undefined): string[] =>
-    image
-        ? [image.url, image.largeUrl, image.mediumUrl, image.smallUrl].filter((url): url is string => Boolean(url))
-        : [];
+  image
+    ? [image.url, image.largeUrl, image.mediumUrl, image.smallUrl].filter(
+        (url): url is string => Boolean(url),
+      )
+    : [];

@@ -10,15 +10,15 @@
  * Token type for swap
  */
 export type SwapToken = {
-    address: string;
+  address: string;
 
-    /**
-     * @format: int
-     */
-    decimals: number;
+  /**
+   * @format: int
+   */
+  decimals: number;
 
-    name?: string;
-    symbol?: string;
-    image?: string;
-    chainId?: string;
+  name?: string;
+  symbol?: string;
+  image?: string;
+  chainId?: string;
 };

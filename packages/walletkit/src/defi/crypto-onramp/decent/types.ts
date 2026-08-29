@@ -17,32 +17,32 @@ export type DecentSwapDirection = 'exact-amount-in' | 'exact-amount-out';
  * Token / amount entry as returned by the Decent API (Payment object).
  */
 export interface DecentPayment {
-    chainId: number;
-    address: string;
-    name: string;
-    symbol: string;
-    decimals: number;
-    isNative: boolean;
-    amount: string;
-    usdAmount: number;
-    logo: string | null;
-    swapsXyzCode: string;
+  chainId: number;
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  isNative: boolean;
+  amount: string;
+  usdAmount: number;
+  logo: string | null;
+  swapsXyzCode: string;
 }
 
 export interface DecentEvmTx {
-    to: string;
-    toExtra: string | null;
-    value: string;
-    chainId: number;
-    chainKey: string;
+  to: string;
+  toExtra: string | null;
+  value: string;
+  chainId: number;
+  chainKey: string;
 }
 
 export interface DecentBridgeRouteStep {
-    srcChainId: number;
-    dstChainId: number;
-    srcBridgeToken: string;
-    dstBridgeToken: string;
-    bridgeId: string;
+  srcChainId: number;
+  dstChainId: number;
+  srcBridgeToken: string;
+  dstBridgeToken: string;
+  bridgeId: string;
 }
 
 /**
@@ -52,63 +52,63 @@ export interface DecentBridgeRouteStep {
  * same shape and is not typed here.
  */
 export interface DecentGetActionResponse {
-    tx: DecentEvmTx;
-    txId: string;
-    vmId: DecentVmId;
-    amountIn: DecentPayment;
-    amountInMax: DecentPayment;
-    amountOut: DecentPayment;
-    amountOutMin: DecentPayment;
-    protocolFee: DecentPayment;
-    applicationFee: DecentPayment;
-    bridgeFee: DecentPayment;
-    bridgeIds: string[];
-    bridgeRoute: DecentBridgeRouteStep[];
-    exchangeRate: number;
-    estimatedTxTime: number;
-    estimatedPriceImpact: number;
-    requiresTokenApproval: boolean;
-    executionsType: 'DEFAULT' | 'GASLESS';
+  tx: DecentEvmTx;
+  txId: string;
+  vmId: DecentVmId;
+  amountIn: DecentPayment;
+  amountInMax: DecentPayment;
+  amountOut: DecentPayment;
+  amountOutMin: DecentPayment;
+  protocolFee: DecentPayment;
+  applicationFee: DecentPayment;
+  bridgeFee: DecentPayment;
+  bridgeIds: string[];
+  bridgeRoute: DecentBridgeRouteStep[];
+  exchangeRate: number;
+  estimatedTxTime: number;
+  estimatedPriceImpact: number;
+  requiresTokenApproval: boolean;
+  executionsType: 'DEFAULT' | 'GASLESS';
 }
 
 /**
  * Token info entry as returned in `paths[].tokens` from `/getPaths`.
  */
 export interface DecentTokenInfo {
-    chainId: number;
-    address: string;
-    name: string;
-    symbol: string;
-    decimals: number;
-    isNative: boolean;
-    logo: string | null;
-    swapsXyzCode?: string;
+  chainId: number;
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  isNative: boolean;
+  logo: string | null;
+  swapsXyzCode?: string;
 }
 
 export interface DecentChainPath {
-    chainId: number;
-    /** Either the literal string `'all'` or a concrete list of supported tokens. */
-    tokens: 'all' | DecentTokenInfo[];
-    supportsExactAmountIn?: boolean;
-    supportsExactAmountOut?: boolean;
+  chainId: number;
+  /** Either the literal string `'all'` or a concrete list of supported tokens. */
+  tokens: 'all' | DecentTokenInfo[];
+  supportsExactAmountIn?: boolean;
+  supportsExactAmountOut?: boolean;
 }
 
 export interface DecentGetPathsResponse {
-    srcChainId: number;
-    srcToken: DecentTokenInfo;
-    paths: DecentChainPath[];
-    timestamp: string;
+  srcChainId: number;
+  srcToken: DecentTokenInfo;
+  paths: DecentChainPath[];
+  timestamp: string;
 }
 
 export interface DecentErrorResponse {
-    success: false;
-    error: {
-        code: string;
-        name: string;
-        message: string;
-        title: string;
-        statusCode: number;
-        details?: unknown;
-        timestamp: string;
-    };
+  success: false;
+  error: {
+    code: string;
+    name: string;
+    message: string;
+    title: string;
+    statusCode: number;
+    details?: unknown;
+    timestamp: string;
+  };
 }

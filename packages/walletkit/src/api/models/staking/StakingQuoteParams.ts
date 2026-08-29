@@ -15,39 +15,39 @@ import type { UnstakeModes } from './UnstakeMode';
  * Parameters for getting a staking quote
  */
 export interface StakingQuoteParams<TProviderOptions = unknown> {
-    /**
-     * Direction of the quote (stake or unstake)
-     */
-    direction: StakingQuoteDirection;
+  /**
+   * Direction of the quote (stake or unstake)
+   */
+  direction: StakingQuoteDirection;
 
-    /**
-     * Amount of tokens to stake or unstake
-     */
-    amount: string;
+  /**
+   * Amount of tokens to stake or unstake
+   */
+  amount: string;
 
-    /**
-     * Address of the user
-     */
-    userAddress?: UserFriendlyAddress;
+  /**
+   * Address of the user
+   */
+  userAddress?: UserFriendlyAddress;
 
-    /**
-     * Network on which the staking will be executed
-     */
-    network?: Network;
+  /**
+   * Network on which the staking will be executed
+   */
+  network?: Network;
 
-    /**
-     * Requested mode of unstaking
-     */
-    unstakeMode?: UnstakeModes;
+  /**
+   * Requested mode of unstaking
+   */
+  unstakeMode?: UnstakeModes;
 
-    /**
-     * If true, for unstake requests the amount is specified in the staking coin (e.g. GRAM)
-     * instead of the Liquid Staking Token (e.g. tsTON).
-     */
-    isReversed?: boolean;
+  /**
+   * If true, for unstake requests the amount is specified in the staking coin (e.g. GRAM)
+   * instead of the Liquid Staking Token (e.g. tsTON).
+   */
+  isReversed?: boolean;
 
-    /**
-     * Provider-specific options
-     */
-    providerOptions?: TProviderOptions;
+  /**
+   * Provider-specific options
+   */
+  providerOptions?: TProviderOptions;
 }

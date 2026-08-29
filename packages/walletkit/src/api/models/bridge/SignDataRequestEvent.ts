@@ -9,44 +9,48 @@
 import type { SignDataPayload } from '../core/PreparedSignData';
 import type { DAppInfo } from '../core/DAppInfo';
 import type { BridgeEvent } from './BridgeEvent';
-import type { SignDataBinary, SignDataCell, SignDataText } from '../core/SignData';
+import type {
+  SignDataBinary,
+  SignDataCell,
+  SignDataText,
+} from '../core/SignData';
 
 /**
  * Event containing a sign data request from a dApp via TON Connect.
  */
 export interface SignDataRequestEvent extends BridgeEvent {
-    /**
-     * Payload containing the data to be signed
-     */
-    payload: SignDataPayload;
-    /**
-     * Preview information for UI display
-     */
-    preview: SignDataRequestEventPreview;
+  /**
+   * Payload containing the data to be signed
+   */
+  payload: SignDataPayload;
+  /**
+   * Preview information for UI display
+   */
+  preview: SignDataRequestEventPreview;
 }
 
 /**
  * Preview data for displaying sign data request in the wallet UI.
  */
 export interface SignDataRequestEventPreview {
-    /**
-     * Information about the requesting dApp
-     */
-    dAppInfo?: DAppInfo;
+  /**
+   * Information about the requesting dApp
+   */
+  dAppInfo?: DAppInfo;
 
-    /**
-     * Array of sign data previews
-     */
-    data: SignDataPreview;
+  /**
+   * Array of sign data previews
+   */
+  data: SignDataPreview;
 }
 
 /**
  * Data to be signed by the wallet, discriminated by type.
  */
 export type SignDataPreview =
-    | { type: 'text'; value: SignDataPreviewText }
-    | { type: 'binary'; value: SignDataPreviewBinary }
-    | { type: 'cell'; value: SignDataPreviewCell };
+  | { type: 'text'; value: SignDataPreviewText }
+  | { type: 'binary'; value: SignDataPreviewBinary }
+  | { type: 'cell'; value: SignDataPreviewCell };
 
 /**
  * Binary data to be signed.
@@ -58,7 +62,7 @@ export interface SignDataPreviewBinary extends SignDataBinary {}
  * TON Cell data to be signed with a schema definition.
  */
 export interface SignDataPreviewCell extends SignDataCell {
-    parsed?: { [key: string]: unknown };
+  parsed?: { [key: string]: unknown };
 }
 
 /**

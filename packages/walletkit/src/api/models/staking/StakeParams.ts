@@ -13,18 +13,18 @@ import type { StakingQuote } from './StakingQuote';
  * Parameters for staking GRAM
  */
 export interface StakeParams<TProviderOptions = unknown> {
-    /**
-     * The staking quote based on which the transaction is built
-     */
-    quote: StakingQuote;
+  /**
+   * The staking quote based on which the transaction is built
+   */
+  quote: StakingQuote;
 
-    /**
-     * Address of the user performing the staking
-     */
-    userAddress: UserFriendlyAddress;
+  /**
+   * Address of the user performing the staking
+   */
+  userAddress: UserFriendlyAddress;
 
-    /**
-     * Provider-specific options
-     */
-    providerOptions?: TProviderOptions;
+  /**
+   * Provider-specific options
+   */
+  providerOptions?: TProviderOptions;
 }

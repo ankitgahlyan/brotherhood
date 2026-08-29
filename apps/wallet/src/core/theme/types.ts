@@ -11,8 +11,8 @@ export type ThemeMode = 'system' | 'light' | 'dark' | 'oled';
 export type ResolvedTheme = 'light' | 'dark' | 'oled';
 
 export interface ThemeState {
-    theme: ThemeMode;
-    resolvedTheme: ResolvedTheme;
-    setTheme: (theme: ThemeMode) => void;
-    toggleTheme: () => void;
+  theme: ThemeMode;
+  resolvedTheme: ResolvedTheme;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
 }

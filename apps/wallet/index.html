@@ -9,11 +9,15 @@
     <meta name="color-scheme" content="light dark" />
     <title>BrotherHood Wallet</title>
     <script>
-      (function() {
+      (function () {
         try {
           var stored = localStorage.getItem('brotherhood-theme');
-          var isDark = stored === 'dark' || stored === 'oled' || (!stored || stored === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var theme = stored === 'oled' ? 'oled' : (isDark ? 'dark' : 'light');
+          var isDark =
+            stored === 'dark' ||
+            stored === 'oled' ||
+            ((!stored || stored === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var theme = stored === 'oled' ? 'oled' : isDark ? 'dark' : 'light';
           if (isDark) {
             document.documentElement.classList.add('dark');
           } else {

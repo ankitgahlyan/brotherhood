@@ -20,32 +20,35 @@ import type { Base64String, Hex } from '../api/models';
  * @returns An object containing the hash (Hex string) and the boc (Base64 string) of the normalized message.
  * @throws if the message type is not `external-in`.
  */
-export function getNormalizedExtMessageHash(boc: string): { hash: Hex; boc: Base64String } {
-    const cell = Cell.fromBase64(boc);
-    const message = loadMessage(cell.beginParse());
+export function getNormalizedExtMessageHash(boc: string): {
+  hash: Hex;
+  boc: Base64String;
+} {
+  const cell = Cell.fromBase64(boc);
+  const message = loadMessage(cell.beginParse());
 
-    if (message.info.type !== 'external-in') {
-        throw new Error(`Message must be "external-in", got ${message.info.type}`);
-    }
+  if (message.info.type !== 'external-in') {
+    throw new Error(`Message must be "external-in", got ${message.info.type}`);
+  }
 
-    const info = {
-        ...message.info,
-        src: undefined,
-        importFee: 0n,
-    };
+  const info = {
+    ...message.info,
+    src: undefined,
+    importFee: 0n,
+  };
 
-    const normalizedMessage = {
-        ...message,
-        init: null,
-        info: info,
-    };
+  const normalizedMessage = {
+    ...message,
+    init: null,
+    info: info,
+  };
 
-    const normalizedCell = beginCell()
-        .store(storeMessage(normalizedMessage, { forceRef: true }))
-        .endCell();
+  const normalizedCell = beginCell()
+    .store(storeMessage(normalizedMessage, { forceRef: true }))
+    .endCell();
 
-    return {
-        hash: `0x${normalizedCell.hash().toString('hex')}` as Hex,
-        boc: normalizedCell.toBoc().toString('base64') as Base64String,
-    };
+  return {
+    hash: `0x${normalizedCell.hash().toString('hex')}` as Hex,
+    boc: normalizedCell.toBoc().toString('base64') as Base64String,
+  };
 }

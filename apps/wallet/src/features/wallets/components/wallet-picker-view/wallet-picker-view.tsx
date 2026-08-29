@@ -14,11 +14,11 @@ import { WalletRow } from '../wallet-row';
 import { Modal } from '@/core/components/ui/modal';
 
 interface WalletPickerViewProps {
-    onBack: () => void;
-    wallets: SavedWallet[];
-    selectedId?: string;
-    onSelect: (walletId: string) => void;
-    title?: string;
+  onBack: () => void;
+  wallets: SavedWallet[];
+  selectedId?: string;
+  onSelect: (walletId: string) => void;
+  title?: string;
 }
 
 /**
@@ -28,30 +28,32 @@ interface WalletPickerViewProps {
  * it just reports the picked id via {@link onSelect} (used to choose which wallet to connect to a dApp).
  */
 export const WalletPickerView: React.FC<WalletPickerViewProps> = ({
-    onBack,
-    wallets,
-    selectedId,
-    onSelect,
-    title = 'Select wallet',
+  onBack,
+  wallets,
+  selectedId,
+  onSelect,
+  title = 'Select wallet',
 }) => (
-    <>
-        <Modal.Header onBack={onBack}>
-            <Modal.Title>{title}</Modal.Title>
-        </Modal.Header>
+  <>
+    <Modal.Header onBack={onBack}>
+      <Modal.Title>{title}</Modal.Title>
+    </Modal.Header>
 
-        <Modal.Body className="flex-1 overflow-y-auto px-2 pb-4">
-            {wallets.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No wallets available</p>
-            ) : (
-                wallets.map((wallet) => (
-                    <WalletRow
-                        key={wallet.id}
-                        wallet={wallet}
-                        isActive={wallet.id === selectedId}
-                        onSelect={() => onSelect(wallet.id)}
-                    />
-                ))
-            )}
-        </Modal.Body>
-    </>
+    <Modal.Body className="flex-1 overflow-y-auto px-2 pb-4">
+      {wallets.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-4">
+          No wallets available
+        </p>
+      ) : (
+        wallets.map((wallet) => (
+          <WalletRow
+            key={wallet.id}
+            wallet={wallet}
+            isActive={wallet.id === selectedId}
+            onSelect={() => onSelect(wallet.id)}
+          />
+        ))
+      )}
+    </Modal.Body>
+  </>
 );

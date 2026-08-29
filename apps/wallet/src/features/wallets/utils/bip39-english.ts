@@ -15,47 +15,49 @@ const BIP39_ENGLISH = new Set(englishWordlist);
  * Handles commas, semicolons, numbering (e.g. "1."), line breaks and other non-letter separators.
  */
 export function extractMnemonicWordsFromPaste(text: string): string[] {
-    const trimmed = text.trim();
-    if (trimmed.length === 0) {
-        return [];
-    }
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
 
-    const normalized = trimmed.normalize('NFKD').toLowerCase();
-    const withSpaces = normalized.replace(/[^a-z]+/g, ' ').trim();
-    if (withSpaces.length === 0) {
-        return [];
-    }
+  const normalized = trimmed.normalize('NFKD').toLowerCase();
+  const withSpaces = normalized.replace(/[^a-z]+/g, ' ').trim();
+  if (withSpaces.length === 0) {
+    return [];
+  }
 
-    return withSpaces.split(/\s+/).filter((word) => word.length > 0);
+  return withSpaces.split(/\s+/).filter((word) => word.length > 0);
 }
 
 export type Bip39SlotValidation = {
-    nonEmptyWords: string[];
-    invalidIndices: readonly number[];
+  nonEmptyWords: string[];
+  invalidIndices: readonly number[];
 };
 
-export function evaluateBip39Slots(words24: readonly string[]): Bip39SlotValidation {
-    const nonEmptyWords = words24.filter((w) => w.trim() !== '');
-    const invalidIndices: number[] = [];
-    words24.forEach((w, i) => {
-        const t = w.trim();
-        if (t !== '' && !BIP39_ENGLISH.has(t.toLowerCase())) {
-            invalidIndices.push(i);
-        }
-    });
+export function evaluateBip39Slots(
+  words24: readonly string[],
+): Bip39SlotValidation {
+  const nonEmptyWords = words24.filter((w) => w.trim() !== '');
+  const invalidIndices: number[] = [];
+  words24.forEach((w, i) => {
+    const t = w.trim();
+    if (t !== '' && !BIP39_ENGLISH.has(t.toLowerCase())) {
+      invalidIndices.push(i);
+    }
+  });
 
-    return { nonEmptyWords, invalidIndices };
+  return { nonEmptyWords, invalidIndices };
 }
 
 export function isImportableBip39(v: Bip39SlotValidation): boolean {
-    const n = v.nonEmptyWords.length;
-    if (n !== 12 && n !== 24) return false;
-    return v.invalidIndices.length === 0;
+  const n = v.nonEmptyWords.length;
+  if (n !== 12 && n !== 24) return false;
+  return v.invalidIndices.length === 0;
 }
 
 export type MnemonicPasteResult = {
-    nextWords: string[];
-    focusIndex: number;
+  nextWords: string[];
+  focusIndex: number;
 };
 
 /**
@@ -64,21 +66,23 @@ export type MnemonicPasteResult = {
  * Caller is responsible for skipping empty paste.
  */
 export function applyMnemonicPaste(
-    currentWords: readonly string[],
-    atIndex: number,
-    pastedWords: readonly string[],
+  currentWords: readonly string[],
+  atIndex: number,
+  pastedWords: readonly string[],
 ): MnemonicPasteResult {
-    const total = currentWords.length;
-    const isFullOverwrite = pastedWords.length >= 12 && atIndex === 0;
-    const start = isFullOverwrite ? 0 : atIndex;
-    const next = isFullOverwrite ? Array<string>(total).fill('') : [...currentWords];
-    const room = total - start;
-    const written = pastedWords.slice(0, room);
-    written.forEach((word, i) => {
-        next[start + i] = word;
-    });
-    return {
-        nextWords: next,
-        focusIndex: Math.min(start + Math.max(written.length - 1, 0), total - 1),
-    };
+  const total = currentWords.length;
+  const isFullOverwrite = pastedWords.length >= 12 && atIndex === 0;
+  const start = isFullOverwrite ? 0 : atIndex;
+  const next = isFullOverwrite
+    ? Array<string>(total).fill('')
+    : [...currentWords];
+  const room = total - start;
+  const written = pastedWords.slice(0, room);
+  written.forEach((word, i) => {
+    next[start + i] = word;
+  });
+  return {
+    nextWords: next,
+    focusIndex: Math.min(start + Math.max(written.length - 1, 0), total - 1),
+  };
 }

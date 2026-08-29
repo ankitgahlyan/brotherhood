@@ -7,5 +7,5 @@
  */
 
 export interface SignedSendTransactionOptions {
-    fakeSignature?: boolean;
+  fakeSignature?: boolean;
 }

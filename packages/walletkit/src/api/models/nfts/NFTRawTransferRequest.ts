@@ -13,36 +13,36 @@ import type { TokenAmount } from '../core/TokenAmount';
  * Request raw parameters for transferring an NFT to another address.
  */
 export interface NFTRawTransferRequest {
-    /**
-     * Contract address of the NFT to transfer
-     */
-    nftAddress: UserFriendlyAddress;
+  /**
+   * Contract address of the NFT to transfer
+   */
+  nftAddress: UserFriendlyAddress;
 
-    /**
-     * GRAM amount to attach for gas fees (default: 0.1 GRAM)
-     */
-    transferAmount: TokenAmount;
+  /**
+   * GRAM amount to attach for gas fees (default: 0.1 GRAM)
+   */
+  transferAmount: TokenAmount;
 
-    /**
-     * Transfer message details
-     */
-    message: NFTRawTransferRequestMessage;
+  /**
+   * Transfer message details
+   */
+  message: NFTRawTransferRequestMessage;
 }
 
 export interface NFTRawTransferRequestMessage {
-    /**
-     * @format bigInt
-     */
-    queryId: string;
+  /**
+   * @format bigInt
+   */
+  queryId: string;
 
-    newOwner: UserFriendlyAddress;
-    responseDestination?: UserFriendlyAddress;
-    customPayload?: Base64String;
+  newOwner: UserFriendlyAddress;
+  responseDestination?: UserFriendlyAddress;
+  customPayload?: Base64String;
 
-    /**
-     * @format bigInt
-     */
-    forwardAmount: string;
+  /**
+   * @format bigInt
+   */
+  forwardAmount: string;
 
-    forwardPayload?: Base64String;
+  forwardPayload?: Base64String;
 }

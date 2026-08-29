@@ -18,19 +18,21 @@ import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
 export const Swap: FC = () => {
-    const navigate = useNavigate();
-    const { setFromToken, setToToken, clearSwap } = useSwap();
+  const navigate = useNavigate();
+  const { setFromToken, setToToken, clearSwap } = useSwap();
 
-    useEffect(() => {
-        setFromToken({ address: 'ton', decimals: 9, symbol: 'GRAM' });
-        setToToken({ address: USDT_ADDRESS, decimals: 6, symbol: 'USDT' });
+  useEffect(() => {
+    setFromToken({ address: 'ton', decimals: 9, symbol: 'GRAM' });
+    setToToken({ address: USDT_ADDRESS, decimals: 6, symbol: 'USDT' });
 
-        return () => clearSwap();
-    }, [clearSwap, setFromToken, setToToken]);
+    return () => clearSwap();
+  }, [clearSwap, setFromToken, setToToken]);
 
-    return (
-        <NewLayout header={<ScreenHeader title="Swap" onBack={() => navigate('/wallet')} />}>
-            <SwapInterface />
-        </NewLayout>
-    );
+  return (
+    <NewLayout
+      header={<ScreenHeader title="Swap" onBack={() => navigate('/wallet')} />}
+    >
+      <SwapInterface />
+    </NewLayout>
+  );
 };

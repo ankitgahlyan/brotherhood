@@ -11,6 +11,6 @@ import type { Hex } from '../models/core/Primitives';
 export type ISigner = (bytes: Iterable<number>) => Promise<Hex>;
 
 export type WalletSigner = {
-    sign: ISigner;
-    publicKey: Hex;
+  sign: ISigner;
+  publicKey: Hex;
 };

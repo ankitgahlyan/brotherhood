@@ -535,7 +535,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoProxy implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECCAEAAT8AART/APSkE/S88sgLAQIBYgIDAWDQ+JGRMOAgxwCRMOAg7UTQ+kgwAdcsIAAAgGzjAjHXLCAAAIA8MZEw4IQPAccA8vQEABGh543aiaH0kaMD/GwS0z8x0z/6SNMf1NdM+CiIVHZXJQPIyz8S+lIU+lIT+lIUzMxwzwtiE8sfz4HJAcjPhNDMzPkWyM+KAEDL/89Q+JLHBfLivIIImJaAcPsCgiAJGE5yoACCEAX14QCCCvrwgPgobSBus5MwiwTfyM+QXjUUZijPCz9QBfoCiQUGBwhCAthWuF6cEEbTUwDHmW68DblM3ECIia3rmXa/10foiiOIAAMAEACGzxb6UlJQ+lTPhCATzsnIz4UIUnD6Ulj6AoEQAc8LihXLPxP6Ulj6AhLMyXP7ANDIzsnIz4UIEvpScc8LbszJgEL7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECCAEAAT8AART/APSkE/S88sgLAQIBYgIDAWDQ+JGRMOAgxwCRMOAg7UTQ+kgwAdcsIAAAgGzjAjHXLCAAAIA8MZEw4IQPAccA8vQEABGh543aiaH0kaMD/GwS0z8x0z/6SNMf1DHXTPgoiFR1RiUDyMs/EvpSFPpSE/pSEsxwzwtiE8sfz4HJWMjPhNDMzPkWyM+KAEDL/89Q+JLHBfLivIIImJaAcPsCgiAJGE5yoACCEAX14QCCCvrwgPgobSBus5MwiwTfyM+QXjUUZijPCz9QBfoCiQUGBwhCArILck014GlQIrYOxC0cKHBaJLXZFJsBQ6B+zFRWr1osAAMAEACGzxb6UlJQ+lTPhCATzsnIz4UIUnD6Ulj6AoEQAc8LihXLPxP6Ulj6AhLMyXP7ANDIzsnIz4UIEvpScc8LbszJgEL7AA==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,

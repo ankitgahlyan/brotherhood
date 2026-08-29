@@ -12,9 +12,9 @@ import type { Quote } from '@ston-fi/omniston-sdk';
  * Metadata associated with an Omniston quote
  */
 export interface OmnistonQuoteMetadata {
-    /**
-     * The actual omniston quote object
-     * @format frozen
-     */
-    omnistonQuote: Quote;
+  /**
+   * The actual omniston quote object
+   * @format frozen
+   */
+  omnistonQuote: Quote;
 }

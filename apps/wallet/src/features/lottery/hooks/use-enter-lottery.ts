@@ -9,46 +9,50 @@
 import { useCallback } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { EnterLottery } from '@/contracts/brotherhood/Lottery.gen';
+import { EnterLottery } from '@wrappers/Lottery.gen';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 
 export interface UseEnterLotteryParams {
-    wallet: Wallet | null | undefined;
-    walletKit: ITonWalletKit | null;
-    walletAddress: string | null;
-    lotteryAddress: string;
+  wallet: Wallet | null | undefined;
+  walletKit: ITonWalletKit | null;
+  walletAddress: string | null;
+  lotteryAddress: string;
 }
 
 export interface UseEnterLotteryResult {
-    enter: () => Promise<void>;
-    isDisabled: boolean;
-    isSending: boolean;
-    error: string | null;
+  enter: () => Promise<void>;
+  isDisabled: boolean;
+  isSending: boolean;
+  error: string | null;
 }
 
 export function useEnterLottery({
-    wallet,
-    walletKit,
-    walletAddress,
-    lotteryAddress,
+  wallet,
+  walletKit,
+  walletAddress,
+  lotteryAddress,
 }: UseEnterLotteryParams): UseEnterLotteryResult {
-    const { send: sendTx, isSending, error } = useBrotherhoodTransaction(wallet, walletKit);
+  const {
+    send: sendTx,
+    isSending,
+    error,
+  } = useBrotherhoodTransaction(wallet, walletKit);
 
-    const enter = useCallback(async () => {
-        if (!walletAddress || !lotteryAddress) throw new Error('Missing address');
-        const sender = Address.parse(walletAddress);
+  const enter = useCallback(async () => {
+    if (!walletAddress || !lotteryAddress) throw new Error('Missing address');
+    const sender = Address.parse(walletAddress);
 
-        const payload = EnterLottery.toCell(
-            EnterLottery.create({
-                sender,
-                amount: GAS.LOTTERY,
-            })
-        );
+    const payload = EnterLottery.toCell(
+      EnterLottery.create({
+        sender,
+        amount: GAS.LOTTERY,
+      }),
+    );
 
-        await sendTx([{ toAddress: lotteryAddress, amount: GAS.LOTTERY, payload }]);
-    }, [walletAddress, lotteryAddress, sendTx]);
+    await sendTx([{ toAddress: lotteryAddress, amount: GAS.LOTTERY, payload }]);
+  }, [walletAddress, lotteryAddress, sendTx]);
 
-    const isDisabled = !wallet || !walletAddress || !lotteryAddress || isSending;
+  const isDisabled = !wallet || !walletAddress || !lotteryAddress || isSending;
 
-    return { enter, isDisabled, isSending, error };
+  return { enter, isDisabled, isSending, error };
 }

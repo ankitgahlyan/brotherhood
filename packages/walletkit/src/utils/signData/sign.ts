@@ -24,21 +24,21 @@ import type { PreparedSignData, UnpreparedSignData } from '../../api/models';
  * @returns Signed data with base64 signature
  */
 export function PrepareSignData(data: UnpreparedSignData): PreparedSignData {
-    const { payload, domain, address } = data;
-    const timestamp = Math.floor(Date.now() / 1000);
-    const parsedAddr = Address.parse(address);
+  const { payload, domain, address } = data;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const parsedAddr = Address.parse(address);
 
-    // Create hash based on payload type
-    const finalHash =
-        payload.data?.type === 'cell'
-            ? createCellHash(payload.data.value, parsedAddr, domain, timestamp)
-            : createTextBinaryHash(payload.data, parsedAddr, domain, timestamp);
+  // Create hash based on payload type
+  const finalHash =
+    payload.data?.type === 'cell'
+      ? createCellHash(payload.data.value, parsedAddr, domain, timestamp)
+      : createTextBinaryHash(payload.data, parsedAddr, domain, timestamp);
 
-    return {
-        address,
-        timestamp,
-        domain,
-        payload,
-        hash: Uint8ArrayToHex(finalHash),
-    };
+  return {
+    address,
+    timestamp,
+    domain,
+    payload,
+    hash: Uint8ArrayToHex(finalHash),
+  };
 }

@@ -16,8 +16,8 @@ import type { TonApiGaslessConfig } from '../types/config';
  * and the assets the relayer accepts as fee payment.
  */
 export const mapGaslessConfig = (raw: TonApiGaslessConfig): GaslessConfig => ({
-    relayAddress: asAddressFriendly(raw.relay_address),
-    supportedAssets: raw.gas_jettons.map((jetton) => ({
-        address: asAddressFriendly(jetton.master_id),
-    })),
+  relayAddress: asAddressFriendly(raw.relay_address),
+  supportedAssets: raw.gas_jettons.map((jetton) => ({
+    address: asAddressFriendly(jetton.master_id),
+  })),
 });

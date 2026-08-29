@@ -8,11 +8,11 @@ For detailed information about DeDust Router, see the [official documentation](h
 
 ```ts
 kit.registerProvider(
-    createDeDustProvider({
-        defaultSlippageBps: 100, // 1%
-        referralAddress: 'EQ...',
-        referralFeeBps: 50, // 0.5%
-    }),
+  createDeDustProvider({
+    defaultSlippageBps: 100, // 1%
+    referralAddress: 'EQ...',
+    referralFeeBps: 50, // 0.5%
+  }),
 );
 ```
 
@@ -20,15 +20,15 @@ kit.registerProvider(
 
 ```typescript
 interface DeDustSwapProviderConfig {
-    providerId?: string;          // Default: 'dedust'
-    apiUrl?: string;              // Default: 'https://mainnet.api.dedust.io/v4/router'
-    defaultSlippageBps?: number;  // Default: 100 (1%)
-    referralAddress?: string;     // Optional referral address
-    referralFeeBps?: number;     // Referral fee in bps (max 100 = 1%)
-    onlyVerifiedPools?: boolean; // Default: true
-    maxSplits?: number;          // Default: 4
-    maxLength?: number;          // Default: 3 (max route hops)
-    minPoolUsdTvl?: string;      // Default: '5000'
+  providerId?: string; // Default: 'dedust'
+  apiUrl?: string; // Default: 'https://mainnet.api.dedust.io/v4/router'
+  defaultSlippageBps?: number; // Default: 100 (1%)
+  referralAddress?: string; // Optional referral address
+  referralFeeBps?: number; // Referral fee in bps (max 100 = 1%)
+  onlyVerifiedPools?: boolean; // Default: true
+  maxSplits?: number; // Default: 4
+  maxLength?: number; // Default: 3 (max route hops)
+  minPoolUsdTvl?: string; // Default: '5000'
 }
 ```
 
@@ -39,23 +39,23 @@ interface DeDustSwapProviderConfig {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '1000000000',
-    network: Network.mainnet(),
-    providerOptions: {
-        protocols: ['dedust', 'dedust_v3', 'stonfi_v1', 'stonfi_v2', 'tonco'],
-        excludeProtocols: ['memeslab'],
-        onlyVerifiedPools: true,
-        maxSplits: 4,
-        maxLength: 3,
-        excludeVolatilePools: true,
-    } as DeDustProviderOptions,
+  from: GRAM,
+  to: USDT,
+  amount: '1000000000',
+  network: Network.mainnet(),
+  providerOptions: {
+    protocols: ['dedust', 'dedust_v3', 'stonfi_v1', 'stonfi_v2', 'tonco'],
+    excludeProtocols: ['memeslab'],
+    onlyVerifiedPools: true,
+    maxSplits: 4,
+    maxLength: 3,
+    excludeVolatilePools: true,
+  } as DeDustProviderOptions,
 });
 ```
 
@@ -64,19 +64,19 @@ const quote = await getSwapQuote(appKit, {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '1000000000',
-    network: Network.mainnet(),
-    providerOptions: {
-        referralAddress: 'EQ...',
-        referralFeeBps: 50, // 0.5%
-    } as DeDustProviderOptions,
+  from: GRAM,
+  to: USDT,
+  amount: '1000000000',
+  network: Network.mainnet(),
+  providerOptions: {
+    referralAddress: 'EQ...',
+    referralFeeBps: 50, // 0.5%
+  } as DeDustProviderOptions,
 });
 ```
 
@@ -85,37 +85,37 @@ const quote = await getSwapQuote(appKit, {
 ```ts
 const GRAM = { address: 'ton', decimals: 9 };
 const USDT = {
-    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-    decimals: 6,
+  address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  decimals: 6,
 };
 
 // Global referrer in config
 appKit.registerProvider(
-    createDeDustProvider({
-        referralAddress: 'EQ...global',
-        referralFeeBps: 50,
-    }),
+  createDeDustProvider({
+    referralAddress: 'EQ...global',
+    referralFeeBps: 50,
+  }),
 );
 
 // Override for specific quote
 const quote = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '1000000000',
-    network: Network.mainnet(),
-    providerOptions: {
-        referralAddress: 'EQ...different', // Uses this instead of global
-        referralFeeBps: 75,
-    } as DeDustProviderOptions,
+  from: GRAM,
+  to: USDT,
+  amount: '1000000000',
+  network: Network.mainnet(),
+  providerOptions: {
+    referralAddress: 'EQ...different', // Uses this instead of global
+    referralFeeBps: 75,
+  } as DeDustProviderOptions,
 });
 
 // Or use global settings by omitting providerOptions
 const quote2 = await getSwapQuote(appKit, {
-    from: GRAM,
-    to: USDT,
-    amount: '1000000000',
-    network: Network.mainnet(),
-    // Uses global referrer from config
+  from: GRAM,
+  to: USDT,
+  amount: '1000000000',
+  network: Network.mainnet(),
+  // Uses global referrer from config
 });
 ```
 
@@ -131,4 +131,3 @@ This file is auto-generated. Do not edit manually.
 Changes will be overwritten when running the docs update script.
 Source template: template/packages/walletkit/src/defi/swap/dedust/README.md
 -->
-

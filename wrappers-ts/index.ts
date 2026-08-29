@@ -10,7 +10,7 @@ export * as PollContract from './Poll.gen';
 export * as VoterContract from './Voter.gen';
 
 export { DaoProxy } from './DaoProxy.gen';
-export { Followers } from './Followers.gen';
+export { Following, Following as Followers } from './Followers.gen';
 export { FossFi } from './FossFi.gen';
 export { FossFiWallet } from './FossFiWallet.gen';
 export { Location } from './Location.gen';

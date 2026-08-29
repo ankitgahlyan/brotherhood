@@ -9,14 +9,18 @@
 import type { Feature, SignMessageFeature } from '@tonconnect/protocol';
 
 /** Find the wallet's advertised `SignMessage` feature, if any. */
-function findSignMessageFeature(features: Feature[]): SignMessageFeature | undefined {
-    return features.find(
-        (feature): feature is SignMessageFeature =>
-            !!feature && typeof feature === 'object' && feature.name === 'SignMessage',
-    );
+function findSignMessageFeature(
+  features: Feature[],
+): SignMessageFeature | undefined {
+  return features.find(
+    (feature): feature is SignMessageFeature =>
+      !!feature &&
+      typeof feature === 'object' &&
+      feature.name === 'SignMessage',
+  );
 }
 
 /** Whether the connected wallet advertises the `SignMessage` feature. */
 export function hasSignMessageSupport(features: Feature[]): boolean {
-    return findSignMessageFeature(features) !== undefined;
+  return findSignMessageFeature(features) !== undefined;
 }

@@ -17,117 +17,119 @@ import type { Transport } from '../transport/Transport';
  * Uses dependency injection for transport layer
  */
 export class TonConnectBridge {
-    // Public properties as per TonConnect spec
-    public readonly deviceInfo: BridgeConfig['deviceInfo'];
-    public readonly walletInfo: BridgeConfig['walletInfo'];
-    public readonly protocolVersion: number;
-    public readonly isWalletBrowser: boolean;
+  // Public properties as per TonConnect spec
+  public readonly deviceInfo: BridgeConfig['deviceInfo'];
+  public readonly walletInfo: BridgeConfig['walletInfo'];
+  public readonly protocolVersion: number;
+  public readonly isWalletBrowser: boolean;
 
-    // Private state
-    private readonly transport: Transport;
-    private readonly eventListeners: Array<(event: unknown) => void> = [];
+  // Private state
+  private readonly transport: Transport;
+  private readonly eventListeners: Array<(event: unknown) => void> = [];
 
-    constructor(config: BridgeConfig, transport: Transport) {
-        this.deviceInfo = config.deviceInfo;
-        this.walletInfo = config.walletInfo;
-        this.protocolVersion = config.protocolVersion;
-        this.isWalletBrowser = config.isWalletBrowser;
+  constructor(config: BridgeConfig, transport: Transport) {
+    this.deviceInfo = config.deviceInfo;
+    this.walletInfo = config.walletInfo;
+    this.protocolVersion = config.protocolVersion;
+    this.isWalletBrowser = config.isWalletBrowser;
 
-        this.transport = transport;
+    this.transport = transport;
 
-        // Setup event forwarding from transport
-        this.transport.onEvent((event) => {
-            this.notifyListeners(event);
-        });
+    // Setup event forwarding from transport
+    this.transport.onEvent((event) => {
+      this.notifyListeners(event);
+    });
+  }
+
+  /**
+   * Initiates connect request - forwards to transport
+   */
+  async connect(
+    protocolVersion: number,
+    message: ConnectRequest,
+  ): Promise<unknown> {
+    if (protocolVersion < 2) {
+      throw new Error('Unsupported protocol version');
     }
 
-    /**
-     * Initiates connect request - forwards to transport
-     */
-    async connect(protocolVersion: number, message: ConnectRequest): Promise<unknown> {
-        if (protocolVersion < 2) {
-            throw new Error('Unsupported protocol version');
-        }
+    return this.transport.send({
+      method: 'connect',
+      params: { protocolVersion, ...message },
+    });
+  }
 
-        return this.transport.send({
-            method: 'connect',
-            params: { protocolVersion, ...message },
-        });
+  /**
+   * Attempts to restore previous connection - forwards to transport
+   */
+  async restoreConnection(): Promise<unknown> {
+    return this.transport.send({
+      method: 'restoreConnection',
+      params: [],
+    });
+  }
+
+  /**
+   * Sends a message to the bridge - forwards to transport
+   */
+  async send(message: unknown): Promise<unknown> {
+    return this.transport.send({
+      method: 'send',
+      params: [message],
+    });
+  }
+
+  /**
+   * Registers a listener for events from the wallet
+   * Returns unsubscribe function
+   */
+  listen(callback: (event: unknown) => void): () => void {
+    if (typeof callback !== 'function') {
+      throw new Error('Callback must be a function');
     }
 
-    /**
-     * Attempts to restore previous connection - forwards to transport
-     */
-    async restoreConnection(): Promise<unknown> {
-        return this.transport.send({
-            method: 'restoreConnection',
-            params: [],
-        });
-    }
+    this.eventListeners.push(callback);
 
-    /**
-     * Sends a message to the bridge - forwards to transport
-     */
-    async send(message: unknown): Promise<unknown> {
-        return this.transport.send({
-            method: 'send',
-            params: [message],
-        });
-    }
+    // Return unsubscribe function
+    return () => {
+      const index = this.eventListeners.indexOf(callback);
+      if (index > -1) {
+        this.eventListeners.splice(index, 1);
+      }
+    };
+  }
 
-    /**
-     * Registers a listener for events from the wallet
-     * Returns unsubscribe function
-     */
-    listen(callback: (event: unknown) => void): () => void {
-        if (typeof callback !== 'function') {
-            throw new Error('Callback must be a function');
-        }
+  /**
+   * Expose listener count for environments that need to fan-out events across frames.
+   */
+  public hasListeners(): boolean {
+    return this.eventListeners.length > 0;
+  }
 
-        this.eventListeners.push(callback);
+  /**
+   * Notify all registered listeners of an event
+   */
+  private notifyListeners(event: unknown): void {
+    this.eventListeners.forEach((callback) => {
+      try {
+        callback(event);
+      } catch (error) {
+        console.error('TonConnect event listener error:', error);
+      }
+    });
+  }
 
-        // Return unsubscribe function
-        return () => {
-            const index = this.eventListeners.indexOf(callback);
-            if (index > -1) {
-                this.eventListeners.splice(index, 1);
-            }
-        };
-    }
+  /**
+   * Check if transport is available
+   */
+  isTransportAvailable(): boolean {
+    return this.transport.isAvailable();
+  }
 
-    /**
-     * Expose listener count for environments that need to fan-out events across frames.
-     */
-    public hasListeners(): boolean {
-        return this.eventListeners.length > 0;
-    }
-
-    /**
-     * Notify all registered listeners of an event
-     */
-    private notifyListeners(event: unknown): void {
-        this.eventListeners.forEach((callback) => {
-            try {
-                callback(event);
-            } catch (error) {
-                 
-                console.error('TonConnect event listener error:', error);
-            }
-        });
-    }
-
-    /**
-     * Check if transport is available
-     */
-    isTransportAvailable(): boolean {
-        return this.transport.isAvailable();
-    }
-
-    /**
-     * Cleanup resources
-     */
-    destroy(): void {
-        this.eventListeners.length = 0;
-        this.transport.destroy();
-    }
+  /**
+   * Cleanup resources
+   */
+  destroy(): void {
+    this.eventListeners.length = 0;
+    this.transport.destroy();
+  }
 }

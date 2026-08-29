@@ -14,18 +14,18 @@ import type { UserFriendlyAddress } from './Primitives';
 export type AddressBook = { [key: UserFriendlyAddress]: AddressBookEntry };
 
 export interface AddressBookEntry {
-    /**
-     * The human-readable representation of the blockchain address
-     */
-    address?: UserFriendlyAddress;
+  /**
+   * The human-readable representation of the blockchain address
+   */
+  address?: UserFriendlyAddress;
 
-    /**
-     * The domain name associated with the address if available
-     */
-    domain?: string;
+  /**
+   * The domain name associated with the address if available
+   */
+  domain?: string;
 
-    /**
-     * List of supported interfaces by the address
-     */
-    interfaces: string[];
+  /**
+   * List of supported interfaces by the address
+   */
+  interfaces: string[];
 }

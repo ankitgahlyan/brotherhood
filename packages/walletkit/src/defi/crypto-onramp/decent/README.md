@@ -16,7 +16,7 @@ For more information about supported chains and tokens, see the [official docume
 import { createDecentProvider } from '@ton/walletkit/crypto-onramp/decent';
 
 kit.cryptoOnramp.registerProvider(
-    createDecentProvider({ apiKey: 'your-api-key' }),
+  createDecentProvider({ apiKey: 'your-api-key' }),
 );
 kit.cryptoOnramp.setDefaultProvider('decent');
 ```
@@ -25,9 +25,9 @@ kit.cryptoOnramp.setDefaultProvider('decent');
 
 ```typescript
 interface DecentProviderConfig {
-    apiKey: string;          // API key issued by Decent
-    apiUrl?: string;         // Default: 'https://api-v2.swaps.xyz/api'
-    defaultSender?: string;  // Default EVM sender address used at quote time
+  apiKey: string; // API key issued by Decent
+  apiUrl?: string; // Default: 'https://api-v2.swaps.xyz/api'
+  defaultSender?: string; // Default EVM sender address used at quote time
 }
 ```
 
@@ -35,7 +35,7 @@ interface DecentProviderConfig {
 
 ```typescript
 interface DecentQuoteOptions {
-    slippageBps?: number;    // Slippage tolerance in basis points (default: 100 = 1%)
+  slippageBps?: number; // Slippage tolerance in basis points (default: 100 = 1%)
 }
 ```
 
@@ -47,19 +47,19 @@ See [Crypto Onramp README](../README.md) for base `CryptoOnrampQuoteParams`.
 import type { DecentQuoteOptions } from '@ton/walletkit/crypto-onramp/decent';
 
 const quote = await kit.cryptoOnramp.getQuote<DecentQuoteOptions>({
-    sourceCurrencyAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT on Arbitrum
-    sourceNetwork: '42161',
-    targetCurrencyAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT on TON
-    amount: '1000000', // 1 USDT (6 decimals)
-    recipientAddress: 'UQ...', // TON address to receive tokens
-    providerOptions: {
-        slippageBps: 50, // 0.5%
-    },
+  sourceCurrencyAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT on Arbitrum
+  sourceNetwork: '42161',
+  targetCurrencyAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT on TON
+  amount: '1000000', // 1 USDT (6 decimals)
+  recipientAddress: 'UQ...', // TON address to receive tokens
+  providerOptions: {
+    slippageBps: 50, // 0.5%
+  },
 });
 
 const deposit = await kit.cryptoOnramp.createDeposit({
-    quote,
-    refundAddress: '0x...', // EVM address to refund if the bridge fails
+  quote,
+  refundAddress: '0x...', // EVM address to refund if the bridge fails
 });
 
 // deposit.address — contract to approve + call on the source chain

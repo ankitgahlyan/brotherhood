@@ -10,4 +10,8 @@ export type { DeDustReferralOptions } from './DeDustReferralOptions';
 export type { DeDustProviderOptions } from './DeDustProviderOptions';
 export type { DeDustSwapProviderConfig } from './DeDustSwapProviderConfig';
 export type { DeDustQuoteMetadata } from './DeDustQuoteMetadata';
-export type { DeDustRouteStep, DeDustSwapData, DeDustQuoteResponse } from '../DeDustPrivateTypes';
+export type {
+  DeDustRouteStep,
+  DeDustSwapData,
+  DeDustQuoteResponse,
+} from '../DeDustPrivateTypes';

@@ -20,10 +20,10 @@ import { globalLogger } from './Logger';
 import type { TONConnectSessionManager } from '../api/interfaces/TONConnectSessionManager';
 import type { EventRouter } from './EventRouter';
 import type {
-    BridgeEventMessageInfo,
-    InjectedToExtensionBridgeRequestPayload,
-    JSBridgeTransportFunction,
-    WalletInfo,
+  BridgeEventMessageInfo,
+  InjectedToExtensionBridgeRequestPayload,
+  JSBridgeTransportFunction,
+  WalletInfo,
 } from '../types/jsBridge';
 import { uuidv7 } from '../utils/uuid.mjs';
 import { WalletKitError, ERROR_CODES } from '../errors';
@@ -35,722 +35,780 @@ import type { BridgeEvent, TONConnectSession } from '../api/models';
 const log = globalLogger.createChild('BridgeManager');
 
 export class BridgeManager {
-    private config: BridgeConfig;
-    private bridgeProvider?: BridgeProvider<WalletConsumer>;
-    private sessionManager: TONConnectSessionManager;
-    private storage: Storage;
-    private isConnected = false;
-    private reconnectAttempts = 0;
-    private lastEventId?: string;
-    private storageKey = 'bridge_last_event_id';
-    private walletKitConfig: TonWalletKitOptions;
-    private jsBridgeTransport?: JSBridgeTransportFunction;
+  private config: BridgeConfig;
+  private bridgeProvider?: BridgeProvider<WalletConsumer>;
+  private sessionManager: TONConnectSessionManager;
+  private storage: Storage;
+  private isConnected = false;
+  private reconnectAttempts = 0;
+  private lastEventId?: string;
+  private storageKey = 'bridge_last_event_id';
+  private walletKitConfig: TonWalletKitOptions;
+  private jsBridgeTransport?: JSBridgeTransportFunction;
 
-    // Event processing queue and concurrency control
-     
-    private eventQueue: any[] = [];
-    private isProcessing = false;
-    private isActive = false;
+  // Event processing queue and concurrency control
 
-    // Durable events support
-    private eventStore: EventStore;
-    private eventRouter: EventRouter;
-    private eventEmitter?: WalletKitEventEmitter;
-    private analytics?: Analytics;
+  private eventQueue: any[] = [];
+  private isProcessing = false;
+  private isActive = false;
 
-    private requestProcessingTimeoutId?: number;
+  // Durable events support
+  private eventStore: EventStore;
+  private eventRouter: EventRouter;
+  private eventEmitter?: WalletKitEventEmitter;
+  private analytics?: Analytics;
 
-    constructor(
-        walletManifest: WalletInfo | undefined,
-        config: BridgeConfig | undefined,
-        sessionManager: TONConnectSessionManager,
-        storage: Storage,
-        eventStore: EventStore,
-        eventRouter: EventRouter,
-        walletKitConfig: TonWalletKitOptions,
-        eventEmitter?: WalletKitEventEmitter,
-        analyticsManager?: AnalyticsManager,
-    ) {
-        const isManifestJsBridge = walletManifest && 'jsBridgeKey' in walletManifest ? true : false;
-        const manifestJsBridgeKey =
-            walletManifest && 'jsBridgeKey' in walletManifest ? walletManifest.jsBridgeKey : undefined;
-        const manifestBridgeUrl =
-            walletManifest && 'bridgeUrl' in walletManifest ? walletManifest.bridgeUrl : undefined;
+  private requestProcessingTimeoutId?: number;
 
-        this.config = {
-            heartbeatInterval: 5000,
-            reconnectInterval: 15000,
-            maxReconnectAttempts: 5,
-            ...{
-                enableJsBridge: isManifestJsBridge,
-                jsBridgeKey: manifestJsBridgeKey,
-                bridgeUrl: manifestBridgeUrl,
-            },
-            ...config,
-        };
-        this.sessionManager = sessionManager;
-        this.storage = storage;
-        this.eventStore = eventStore;
-        this.eventEmitter = eventEmitter;
-        this.eventRouter = eventRouter;
-        this.analytics = analyticsManager?.scoped({
-            bridge_url: this.config.bridgeUrl,
-        });
-        this.walletKitConfig = walletKitConfig;
-        this.jsBridgeTransport = config?.jsBridgeTransport;
+  constructor(
+    walletManifest: WalletInfo | undefined,
+    config: BridgeConfig | undefined,
+    sessionManager: TONConnectSessionManager,
+    storage: Storage,
+    eventStore: EventStore,
+    eventRouter: EventRouter,
+    walletKitConfig: TonWalletKitOptions,
+    eventEmitter?: WalletKitEventEmitter,
+    analyticsManager?: AnalyticsManager,
+  ) {
+    const isManifestJsBridge =
+      walletManifest && 'jsBridgeKey' in walletManifest ? true : false;
+    const manifestJsBridgeKey =
+      walletManifest && 'jsBridgeKey' in walletManifest
+        ? walletManifest.jsBridgeKey
+        : undefined;
+    const manifestBridgeUrl =
+      walletManifest && 'bridgeUrl' in walletManifest
+        ? walletManifest.bridgeUrl
+        : undefined;
 
-        if (this.config.bridgeUrl && !this.config.disableHttpConnection) {
-            this.bridgeProvider = new BridgeProvider<WalletConsumer>(
-                this.config.bridgeUrl,
-                this.queueBridgeEvent.bind(this),
-                 
-                (error: any) => {
-                    log.error('Bridge listener error', { error: error.toString() });
-                    // Send bridge-client-connect-error event for listener errors
-                    this.analytics?.emitBridgeClientConnectError({
-                        error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
-                        trace_id: error?.traceId,
-                        client_id: error?.clientId,
-                    });
-                },
-            );
-        }
+    this.config = {
+      heartbeatInterval: 5000,
+      reconnectInterval: 15000,
+      maxReconnectAttempts: 5,
+      ...{
+        enableJsBridge: isManifestJsBridge,
+        jsBridgeKey: manifestJsBridgeKey,
+        bridgeUrl: manifestBridgeUrl,
+      },
+      ...config,
+    };
+    this.sessionManager = sessionManager;
+    this.storage = storage;
+    this.eventStore = eventStore;
+    this.eventEmitter = eventEmitter;
+    this.eventRouter = eventRouter;
+    this.analytics = analyticsManager?.scoped({
+      bridge_url: this.config.bridgeUrl,
+    });
+    this.walletKitConfig = walletKitConfig;
+    this.jsBridgeTransport = config?.jsBridgeTransport;
 
-        if (!this.jsBridgeTransport && config?.enableJsBridge) {
-            throw new WalletKitError(ERROR_CODES.INVALID_CONFIG, 'JS Bridge transport is not configured');
-        }
-    }
+    if (this.config.bridgeUrl && !this.config.disableHttpConnection) {
+      this.bridgeProvider = new BridgeProvider<WalletConsumer>(
+        this.config.bridgeUrl,
+        this.queueBridgeEvent.bind(this),
 
-    /**
-     * Initialize bridge connection
-     */
-    async start(): Promise<void> {
-        if (this.isActive === true) {
-            log.warn('Bridge already started');
-            return;
-        }
-
-        this.isActive = true;
-
-        if (this.isConnected === true) {
-            log.warn('Bridge already connected');
-            return;
-        }
-
-        try {
-            await this.loadLastEventId();
-            if (!this.config?.disableHttpConnection) {
-                await this.connectToSSEBridge();
-            } else {
-                this.isConnected = true;
-                this.reconnectAttempts = 0;
-            }
-        } catch (error) {
-            this.isActive = false;
-            log.error('Failed to start bridge', { error });
-            throw error;
-        }
-
-        const requestProcessing = () => {
-            this.processBridgeEvents();
-            this.requestProcessingTimeoutId = setTimeout(requestProcessing, 1000) as unknown as number;
-        };
-        requestProcessing();
-    }
-
-    /**
-     * Create new session for a dApp connection
-     */
-    async createSession(appSessionId: string): Promise<void> {
-        // const walletSession = new SessionCrypto();
-        // this.sessions.set(appSessionId, walletSession);
-        log.info('[BRIDGE] Creating session', { appSessionId });
-
-        const session = await this.sessionManager.getSession(appSessionId);
-        if (!session) {
-            throw new WalletKitError(ERROR_CODES.SESSION_NOT_FOUND, `Session not found`, undefined, {
-                appSessionId,
-            });
-        }
-
-        // const sessionCrypto = new SessionCrypto({
-        //     publicKey: session.publicKey,
-        //     secretKey: session.privateKey,
-        // });
-
-        // const walletSession = new SessionCrypto();
-        // this.sessions.set(appSessionId, walletSession);
-        // If bridge is already connected, add this client
-        if (this.bridgeProvider && this.isConnected) {
-            log.info('[BRIDGE] Updating clients');
-            await this.updateClients();
-        }
-
-        // return walletSession;
-    }
-
-    /**
-     * Remove session
-     */
-    async removeSession(appSessionId: string): Promise<void> {
-        // const session = this.sessions.get(appSessionId);
-        // if (!session) {
-        //     return;
-        // }
-
-        // this.sessions.delete(appSessionId);
-
-        if (this.bridgeProvider && this.isConnected) {
-            await this.updateClients();
-        }
-        log.debug('Session removed', { appSessionId });
-    }
-
-    /**
-     * Send response to dApp
-     */
-
-    async sendResponse(
-        event: BridgeEvent,
-         
-        response: any,
-        providedSessionCrypto?: SessionCrypto,
-    ): Promise<void> {
-        if (event.isLocal) {
-            return;
-        }
-
-        if (event.isJsBridge) {
-            return this.sendJsBridgeResponse(
-                event.tabId?.toString() || '',
-                event.isJsBridge,
-                event.messageId ?? null,
-                response,
-                {
-                    traceId: event?.traceId,
-                },
-            );
-        }
-
-        if (!this.bridgeProvider) {
-            throw new WalletKitError(ERROR_CODES.BRIDGE_NOT_INITIALIZED, 'Bridge not initialized for sending response');
-        }
-
-        const sessionId = event.from || event.sessionId;
-        if (!sessionId) {
-            throw new WalletKitError(
-                ERROR_CODES.SESSION_ID_REQUIRED,
-                'Session ID is required for sending response',
-                undefined,
-                { event: { id: event.id } },
-            );
-        }
-
-        let sessionCrypto = providedSessionCrypto;
-
-        if (!sessionCrypto) {
-            const session = await this.sessionManager.getSession(sessionId);
-
-            if (session) {
-                sessionCrypto = new SessionCrypto({
-                    publicKey: session.publicKey,
-                    secretKey: session.privateKey,
-                });
-            } else {
-                throw new WalletKitError(ERROR_CODES.SESSION_NOT_FOUND, `Session not found for response`, undefined, {
-                    sessionId,
-                    eventId: event.id,
-                });
-            }
-        }
-
-        try {
-             
-            await this.bridgeProvider.send(response, sessionCrypto as any, sessionId, {
-                traceId: event?.traceId,
-            });
-
-            log.debug('Response sent successfully', { sessionId: sessionId, requestId: event.id });
-        } catch (error) {
-            log.error('Failed to send response through bridge', {
-                sessionId: sessionId,
-                requestId: event.id,
-                error,
-            });
-            throw WalletKitError.fromError(
-                ERROR_CODES.BRIDGE_RESPONSE_SEND_FAILED,
-                'Failed to send response through bridge',
-                error,
-                { sessionId, requestId: event.id },
-            );
-        }
-    }
-
-    async sendJsBridgeResponse(
-        sessionId: string,
-        _isJsBridge: boolean,
-        requestId: string | null,
-         
-        response: any,
-        options?: {
-            traceId?: string;
-            session?: TONConnectSession;
+        (error: any) => {
+          log.error('Bridge listener error', { error: error.toString() });
+          // Send bridge-client-connect-error event for listener errors
+          this.analytics?.emitBridgeClientConnectError({
+            error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
+            trace_id: error?.traceId,
+            client_id: error?.clientId,
+          });
         },
-    ): Promise<void> {
-        const source = this.config.jsBridgeKey + '-tonconnect';
-        const message = {
-            type: TONCONNECT_BRIDGE_RESPONSE,
-            source: source,
-            messageId: requestId,
-            success: true,
-            payload: response,
-            traceId: options?.traceId,
-        };
-
-        if (this.jsBridgeTransport) {
-            try {
-                await this.jsBridgeTransport(sessionId, message);
-            } catch (e) {
-                 
-                console.error('Failed to send response through JS Bridge', { error: e });
-            }
-        } else {
-            throw new WalletKitError(ERROR_CODES.INVALID_CONFIG, 'JS Bridge transport is not configured');
-        }
-
-        // Fire disconnect event on emit (not inside bridge event handler)
-        // if (response?.event === 'disconnect' && options?.session) {
-        //     const session = options.session;
-        //     const disconnectEvent: RawBridgeEvent = {
-        //         id: response.id || crypto.randomUUID(),
-        //         method: 'disconnect',
-        //         params: response.payload || {},
-        //         timestamp: Date.now(),
-        //         from: sessionId,
-        //         domain: session.domain,
-        //         isJsBridge: true,
-        //         walletAddress: session.walletAddress,
-        //         dAppInfo: {
-        //             name: session.dAppName,
-        //             description: session.dAppDescription,
-        //             url: session.dAppIconUrl,
-        //             iconUrl: session.dAppIconUrl,
-        //         },
-        //         traceId: options.traceId,
-        //     };
-        //     await this.eventRouter.routeEvent(disconnectEvent);
-        // }
+      );
     }
 
-    /**
-     * Close bridge connection
-     */
-    async close(): Promise<void> {
-        if (this.bridgeProvider) {
-            await this.bridgeProvider.close();
-        }
+    if (!this.jsBridgeTransport && config?.enableJsBridge) {
+      throw new WalletKitError(
+        ERROR_CODES.INVALID_CONFIG,
+        'JS Bridge transport is not configured',
+      );
+    }
+  }
 
-        // Clear event queue and reset processing state
-        this.eventQueue = [];
-        this.isProcessing = false;
+  /**
+   * Initialize bridge connection
+   */
+  async start(): Promise<void> {
+    if (this.isActive === true) {
+      log.warn('Bridge already started');
+      return;
+    }
 
-        // this.sessions.clear();
-        this.isActive = false;
-        this.isConnected = false;
+    this.isActive = true;
+
+    if (this.isConnected === true) {
+      log.warn('Bridge already connected');
+      return;
+    }
+
+    try {
+      await this.loadLastEventId();
+      if (!this.config?.disableHttpConnection) {
+        await this.connectToSSEBridge();
+      } else {
+        this.isConnected = true;
         this.reconnectAttempts = 0;
-        if (this.requestProcessingTimeoutId) {
-            clearTimeout(this.requestProcessingTimeoutId);
-            this.requestProcessingTimeoutId = undefined;
-        }
+      }
+    } catch (error) {
+      this.isActive = false;
+      log.error('Failed to start bridge', { error });
+      throw error;
     }
 
-    /**
-     * Get connection status
-     */
-    isConnectedToBridge(): boolean {
-        return this.isConnected;
+    const requestProcessing = () => {
+      this.processBridgeEvents();
+      this.requestProcessingTimeoutId = setTimeout(
+        requestProcessing,
+        1000,
+      ) as unknown as number;
+    };
+    requestProcessing();
+  }
+
+  /**
+   * Create new session for a dApp connection
+   */
+  async createSession(appSessionId: string): Promise<void> {
+    // const walletSession = new SessionCrypto();
+    // this.sessions.set(appSessionId, walletSession);
+    log.info('[BRIDGE] Creating session', { appSessionId });
+
+    const session = await this.sessionManager.getSession(appSessionId);
+    if (!session) {
+      throw new WalletKitError(
+        ERROR_CODES.SESSION_NOT_FOUND,
+        `Session not found`,
+        undefined,
+        {
+          appSessionId,
+        },
+      );
     }
 
-    /**
-     * Get active session count
-     */
-    // getSessionCount(): number {
-    //     return this.sessions.size;
+    // const sessionCrypto = new SessionCrypto({
+    //     publicKey: session.publicKey,
+    //     secretKey: session.privateKey,
+    // });
+
+    // const walletSession = new SessionCrypto();
+    // this.sessions.set(appSessionId, walletSession);
+    // If bridge is already connected, add this client
+    if (this.bridgeProvider && this.isConnected) {
+      log.info('[BRIDGE] Updating clients');
+      await this.updateClients();
+    }
+
+    // return walletSession;
+  }
+
+  /**
+   * Remove session
+   */
+  async removeSession(appSessionId: string): Promise<void> {
+    // const session = this.sessions.get(appSessionId);
+    // if (!session) {
+    //     return;
     // }
 
-    private async getClients(): Promise<ClientConnection[]> {
-        return (await this.sessionManager.getSessions()).map((session) => ({
-            session: new SessionCrypto({
-                publicKey: session.publicKey,
-                secretKey: session.privateKey.length > 64 ? session.privateKey.slice(0, 64) : session.privateKey,
-                 
-            }) as any,
-            clientId: session.sessionId,
-        }));
+    // this.sessions.delete(appSessionId);
+
+    if (this.bridgeProvider && this.isConnected) {
+      await this.updateClients();
+    }
+    log.debug('Session removed', { appSessionId });
+  }
+
+  /**
+   * Send response to dApp
+   */
+
+  async sendResponse(
+    event: BridgeEvent,
+
+    response: any,
+    providedSessionCrypto?: SessionCrypto,
+  ): Promise<void> {
+    if (event.isLocal) {
+      return;
     }
 
-    /**
-     * Connect to TON Connect bridge
-     */
-    private async connectToSSEBridge(): Promise<void> {
-        if (!this.bridgeProvider) {
-            throw new WalletKitError(
-                ERROR_CODES.BRIDGE_NOT_INITIALIZED,
-                'Bridge not initialized before connecting to SSE',
-            );
-        }
-
-        const connectTraceId = uuidv7();
-        try {
-            // Prepare clients array for existing sessions
-            const clients = await this.getClients();
-            if (clients.length === 0) {
-                clients.push({
-                    clientId: '0',
-                     
-                    session: new SessionCrypto() as any,
-                });
-            }
-
-            // Send bridge-client-connect-started event
-            if (this.analytics) {
-                const client = clients[0];
-
-                this.analytics.emitBridgeClientConnectStarted({
-                    trace_id: connectTraceId,
-                    client_id: client?.clientId,
-                });
-            }
-
-            await this.bridgeProvider?.restoreConnection(clients, {
-                lastEventId: this.lastEventId,
-            });
-            this.isConnected = true;
-            this.reconnectAttempts = 0;
-            log.info('Bridge connected successfully');
-
-            // Send bridge-client-connect-established event
-            if (this.analytics) {
-                const client = clients[0];
-
-                this.analytics.emitBridgeClientConnectEstablished({
-                    trace_id: connectTraceId,
-                    client_id: client?.clientId,
-                });
-            }
-
-             
-        } catch (error: any) {
-            log.error('Bridge connection failed', { error: error?.toString() });
-
-            // Send bridge-client-connect-error event
-            this.analytics?.emitBridgeClientConnectError({
-                error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
-                trace_id: error?.traceId ?? connectTraceId,
-                client_id: error?.clientId,
-            });
-
-            if (!this.config.disableHttpConnection) {
-                // Attempt reconnection if not at max attempts
-                if (this.reconnectAttempts < (this.config.maxReconnectAttempts || 5)) {
-                    this.reconnectAttempts++;
-                    log.info('Bridge reconnection attempt', { attempt: this.reconnectAttempts });
-                    setTimeout(() => {
-                        this.connectToSSEBridge().catch((error) => log.error('Bridge reconnection failed', { error }));
-                    }, this.config.reconnectInterval);
-                }
-            }
-            throw WalletKitError.fromError(ERROR_CODES.BRIDGE_CONNECTION_FAILED, 'Failed to connect to bridge', error, {
-                reconnectAttempts: this.reconnectAttempts,
-                bridgeUrl: this.config.bridgeUrl,
-            });
-        }
+    if (event.isJsBridge) {
+      return this.sendJsBridgeResponse(
+        event.tabId?.toString() || '',
+        event.isJsBridge,
+        event.messageId ?? null,
+        response,
+        {
+          traceId: event?.traceId,
+        },
+      );
     }
 
-    /**
-     * Restart bridge connection in case of error, so we can receive events again
-     */
-    private async restartConnection(): Promise<void> {
-        await this.close();
-        await this.start();
+    if (!this.bridgeProvider) {
+      throw new WalletKitError(
+        ERROR_CODES.BRIDGE_NOT_INITIALIZED,
+        'Bridge not initialized for sending response',
+      );
     }
 
-    /**
-     * Add client to existing bridge connection
-     */
-    private async updateClients(): Promise<void> {
-        log.debug('Updating clients');
-        if (this.bridgeProvider) {
-            const clients = await this.getClients();
-            log.info('[BRIDGE] Restoring connection', { clients: clients.length });
-            await this.bridgeProvider.restoreConnection(clients, {
-                lastEventId: this.lastEventId,
-            });
-        }
+    const sessionId = event.from || event.sessionId;
+    if (!sessionId) {
+      throw new WalletKitError(
+        ERROR_CODES.SESSION_ID_REQUIRED,
+        'Session ID is required for sending response',
+        undefined,
+        { event: { id: event.id } },
+      );
     }
 
-    /**
-     * Queue incoming bridge events for processing
-     */
-     
-    private queueBridgeEvent(event: any): void {
-        log.debug('Bridge event queued', { eventId: event?.id, event });
-        this.eventQueue.push(event);
+    let sessionCrypto = providedSessionCrypto;
 
-        // Trigger processing (don't wait for it to complete)
-        this.processBridgeEvents().catch((error) => {
-            log.error('Error in background event processing', { error });
+    if (!sessionCrypto) {
+      const session = await this.sessionManager.getSession(sessionId);
+
+      if (session) {
+        sessionCrypto = new SessionCrypto({
+          publicKey: session.publicKey,
+          secretKey: session.privateKey,
         });
+      } else {
+        throw new WalletKitError(
+          ERROR_CODES.SESSION_NOT_FOUND,
+          `Session not found for response`,
+          undefined,
+          {
+            sessionId,
+            eventId: event.id,
+          },
+        );
+      }
     }
 
-    public queueJsBridgeEvent(
-        messageInfo: BridgeEventMessageInfo,
-        event: InjectedToExtensionBridgeRequestPayload,
-    ): void {
-        log.debug('JS Bridge event queued', { eventId: messageInfo?.messageId });
+    try {
+      await this.bridgeProvider.send(
+        response,
+        sessionCrypto as any,
+        sessionId,
+        {
+          traceId: event?.traceId,
+        },
+      );
 
-        // Todo validate event
-        if (!event) {
-            return;
-        }
+      log.debug('Response sent successfully', {
+        sessionId: sessionId,
+        requestId: event.id,
+      });
+    } catch (error) {
+      log.error('Failed to send response through bridge', {
+        sessionId: sessionId,
+        requestId: event.id,
+        error,
+      });
+      throw WalletKitError.fromError(
+        ERROR_CODES.BRIDGE_RESPONSE_SEND_FAILED,
+        'Failed to send response through bridge',
+        error,
+        { sessionId, requestId: event.id },
+      );
+    }
+  }
 
-        if (!event.traceId) {
-            event.traceId = uuidv7();
-        }
+  async sendJsBridgeResponse(
+    sessionId: string,
+    _isJsBridge: boolean,
+    requestId: string | null,
 
-        if (event.method == 'connect') {
-            this.eventQueue.push({
-                ...event,
-                isJsBridge: true,
-                tabId: messageInfo.tabId,
-                domain: messageInfo.domain,
-                messageId: messageInfo.messageId,
-                walletId: messageInfo.walletId,
-            });
-        } else if (event.method == 'restoreConnection') {
-            this.eventEmitter?.emit(
-                'restoreConnection',
-                {
-                    ...event,
-                    method: 'restoreConnection',
-                    tabId: messageInfo.tabId,
-                    domain: messageInfo.domain,
-                    messageId: messageInfo.messageId,
-                    walletId: messageInfo.walletId,
-                },
-                'bridge-manager',
-            );
-        } else if (event.method == 'send' && event?.params?.length === 1) {
-            this.eventQueue.push({
-                ...event,
-                 
-                ...(event as any).params[0],
-                isJsBridge: true,
-                tabId: messageInfo.tabId,
-                domain: messageInfo.domain,
-                messageId: messageInfo.messageId,
-                walletId: messageInfo.walletId,
-            });
-        }
+    response: any,
+    options?: {
+      traceId?: string;
+      session?: TONConnectSession;
+    },
+  ): Promise<void> {
+    const source = this.config.jsBridgeKey + '-tonconnect';
+    const message = {
+      type: TONCONNECT_BRIDGE_RESPONSE,
+      source: source,
+      messageId: requestId,
+      success: true,
+      payload: response,
+      traceId: options?.traceId,
+    };
 
-        // Trigger processing (don't wait for it to complete)
-        this.processBridgeEvents().catch((error) => {
-            log.error('Error in background event processing', { error });
+    if (this.jsBridgeTransport) {
+      try {
+        await this.jsBridgeTransport(sessionId, message);
+      } catch (e) {
+        console.error('Failed to send response through JS Bridge', {
+          error: e,
         });
+      }
+    } else {
+      throw new WalletKitError(
+        ERROR_CODES.INVALID_CONFIG,
+        'JS Bridge transport is not configured',
+      );
     }
 
-    /**
-     * Process events from the queue with concurrency control
-     * New events from the bridge added to eventQueue to avoid concurrency
-     * processBridgeEvents takes events from queue one by one and tries to store them durably
-     * if event stored successfully, we will update lastEventId and proceed to the next event
-     * if we've encountered error, bridge connection we be restarted from last success id, so we should try to process same event again
-     */
-    private async processBridgeEvents(): Promise<void> {
-        // Ensure only one processing instance runs at a time
-        if (this.isProcessing) {
-            log.debug('Event processing already in progress, skipping');
-            return;
-        }
+    // Fire disconnect event on emit (not inside bridge event handler)
+    // if (response?.event === 'disconnect' && options?.session) {
+    //     const session = options.session;
+    //     const disconnectEvent: RawBridgeEvent = {
+    //         id: response.id || crypto.randomUUID(),
+    //         method: 'disconnect',
+    //         params: response.payload || {},
+    //         timestamp: Date.now(),
+    //         from: sessionId,
+    //         domain: session.domain,
+    //         isJsBridge: true,
+    //         walletAddress: session.walletAddress,
+    //         dAppInfo: {
+    //             name: session.dAppName,
+    //             description: session.dAppDescription,
+    //             url: session.dAppIconUrl,
+    //             iconUrl: session.dAppIconUrl,
+    //         },
+    //         traceId: options.traceId,
+    //     };
+    //     await this.eventRouter.routeEvent(disconnectEvent);
+    // }
+  }
 
-        this.isProcessing = true;
-
-        try {
-            // Process all events in FIFO order
-            while (this.eventQueue.length > 0) {
-                const event = this.eventQueue.shift();
-                if (event) {
-                    // Important: set isLocal to false for all events from bridge
-                    event.isLocal = false;
-                    await this.handleBridgeEvent(event);
-                }
-            }
-        } catch (error) {
-            log.error('Error during event processing', { error });
-            this.isProcessing = false;
-            this.restartConnection();
-            return;
-        } finally {
-            this.isProcessing = false;
-        }
+  /**
+   * Close bridge connection
+   */
+  async close(): Promise<void> {
+    if (this.bridgeProvider) {
+      await this.bridgeProvider.close();
     }
 
-    /**
-     * Handle individual bridge event (original processing logic)
-     */
-     
-    private async handleBridgeEvent(event: any): Promise<void> {
-        try {
-            log.info('Bridge event received', { event });
-            // Convert bridge event to our internal format
-            const rawEvent: RawBridgeEvent = {
-                id: event.id || crypto.randomUUID(),
-                method: event.method || 'unknown',
-                params: event.params || event,
-                // sessionId: event.from,
-                timestamp: Date.now(),
-                from: event?.from,
-                domain: event?.domain,
-                isJsBridge: event?.isJsBridge,
-                tabId: event?.tabId,
-                messageId: event?.messageId,
-                traceId: event?.traceId,
-                walletId: event?.walletId,
-                returnStrategy: event?.returnStrategy,
-            };
+    // Clear event queue and reset processing state
+    this.eventQueue = [];
+    this.isProcessing = false;
 
-            if (!rawEvent.traceId) {
-                rawEvent.traceId = uuidv7();
-            }
+    // this.sessions.clear();
+    this.isActive = false;
+    this.isConnected = false;
+    this.reconnectAttempts = 0;
+    if (this.requestProcessingTimeoutId) {
+      clearTimeout(this.requestProcessingTimeoutId);
+      this.requestProcessingTimeoutId = undefined;
+    }
+  }
 
-            await this.sessionManager.initialize();
-            if (rawEvent.from) {
-                const session = await this.sessionManager.getSession(rawEvent.from);
-                rawEvent.domain = session?.domain || '';
-                if (session) {
-                    if (session?.walletId) {
-                        rawEvent.walletId = session.walletId;
-                    }
-                    if (session?.walletAddress) {
-                        rawEvent.walletAddress = session.walletAddress;
-                    }
+  /**
+   * Get connection status
+   */
+  isConnectedToBridge(): boolean {
+    return this.isConnected;
+  }
 
-                    rawEvent.dAppInfo = {
-                        name: session.dAppName,
-                        description: session.dAppDescription,
-                        url: session.dAppUrl,
-                        iconUrl: session.dAppIconUrl,
-                    };
-                }
-            } else if (rawEvent.domain) {
-                const sessions = await this.sessionManager.getSessions({
-                    walletId: event.walletId,
-                    domain: rawEvent.domain,
-                    isJsBridge: rawEvent.isJsBridge,
-                });
+  /**
+   * Get active session count
+   */
+  // getSessionCount(): number {
+  //     return this.sessions.size;
+  // }
 
-                const session = sessions.length > 0 ? sessions[0] : undefined;
+  private async getClients(): Promise<ClientConnection[]> {
+    return (await this.sessionManager.getSessions()).map((session) => ({
+      session: new SessionCrypto({
+        publicKey: session.publicKey,
+        secretKey:
+          session.privateKey.length > 64
+            ? session.privateKey.slice(0, 64)
+            : session.privateKey,
+      }) as any,
+      clientId: session.sessionId,
+    }));
+  }
 
-                if (session?.walletId) {
-                    rawEvent.walletId = session.walletId;
-                }
-                if (session?.walletAddress) {
-                    rawEvent.walletAddress = session.walletAddress;
-                }
-
-                if (session?.sessionId) {
-                    rawEvent.from = session.sessionId;
-                }
-
-                if (session) {
-                    rawEvent.dAppInfo = {
-                        name: session.dAppName,
-                        description: session.dAppDescription,
-                        url: session.dAppUrl,
-                        iconUrl: session.dAppIconUrl,
-                    };
-
-                    if (!rawEvent.from) {
-                        rawEvent.from = session.sessionId;
-                    }
-                }
-            }
-
-            // Store event durably if enabled
-            if (!this.eventStore) {
-                throw new WalletKitError(ERROR_CODES.EVENT_STORE_NOT_INITIALIZED, 'Event store is not initialized');
-            }
-            try {
-                await this.eventStore.storeEvent(rawEvent);
-
-                // Notify that bridge storage was updated
-                if (this.eventEmitter) {
-                    this.eventEmitter.emit('bridgeStorageUpdated', {}, 'bridge-manager');
-                }
-
-                log.info('Event stored durably', { eventId: rawEvent.id, method: rawEvent.method });
-            } catch (error) {
-                log.error('Failed to store event durably', {
-                    eventId: rawEvent.id,
-                    error: (error as Error).message,
-                });
-
-                throw WalletKitError.fromError(
-                    ERROR_CODES.EVENT_STORE_OPERATION_FAILED,
-                    'Failed to store event durably',
-                    error,
-                    { eventId: rawEvent.id, method: rawEvent.method },
-                );
-            }
-
-            log.info('Bridge event processed', { rawEvent });
-
-            // Update and persist last event ID
-            if (event?.lastEventId && event.lastEventId !== this.lastEventId) {
-                this.lastEventId = event.lastEventId;
-                await this.saveLastEventId();
-            }
-        } catch (error) {
-            log.error('Error handling bridge event', { error });
-        }
+  /**
+   * Connect to TON Connect bridge
+   */
+  private async connectToSSEBridge(): Promise<void> {
+    if (!this.bridgeProvider) {
+      throw new WalletKitError(
+        ERROR_CODES.BRIDGE_NOT_INITIALIZED,
+        'Bridge not initialized before connecting to SSE',
+      );
     }
 
-    /**
-     * Load last event ID from storage
-     */
-    private async loadLastEventId(): Promise<void> {
-        try {
-            const savedEventId = await this.storage.get<string>(this.storageKey);
-            if (savedEventId) {
-                this.lastEventId = savedEventId;
-                log.debug('Loaded last event ID from storage', { lastEventId: this.lastEventId });
-            }
-        } catch (error) {
-            const storageError = WalletKitError.fromError(
-                ERROR_CODES.STORAGE_READ_FAILED,
-                'Failed to load last event ID from storage',
-                error,
+    const connectTraceId = uuidv7();
+    try {
+      // Prepare clients array for existing sessions
+      const clients = await this.getClients();
+      if (clients.length === 0) {
+        clients.push({
+          clientId: '0',
+
+          session: new SessionCrypto() as any,
+        });
+      }
+
+      // Send bridge-client-connect-started event
+      if (this.analytics) {
+        const client = clients[0];
+
+        this.analytics.emitBridgeClientConnectStarted({
+          trace_id: connectTraceId,
+          client_id: client?.clientId,
+        });
+      }
+
+      await this.bridgeProvider?.restoreConnection(clients, {
+        lastEventId: this.lastEventId,
+      });
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+      log.info('Bridge connected successfully');
+
+      // Send bridge-client-connect-established event
+      if (this.analytics) {
+        const client = clients[0];
+
+        this.analytics.emitBridgeClientConnectEstablished({
+          trace_id: connectTraceId,
+          client_id: client?.clientId,
+        });
+      }
+    } catch (error: any) {
+      log.error('Bridge connection failed', { error: error?.toString() });
+
+      // Send bridge-client-connect-error event
+      this.analytics?.emitBridgeClientConnectError({
+        error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
+        trace_id: error?.traceId ?? connectTraceId,
+        client_id: error?.clientId,
+      });
+
+      if (!this.config.disableHttpConnection) {
+        // Attempt reconnection if not at max attempts
+        if (this.reconnectAttempts < (this.config.maxReconnectAttempts || 5)) {
+          this.reconnectAttempts++;
+          log.info('Bridge reconnection attempt', {
+            attempt: this.reconnectAttempts,
+          });
+          setTimeout(() => {
+            this.connectToSSEBridge().catch((error) =>
+              log.error('Bridge reconnection failed', { error }),
             );
-            log.warn('Failed to load last event ID from storage', { error: storageError });
+          }, this.config.reconnectInterval);
         }
+      }
+      throw WalletKitError.fromError(
+        ERROR_CODES.BRIDGE_CONNECTION_FAILED,
+        'Failed to connect to bridge',
+        error,
+        {
+          reconnectAttempts: this.reconnectAttempts,
+          bridgeUrl: this.config.bridgeUrl,
+        },
+      );
+    }
+  }
+
+  /**
+   * Restart bridge connection in case of error, so we can receive events again
+   */
+  private async restartConnection(): Promise<void> {
+    await this.close();
+    await this.start();
+  }
+
+  /**
+   * Add client to existing bridge connection
+   */
+  private async updateClients(): Promise<void> {
+    log.debug('Updating clients');
+    if (this.bridgeProvider) {
+      const clients = await this.getClients();
+      log.info('[BRIDGE] Restoring connection', { clients: clients.length });
+      await this.bridgeProvider.restoreConnection(clients, {
+        lastEventId: this.lastEventId,
+      });
+    }
+  }
+
+  /**
+   * Queue incoming bridge events for processing
+   */
+
+  private queueBridgeEvent(event: any): void {
+    log.debug('Bridge event queued', { eventId: event?.id, event });
+    this.eventQueue.push(event);
+
+    // Trigger processing (don't wait for it to complete)
+    this.processBridgeEvents().catch((error) => {
+      log.error('Error in background event processing', { error });
+    });
+  }
+
+  public queueJsBridgeEvent(
+    messageInfo: BridgeEventMessageInfo,
+    event: InjectedToExtensionBridgeRequestPayload,
+  ): void {
+    log.debug('JS Bridge event queued', { eventId: messageInfo?.messageId });
+
+    // Todo validate event
+    if (!event) {
+      return;
     }
 
-    /**
-     * Save last event ID to storage
-     */
-    private async saveLastEventId(): Promise<void> {
-        try {
-            if (this.lastEventId) {
-                await this.storage.set(this.storageKey, this.lastEventId);
-                log.debug('Saved last event ID to storage', { lastEventId: this.lastEventId });
-            }
-        } catch (error) {
-            const storageError = WalletKitError.fromError(
-                ERROR_CODES.STORAGE_WRITE_FAILED,
-                'Failed to save last event ID to storage',
-                error,
-            );
-            log.warn('Failed to save last event ID to storage', { error: storageError });
-        }
+    if (!event.traceId) {
+      event.traceId = uuidv7();
     }
+
+    if (event.method == 'connect') {
+      this.eventQueue.push({
+        ...event,
+        isJsBridge: true,
+        tabId: messageInfo.tabId,
+        domain: messageInfo.domain,
+        messageId: messageInfo.messageId,
+        walletId: messageInfo.walletId,
+      });
+    } else if (event.method == 'restoreConnection') {
+      this.eventEmitter?.emit(
+        'restoreConnection',
+        {
+          ...event,
+          method: 'restoreConnection',
+          tabId: messageInfo.tabId,
+          domain: messageInfo.domain,
+          messageId: messageInfo.messageId,
+          walletId: messageInfo.walletId,
+        },
+        'bridge-manager',
+      );
+    } else if (event.method == 'send' && event?.params?.length === 1) {
+      this.eventQueue.push({
+        ...event,
+
+        ...(event as any).params[0],
+        isJsBridge: true,
+        tabId: messageInfo.tabId,
+        domain: messageInfo.domain,
+        messageId: messageInfo.messageId,
+        walletId: messageInfo.walletId,
+      });
+    }
+
+    // Trigger processing (don't wait for it to complete)
+    this.processBridgeEvents().catch((error) => {
+      log.error('Error in background event processing', { error });
+    });
+  }
+
+  /**
+   * Process events from the queue with concurrency control
+   * New events from the bridge added to eventQueue to avoid concurrency
+   * processBridgeEvents takes events from queue one by one and tries to store them durably
+   * if event stored successfully, we will update lastEventId and proceed to the next event
+   * if we've encountered error, bridge connection we be restarted from last success id, so we should try to process same event again
+   */
+  private async processBridgeEvents(): Promise<void> {
+    // Ensure only one processing instance runs at a time
+    if (this.isProcessing) {
+      log.debug('Event processing already in progress, skipping');
+      return;
+    }
+
+    this.isProcessing = true;
+
+    try {
+      // Process all events in FIFO order
+      while (this.eventQueue.length > 0) {
+        const event = this.eventQueue.shift();
+        if (event) {
+          // Important: set isLocal to false for all events from bridge
+          event.isLocal = false;
+          await this.handleBridgeEvent(event);
+        }
+      }
+    } catch (error) {
+      log.error('Error during event processing', { error });
+      this.isProcessing = false;
+      this.restartConnection();
+      return;
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Handle individual bridge event (original processing logic)
+   */
+
+  private async handleBridgeEvent(event: any): Promise<void> {
+    try {
+      log.info('Bridge event received', { event });
+      // Convert bridge event to our internal format
+      const rawEvent: RawBridgeEvent = {
+        id: event.id || crypto.randomUUID(),
+        method: event.method || 'unknown',
+        params: event.params || event,
+        // sessionId: event.from,
+        timestamp: Date.now(),
+        from: event?.from,
+        domain: event?.domain,
+        isJsBridge: event?.isJsBridge,
+        tabId: event?.tabId,
+        messageId: event?.messageId,
+        traceId: event?.traceId,
+        walletId: event?.walletId,
+        returnStrategy: event?.returnStrategy,
+      };
+
+      if (!rawEvent.traceId) {
+        rawEvent.traceId = uuidv7();
+      }
+
+      await this.sessionManager.initialize();
+      if (rawEvent.from) {
+        const session = await this.sessionManager.getSession(rawEvent.from);
+        rawEvent.domain = session?.domain || '';
+        if (session) {
+          if (session?.walletId) {
+            rawEvent.walletId = session.walletId;
+          }
+          if (session?.walletAddress) {
+            rawEvent.walletAddress = session.walletAddress;
+          }
+
+          rawEvent.dAppInfo = {
+            name: session.dAppName,
+            description: session.dAppDescription,
+            url: session.dAppUrl,
+            iconUrl: session.dAppIconUrl,
+          };
+        }
+      } else if (rawEvent.domain) {
+        const sessions = await this.sessionManager.getSessions({
+          walletId: event.walletId,
+          domain: rawEvent.domain,
+          isJsBridge: rawEvent.isJsBridge,
+        });
+
+        const session = sessions.length > 0 ? sessions[0] : undefined;
+
+        if (session?.walletId) {
+          rawEvent.walletId = session.walletId;
+        }
+        if (session?.walletAddress) {
+          rawEvent.walletAddress = session.walletAddress;
+        }
+
+        if (session?.sessionId) {
+          rawEvent.from = session.sessionId;
+        }
+
+        if (session) {
+          rawEvent.dAppInfo = {
+            name: session.dAppName,
+            description: session.dAppDescription,
+            url: session.dAppUrl,
+            iconUrl: session.dAppIconUrl,
+          };
+
+          if (!rawEvent.from) {
+            rawEvent.from = session.sessionId;
+          }
+        }
+      }
+
+      // Store event durably if enabled
+      if (!this.eventStore) {
+        throw new WalletKitError(
+          ERROR_CODES.EVENT_STORE_NOT_INITIALIZED,
+          'Event store is not initialized',
+        );
+      }
+      try {
+        await this.eventStore.storeEvent(rawEvent);
+
+        // Notify that bridge storage was updated
+        if (this.eventEmitter) {
+          this.eventEmitter.emit('bridgeStorageUpdated', {}, 'bridge-manager');
+        }
+
+        log.info('Event stored durably', {
+          eventId: rawEvent.id,
+          method: rawEvent.method,
+        });
+      } catch (error) {
+        log.error('Failed to store event durably', {
+          eventId: rawEvent.id,
+          error: (error as Error).message,
+        });
+
+        throw WalletKitError.fromError(
+          ERROR_CODES.EVENT_STORE_OPERATION_FAILED,
+          'Failed to store event durably',
+          error,
+          { eventId: rawEvent.id, method: rawEvent.method },
+        );
+      }
+
+      log.info('Bridge event processed', { rawEvent });
+
+      // Update and persist last event ID
+      if (event?.lastEventId && event.lastEventId !== this.lastEventId) {
+        this.lastEventId = event.lastEventId;
+        await this.saveLastEventId();
+      }
+    } catch (error) {
+      log.error('Error handling bridge event', { error });
+    }
+  }
+
+  /**
+   * Load last event ID from storage
+   */
+  private async loadLastEventId(): Promise<void> {
+    try {
+      const savedEventId = await this.storage.get<string>(this.storageKey);
+      if (savedEventId) {
+        this.lastEventId = savedEventId;
+        log.debug('Loaded last event ID from storage', {
+          lastEventId: this.lastEventId,
+        });
+      }
+    } catch (error) {
+      const storageError = WalletKitError.fromError(
+        ERROR_CODES.STORAGE_READ_FAILED,
+        'Failed to load last event ID from storage',
+        error,
+      );
+      log.warn('Failed to load last event ID from storage', {
+        error: storageError,
+      });
+    }
+  }
+
+  /**
+   * Save last event ID to storage
+   */
+  private async saveLastEventId(): Promise<void> {
+    try {
+      if (this.lastEventId) {
+        await this.storage.set(this.storageKey, this.lastEventId);
+        log.debug('Saved last event ID to storage', {
+          lastEventId: this.lastEventId,
+        });
+      }
+    } catch (error) {
+      const storageError = WalletKitError.fromError(
+        ERROR_CODES.STORAGE_WRITE_FAILED,
+        'Failed to save last event ID to storage',
+        error,
+      );
+      log.warn('Failed to save last event ID to storage', {
+        error: storageError,
+      });
+    }
+  }
 }

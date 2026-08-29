@@ -7,44 +7,44 @@
  */
 
 export interface EmulationAddressMetadata {
-    is_indexed: boolean;
-    token_info?: EmulationTokenInfo[];
+  is_indexed: boolean;
+  token_info?: EmulationTokenInfo[];
 }
 
 export type EmulationTokenInfo =
-    | EmulationTokenInfoWallets
-    | EmulationTokenInfoMasters
-    | (EmulationTokenInfoBase & Record<string, unknown>);
+  | EmulationTokenInfoWallets
+  | EmulationTokenInfoMasters
+  | (EmulationTokenInfoBase & Record<string, unknown>);
 
 export interface EmulationTokenInfoBase {
-    valid: boolean;
-    type: string;
+  valid: boolean;
+  type: string;
 }
 
 export interface EmulationTokenInfoWallets extends EmulationTokenInfoBase {
-    type: 'jetton_wallets';
-    extra: {
-        balance: string;
-        jetton: string;
-        owner: string;
-    };
+  type: 'jetton_wallets';
+  extra: {
+    balance: string;
+    jetton: string;
+    owner: string;
+  };
 }
 
 export interface EmulationTokenInfoMasters extends EmulationTokenInfoBase {
-    type: 'jetton_masters';
-    name: string;
-    symbol: string;
-    description: string;
-    image?: string;
-    extra: {
-        _image_big?: string;
-        _image_medium?: string;
-        _image_small?: string;
-        decimals: string;
-        image_data?: string;
-        social?: string[];
-        uri?: string;
-        websites?: string[];
-        [key: string]: unknown;
-    };
+  type: 'jetton_masters';
+  name: string;
+  symbol: string;
+  description: string;
+  image?: string;
+  extra: {
+    _image_big?: string;
+    _image_medium?: string;
+    _image_small?: string;
+    decimals: string;
+    image_data?: string;
+    social?: string[];
+    uri?: string;
+    websites?: string[];
+    [key: string]: unknown;
+  };
 }

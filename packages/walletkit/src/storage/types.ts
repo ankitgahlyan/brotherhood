@@ -12,38 +12,38 @@
  * Async storage adapter interface
  */
 export interface StorageAdapter {
-    get(key: string): Promise<string | null>;
-    set(key: string, value: string): Promise<void>;
-    remove(key: string): Promise<void>;
-    clear(): Promise<void>;
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+  remove(key: string): Promise<void>;
+  clear(): Promise<void>;
 }
 
 /**
  * Configuration for storage adapters
  */
 export interface StorageConfig {
-    prefix?: string;
-    maxRetries?: number;
-    retryDelay?: number;
-    allowMemory?: boolean;
+  prefix?: string;
+  maxRetries?: number;
+  retryDelay?: number;
+  allowMemory?: boolean;
 }
 
 /**
  * Storage operation result
  */
- 
+
 export interface StorageResult<T = any> {
-    success: boolean;
-    data?: T;
-    error?: string;
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
 /**
  * Storage metrics for monitoring
  */
 export interface StorageMetrics {
-    operations: number;
-    errors: number;
-    lastOperation: Date;
-    avgOperationTime: number;
+  operations: number;
+  errors: number;
+  lastOperation: Date;
+  avgOperationTime: number;
 }

@@ -11,8 +11,8 @@
  * See https://docs.tonapi.io/tonapi/rest-api/gasless.
  */
 export interface TonApiGaslessSendRequest {
-    wallet_public_key: string;
-    boc: string;
+  wallet_public_key: string;
+  boc: string;
 }
 
 /**
@@ -25,6 +25,6 @@ export interface TonApiGaslessSendRequest {
  * submit, so it's the source of truth for the on-chain hash (see `mapGaslessSend`).
  */
 export interface TonApiGaslessSendResponse {
-    external?: string;
-    protocol_name: string;
+  external?: string;
+  protocol_name: string;
 }

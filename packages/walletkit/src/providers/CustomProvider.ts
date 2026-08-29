@@ -18,5 +18,5 @@ import type { BaseProvider } from '../api/models';
  * }
  */
 export interface CustomProvider extends BaseProvider {
-    readonly type: 'custom';
+  readonly type: 'custom';
 }

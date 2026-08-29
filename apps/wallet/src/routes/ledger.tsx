@@ -4,9 +4,9 @@ import { LedgerScreen } from '@/features/ledger';
 import { ProtectedRoute } from '@/core/routing';
 
 export const Route = createFileRoute('/ledger')({
-    component: () => (
-        <ProtectedRoute>
-            <LedgerScreen />
-        </ProtectedRoute>
-    ),
+  component: () => (
+    <ProtectedRoute>
+      <LedgerScreen />
+    </ProtectedRoute>
+  ),
 });

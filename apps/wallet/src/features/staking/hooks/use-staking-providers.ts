@@ -10,19 +10,19 @@ import { useMemo } from 'react';
 import { useWalletKit } from '@demo/wallet-core';
 
 export interface StakingProviderOption {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 /** Registered staking providers (id + display name) read from the kit. */
 export const useStakingProviders = (): StakingProviderOption[] => {
-    const walletKit = useWalletKit();
+  const walletKit = useWalletKit();
 
-    return useMemo(() => {
-        if (!walletKit) return [];
-        return walletKit.staking.getProviders().map((provider) => ({
-            id: provider.providerId,
-            name: provider.getStakingProviderMetadata().name,
-        }));
-    }, [walletKit]);
+  return useMemo(() => {
+    if (!walletKit) return [];
+    return walletKit.staking.getProviders().map((provider) => ({
+      id: provider.providerId,
+      name: provider.getStakingProviderMetadata().name,
+    }));
+  }, [walletKit]);
 };

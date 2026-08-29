@@ -11,11 +11,16 @@ import 'dotenv/config';
 import util from 'util';
 
 import type { ConnectTransactionParamMessage, Wallet } from '../src';
-import { ApiClientToncenter, CHAIN, Signer, WalletV5R1Adapter, wrapWalletInterface } from '../src';
+import {
+  ApiClientToncenter,
+  CHAIN,
+  Signer,
+  WalletV5R1Adapter,
+  wrapWalletInterface,
+} from '../src';
 
- 
 const logInfo = console.log;
- 
+
 const logError = console.error;
 
 const isTestSend = process.env.TEST_SEND;
@@ -26,48 +31,56 @@ const mnemonic = process.env[`TON_MNEMONIC_${networkName}`]!.trim().split(' ');
 const client = new ApiClientToncenter({ apiKey, network });
 
 async function logWallet(wallet: Wallet) {
-    return {
-        address: wallet.getAddress(),
-        balance: await wallet.getBalance(),
-    };
+  return {
+    address: wallet.getAddress(),
+    balance: await wallet.getBalance(),
+  };
 }
 
 async function main() {
-    const signer = await Signer.fromMnemonic(mnemonic);
-    const walletAdapter = await WalletV5R1Adapter.create(signer, { client, network });
-    const existAccount = await wrapWalletInterface(walletAdapter, client);
-    logInfo('exist account', util.inspect(await logWallet(existAccount), { colors: true, depth: 6 }));
-    const message: ConnectTransactionParamMessage = {
-        address: existAccount.getAddress(),
-        amount: '1',
-    };
-    const emulation = await client.fetchEmulation(existAccount.getAddress(), [message]);
-    logInfo(
-        'emulation total fees',
-        Object.values(emulation.transactions)
-            .map((it) => it.total_fees)
-            .reduce((acc, cnt) => acc + +cnt, 0),
+  const signer = await Signer.fromMnemonic(mnemonic);
+  const walletAdapter = await WalletV5R1Adapter.create(signer, {
+    client,
+    network,
+  });
+  const existAccount = await wrapWalletInterface(walletAdapter, client);
+  logInfo(
+    'exist account',
+    util.inspect(await logWallet(existAccount), { colors: true, depth: 6 }),
+  );
+  const message: ConnectTransactionParamMessage = {
+    address: existAccount.getAddress(),
+    amount: '1',
+  };
+  const emulation = await client.fetchEmulation(existAccount.getAddress(), [
+    message,
+  ]);
+  logInfo(
+    'emulation total fees',
+    Object.values(emulation.transactions)
+      .map((it) => it.total_fees)
+      .reduce((acc, cnt) => acc + +cnt, 0),
+  );
+  if (isTestSend) {
+    const boc = await existAccount.getSignedSendTransaction(
+      {
+        network: CHAIN.MAINNET,
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+        messages: [message],
+      },
+      { fakeSignature: false },
     );
-    if (isTestSend) {
-        const boc = await existAccount.getSignedSendTransaction(
-            {
-                network: CHAIN.MAINNET,
-                validUntil: Math.floor(Date.now() / 1000) + 60,
-                messages: [message],
-            },
-            { fakeSignature: false },
-        );
-        const hash = await client.sendBoc(boc);
-        logInfo('send boc hash:', hash);
-    }
+    const hash = await client.sendBoc(boc);
+    logInfo('send boc hash:', hash);
+  }
 }
 
 main().catch((error) => {
-    if (error instanceof Error) {
-        logError(error.message);
-        logError(error.stack);
-    } else {
-        logError('Unknown error:', error);
-    }
-    process.exit(1);
+  if (error instanceof Error) {
+    logError(error.message);
+    logError(error.stack);
+  } else {
+    logError('Unknown error:', error);
+  }
+  process.exit(1);
 });

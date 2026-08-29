@@ -18,112 +18,119 @@ import type { WalletSetupMode } from '@/features/wallet-setup';
 const MIN_LENGTH = 4;
 
 const INPUT_CLASS =
-    'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+  'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
 
 export const SetupPasswordScreen: React.FC = () => {
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { setPassword: setStorePassword } = useAuth();
-    const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setPassword: setStorePassword } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-    const tooShort = password.length > 0 && password.length < MIN_LENGTH;
-    const mismatch = confirmPassword.length > 0 && confirmPassword !== password;
-    const canSubmit = password.length >= MIN_LENGTH && password === confirmPassword && !isLoading;
+  const tooShort = password.length > 0 && password.length < MIN_LENGTH;
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== password;
+  const canSubmit =
+    password.length >= MIN_LENGTH && password === confirmPassword && !isLoading;
 
-    const handleSubmit = async () => {
-        if (!canSubmit) return;
-        setError('');
-        setIsLoading(true);
-        try {
-            await setStorePassword(password);
-            // Route by the chosen path — each has its own dedicated screen.
-            const tab = (location.state as { tab?: WalletSetupMode } | null)?.tab;
-            navigate(WALLET_SETUP_ROUTE[tab ?? 'create']);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setError('');
+    setIsLoading(true);
+    try {
+      await setStorePassword(password);
+      // Route by the chosen path — each has its own dedicated screen.
+      const tab = (location.state as { tab?: WalletSetupMode } | null)?.tab;
+      navigate(WALLET_SETUP_ROUTE[tab ?? 'create']);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const footer = (
-        <Button
-            data-testid="password-submit"
-            fullWidth
-            loading={isLoading}
-            onClick={handleSubmit}
-            disabled={!canSubmit}
+  const footer = (
+    <Button
+      data-testid="password-submit"
+      fullWidth
+      loading={isLoading}
+      onClick={handleSubmit}
+      disabled={!canSubmit}
+    >
+      Continue
+    </Button>
+  );
+
+  return (
+    <CenteredScreen onBack={() => navigate(-1)} footer={footer}>
+      <div className="flex flex-col items-center text-center px-6">
+        <h1
+          className="text-2xl font-bold text-foreground"
+          data-testid="subtitle"
         >
-            Continue
-        </Button>
-    );
+          Create a password
+        </h1>
+        <p className="mt-2 text-base text-muted-foreground">
+          Create a password to protect your wallet.
+        </p>
 
-    return (
-        <CenteredScreen onBack={() => navigate(-1)} footer={footer}>
-            <div className="flex flex-col items-center text-center px-6">
-                <h1 className="text-2xl font-bold text-foreground" data-testid="subtitle">
-                    Create a password
-                </h1>
-                <p className="mt-2 text-base text-muted-foreground">Create a password to protect your wallet.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit();
+          }}
+          className="mt-8 w-full space-y-3 text-left"
+        >
+          <input
+            ref={inputRef}
+            type="password"
+            data-testid="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError('');
+            }}
+            placeholder="Password"
+            autoComplete="new-password"
+            aria-label="Password"
+            className={INPUT_CLASS}
+          />
+          <input
+            type="password"
+            data-testid="password-confirm"
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              setError('');
+            }}
+            placeholder="Confirm password"
+            autoComplete="new-password"
+            aria-label="Confirm password"
+            className={INPUT_CLASS}
+          />
+        </form>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        void handleSubmit();
-                    }}
-                    className="mt-8 w-full space-y-3 text-left"
-                >
-                    <input
-                        ref={inputRef}
-                        type="password"
-                        data-testid="password"
-                        value={password}
-                        onChange={(e) => {
-                            setPassword(e.target.value);
-                            setError('');
-                        }}
-                        placeholder="Password"
-                        autoComplete="new-password"
-                        aria-label="Password"
-                        className={INPUT_CLASS}
-                    />
-                    <input
-                        type="password"
-                        data-testid="password-confirm"
-                        value={confirmPassword}
-                        onChange={(e) => {
-                            setConfirmPassword(e.target.value);
-                            setError('');
-                        }}
-                        placeholder="Confirm password"
-                        autoComplete="new-password"
-                        aria-label="Confirm password"
-                        className={INPUT_CLASS}
-                    />
-                </form>
+        {(error || tooShort || mismatch) && (
+          <p className="mt-4 text-sm text-red-500">
+            {error ||
+              (tooShort
+                ? `Password must be at least ${MIN_LENGTH} characters`
+                : 'Passwords do not match')}
+          </p>
+        )}
 
-                {(error || tooShort || mismatch) && (
-                    <p className="mt-4 text-sm text-red-500">
-                        {error ||
-                            (tooShort
-                                ? `Password must be at least ${MIN_LENGTH} characters`
-                                : 'Passwords do not match')}
-                    </p>
-                )}
-
-                <p className="mt-6 text-xs text-muted-foreground">
-                    Make sure to remember your password — it can’t be recovered if forgotten.
-                </p>
-            </div>
-        </CenteredScreen>
-    );
+        <p className="mt-6 text-xs text-muted-foreground">
+          Make sure to remember your password — it can’t be recovered if
+          forgotten.
+        </p>
+      </div>
+    </CenteredScreen>
+  );
 };

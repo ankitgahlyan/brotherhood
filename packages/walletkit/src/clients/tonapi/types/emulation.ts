@@ -11,20 +11,20 @@ import type { TonApiTrace } from './traces';
 // import type { TonApiTransaction } from './transactions';
 
 export interface TonApiJettonQuantity {
-    quantity: string;
-    jetton: {
-        address: string;
-        name?: string;
-        symbol?: string;
-        decimals?: number;
-    };
+  quantity: string;
+  jetton: {
+    address: string;
+    name?: string;
+    symbol?: string;
+    decimals?: number;
+  };
 }
 
 export interface TonApiRisk {
-    transfer_all_remaining_balance: boolean;
-    ton: number;
-    jettons: TonApiJettonQuantity[];
-    nfts: unknown[];
+  transfer_all_remaining_balance: boolean;
+  ton: number;
+  jettons: TonApiJettonQuantity[];
+  nfts: unknown[];
 }
 
 export type TonApiMessageConsequences = TonApiTrace;

@@ -9,14 +9,19 @@
 import { Address } from '@ton/core';
 
 import type {
-    DeDustQuoteMetadata,
-    DeDustSwapProviderConfig,
-    DeDustProviderOptions,
-    DeDustQuoteResponse,
+  DeDustQuoteMetadata,
+  DeDustSwapProviderConfig,
+  DeDustProviderOptions,
+  DeDustQuoteResponse,
 } from './models';
 import type { DeDustSwapResponse } from './DeDustPrivateTypes';
 import { SwapProvider } from '../SwapProvider';
-import type { SwapQuoteParams, SwapQuote, SwapParams, SwapProviderMetadata } from '../../../api/models';
+import type {
+  SwapQuoteParams,
+  SwapQuote,
+  SwapParams,
+  SwapProviderMetadata,
+} from '../../../api/models';
 import { Network } from '../../../api/models';
 import { SwapError, SwapErrorCode } from '../errors';
 import { globalLogger } from '../../../core/Logger';
@@ -37,14 +42,14 @@ const DEFAULT_API_URL = 'https://mainnet.api.dedust.io/v4/router';
  * Default protocols to use for routing
  */
 const DEFAULT_PROTOCOLS = [
-    'dedust',
-    'dedust_v3',
-    // 'dedust_v3_memepad',
-    'stonfi_v1',
-    'stonfi_v2',
-    'tonco',
-    // 'memeslab',
-    // 'tonfun',
+  'dedust',
+  'dedust_v3',
+  // 'dedust_v3_memepad',
+  'stonfi_v1',
+  'stonfi_v2',
+  'tonco',
+  // 'memeslab',
+  // 'tonfun',
 ];
 
 /**
@@ -66,248 +71,293 @@ const DEFAULT_PROTOCOLS = [
  * );
  * ```
  */
-export class DeDustSwapProvider extends SwapProvider<DeDustProviderOptions, DeDustProviderOptions> {
-    private readonly apiUrl: string;
-    private readonly defaultSlippageBps: number;
-    private readonly referralAddress?: string;
-    private readonly referralFeeBps?: number;
-    private readonly onlyVerifiedPools: boolean;
-    private readonly maxSplits: number;
-    private readonly maxLength: number;
-    private readonly minPoolUsdTvl: string;
+export class DeDustSwapProvider extends SwapProvider<
+  DeDustProviderOptions,
+  DeDustProviderOptions
+> {
+  private readonly apiUrl: string;
+  private readonly defaultSlippageBps: number;
+  private readonly referralAddress?: string;
+  private readonly referralFeeBps?: number;
+  private readonly onlyVerifiedPools: boolean;
+  private readonly maxSplits: number;
+  private readonly maxLength: number;
+  private readonly minPoolUsdTvl: string;
 
-    readonly providerId: string;
+  readonly providerId: string;
 
-    readonly metadata: SwapProviderMetadata = {
-        name: 'DeDust',
-        url: 'https://dedust.io',
-    };
+  readonly metadata: SwapProviderMetadata = {
+    name: 'DeDust',
+    url: 'https://dedust.io',
+  };
 
-    constructor(config?: DeDustSwapProviderConfig) {
-        super();
-        this.providerId = config?.providerId ?? 'dedust';
-        this.apiUrl = (config?.apiUrl ?? DEFAULT_API_URL).replace(/\/+$/, '');
-        this.defaultSlippageBps = config?.defaultSlippageBps ?? 100; // 1% default
-        this.referralAddress = config?.referralAddress;
-        this.referralFeeBps = config?.referralFeeBps;
-        this.onlyVerifiedPools = config?.onlyVerifiedPools ?? true;
-        this.maxSplits = config?.maxSplits ?? 4;
-        this.maxLength = config?.maxLength ?? 3;
-        this.minPoolUsdTvl = config?.minPoolUsdTvl ?? '5000';
+  constructor(config?: DeDustSwapProviderConfig) {
+    super();
+    this.providerId = config?.providerId ?? 'dedust';
+    this.apiUrl = (config?.apiUrl ?? DEFAULT_API_URL).replace(/\/+$/, '');
+    this.defaultSlippageBps = config?.defaultSlippageBps ?? 100; // 1% default
+    this.referralAddress = config?.referralAddress;
+    this.referralFeeBps = config?.referralFeeBps;
+    this.onlyVerifiedPools = config?.onlyVerifiedPools ?? true;
+    this.maxSplits = config?.maxSplits ?? 4;
+    this.maxLength = config?.maxLength ?? 3;
+    this.minPoolUsdTvl = config?.minPoolUsdTvl ?? '5000';
 
-        if (config?.metadata) {
-            this.metadata = {
-                ...this.metadata,
-                ...config.metadata,
-            };
-        }
+    if (config?.metadata) {
+      this.metadata = {
+        ...this.metadata,
+        ...config.metadata,
+      };
+    }
 
-        log.info('DeDustSwapProvider initialized', {
-            apiUrl: this.apiUrl,
-            defaultSlippageBps: this.defaultSlippageBps,
-            hasReferral: !!this.referralAddress,
+    log.info('DeDustSwapProvider initialized', {
+      apiUrl: this.apiUrl,
+      defaultSlippageBps: this.defaultSlippageBps,
+      hasReferral: !!this.referralAddress,
+    });
+  }
+
+  getMetadata(): SwapProviderMetadata {
+    return this.metadata;
+  }
+
+  getSupportedNetworks(): Network[] {
+    return [Network.mainnet()];
+  }
+
+  async getQuote(
+    params: SwapQuoteParams<DeDustProviderOptions>,
+  ): Promise<SwapQuote> {
+    log.debug('Getting DeDust quote', {
+      fromToken: params.from,
+      toToken: params.to,
+      amount: params.amount,
+      isReverseSwap: params.isReverseSwap,
+    });
+
+    // Validate network (DeDust only supports mainnet)
+    validateNetwork(params.network);
+
+    const slippageBps = params.slippageBps ?? this.defaultSlippageBps;
+    const swapMode = params.isReverseSwap ? 'exact_out' : 'exact_in';
+    const amount = params.isReverseSwap
+      ? parseUnits(params.amount, params.to.decimals).toString()
+      : parseUnits(params.amount, params.from.decimals).toString();
+
+    try {
+      const inMinter = tokenToMinter(params.from);
+      const outMinter = tokenToMinter(params.to);
+
+      const requestBody = {
+        in_minter: inMinter,
+        out_minter: outMinter,
+        amount,
+        swap_mode: swapMode,
+        slippage_bps: slippageBps,
+        protocols: params.providerOptions?.protocols ?? DEFAULT_PROTOCOLS,
+        exclude_protocols: params.providerOptions?.excludeProtocols,
+        only_verified_pools:
+          params.providerOptions?.onlyVerifiedPools ?? this.onlyVerifiedPools,
+        max_splits: params.providerOptions?.maxSplits ?? this.maxSplits,
+        max_length: params.providerOptions?.maxLength ?? this.maxLength,
+        min_pool_usd_tvl: this.minPoolUsdTvl,
+        exclude_volatile_pools: params.providerOptions?.excludeVolatilePools,
+      };
+
+      const response = await fetch(`${this.apiUrl}/quote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        log.error('DeDust quote API error', {
+          status: response.status,
+          error: errorText,
         });
+
+        if (response.status === 400) {
+          throw new SwapError(
+            `No route found for swap: ${errorText}`,
+            SwapErrorCode.InsufficientLiquidity,
+          );
+        }
+
+        throw new SwapError(
+          `DeDust API error: ${response.status} ${errorText}`,
+          SwapErrorCode.NetworkError,
+        );
+      }
+
+      const quoteResponse: DeDustQuoteResponse = await response.json();
+
+      if (!quoteResponse.swap_is_possible) {
+        throw new SwapError(
+          'Swap is not possible for this pair',
+          SwapErrorCode.InsufficientLiquidity,
+        );
+      }
+
+      if (
+        !quoteResponse.swap_data?.routes ||
+        quoteResponse.swap_data.routes.length === 0
+      ) {
+        throw new SwapError(
+          'No routes found for this swap',
+          SwapErrorCode.InsufficientLiquidity,
+        );
+      }
+
+      // Calculate min received based on slippage
+      const outAmount = BigInt(quoteResponse.out_amount);
+      const minReceived =
+        (outAmount * BigInt(10000 - slippageBps)) / BigInt(10000);
+
+      // Build metadata
+      const metadata: DeDustQuoteMetadata = {
+        quoteResponse,
+        slippageBps,
+      };
+
+      const swapQuote: SwapQuote = {
+        metadata,
+        providerId: this.providerId,
+        fromToken: params.from,
+        toToken: params.to,
+        rawFromAmount: quoteResponse.in_amount,
+        rawToAmount: quoteResponse.out_amount,
+        rawMinReceived: minReceived.toString(),
+        fromAmount: formatUnits(quoteResponse.in_amount, params.from.decimals),
+        toAmount: formatUnits(quoteResponse.out_amount, params.to.decimals),
+        minReceived: formatUnits(minReceived.toString(), params.to.decimals),
+        network: params.network,
+        priceImpact: quoteResponse.price_impact
+          ? Math.round(quoteResponse.price_impact * 100)
+          : undefined,
+      };
+
+      log.debug('Received DeDust quote', {
+        inAmount: quoteResponse.in_amount,
+        outAmount: quoteResponse.out_amount,
+        minReceived: minReceived.toString(),
+        routeCount: quoteResponse.swap_data.routes.length,
+      });
+
+      return swapQuote;
+    } catch (error) {
+      log.error('Failed to get DeDust quote', { error, params });
+
+      if (error instanceof SwapError) {
+        throw error;
+      }
+
+      throw new SwapError(
+        `DeDust quote request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        SwapErrorCode.NetworkError,
+        error,
+      );
+    }
+  }
+
+  async buildSwapTransaction(
+    params: SwapParams<DeDustProviderOptions>,
+  ): Promise<TransactionRequest> {
+    log.debug('Building DeDust swap transaction', params);
+
+    const metadata = params.quote.metadata;
+
+    if (!metadata || !isDeDustQuoteMetadata(metadata)) {
+      throw new SwapError(
+        'Invalid quote: missing DeDust quote data',
+        SwapErrorCode.InvalidQuote,
+      );
     }
 
-    getMetadata(): SwapProviderMetadata {
-        return this.metadata;
-    }
+    try {
+      const userAddress = Address.parse(params.userAddress).toRawString();
 
-    getSupportedNetworks(): Network[] {
-        return [Network.mainnet()];
-    }
+      // Use custom referral from params, or fall back to config
+      const referralAddress =
+        params.providerOptions?.referralAddress ?? this.referralAddress;
+      const referralFeeBps =
+        params.providerOptions?.referralFeeBps ?? this.referralFeeBps;
 
-    async getQuote(params: SwapQuoteParams<DeDustProviderOptions>): Promise<SwapQuote> {
-        log.debug('Getting DeDust quote', {
-            fromToken: params.from,
-            toToken: params.to,
-            amount: params.amount,
-            isReverseSwap: params.isReverseSwap,
+      const requestBody = {
+        sender_address: userAddress,
+        swap_data: metadata.quoteResponse.swap_data,
+        referral_address: referralAddress
+          ? Address.parse(referralAddress).toRawString()
+          : undefined,
+        referral_fee: referralFeeBps,
+      };
+
+      const response = await fetch(`${this.apiUrl}/swap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        log.error('DeDust swap API error', {
+          status: response.status,
+          error: errorText,
         });
+        throw new SwapError(
+          `DeDust swap API error: ${response.status} ${errorText}`,
+          SwapErrorCode.BuildTxFailed,
+        );
+      }
 
-        // Validate network (DeDust only supports mainnet)
-        validateNetwork(params.network);
+      const swapResponse: DeDustSwapResponse = await response.json();
 
-        const slippageBps = params.slippageBps ?? this.defaultSlippageBps;
-        const swapMode = params.isReverseSwap ? 'exact_out' : 'exact_in';
-        const amount = params.isReverseSwap
-            ? parseUnits(params.amount, params.to.decimals).toString()
-            : parseUnits(params.amount, params.from.decimals).toString();
+      if (
+        !swapResponse.transactions ||
+        swapResponse.transactions.length === 0
+      ) {
+        throw new SwapError(
+          'No transactions returned from swap API',
+          SwapErrorCode.BuildTxFailed,
+        );
+      }
 
-        try {
-            const inMinter = tokenToMinter(params.from);
-            const outMinter = tokenToMinter(params.to);
+      const transaction: TransactionRequest = {
+        fromAddress: params.userAddress,
+        messages: swapResponse.transactions.map((tx) => ({
+          address: Address.parse(tx.address).toString(),
+          amount: tx.amount,
+          payload: asBase64(tx.payload),
+          stateInit: tx.state_init ? asBase64(tx.state_init) : undefined,
+        })),
+        network: params.quote.network,
+      };
 
-            const requestBody = {
-                in_minter: inMinter,
-                out_minter: outMinter,
-                amount,
-                swap_mode: swapMode,
-                slippage_bps: slippageBps,
-                protocols: params.providerOptions?.protocols ?? DEFAULT_PROTOCOLS,
-                exclude_protocols: params.providerOptions?.excludeProtocols,
-                only_verified_pools: params.providerOptions?.onlyVerifiedPools ?? this.onlyVerifiedPools,
-                max_splits: params.providerOptions?.maxSplits ?? this.maxSplits,
-                max_length: params.providerOptions?.maxLength ?? this.maxLength,
-                min_pool_usd_tvl: this.minPoolUsdTvl,
-                exclude_volatile_pools: params.providerOptions?.excludeVolatilePools,
-            };
+      log.debug('Built DeDust swap transaction', {
+        messageCount: transaction.messages.length,
+      });
 
-            const response = await fetch(`${this.apiUrl}/quote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-            });
+      return transaction;
+    } catch (error) {
+      log.error('Failed to build DeDust swap transaction', { error, params });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                log.error('DeDust quote API error', { status: response.status, error: errorText });
+      if (error instanceof SwapError) {
+        throw error;
+      }
 
-                if (response.status === 400) {
-                    throw new SwapError(`No route found for swap: ${errorText}`, SwapErrorCode.InsufficientLiquidity);
-                }
-
-                throw new SwapError(`DeDust API error: ${response.status} ${errorText}`, SwapErrorCode.NetworkError);
-            }
-
-            const quoteResponse: DeDustQuoteResponse = await response.json();
-
-            if (!quoteResponse.swap_is_possible) {
-                throw new SwapError('Swap is not possible for this pair', SwapErrorCode.InsufficientLiquidity);
-            }
-
-            if (!quoteResponse.swap_data?.routes || quoteResponse.swap_data.routes.length === 0) {
-                throw new SwapError('No routes found for this swap', SwapErrorCode.InsufficientLiquidity);
-            }
-
-            // Calculate min received based on slippage
-            const outAmount = BigInt(quoteResponse.out_amount);
-            const minReceived = (outAmount * BigInt(10000 - slippageBps)) / BigInt(10000);
-
-            // Build metadata
-            const metadata: DeDustQuoteMetadata = {
-                quoteResponse,
-                slippageBps,
-            };
-
-            const swapQuote: SwapQuote = {
-                metadata,
-                providerId: this.providerId,
-                fromToken: params.from,
-                toToken: params.to,
-                rawFromAmount: quoteResponse.in_amount,
-                rawToAmount: quoteResponse.out_amount,
-                rawMinReceived: minReceived.toString(),
-                fromAmount: formatUnits(quoteResponse.in_amount, params.from.decimals),
-                toAmount: formatUnits(quoteResponse.out_amount, params.to.decimals),
-                minReceived: formatUnits(minReceived.toString(), params.to.decimals),
-                network: params.network,
-                priceImpact: quoteResponse.price_impact ? Math.round(quoteResponse.price_impact * 100) : undefined,
-            };
-
-            log.debug('Received DeDust quote', {
-                inAmount: quoteResponse.in_amount,
-                outAmount: quoteResponse.out_amount,
-                minReceived: minReceived.toString(),
-                routeCount: quoteResponse.swap_data.routes.length,
-            });
-
-            return swapQuote;
-        } catch (error) {
-            log.error('Failed to get DeDust quote', { error, params });
-
-            if (error instanceof SwapError) {
-                throw error;
-            }
-
-            throw new SwapError(
-                `DeDust quote request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                SwapErrorCode.NetworkError,
-                error,
-            );
-        }
+      throw new SwapError(
+        `Failed to build DeDust transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        SwapErrorCode.BuildTxFailed,
+        error,
+      );
     }
-
-    async buildSwapTransaction(params: SwapParams<DeDustProviderOptions>): Promise<TransactionRequest> {
-        log.debug('Building DeDust swap transaction', params);
-
-        const metadata = params.quote.metadata;
-
-        if (!metadata || !isDeDustQuoteMetadata(metadata)) {
-            throw new SwapError('Invalid quote: missing DeDust quote data', SwapErrorCode.InvalidQuote);
-        }
-
-        try {
-            const userAddress = Address.parse(params.userAddress).toRawString();
-
-            // Use custom referral from params, or fall back to config
-            const referralAddress = params.providerOptions?.referralAddress ?? this.referralAddress;
-            const referralFeeBps = params.providerOptions?.referralFeeBps ?? this.referralFeeBps;
-
-            const requestBody = {
-                sender_address: userAddress,
-                swap_data: metadata.quoteResponse.swap_data,
-                referral_address: referralAddress ? Address.parse(referralAddress).toRawString() : undefined,
-                referral_fee: referralFeeBps,
-            };
-
-            const response = await fetch(`${this.apiUrl}/swap`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                log.error('DeDust swap API error', { status: response.status, error: errorText });
-                throw new SwapError(
-                    `DeDust swap API error: ${response.status} ${errorText}`,
-                    SwapErrorCode.BuildTxFailed,
-                );
-            }
-
-            const swapResponse: DeDustSwapResponse = await response.json();
-
-            if (!swapResponse.transactions || swapResponse.transactions.length === 0) {
-                throw new SwapError('No transactions returned from swap API', SwapErrorCode.BuildTxFailed);
-            }
-
-            const transaction: TransactionRequest = {
-                fromAddress: params.userAddress,
-                messages: swapResponse.transactions.map((tx) => ({
-                    address: Address.parse(tx.address).toString(),
-                    amount: tx.amount,
-                    payload: asBase64(tx.payload),
-                    stateInit: tx.state_init ? asBase64(tx.state_init) : undefined,
-                })),
-                network: params.quote.network,
-            };
-
-            log.debug('Built DeDust swap transaction', {
-                messageCount: transaction.messages.length,
-            });
-
-            return transaction;
-        } catch (error) {
-            log.error('Failed to build DeDust swap transaction', { error, params });
-
-            if (error instanceof SwapError) {
-                throw error;
-            }
-
-            throw new SwapError(
-                `Failed to build DeDust transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                SwapErrorCode.BuildTxFailed,
-                error,
-            );
-        }
-    }
+  }
 }
 
 /**
@@ -315,7 +365,7 @@ export class DeDustSwapProvider extends SwapProvider<DeDustProviderOptions, DeDu
  * pass to `providers: [createDeDustProvider(config)]`.
  */
 export const createDeDustProvider = (
-    config: DeDustSwapProviderConfig = {},
+  config: DeDustSwapProviderConfig = {},
 ): ((ctx: ProviderFactoryContext) => DeDustSwapProvider) => {
-    return () => new DeDustSwapProvider(config);
+  return () => new DeDustSwapProvider(config);
 };

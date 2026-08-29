@@ -9,17 +9,17 @@
 import type { ResultError } from '../core/Primitives';
 
 export interface RequestErrorEvent {
-    /**
-     * Unique identifier for the request that resulted in an error
-     */
-    id: string;
-    /**
-     * Error details for the request failure
-     */
-    error: ResultError;
+  /**
+   * Unique identifier for the request that resulted in an error
+   */
+  id: string;
+  /**
+   * Error details for the request failure
+   */
+  error: ResultError;
 
-    /**
-     * Additional data related to the error event
-     */
-    data: { [k: string]: unknown };
+  /**
+   * Additional data related to the error event
+   */
+  data: { [k: string]: unknown };
 }

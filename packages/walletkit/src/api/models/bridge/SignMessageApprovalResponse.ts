@@ -12,9 +12,9 @@ import type { Base64String } from '../core/Primitives';
  * Response after user approves a sign-message request.
  */
 export interface SignMessageApprovalResponse {
-    /**
-     * Signed internal message BoC (Bag of Cells) format, encoded in Base64.
-     * This is a signed internal message (internal opcode) that the dApp can relay via a third-party relayer.
-     */
-    internalBoc: Base64String;
+  /**
+   * Signed internal message BoC (Bag of Cells) format, encoded in Base64.
+   * This is a signed internal message (internal opcode) that the dApp can relay via a third-party relayer.
+   */
+  internalBoc: Base64String;
 }

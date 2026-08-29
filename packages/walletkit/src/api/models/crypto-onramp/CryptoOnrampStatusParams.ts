@@ -14,13 +14,13 @@
  * user's TON address.
  */
 export interface CryptoOnrampStatusParams {
-    /**
-     * Deposit id
-     */
-    depositId: string;
+  /**
+   * Deposit id
+   */
+  depositId: string;
 
-    /**
-     * Identifier of the provider that issued this deposit
-     */
-    providerId: string;
+  /**
+   * Identifier of the provider that issued this deposit
+   */
+  providerId: string;
 }

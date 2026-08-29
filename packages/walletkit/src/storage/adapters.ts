@@ -18,19 +18,23 @@ const log = globalLogger.createChild('StorageAdapter');
 /**
  * Create storage adapter based on environment and preferences
  */
-export function createStorageAdapter(config: StorageConfig = {}): StorageAdapter {
-    // Check if localStorage is available
-    if (typeof localStorage !== 'undefined') {
-        try {
-            return new LocalStorageAdapter(config);
-        } catch (error) {
-            log.warn('Failed to create LocalStorageAdapter, falling back to memory', { error });
-        }
+export function createStorageAdapter(
+  config: StorageConfig = {},
+): StorageAdapter {
+  // Check if localStorage is available
+  if (typeof localStorage !== 'undefined') {
+    try {
+      return new LocalStorageAdapter(config);
+    } catch (error) {
+      log.warn('Failed to create LocalStorageAdapter, falling back to memory', {
+        error,
+      });
     }
+  }
 
-    if (config.allowMemory) {
-        return new MemoryStorageAdapter(config);
-    } else {
-        throw new Error('No storage adapter available');
-    }
+  if (config.allowMemory) {
+    return new MemoryStorageAdapter(config);
+  } else {
+    throw new Error('No storage adapter available');
+  }
 }

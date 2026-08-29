@@ -16,7 +16,7 @@ For more information about supported chains and tokens, see the [official docume
 import { createLayerswapProvider } from '@ton/walletkit/crypto-onramp/layerswap';
 
 kit.cryptoOnramp.registerProvider(
-    createLayerswapProvider({ apiKey: 'your-api-key' }),
+  createLayerswapProvider({ apiKey: 'your-api-key' }),
 );
 kit.cryptoOnramp.setDefaultProvider('layerswap');
 ```
@@ -25,8 +25,8 @@ kit.cryptoOnramp.setDefaultProvider('layerswap');
 
 ```typescript
 interface LayerswapProviderConfig {
-    apiKey?: string;   // Optional API key forwarded as X-LS-APIKEY
-    apiUrl?: string;   // Default: 'https://api.layerswap.io/api/v2'
+  apiKey?: string; // Optional API key forwarded as X-LS-APIKEY
+  apiUrl?: string; // Default: 'https://api.layerswap.io/api/v2'
 }
 ```
 
@@ -36,11 +36,11 @@ See [Crypto Onramp README](../README.md) for base `CryptoOnrampQuoteParams`. Lay
 
 ```typescript
 const quote = await kit.cryptoOnramp.getQuote({
-    sourceCurrencyAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT on Arbitrum
-    sourceNetwork: '42161',
-    targetCurrencyAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT on TON
-    amount: '1000000', // 1 USDT (6 decimals)
-    recipientAddress: 'UQ...', // TON address to receive tokens
+  sourceCurrencyAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT on Arbitrum
+  sourceNetwork: '42161',
+  targetCurrencyAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT on TON
+  amount: '1000000', // 1 USDT (6 decimals)
+  recipientAddress: 'UQ...', // TON address to receive tokens
 });
 
 const deposit = await kit.cryptoOnramp.createDeposit({ quote });

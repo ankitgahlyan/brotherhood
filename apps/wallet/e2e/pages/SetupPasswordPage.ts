@@ -9,66 +9,71 @@
 import type { Page } from '@playwright/test';
 
 export class SetupPasswordPage {
-    constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) {}
 
-    // Locators
+  // Locators
 
-    get subtitle() {
-        return this.page.getByTestId('subtitle');
-    }
+  get subtitle() {
+    return this.page.getByTestId('subtitle');
+  }
 
-    get passwordInput() {
-        return this.page.getByTestId('password');
-    }
+  get passwordInput() {
+    return this.page.getByTestId('password');
+  }
 
-    get confirmInput() {
-        return this.page.getByTestId('password-confirm');
-    }
+  get confirmInput() {
+    return this.page.getByTestId('password-confirm');
+  }
 
-    get submitButton() {
-        return this.page.getByTestId('password-submit');
-    }
+  get submitButton() {
+    return this.page.getByTestId('password-submit');
+  }
 
-    get helperText() {
-        return this.page.getByText('Make sure to remember', { exact: false });
-    }
+  get helperText() {
+    return this.page.getByText('Make sure to remember', { exact: false });
+  }
 
-    get errorMessage() {
-        return this.page.locator('[data-testid="password-error"], .text-red-500');
-    }
+  get errorMessage() {
+    return this.page.locator('[data-testid="password-error"], .text-red-500');
+  }
 
-    // Actions
+  // Actions
 
-    async waitForPage() {
-        await this.passwordInput.waitFor({ state: 'visible' });
-    }
+  async waitForPage() {
+    await this.passwordInput.waitFor({ state: 'visible' });
+  }
 
-    async fillPassword(password: string) {
-        await this.passwordInput.fill(password);
-    }
+  async fillPassword(password: string) {
+    await this.passwordInput.fill(password);
+  }
 
-    async fillConfirm(password: string) {
-        await this.confirmInput.fill(password);
-    }
+  async fillConfirm(password: string) {
+    await this.confirmInput.fill(password);
+  }
 
-    async submit(password: string, confirm = password) {
-        await this.fillPassword(password);
-        await this.fillConfirm(confirm);
-        await this.submitButton.click();
-    }
+  async submit(password: string, confirm = password) {
+    await this.fillPassword(password);
+    await this.fillConfirm(confirm);
+    await this.submitButton.click();
+  }
 
-    async submitByPasting(password: string) {
-        await this.page.evaluate((pwd) => navigator.clipboard.writeText(pwd), password);
-        await this.passwordInput.click();
-        await this.page.keyboard.press('ControlOrMeta+v');
-        await this.confirmInput.click();
-        await this.page.keyboard.press('ControlOrMeta+v');
-        await this.submitButton.click();
-    }
+  async submitByPasting(password: string) {
+    await this.page.evaluate(
+      (pwd) => navigator.clipboard.writeText(pwd),
+      password,
+    );
+    await this.passwordInput.click();
+    await this.page.keyboard.press('ControlOrMeta+v');
+    await this.confirmInput.click();
+    await this.page.keyboard.press('ControlOrMeta+v');
+    await this.submitButton.click();
+  }
 
-    // localStorage
+  // localStorage
 
-    async getStore() {
-        return this.page.evaluate(() => JSON.parse(localStorage.getItem('demo-wallet-store') ?? '{}'));
-    }
+  async getStore() {
+    return this.page.evaluate(() =>
+      JSON.parse(localStorage.getItem('demo-wallet-store') ?? '{}'),
+    );
+  }
 }

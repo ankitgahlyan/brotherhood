@@ -10,4 +10,5 @@ import { sendMessage } from '@truecarry/webext-bridge/background';
 
 import { createSendMessageToExtensionContent } from './extension';
 
-export const SendMessageToExtensionContentFromBackground = createSendMessageToExtensionContent(sendMessage);
+export const SendMessageToExtensionContentFromBackground =
+  createSendMessageToExtensionContent(sendMessage);

@@ -10,14 +10,14 @@
  * Options for configuring the referral in DeDust swap operations
  */
 export interface DeDustReferralOptions {
-    /**
-     * The address of the referrer
-     */
-    referralAddress?: string;
+  /**
+   * The address of the referrer
+   */
+  referralAddress?: string;
 
-    /**
-     * Referral fee in basis points (max 100 = 1%)
-     * @format int
-     */
-    referralFeeBps?: number;
+  /**
+   * Referral fee in basis points (max 100 = 1%)
+   * @format int
+   */
+  referralFeeBps?: number;
 }

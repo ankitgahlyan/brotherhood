@@ -20,18 +20,37 @@ export { RequestProcessor } from './core/RequestProcessor';
 export { Initializer } from './core/Initializer';
 export { JettonsManager } from './core/JettonsManager';
 export { DefiError, DefiErrorCode } from './defi/errors';
-export { SwapManager, SwapProvider, SwapError, SwapErrorCode } from './defi/swap';
-export { StakingManager, StakingProvider, StakingError, StakingErrorCode } from './defi/staking';
 export {
-    CryptoOnrampManager,
-    CryptoOnrampProvider,
-    CryptoOnrampError,
-    CryptoOnrampErrorCode,
-    Caip2ByNetwork,
+  SwapManager,
+  SwapProvider,
+  SwapError,
+  SwapErrorCode,
+} from './defi/swap';
+export {
+  StakingManager,
+  StakingProvider,
+  StakingError,
+  StakingErrorCode,
+} from './defi/staking';
+export {
+  CryptoOnrampManager,
+  CryptoOnrampProvider,
+  CryptoOnrampError,
+  CryptoOnrampErrorCode,
+  Caip2ByNetwork,
 } from './defi/crypto-onramp';
-export { GaslessManager, GaslessProvider, GaslessError, GaslessErrorCode } from './defi/gasless';
+export {
+  GaslessManager,
+  GaslessProvider,
+  GaslessError,
+  GaslessErrorCode,
+} from './defi/gasless';
 export { EventEmitter } from './core/EventEmitter';
-export type { EventListener, EventPayload, KitEvent } from './core/EventEmitter';
+export type {
+  EventListener,
+  EventPayload,
+  KitEvent,
+} from './core/EventEmitter';
 export type { SharedKitEvents } from './types/emitter';
 export { ApiClientToncenter } from './clients/toncenter';
 export { ApiClientTonApi } from './clients/tonapi';
@@ -45,7 +64,10 @@ export { SignDataHandler } from './handlers/SignDataHandler';
 export { DisconnectHandler } from './handlers/DisconnectHandler';
 export { WalletV5, WalletV5R1Id, Opcodes } from './contracts/w5/WalletV5R1';
 export type { WalletV5Config } from './contracts/w5/WalletV5R1';
-export { WalletV5R1CodeCell, WalletV5R1CodeBoc } from './contracts/w5/WalletV5R1.source';
+export {
+  WalletV5R1CodeCell,
+  WalletV5R1CodeBoc,
+} from './contracts/w5/WalletV5R1.source';
 export { WalletV5R1Adapter } from './contracts/w5/WalletV5R1Adapter';
 export { defaultWalletIdV5R1 } from './contracts/w5/WalletV5R1Adapter';
 export { ActionSendMsg, packActionsList } from './contracts/w5/actions';
@@ -63,61 +85,77 @@ export { CallForSuccess } from './utils/retry';
 export { createWalletId } from './utils/walletId';
 export type { WalletId } from './utils/walletId';
 export {
-    Base64Normalize,
-    Base64NormalizeUrl,
-    ParseBase64,
-    Base64ToHex,
-    Base64ToUint8Array,
-    Uint8ArrayToBase64,
-    Base64ToBigInt,
-    BigIntToBase64,
-    Uint8ArrayToBigInt,
-    HexToBigInt,
-    HexToBase64,
-    Uint8ArrayToHex,
-    HexToUint8Array,
+  Base64Normalize,
+  Base64NormalizeUrl,
+  ParseBase64,
+  Base64ToHex,
+  Base64ToUint8Array,
+  Uint8ArrayToBase64,
+  Base64ToBigInt,
+  BigIntToBase64,
+  Uint8ArrayToBigInt,
+  HexToBigInt,
+  HexToBase64,
+  Uint8ArrayToHex,
+  HexToUint8Array,
 } from './utils/base64';
 export type { ToncenterTransaction } from './types/toncenter/emulation';
 export type { TonProofParsedMessage } from './utils/tonProof';
 export type { ITonWalletKit } from './types/kit';
 export type { ProviderInput } from './types/factory';
 export type {
-    JSBridgeInjectOptions,
-    JSBridgeTransportFunction,
-    TonConnectBridge,
-    DeviceInfo,
-    WalletInfo,
-    ConnectRequest,
-    ConnectEvent,
-    ConnectEventError,
-    InjectedToExtensionBridgeRequest,
-    BridgeResponse,
-    BridgeEvent,
-    BridgeEventMessageInfo,
-    AppRequest,
-    WalletResponse,
-    WalletEvent,
-    DisconnectEvent,
-    ConnectItem,
-    ConnectItemReply,
-    Feature,
-    InjectedToExtensionBridgeRequestPayload,
+  JSBridgeInjectOptions,
+  JSBridgeTransportFunction,
+  TonConnectBridge,
+  DeviceInfo,
+  WalletInfo,
+  ConnectRequest,
+  ConnectEvent,
+  ConnectEventError,
+  InjectedToExtensionBridgeRequest,
+  BridgeResponse,
+  BridgeEvent,
+  BridgeEventMessageInfo,
+  AppRequest,
+  WalletResponse,
+  WalletEvent,
+  DisconnectEvent,
+  ConnectItem,
+  ConnectItemReply,
+  Feature,
+  InjectedToExtensionBridgeRequestPayload,
 } from './types/jsBridge';
 export { MnemonicToKeyPair, CreateTonMnemonic } from './utils/mnemonic.mjs';
 export { DefaultSignature, FakeSignature } from './utils/sign';
 export { wrapWalletInterface } from './core/Initializer';
-export type { NftTransferParamsHuman, NftTransferParamsRaw } from './types/nfts';
+export type {
+  NftTransferParamsHuman,
+  NftTransferParamsRaw,
+} from './types/nfts';
 
-export { isValidAddress, compareAddress, asAddressFriendly } from './utils/address';
+export {
+  isValidAddress,
+  compareAddress,
+  asAddressFriendly,
+} from './utils/address';
 export { withTimeout } from './utils/withTimeout';
 export { validateTransactionMessage } from './validation';
-export { createDeviceInfo, createWalletManifest } from './utils/getDefaultWalletConfig';
-export { getMaxOutgoingMessages, hasSignMessageSupport } from './utils/features';
+export {
+  createDeviceInfo,
+  createWalletManifest,
+} from './utils/getDefaultWalletConfig';
+export {
+  getMaxOutgoingMessages,
+  hasSignMessageSupport,
+} from './utils/features';
 export { Signer } from './utils/Signer';
 export { ParseStack, SerializeStack } from './utils/tvmStack';
 export type { Transport } from './bridge/transport/Transport';
 export { TONCONNECT_BRIDGE_EVENT } from './bridge/utils/messageTypes';
-export { RESTORE_CONNECTION_TIMEOUT, DEFAULT_REQUEST_TIMEOUT } from './bridge/utils/timeouts';
+export {
+  RESTORE_CONNECTION_TIMEOUT,
+  DEFAULT_REQUEST_TIMEOUT,
+} from './bridge/utils/timeouts';
 export { CreateTonProofMessageBytes } from './utils/tonProof';
 export type { AnalyticsAppInfo, AnalyticsManagerOptions } from './analytics';
 
@@ -126,36 +164,36 @@ export type { ToncenterResponseJettonMasters } from './types/toncenter/emulation
 export { asHex } from './utils/hex';
 export { asBase64 } from './utils/base64';
 export {
-    // Message builders
-    storeJettonTransferMessage,
-    storeNftTransferMessage,
-    createJettonTransferPayload,
-    createNftTransferPayload,
-    createNftTransferRawPayload,
-    createCommentPayload,
-    createCommentPayloadBase64,
-    createTransferTransaction,
-    // Constants
-    DEFAULT_JETTON_GAS_FEE,
-    DEFAULT_NFT_GAS_FEE,
-    DEFAULT_FORWARD_AMOUNT,
+  // Message builders
+  storeJettonTransferMessage,
+  storeNftTransferMessage,
+  createJettonTransferPayload,
+  createNftTransferPayload,
+  createNftTransferRawPayload,
+  createCommentPayload,
+  createCommentPayloadBase64,
+  createTransferTransaction,
+  // Constants
+  DEFAULT_JETTON_GAS_FEE,
+  DEFAULT_NFT_GAS_FEE,
+  DEFAULT_FORWARD_AMOUNT,
 } from './utils/messageBuilders';
 export type {
-    JettonTransferMessage,
-    NftTransferMessage,
-    NftTransferRawParams,
-    CreateTransferTransactionParams,
+  JettonTransferMessage,
+  NftTransferMessage,
+  NftTransferRawParams,
+  CreateTransferTransactionParams,
 } from './utils/messageBuilders';
 export { getTransactionStatus } from './utils/toncenter/getTransactionStatus';
 export { getNormalizedExtMessageHash } from './utils/getNormalizedExtMessageHash';
 
 // Asset helpers
 export {
-    getJettonWalletAddressFromClient,
-    getJettonBalanceFromClient,
-    getJettonsFromClient,
-    getNftsFromClient,
-    getNftFromClient,
+  getJettonWalletAddressFromClient,
+  getJettonBalanceFromClient,
+  getJettonsFromClient,
+  getNftsFromClient,
+  getNftFromClient,
 } from './utils/assetHelpers';
 
 export { formatUnits, parseUnits } from './utils/units';
@@ -165,12 +203,21 @@ export { fetchManifest } from './utils/manifest';
 export type * from './api/interfaces';
 export * from './api/models';
 
-export { TonCenterStreamingProvider, createTonCenterStreamingProvider } from './streaming/toncenter';
+export {
+  TonCenterStreamingProvider,
+  createTonCenterStreamingProvider,
+} from './streaming/toncenter';
 export type { TonCenterStreamingProviderConfig } from './streaming/toncenter';
-export { TonApiStreamingProvider, createTonApiStreamingProvider } from './streaming/tonapi';
+export {
+  TonApiStreamingProvider,
+  createTonApiStreamingProvider,
+} from './streaming/tonapi';
 export type { TonApiStreamingProviderConfig } from './streaming/tonapi';
 export { StreamingManager } from './streaming';
-export type { StreamingProvider, StreamingProviderFactory } from './api/interfaces/StreamingProvider';
+export type {
+  StreamingProvider,
+  StreamingProviderFactory,
+} from './api/interfaces/StreamingProvider';
 export type { StreamingAPI } from './api/interfaces/StreamingAPI';
 export type { ProviderFactoryContext } from './types/factory';
 export { CustomProvidersManager } from './providers';

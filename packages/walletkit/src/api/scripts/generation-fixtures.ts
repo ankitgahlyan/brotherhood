@@ -14,9 +14,9 @@
 
 /** Case 1 — basic numeric enum without @format. */
 export enum BasicNumericEnum {
-    Foo = 0,
-    Bar = 1,
-    Baz = 2,
+  Foo = 0,
+  Bar = 1,
+  Baz = 2,
 }
 
 // ----------------------------------------------------------------------------
@@ -27,9 +27,9 @@ export enum BasicNumericEnum {
 
 /** @format int32 */
 export enum Int32FormatEnum {
-    Ok = 0,
-    NotFound = 404,
-    InternalError = 500,
+  Ok = 0,
+  NotFound = 404,
+  InternalError = 500,
 }
 
 // ----------------------------------------------------------------------------
@@ -40,8 +40,8 @@ export enum Int32FormatEnum {
 // then the Swift codegen prepends TON.
 
 export enum SCREAMING_SNAKE_CASE_FIXTURE {
-    FirstValue = 1,
-    SecondValue = 2,
+  FirstValue = 1,
+  SecondValue = 2,
 }
 
 // ----------------------------------------------------------------------------
@@ -54,10 +54,11 @@ export enum SCREAMING_SNAKE_CASE_FIXTURE {
 export const CONST_OBJECT_ENUM_FOO = 'CONST_OBJECT_ENUM_FOO';
 export const CONST_OBJECT_ENUM_BAR = 'CONST_OBJECT_ENUM_BAR';
 export const ConstObjectEnum = {
-    CONST_OBJECT_ENUM_FOO: CONST_OBJECT_ENUM_FOO,
-    CONST_OBJECT_ENUM_BAR: CONST_OBJECT_ENUM_BAR,
+  CONST_OBJECT_ENUM_FOO: CONST_OBJECT_ENUM_FOO,
+  CONST_OBJECT_ENUM_BAR: CONST_OBJECT_ENUM_BAR,
 } as const;
-export type ConstObjectEnumValue = (typeof ConstObjectEnum)[keyof typeof ConstObjectEnum];
+export type ConstObjectEnumValue =
+  (typeof ConstObjectEnum)[keyof typeof ConstObjectEnum];
 
 // ----------------------------------------------------------------------------
 // Case 5: Discriminated union with @discriminator
@@ -69,22 +70,23 @@ export type ConstObjectEnumValue = (typeof ConstObjectEnum)[keyof typeof ConstOb
 //   - Gamma:   no non-discriminator fields   → empty variant
 
 /** @discriminator type */
-export type DiscriminatedUnion = DiscriminatedUnionAlpha | DiscriminatedUnionBeta | DiscriminatedUnionGamma;
+export type DiscriminatedUnion =
+  DiscriminatedUnionAlpha | DiscriminatedUnionBeta | DiscriminatedUnionGamma;
 
 export interface DiscriminatedUnionAlpha {
-    type: 'alpha';
-    alphaValue: string;
+  type: 'alpha';
+  alphaValue: string;
 }
 
 export interface DiscriminatedUnionBeta {
-    type: 'beta';
-    betaValue: string;
-    /** @format int32 */
-    betaCount: number;
+  type: 'beta';
+  betaValue: string;
+  /** @format int32 */
+  betaCount: number;
 }
 
 export interface DiscriminatedUnionGamma {
-    type: 'gamma';
+  type: 'gamma';
 }
 
 // ----------------------------------------------------------------------------
@@ -95,8 +97,10 @@ export interface DiscriminatedUnionGamma {
 // parent type gets a nested enum named after the property.
 
 export interface InlineDiscriminatedUnionParent {
-    label: string;
-    inner: { type: 'cat'; meow: string } | { type: 'dog'; /** @format int32 */ bark: number };
+  label: string;
+  inner:
+    | { type: 'cat'; meow: string }
+    | { type: 'dog'; /** @format int32 */ bark: number };
 }
 
 // ----------------------------------------------------------------------------
@@ -124,9 +128,9 @@ export type TypeAliasToRef = DiscriminatedUnion;
 // `value: T` becomes `x-generic-type-ref: "T"`; `x-generic-params: [{T}]`.
 
 export interface GenericContainer<T> {
-    value: T;
-    /** @format int32 */
-    count: number;
+  value: T;
+  /** @format int32 */
+  count: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -137,9 +141,9 @@ export interface GenericContainer<T> {
 // in the Swift initializer body rather than a parameter.
 
 export interface ConstantFieldsCase {
-    role: 'admin';
-    /** @format int32 */
-    score: number;
+  role: 'admin';
+  /** @format int32 */
+  score: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -149,9 +153,9 @@ export interface ConstantFieldsCase {
 // field becomes a `private let … : AnyCodable` in Swift.
 
 export interface FrozenFormatCase {
-    name: string;
-    /** @format frozen */
-    opaque: unknown;
+  name: string;
+  /** @format frozen */
+  opaque: unknown;
 }
 
 // ----------------------------------------------------------------------------
@@ -161,17 +165,17 @@ export interface FrozenFormatCase {
 // uint, uint8/16/32/64, timestamp).
 
 export interface IntegerFormatsCase {
-    /** @format int */ intField: number;
-    /** @format int8 */ int8Field: number;
-    /** @format int16 */ int16Field: number;
-    /** @format int32 */ int32Field: number;
-    /** @format int64 */ int64Field: number;
-    /** @format uint */ uintField: number;
-    /** @format uint8 */ uint8Field: number;
-    /** @format uint16 */ uint16Field: number;
-    /** @format uint32 */ uint32Field: number;
-    /** @format uint64 */ uint64Field: number;
-    /** @format timestamp */ timestampField: number;
+  /** @format int */ intField: number;
+  /** @format int8 */ int8Field: number;
+  /** @format int16 */ int16Field: number;
+  /** @format int32 */ int32Field: number;
+  /** @format int64 */ int64Field: number;
+  /** @format uint */ uintField: number;
+  /** @format uint8 */ uint8Field: number;
+  /** @format uint16 */ uint16Field: number;
+  /** @format uint32 */ uint32Field: number;
+  /** @format uint64 */ uint64Field: number;
+  /** @format timestamp */ timestampField: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -181,13 +185,13 @@ export interface IntegerFormatsCase {
 
 /** A model with descriptive JSDoc on the type and its fields. */
 export interface JSDocDescribedModel {
-    /** The user's full name. */
-    name: string;
-    /**
-     * Age in years.
-     * @format int32
-     */
-    age: number;
+  /** The user's full name. */
+  name: string;
+  /**
+   * Age in years.
+   * @format int32
+   */
+  age: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -201,13 +205,13 @@ export interface JSDocDescribedModel {
 export type RecursiveUnion = RecursiveUnionLeaf | RecursiveUnionBranch;
 
 export interface RecursiveUnionLeaf {
-    type: 'leaf';
-    value: string;
+  type: 'leaf';
+  value: string;
 }
 
 export interface RecursiveUnionBranch {
-    type: 'branch';
-    children: RecursiveUnion[];
+  type: 'branch';
+  children: RecursiveUnion[];
 }
 
 // ----------------------------------------------------------------------------
@@ -220,15 +224,16 @@ export interface RecursiveUnionBranch {
 // so the enum can hold itself.
 
 /** @discriminator type */
-export type RecursiveUnionDirect = RecursiveUnionDirectEmpty | RecursiveUnionDirectNested;
+export type RecursiveUnionDirect =
+  RecursiveUnionDirectEmpty | RecursiveUnionDirectNested;
 
 export interface RecursiveUnionDirectEmpty {
-    type: 'empty';
+  type: 'empty';
 }
 
 export interface RecursiveUnionDirectNested {
-    type: 'nested';
-    value: RecursiveUnionDirect;
+  type: 'nested';
+  value: RecursiveUnionDirect;
 }
 
 // ----------------------------------------------------------------------------
@@ -243,15 +248,15 @@ export interface RecursiveUnionDirectNested {
 //   - dictionary            → JSON `additionalProperties`         → Swift `[String: V]`
 
 export interface PropertyKindsCase {
-    requiredString: string;
-    optionalString?: string;
-    nullableString: string | null;
-    /** @format int32 */
-    requiredCount: number;
-    isActive: boolean;
-    tags: string[];
-    nestedEnums: BasicNumericEnum[];
-    metadata: { [key: string]: string };
+  requiredString: string;
+  optionalString?: string;
+  nullableString: string | null;
+  /** @format int32 */
+  requiredCount: number;
+  isActive: boolean;
+  tags: string[];
+  nestedEnums: BasicNumericEnum[];
+  metadata: { [key: string]: string };
 }
 
 // ----------------------------------------------------------------------------
@@ -263,9 +268,9 @@ export interface PropertyKindsCase {
 // value type is `String` (not `Double`).
 
 export enum StringRawEnum {
-    Ton = 'ton',
-    Jetton = 'jetton',
-    Nft = 'nft',
+  Ton = 'ton',
+  Jetton = 'jetton',
+  Nft = 'nft',
 }
 
 // ----------------------------------------------------------------------------
@@ -286,9 +291,9 @@ export type PrimitiveTypeAlias = string;
 // honoring them.
 
 export interface GenericWithDefault<TPayload = unknown> {
-    /** @format int32 */
-    id: number;
-    payload: TPayload;
+  /** @format int32 */
+  id: number;
+  payload: TPayload;
 }
 
 // ----------------------------------------------------------------------------
@@ -299,11 +304,11 @@ export interface GenericWithDefault<TPayload = unknown> {
 // triggering integer/frozen handling.
 
 export interface UrlFormatCase {
-    name: string;
-    /** @format url */
-    aboutUrl: string;
-    /** @format url */
-    iconUrl?: string;
+  name: string;
+  /** @format url */
+  aboutUrl: string;
+  /** @format url */
+  iconUrl?: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -318,11 +323,11 @@ export interface UrlFormatCase {
 // enum-refs, mix of int-raw and string-raw enums.
 
 export interface EnumRefPropertiesCase {
-    primary: BasicNumericEnum;
-    secondary?: StringRawEnum;
-    everyMode: BasicNumericEnum[];
-    /** @format int32 */
-    rawCount: number;
+  primary: BasicNumericEnum;
+  secondary?: StringRawEnum;
+  everyMode: BasicNumericEnum[];
+  /** @format int32 */
+  rawCount: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -352,10 +357,10 @@ export interface EmptyCase {}
 // through `GenericInterfaceNodeParser` for non-generic siblings.
 
 export interface MultiGenericContainer<K, V> {
-    key: K;
-    value: V;
-    /** @format int32 */
-    count: number;
+  key: K;
+  value: V;
+  /** @format int32 */
+  count: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -368,19 +373,20 @@ export interface MultiGenericContainer<K, V> {
 // field-variant case, exercising format-passthrough on the inlined arm.
 
 /** @discriminator type */
-export type DiscriminatedUnionWithFormat = DiscriminatedUnionWithFormatA | DiscriminatedUnionWithFormatB;
+export type DiscriminatedUnionWithFormat =
+  DiscriminatedUnionWithFormatA | DiscriminatedUnionWithFormatB;
 
 export interface DiscriminatedUnionWithFormatA {
-    type: 'a';
-    name: string;
-    /** @format int32 */
-    counter: number;
+  type: 'a';
+  name: string;
+  /** @format int32 */
+  counter: number;
 }
 
 export interface DiscriminatedUnionWithFormatB {
-    type: 'b';
-    /** @format uint16 */
-    code: number;
+  type: 'b';
+  /** @format uint16 */
+  code: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -394,9 +400,9 @@ export interface DiscriminatedUnionWithFormatB {
 // Covers required + optional. The bare `label` keeps the non-generic path live.
 
 export interface GenericInstanceContainer<TMeta> {
-    inner: GenericContainer<TMeta>;
-    optionalInner?: GenericContainer<TMeta>;
-    label: string;
+  inner: GenericContainer<TMeta>;
+  optionalInner?: GenericContainer<TMeta>;
+  label: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -408,9 +414,9 @@ export interface GenericInstanceContainer<TMeta> {
 // integer-format path still fires alongside x-generic-instance-type.
 
 export interface GenericInstanceMultiArg<A, B> {
-    pair: MultiGenericContainer<A, B>;
-    /** @format int32 */
-    count: number;
+  pair: MultiGenericContainer<A, B>;
+  /** @format int32 */
+  count: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -422,6 +428,6 @@ export interface GenericInstanceMultiArg<A, B> {
 // exactly the used argument and coexists with x-generic-type-ref.
 
 export interface GenericInstanceSubsetArg<TUsed, TUnused> {
-    used: GenericContainer<TUsed>;
-    spare: TUnused;
+  used: GenericContainer<TUsed>;
+  spare: TUnused;
 }

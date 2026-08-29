@@ -9,56 +9,65 @@
 import { useCallback } from 'react';
 import { Address, Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { ActSubmitProposal } from '@/contracts/brotherhood/FossFiWallet.gen';
+import { ActSubmitProposal } from '@wrappers/FossFiWallet.gen';
+import { Poll } from '@wrappers/Poll.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 
 export interface UseSubmitProposalParams {
-    wallet: Wallet | null | undefined;
-    walletKit: ITonWalletKit | null;
-    walletAddress: string | null;
-    daoAddress: string;
-    proposalTargetPayload?: Cell;
-    network: Network;
+  wallet: Wallet | null | undefined;
+  walletKit: ITonWalletKit | null;
+  walletAddress: string | null;
+  daoAddress: string;
+  proposalTargetPayload?: Cell;
+  network: Network;
 }
 
 export interface UseSubmitProposalResult {
-    submit: () => Promise<void>;
-    isDisabled: boolean;
-    isSending: boolean;
-    error: string | null;
+  submit: () => Promise<void>;
+  isDisabled: boolean;
+  isSending: boolean;
+  error: string | null;
 }
 
 export function useSubmitProposal({
-    wallet,
-    walletKit,
-    walletAddress,
-    daoAddress,
-    proposalTargetPayload,
-    network,
+  wallet,
+  walletKit,
+  walletAddress,
+  daoAddress,
+  proposalTargetPayload,
+  network,
 }: UseSubmitProposalParams): UseSubmitProposalResult {
-    const { send: sendTx, isSending, error } = useBrotherhoodTransaction(wallet, walletKit);
+  const {
+    send: sendTx,
+    isSending,
+    error,
+  } = useBrotherhoodTransaction(wallet, walletKit);
 
-    const submit = useCallback(async () => {
-        if (!walletAddress || !daoAddress) throw new Error('Missing wallet or DAO address');
-        const ownerAddr = Address.parse(walletAddress);
-        const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-        const daoAddr = Address.parse(daoAddress);
-        const targetMsg = proposalTargetPayload ?? Cell.EMPTY;
+  const submit = useCallback(async () => {
+    if (!walletAddress || !daoAddress)
+      throw new Error('Missing wallet or DAO address');
+    const ownerAddr = Address.parse(walletAddress);
+    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+    const daoAddr = Address.parse(daoAddress);
+    const targetMsg = proposalTargetPayload ?? Cell.EMPTY;
 
-        const payload = ActSubmitProposal.toCell(
-            ActSubmitProposal.create({
-                queryId: 0n,
-                daoAddress: daoAddr,
-                targetMsg,
-            })
-        );
+    const payload = ActSubmitProposal.toCell(
+      ActSubmitProposal.create({
+        queryId: 0n,
+        daoProxyAddress: daoAddr,
+        targetMsg,
+        pollCode: Poll.CodeCell,
+      }),
+    );
 
-        await sendTx([{ toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload }]);
-    }, [walletAddress, daoAddress, proposalTargetPayload, network, sendTx]);
+    await sendTx([
+      { toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload },
+    ]);
+  }, [walletAddress, daoAddress, proposalTargetPayload, network, sendTx]);
 
-    const isDisabled = !wallet || !walletAddress || !daoAddress || isSending;
+  const isDisabled = !wallet || !walletAddress || !daoAddress || isSending;
 
-    return { submit, isDisabled, isSending, error };
+  return { submit, isDisabled, isSending, error };
 }

@@ -9,40 +9,40 @@
 import type { UserFriendlyAddress, WalletId } from '../../..';
 
 export interface TONConnectSession {
-    sessionId: string;
+  sessionId: string;
 
-    walletId: WalletId;
-    walletAddress: UserFriendlyAddress;
-    createdAt: string; // date
-    lastActivityAt: string; // date
-    privateKey: string;
-    publicKey: string;
-    domain: string;
+  walletId: WalletId;
+  walletAddress: UserFriendlyAddress;
+  createdAt: string; // date
+  lastActivityAt: string; // date
+  privateKey: string;
+  publicKey: string;
+  domain: string;
 
-    /**
-     * Display name of the dApp
-     */
-    dAppName?: string;
+  /**
+   * Display name of the dApp
+   */
+  dAppName?: string;
 
-    /**
-     * Brief description of the dApp's purpose
-     */
-    dAppDescription?: string;
+  /**
+   * Brief description of the dApp's purpose
+   */
+  dAppDescription?: string;
 
-    /**
-     * Main website URL of the dApp
-     * @format url
-     */
-    dAppUrl?: string;
+  /**
+   * Main website URL of the dApp
+   * @format url
+   */
+  dAppUrl?: string;
 
-    /**
-     * Icon/logo URL of the dApp
-     * @format url
-     */
-    dAppIconUrl?: string;
+  /**
+   * Icon/logo URL of the dApp
+   * @format url
+   */
+  dAppIconUrl?: string;
 
-    // Bridge type indicator (needed to determine how to send disconnect events)
-    isJsBridge?: boolean; // true if session was created via JS Bridge, false/undefined for HTTP Bridge
+  // Bridge type indicator (needed to determine how to send disconnect events)
+  isJsBridge?: boolean; // true if session was created via JS Bridge, false/undefined for HTTP Bridge
 
-    schemaVersion: number;
+  schemaVersion: number;
 }

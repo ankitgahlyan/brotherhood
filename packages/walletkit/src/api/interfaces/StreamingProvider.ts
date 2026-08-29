@@ -6,41 +6,58 @@
  *
  */
 
-import type { BalanceUpdate, TransactionsUpdate, JettonUpdate, Network, BaseProvider } from '../models';
+import type {
+  BalanceUpdate,
+  TransactionsUpdate,
+  JettonUpdate,
+  Network,
+  BaseProvider,
+} from '../models';
 import type { ProviderFactoryContext } from '../../types/factory';
 export interface StreamingProvider extends BaseProvider {
-    readonly type: 'streaming';
-    readonly network: Network;
+  readonly type: 'streaming';
+  readonly network: Network;
 
-    /**
-     * Watch account balance changes. Returns an unsubscribe function.
-     */
-    watchBalance(address: string, onChange: (update: BalanceUpdate) => void): () => void;
+  /**
+   * Watch account balance changes. Returns an unsubscribe function.
+   */
+  watchBalance(
+    address: string,
+    onChange: (update: BalanceUpdate) => void,
+  ): () => void;
 
-    /**
-     * Watch transactions for an address. Returns an unsubscribe function.
-     */
-    watchTransactions(address: string, onChange: (update: TransactionsUpdate) => void): () => void;
+  /**
+   * Watch transactions for an address. Returns an unsubscribe function.
+   */
+  watchTransactions(
+    address: string,
+    onChange: (update: TransactionsUpdate) => void,
+  ): () => void;
 
-    /**
-     * Watch jetton changes for an address. Returns an unsubscribe function.
-     */
-    watchJettons(address: string, onChange: (update: JettonUpdate) => void): () => void;
+  /**
+   * Watch jetton changes for an address. Returns an unsubscribe function.
+   */
+  watchJettons(
+    address: string,
+    onChange: (update: JettonUpdate) => void,
+  ): () => void;
 
-    /**
-     * Close the connection without dropping subscriptions.
-     */
-    disconnect(): void;
+  /**
+   * Close the connection without dropping subscriptions.
+   */
+  disconnect(): void;
 
-    /**
-     * Connect (or reconnect) and resume all active subscriptions.
-     */
-    connect(): void;
+  /**
+   * Connect (or reconnect) and resume all active subscriptions.
+   */
+  connect(): void;
 
-    /**
-     * Subscribe to connection state changes. Returns an unsubscribe function.
-     */
-    onConnectionChange(callback: (connected: boolean) => void): () => void;
+  /**
+   * Subscribe to connection state changes. Returns an unsubscribe function.
+   */
+  onConnectionChange(callback: (connected: boolean) => void): () => void;
 }
 
-export type StreamingProviderFactory = (ctx: ProviderFactoryContext) => StreamingProvider;
+export type StreamingProviderFactory = (
+  ctx: ProviderFactoryContext,
+) => StreamingProvider;

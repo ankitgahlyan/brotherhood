@@ -12,8 +12,8 @@
  * @see https://chainagnostic.org/CAIPs/caip-2
  */
 export interface Caip2 {
-    namespace: string;
-    reference: string;
+  namespace: string;
+  reference: string;
 }
 
 /**
@@ -25,14 +25,14 @@ export interface Caip2 {
  * so the entries leave room for testnet additions later.
  */
 export const Caip2ByNetwork = {
-    EthereumMainnet: 'eip155:1',
-    OptimismMainnet: 'eip155:10',
-    BscMainnet: 'eip155:56',
-    PolygonMainnet: 'eip155:137',
-    BaseMainnet: 'eip155:8453',
-    ArbitrumMainnet: 'eip155:42161',
-    AvalancheMainnet: 'eip155:43114',
-    SolanaMainnet: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-    BitcoinMainnet: 'bip122:000000000019d6689c085ae165831e93',
-    TronMainnet: 'tron:mainnet',
+  EthereumMainnet: 'eip155:1',
+  OptimismMainnet: 'eip155:10',
+  BscMainnet: 'eip155:56',
+  PolygonMainnet: 'eip155:137',
+  BaseMainnet: 'eip155:8453',
+  ArbitrumMainnet: 'eip155:42161',
+  AvalancheMainnet: 'eip155:43114',
+  SolanaMainnet: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+  BitcoinMainnet: 'bip122:000000000019d6689c085ae165831e93',
+  TronMainnet: 'tron:mainnet',
 } as const;

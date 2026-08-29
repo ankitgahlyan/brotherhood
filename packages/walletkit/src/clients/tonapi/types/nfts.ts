@@ -9,44 +9,44 @@
 import type { TonApiAccountAddress } from './accounts';
 
 export interface TonApiNftCollection {
-    address: string;
-    name: string;
-    description: string;
+  address: string;
+  name: string;
+  description: string;
 }
 
 export interface TonApiNftAttribute {
-    trait_type: string;
-    value: string;
+  trait_type: string;
+  value: string;
 }
 
 export interface TonApiNftMetadata {
-    attributes?: TonApiNftAttribute[];
-    content_url?: string;
-    description?: string;
-    name?: string;
-    image?: string;
+  attributes?: TonApiNftAttribute[];
+  content_url?: string;
+  description?: string;
+  name?: string;
+  image?: string;
 }
 
 export interface TonApiNftPreview {
-    resolution: string;
-    url: string;
+  resolution: string;
+  url: string;
 }
 
 export interface TonApiNftItem {
-    address: string;
-    index: number;
-    owner?: TonApiAccountAddress;
-    collection?: TonApiNftCollection;
-    verified: boolean;
-    metadata: TonApiNftMetadata;
-    sale?: unknown;
-    previews?: TonApiNftPreview[];
-    dns?: string;
-    approved_by?: string[];
-    include_cnft?: boolean;
-    trust: 'whitelist' | 'graylist' | 'blacklist' | 'none';
+  address: string;
+  index: number;
+  owner?: TonApiAccountAddress;
+  collection?: TonApiNftCollection;
+  verified: boolean;
+  metadata: TonApiNftMetadata;
+  sale?: unknown;
+  previews?: TonApiNftPreview[];
+  dns?: string;
+  approved_by?: string[];
+  include_cnft?: boolean;
+  trust: 'whitelist' | 'graylist' | 'blacklist' | 'none';
 }
 
 export interface TonApiNftItems {
-    nft_items: TonApiNftItem[];
+  nft_items: TonApiNftItem[];
 }

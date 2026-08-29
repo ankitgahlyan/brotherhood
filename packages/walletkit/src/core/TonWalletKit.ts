@@ -11,11 +11,11 @@
 import { Address } from '@ton/core';
 import { CONNECT_EVENT_ERROR_CODES } from '@tonconnect/protocol';
 import type {
-    ConnectEventError,
-    ConnectEventSuccess,
-    ConnectRequest,
-    DisconnectEvent,
-    SendTransactionRpcResponseError,
+  ConnectEventError,
+  ConnectEventSuccess,
+  ConnectRequest,
+  DisconnectEvent,
+  SendTransactionRpcResponseError,
 } from '@tonconnect/protocol';
 import { SessionCrypto } from '@tonconnect/protocol';
 
@@ -35,16 +35,24 @@ import { StakingManager } from '../defi/staking';
 import type { GaslessProvider } from '../defi/gasless';
 import { GaslessManager } from '../defi/gasless';
 import type {
-    RawBridgeEventConnect,
-    RawBridgeEventRestoreConnection,
-    RawBridgeEventTransaction,
+  RawBridgeEventConnect,
+  RawBridgeEventRestoreConnection,
+  RawBridgeEventTransaction,
 } from '../types/internal';
 import { toConnectTransactionParamContent } from '../types/internal';
 import { EventEmitter } from './EventEmitter';
 import type { StorageEventProcessor } from './EventProcessor';
 import type { BridgeManager } from './BridgeManager';
-import type { BridgeEventMessageInfo, InjectedToExtensionBridgeRequestPayload } from '../types/jsBridge';
-import type { ApiClient, StakingProviderInterface, StreamingProvider, SwapProviderInterface } from '../api/interfaces';
+import type {
+  BridgeEventMessageInfo,
+  InjectedToExtensionBridgeRequestPayload,
+} from '../types/jsBridge';
+import type {
+  ApiClient,
+  StakingProviderInterface,
+  StreamingProvider,
+  SwapProviderInterface,
+} from '../api/interfaces';
 import { StreamingManager } from '../streaming/StreamingManager';
 import { CustomProvidersManager } from '../providers';
 import type { CustomProvider } from '../providers';
@@ -58,22 +66,22 @@ import { KitNetworkManager } from './NetworkManager';
 import type { WalletId } from '../utils/walletId';
 import type { StreamingAPI, Wallet, WalletAdapter } from '../api/interfaces';
 import type {
-    Network,
-    TransactionRequest,
-    SendTransactionRequestEvent,
-    BridgeEvent,
-    RequestErrorEvent,
-    DisconnectionEvent,
-    SignDataRequestEvent,
-    SignMessageRequestEvent,
-    ConnectionRequestEvent,
-    SendTransactionApprovalResponse,
-    SignDataApprovalResponse,
-    SignMessageApprovalResponse,
-    TONConnectSession,
-    ConnectionApprovalResponse,
-    EmbeddedRequestEvent,
-    BaseProvider,
+  Network,
+  TransactionRequest,
+  SendTransactionRequestEvent,
+  BridgeEvent,
+  RequestErrorEvent,
+  DisconnectionEvent,
+  SignDataRequestEvent,
+  SignMessageRequestEvent,
+  ConnectionRequestEvent,
+  SendTransactionApprovalResponse,
+  SignDataApprovalResponse,
+  SignMessageApprovalResponse,
+  TONConnectSession,
+  ConnectionApprovalResponse,
+  EmbeddedRequestEvent,
+  BaseProvider,
 } from '../api/models';
 import { asAddressFriendly } from '../utils';
 import { parseEmbeddedRequestFromReqParam } from '../utils/embeddedRequest';
@@ -93,875 +101,939 @@ const log = globalLogger.createChild('TonWalletKit');
  * - Initializer: component setup & teardown
  */
 export class TonWalletKit implements ITonWalletKit {
-    // Component references
-    private walletManager!: WalletManager;
-    private sessionManager!: TONConnectSessionManager;
-    private eventRouter!: EventRouter;
-    private requestProcessor!: RequestProcessor;
-    // private responseHandler!: ResponseHandler;
-    private networkManager: NetworkManager;
-    private jettonsManager!: JettonsManager;
-    private swapManager: SwapManager;
-    private streamingManager: StreamingManager;
-    private stakingManager: StakingManager;
-    private gaslessManager: GaslessManager;
-    private customProvidersManager: CustomProvidersManager;
-    private initializer: Initializer;
-    private eventProcessor!: StorageEventProcessor;
-    private bridgeManager!: BridgeManager;
-    private config: TonWalletKitOptions;
+  // Component references
+  private walletManager!: WalletManager;
+  private sessionManager!: TONConnectSessionManager;
+  private eventRouter!: EventRouter;
+  private requestProcessor!: RequestProcessor;
+  // private responseHandler!: ResponseHandler;
+  private networkManager: NetworkManager;
+  private jettonsManager!: JettonsManager;
+  private swapManager: SwapManager;
+  private streamingManager: StreamingManager;
+  private stakingManager: StakingManager;
+  private gaslessManager: GaslessManager;
+  private customProvidersManager: CustomProvidersManager;
+  private initializer: Initializer;
+  private eventProcessor!: StorageEventProcessor;
+  private bridgeManager!: BridgeManager;
+  private config: TonWalletKitOptions;
 
-    // Event emitter for this kit instance
-    private eventEmitter: WalletKitEventEmitter;
+  // Event emitter for this kit instance
+  private eventEmitter: WalletKitEventEmitter;
 
-    // State
-    private isInitialized = false;
-    private initializationPromise?: Promise<void>;
-    private analyticsManager?: AnalyticsManager;
+  // State
+  private isInitialized = false;
+  private initializationPromise?: Promise<void>;
+  private analyticsManager?: AnalyticsManager;
 
-    constructor(options: TonWalletKitOptions) {
-        this.config = options;
+  constructor(options: TonWalletKitOptions) {
+    this.config = options;
 
-        if (options?.analytics?.enabled) {
-            this.analyticsManager = new AnalyticsManager({
-                ...options?.analytics,
-                appInfo: {
-                    appName: options?.deviceInfo?.appName,
-                    appVersion: options?.deviceInfo?.appVersion,
-                    ...options?.analytics?.appInfo,
-                },
-            });
-        }
+    if (options?.analytics?.enabled) {
+      this.analyticsManager = new AnalyticsManager({
+        ...options?.analytics,
+        appInfo: {
+          appName: options?.deviceInfo?.appName,
+          appVersion: options?.deviceInfo?.appVersion,
+          ...options?.analytics?.appInfo,
+        },
+      });
+    }
 
-        // Initialize NetworkManager for multi-network support
-        this.networkManager = new KitNetworkManager(options);
+    // Initialize NetworkManager for multi-network support
+    this.networkManager = new KitNetworkManager(options);
 
-        this.eventEmitter = new EventEmitter<WalletKitEvents>();
-        this.streamingManager = new StreamingManager(() => this.createFactoryContext());
-        this.initializer = new Initializer(options, this.eventEmitter, this.analyticsManager);
+    this.eventEmitter = new EventEmitter<WalletKitEvents>();
+    this.streamingManager = new StreamingManager(() =>
+      this.createFactoryContext(),
+    );
+    this.initializer = new Initializer(
+      options,
+      this.eventEmitter,
+      this.analyticsManager,
+    );
 
-        // Auto-initialize (lazy)
-        this.initializationPromise = this.initialize();
+    // Auto-initialize (lazy)
+    this.initializationPromise = this.initialize();
 
-        // Initialize JettonsManager with NetworkManager for multi-network support
-        this.jettonsManager = new JettonsManager(10000, this.eventEmitter, this.networkManager);
+    // Initialize JettonsManager with NetworkManager for multi-network support
+    this.jettonsManager = new JettonsManager(
+      10000,
+      this.eventEmitter,
+      this.networkManager,
+    );
 
-        // Initialize SwapManager
-        this.swapManager = new SwapManager(() => this.createFactoryContext());
-        // Initialize StakingManager
-        this.stakingManager = new StakingManager(() => this.createFactoryContext());
-        // Initialize GaslessManager
-        this.gaslessManager = new GaslessManager(() => this.createFactoryContext());
-        // Initialize CustomProvidersManager
-        this.customProvidersManager = new CustomProvidersManager(() => this.createFactoryContext());
+    // Initialize SwapManager
+    this.swapManager = new SwapManager(() => this.createFactoryContext());
+    // Initialize StakingManager
+    this.stakingManager = new StakingManager(() => this.createFactoryContext());
+    // Initialize GaslessManager
+    this.gaslessManager = new GaslessManager(() => this.createFactoryContext());
+    // Initialize CustomProvidersManager
+    this.customProvidersManager = new CustomProvidersManager(() =>
+      this.createFactoryContext(),
+    );
 
-        this.eventEmitter.on('restoreConnection', async ({ payload: event }) => {
-            if (!event.domain) {
-                log.error('Domain is required for restore connection');
-                return this.sendErrorConnectResponse(event);
-            }
-            // We are passing isJsBridge true because restoreConnection is only performed
-            // in an code that injected into web view or browser extension (e.g. injected bridge)
-            const sessions = await this.sessionManager.getSessions({
-                walletId: event.walletId,
-                domain: event.domain,
-                isJsBridge: true,
-            });
+    this.eventEmitter.on('restoreConnection', async ({ payload: event }) => {
+      if (!event.domain) {
+        log.error('Domain is required for restore connection');
+        return this.sendErrorConnectResponse(event);
+      }
+      // We are passing isJsBridge true because restoreConnection is only performed
+      // in an code that injected into web view or browser extension (e.g. injected bridge)
+      const sessions = await this.sessionManager.getSessions({
+        walletId: event.walletId,
+        domain: event.domain,
+        isJsBridge: true,
+      });
 
-            const session = sessions.length > 0 ? sessions[0] : undefined;
+      const session = sessions.length > 0 ? sessions[0] : undefined;
 
-            if (!session) {
-                log.error('Session not found for domain', { domain: event.domain });
-                return this.sendErrorConnectResponse(event);
-            }
+      if (!session) {
+        log.error('Session not found for domain', { domain: event.domain });
+        return this.sendErrorConnectResponse(event);
+      }
 
-            // Get the wallet to determine its network - use walletId if available, fall back to walletAddress
-            const wallet = session.walletId ? this.walletManager?.getWallet(session.walletId) : undefined;
-            if (!wallet) {
-                log.error('Wallet not found for session', { walletId: session.walletId });
-                return this.sendErrorConnectResponse(event);
-            }
-
-            const walletAddress = wallet.getAddress();
-
-            // Get wallet state init and public key for the response
-            const walletStateInit = await wallet.getStateInit();
-            const publicKey = wallet.getPublicKey().replace('0x', '');
-
-            // Get device info with wallet-specific features if available
-            const deviceInfo = getDeviceInfoForWallet(wallet, this.config.deviceInfo);
-
-            // Create base response data
-            const tonConnectEvent: ConnectEventSuccess = {
-                event: 'connect',
-                id: Date.now(),
-                payload: {
-                    device: deviceInfo,
-                    items: [
-                        {
-                            name: 'ton_addr',
-                            address: Address.parse(walletAddress).toRawString(),
-                            // TODO: Support multiple networks
-                            network: wallet.getNetwork().chainId,
-                            walletStateInit,
-                            publicKey,
-                        },
-                    ],
-                },
-            };
-
-            this.bridgeManager.sendJsBridgeResponse(
-                event?.tabId?.toString() || '',
-                true,
-                event?.id ?? event?.messageId,
-                tonConnectEvent,
-            );
+      // Get the wallet to determine its network - use walletId if available, fall back to walletAddress
+      const wallet = session.walletId
+        ? this.walletManager?.getWallet(session.walletId)
+        : undefined;
+      if (!wallet) {
+        log.error('Wallet not found for session', {
+          walletId: session.walletId,
         });
-    }
+        return this.sendErrorConnectResponse(event);
+      }
 
-    createFactoryContext(): ProviderFactoryContext<WalletKitEvents> {
-        return {
-            networkManager: this.networkManager,
-            eventEmitter: this.eventEmitter,
-        };
-    }
+      const walletAddress = wallet.getAddress();
 
-    private async sendErrorConnectResponse(event: RawBridgeEventRestoreConnection): Promise<void> {
-        const tonConnectEvent: ConnectEventError = {
-            event: 'connect_error',
-            id: Date.now(),
-            payload: {
-                code: CONNECT_EVENT_ERROR_CODES.UNKNOWN_APP_ERROR,
-                message: '',
+      // Get wallet state init and public key for the response
+      const walletStateInit = await wallet.getStateInit();
+      const publicKey = wallet.getPublicKey().replace('0x', '');
+
+      // Get device info with wallet-specific features if available
+      const deviceInfo = getDeviceInfoForWallet(wallet, this.config.deviceInfo);
+
+      // Create base response data
+      const tonConnectEvent: ConnectEventSuccess = {
+        event: 'connect',
+        id: Date.now(),
+        payload: {
+          device: deviceInfo,
+          items: [
+            {
+              name: 'ton_addr',
+              address: Address.parse(walletAddress).toRawString(),
+              // TODO: Support multiple networks
+              network: wallet.getNetwork().chainId,
+              walletStateInit,
+              publicKey,
             },
-        };
+          ],
+        },
+      };
 
-        await this.bridgeManager.sendJsBridgeResponse(
-            event?.tabId?.toString() || '',
-            true,
-            event?.id ?? event?.messageId,
-            tonConnectEvent,
-        );
+      this.bridgeManager.sendJsBridgeResponse(
+        event?.tabId?.toString() || '',
+        true,
+        event?.id ?? event?.messageId,
+        tonConnectEvent,
+      );
+    });
+  }
+
+  createFactoryContext(): ProviderFactoryContext<WalletKitEvents> {
+    return {
+      networkManager: this.networkManager,
+      eventEmitter: this.eventEmitter,
+    };
+  }
+
+  private async sendErrorConnectResponse(
+    event: RawBridgeEventRestoreConnection,
+  ): Promise<void> {
+    const tonConnectEvent: ConnectEventError = {
+      event: 'connect_error',
+      id: Date.now(),
+      payload: {
+        code: CONNECT_EVENT_ERROR_CODES.UNKNOWN_APP_ERROR,
+        message: '',
+      },
+    };
+
+    await this.bridgeManager.sendJsBridgeResponse(
+      event?.tabId?.toString() || '',
+      true,
+      event?.id ?? event?.messageId,
+      tonConnectEvent,
+    );
+  }
+
+  // === Initialization ===
+
+  /**
+   * Initialize all components
+   */
+  private async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    try {
+      const components = await this.initializer.initialize(
+        this.config,
+        this.networkManager,
+      );
+      this.assignComponents(components);
+      await this.setupEventRouting();
+
+      // Start the event processor recovery loop
+      this.eventProcessor.startRecoveryLoop();
+
+      // Start no-wallet event processing (for connect events)
+      await this.eventProcessor.startProcessing();
+
+      this.isInitialized = true;
+    } catch (error: any) {
+      log.error('TonWalletKit initialization failed', {
+        error: error?.toString(),
+      });
+      throw error;
     }
+  }
 
-    // === Initialization ===
+  /**
+   * Assign initialized components
+   */
+  private assignComponents(components: InitializationResult): void {
+    this.walletManager = components.walletManager;
+    this.sessionManager = components.sessionManager;
+    this.eventRouter = components.eventRouter;
+    this.requestProcessor = components.requestProcessor;
+    this.eventProcessor = components.eventProcessor;
+    this.bridgeManager = components.bridgeManager;
+  }
 
-    /**
-     * Initialize all components
-     */
-    private async initialize(): Promise<void> {
-        if (this.isInitialized) return;
+  /**
+   * Setup event routing from bridge to handlers
+   */
+  private async setupEventRouting(): Promise<void> {
+    // The event routing logic will use the existing EventRouter
+    // but integrate with our new ResponseHandler for error cases
 
-        try {
-            const components = await this.initializer.initialize(this.config, this.networkManager);
-            this.assignComponents(components);
-            await this.setupEventRouting();
+    // Start event processing for existing wallets
+    await this.startProcessingForExistingWallets();
+  }
 
-            // Start the event processor recovery loop
-            this.eventProcessor.startRecoveryLoop();
+  /**
+   * Start event processing for all existing wallets
+   */
+  private async startProcessingForExistingWallets(): Promise<void> {
+    const wallets = this.walletManager.getWallets();
 
-            // Start no-wallet event processing (for connect events)
-            await this.eventProcessor.startProcessing();
-
-            this.isInitialized = true;
-             
-        } catch (error: any) {
-            log.error('TonWalletKit initialization failed', { error: error?.toString() });
-            throw error;
-        }
-    }
-
-    /**
-     * Assign initialized components
-     */
-    private assignComponents(components: InitializationResult): void {
-        this.walletManager = components.walletManager;
-        this.sessionManager = components.sessionManager;
-        this.eventRouter = components.eventRouter;
-        this.requestProcessor = components.requestProcessor;
-        this.eventProcessor = components.eventProcessor;
-        this.bridgeManager = components.bridgeManager;
-    }
-
-    /**
-     * Setup event routing from bridge to handlers
-     */
-    private async setupEventRouting(): Promise<void> {
-        // The event routing logic will use the existing EventRouter
-        // but integrate with our new ResponseHandler for error cases
-
-        // Start event processing for existing wallets
-        await this.startProcessingForExistingWallets();
-    }
-
-    /**
-     * Start event processing for all existing wallets
-     */
-    private async startProcessingForExistingWallets(): Promise<void> {
-        const wallets = this.walletManager.getWallets();
-
-        for (const wallet of wallets) {
-            try {
-                const walletId = wallet.getWalletId();
-                await this.eventProcessor.startProcessing(walletId);
-            } catch (error) {
-                log.error('Failed to start event processing for wallet', {
-                    walletAddress: wallet.getAddress(),
-                    error,
-                });
-            }
-        }
-    }
-
-    /**
-     * Ensure initialization is complete
-     */
-    async ensureInitialized(): Promise<void> {
-        if (this.initializationPromise) {
-            await this.initializationPromise;
-        }
-    }
-
-    /**
-     * Get all configured networks
-     */
-    getConfiguredNetworks(): Network[] {
-        return this.networkManager.getConfiguredNetworks();
-    }
-
-    // === Wallet Management API (Delegated) ===
-
-    getWallets(): Wallet[] {
-        if (!this.isInitialized) {
-            log.warn('TonWalletKit not yet initialized, returning empty array');
-            return [];
-        }
-        return this.walletManager.getWallets();
-    }
-
-    /**
-     * Get wallet by wallet ID (network:address format)
-     */
-    getWallet(walletId: WalletId): Wallet | undefined {
-        if (!this.isInitialized) {
-            log.warn('TonWalletKit not yet initialized, returning undefined');
-            return undefined;
-        }
-        return this.walletManager.getWallet(walletId);
-    }
-
-    async addWallet(adapter: WalletAdapter): Promise<Wallet | undefined> {
-        await this.ensureInitialized();
-
-        // Get the wallet's network and verify we have a client for it
-        const walletNetwork = adapter.getNetwork();
-        if (!this.networkManager.hasNetwork(walletNetwork)) {
-            throw new WalletKitError(
-                ERROR_CODES.NETWORK_NOT_CONFIGURED,
-                `No API client configured for wallet network ${walletNetwork}`,
-                undefined,
-                { walletNetwork, configuredNetworks: this.networkManager.getConfiguredNetworks() },
-            );
-        }
-
-        const wallet = await wrapWalletInterface(adapter);
-        const walletId = await this.walletManager.addWallet(wallet);
-
-        // Start event processing for the wallet (whether new or existing)
-        await this.eventProcessor.startProcessing(walletId);
-        return wallet;
-    }
-
-    async removeWallet(walletIdOrAdapter: WalletId | WalletAdapter): Promise<void> {
-        await this.ensureInitialized();
-
-        let wallet: Wallet | undefined;
-        let walletId: WalletId;
-        if (typeof walletIdOrAdapter === 'string') {
-            walletId = walletIdOrAdapter;
-            wallet = this.walletManager.getWallet(walletIdOrAdapter);
-        } else {
-            walletId = this.walletManager.getWalletId(walletIdOrAdapter);
-            wallet = this.walletManager.getWallet(walletId);
-        }
-
-        if (!wallet) {
-            throw new WalletKitError(ERROR_CODES.WALLET_NOT_FOUND, 'Wallet not found for removal', undefined, {
-                walletId,
-            });
-        }
-
-        // Stop event processing for the wallet
-        await this.eventProcessor.stopProcessing(wallet.getAddress());
-
-        await this.walletManager.removeWallet(walletId);
-        // Also remove associated sessions
-        await this.sessionManager.removeSessions({ walletId });
-    }
-
-    async clearWallets(): Promise<void> {
-        await this.ensureInitialized();
-
-        // Stop event processing for all wallets
-        const wallets = this.walletManager.getWallets();
-        for (const wallet of wallets) {
-            await this.eventProcessor.stopProcessing(wallet.getAddress());
-        }
-
-        await this.walletManager.clearWallets();
-        await this.sessionManager.clearSessions();
-    }
-
-    // === Session Management API (Delegated) ===
-
-    async disconnect(sessionId?: string): Promise<void> {
-        await this.ensureInitialized();
-
-        const removeSession = async (sessionId: string) => {
-            // Get session to check if it's a JS bridge session
-            const session = await this.sessionManager.getSession(sessionId);
-
-            if (session) {
-                try {
-                    const sessionCrypto = new SessionCrypto({
-                        publicKey: session.publicKey,
-                        secretKey: session.privateKey,
-                    });
-
-                    // For HTTP bridge sessions, send as a response
-                    await CallForSuccess(
-                        () =>
-                            this.bridgeManager.sendResponse(
-                                {
-                                    sessionId: sessionId,
-                                    isJsBridge: session?.isJsBridge,
-                                    id: Date.now(),
-                                    from: sessionId,
-                                } as unknown as BridgeEvent,
-                                {
-                                    event: 'disconnect',
-                                    id: Date.now(),
-                                    payload: {},
-                                } as DisconnectEvent,
-                                sessionCrypto,
-                            ),
-                        10,
-                        100,
-                    );
-                } catch (error) {
-                    log.error('Failed to send disconnect to bridge', { sessionId, error });
-                }
-            }
-
-            await this.sessionManager.removeSession(sessionId);
-        };
-        if (sessionId) {
-            try {
-                await removeSession(sessionId);
-            } catch (error) {
-                log.error('Failed to remove session', { sessionId, error });
-            }
-        } else {
-            const sessions = await this.sessionManager.getSessions();
-            if (sessions.length > 0) {
-                for (const session of sessions) {
-                    try {
-                        await removeSession(session.sessionId);
-                    } catch (error) {
-                        log.error('Failed to remove session', { sessionId: session.sessionId, error });
-                    }
-                }
-            }
-        }
-    }
-
-    async listSessions(): Promise<TONConnectSession[]> {
-        await this.ensureInitialized();
-        return await this.sessionManager.getSessions();
-    }
-
-    // === Event Handler Registration (Delegated) ===
-
-    onConnectRequest(cb: (event: ConnectionRequestEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onConnectRequest(cb);
-        } else {
-            // Queue callback until initialized
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onConnectRequest(cb);
-            });
-        }
-    }
-
-    onTransactionRequest(cb: (event: SendTransactionRequestEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onTransactionRequest(cb);
-        } else {
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onTransactionRequest(cb);
-            });
-        }
-    }
-
-    onSignDataRequest(cb: (event: SignDataRequestEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onSignDataRequest(cb);
-        } else {
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onSignDataRequest(cb);
-            });
-        }
-    }
-
-    onDisconnect(cb: (event: DisconnectionEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onDisconnect(cb);
-        } else {
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onDisconnect(cb);
-            });
-        }
-    }
-
-    removeConnectRequestCallback(): void {
-        this.eventRouter.removeConnectRequestCallback();
-    }
-
-    removeTransactionRequestCallback(): void {
-        this.eventRouter.removeTransactionRequestCallback();
-    }
-
-    removeSignDataRequestCallback(): void {
-        this.eventRouter.removeSignDataRequestCallback();
-    }
-
-    onSignMessageRequest(cb: (event: SignMessageRequestEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onSignMessageRequest(cb);
-        } else {
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onSignMessageRequest(cb);
-            });
-        }
-    }
-
-    removeSignMessageRequestCallback(): void {
-        this.eventRouter.removeSignMessageRequestCallback();
-    }
-
-    removeDisconnectCallback(): void {
-        this.eventRouter.removeDisconnectCallback();
-    }
-
-    onRequestError(cb: (event: RequestErrorEvent) => void): void {
-        if (this.eventRouter) {
-            this.eventRouter.onRequestError(cb);
-        } else {
-            this.ensureInitialized().then(() => {
-                this.eventRouter.onRequestError(cb);
-            });
-        }
-    }
-
-    removeErrorCallback(): void {
-        this.eventRouter.removeErrorCallback();
-    }
-
-    // === URL Parsing API ===
-
-    /**
-     * Allow to convert url to ConnectionRequestEvent to use inline way
-     */
-    async connectionEventFromUrl(url: string): Promise<ConnectionRequestEvent> {
-        await this.ensureInitialized();
-
-        try {
-            const bridgeEvent = this.parseBridgeConnectEventFromUrl(url);
-            const handler = new ConnectHandler(() => {}, this.config, this.analyticsManager);
-            return await handler.handle(bridgeEvent);
-        } catch (error) {
-            log.error('Failed to create connection event from URL', { error, url });
-            throw error;
-        }
-    }
-
-    // === URL Processing API ===
-
-    /**
-     * Handle pasted TON Connect URL/link
-     * Parses the URL and creates a connect request event
-     */
-    async handleTonConnectUrl(url: string): Promise<void> {
-        await this.ensureInitialized();
-
-        try {
-            const bridgeEvent = this.parseBridgeConnectEventFromUrl(url);
-            await this.eventRouter.routeEvent(bridgeEvent);
-        } catch (error) {
-            log.error('Failed to handle TON Connect URL', { error, url });
-            throw error;
-        }
-    }
-
-    async handleNewTransaction(wallet: Wallet, data: TransactionRequest): Promise<void> {
-        await this.ensureInitialized();
-
-        data.validUntil ??= Math.floor(Date.now() / 1000) + 300;
-        data.network ??= wallet.getNetwork();
-
+    for (const wallet of wallets) {
+      try {
         const walletId = wallet.getWalletId();
-        const bridgeEvent: RawBridgeEventTransaction = {
-            id: Date.now().toString(),
-            method: 'sendTransaction',
-            params: [JSON.stringify(toConnectTransactionParamContent(data))],
-            from: '',
-            domain: '',
-            isLocal: true,
-            walletId,
-            walletAddress: asAddressFriendly(wallet.getAddress()),
-        };
-        await this.eventRouter.routeEvent(bridgeEvent);
+        await this.eventProcessor.startProcessing(walletId);
+      } catch (error) {
+        log.error('Failed to start event processing for wallet', {
+          walletAddress: wallet.getAddress(),
+          error,
+        });
+      }
+    }
+  }
+
+  /**
+   * Ensure initialization is complete
+   */
+  async ensureInitialized(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+    }
+  }
+
+  /**
+   * Get all configured networks
+   */
+  getConfiguredNetworks(): Network[] {
+    return this.networkManager.getConfiguredNetworks();
+  }
+
+  // === Wallet Management API (Delegated) ===
+
+  getWallets(): Wallet[] {
+    if (!this.isInitialized) {
+      log.warn('TonWalletKit not yet initialized, returning empty array');
+      return [];
+    }
+    return this.walletManager.getWallets();
+  }
+
+  /**
+   * Get wallet by wallet ID (network:address format)
+   */
+  getWallet(walletId: WalletId): Wallet | undefined {
+    if (!this.isInitialized) {
+      log.warn('TonWalletKit not yet initialized, returning undefined');
+      return undefined;
+    }
+    return this.walletManager.getWallet(walletId);
+  }
+
+  async addWallet(adapter: WalletAdapter): Promise<Wallet | undefined> {
+    await this.ensureInitialized();
+
+    // Get the wallet's network and verify we have a client for it
+    const walletNetwork = adapter.getNetwork();
+    if (!this.networkManager.hasNetwork(walletNetwork)) {
+      throw new WalletKitError(
+        ERROR_CODES.NETWORK_NOT_CONFIGURED,
+        `No API client configured for wallet network ${walletNetwork}`,
+        undefined,
+        {
+          walletNetwork,
+          configuredNetworks: this.networkManager.getConfiguredNetworks(),
+        },
+      );
     }
 
-    /**
-     * Parse and validate TON Connect URL into a RawBridgeEventConnect
-     */
-    private parseBridgeConnectEventFromUrl(url: string): RawBridgeEventConnect {
-        const parsedUrl = this.parseTonConnectUrl(url);
-        if (!parsedUrl) {
-            throw new WalletKitError(ERROR_CODES.VALIDATION_ERROR, 'Invalid TON Connect URL format', undefined, {
-                url,
-            });
-        }
+    const wallet = await wrapWalletInterface(adapter);
+    const walletId = await this.walletManager.addWallet(wallet);
 
-        const bridgeEvent = this.createConnectEventFromUrl(parsedUrl);
-        if (!bridgeEvent) {
-            throw new WalletKitError(
-                ERROR_CODES.VALIDATION_ERROR,
-                'Invalid TON Connect URL - unable to create bridge event',
-                undefined,
-                { parsedUrl },
-            );
-        }
+    // Start event processing for the wallet (whether new or existing)
+    await this.eventProcessor.startProcessing(walletId);
+    return wallet;
+  }
 
-        return bridgeEvent;
+  async removeWallet(
+    walletIdOrAdapter: WalletId | WalletAdapter,
+  ): Promise<void> {
+    await this.ensureInitialized();
+
+    let wallet: Wallet | undefined;
+    let walletId: WalletId;
+    if (typeof walletIdOrAdapter === 'string') {
+      walletId = walletIdOrAdapter;
+      wallet = this.walletManager.getWallet(walletIdOrAdapter);
+    } else {
+      walletId = this.walletManager.getWalletId(walletIdOrAdapter);
+      wallet = this.walletManager.getWallet(walletId);
     }
 
-    /**
-     * Parse TON Connect URL to extract connection parameters
-     */
-    private parseTonConnectUrl(url: string): {
-        version: string;
-        clientId: string;
-        requestId: string;
-        returnStrategy: string;
-        r: string;
-        [key: string]: string;
-    } | null {
+    if (!wallet) {
+      throw new WalletKitError(
+        ERROR_CODES.WALLET_NOT_FOUND,
+        'Wallet not found for removal',
+        undefined,
+        {
+          walletId,
+        },
+      );
+    }
+
+    // Stop event processing for the wallet
+    await this.eventProcessor.stopProcessing(wallet.getAddress());
+
+    await this.walletManager.removeWallet(walletId);
+    // Also remove associated sessions
+    await this.sessionManager.removeSessions({ walletId });
+  }
+
+  async clearWallets(): Promise<void> {
+    await this.ensureInitialized();
+
+    // Stop event processing for all wallets
+    const wallets = this.walletManager.getWallets();
+    for (const wallet of wallets) {
+      await this.eventProcessor.stopProcessing(wallet.getAddress());
+    }
+
+    await this.walletManager.clearWallets();
+    await this.sessionManager.clearSessions();
+  }
+
+  // === Session Management API (Delegated) ===
+
+  async disconnect(sessionId?: string): Promise<void> {
+    await this.ensureInitialized();
+
+    const removeSession = async (sessionId: string) => {
+      // Get session to check if it's a JS bridge session
+      const session = await this.sessionManager.getSession(sessionId);
+
+      if (session) {
         try {
-            const parsedUrl = new URL(url);
+          const sessionCrypto = new SessionCrypto({
+            publicKey: session.publicKey,
+            secretKey: session.privateKey,
+          });
 
-            // Extract query parameters
-            const params: { [key: string]: string } = {};
-            for (const [key, value] of parsedUrl.searchParams.entries()) {
-                params[key] = value;
-            }
-
-            // Validate required parameters
-            if (!params.v || !params.id || !params.r) {
-                log.warn('Missing required TON Connect URL parameters');
-                return null;
-            }
-
-            return {
-                version: params.v,
-                clientId: params.id,
-                requestId: params.id,
-                returnStrategy: params.ret || 'back',
-                r: params.r,
-                ...params,
-            };
+          // For HTTP bridge sessions, send as a response
+          await CallForSuccess(
+            () =>
+              this.bridgeManager.sendResponse(
+                {
+                  sessionId: sessionId,
+                  isJsBridge: session?.isJsBridge,
+                  id: Date.now(),
+                  from: sessionId,
+                } as unknown as BridgeEvent,
+                {
+                  event: 'disconnect',
+                  id: Date.now(),
+                  payload: {},
+                } as DisconnectEvent,
+                sessionCrypto,
+              ),
+            10,
+            100,
+          );
         } catch (error) {
-            log.error('Failed to parse TON Connect URL', { error, url });
-            return null;
+          log.error('Failed to send disconnect to bridge', {
+            sessionId,
+            error,
+          });
         }
-    }
+      }
 
-    /**
-     * Create bridge event from parsed URL parameters
-     */
-    private createConnectEventFromUrl(params: {
-        version: string;
-        clientId: string;
-        requestId: string;
-        r: string;
-        e?: string;
-        returnStrategy?: string;
-    }): RawBridgeEventConnect | undefined {
-        const rString = params.r;
-        const r = rString ? (JSON.parse(rString) as ConnectRequest) : undefined;
-
-        if (!r?.manifestUrl || !params.clientId) {
-            return undefined;
-        }
-
-        const bridgeEvent: RawBridgeEventConnect = {
-            from: params.clientId,
-            id: params.requestId,
-            method: 'connect',
-            params: {
-                manifest: {
-                    url: r.manifestUrl,
-                },
-                items: r.items,
-                returnStrategy: params.returnStrategy,
-            },
-            timestamp: Date.now(),
-            domain: '',
-        };
-
-        // Parse embedded embedded request if present
-        if (params.e) {
-            // check if we have embedded requests supported in features
-            const hasEmbeddedRequests = this.config.deviceInfo?.features.some(
-                (feature) => typeof feature === 'object' && feature.name === 'EmbeddedRequest',
-            );
-            if (hasEmbeddedRequests) {
-                bridgeEvent.embeddedRequest = parseEmbeddedRequestFromReqParam(params.e);
-            } else {
-                log.warn(
-                    'Embedded request feature is not supported in features, but we received request with embedded request payload',
-                    {
-                        features: this.config.deviceInfo?.features,
-                    },
-                );
-            }
-        }
-
-        return bridgeEvent;
-    }
-
-    // === Request Processing API (Delegated) ===
-
-    async approveConnectRequest(
-        event: ConnectionRequestEvent,
-        response?: ConnectionApprovalResponse,
-    ): Promise<EmbeddedRequestEvent | undefined> {
-        await this.ensureInitialized();
-        return this.requestProcessor.approveConnectRequest(event, response);
-    }
-
-    async rejectConnectRequest(
-        event: ConnectionRequestEvent,
-        reason?: string,
-        errorCode?: CONNECT_EVENT_ERROR_CODES,
-    ): Promise<void> {
-        await this.ensureInitialized();
-        return this.requestProcessor.rejectConnectRequest(event, reason, errorCode);
-    }
-
-    async approveTransactionRequest(
-        event: SendTransactionRequestEvent,
-        response?: SendTransactionApprovalResponse,
-    ): Promise<SendTransactionApprovalResponse> {
-        await this.ensureInitialized();
-        return this.requestProcessor.approveTransactionRequest(event, response);
-    }
-
-    async rejectTransactionRequest(
-        event: SendTransactionRequestEvent,
-        reason?: string | SendTransactionRpcResponseError['error'],
-    ): Promise<void> {
-        await this.ensureInitialized();
-        return this.requestProcessor.rejectTransactionRequest(event, reason);
-    }
-
-    async approveSignDataRequest(
-        event: SignDataRequestEvent,
-        response?: SignDataApprovalResponse,
-    ): Promise<SignDataApprovalResponse> {
-        await this.ensureInitialized();
-        return this.requestProcessor.approveSignDataRequest(event, response);
-    }
-
-    async rejectSignDataRequest(event: SignDataRequestEvent, reason?: string): Promise<void> {
-        await this.ensureInitialized();
-        return this.requestProcessor.rejectSignDataRequest(event, reason);
-    }
-
-    async approveSignMessageRequest(
-        event: SignMessageRequestEvent,
-        response?: SignMessageApprovalResponse,
-    ): Promise<SignMessageApprovalResponse> {
-        await this.ensureInitialized();
-        return this.requestProcessor.approveSignMessageRequest(event, response);
-    }
-
-    async rejectSignMessageRequest(event: SignMessageRequestEvent, reason?: string): Promise<void> {
-        await this.ensureInitialized();
-        return this.requestProcessor.rejectSignMessageRequest(event, reason);
-    }
-
-    // === TON Client Access ===
-
-    /**
-     * Get API client for a specific network
-     * @param network - The network object
-     * @returns The API client for the specified network
-     * @throws WalletKitError if no client is configured for the network
-     */
-    getApiClient(network: Network): ApiClient {
-        return this.networkManager.getClient(network);
-    }
-
-    /**
-     * Get the NetworkManager instance
-     * Provides access to all configured network clients
-     */
-    getNetworkManager(): NetworkManager {
-        return this.networkManager;
-    }
-
-    // === Lifecycle Management ===
-
-    /**
-     * Check if kit is ready for use
-     */
-    isReady(): boolean {
-        return this.isInitialized;
-    }
-
-    /**
-     * Wait for initialization to complete
-     */
-    async waitForReady(): Promise<void> {
-        await this.ensureInitialized();
-    }
-
-    /**
-     * Get initialization status
-     */
-    getStatus(): { initialized: boolean; ready: boolean } {
-        return {
-            initialized: this.isInitialized,
-            ready: this.isInitialized,
-        };
-    }
-
-    /**
-     * Clean shutdown
-     */
-    async close(): Promise<void> {
-        if (this.initializer) {
-            await this.initializer.cleanup({
-                walletManager: this.walletManager,
-                bridgeManager: this.bridgeManager,
-                sessionManager: this.sessionManager,
-                eventRouter: this.eventRouter,
-                requestProcessor: this.requestProcessor,
-                eventProcessor: this.eventProcessor,
+      await this.sessionManager.removeSession(sessionId);
+    };
+    if (sessionId) {
+      try {
+        await removeSession(sessionId);
+      } catch (error) {
+        log.error('Failed to remove session', { sessionId, error });
+      }
+    } else {
+      const sessions = await this.sessionManager.getSessions();
+      if (sessions.length > 0) {
+        for (const session of sessions) {
+          try {
+            await removeSession(session.sessionId);
+          } catch (error) {
+            log.error('Failed to remove session', {
+              sessionId: session.sessionId,
+              error,
             });
+          }
         }
+      }
+    }
+  }
 
-        this.isInitialized = false;
+  async listSessions(): Promise<TONConnectSession[]> {
+    await this.ensureInitialized();
+    return await this.sessionManager.getSessions();
+  }
+
+  // === Event Handler Registration (Delegated) ===
+
+  onConnectRequest(cb: (event: ConnectionRequestEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onConnectRequest(cb);
+    } else {
+      // Queue callback until initialized
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onConnectRequest(cb);
+      });
+    }
+  }
+
+  onTransactionRequest(cb: (event: SendTransactionRequestEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onTransactionRequest(cb);
+    } else {
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onTransactionRequest(cb);
+      });
+    }
+  }
+
+  onSignDataRequest(cb: (event: SignDataRequestEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onSignDataRequest(cb);
+    } else {
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onSignDataRequest(cb);
+      });
+    }
+  }
+
+  onDisconnect(cb: (event: DisconnectionEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onDisconnect(cb);
+    } else {
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onDisconnect(cb);
+      });
+    }
+  }
+
+  removeConnectRequestCallback(): void {
+    this.eventRouter.removeConnectRequestCallback();
+  }
+
+  removeTransactionRequestCallback(): void {
+    this.eventRouter.removeTransactionRequestCallback();
+  }
+
+  removeSignDataRequestCallback(): void {
+    this.eventRouter.removeSignDataRequestCallback();
+  }
+
+  onSignMessageRequest(cb: (event: SignMessageRequestEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onSignMessageRequest(cb);
+    } else {
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onSignMessageRequest(cb);
+      });
+    }
+  }
+
+  removeSignMessageRequestCallback(): void {
+    this.eventRouter.removeSignMessageRequestCallback();
+  }
+
+  removeDisconnectCallback(): void {
+    this.eventRouter.removeDisconnectCallback();
+  }
+
+  onRequestError(cb: (event: RequestErrorEvent) => void): void {
+    if (this.eventRouter) {
+      this.eventRouter.onRequestError(cb);
+    } else {
+      this.ensureInitialized().then(() => {
+        this.eventRouter.onRequestError(cb);
+      });
+    }
+  }
+
+  removeErrorCallback(): void {
+    this.eventRouter.removeErrorCallback();
+  }
+
+  // === URL Parsing API ===
+
+  /**
+   * Allow to convert url to ConnectionRequestEvent to use inline way
+   */
+  async connectionEventFromUrl(url: string): Promise<ConnectionRequestEvent> {
+    await this.ensureInitialized();
+
+    try {
+      const bridgeEvent = this.parseBridgeConnectEventFromUrl(url);
+      const handler = new ConnectHandler(
+        () => {},
+        this.config,
+        this.analyticsManager,
+      );
+      return await handler.handle(bridgeEvent);
+    } catch (error) {
+      log.error('Failed to create connection event from URL', { error, url });
+      throw error;
+    }
+  }
+
+  // === URL Processing API ===
+
+  /**
+   * Handle pasted TON Connect URL/link
+   * Parses the URL and creates a connect request event
+   */
+  async handleTonConnectUrl(url: string): Promise<void> {
+    await this.ensureInitialized();
+
+    try {
+      const bridgeEvent = this.parseBridgeConnectEventFromUrl(url);
+      await this.eventRouter.routeEvent(bridgeEvent);
+    } catch (error) {
+      log.error('Failed to handle TON Connect URL', { error, url });
+      throw error;
+    }
+  }
+
+  async handleNewTransaction(
+    wallet: Wallet,
+    data: TransactionRequest,
+  ): Promise<void> {
+    await this.ensureInitialized();
+
+    data.validUntil ??= Math.floor(Date.now() / 1000) + 300;
+    data.network ??= wallet.getNetwork();
+
+    const walletId = wallet.getWalletId();
+    const bridgeEvent: RawBridgeEventTransaction = {
+      id: Date.now().toString(),
+      method: 'sendTransaction',
+      params: [JSON.stringify(toConnectTransactionParamContent(data))],
+      from: '',
+      domain: '',
+      isLocal: true,
+      walletId,
+      walletAddress: asAddressFriendly(wallet.getAddress()),
+    };
+    await this.eventRouter.routeEvent(bridgeEvent);
+  }
+
+  /**
+   * Parse and validate TON Connect URL into a RawBridgeEventConnect
+   */
+  private parseBridgeConnectEventFromUrl(url: string): RawBridgeEventConnect {
+    const parsedUrl = this.parseTonConnectUrl(url);
+    if (!parsedUrl) {
+      throw new WalletKitError(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid TON Connect URL format',
+        undefined,
+        {
+          url,
+        },
+      );
     }
 
-    /**
-     * Add a provider
-     */
-    registerProvider(input: ProviderInput<BaseProvider>): void {
-        const provider = typeof input === 'function' ? input(this.createFactoryContext()) : input;
-        switch (provider.type) {
-            case 'swap':
-                this.swapManager.registerProvider(provider as SwapProviderInterface);
-                break;
-            case 'staking':
-                this.stakingManager.registerProvider(provider as StakingProviderInterface);
-                break;
-            case 'streaming':
-                this.streamingManager.registerProvider(provider as StreamingProvider);
-                break;
-            case 'gasless':
-                this.gaslessManager.registerProvider(provider as GaslessProvider);
-                break;
-            case 'custom':
-                this.customProvidersManager.registerProvider(provider as CustomProvider);
-                break;
-            default:
-                throw new Error('Unknown provider type');
-        }
+    const bridgeEvent = this.createConnectEventFromUrl(parsedUrl);
+    if (!bridgeEvent) {
+      throw new WalletKitError(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid TON Connect URL - unable to create bridge event',
+        undefined,
+        { parsedUrl },
+      );
     }
 
-    // === Jettons API ===
+    return bridgeEvent;
+  }
 
-    /**
-     * Jettons API access
-     */
-    get jettons(): JettonsAPI {
-        return this.jettonsManager;
+  /**
+   * Parse TON Connect URL to extract connection parameters
+   */
+  private parseTonConnectUrl(url: string): {
+    version: string;
+    clientId: string;
+    requestId: string;
+    returnStrategy: string;
+    r: string;
+    [key: string]: string;
+  } | null {
+    try {
+      const parsedUrl = new URL(url);
+
+      // Extract query parameters
+      const params: { [key: string]: string } = {};
+      for (const [key, value] of parsedUrl.searchParams.entries()) {
+        params[key] = value;
+      }
+
+      // Validate required parameters
+      if (!params.v || !params.id || !params.r) {
+        log.warn('Missing required TON Connect URL parameters');
+        return null;
+      }
+
+      return {
+        version: params.v,
+        clientId: params.id,
+        requestId: params.id,
+        returnStrategy: params.ret || 'back',
+        r: params.r,
+        ...params,
+      };
+    } catch (error) {
+      log.error('Failed to parse TON Connect URL', { error, url });
+      return null;
+    }
+  }
+
+  /**
+   * Create bridge event from parsed URL parameters
+   */
+  private createConnectEventFromUrl(params: {
+    version: string;
+    clientId: string;
+    requestId: string;
+    r: string;
+    e?: string;
+    returnStrategy?: string;
+  }): RawBridgeEventConnect | undefined {
+    const rString = params.r;
+    const r = rString ? (JSON.parse(rString) as ConnectRequest) : undefined;
+
+    if (!r?.manifestUrl || !params.clientId) {
+      return undefined;
     }
 
-    /**
-     * Get jettons manager for internal use
-     */
-    getJettonsManager(): JettonsManager {
-        return this.jettonsManager;
+    const bridgeEvent: RawBridgeEventConnect = {
+      from: params.clientId,
+      id: params.requestId,
+      method: 'connect',
+      params: {
+        manifest: {
+          url: r.manifestUrl,
+        },
+        items: r.items,
+        returnStrategy: params.returnStrategy,
+      },
+      timestamp: Date.now(),
+      domain: '',
+    };
+
+    // Parse embedded embedded request if present
+    if (params.e) {
+      // check if we have embedded requests supported in features
+      const hasEmbeddedRequests = this.config.deviceInfo?.features.some(
+        (feature) =>
+          typeof feature === 'object' && feature.name === 'EmbeddedRequest',
+      );
+      if (hasEmbeddedRequests) {
+        bridgeEvent.embeddedRequest = parseEmbeddedRequestFromReqParam(
+          params.e,
+        );
+      } else {
+        log.warn(
+          'Embedded request feature is not supported in features, but we received request with embedded request payload',
+          {
+            features: this.config.deviceInfo?.features,
+          },
+        );
+      }
     }
 
-    /**
-     * Swap API access
-     */
-    get swap(): SwapManager {
-        return this.swapManager;
+    return bridgeEvent;
+  }
+
+  // === Request Processing API (Delegated) ===
+
+  async approveConnectRequest(
+    event: ConnectionRequestEvent,
+    response?: ConnectionApprovalResponse,
+  ): Promise<EmbeddedRequestEvent | undefined> {
+    await this.ensureInitialized();
+    return this.requestProcessor.approveConnectRequest(event, response);
+  }
+
+  async rejectConnectRequest(
+    event: ConnectionRequestEvent,
+    reason?: string,
+    errorCode?: CONNECT_EVENT_ERROR_CODES,
+  ): Promise<void> {
+    await this.ensureInitialized();
+    return this.requestProcessor.rejectConnectRequest(event, reason, errorCode);
+  }
+
+  async approveTransactionRequest(
+    event: SendTransactionRequestEvent,
+    response?: SendTransactionApprovalResponse,
+  ): Promise<SendTransactionApprovalResponse> {
+    await this.ensureInitialized();
+    return this.requestProcessor.approveTransactionRequest(event, response);
+  }
+
+  async rejectTransactionRequest(
+    event: SendTransactionRequestEvent,
+    reason?: string | SendTransactionRpcResponseError['error'],
+  ): Promise<void> {
+    await this.ensureInitialized();
+    return this.requestProcessor.rejectTransactionRequest(event, reason);
+  }
+
+  async approveSignDataRequest(
+    event: SignDataRequestEvent,
+    response?: SignDataApprovalResponse,
+  ): Promise<SignDataApprovalResponse> {
+    await this.ensureInitialized();
+    return this.requestProcessor.approveSignDataRequest(event, response);
+  }
+
+  async rejectSignDataRequest(
+    event: SignDataRequestEvent,
+    reason?: string,
+  ): Promise<void> {
+    await this.ensureInitialized();
+    return this.requestProcessor.rejectSignDataRequest(event, reason);
+  }
+
+  async approveSignMessageRequest(
+    event: SignMessageRequestEvent,
+    response?: SignMessageApprovalResponse,
+  ): Promise<SignMessageApprovalResponse> {
+    await this.ensureInitialized();
+    return this.requestProcessor.approveSignMessageRequest(event, response);
+  }
+
+  async rejectSignMessageRequest(
+    event: SignMessageRequestEvent,
+    reason?: string,
+  ): Promise<void> {
+    await this.ensureInitialized();
+    return this.requestProcessor.rejectSignMessageRequest(event, reason);
+  }
+
+  // === TON Client Access ===
+
+  /**
+   * Get API client for a specific network
+   * @param network - The network object
+   * @returns The API client for the specified network
+   * @throws WalletKitError if no client is configured for the network
+   */
+  getApiClient(network: Network): ApiClient {
+    return this.networkManager.getClient(network);
+  }
+
+  /**
+   * Get the NetworkManager instance
+   * Provides access to all configured network clients
+   */
+  getNetworkManager(): NetworkManager {
+    return this.networkManager;
+  }
+
+  // === Lifecycle Management ===
+
+  /**
+   * Check if kit is ready for use
+   */
+  isReady(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
+   * Wait for initialization to complete
+   */
+  async waitForReady(): Promise<void> {
+    await this.ensureInitialized();
+  }
+
+  /**
+   * Get initialization status
+   */
+  getStatus(): { initialized: boolean; ready: boolean } {
+    return {
+      initialized: this.isInitialized,
+      ready: this.isInitialized,
+    };
+  }
+
+  /**
+   * Clean shutdown
+   */
+  async close(): Promise<void> {
+    if (this.initializer) {
+      await this.initializer.cleanup({
+        walletManager: this.walletManager,
+        bridgeManager: this.bridgeManager,
+        sessionManager: this.sessionManager,
+        eventRouter: this.eventRouter,
+        requestProcessor: this.requestProcessor,
+        eventProcessor: this.eventProcessor,
+      });
     }
 
-    /**
-     * Streaming API access
-     */
-    get streaming(): StreamingAPI {
-        return this.streamingManager;
-    }
+    this.isInitialized = false;
+  }
 
-    /**
-     * Staking API access
-     */
-    get staking(): StakingManager {
-        return this.stakingManager;
+  /**
+   * Add a provider
+   */
+  registerProvider(input: ProviderInput<BaseProvider>): void {
+    const provider =
+      typeof input === 'function' ? input(this.createFactoryContext()) : input;
+    switch (provider.type) {
+      case 'swap':
+        this.swapManager.registerProvider(provider as SwapProviderInterface);
+        break;
+      case 'staking':
+        this.stakingManager.registerProvider(
+          provider as StakingProviderInterface,
+        );
+        break;
+      case 'streaming':
+        this.streamingManager.registerProvider(provider as StreamingProvider);
+        break;
+      case 'gasless':
+        this.gaslessManager.registerProvider(provider as GaslessProvider);
+        break;
+      case 'custom':
+        this.customProvidersManager.registerProvider(
+          provider as CustomProvider,
+        );
+        break;
+      default:
+        throw new Error('Unknown provider type');
     }
+  }
 
-    /**
-     * Gasless API access
-     */
-    get gasless(): GaslessManager {
-        return this.gaslessManager;
-    }
+  // === Jettons API ===
 
-    /**
-     * Custom providers API access
-     */
-    get customProviders(): CustomProvidersManager {
-        return this.customProvidersManager;
-    }
+  /**
+   * Jettons API access
+   */
+  get jettons(): JettonsAPI {
+    return this.jettonsManager;
+  }
 
-    /**
-     * Get the event emitter for this kit instance
-     * Allows external components to listen to and emit events
-     */
-    getEventEmitter(): WalletKitEventEmitter {
-        return this.eventEmitter;
-    }
+  /**
+   * Get jettons manager for internal use
+   */
+  getJettonsManager(): JettonsManager {
+    return this.jettonsManager;
+  }
 
-    /**
-     * Process a bridge request from injected JS Bridge
-     * This method is called by extension content scripts
-     * @param request - The bridge request to process
-     * @returns Promise resolving to the response data
-     */
-    async processInjectedBridgeRequest(
-        messageInfo: BridgeEventMessageInfo,
-        request: InjectedToExtensionBridgeRequestPayload,
-    ): Promise<unknown> {
-        await this.ensureInitialized();
-        return this.bridgeManager.queueJsBridgeEvent(messageInfo, request);
-    }
+  /**
+   * Swap API access
+   */
+  get swap(): SwapManager {
+    return this.swapManager;
+  }
+
+  /**
+   * Streaming API access
+   */
+  get streaming(): StreamingAPI {
+    return this.streamingManager;
+  }
+
+  /**
+   * Staking API access
+   */
+  get staking(): StakingManager {
+    return this.stakingManager;
+  }
+
+  /**
+   * Gasless API access
+   */
+  get gasless(): GaslessManager {
+    return this.gaslessManager;
+  }
+
+  /**
+   * Custom providers API access
+   */
+  get customProviders(): CustomProvidersManager {
+    return this.customProvidersManager;
+  }
+
+  /**
+   * Get the event emitter for this kit instance
+   * Allows external components to listen to and emit events
+   */
+  getEventEmitter(): WalletKitEventEmitter {
+    return this.eventEmitter;
+  }
+
+  /**
+   * Process a bridge request from injected JS Bridge
+   * This method is called by extension content scripts
+   * @param request - The bridge request to process
+   * @returns Promise resolving to the response data
+   */
+  async processInjectedBridgeRequest(
+    messageInfo: BridgeEventMessageInfo,
+    request: InjectedToExtensionBridgeRequestPayload,
+  ): Promise<unknown> {
+    await this.ensureInitialized();
+    return this.bridgeManager.queueJsBridgeEvent(messageInfo, request);
+  }
 }

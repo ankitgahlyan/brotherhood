@@ -20,12 +20,13 @@ type MaxMessagesFeatureName = 'SendTransaction' | 'SignMessage';
  *          feature is not advertised)
  */
 export function getMaxOutgoingMessages(
-    features: Feature[],
-    featureName: MaxMessagesFeatureName = 'SendTransaction',
+  features: Feature[],
+  featureName: MaxMessagesFeatureName = 'SendTransaction',
 ): number {
-    const feature = features.find(
-        (f): f is Extract<Feature, { name: MaxMessagesFeatureName }> => typeof f === 'object' && f.name === featureName,
-    );
+  const feature = features.find(
+    (f): f is Extract<Feature, { name: MaxMessagesFeatureName }> =>
+      typeof f === 'object' && f.name === featureName,
+  );
 
-    return feature?.maxMessages ?? 1;
+  return feature?.maxMessages ?? 1;
 }

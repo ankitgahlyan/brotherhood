@@ -9,50 +9,56 @@
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
-import { Location } from '@/contracts/brotherhood/Location.gen';
+import { Location } from '@wrappers/Location.gen';
 import { network } from '@/lib/brotherhood/config';
 
-export interface CityItem {
-    id: string;
-    cityName: string;
+export interface LocationInfo {
+  h3Cell: string | null;
+  memberCount: number | null;
+  version: number | null;
+  minterAddress: string | null;
 }
 
-export interface UseCitiesResult {
-    cities: CityItem[];
-    isLoading: boolean;
-    refetch: () => void;
+export interface UseLocationResult {
+  location: LocationInfo | null;
+  isLoading: boolean;
+  refetch: () => void;
 }
 
-export function useCities(locationAddressString: string | null): UseCitiesResult {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['location-cities', locationAddressString],
-        queryFn: async () => {
-            if (!locationAddressString) return [];
-            const locAddr = Address.parse(locationAddressString);
-            const client = getTonClient(network);
-            const locationContract = client.open(Location.fromAddress(locAddr));
+export function useLocation(
+  locationAddressString: string | null,
+): UseLocationResult {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['location-info', locationAddressString],
+    queryFn: async () => {
+      if (!locationAddressString) return null;
+      const locAddr = Address.parse(locationAddressString);
+      const client = getTonClient(network);
+      const locationContract = client.open(Location.fromAddress(locAddr));
 
-            const dict = await locationContract.getCities();
-            const result: CityItem[] = [];
+      const [h3Cell, memberCount, version, minterAddress] = await Promise.all([
+        locationContract.getH3Cell().catch(() => null),
+        locationContract.getMemberCount().catch(() => null),
+        locationContract.getVersion().catch(() => null),
+        locationContract.getMinterAddress().catch(() => null),
+      ]);
 
-            for (const key of dict.keys()) {
-                const cityName = dict.get(key);
-                if (cityName) {
-                    result.push({
-                        id: key.toString(),
-                        cityName,
-                    });
-                }
-            }
+      return {
+        h3Cell,
+        memberCount: memberCount !== null ? Number(memberCount) : null,
+        version: version !== null ? Number(version) : null,
+        minterAddress: minterAddress ? minterAddress.toString() : null,
+      };
+    },
+    enabled: Boolean(locationAddressString),
+  });
 
-            return result;
-        },
-        enabled: Boolean(locationAddressString),
-    });
-
-    return {
-        cities: data ?? [],
-        isLoading,
-        refetch,
-    };
+  return {
+    location: data ?? null,
+    isLoading,
+    refetch,
+  };
 }
+
+// Backwards compatibility alias
+export const useCities = useLocation;

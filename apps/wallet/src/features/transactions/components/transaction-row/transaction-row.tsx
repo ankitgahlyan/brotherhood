@@ -9,82 +9,99 @@
 import React from 'react';
 import { Check, MinusCircle, PlusCircle, X } from 'lucide-react';
 
-import type { TransactionRowModel, TransactionRowStatus } from '../../utils/map-transaction-row';
+import type {
+  TransactionRowModel,
+  TransactionRowStatus,
+} from '../../utils/map-transaction-row';
 
-const StatusBadge: React.FC<{ status: TransactionRowStatus }> = ({ status }) => {
-    const base =
-        'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-background';
+const StatusBadge: React.FC<{ status: TransactionRowStatus }> = ({
+  status,
+}) => {
+  const base =
+    'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-background';
 
-    if (status === 'success') {
-        return (
-            <span className={`${base} bg-emerald-500`}>
-                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-            </span>
-        );
-    }
-    if (status === 'failed') {
-        return (
-            <span className={`${base} bg-red-500`}>
-                <X className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-            </span>
-        );
-    }
+  if (status === 'success') {
     return (
-        <span className={`${base} bg-card`} title="Pending">
-            <span className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
-        </span>
+      <span className={`${base} bg-emerald-500`}>
+        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+      </span>
     );
+  }
+  if (status === 'failed') {
+    return (
+      <span className={`${base} bg-red-500`}>
+        <X className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+      </span>
+    );
+  }
+  return (
+    <span className={`${base} bg-card`} title="Pending">
+      <span className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+    </span>
+  );
 };
 
 /** Single transaction list item. Reused by the dashboard preview and the full history page. */
 export const TransactionRow: React.FC<TransactionRowModel> = ({
-    explorerUrl,
-    title,
-    subtitleId,
-    amount,
-    isOutgoing,
-    status,
-    date,
+  explorerUrl,
+  title,
+  subtitleId,
+  amount,
+  isOutgoing,
+  status,
+  date,
 }) => {
-    const content = (
-        <>
-            <span className="relative w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                {isOutgoing ? (
-                    <MinusCircle className="w-6 h-6 text-muted-foreground" strokeWidth={2} />
-                ) : (
-                    <PlusCircle className="w-6 h-6 text-muted-foreground" strokeWidth={2} />
-                )}
-                <StatusBadge status={status} />
-            </span>
+  const content = (
+    <>
+      <span className="relative w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+        {isOutgoing ? (
+          <MinusCircle
+            className="w-6 h-6 text-muted-foreground"
+            strokeWidth={2}
+          />
+        ) : (
+          <PlusCircle
+            className="w-6 h-6 text-muted-foreground"
+            strokeWidth={2}
+          />
+        )}
+        <StatusBadge status={status} />
+      </span>
 
-            <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-foreground truncate">{title}</div>
-                <div className="text-xs text-muted-foreground truncate">{subtitleId}</div>
-            </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-foreground truncate">
+          {title}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {subtitleId}
+        </div>
+      </div>
 
-            <div className="text-right flex-shrink-0">
-                <div className={`text-sm font-semibold ${isOutgoing ? 'text-red-500' : 'text-emerald-500'}`}>
-                    {amount}
-                </div>
-                <div className="text-xs text-muted-foreground">{date}</div>
-            </div>
-        </>
-    );
-
-    const rowClassName = 'flex items-center gap-3 py-2 -mx-1 px-1 rounded-xl';
-
-    if (!explorerUrl) {
-        return <div className={rowClassName}>{content}</div>;
-    }
-
-    return (
-        <a
-            href={explorerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${rowClassName} hover:bg-secondary/50 transition-colors`}
+      <div className="text-right flex-shrink-0">
+        <div
+          className={`text-sm font-semibold ${isOutgoing ? 'text-red-500' : 'text-emerald-500'}`}
         >
-            {content}
-        </a>
-    );
+          {amount}
+        </div>
+        <div className="text-xs text-muted-foreground">{date}</div>
+      </div>
+    </>
+  );
+
+  const rowClassName = 'flex items-center gap-3 py-2 -mx-1 px-1 rounded-xl';
+
+  if (!explorerUrl) {
+    return <div className={rowClassName}>{content}</div>;
+  }
+
+  return (
+    <a
+      href={explorerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${rowClassName} hover:bg-secondary/50 transition-colors`}
+    >
+      {content}
+    </a>
+  );
 };

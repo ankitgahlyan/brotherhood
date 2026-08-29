@@ -7,7 +7,10 @@
  */
 
 import { isValidAddress } from '../../../utils/address';
-import { isValidNanoAmount, validateTransactionMessage } from '../../../validation';
+import {
+  isValidNanoAmount,
+  validateTransactionMessage,
+} from '../../../validation';
 import { CallForSuccess } from '../../../utils/retry';
 import { createTransactionPreview as createTransactionPreviewHelper } from '../../../utils/transactionPreview';
 import { createCommentPayloadBase64 } from '../../../utils/messageBuilders';
@@ -15,122 +18,144 @@ import { getNormalizedExtMessageHash } from '../../../utils/getNormalizedExtMess
 import { ERROR_CODES, WalletKitError } from '../../../errors';
 import { globalLogger } from '../../Logger';
 import type {
-    TONTransferRequest,
-    TransactionEmulatedPreview,
-    TransactionRequest,
-    TransactionRequestMessage,
-    SendTransactionResponse,
-    Base64String,
-    TransactionPreviewOptions,
+  TONTransferRequest,
+  TransactionEmulatedPreview,
+  TransactionRequest,
+  TransactionRequestMessage,
+  SendTransactionResponse,
+  Base64String,
+  TransactionPreviewOptions,
 } from '../../../api/models';
 import type { Wallet, WalletTonInterface } from '../../../api/interfaces';
 
 const log = globalLogger.createChild('WalletTonClass');
 
 export class WalletTonClass implements WalletTonInterface {
-    async createTransferTonTransaction(this: Wallet, param: TONTransferRequest): Promise<TransactionRequest> {
-        if (!isValidAddress(param.recipientAddress)) {
-            throw new Error(`Invalid to address: ${param.recipientAddress}`);
-        }
-        if (!isValidNanoAmount(param.transferAmount)) {
-            throw new Error(`Invalid amount: ${param.transferAmount}`);
-        }
-
-        let body: Base64String | undefined;
-        if (param.payload) {
-            body = param.payload;
-        } else if (param.comment) {
-            body = createCommentPayloadBase64(param.comment);
-        }
-        const message: TransactionRequestMessage = {
-            address: param.recipientAddress,
-            amount: param.transferAmount,
-            payload: body,
-            stateInit: param.stateInit,
-            extraCurrency: param.extraCurrency,
-            mode: param.mode,
-        };
-
-        if (!validateTransactionMessage(message, false).isValid) {
-            throw new Error(`Invalid transaction message: ${JSON.stringify(message)}`);
-        }
-
-        return {
-            messages: [message],
-            fromAddress: this.getAddress(),
-        };
+  async createTransferTonTransaction(
+    this: Wallet,
+    param: TONTransferRequest,
+  ): Promise<TransactionRequest> {
+    if (!isValidAddress(param.recipientAddress)) {
+      throw new Error(`Invalid to address: ${param.recipientAddress}`);
     }
-    async createTransferMultiTonTransaction(this: Wallet, params: TONTransferRequest[]): Promise<TransactionRequest> {
-        const messages: TransactionRequestMessage[] = [];
-        for (const param of params) {
-            if (!isValidAddress(param.recipientAddress)) {
-                throw new Error(`Invalid to address: ${param.recipientAddress}`);
-            }
-            if (!isValidNanoAmount(param.transferAmount)) {
-                throw new Error(`Invalid amount: ${param.transferAmount}`);
-            }
-
-            let body: Base64String | undefined;
-            if (param.payload) {
-                body = param.payload;
-            } else if (param.comment) {
-                body = createCommentPayloadBase64(param.comment);
-            }
-            const message: TransactionRequestMessage = {
-                address: param.recipientAddress,
-                amount: param.transferAmount,
-                payload: body,
-                stateInit: param.stateInit,
-                extraCurrency: param.extraCurrency,
-                mode: param.mode,
-            };
-
-            if (!validateTransactionMessage(message, false).isValid) {
-                throw new Error(`Invalid transaction message: ${JSON.stringify(message)}`);
-            }
-
-            messages.push(message);
-        }
-        return {
-            messages,
-            fromAddress: this.getAddress(),
-        };
+    if (!isValidNanoAmount(param.transferAmount)) {
+      throw new Error(`Invalid amount: ${param.transferAmount}`);
     }
 
-    async getTransactionPreview(
-        this: Wallet,
-        param: TransactionRequest | Promise<TransactionRequest>,
-        options?: TransactionPreviewOptions,
-    ): Promise<TransactionEmulatedPreview> {
-        const transaction = await param;
-        const preview = await CallForSuccess(() =>
-            createTransactionPreviewHelper(this.client, transaction, this, options),
+    let body: Base64String | undefined;
+    if (param.payload) {
+      body = param.payload;
+    } else if (param.comment) {
+      body = createCommentPayloadBase64(param.comment);
+    }
+    const message: TransactionRequestMessage = {
+      address: param.recipientAddress,
+      amount: param.transferAmount,
+      payload: body,
+      stateInit: param.stateInit,
+      extraCurrency: param.extraCurrency,
+      mode: param.mode,
+    };
+
+    if (!validateTransactionMessage(message, false).isValid) {
+      throw new Error(
+        `Invalid transaction message: ${JSON.stringify(message)}`,
+      );
+    }
+
+    return {
+      messages: [message],
+      fromAddress: this.getAddress(),
+    };
+  }
+  async createTransferMultiTonTransaction(
+    this: Wallet,
+    params: TONTransferRequest[],
+  ): Promise<TransactionRequest> {
+    const messages: TransactionRequestMessage[] = [];
+    for (const param of params) {
+      if (!isValidAddress(param.recipientAddress)) {
+        throw new Error(`Invalid to address: ${param.recipientAddress}`);
+      }
+      if (!isValidNanoAmount(param.transferAmount)) {
+        throw new Error(`Invalid amount: ${param.transferAmount}`);
+      }
+
+      let body: Base64String | undefined;
+      if (param.payload) {
+        body = param.payload;
+      } else if (param.comment) {
+        body = createCommentPayloadBase64(param.comment);
+      }
+      const message: TransactionRequestMessage = {
+        address: param.recipientAddress,
+        amount: param.transferAmount,
+        payload: body,
+        stateInit: param.stateInit,
+        extraCurrency: param.extraCurrency,
+        mode: param.mode,
+      };
+
+      if (!validateTransactionMessage(message, false).isValid) {
+        throw new Error(
+          `Invalid transaction message: ${JSON.stringify(message)}`,
         );
-        return preview;
+      }
+
+      messages.push(message);
     }
+    return {
+      messages,
+      fromAddress: this.getAddress(),
+    };
+  }
 
-    async sendTransaction(this: Wallet, request: TransactionRequest): Promise<SendTransactionResponse> {
-        try {
-            const boc = await this.getSignedSendTransaction(request, { fakeSignature: false });
+  async getTransactionPreview(
+    this: Wallet,
+    param: TransactionRequest | Promise<TransactionRequest>,
+    options?: TransactionPreviewOptions,
+  ): Promise<TransactionEmulatedPreview> {
+    const transaction = await param;
+    const preview = await CallForSuccess(() =>
+      createTransactionPreviewHelper(this.client, transaction, this, options),
+    );
+    return preview;
+  }
 
-            await CallForSuccess(() => this.getClient().sendBoc(boc));
+  async sendTransaction(
+    this: Wallet,
+    request: TransactionRequest,
+  ): Promise<SendTransactionResponse> {
+    try {
+      const boc = await this.getSignedSendTransaction(request, {
+        fakeSignature: false,
+      });
 
-            const { hash: normalizedHash, boc: normalizedBoc } = getNormalizedExtMessageHash(boc);
-            return { boc, normalizedBoc, normalizedHash };
-        } catch (error) {
-            log.error('Failed to send transaction', { error });
+      await CallForSuccess(() => this.getClient().sendBoc(boc));
 
-            if (error instanceof WalletKitError) {
-                throw error;
-            }
-            if ((error as { message: string })?.message?.includes('Ledger device')) {
-                throw new WalletKitError(ERROR_CODES.LEDGER_DEVICE_ERROR, 'Ledger device error', error as Error);
-            }
-            throw error;
-        }
+      const { hash: normalizedHash, boc: normalizedBoc } =
+        getNormalizedExtMessageHash(boc);
+      return { boc, normalizedBoc, normalizedHash };
+    } catch (error) {
+      log.error('Failed to send transaction', { error });
+
+      if (error instanceof WalletKitError) {
+        throw error;
+      }
+      if ((error as { message: string })?.message?.includes('Ledger device')) {
+        throw new WalletKitError(
+          ERROR_CODES.LEDGER_DEVICE_ERROR,
+          'Ledger device error',
+          error as Error,
+        );
+      }
+      throw error;
     }
+  }
 
-    async getBalance(this: Wallet): Promise<string> {
-        return await CallForSuccess(async () => this.getClient().getBalance(this.getAddress()));
-    }
+  async getBalance(this: Wallet): Promise<string> {
+    return await CallForSuccess(async () =>
+      this.getClient().getBalance(this.getAddress()),
+    );
+  }
 }

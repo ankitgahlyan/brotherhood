@@ -6,5 +6,8 @@
  *
  */
 
-export { TonStakersStakingProvider, createTonstakersProvider } from './TonStakersStakingProvider';
+export {
+  TonStakersStakingProvider,
+  createTonstakersProvider,
+} from './TonStakersStakingProvider';
 export type { TonStakersProviderConfig } from './models/TonStakersProviderConfig';

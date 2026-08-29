@@ -18,7 +18,7 @@ import {
   TopUpTons,
   ApproveUpgrade,
   RejectUpgrade,
-} from '@/contracts/brotherhood/FossFi.gen';
+} from '@wrappers/FossFi.gen';
 import {
   AskToBurn,
   AskToTransfer,
@@ -30,9 +30,9 @@ import {
   Destroy,
   SetAllowance,
   SpendAllowance,
-} from '@/contracts/brotherhood/FossFiWallet.gen';
-import { PersonalMinter } from '@/contracts/brotherhood/Personal.gen';
-import { PersonalWallet } from '@/contracts/brotherhood/PersonalWallet.gen';
+} from '@wrappers/FossFiWallet.gen';
+import { PersonalMinter } from '@wrappers/Personal.gen';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   buildOnchainMetadata,
   buildTolkOnchainMetadata,
@@ -228,15 +228,15 @@ export function buildTransferBody(params: {
 export function buildInviteBody(params: {
   transferRecipient: Address;
   username?: string;
-  city?: string;
-  cityLetter?: number | bigint;
+  h3Cell?: string;
+  country?: number | bigint;
   queryId?: bigint;
 }): Cell {
   const {
     transferRecipient,
     username = '',
-    city = '',
-    cityLetter = 0,
+    h3Cell = '',
+    country = 0,
     queryId = 0n,
   } = params;
   return ActInvite.toCell(
@@ -244,8 +244,8 @@ export function buildInviteBody(params: {
       queryId,
       transferRecipient,
       username,
-      city,
-      cityLetter: BigInt(cityLetter),
+      h3Cell,
+      country: BigInt(country),
     }),
   );
 }

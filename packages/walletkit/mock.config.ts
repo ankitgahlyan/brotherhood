@@ -6,48 +6,46 @@
  *
  */
 
- 
 const isJest = typeof jest !== 'undefined';
- 
+
 const isVitest = typeof (global as any).vi !== 'undefined';
 
 export const useFakeTimers = isJest
-    ? jest.useFakeTimers
-    : isVitest
-      ?  
-        (global as any).vi.useFakeTimers
-      : () => {
-            throw new Error('No test framework detected');
-        };
+  ? jest.useFakeTimers
+  : isVitest
+    ? (global as any).vi.useFakeTimers
+    : () => {
+        throw new Error('No test framework detected');
+      };
 
 export const useRealTimers = isJest
-    ? jest.useRealTimers
-    : isVitest
-      ?  
-        (global as any).vi.useRealTimers
-      : () => {
-            throw new Error('No test framework detected');
-        };
+  ? jest.useRealTimers
+  : isVitest
+    ? (global as any).vi.useRealTimers
+    : () => {
+        throw new Error('No test framework detected');
+      };
 
 export const mockFn = isJest
-    ? jest.fn
-    : isVitest
-      ?  
-        (global as any).vi.fn
-      : () => {
-            throw new Error('No test framework detected');
-        };
+  ? jest.fn
+  : isVitest
+    ? (global as any).vi.fn
+    : () => {
+        throw new Error('No test framework detected');
+      };
 
 export const clearAllMocks = isJest
-    ? jest.clearAllMocks
-    : isVitest
-      ?  
-        (global as any).vi.clearAllMocks
-      : () => {
-            throw new Error('No test framework detected');
-        };
+  ? jest.clearAllMocks
+  : isVitest
+    ? (global as any).vi.clearAllMocks
+    : () => {
+        throw new Error('No test framework detected');
+      };
 
- 
-export const mocked = isJest ? jest.mocked : isVitest ? (global as any).vi.mocked : (fn: any) => fn;
+export const mocked = isJest
+  ? jest.mocked
+  : isVitest
+    ? (global as any).vi.mocked
+    : (fn: any) => fn;
 
 export type MockFunction = ReturnType<typeof mockFn>;

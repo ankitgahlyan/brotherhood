@@ -12,12 +12,12 @@ import type { Pagination, UserFriendlyAddress } from '../core/Primitives';
  * Request parameters for fetching NFT tokens.
  */
 export interface UserNFTsRequest {
-    /**
-     * Owner address of the NFTs
-     */
-    ownerAddress: UserFriendlyAddress;
-    /**
-     * Pagination information
-     */
-    pagination?: Pagination;
+  /**
+   * Owner address of the NFTs
+   */
+  ownerAddress: UserFriendlyAddress;
+  /**
+   * Pagination information
+   */
+  pagination?: Pagination;
 }

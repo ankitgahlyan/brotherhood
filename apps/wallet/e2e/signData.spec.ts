@@ -15,42 +15,53 @@ import { runSignDataTest } from './runTest';
 config();
 
 const test = testWithDemoWalletFixture({
-    appUrl: process.env.DAPP_URL ?? 'https://allure-test-runner.vercel.app/e2e',
+  appUrl: process.env.DAPP_URL ?? 'https://allure-test-runner.vercel.app/e2e',
 });
 
 let allureClient: AllureApiClient;
 
 test.beforeAll(async () => {
-    try {
-        const config = createAllureConfig();
-        allureClient = new AllureApiClient(config);
-    } catch (error) {
-         
-        console.error('Error creating allure client:', error);
-        throw error;
-    }
+  try {
+    const config = createAllureConfig();
+    allureClient = new AllureApiClient(config);
+  } catch (error) {
+    console.error('Error creating allure client:', error);
+    throw error;
+  }
 });
 
 test('Sign text @allureId(2258)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });
 
 test('Sign cell @allureId(2260)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });
 
 test('Sign binary @allureId(2259)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });
 
-test('User declined to sign data binary @allureId(8612)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+test('User declined to sign data binary @allureId(8612)', async ({
+  wallet,
+  app,
+  widget,
+}) => {
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });
 
-test('User declined to sign data cell @allureId(8645)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+test('User declined to sign data cell @allureId(8645)', async ({
+  wallet,
+  app,
+  widget,
+}) => {
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });
 
-test('User declined to sign data text @allureId(8646)', async ({ wallet, app, widget }) => {
-    await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
+test('User declined to sign data text @allureId(8646)', async ({
+  wallet,
+  app,
+  widget,
+}) => {
+  await runSignDataTest({ wallet, app, widget }, test.info(), allureClient);
 });

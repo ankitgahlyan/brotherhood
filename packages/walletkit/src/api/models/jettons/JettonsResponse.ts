@@ -13,12 +13,12 @@ import type { Jetton } from './Jetton';
  * Response containing a list of Jetton tokens.
  */
 export interface JettonsResponse {
-    /**
-     * Address book mapping
-     */
-    addressBook: AddressBook;
-    /**
-     * List of Jettons
-     */
-    jettons: Jetton[];
+  /**
+   * Address book mapping
+   */
+  addressBook: AddressBook;
+  /**
+   * List of Jettons
+   */
+  jettons: Jetton[];
 }

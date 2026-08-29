@@ -6,8 +6,15 @@
  *
  */
 
-import type { TransactionEmulatedTrace, StreamingEvents, BaseProviderEvents } from '../api/models';
-import type { RawBridgeEvent, RawBridgeEventRestoreConnection } from './internal';
+import type {
+  TransactionEmulatedTrace,
+  StreamingEvents,
+  BaseProviderEvents,
+} from '../api/models';
+import type {
+  RawBridgeEvent,
+  RawBridgeEventRestoreConnection,
+} from './internal';
 import type { EventEmitter } from '../core/EventEmitter';
 
 /**
@@ -19,10 +26,10 @@ export type SharedKitEvents = StreamingEvents & BaseProviderEvents;
  * Definition of all events emitted by the TonWalletKit.
  */
 export type WalletKitEvents = {
-    restoreConnection: RawBridgeEventRestoreConnection;
-    eventError: RawBridgeEvent;
-    emulationResult: TransactionEmulatedTrace;
-    bridgeStorageUpdated: object;
+  restoreConnection: RawBridgeEventRestoreConnection;
+  eventError: RawBridgeEvent;
+  emulationResult: TransactionEmulatedTrace;
+  bridgeStorageUpdated: object;
 } & SharedKitEvents;
 
 export type WalletKitEventEmitter = EventEmitter<WalletKitEvents>;

@@ -10,16 +10,16 @@
  * Static metadata for a gasless provider.
  */
 export interface GaslessProviderMetadata {
-    name: string;
-    logo?: string;
-    url?: string;
+  name: string;
+  logo?: string;
+  url?: string;
 }
 
 /**
  * Used in provider configuration to override fields of the provider's metadata.
  */
 export interface GaslessProviderMetadataOverride {
-    name?: string;
-    logo?: string;
-    url?: string;
+  name?: string;
+  logo?: string;
+  url?: string;
 }

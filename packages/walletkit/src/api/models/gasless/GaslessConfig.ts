@@ -19,8 +19,8 @@ import type { GaslessSupportedAsset } from './GaslessSupportedAsset';
  *  - `supportedAssets` — what the relayer accepts as fee payment.
  */
 export interface GaslessConfig {
-    /** Relayer address — for jetton-transfer `responseDestination` and similar. */
-    relayAddress: UserFriendlyAddress;
-    /** Assets the relayer accepts as fee payment. */
-    supportedAssets: GaslessSupportedAsset[];
+  /** Relayer address — for jetton-transfer `responseDestination` and similar. */
+  relayAddress: UserFriendlyAddress;
+  /** Assets the relayer accepts as fee payment. */
+  supportedAssets: GaslessSupportedAsset[];
 }

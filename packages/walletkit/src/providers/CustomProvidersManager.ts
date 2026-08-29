@@ -21,51 +21,51 @@ import type { CustomProvider } from './CustomProvider';
  * the expected type as a generic argument to narrow the returned provider.
  */
 export class CustomProvidersManager {
-    public createFactoryContext: () => ProviderFactoryContext;
+  public createFactoryContext: () => ProviderFactoryContext;
 
-    private readonly providers = new Map<string, CustomProvider>();
-    private readonly eventEmitter: EventEmitter<SharedKitEvents>;
+  private readonly providers = new Map<string, CustomProvider>();
+  private readonly eventEmitter: EventEmitter<SharedKitEvents>;
 
-    constructor(createFactoryContext: () => ProviderFactoryContext) {
-        this.createFactoryContext = createFactoryContext;
-        this.eventEmitter = createFactoryContext().eventEmitter;
-    }
+  constructor(createFactoryContext: () => ProviderFactoryContext) {
+    this.createFactoryContext = createFactoryContext;
+    this.eventEmitter = createFactoryContext().eventEmitter;
+  }
 
-    /**
-     * Register a custom provider. Replaces any existing provider with the same id.
-     * Emits `provider:registered`.
-     * @param input - Provider instance or factory that produces one
-     */
-    registerProvider<T extends CustomProvider>(input: ProviderInput<T>): void {
-        const provider = resolveProvider(input, this.createFactoryContext());
-        this.providers.set(provider.providerId, provider);
-        this.eventEmitter.emit(
-            'provider:registered',
-            { providerId: provider.providerId, type: provider.type },
-            'custom-providers-manager',
-        );
-    }
+  /**
+   * Register a custom provider. Replaces any existing provider with the same id.
+   * Emits `provider:registered`.
+   * @param input - Provider instance or factory that produces one
+   */
+  registerProvider<T extends CustomProvider>(input: ProviderInput<T>): void {
+    const provider = resolveProvider(input, this.createFactoryContext());
+    this.providers.set(provider.providerId, provider);
+    this.eventEmitter.emit(
+      'provider:registered',
+      { providerId: provider.providerId, type: provider.type },
+      'custom-providers-manager',
+    );
+  }
 
-    /**
-     * Get a registered custom provider by id.
-     * @param providerId - Id the provider was registered under
-     * @returns The provider when present, otherwise undefined
-     */
-    getProvider<T extends CustomProvider>(providerId: string): T | undefined {
-        return this.providers.get(providerId) as T | undefined;
-    }
+  /**
+   * Get a registered custom provider by id.
+   * @param providerId - Id the provider was registered under
+   * @returns The provider when present, otherwise undefined
+   */
+  getProvider<T extends CustomProvider>(providerId: string): T | undefined {
+    return this.providers.get(providerId) as T | undefined;
+  }
 
-    /**
-     * Check if a custom provider is registered
-     */
-    hasProvider(providerId: string): boolean {
-        return this.providers.has(providerId);
-    }
+  /**
+   * Check if a custom provider is registered
+   */
+  hasProvider(providerId: string): boolean {
+    return this.providers.has(providerId);
+  }
 
-    /**
-     * Get the ids of all registered custom providers
-     */
-    getRegisteredProviders(): string[] {
-        return Array.from(this.providers.keys());
-    }
+  /**
+   * Get the ids of all registered custom providers
+   */
+  getRegisteredProviders(): string[] {
+    return Array.from(this.providers.keys());
+  }
 }

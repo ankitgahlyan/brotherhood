@@ -10,21 +10,21 @@ import { useMemo } from 'react';
 import { useWalletKit } from '@demo/wallet-core';
 
 export interface SwapProviderOption {
-    id: string;
-    name: string;
-    logo?: string;
-    url?: string;
+  id: string;
+  name: string;
+  logo?: string;
+  url?: string;
 }
 
 /** Registered swap providers (id + display metadata) read from the kit. */
 export const useSwapProviders = (): SwapProviderOption[] => {
-    const walletKit = useWalletKit();
+  const walletKit = useWalletKit();
 
-    return useMemo(() => {
-        if (!walletKit) return [];
-        return walletKit.swap.getProviders().map((provider) => ({
-            id: provider.providerId,
-            ...provider.getMetadata(),
-        }));
-    }, [walletKit]);
+  return useMemo(() => {
+    if (!walletKit) return [];
+    return walletKit.swap.getProviders().map((provider) => ({
+      id: provider.providerId,
+      ...provider.getMetadata(),
+    }));
+  }, [walletKit]);
 };

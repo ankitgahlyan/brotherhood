@@ -9,9 +9,8 @@
 // npx tsx examples/ton-dns.ts
 import { ApiClientToncenter, CHAIN } from '../src';
 
- 
 const logInfo = console.log;
- 
+
 const logError = console.error;
 
 const networkName = process.env.TON_NETWORK ?? 'TESTNET';
@@ -20,13 +19,13 @@ const apiKey = process.env[`TON_API_KEY_${networkName}`];
 const client = new ApiClientToncenter({ apiKey, network });
 
 async function main() {
-    const wallet = await client.resolveDnsWallet('tolya.ton');
-    logInfo({ wallet });
-    const domain = await client.backResolveDnsWallet(wallet!);
-    logInfo({ domain });
+  const wallet = await client.resolveDnsWallet('tolya.ton');
+  logInfo({ wallet });
+  const domain = await client.backResolveDnsWallet(wallet!);
+  logInfo({ domain });
 }
 
 main().catch((error) => {
-    logError(error);
-    process.exit(1);
+  logError(error);
+  process.exit(1);
 });

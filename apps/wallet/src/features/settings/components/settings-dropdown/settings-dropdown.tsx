@@ -8,7 +8,18 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
-import { ChevronRight, KeyRound, Lock, Moon, Monitor, Plus, Sun, Sparkles, Trash2, Check } from 'lucide-react';
+import {
+  ChevronRight,
+  KeyRound,
+  Lock,
+  Moon,
+  Monitor,
+  Plus,
+  Sun,
+  Sparkles,
+  Trash2,
+  Check,
+} from 'lucide-react';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
@@ -25,242 +36,272 @@ import type { CreateWalletMode } from '@/features/wallet-setup';
 const log = createComponentLogger('SettingsDropdown');
 
 interface ActionRowProps {
-    icon: React.ReactNode;
-    label: string;
-    onClick: () => void;
-    danger?: boolean;
-    disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  disabled?: boolean;
 }
 
-const ActionRow: React.FC<ActionRowProps> = ({ icon, label, onClick, danger = false, disabled = false }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors disabled:opacity-50 ${
-            danger
-                ? 'text-red-500 hover:bg-red-500/10'
-                : 'text-foreground hover:bg-muted/80'
-        }`}
-    >
-        <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
-        <span className="flex-1 text-sm font-semibold">{label}</span>
-        <ChevronRight className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`} />
-    </button>
+const ActionRow: React.FC<ActionRowProps> = ({
+  icon,
+  label,
+  onClick,
+  danger = false,
+  disabled = false,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors disabled:opacity-50 ${
+      danger
+        ? 'text-red-500 hover:bg-red-500/10'
+        : 'text-foreground hover:bg-muted/80'
+    }`}
+  >
+    <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
+    <span className="flex-1 text-sm font-semibold">{label}</span>
+    <ChevronRight
+      className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`}
+    />
+  </button>
 );
 
-const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
-    { mode: 'system', label: 'System', icon: <Monitor className="w-4 h-4" /> },
-    { mode: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
-    { mode: 'dark', label: 'Midnight', icon: <Moon className="w-4 h-4" /> },
-    { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
+const THEME_OPTIONS: {
+  mode: ThemeMode;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  { mode: 'system', label: 'System', icon: <Monitor className="w-4 h-4" /> },
+  { mode: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
+  { mode: 'dark', label: 'Midnight', icon: <Moon className="w-4 h-4" /> },
+  { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
 ];
 
 export const SettingsDropdown: React.FC = () => {
-    const navigate = useNavigate();
-    const { theme, setTheme } = useTheme();
-    const {
-        lock,
-        reset,
-        persistPassword,
-        setPersistPassword,
-        holdToSign,
-        setHoldToSign,
-        showFastSend,
-        setShowFastSend,
-    } = useAuth();
-    const { getDecryptedMnemonic } = useWallet();
+  const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const {
+    lock,
+    reset,
+    persistPassword,
+    setPersistPassword,
+    holdToSign,
+    setHoldToSign,
+    showFastSend,
+    setShowFastSend,
+  } = useAuth();
+  const { getDecryptedMnemonic } = useWallet();
 
-    const [panel, setPanel] = useState<'menu' | 'create' | 'mnemonic' | null>(null);
-    const [mnemonic, setMnemonic] = useState<string[]>([]);
-    const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
-    const [mnemonicError, setMnemonicError] = useState('');
+  const [panel, setPanel] = useState<'menu' | 'create' | 'mnemonic' | null>(
+    null,
+  );
+  const [mnemonic, setMnemonic] = useState<string[]>([]);
+  const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
+  const [mnemonicError, setMnemonicError] = useState('');
 
-    const handleLockWallet = () => {
-        setPanel(null);
-        lock();
-    };
+  const handleLockWallet = () => {
+    setPanel(null);
+    lock();
+  };
 
-    const handleDeleteWallet = () => {
-        if (window.confirm('Are you sure you want to delete your wallet? This action cannot be undone.')) {
-            setPanel(null);
-            reset();
-        }
-    };
+  const handleDeleteWallet = () => {
+    if (
+      window.confirm(
+        'Are you sure you want to delete your wallet? This action cannot be undone.',
+      )
+    ) {
+      setPanel(null);
+      reset();
+    }
+  };
 
-    const handleCreateNewWallet = () => setPanel('create');
+  const handleCreateNewWallet = () => setPanel('create');
 
-    const handleSelectCreateMode = (mode: CreateWalletMode) => {
-        setPanel(null);
-        navigate(WALLET_SETUP_ROUTE[mode]);
-    };
+  const handleSelectCreateMode = (mode: CreateWalletMode) => {
+    setPanel(null);
+    navigate(WALLET_SETUP_ROUTE[mode]);
+  };
 
-    const handleViewRecoveryPhrase = async () => {
-        setIsLoadingMnemonic(true);
-        setMnemonicError('');
+  const handleViewRecoveryPhrase = async () => {
+    setIsLoadingMnemonic(true);
+    setMnemonicError('');
 
-        try {
-            const decryptedMnemonic = await getDecryptedMnemonic();
-            if (decryptedMnemonic) {
-                setMnemonic(decryptedMnemonic);
-                setPanel('mnemonic');
-            } else {
-                setMnemonicError('Unable to retrieve recovery phrase. Please ensure you are logged in.');
-            }
-        } catch (error) {
-            setMnemonicError('Failed to decrypt recovery phrase. Please try again.');
-            log.error('Error retrieving mnemonic:', error);
-        } finally {
-            setIsLoadingMnemonic(false);
-        }
-    };
+    try {
+      const decryptedMnemonic = await getDecryptedMnemonic();
+      if (decryptedMnemonic) {
+        setMnemonic(decryptedMnemonic);
+        setPanel('mnemonic');
+      } else {
+        setMnemonicError(
+          'Unable to retrieve recovery phrase. Please ensure you are logged in.',
+        );
+      }
+    } catch (error) {
+      setMnemonicError('Failed to decrypt recovery phrase. Please try again.');
+      log.error('Error retrieving mnemonic:', error);
+    } finally {
+      setIsLoadingMnemonic(false);
+    }
+  };
 
-    const handleCloseMnemonicModal = () => {
-        setPanel(null);
-        setMnemonic([]);
-        setMnemonicError('');
-    };
+  const handleCloseMnemonicModal = () => {
+    setPanel(null);
+    setMnemonic([]);
+    setMnemonicError('');
+  };
 
-    return (
-        <>
-            <button
-                onClick={() => setPanel('menu')}
-                className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
-                aria-label="Settings"
-                data-testid="wallet-menu"
-            >
-                <SettingsIcon className="w-6 h-6 text-foreground" />
-            </button>
+  return (
+    <>
+      <button
+        onClick={() => setPanel('menu')}
+        className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
+        aria-label="Settings"
+        data-testid="wallet-menu"
+      >
+        <SettingsIcon className="w-6 h-6 text-foreground" />
+      </button>
 
-            <Modal.Container
-                isOpened={panel === 'menu'}
-                onOpenChange={(open) => !open && setPanel(null)}
-                className="px-2"
-            >
-                <Modal.Header onClose={() => setPanel(null)}>
-                    <Modal.Title>Settings</Modal.Title>
-                </Modal.Header>
+      <Modal.Container
+        isOpened={panel === 'menu'}
+        onOpenChange={(open) => !open && setPanel(null)}
+        className="px-2"
+      >
+        <Modal.Header onClose={() => setPanel(null)}>
+          <Modal.Title>Settings</Modal.Title>
+        </Modal.Header>
 
-                <Modal.Body className="gap-3">
-                    {/* Appearance Section */}
-                    <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2 block">
-                            Appearance
-                        </span>
-                        <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
-                            {THEME_OPTIONS.map((opt) => {
-                                const isSelected = theme === opt.mode;
-                                return (
-                                    <button
-                                        key={opt.mode}
-                                        type="button"
-                                        onClick={() => setTheme(opt.mode)}
-                                        className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
-                                            isSelected
-                                                ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
-                                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                                        }`}
-                                        data-testid={`theme-option-${opt.mode}`}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            {opt.icon}
-                                            {isSelected && <Check className="w-3 h-3 text-blue-500" />}
-                                        </div>
-                                        <span>{opt.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+        <Modal.Body className="gap-3">
+          {/* Appearance Section */}
+          <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2 block">
+              Appearance
+            </span>
+            <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
+              {THEME_OPTIONS.map((opt) => {
+                const isSelected = theme === opt.mode;
+                return (
+                  <button
+                    key={opt.mode}
+                    type="button"
+                    onClick={() => setTheme(opt.mode)}
+                    className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
+                      isSelected
+                        ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                    data-testid={`theme-option-${opt.mode}`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {opt.icon}
+                      {isSelected && (
+                        <Check className="w-3 h-3 text-blue-500" />
+                      )}
                     </div>
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                    <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-                        <ToggleRow
-                            testId="auto-lock"
-                            label="Auto-Lock"
-                            description="Lock wallet on app reload (more secure)"
-                            checked={!persistPassword}
-                            onChange={(checked) => setPersistPassword(!checked)}
-                            info={
-                                <>
-                                    <strong>Security notice:</strong> when auto-lock is off, your password is stored
-                                    locally and the wallet stays unlocked. Only use for development.
-                                </>
-                            }
-                        />
-                        <ToggleRow
-                            testId="hold-to-sign"
-                            label="Hold to Sign"
-                            description="Hold the button for 3 seconds to approve transactions"
-                            checked={holdToSign ?? true}
-                            onChange={setHoldToSign}
-                            info={
-                                <>
-                                    <strong>Security notice:</strong> disabling hold-to-sign makes it easier to
-                                    accidentally approve transactions. Only use for testing.
-                                </>
-                            }
-                        />
-                        <ToggleRow
-                            testId="show-fast-send"
-                            label="Show fast send"
-                            description="Show “Send Fast” button (1 nano, no confirmation)"
-                            checked={showFastSend ?? false}
-                            onChange={setShowFastSend}
-                        />
-                    </div>
-
-                    <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-                        <ActionRow
-                            icon={<Plus className="w-5 h-5" />}
-                            label="Create New Wallet"
-                            onClick={handleCreateNewWallet}
-                        />
-                        <ActionRow
-                            icon={<KeyRound className="w-5 h-5" />}
-                            label={isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'}
-                            onClick={handleViewRecoveryPhrase}
-                            disabled={isLoadingMnemonic}
-                        />
-                        <ActionRow icon={<Lock className="w-5 h-5" />} label="Lock Wallet" onClick={handleLockWallet} />
-                        <ActionRow
-                            icon={<Trash2 className="w-5 h-5" />}
-                            label="Delete Wallet"
-                            onClick={handleDeleteWallet}
-                            danger
-                        />
-                    </div>
-
-                    {mnemonicError && (
-                        <p className="text-red-500 text-sm text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">{mnemonicError}</p>
-                    )}
-                </Modal.Body>
-            </Modal.Container>
-
-            <CreateWalletModal
-                isOpen={panel === 'create'}
-                onClose={() => setPanel(null)}
-                onSelect={handleSelectCreateMode}
+          <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+            <ToggleRow
+              testId="auto-lock"
+              label="Auto-Lock"
+              description="Lock wallet on app reload (more secure)"
+              checked={!persistPassword}
+              onChange={(checked) => setPersistPassword(!checked)}
+              info={
+                <>
+                  <strong>Security notice:</strong> when auto-lock is off, your
+                  password is stored locally and the wallet stays unlocked. Only
+                  use for development.
+                </>
+              }
             />
+            <ToggleRow
+              testId="hold-to-sign"
+              label="Hold to Sign"
+              description="Hold the button for 3 seconds to approve transactions"
+              checked={holdToSign ?? true}
+              onChange={setHoldToSign}
+              info={
+                <>
+                  <strong>Security notice:</strong> disabling hold-to-sign makes
+                  it easier to accidentally approve transactions. Only use for
+                  testing.
+                </>
+              }
+            />
+            <ToggleRow
+              testId="show-fast-send"
+              label="Show fast send"
+              description="Show “Send Fast” button (1 nano, no confirmation)"
+              checked={showFastSend ?? false}
+              onChange={setShowFastSend}
+            />
+          </div>
 
-            <Modal.Container
-                isOpened={panel === 'mnemonic'}
-                onOpenChange={(open) => !open && handleCloseMnemonicModal()}
-                className="px-2"
-            >
-                <Modal.Header onClose={handleCloseMnemonicModal}>
-                    <Modal.Title>Recovery Phrase</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {mnemonic.length > 0 && (
-                        <MnemonicDisplay
-                            mnemonic={mnemonic}
-                            showWarning
-                            warningType="red"
-                            warningText="Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet."
-                        />
-                    )}
-                </Modal.Body>
-            </Modal.Container>
-        </>
-    );
+          <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+            <ActionRow
+              icon={<Plus className="w-5 h-5" />}
+              label="Create New Wallet"
+              onClick={handleCreateNewWallet}
+            />
+            <ActionRow
+              icon={<KeyRound className="w-5 h-5" />}
+              label={isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'}
+              onClick={handleViewRecoveryPhrase}
+              disabled={isLoadingMnemonic}
+            />
+            <ActionRow
+              icon={<Lock className="w-5 h-5" />}
+              label="Lock Wallet"
+              onClick={handleLockWallet}
+            />
+            <ActionRow
+              icon={<Trash2 className="w-5 h-5" />}
+              label="Delete Wallet"
+              onClick={handleDeleteWallet}
+              danger
+            />
+          </div>
+
+          {mnemonicError && (
+            <p className="text-red-500 text-sm text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+              {mnemonicError}
+            </p>
+          )}
+        </Modal.Body>
+      </Modal.Container>
+
+      <CreateWalletModal
+        isOpen={panel === 'create'}
+        onClose={() => setPanel(null)}
+        onSelect={handleSelectCreateMode}
+      />
+
+      <Modal.Container
+        isOpened={panel === 'mnemonic'}
+        onOpenChange={(open) => !open && handleCloseMnemonicModal()}
+        className="px-2"
+      >
+        <Modal.Header onClose={handleCloseMnemonicModal}>
+          <Modal.Title>Recovery Phrase</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {mnemonic.length > 0 && (
+            <MnemonicDisplay
+              mnemonic={mnemonic}
+              showWarning
+              warningType="red"
+              warningText="Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet."
+            />
+          )}
+        </Modal.Body>
+      </Modal.Container>
+    </>
+  );
 };

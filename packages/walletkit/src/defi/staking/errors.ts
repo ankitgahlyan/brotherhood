@@ -9,16 +9,16 @@
 import { DefiError } from '../errors';
 
 export enum StakingErrorCode {
-    InvalidParams = 'INVALID_PARAMS',
-    UnsupportedOperation = 'UNSUPPORTED_OPERATION',
+  InvalidParams = 'INVALID_PARAMS',
+  UnsupportedOperation = 'UNSUPPORTED_OPERATION',
 }
 
 export class StakingError extends DefiError {
-    public readonly code: StakingErrorCode;
+  public readonly code: StakingErrorCode;
 
-    constructor(message: string, code: StakingErrorCode, details?: unknown) {
-        super(message, code, details);
-        this.name = 'StakingError';
-        this.code = code;
-    }
+  constructor(message: string, code: StakingErrorCode, details?: unknown) {
+    super(message, code, details);
+    this.name = 'StakingError';
+    this.code = code;
+  }
 }

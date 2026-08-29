@@ -10,7 +10,9 @@
       "@/*": ["./src/*"],
       "@wrappers/*": ["../../wrappers-ts/*"],
       "@wrappers": ["../../wrappers-ts/index.ts"],
-      "@demo/v4ledger-adapter": ["../../packages/v4ledger-adapter/src/index.ts"],
+      "@demo/v4ledger-adapter": [
+        "../../packages/v4ledger-adapter/src/index.ts"
+      ],
       "@demo/wallet-core": ["../../packages/wallet-core/src/index.ts"],
       "@ton/walletkit": ["../../packages/walletkit/src/index.ts"]
     }

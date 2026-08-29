@@ -12,8 +12,8 @@ import type { AddressBookRowV3 } from '../../toncenter/v3/AddressBookRowV3';
 
 // Toncenter Jetton Wallets API Response Types
 export interface ResponseUserJettons {
-    jettons: AddressJetton[];
-    address_book: Record<string, AddressBookRowV3>;
+  jettons: AddressJetton[];
+  address_book: Record<string, AddressBookRowV3>;
 
-    pagination: Pagination;
+  pagination: Pagination;
 }

@@ -12,7 +12,7 @@
  * @returns Formatted date/time string
  */
 export const formatTimestamp = (timestampSeconds: number): string => {
-    return new Date(timestampSeconds * 1000).toLocaleString();
+  return new Date(timestampSeconds * 1000).toLocaleString();
 };
 
 /**
@@ -22,7 +22,7 @@ export const formatTimestamp = (timestampSeconds: number): string => {
  * @returns Shortened address (e.g., "EQAbc...xyz123")
  */
 export const formatAddress = (addr: string, count = 6): string => {
-    if (!addr) return '';
+  if (!addr) return '';
 
-    return `${addr.slice(0, count)}...${addr.slice(-count)}`;
+  return `${addr.slice(0, count)}...${addr.slice(-count)}`;
 };

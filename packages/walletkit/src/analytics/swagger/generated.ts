@@ -15,7 +15,7 @@ export interface BridgeClientConnectErrorEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -39,7 +39,7 @@ export interface BridgeClientConnectErrorEvent {
    */
   event_id?: string;
   /** @example "bridge-client-connect-error" */
-  event_name: "bridge-client-connect-error";
+  event_name: 'bridge-client-connect-error';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -49,7 +49,7 @@ export interface BridgeClientConnectErrorEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -75,7 +75,7 @@ export interface BridgeClientConnectStartedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -95,7 +95,7 @@ export interface BridgeClientConnectStartedEvent {
    */
   event_id?: string;
   /** @example "bridge-client-connect-started" */
-  event_name: "bridge-client-connect-started";
+  event_name: 'bridge-client-connect-started';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -105,7 +105,7 @@ export interface BridgeClientConnectStartedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -131,7 +131,7 @@ export interface BridgeClientMessageDecodeErrorEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -161,7 +161,7 @@ export interface BridgeClientMessageDecodeErrorEvent {
    */
   event_id?: string;
   /** @example "bridge-client-message-decode-error" */
-  event_name: "bridge-client-message-decode-error";
+  event_name: 'bridge-client-message-decode-error';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -171,7 +171,7 @@ export interface BridgeClientMessageDecodeErrorEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -203,7 +203,7 @@ export interface BridgeClientMessageReceivedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -229,7 +229,7 @@ export interface BridgeClientMessageReceivedEvent {
    */
   event_id?: string;
   /** @example "bridge-client-message-received" */
-  event_name: "bridge-client-message-received";
+  event_name: 'bridge-client-message-received';
   /** Message ID. */
   message_id?: string;
   /**
@@ -243,7 +243,7 @@ export interface BridgeClientMessageReceivedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -276,7 +276,7 @@ export interface BridgeConnectEstablishedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -296,7 +296,7 @@ export interface BridgeConnectEstablishedEvent {
    */
   event_id?: string;
   /** @example "bridge-client-connect-established" */
-  event_name: "bridge-client-connect-established";
+  event_name: 'bridge-client-connect-established';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -306,7 +306,7 @@ export interface BridgeConnectEstablishedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -332,7 +332,7 @@ export interface BridgeEventsClientSubscribedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -346,7 +346,7 @@ export interface BridgeEventsClientSubscribedEvent {
    */
   event_id?: string;
   /** @example "bridge-events-client-subscribed" */
-  event_name: "bridge-events-client-subscribed";
+  event_name: 'bridge-events-client-subscribed';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -356,7 +356,7 @@ export interface BridgeEventsClientSubscribedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -380,7 +380,7 @@ export interface BridgeEventsClientUnsubscribedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -394,7 +394,7 @@ export interface BridgeEventsClientUnsubscribedEvent {
    */
   event_id?: string;
   /** @example "bridge-events-client-unsubscribed" */
-  event_name: "bridge-events-client-unsubscribed";
+  event_name: 'bridge-events-client-unsubscribed';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -404,7 +404,7 @@ export interface BridgeEventsClientUnsubscribedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -428,7 +428,7 @@ export interface BridgeMessageExpiredEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -448,7 +448,7 @@ export interface BridgeMessageExpiredEvent {
    */
   event_id?: string;
   /** @example "bridge-message-expired" */
-  event_name: "bridge-message-expired";
+  event_name: 'bridge-message-expired';
   /** Message ID. */
   message_id?: string;
   /**
@@ -462,7 +462,7 @@ export interface BridgeMessageExpiredEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -492,7 +492,7 @@ export interface BridgeMessageReceivedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -512,7 +512,7 @@ export interface BridgeMessageReceivedEvent {
    */
   event_id?: string;
   /** @example "bridge-message-received" */
-  event_name: "bridge-message-received";
+  event_name: 'bridge-message-received';
   /** Message ID. */
   message_id?: string;
   /**
@@ -526,7 +526,7 @@ export interface BridgeMessageReceivedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -550,7 +550,7 @@ export interface BridgeMessageSentEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -570,7 +570,7 @@ export interface BridgeMessageSentEvent {
    */
   event_id?: string;
   /** @example "bridge-message-sent" */
-  event_name: "bridge-message-sent";
+  event_name: 'bridge-message-sent';
   /** Message ID. */
   message_id?: string;
   /**
@@ -584,7 +584,7 @@ export interface BridgeMessageSentEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -614,7 +614,7 @@ export interface BridgeMessageValidationFailedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -634,7 +634,7 @@ export interface BridgeMessageValidationFailedEvent {
    */
   event_id?: string;
   /** @example "bridge-message-validation-failed" */
-  event_name: "bridge-message-validation-failed";
+  event_name: 'bridge-message-validation-failed';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -646,7 +646,7 @@ export interface BridgeMessageValidationFailedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -676,7 +676,7 @@ export interface BridgeRequestSentEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -702,7 +702,7 @@ export interface BridgeRequestSentEvent {
    */
   event_id?: string;
   /** @example "bridge-client-message-sent" */
-  event_name: "bridge-client-message-sent";
+  event_name: 'bridge-client-message-sent';
   /** Message ID. */
   message_id?: string;
   /**
@@ -716,7 +716,7 @@ export interface BridgeRequestSentEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -748,7 +748,7 @@ export interface BridgeVerifyEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -762,7 +762,7 @@ export interface BridgeVerifyEvent {
    */
   event_id?: string;
   /** @example "bridge-verify" */
-  event_name: "bridge-verify";
+  event_name: 'bridge-verify';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -772,7 +772,7 @@ export interface BridgeVerifyEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -785,7 +785,7 @@ export interface BridgeVerifyEvent {
   user_id?: string;
   /** Status of verification. */
   verification_result?: string;
-  verify_type?: "connect" | string;
+  verify_type?: 'connect' | string;
   /** The version of the sending subsystem. */
   version?: string;
   /** User locale */
@@ -799,7 +799,7 @@ export interface BridgeVerifyValidationFailedEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -817,7 +817,7 @@ export interface BridgeVerifyValidationFailedEvent {
    */
   event_id?: string;
   /** @example "bridge-verify-validation-failed" */
-  event_name: "bridge-verify-validation-failed";
+  event_name: 'bridge-verify-validation-failed';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -827,7 +827,7 @@ export interface BridgeVerifyValidationFailedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -838,7 +838,7 @@ export interface BridgeVerifyValidationFailedEvent {
    * @example "8d5e90bd-d6f8-4ab0-bff8-0ee2f26b44c3"
    */
   user_id?: string;
-  verify_type?: "connect" | string;
+  verify_type?: 'connect' | string;
   /** The version of the sending subsystem. */
   version?: string;
   /** User locale */
@@ -851,7 +851,7 @@ export interface BridgeVerifyValidationFailedEvent {
 export interface ConnectionCompletedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -871,7 +871,7 @@ export interface ConnectionCompletedEvent {
    */
   event_id?: string;
   /** @example "connection-completed" */
-  event_name: "connection-completed";
+  event_name: 'connection-completed';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -882,18 +882,12 @@ export interface ConnectionCompletedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -933,7 +927,7 @@ export interface ConnectionCompletedEvent {
 export interface ConnectionErrorEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -957,7 +951,7 @@ export interface ConnectionErrorEvent {
    */
   event_id?: string;
   /** @example "connection-error" */
-  event_name: "connection-error";
+  event_name: 'connection-error';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -968,18 +962,12 @@ export interface ConnectionErrorEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1006,7 +994,7 @@ export interface ConnectionErrorEvent {
 export interface ConnectionSelectedWalletEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1026,7 +1014,7 @@ export interface ConnectionSelectedWalletEvent {
    */
   event_id?: string;
   /** @example "connection-selected-wallet" */
-  event_name: "connection-selected-wallet";
+  event_name: 'connection-selected-wallet';
   locale?: string;
   main_screen?: string[];
   manifest_json_url?: string;
@@ -1038,18 +1026,12 @@ export interface ConnectionSelectedWalletEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1069,16 +1051,16 @@ export interface ConnectionSelectedWalletEvent {
   wallet_list_download_duration?: number;
   wallet_redirect_link?: string;
   /** @example "external_link" */
-  wallet_redirect_method?: "tg_link" | "external_link" | string;
+  wallet_redirect_method?: 'tg_link' | 'external_link' | string;
   /** @example "main_screen" */
-  wallets_menu?: "explicit_wallet" | "main_screen" | "other_wallets" | string;
+  wallets_menu?: 'explicit_wallet' | 'main_screen' | 'other_wallets' | string;
 }
 
 /** This event should be sent when a user begins the wallet connection process. */
 export interface ConnectionStartedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1098,7 +1080,7 @@ export interface ConnectionStartedEvent {
    */
   event_id?: string;
   /** @example "connection-started" */
-  event_name: "connection-started";
+  event_name: 'connection-started';
   locale?: string;
   /** List of the wallets on the main screen. */
   main_screen?: string[];
@@ -1111,18 +1093,12 @@ export interface ConnectionStartedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1144,7 +1120,7 @@ export interface ConnectionStartedEvent {
 export interface DisconnectionEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1164,7 +1140,7 @@ export interface DisconnectionEvent {
    */
   event_id?: string;
   /** @example "disconnection" */
-  event_name: "disconnection";
+  event_name: 'disconnection';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1175,18 +1151,12 @@ export interface DisconnectionEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1229,7 +1199,7 @@ export interface JSBridgeCallEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1249,17 +1219,13 @@ export interface JSBridgeCallEvent {
    */
   event_id?: string;
   /** @example "js-bridge-call" */
-  event_name: "js-bridge-call";
+  event_name: 'js-bridge-call';
   /**
    * Method (connect, restoreConnection, send, listen).
    * @example "connect"
    */
   js_bridge_method?:
-    | "connect"
-    | "restoreConnection"
-    | "send"
-    | "listen"
-    | string;
+    'connect' | 'restoreConnection' | 'send' | 'listen' | string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -1269,7 +1235,7 @@ export interface JSBridgeCallEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -1301,7 +1267,7 @@ export interface JSBridgeErrorEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1325,17 +1291,13 @@ export interface JSBridgeErrorEvent {
    */
   event_id?: string;
   /** @example "js-bridge-error" */
-  event_name: "js-bridge-error";
+  event_name: 'js-bridge-error';
   /**
    * Method (connect, restoreConnection, send, listen).
    * @example "connect"
    */
   js_bridge_method?:
-    | "connect"
-    | "restoreConnection"
-    | "send"
-    | "listen"
-    | string;
+    'connect' | 'restoreConnection' | 'send' | 'listen' | string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -1345,7 +1307,7 @@ export interface JSBridgeErrorEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -1377,7 +1339,7 @@ export interface JSBridgeResponseEvent {
   /** Bridge URL. */
   bridge_url?: string;
   /** The client environment. */
-  client_environment?: "bridge" | string;
+  client_environment?: 'bridge' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1397,17 +1359,13 @@ export interface JSBridgeResponseEvent {
    */
   event_id?: string;
   /** @example "js-bridge-response" */
-  event_name: "js-bridge-response";
+  event_name: 'js-bridge-response';
   /**
    * Method (connect, restoreConnection, send, listen).
    * @example "connect"
    */
   js_bridge_method?:
-    | "connect"
-    | "restoreConnection"
-    | "send"
-    | "listen"
-    | string;
+    'connect' | 'restoreConnection' | 'send' | 'listen' | string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -1417,7 +1375,7 @@ export interface JSBridgeResponseEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -1457,7 +1415,7 @@ export interface Message {
 export interface SignDataRequestCompletedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1477,7 +1435,7 @@ export interface SignDataRequestCompletedEvent {
    */
   event_id?: string;
   /** @example "sign-data-request-completed" */
-  event_name: "sign-data-request-completed";
+  event_name: 'sign-data-request-completed';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1488,18 +1446,12 @@ export interface SignDataRequestCompletedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1538,7 +1490,7 @@ export interface SignDataRequestCompletedEvent {
 export interface SignDataRequestFailedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1562,7 +1514,7 @@ export interface SignDataRequestFailedEvent {
    */
   event_id?: string;
   /** @example "sign-data-request-failed" */
-  event_name: "sign-data-request-failed";
+  event_name: 'sign-data-request-failed';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1573,21 +1525,15 @@ export interface SignDataRequestFailedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   sign_data_schema?: string;
-  sign_data_type?: "binary" | "cell" | "text" | string;
-  sign_data_value?: "binary" | "cell" | "text" | string;
+  sign_data_type?: 'binary' | 'cell' | 'text' | string;
+  sign_data_value?: 'binary' | 'cell' | 'text' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1626,7 +1572,7 @@ export interface SignDataRequestFailedEvent {
 export interface SignDataRequestInitiatedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1646,7 +1592,7 @@ export interface SignDataRequestInitiatedEvent {
    */
   event_id?: string;
   /** @example "sign-data-request-initiated" */
-  event_name: "sign-data-request-initiated";
+  event_name: 'sign-data-request-initiated';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1657,18 +1603,12 @@ export interface SignDataRequestInitiatedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1711,7 +1651,7 @@ export interface TONConnectEvent {
   browser?: string;
   callback_return_action?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   client_id?: string;
   /** @example 0 */
   client_timestamp?: number;
@@ -1731,58 +1671,54 @@ export interface TONConnectEvent {
   /** @example "8d5e90bd-d6f8-4ab0-bff8-0ee2f26b44c3" */
   event_id?: string;
   event_name:
-    | "connection-started"
-    | "connection-selected-wallet"
-    | "connection-completed"
-    | "connection-error"
-    | "disconnection"
-    | "transaction-sent"
-    | "transaction-signed"
-    | "transaction-signing-failed"
-    | "sign-data-request-initiated"
-    | "sign-data-request-completed"
-    | "sign-data-request-failed"
-    | "bridge-client-connect-started"
-    | "bridge-client-connect-established"
-    | "bridge-client-connect-error"
-    | "bridge-client-message-sent"
-    | "bridge-client-message-received"
-    | "bridge-client-message-decode-error"
-    | "js-bridge-call"
-    | "js-bridge-response"
-    | "js-bridge-error"
-    | "bridge-message-received"
-    | "bridge-message-sent"
-    | "bridge-message-expired"
-    | "bridge-message-validation-failed"
-    | "bridge-events-client-subscribed"
-    | "bridge-events-client-unsubscribed"
-    | "bridge-verify"
-    | "wallet-sign-data-request-received"
-    | "wallet-connect-request-ui-displayed"
-    | "wallet-connect-accepted"
-    | "wallet-connect-rejected"
-    | "wallet-connect-response-sent"
-    | "wallet-transaction-request-received"
-    | "wallet-transaction-confirmation-ui-displayed"
-    | "wallet-transaction-accepted"
-    | "wallet-transaction-declined"
-    | "wallet-transaction-sent"
-    | "wallet-connect-request-received"
-    | "wallet-sign-data-confirmation-ui-displayed"
-    | "wallet-sign-data-accepted"
-    | "wallet-sign-data-declined"
-    | "wallet-sign-data-sent"
+    | 'connection-started'
+    | 'connection-selected-wallet'
+    | 'connection-completed'
+    | 'connection-error'
+    | 'disconnection'
+    | 'transaction-sent'
+    | 'transaction-signed'
+    | 'transaction-signing-failed'
+    | 'sign-data-request-initiated'
+    | 'sign-data-request-completed'
+    | 'sign-data-request-failed'
+    | 'bridge-client-connect-started'
+    | 'bridge-client-connect-established'
+    | 'bridge-client-connect-error'
+    | 'bridge-client-message-sent'
+    | 'bridge-client-message-received'
+    | 'bridge-client-message-decode-error'
+    | 'js-bridge-call'
+    | 'js-bridge-response'
+    | 'js-bridge-error'
+    | 'bridge-message-received'
+    | 'bridge-message-sent'
+    | 'bridge-message-expired'
+    | 'bridge-message-validation-failed'
+    | 'bridge-events-client-subscribed'
+    | 'bridge-events-client-unsubscribed'
+    | 'bridge-verify'
+    | 'wallet-sign-data-request-received'
+    | 'wallet-connect-request-ui-displayed'
+    | 'wallet-connect-accepted'
+    | 'wallet-connect-rejected'
+    | 'wallet-connect-response-sent'
+    | 'wallet-transaction-request-received'
+    | 'wallet-transaction-confirmation-ui-displayed'
+    | 'wallet-transaction-accepted'
+    | 'wallet-transaction-declined'
+    | 'wallet-transaction-sent'
+    | 'wallet-connect-request-received'
+    | 'wallet-sign-data-confirmation-ui-displayed'
+    | 'wallet-sign-data-accepted'
+    | 'wallet-sign-data-declined'
+    | 'wallet-sign-data-sent'
     | string;
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   /** @example "connect" */
   js_bridge_method?:
-    | "connect"
-    | "restoreConnection"
-    | "send"
-    | "listen"
-    | string;
+    'connect' | 'restoreConnection' | 'send' | 'listen' | string;
   locale?: string;
   main_screen?: string[];
   manifest_json_url?: string;
@@ -1799,17 +1735,11 @@ export interface TONConnectEvent {
   payload?: string;
   /** @example "ios" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   proof_payload_size?: number;
   request_type?: string;
   sign_data_schema?: string;
-  sign_data_type?: "binary" | "cell" | "text" | string;
+  sign_data_type?: 'binary' | 'cell' | 'text' | string;
   sign_data_value?: string;
   /**
    * @format base64
@@ -1817,7 +1747,7 @@ export interface TONConnectEvent {
    */
   signed_boc?: string;
   /** @example "dapp" */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tg_id?: number;
   tma_is_premium?: boolean;
   /** @example "00000000-0000-0000-0000-000000000000" */
@@ -1827,8 +1757,8 @@ export interface TONConnectEvent {
   /** @example 1756253085 */
   valid_until?: number;
   /** @example "ok" */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
-  verify_type?: "connect" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
+  verify_type?: 'connect' | string;
   version?: string;
   versions?: Record<string, string>;
   wallet_address?: string;
@@ -1842,21 +1772,21 @@ export interface TONConnectEvent {
   wallet_list_download_duration?: number;
   wallet_redirect_link?: string;
   /** @example "external_link" */
-  wallet_redirect_method?: "tg_link" | "external_link" | string;
+  wallet_redirect_method?: 'tg_link' | 'external_link' | string;
   /**
    * @format base64
    * @example ""
    */
   wallet_state_init?: string;
   /** @example "main_screen" */
-  wallets_menu?: "explicit_wallet" | "main_screen" | "other_wallets" | string;
+  wallets_menu?: 'explicit_wallet' | 'main_screen' | 'other_wallets' | string;
 }
 
 /** Created when a user sends a transaction for signature. */
 export interface TransactionSentEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1876,7 +1806,7 @@ export interface TransactionSentEvent {
    */
   event_id?: string;
   /** @example "transaction-sent" */
-  event_name: "transaction-sent";
+  event_name: 'transaction-sent';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1887,18 +1817,12 @@ export interface TransactionSentEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -1938,7 +1862,7 @@ export interface TransactionSentEvent {
 export interface TransactionSignedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -1958,7 +1882,7 @@ export interface TransactionSignedEvent {
    */
   event_id?: string;
   /** @example "transaction-signed" */
-  event_name: "transaction-signed";
+  event_name: 'transaction-signed';
   locale?: string;
   manifest_json_url?: string;
   /**
@@ -1969,13 +1893,7 @@ export interface TransactionSignedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * Bag of cells with a signed external message.
    * @format base64
@@ -1986,7 +1904,7 @@ export interface TransactionSignedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -2026,7 +1944,7 @@ export interface TransactionSignedEvent {
 export interface TransactionSigningFailedEvent {
   browser?: string;
   /** @example "web" */
-  client_environment?: "bridge" | "miniapp" | "wallet" | "web" | string;
+  client_environment?: 'bridge' | 'miniapp' | 'wallet' | 'web' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2050,7 +1968,7 @@ export interface TransactionSigningFailedEvent {
    */
   event_id?: string;
   /** @example "transaction-signing-failed" */
-  event_name: "transaction-signing-failed";
+  event_name: 'transaction-signing-failed';
   locale?: string;
   manifest_json_url?: string;
   messages?: Message[];
@@ -2062,18 +1980,12 @@ export interface TransactionSigningFailedEvent {
   origin_url?: string;
   /** @example "linux" */
   platform?:
-    | "ios"
-    | "ipad"
-    | "android"
-    | "macos"
-    | "windows"
-    | "linux"
-    | string;
+    'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | string;
   /**
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   tma_is_premium?: boolean;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
@@ -2118,7 +2030,7 @@ export interface WalletConnectAcceptedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2133,7 +2045,7 @@ export interface WalletConnectAcceptedEvent {
    */
   event_id?: string;
   /** @example "wallet-connect-accepted" */
-  event_name: "wallet-connect-accepted";
+  event_name: 'wallet-connect-accepted';
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   manifest_json_url?: string;
@@ -2148,7 +2060,7 @@ export interface WalletConnectAcceptedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2160,7 +2072,7 @@ export interface WalletConnectAcceptedEvent {
    */
   user_id?: string;
   /** @example "ok" */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2184,7 +2096,7 @@ export interface WalletConnectRejectedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2199,7 +2111,7 @@ export interface WalletConnectRejectedEvent {
    */
   event_id?: string;
   /** @example "wallet-connect-rejected" */
-  event_name: "wallet-connect-rejected";
+  event_name: 'wallet-connect-rejected';
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   manifest_json_url?: string;
@@ -2214,7 +2126,7 @@ export interface WalletConnectRejectedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2226,7 +2138,7 @@ export interface WalletConnectRejectedEvent {
    */
   user_id?: string;
   /** @example "ok" */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2249,7 +2161,7 @@ export interface WalletConnectRequestReceivedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2263,7 +2175,7 @@ export interface WalletConnectRequestReceivedEvent {
    */
   event_id?: string;
   /** @example "wallet-connect-request-received" */
-  event_name: "wallet-connect-request-received";
+  event_name: 'wallet-connect-request-received';
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   manifest_json_url?: string;
@@ -2277,7 +2189,7 @@ export interface WalletConnectRequestReceivedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2305,7 +2217,7 @@ export interface WalletConnectRequestUIDisplayedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2320,7 +2232,7 @@ export interface WalletConnectRequestUIDisplayedEvent {
    */
   event_id?: string;
   /** @example "wallet-connect-request-ui-displayed" */
-  event_name: "wallet-connect-request-ui-displayed";
+  event_name: 'wallet-connect-request-ui-displayed';
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   manifest_json_url?: string;
@@ -2335,7 +2247,7 @@ export interface WalletConnectRequestUIDisplayedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2347,7 +2259,7 @@ export interface WalletConnectRequestUIDisplayedEvent {
    */
   user_id?: string;
   /** @example "ok" */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2365,7 +2277,7 @@ export interface WalletConnectResponseSentEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2380,7 +2292,7 @@ export interface WalletConnectResponseSentEvent {
    */
   event_id?: string;
   /** @example "wallet-connect-response-sent" */
-  event_name: "wallet-connect-response-sent";
+  event_name: 'wallet-connect-response-sent';
   is_ton_addr?: boolean;
   is_ton_proof?: boolean;
   manifest_json_url?: string;
@@ -2395,7 +2307,7 @@ export interface WalletConnectResponseSentEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2407,7 +2319,7 @@ export interface WalletConnectResponseSentEvent {
    */
   user_id?: string;
   /** @example "ok" */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2431,7 +2343,7 @@ export interface WalletSignDataAcceptedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2446,7 +2358,7 @@ export interface WalletSignDataAcceptedEvent {
    */
   event_id?: string;
   /** @example "wallet-sign-data-accepted" */
-  event_name: "wallet-sign-data-accepted";
+  event_name: 'wallet-sign-data-accepted';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2458,7 +2370,7 @@ export interface WalletSignDataAcceptedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2492,7 +2404,7 @@ export interface WalletSignDataConfirmationUIDisplayedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2507,7 +2419,7 @@ export interface WalletSignDataConfirmationUIDisplayedEvent {
    */
   event_id?: string;
   /** @example "wallet-sign-data-confirmation-ui-displayed" */
-  event_name: "wallet-sign-data-confirmation-ui-displayed";
+  event_name: 'wallet-sign-data-confirmation-ui-displayed';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2519,7 +2431,7 @@ export interface WalletSignDataConfirmationUIDisplayedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2534,7 +2446,7 @@ export interface WalletSignDataConfirmationUIDisplayedEvent {
    * Verification result.
    * @example "ok"
    */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2558,7 +2470,7 @@ export interface WalletSignDataDeclinedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2573,7 +2485,7 @@ export interface WalletSignDataDeclinedEvent {
    */
   event_id?: string;
   /** @example "wallet-sign-data-declined" */
-  event_name: "wallet-sign-data-declined";
+  event_name: 'wallet-sign-data-declined';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2585,7 +2497,7 @@ export interface WalletSignDataDeclinedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2619,7 +2531,7 @@ export interface WalletSignDataRequestReceivedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2634,7 +2546,7 @@ export interface WalletSignDataRequestReceivedEvent {
    */
   event_id?: string;
   /** @example "wallet-sign-data-request-received" */
-  event_name: "wallet-sign-data-request-received";
+  event_name: 'wallet-sign-data-request-received';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2646,7 +2558,7 @@ export interface WalletSignDataRequestReceivedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2680,7 +2592,7 @@ export interface WalletSignDataSentEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2695,7 +2607,7 @@ export interface WalletSignDataSentEvent {
    */
   event_id?: string;
   /** @example "wallet-sign-data-sent" */
-  event_name: "wallet-sign-data-sent";
+  event_name: 'wallet-sign-data-sent';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2707,7 +2619,7 @@ export interface WalletSignDataSentEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2741,7 +2653,7 @@ export interface WalletTransactionAcceptedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2756,7 +2668,7 @@ export interface WalletTransactionAcceptedEvent {
    */
   event_id?: string;
   /** @example "wallet-transaction-accepted" */
-  event_name: "wallet-transaction-accepted";
+  event_name: 'wallet-transaction-accepted';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2768,7 +2680,7 @@ export interface WalletTransactionAcceptedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2802,7 +2714,7 @@ export interface WalletTransactionConfirmationUIDisplayedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2823,7 +2735,7 @@ export interface WalletTransactionConfirmationUIDisplayedEvent {
    */
   event_id?: string;
   /** @example "wallet-transaction-confirmation-ui-displayed" */
-  event_name: "wallet-transaction-confirmation-ui-displayed";
+  event_name: 'wallet-transaction-confirmation-ui-displayed';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2837,7 +2749,7 @@ export interface WalletTransactionConfirmationUIDisplayedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2852,7 +2764,7 @@ export interface WalletTransactionConfirmationUIDisplayedEvent {
    * unknown, ok, warning, danger.
    * @example "ok"
    */
-  verification_result?: "unknown" | "ok" | "warning" | "danger" | string;
+  verification_result?: 'unknown' | 'ok' | 'warning' | 'danger' | string;
   /** The version of the sending subsystem. */
   version?: string;
   wallet_app_name?: string;
@@ -2876,7 +2788,7 @@ export interface WalletTransactionDeclinedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2893,7 +2805,7 @@ export interface WalletTransactionDeclinedEvent {
    */
   event_id?: string;
   /** @example "wallet-transaction-declined" */
-  event_name: "wallet-transaction-declined";
+  event_name: 'wallet-transaction-declined';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2907,7 +2819,7 @@ export interface WalletTransactionDeclinedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -2941,7 +2853,7 @@ export interface WalletTransactionRequestReceivedEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -2956,7 +2868,7 @@ export interface WalletTransactionRequestReceivedEvent {
    */
   event_id?: string;
   /** @example "wallet-transaction-request-received" */
-  event_name: "wallet-transaction-request-received";
+  event_name: 'wallet-transaction-request-received';
   manifest_json_url?: string;
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
@@ -2968,7 +2880,7 @@ export interface WalletTransactionRequestReceivedEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -3001,7 +2913,7 @@ export interface WalletTransactionSentEvent {
    * The client environment.
    * @example "wallet"
    */
-  client_environment?: "wallet" | string;
+  client_environment?: 'wallet' | string;
   /** A unique session ID. */
   client_id?: string;
   /**
@@ -3019,7 +2931,7 @@ export interface WalletTransactionSentEvent {
    */
   event_id?: string;
   /** @example "wallet-transaction-sent" */
-  event_name: "wallet-transaction-sent";
+  event_name: 'wallet-transaction-sent';
   /**
    * Network id (-239 for the mainnet and -3 for the testnet). Other values should be rejected.
    * @example "-3"
@@ -3041,7 +2953,7 @@ export interface WalletTransactionSentEvent {
    * The subsystem used to collect the event (possible values: dapp, bridge, wallet).
    * @example "dapp"
    */
-  subsystem?: "bridge" | "dapp" | "dapp-sdk" | "wallet" | "wallet-sdk" | string;
+  subsystem?: 'bridge' | 'dapp' | 'dapp-sdk' | 'wallet' | 'wallet-sdk' | string;
   /**
    * ID to aggregate multiple events into one trace. UUIDv7 must be used (first 48 bits must be unix_ts_ms as in the specification). trace_id older than 24h won't be accepted.
    * @example "00000000-0000-0000-0000-000000000000"
@@ -3063,9 +2975,9 @@ export interface WalletTransactionSentEvent {
 }
 
 export type QueryParamsType = Record<string | number, any>;
-export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
+export type ResponseFormat = keyof Omit<Body, 'body' | 'bodyUsed'>;
 
-export interface FullRequestParams extends Omit<RequestInit, "body"> {
+export interface FullRequestParams extends Omit<RequestInit, 'body'> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -3086,20 +2998,22 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
 
 export type RequestParams = Omit<
   FullRequestParams,
-  "body" | "method" | "query" | "path"
+  'body' | 'method' | 'query' | 'path'
 >;
 
 export interface ApiConfig<SecurityDataType = unknown> {
   baseUrl?: string;
-  baseApiParams?: Omit<RequestParams, "baseUrl" | "cancelToken" | "signal">;
+  baseApiParams?: Omit<RequestParams, 'baseUrl' | 'cancelToken' | 'signal'>;
   securityWorker?: (
     securityData: SecurityDataType | null,
   ) => Promise<RequestParams | void> | RequestParams | void;
   customFetch?: typeof fetch;
 }
 
-export interface HttpResponse<D extends unknown, E extends unknown = unknown>
-  extends Response {
+export interface HttpResponse<
+  D extends unknown,
+  E extends unknown = unknown,
+> extends Response {
   data: D;
   error: E;
 }
@@ -3107,26 +3021,26 @@ export interface HttpResponse<D extends unknown, E extends unknown = unknown>
 type CancelToken = Symbol | string | number;
 
 export enum ContentType {
-  Json = "application/json",
-  JsonApi = "application/vnd.api+json",
-  FormData = "multipart/form-data",
-  UrlEncoded = "application/x-www-form-urlencoded",
-  Text = "text/plain",
+  Json = 'application/json',
+  JsonApi = 'application/vnd.api+json',
+  FormData = 'multipart/form-data',
+  UrlEncoded = 'application/x-www-form-urlencoded',
+  Text = 'text/plain',
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public baseUrl: string = "";
+  public baseUrl: string = '';
   private securityData: SecurityDataType | null = null;
-  private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
+  private securityWorker?: ApiConfig<SecurityDataType>['securityWorker'];
   private abortControllers = new Map<CancelToken, AbortController>();
   private customFetch = (...fetchParams: Parameters<typeof fetch>) =>
     fetch(...fetchParams);
 
   private baseApiParams: RequestParams = {
-    credentials: "same-origin",
+    credentials: 'same-origin',
     headers: {},
-    redirect: "follow",
-    referrerPolicy: "no-referrer",
+    redirect: 'follow',
+    referrerPolicy: 'no-referrer',
   };
 
   constructor(apiConfig: ApiConfig<SecurityDataType> = {}) {
@@ -3139,7 +3053,7 @@ export class HttpClient<SecurityDataType = unknown> {
 
   protected encodeQueryParam(key: string, value: any) {
     const encodedKey = encodeURIComponent(key);
-    return `${encodedKey}=${encodeURIComponent(typeof value === "number" ? value : `${value}`)}`;
+    return `${encodedKey}=${encodeURIComponent(typeof value === 'number' ? value : `${value}`)}`;
   }
 
   protected addQueryParam(query: QueryParamsType, key: string) {
@@ -3148,13 +3062,13 @@ export class HttpClient<SecurityDataType = unknown> {
 
   protected addArrayQueryParam(query: QueryParamsType, key: string) {
     const value = query[key];
-    return value.map((v: any) => this.encodeQueryParam(key, v)).join("&");
+    return value.map((v: any) => this.encodeQueryParam(key, v)).join('&');
   }
 
   protected toQueryString(rawQuery?: QueryParamsType): string {
     const query = rawQuery || {};
     const keys = Object.keys(query).filter(
-      (key) => "undefined" !== typeof query[key],
+      (key) => 'undefined' !== typeof query[key],
     );
     return keys
       .map((key) =>
@@ -3162,25 +3076,25 @@ export class HttpClient<SecurityDataType = unknown> {
           ? this.addArrayQueryParam(query, key)
           : this.addQueryParam(query, key),
       )
-      .join("&");
+      .join('&');
   }
 
   protected addQueryParams(rawQuery?: QueryParamsType): string {
     const queryString = this.toQueryString(rawQuery);
-    return queryString ? `?${queryString}` : "";
+    return queryString ? `?${queryString}` : '';
   }
 
   private contentFormatters: Record<ContentType, (input: any) => any> = {
     [ContentType.Json]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
+      input !== null && (typeof input === 'object' || typeof input === 'string')
         ? JSON.stringify(input)
         : input,
     [ContentType.JsonApi]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
+      input !== null && (typeof input === 'object' || typeof input === 'string')
         ? JSON.stringify(input)
         : input,
     [ContentType.Text]: (input: any) =>
-      input !== null && typeof input !== "string"
+      input !== null && typeof input !== 'string'
         ? JSON.stringify(input)
         : input,
     [ContentType.FormData]: (input: any) => {
@@ -3194,7 +3108,7 @@ export class HttpClient<SecurityDataType = unknown> {
           key,
           property instanceof Blob
             ? property
-            : typeof property === "object" && property !== null
+            : typeof property === 'object' && property !== null
               ? JSON.stringify(property)
               : `${property}`,
         );
@@ -3257,7 +3171,7 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<HttpResponse<T, E>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.baseApiParams.secure) &&
+      ((typeof secure === 'boolean' ? secure : this.baseApiParams.secure) &&
         this.securityWorker &&
         (await this.securityWorker(this.securityData))) ||
       {};
@@ -3267,13 +3181,13 @@ export class HttpClient<SecurityDataType = unknown> {
     const responseFormat = format || requestParams.format;
 
     return this.customFetch(
-      `${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`,
+      `${baseUrl || this.baseUrl || ''}${path}${queryString ? `?${queryString}` : ''}`,
       {
         ...requestParams,
         headers: {
           ...(requestParams.headers || {}),
           ...(type && type !== ContentType.FormData
-            ? { "Content-Type": type }
+            ? { 'Content-Type': type }
             : {}),
         },
         signal:
@@ -3281,7 +3195,7 @@ export class HttpClient<SecurityDataType = unknown> {
             ? this.createAbortSignal(cancelToken)
             : requestParams.signal) || null,
         body:
-          typeof body === "undefined" || body === null
+          typeof body === 'undefined' || body === null
             ? null
             : payloadFormatter(body),
       },
@@ -3382,7 +3296,7 @@ export class Api<
     ) =>
       this.request<any, any>({
         path: `/events`,
-        method: "POST",
+        method: 'POST',
         body: events,
         type: ContentType.Json,
         ...params,
