@@ -1,0 +1,51 @@
+/**
+ * Copyright (c) TonTech.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+import type { SwapProviderMetadataOverride } from '../../../../api/models';
+import type { OmnistonReferrerOptions } from './OmnistonReferrerOptions';
+
+/**
+ * Configuration for the Omniston Swap Provider
+ */
+export interface OmnistonSwapProviderConfig extends OmnistonReferrerOptions {
+    /**
+     * Optional URL for the Omniston API
+     * @format url
+     */
+    apiUrl?: string;
+
+    /**
+     * Default slippage tolerance in basis points (1 bp = 0.01%)
+     * @format int
+     */
+    defaultSlippageBps?: number;
+
+    /**
+     * Timeout for quote requests in milliseconds
+     * @format int
+     */
+    quoteTimeoutMs?: number;
+
+    /**
+     * Timeout for build-transaction requests in milliseconds.
+     * Guards against indefinite hangs when network connectivity is lost between getting
+     * a quote and signing — `buildTransfer` would otherwise wait without surfacing an error.
+     * @format int
+     */
+    buildTimeoutMs?: number;
+
+    /**
+     * Identifier for the provider
+     */
+    providerId?: string;
+
+    /**
+     * Custom metadata for the provider
+     */
+    metadata?: SwapProviderMetadataOverride;
+}

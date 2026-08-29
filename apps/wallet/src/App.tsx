@@ -1,0 +1,80 @@
+/**
+ * Copyright (c) TonTech.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+import React from 'react';
+import TransportWebHID from '@ledgerhq/hw-transport-webhid';
+import { WalletProvider } from '@demo/wallet-core';
+import type { WalletKitConfig } from '@demo/wallet-core';
+import { RouterProvider } from '@tanstack/react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { router } from './router';
+import { queryClient } from '@/lib/brotherhood/ton';
+import {
+    DISABLE_AUTO_EMULATION,
+    DISABLE_HTTP_BRIDGE,
+    DISABLE_MANIFEST_DOMAIN_CHECK,
+    DISABLE_NETWORK_SEND,
+    ENV_BRIDGE_URL,
+    ENV_TON_API_KEY_MAINNET,
+    ENV_TON_API_KEY_TESTNET,
+    ENV_TON_API_KEY_TETRA,
+    ENV_TON_API_PROVIDER,
+} from '@/core/lib/env';
+
+import './App.css';
+import './storePatch';
+
+/**
+ * Creates a Ledger transport for web using WebHID API
+ * This is used for connecting to Ledger hardware wallets via USB
+ */
+const createWebLedgerTransport = () => TransportWebHID.create();
+
+const getPlatform = (): 'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | undefined => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('ipad')) return 'ipad';
+    if (ua.includes('iphone')) return 'ios';
+    if (ua.includes('android')) return 'android';
+    if (ua.includes('mac')) return 'macos';
+    if (ua.includes('win')) return 'windows';
+    if (ua.includes('linux')) return 'linux';
+    return undefined;
+};
+
+const walletKitConfig: WalletKitConfig = {
+    disableHttpBridge: DISABLE_HTTP_BRIDGE,
+    disableNetworkSend: DISABLE_NETWORK_SEND,
+    disableManifestDomainCheck: DISABLE_MANIFEST_DOMAIN_CHECK,
+    bridgeUrl: ENV_BRIDGE_URL,
+    tonApiProvider: ENV_TON_API_PROVIDER,
+    tonApiKeyMainnet: ENV_TON_API_KEY_MAINNET,
+    tonApiKeyTestnet: ENV_TON_API_KEY_TESTNET,
+    tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
+    createLedgerTransport: createWebLedgerTransport,
+    analytics: {
+        appInfo: {
+            env: 'web',
+            platform: getPlatform(),
+            browser: navigator.userAgent,
+            getLocale: () => navigator.language,
+        },
+    },
+    disableAutoEmulation: DISABLE_AUTO_EMULATION,
+};
+
+export function App() {
+    return (
+        <QueryClientProvider client={queryClient}>
+            <WalletProvider storage={localStorage} walletKitConfig={walletKitConfig} enableDevtools={false}>
+                <RouterProvider router={router} />
+            </WalletProvider>
+        </QueryClientProvider>
+    );
+}
+
+export default App;

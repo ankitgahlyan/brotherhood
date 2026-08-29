@@ -1,0 +1,48 @@
+{
+  "name": "@demo/v4ledger-adapter",
+  "version": "0.1.0",
+  "description": "Ledger hardware wallet adapter for TON V4R2 wallets",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@ledgerhq/hw-transport": "6.32.0",
+    "@ton-community/ton-ledger": "^7.3.0",
+    "@ton/walletkit": "workspace:*"
+  },
+  "devDependencies": {
+    "@ledgerhq/hw-transport-node-hid": "6.30.0",
+    "@ton/core": "^0.63.1",
+    "@tonconnect/protocol": "^3.0.0",
+    "dotenv": "^17.4.2",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@ton/core": "^0.63.1",
+    "@tonconnect/protocol": "^3.0.0"
+  },
+  "scripts": {
+    "build": "bun run build:clean && bun run build:cjs && bun run build:esm",
+    "build:clean": "rm -rf dist",
+    "build:cjs": "tsc -p tsconfig.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "dev": "tsc -p tsconfig.esm.json --watch",
+    "typecheck": "tsc --noEmit"
+  }
+}

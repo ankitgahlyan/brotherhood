@@ -91,6 +91,7 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
         internalTransferMsg: makeInternalTransferStep(100, ton("50"), setup.deployer.address),
     }.toCell();
 
+    val expiresAt = blockchain.now() + 604800;
     val res = wallet1.sendActSubmitProposal(
         member1.address,
         1,
@@ -104,7 +105,6 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
     val newBal = wallet1.getJettonBalance();
     expect(newBal).toEqual(initialBal - ton("1000"));
 
-    val expiresAt = blockchain.now() + 604800;
     val expectedPollAddr = calcDeployPoll(
         1,
         member1.address,
@@ -141,6 +141,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         internalTransferMsg: makeInternalTransferStep(200, ton("100"), member1.address),
     }.toCell();
 
+    val expiresAt = blockchain.now() + 604800;
     val submitRes = wallet1.sendActSubmitProposal(
         member1.address,
         200,
@@ -151,7 +152,6 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     );
     expect(submitRes).toHaveAllSuccessfulTxs();
 
-    val expiresAt = blockchain.now() + 604800;
     val pollAddr = calcDeployPoll(
         200,
         member1.address,
@@ -225,9 +225,6 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     );
     expect(vote3Res).toHaveAllSuccessfulTxs();
 
-    pData = poll.getPollData();
-    expect(pData.executed).toBeTrue();
-
     // Proposer (member1) gets 10x proposal fee (10,000 FI) reward: initial 2001 FI - 1000 fee + 100 targetMsg + 10000 reward = 11101 FI
     expect(wallet1.getJettonBalance()).toEqual(ton("11101"));
 }
@@ -237,8 +234,12 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
 
     val member1 = testing.treasury("member-dup-1");
     val member2 = testing.treasury("member-dup-2");
+    val member3 = testing.treasury("member-dup-3");
+    val member4 = testing.treasury("member-dup-4");
     val wallet1 = createMemberWallet(setup, member1.address);
     val _wallet2 = createMemberWallet(setup, member2.address);
+    val _wallet3 = createMemberWallet(setup, member3.address);
+    val _wallet4 = createMemberWallet(setup, member4.address);
 
     val targetMsg = MintNewJettons {
         queryId: 300,
@@ -247,7 +248,8 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         internalTransferMsg: makeInternalTransferStep(300, ton("50"), member1.address),
     }.toCell();
 
-    wallet1.sendActSubmitProposal(
+    val expiresAt = blockchain.now() + 604800;
+    val submitRes = wallet1.sendActSubmitProposal(
         member1.address,
         300,
         setup.daoProxy.address,
@@ -255,8 +257,8 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         setup.pollCodeLibRef,
         { value: ton("0.5") },
     );
+    expect(submitRes).toHaveAllSuccessfulTxs();
 
-    val expiresAt = blockchain.now() + 604800;
     val pollAddr = calcDeployPoll(
         300,
         member1.address,

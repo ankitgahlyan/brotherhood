@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@wrappers/*": ["../../wrappers-ts/*"],
+      "@wrappers": ["../../wrappers-ts/index.ts"],
+      "@demo/v4ledger-adapter": ["../../packages/v4ledger-adapter/src/index.ts"],
+      "@demo/wallet-core": ["../../packages/wallet-core/src/index.ts"],
+      "@ton/walletkit": ["../../packages/walletkit/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

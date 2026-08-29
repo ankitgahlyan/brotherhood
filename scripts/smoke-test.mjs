@@ -1,26 +1,26 @@
 /**
- * Minimal headless smoke test for the app.
+ * Headless smoke test for the BrotherHood Wallet app.
  *
  * Opens the app in headless Chromium (bundled via Playwright) and asserts the
- * Manage page shell + content render. Use `nub run dev` (or serve
- * `dist/client`) first, then:
+ * welcome screen and wallet onboarding elements render.
  *
  *   node scripts/smoke-test.mjs [baseUrl]
  *
- * The default baseUrl is http://localhost:3000/brotherhood/ (vite dev). The
- * Playwright browser binary lives in ~/.cache/ms-playwright (shared cache);
- * install it once with `npx playwright install chromium`.
+ * The default baseUrl is http://localhost:3000/brotherhood/. If no server is running,
+ * it serves apps/wallet/dist locally.
  */
 import { chromium } from 'playwright';
-import { existsSync, readdirSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const baseUrl = process.argv[2] ?? 'http://localhost:3000/brotherhood/';
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const WALLET_DIST = join(ROOT, 'apps', 'wallet', 'dist');
+const defaultPort = 3000;
+const basePath = '/brotherhood/';
 
-// Resolve the full Chromium binary from the Playwright cache. Recent
-// Playwright ships a separate headless-shell binary; if that's missing, fall
-// back to the full Chromium executable in headless mode.
 function findChrome() {
   const root = join(homedir(), '.cache', 'ms-playwright');
   if (!existsSync(root)) return undefined;
@@ -35,16 +35,79 @@ function findChrome() {
   return undefined;
 }
 
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
+};
+
+async function startStaticServer(port) {
+  return new Promise((resolve) => {
+    const server = createServer((req, res) => {
+      let reqPath = req.url?.split('?')[0] ?? '/';
+      if (reqPath.startsWith(basePath)) {
+        reqPath = reqPath.slice(basePath.length - 1);
+      }
+      let filePath = join(WALLET_DIST, reqPath);
+      if (existsSync(filePath) && statSync(filePath).isDirectory()) {
+        filePath = join(filePath, 'index.html');
+      }
+      if (!existsSync(filePath)) {
+        filePath = join(WALLET_DIST, 'index.html');
+      }
+
+      try {
+        const content = readFileSync(filePath);
+        const ext = extname(filePath);
+        res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+        res.writeHead(200);
+        res.end(content);
+      } catch {
+        res.writeHead(404);
+        res.end('Not Found');
+      }
+    });
+
+    server.listen(port, () => {
+      resolve(server);
+    });
+  });
+}
+
+let server = null;
+let targetUrl = process.argv[2];
+
+if (!targetUrl) {
+  try {
+    const check = await fetch('http://localhost:3000/brotherhood/').catch(() => null);
+    if (!check) {
+      server = await startStaticServer(defaultPort);
+    }
+  } catch {
+    server = await startStaticServer(defaultPort);
+  }
+  targetUrl = `http://localhost:${defaultPort}${basePath}`;
+}
+
 const launched = await chromium.launch({ executablePath: findChrome() });
 let failed = false;
+
 try {
   const page = await launched.newPage();
-  await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
-  // Route content hydrates client-side (routes are ssr:false), so block until
-  // the token card renders rather than racing networkidle.
+  await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 60000 });
+
+  // Wait for initial render of wallet onboarding screen
   await page
     .waitForFunction(
-      () => document.body.innerText.includes('BROTHERHOOD — HD'),
+      () =>
+        document.body.innerText.includes('Your TON wallet') ||
+        document.body.innerText.includes('Create a new wallet') ||
+        document.body.innerText.includes('Add an existing wallet'),
       null,
       { timeout: 20000 },
     )
@@ -53,9 +116,9 @@ try {
   const url = page.url();
 
   const expectations = {
-    'header brand': 'BrotherHood',
-    'Manage tab list': 'IDENTITY',
-    'token card': 'BROTHERHOOD — HD',
+    'welcome title': 'Your TON wallet',
+    'create wallet button': 'Create a new wallet',
+    'add existing wallet button': 'Add an existing wallet',
   };
 
   console.log(`Loaded: ${url}\n`);
@@ -66,5 +129,9 @@ try {
   }
 } finally {
   await launched.close();
+  if (server) {
+    server.close();
+  }
 }
+
 process.exit(failed ? 1 : 0);

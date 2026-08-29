@@ -1,0 +1,54 @@
+{
+  "name": "@demo/wallet-core",
+  "version": "0.1.0",
+  "description": "Core logic for TON wallet demo applications (React + React Native)",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run build:clean && bun run build:cjs && bun run build:esm",
+    "build:clean": "rm -rf dist",
+    "build:cjs": "tsc -p tsconfig.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "dev": "tsc -p tsconfig.esm.json --watch",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@demo/v4ledger-adapter": "workspace:*",
+    "@ton/core": "^0.63.1",
+    "@ton/walletkit": "workspace:*",
+    "buffer": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@ton/core": "^0.63.1",
+    "@ton/crypto": "^3.3.0",
+    "immer": "^10.2.0",
+    "react": "^19.2.3",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@ledgerhq/hw-transport": "6.32.0",
+    "@ton/crypto": "^3.3.0",
+    "@types/react": "^19.2.3",
+    "immer": "^10.2.0",
+    "react": "^19.2.3",
+    "typescript": "^5.9.3",
+    "zustand": "^5.0.8"
+  }
+}

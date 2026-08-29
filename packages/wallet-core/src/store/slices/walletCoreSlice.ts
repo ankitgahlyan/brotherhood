@@ -1,0 +1,193 @@
+/**
+ * Copyright (c) TonTech.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+import {
+    TonWalletKit,
+    Network,
+    createDeviceInfo,
+    createWalletManifest,
+    ApiClientTonApi,
+    createTonApiStreamingProvider,
+    ApiClientToncenter,
+    createTonCenterStreamingProvider,
+    fetchManifest,
+} from '@ton/walletkit';
+import type { ITonWalletKit } from '@ton/walletkit';
+import { createOmnistonProvider } from '@ton/walletkit/swap/omniston';
+import { createDeDustProvider } from '@ton/walletkit/swap/dedust';
+import { createTonstakersProvider } from '@ton/walletkit/staking/tonstakers';
+import { createTonApiGaslessProvider } from '@ton/walletkit/gasless/tonapi';
+
+import { createComponentLogger } from '../../utils/logger';
+import { isExtension } from '../../utils/isExtension';
+import { getTonConnectDeviceInfo, getTonConnectWalletManifest } from '../../utils/walletManifest';
+import type { SetState, WalletCoreSliceCreator } from '../../types/store';
+import type { WalletKitConfig } from '../../types/wallet';
+import { getErrorMessage } from '../../utils/error';
+import type { NetworkType } from '../../utils';
+
+const log = createComponentLogger('WalletCoreSlice');
+
+const MANIFEST_PROXY_URL = 'https://walletbot.me/tonconnect-proxy/';
+
+/**
+ * Creates a WalletKit instance with the specified network configuration
+ */
+function createWalletKitInstance(walletKitConfig?: WalletKitConfig): ITonWalletKit {
+    const walletKit = new TonWalletKit({
+        deviceInfo: createDeviceInfo(getTonConnectDeviceInfo()),
+        walletManifest: createWalletManifest(getTonConnectWalletManifest()),
+
+        bridge: {
+            bridgeUrl: walletKitConfig?.bridgeUrl,
+            disableHttpConnection: walletKitConfig?.disableHttpBridge,
+            jsBridgeTransport: walletKitConfig?.jsBridgeTransport,
+        },
+
+        networks: {
+            [Network.mainnet().chainId]: {
+                apiClient:
+                    walletKitConfig?.tonApiProvider === 'tonapi'
+                        ? new ApiClientTonApi({
+                              network: Network.mainnet(),
+                              apiKey: walletKitConfig?.tonApiKeyMainnet,
+                          })
+                        : new ApiClientToncenter({
+                              network: Network.mainnet(),
+                              apiKey: walletKitConfig?.tonApiKeyMainnet,
+                          }),
+            },
+            [Network.testnet().chainId]: {
+                apiClient:
+                    walletKitConfig?.tonApiProvider === 'tonapi'
+                        ? new ApiClientTonApi({
+                              network: Network.testnet(),
+                              apiKey: walletKitConfig?.tonApiKeyTestnet,
+                          })
+                        : new ApiClientToncenter({
+                              network: Network.testnet(),
+                              apiKey: walletKitConfig?.tonApiKeyTestnet,
+                          }),
+            },
+            [Network.tetra().chainId]: {
+                apiClient:
+                    walletKitConfig?.tonApiProvider === 'tonapi'
+                        ? new ApiClientTonApi({
+                              network: Network.tetra(),
+                              apiKey: walletKitConfig?.tonApiKeyTetra,
+                          })
+                        : new ApiClientToncenter({
+                              network: Network.tetra(),
+                              apiKey: walletKitConfig?.tonApiKeyTetra,
+                          }),
+            },
+        },
+
+        storage: walletKitConfig?.storage,
+
+        analytics: {
+            ...walletKitConfig?.analytics,
+            enabled: true,
+        },
+
+        eventProcessor: {
+            disableTransactionEmulation: walletKitConfig?.disableAutoEmulation,
+        },
+
+        dev: {
+            disableNetworkSend: walletKitConfig?.disableNetworkSend,
+            disableManifestDomainCheck: walletKitConfig?.disableManifestDomainCheck,
+        },
+
+        fetchManifest(manifestUrl: string) {
+            return fetchManifest(manifestUrl, MANIFEST_PROXY_URL);
+        },
+    }) as ITonWalletKit;
+
+    walletKit.swap.registerProvider(createOmnistonProvider());
+    walletKit.swap.registerProvider(createDeDustProvider());
+
+    const streamingProvider =
+        walletKitConfig?.tonApiProvider === 'tonapi' ? createTonApiStreamingProvider : createTonCenterStreamingProvider;
+    walletKit.streaming.registerProvider(
+        streamingProvider({ network: Network.mainnet(), apiKey: walletKitConfig?.tonApiKeyMainnet }),
+    );
+    walletKit.streaming.registerProvider(
+        streamingProvider({ network: Network.testnet(), apiKey: walletKitConfig?.tonApiKeyTestnet }),
+    );
+    walletKit.staking.registerProvider(createTonstakersProvider());
+
+    // Pass the TonAPI keys to the gasless relayer only when TonAPI is the
+    // configured provider — otherwise the keys are Toncenter keys and don't
+    // apply. Without a key it falls back to the public TonAPI endpoints.
+    const gaslessConfig =
+        walletKitConfig?.tonApiProvider === 'tonapi' &&
+        (walletKitConfig.tonApiKeyMainnet || walletKitConfig.tonApiKeyTestnet)
+            ? {
+                  chains: {
+                      [Network.mainnet().chainId]: { apiKey: walletKitConfig.tonApiKeyMainnet },
+                      [Network.testnet().chainId]: { apiKey: walletKitConfig.tonApiKeyTestnet },
+                  },
+              }
+            : undefined;
+    walletKit.gasless.registerProvider(createTonApiGaslessProvider(gaslessConfig));
+
+    log.info(`WalletKit initialized with network: ${isExtension() ? 'extension' : 'web'}`);
+    return walletKit;
+}
+
+export const createWalletCoreSlice =
+    (walletKitConfig: WalletKitConfig): WalletCoreSliceCreator =>
+    (set: SetState, get) => ({
+        walletCore: {
+            walletKit: null,
+            isWalletKitInitialized: false,
+            initializationError: null,
+        },
+
+        initializeWalletKit: async (network: NetworkType = 'testnet'): Promise<void> => {
+            const state = get();
+
+            // Check if we need to reinitialize
+            if (state.walletCore.walletKit) {
+                log.info(`Reinitializing WalletKit to ${network}`);
+
+                try {
+                    const existingWallets = state.walletCore.walletKit.getWallets();
+                    log.info(`Clearing ${existingWallets.length} existing wallets before reinitialization`);
+                } catch (error) {
+                    log.warn('Error during cleanup:', error);
+                }
+            }
+
+            // Create new WalletKit instance
+            const walletKit = createWalletKitInstance(walletKitConfig);
+
+            try {
+                await walletKit.ensureInitialized();
+                get().setupTonConnectListeners(walletKit);
+
+                set((state) => {
+                    state.walletCore.walletKit = walletKit;
+                    state.walletCore.isWalletKitInitialized = true;
+                    state.walletCore.initializationError = null;
+                });
+
+                // Load all saved wallets into the WalletKit instance
+                await get().loadSavedWalletsIntoKit(walletKit);
+            } catch (error) {
+                const errorMessage = getErrorMessage(error);
+                log.error('WalletKit initialization failed', { errorMessage });
+
+                set((state) => {
+                    state.walletCore.initializationError = errorMessage;
+                    state.walletCore.isWalletKitInitialized = false;
+                });
+            }
+        },
+    });

@@ -1,0 +1,21 @@
+export * as DaoProxyContract from './DaoProxy.gen';
+export * as FollowersContract from './Followers.gen';
+export * as FossFiContract from './FossFi.gen';
+export * as FossFiWalletContract from './FossFiWallet.gen';
+export * as LocationContract from './Location.gen';
+export * as LotteryContract from './Lottery.gen';
+export * as PersonalContract from './Personal.gen';
+export * as PersonalWalletContract from './PersonalWallet.gen';
+export * as PollContract from './Poll.gen';
+export * as VoterContract from './Voter.gen';
+
+export { DaoProxy } from './DaoProxy.gen';
+export { Followers } from './Followers.gen';
+export { FossFi } from './FossFi.gen';
+export { FossFiWallet } from './FossFiWallet.gen';
+export { Location } from './Location.gen';
+export { Lottery } from './Lottery.gen';
+export { PersonalMinter } from './Personal.gen';
+export { PersonalWallet } from './PersonalWallet.gen';
+export { Poll } from './Poll.gen';
+export { Voter } from './Voter.gen';

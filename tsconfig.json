@@ -1,6 +1,5 @@
 {
-  "include": ["src", "wrappers-ts", "vite.config.ts", "tsr.config.json"],
-
+  "include": ["wrappers-ts", "scripts"],
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
@@ -14,14 +13,13 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
     "rootDir": ".",
-    "types": ["vite/client", "node", "@nubjs/types"],
+    "types": ["node", "@nubjs/types"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@/*": ["./src/*"],
-      "@wrappers/*": ["./wrappers-ts/*"]
+      "@wrappers/*": ["./wrappers-ts/*"],
+      "@wrappers": ["./wrappers-ts/index.ts"]
     }
   }
 }
