@@ -9,10 +9,13 @@ import "@acton/emulation/scripts"
 
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
+import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
+import "@contracts/dao/storage"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 const FI_ADDRESS = "kQCPnceJsnacJr4XNVq52TC5Sw4E1MrqWCMdd82KJJNenoOT"
@@ -122,6 +125,10 @@ fun buildJettonMetadataCell(info: JettonMetadata): cell {
 }
 
 fun promptJettonMinterStorage(admin: address): FiStore {
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: admin,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
     return {
         totalSupply: promptJettonCoins(
             "JETTON_INITIAL_SUPPLY",
@@ -130,6 +137,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         ),
         walletVersion: 0,
         adminAddress: admin,
+        daoAddress: daoProxy.address,
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(),
@@ -143,6 +151,18 @@ fun deployJettonMinter(deployer: ActonWallet, storage: FiStore): FossFi {
     val res = minter.sendDeploy(deployer.address, { value: ton("0.55") });
     res.waitForFirstTransaction();
     return minter;
+}
+
+fun deployDaoProxy(deployer: ActonWallet, admin: address, target: address): DaoProxy {
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: admin,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+    val res = daoProxy.deploy(deployer.address, { value: ton("0.1") });
+    res.waitForFirstTransaction();
+    val initRes = daoProxy.sendInitDaoProxy(deployer.address, 0, target);
+    initRes.waitForFirstTransaction();
+    return daoProxy;
 }
 
 fun readOnchainMetadataField(metadata: OnchainMetadataReply, key: uint256): string? {

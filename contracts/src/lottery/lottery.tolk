@@ -124,6 +124,7 @@ fun onInternalMessage(in: InMessage) {
     storage.save();
 }
 
+@method_id(2424)
 fun hotUpgradeLotteryData(_additionalData: cell?) {
     var oldStore = LotteryStorage.load();
     oldStore.version += 1;

@@ -232,6 +232,7 @@ fun onInternalMessage(in: InMessage) {
     storage.save();
 }
 
+@method_id(2626)
 fun hotUpgradePersonalWalletData(_additionalData: cell?) {
     var oldStore = PriWalletStore.load();
     oldStore.version += 1;

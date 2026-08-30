@@ -4,20 +4,28 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 
 import "@gen/PersonalWallet.code"
+import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
+import "@contracts/dao/storage"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
 
 import "utils/common"
 
 fun deployTestMinter(admin: address): FossFi {
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: admin,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
     val minter = FossFi.fromStorage({
         totalSupply: 0,
         adminAddress: admin,
+        daoAddress: daoProxy.address,
         metadata: buildJettonMetadataCell({
             name: "BroTherHOOD",
             symbol: "HD",

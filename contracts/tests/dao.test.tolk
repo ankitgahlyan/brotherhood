@@ -1,3 +1,4 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -17,6 +18,7 @@ import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
 import "@contracts/dao/storage"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"
@@ -35,9 +37,15 @@ fun setupDaoTest(): TestSetup {
     val deployer = testing.treasury("dao-deployer");
     registerAllTestLibraries();
 
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: deployer.address,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+
     val minter = FossFi.fromStorage({
         totalSupply: 0,
         adminAddress: deployer.address,
+        daoAddress: daoProxy.address,
         metadata: buildTestMetadata("dao-test"),
         adminHandoff: null,
         others: FiCodes {
@@ -49,12 +57,8 @@ fun setupDaoTest(): TestSetup {
 
     val deployerWallet = userWallet(minter, deployer.address);
 
-    val daoProxy = DaoProxy.fromStorage({
-        fiAddress: minter.address,
-    });
     daoProxy.deploy(deployer.address, { value: ton("10") });
-
-    minter.sendChangeDaoAddress(deployer.address, 1, daoProxy.address);
+    daoProxy.sendInitDaoProxy(deployer.address, 0, minter.address);
 
     return {
         minter,
@@ -299,4 +303,40 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
 
     // Poll rolls back optimistic count on bounce, remaining at 1 (not 2)
     expect(poll.getPollData().yesVotes).toEqual(1);
+}
+
+get fun `test dao: DaoProxy initialization and HotUpgrade by admin`() {
+    val deployer = testing.treasury("dao-admin");
+    val nonAdmin = testing.treasury("non-admin");
+    registerAllTestLibraries();
+
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: deployer.address,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+    daoProxy.deploy(deployer.address, { value: ton("10") });
+
+    expect(daoProxy.getAdminAddress()).toEqual(deployer.address);
+    expect(daoProxy.getTargetAddress()).toBeNull();
+
+    // Non-admin cannot init targetAddress
+    val nonAdminInit = daoProxy.sendInitDaoProxy(nonAdmin.address, 1, nonAdmin.address);
+    expect(nonAdminInit).toHaveTx({
+        exitCode: Errors.NotOwner,
+    });
+
+    // Admin inits targetAddress
+    val adminInit = daoProxy.sendInitDaoProxy(deployer.address, 2, deployer.address);
+    expect(adminInit).toHaveAllSuccessfulTxs();
+    expect(daoProxy.getTargetAddress()).toEqual(deployer.address);
+
+    // Non-admin cannot hot upgrade
+    val nonAdminUpgrade = daoProxy.sendHotUpgrade(nonAdmin.address, null, build("DaoProxy"));
+    expect(nonAdminUpgrade).toHaveTx({
+        exitCode: Errors.NotOwner,
+    });
+
+    // Admin hot upgrade succeeds
+    val adminUpgrade = daoProxy.sendHotUpgrade(deployer.address, null, build("DaoProxy"));
+    expect(adminUpgrade).toHaveAllSuccessfulTxs();
 }

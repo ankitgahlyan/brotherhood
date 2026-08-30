@@ -15,9 +15,8 @@ fun main() {
 
     val minter = deployJettonMinter(deployer, storage);
 
-    // check if minter is deployed successfully
-
-    // deploy and update dao Address in minter
+    // deploy and initialize daoProxy
+    val _daoProxy = deployDaoProxy(deployer, admin, minter.address);
 
     printJettonMinterInfo(minter, "JETTON");
     printJettonWalletInfo(minter, admin, "JETTON_ADMIN");

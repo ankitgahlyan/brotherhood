@@ -53,6 +53,22 @@ fun DaoProxy.deploy(self, from: address, config: SendParams = {}): SendResultLis
     return net.send(from, genericMsg);
 }
 
+fun DaoProxy.sendInitDaoProxy(
+    self,
+    from: address,
+    queryId: uint64,
+    targetAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: InitDaoProxy { queryId, targetAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun DaoProxy.sendExecuteDaoProposal(
     self,
     from: address,
@@ -80,6 +96,22 @@ fun DaoProxy.sendExecuteDaoProposal(
     return net.send(from, genericMsg);
 }
 
+fun DaoProxy.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun DaoProxy.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
@@ -103,4 +135,12 @@ fun DaoProxy.sendAny(self, from: address, body: cell, config: SendParams = {}): 
 
 fun DaoProxy.getDaoProxyData(self): DaoProxyStore {
     return net.runGetMethod(self.address, "get_dao_proxy_data");
+}
+
+fun DaoProxy.getTargetAddress(self): address? {
+    return net.runGetMethod(self.address, "get_target_address");
+}
+
+fun DaoProxy.getAdminAddress(self): address {
+    return net.runGetMethod(self.address, "get_admin_address");
 }

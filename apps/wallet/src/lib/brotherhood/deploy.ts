@@ -31,6 +31,7 @@ import {
   SetAllowance,
   SpendAllowance,
 } from '@wrappers/FossFiWallet.gen';
+import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
@@ -52,8 +53,13 @@ export async function buildDeployMessage(params: {
 }) {
   const content = await buildOnchainMetadata(params.metadata);
 
+  const daoProxy = DaoProxy.fromStorage({
+    adminAddress: params.ownerAddress,
+  });
+
   const minter = FossFi.fromStorage({
     adminAddress: params.ownerAddress,
+    daoAddress: daoProxy.address,
     metadata: content,
     others: {
       ref: FiCodes.create({

@@ -101,6 +101,7 @@ fun onInternalMessage(in: InMessage): void {
     }
 }
 
+@method_id(2323)
 fun hotUpgradeLocationData(_additionalData: cell?) {
     var oldStore = LocationStore.load();
     oldStore.version += 1;

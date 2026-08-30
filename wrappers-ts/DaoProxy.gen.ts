@@ -133,6 +133,14 @@ class StackReader {
     readSlice(): c.Slice {
         return this.popCellLike().beginParse();
     }
+
+    readNullable<T>(readFn_T: (r: StackReader) => T): T | null {
+        if (this.tuple[0].type === 'null') {
+            this.tuple.shift();
+            return null;
+        }
+        return readFn_T(this);
+    }
 }
 
 // ————————————————————————————————————————————
@@ -401,6 +409,50 @@ export const TopUpTons = {
 }
 
 /**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
  > struct (0x0000100d) ExecuteDaoProposal {
  >     queryId: uint64
  >     proposalId: uint64
@@ -464,32 +516,81 @@ export const ExecuteDaoProposal = {
 }
 
 /**
+ > struct (0x00001010) InitDaoProxy {
+ >     queryId: uint64
+ >     targetAddress: address
+ > }
+ */
+export interface InitDaoProxy {
+    readonly $: 'InitDaoProxy'
+    queryId: uint64 /* = 0 */
+    targetAddress: c.Address
+}
+
+export const InitDaoProxy = {
+    PREFIX: 0x00001010,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        targetAddress: c.Address
+    }): InitDaoProxy {
+        return {
+            $: 'InitDaoProxy',
+            queryId: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): InitDaoProxy {
+        loadAndCheckPrefix32(s, 0x00001010, 'InitDaoProxy');
+        return {
+            $: 'InitDaoProxy',
+            queryId: s.loadUintBig(64),
+            targetAddress: s.loadAddress(),
+        }
+    },
+    store(self: InitDaoProxy, b: c.Builder): void {
+        b.storeUint(0x00001010, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.targetAddress);
+    },
+    toCell(self: InitDaoProxy): c.Cell {
+        return makeCellFrom<InitDaoProxy>(self, InitDaoProxy.store);
+    }
+}
+
+/**
  > struct DaoProxyStore {
- >     fiAddress: address
+ >     adminAddress: address
+ >     targetAddress: address
  > }
  */
 export interface DaoProxyStore {
     readonly $: 'DaoProxyStore'
-    fiAddress: c.Address
+    adminAddress: c.Address
+    targetAddress: c.Address /* = address('0:0000000000000000000000000000000000000000000000000000000000000000') */
 }
 
 export const DaoProxyStore = {
     create(args: {
-        fiAddress: c.Address
+        adminAddress: c.Address
+        targetAddress?: c.Address /* = address('0:0000000000000000000000000000000000000000000000000000000000000000') */
     }): DaoProxyStore {
         return {
             $: 'DaoProxyStore',
+            targetAddress: c.Address.parse('0:0000000000000000000000000000000000000000000000000000000000000000'),
             ...args
         }
     },
     fromSlice(s: c.Slice): DaoProxyStore {
         return {
             $: 'DaoProxyStore',
-            fiAddress: s.loadAddress(),
+            adminAddress: s.loadAddress(),
+            targetAddress: s.loadAddress(),
         }
     },
     store(self: DaoProxyStore, b: c.Builder): void {
-        b.storeAddress(self.fiAddress);
+        b.storeAddress(self.adminAddress);
+        b.storeAddress(self.targetAddress);
     },
     toCell(self: DaoProxyStore): c.Cell {
         return makeCellFrom<DaoProxyStore>(self, DaoProxyStore.store);
@@ -535,9 +636,10 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoProxy implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECCAEAAT8AART/APSkE/S88sgLAQIBYgIDAWDQ+JGRMOAgxwCRMOAg7UTQ+kgwAdcsIAAAgGzjAjHXLCAAAIA8MZEw4IQPAccA8vQEABGh543aiaH0kaMD/GwS0z8x0z/6SNMf1DHXTPgoiFR1RiUDyMs/EvpSFPpSE/pSEsxwzwtiE8sfz4HJWMjPhNDMzPkWyM+KAEDL/89Q+JLHBfLivIIImJaAcPsCgiAJGE5yoACCEAX14QCCCvrwgPgobSBus5MwiwTfyM+QXjUUZijPCz9QBfoCiQUGBwhCArILck014GlQIrYOxC0cKHBaJLXZFJsBQ6B+zFRWr1osAAMAEACGzxb6UlJQ+lTPhCATzsnIz4UIUnD6Ulj6AoEQAc8LihXLPxP6Ulj6AhLMyXP7ANDIzsnIz4UIEvpScc8LbszJgEL7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDQEAAhoAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAJCgHx1/EjImHAQY4BImHAQdqJofSR9JBgBa5YQAABAQkcMthF8SRFjgvlwJOmfmP0kGADkfSl9KWT2qnBrlhAAAEAuRwy2EXxJLGOC+XAk+gJrphB9gmh2j3ap+IVT8BjrlhAAAEA2cYEY65YQAABAHhjImHBCB4DjgHl6QYAKa1TmHaiaH0kfSRogOR9KX0pZPaqQAL0MiCNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATHBfLQSQHTPzHTP/pI0x/UMddM+CiIVHVGJQPIyz8S+lIU+lIT+lISzHDPC2ITyx/PgclYyM+E0MzM+RbIz4oAQMv/z1D4kscF8uK8ggiYloBw+wIHCAhCArILck014GlQIrYOxC0cKHBaJLXZFJsBQ6B+zFRWr1osAOSCIAkYTnKgAIIQBfXhAIIK+vCA+ChtIG6zkzCLBN/Iz5BeNRRmKM8LP1AF+gLPiABA+lJSUPpUz4QgE87JyM+FCFJw+lJY+gKBEAHPC4oVyz8T+lJY+gISzMlz+wDQyM7JyM+FCBL6UnHPC27MyYBC+wAAEb+Bf2omh9JBhAIBbgsMAG2w2jtRND6SDH6SDAgjQhgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAExwVtWOMEgABWw8btRND6SPpI0YA==');
 
     static Errors = {
+        'Errors.NotOwner': 73,
         'Errors.IncorrectSender': 700,
     }
 
@@ -554,7 +656,8 @@ export class DaoProxy implements c.Contract {
     }
 
     static fromStorage(emptyStorage: {
-        fiAddress: c.Address
+        adminAddress: c.Address
+        targetAddress?: c.Address /* = address('0:0000000000000000000000000000000000000000000000000000000000000000') */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? DaoProxy.CodeCell,
@@ -562,6 +665,13 @@ export class DaoProxy implements c.Contract {
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new DaoProxy(address, initialState);
+    }
+
+    static createCellOfInitDaoProxy(body: {
+        queryId?: uint64 /* = 0 */
+        targetAddress: c.Address
+    }) {
+        return InitDaoProxy.toCell(InitDaoProxy.create(body));
     }
 
     static createCellOfExecuteDaoProposal(body: {
@@ -575,6 +685,13 @@ export class DaoProxy implements c.Contract {
         return ExecuteDaoProposal.toCell(ExecuteDaoProposal.create(body));
     }
 
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
     static createCellOfTopUpTons(body: {
     }) {
         return TopUpTons.toCell(TopUpTons.create());
@@ -584,6 +701,17 @@ export class DaoProxy implements c.Contract {
         return provider.internal(via, {
             value: msgValue,
             body: c.Cell.EMPTY,
+            ...extraOptions
+        });
+    }
+
+    async sendInitDaoProxy(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        targetAddress: c.Address
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: InitDaoProxy.toCell(InitDaoProxy.create(body)),
             ...extraOptions
         });
     }
@@ -603,6 +731,17 @@ export class DaoProxy implements c.Contract {
         });
     }
 
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -613,10 +752,23 @@ export class DaoProxy implements c.Contract {
     }
 
     async getDaoProxyData(provider: ContractProvider): Promise<DaoProxyStore> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_dao_proxy_data', []));
+        const r = StackReader.fromGetMethod(2, await provider.get('get_dao_proxy_data', []));
         return ({
             $: 'DaoProxyStore',
-            fiAddress: r.readSlice().loadAddress(),
+            adminAddress: r.readSlice().loadAddress(),
+            targetAddress: r.readSlice().loadAddress(),
         });
+    }
+
+    async getTargetAddress(provider: ContractProvider): Promise<c.Address | null> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_target_address', []));
+        return r.readNullable<c.Address>(
+            (r) => r.readSlice().loadAddress()
+        );
+    }
+
+    async getAdminAddress(provider: ContractProvider): Promise<c.Address> {
+        const r = StackReader.fromGetMethod(1, await provider.get('get_admin_address', []));
+        return r.readSlice().loadAddress();
     }
 }

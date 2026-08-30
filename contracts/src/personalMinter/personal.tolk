@@ -258,6 +258,7 @@ fun onInternalMessage(in: InMessage) {
     storage.save();
 }
 
+@method_id(2525)
 fun hotUpgradePersonalMinterData(_additionalData: cell?) {
     var oldStore = PriStore.load();
     oldStore.version += 1;

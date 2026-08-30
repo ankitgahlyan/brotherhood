@@ -8,12 +8,15 @@ import "@acton/types/transaction"
 
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
+import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+import "@contracts/dao/storage"
+import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/lottery/storage"
@@ -289,15 +292,35 @@ fun buildLotteryAddrsMap(minterAddress: address, deployer: address): map<uint8, 
     return lotteryAddrs;
 }
 
+fun deployDaoProxy(
+    deployer: Treasury,
+    adminAddress: address,
+    targetAddress: address,
+): DaoProxy {
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+    daoProxy.deploy(deployer.address, { value: ton("10") });
+    daoProxy.sendInitDaoProxy(deployer.address, 0, targetAddress);
+    return daoProxy;
+}
+
 fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     val deployer = testing.treasury("deployer");
     val notDeployer = testing.treasury("notDeployer");
 
     registerAllTestLibraries();
 
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: deployer.address,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+
     val minter = FossFi.fromStorage({
         totalSupply: initialSupply,
         adminAddress: deployer.address,
+        daoAddress: daoProxy.address,
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {

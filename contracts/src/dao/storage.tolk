@@ -1,5 +1,8 @@
+import "@contracts/fossFi/consts"
+
 struct DaoProxyStore {
-    fiAddress: address
+    adminAddress: address
+    targetAddress: address = RAW_ZERO_ADDRESS
 }
 
 fun DaoProxyStore.load(): DaoProxyStore {

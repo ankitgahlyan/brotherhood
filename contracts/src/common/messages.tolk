@@ -187,6 +187,11 @@ struct (0x0000100f) ResponseTotalAccounts {
     totalAccounts: uint33
 }
 
+struct (0x00001010) InitDaoProxy {
+    queryId: uint64 = 0
+    targetAddress: address
+}
+
 // ============================================================================
 // GROUP 2: ACCOUNT LIFECYCLE & ONBOARDING (Range: 0x00001050 - 0x0000109F)
 // Buffer: 50 reserved opcodes for future lifecycle features

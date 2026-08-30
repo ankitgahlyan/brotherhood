@@ -1,10 +1,11 @@
 import "@contracts/dao/storage"
+import "@contracts/fossFi/consts"
 
 fun calcDeployDaoProxy(
-    fiAddress: address,
+    adminAddress: address,
     daoProxyCode: cell,
 ): AutoDeployAddress {
-    val store: DaoProxyStore = { fiAddress };
+    val store: DaoProxyStore = { adminAddress, targetAddress: RAW_ZERO_ADDRESS };
     return { stateInit: { code: daoProxyCode, data: store.toCell() }, toShard: null };
 }
 

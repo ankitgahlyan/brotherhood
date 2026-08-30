@@ -5,6 +5,7 @@ import "@acton/types/transaction"
 
 import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
+import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -20,9 +21,15 @@ import "test-utils"
 get fun `test admin: deploy should create minter without bounce`() {
     val deployer = testing.treasury("deployer-manual-deploy");
 
+    val daoProxy = DaoProxy.fromStorage({
+        adminAddress: deployer.address,
+        targetAddress: RAW_ZERO_ADDRESS,
+    });
+
     val minter = FossFi.fromStorage({
         totalSupply: 0,
         adminAddress: deployer.address,
+        daoAddress: daoProxy.address,
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {
@@ -409,7 +416,7 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
     val (minter, deployer, notDeployer) = setupTest();
     val dao = testing.treasury("dao-account");
 
-    expect(minter.getDaoAddress()).toBeNull();
+    expect(minter.getDaoAddress() != null).toBeTrue();
 
     val changeDaoResult = minter.sendChangeDaoAddress(
         deployer.address,
