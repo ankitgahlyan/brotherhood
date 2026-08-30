@@ -118,6 +118,7 @@ fun onInternalMessage(in: InMessage): void {
 
         InformMinterChangeLocation => {
             assertCorrectSender(in.senderAddress, msg.owner);
+            reserveForMinterBalance(in.valueCoins);
 
             val oldLocDeploy = calcDeployLocation(
                 msg.oldH3Cell,
@@ -144,14 +145,15 @@ fun onInternalMessage(in: InMessage): void {
             val newLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: newLocDeploy,
-                value: ton("0.05"),
+                value: 0,
                 body: LocationAddMember {
                     queryId: msg.queryId,
                     userAddress: msg.owner,
                     sendExcessesTo: msg.owner,
                 },
             });
-            newLocMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+            // SAFETY: forwards remaining balance above reserve to location indexer
+            newLocMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
         }
 
         NotifyMinter => {
@@ -196,7 +198,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             respondMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
 
@@ -215,10 +217,7 @@ fun onInternalMessage(in: InMessage): void {
 
             store.totalSupply += internalTransferMsg.jettonAmount;
 
-            reserveGramsOnBalance(
-                ton("0.01"),
-                RESERVE_MODE_EXACT_AMOUNT,
-            );
+            reserveMinterStorageFee();
 
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
@@ -408,10 +407,7 @@ fun onInternalMessage(in: InMessage): void {
             // mint the prize to the winner (mirrors MintNewJettons)
             store.totalSupply += msg.amt;
 
-            reserveGramsOnBalance(
-                ton("0.01"),
-                RESERVE_MODE_EXACT_AMOUNT,
-            );
+            reserveMinterStorageFee();
 
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,

@@ -41,7 +41,7 @@ fun onInternalMessage(in: InMessage) {
                         followerOwner: msg.followerOwner,
                     },
                 });
-                revFollower.send(SEND_MODE_IGNORE_ERRORS);
+                revFollower.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
 
                 val revFollowee = createMessage({
                     bounce: BounceMode.NoBounce,
@@ -87,7 +87,7 @@ fun onInternalMessage(in: InMessage) {
                         followerOwner: msg.initiator,
                     },
                 });
-                revFollower.send(SEND_MODE_IGNORE_ERRORS);
+                revFollower.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
 
                 val revFollowee = createMessage({
                     bounce: BounceMode.NoBounce,
@@ -113,7 +113,7 @@ fun onInternalMessage(in: InMessage) {
                 body: createEmptySlice(),
             });
             refundMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
 

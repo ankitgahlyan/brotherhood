@@ -125,7 +125,7 @@ fun onInternalMessage(in: InMessage) {
                 },
             });
             respondMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
 
@@ -149,10 +149,7 @@ fun onInternalMessage(in: InMessage) {
 
             storage.totalSupply += internalTransferMsg.jettonAmount;
 
-            reserveGramsOnBalance(
-                ton("0.01"),
-                RESERVE_MODE_EXACT_AMOUNT,
-            ); // reserve for storage fees
+            reservePersonalMinterStorageFee();
 
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,

@@ -2,6 +2,7 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/Poll.code"
 import "@contracts/common/errors"
+import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
@@ -64,10 +65,7 @@ fun onInternalMessage(in: InMessage): void {
             ).calculateAddress();
             assert (in.senderAddress == expectedPoll) throw Errors.IncorrectSender;
 
-            reserveGramsOnBalance(
-                ton("0.01"),
-                RESERVE_MODE_EXACT_AMOUNT,
-            );
+            reserveDaoStorageFee();
 
             val rewardAmount = ton("10000"); // 10x proposal fee reward (10 * 1000 FI)
             val rewardMsg = createMessage({
@@ -88,7 +86,7 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             rewardMsg.send(
-                SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS,
+                SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
 
             val forwardMsg = createMessage({
@@ -97,8 +95,9 @@ fun onInternalMessage(in: InMessage): void {
                 dest: store.targetAddress,
                 body: msg.targetMsg.beginParse(),
             });
+            // safety
             forwardMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 

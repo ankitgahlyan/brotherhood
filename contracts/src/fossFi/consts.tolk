@@ -15,3 +15,4 @@ const DECAY_MONTHS_TOTAL: int = 480 // ~40 years
 const WEEKLY_CLAIM_AMOUNT: coins = ton("11111")
 const FOLLOW_MINT_AMOUNT: coins = ton("1000") // minted to followee on following, burnt on unfollow/settlement
 const MIN_FOLLOW_GAS: coins = ton("0.08")
+const PROPOSAL_FEE: coins = ton("1000")

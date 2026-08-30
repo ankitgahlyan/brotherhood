@@ -12,7 +12,6 @@ type AllowedMessageToPoll =
     | ResponseTotalAccounts
     | VoteProposal
     | CleanupProposalVotes
-    | TopUpTons
 
 contract Poll {
     author: "zeta"
@@ -137,10 +136,6 @@ fun onInternalMessage(in: InMessage): void {
             excessesMsg.send(
                 SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY,
             );
-        }
-
-        TopUpTons => {
-            // accept tons
         }
 
         else => {

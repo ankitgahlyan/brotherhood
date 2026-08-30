@@ -103,25 +103,6 @@ fun Followers.sendHotUpgrade(
     return net.send(from, genericMsg);
 }
 
-fun Followers.sendUpgrade(
-    self,
-    from: address,
-    walletUpgrade: bool,
-    walletVersion: uint10,
-    sender: address,
-    newData: cell?,
-    newCode: cell?,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
-    });
-    return net.send(from, genericMsg);
-}
-
 /// Send message to the contract with a custom body cell
 fun Followers.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({

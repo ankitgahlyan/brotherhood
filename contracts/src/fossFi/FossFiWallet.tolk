@@ -67,6 +67,7 @@ type BounceOpToHandle =
     | RequestUnfollow
     | BouncedInitFollow
     | BouncedUnfollow
+    | InitPoll
 
 // type BounceRich = InternalInvite
 // global store: FiWalletStore = lazy FiWalletStore.load();
@@ -91,6 +92,10 @@ fun onBouncedMessage(in: InMessageBounced): void {
     var restoreGoldCoins: uint32 = 0;
 
     match (msg) {
+        InitPoll => {
+            restoreAmount = PROPOSAL_FEE;
+        }
+
         EnterLottery => {
             restoreAmount = LOTTERY_ENTRY_AMT;
         }
@@ -654,7 +659,9 @@ fun onInternalMessage(in: InMessage): void {
                 ),
             });
             // carry the Payback message value so the buyer's wallet can afford the transfer
-            transferMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+            transferMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
         }
 
         InternalInvite => {

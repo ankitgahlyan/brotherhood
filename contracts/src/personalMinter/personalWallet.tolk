@@ -81,7 +81,7 @@ fun onInternalMessage(in: InMessage) {
                     },
                 });
                 notifyOwnerMsg.send(
-                    SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                    SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS,
                 );
             }
 

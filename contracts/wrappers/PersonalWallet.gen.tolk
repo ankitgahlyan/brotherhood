@@ -135,16 +135,6 @@ fun PersonalWallet.sendInternalTransferStep(
     return net.send(from, genericMsg);
 }
 
-fun PersonalWallet.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: TopUpTons {},
-    });
-    return net.send(from, genericMsg);
-}
-
 fun PersonalWallet.sendHotUpgrade(
     self,
     from: address,

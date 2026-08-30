@@ -14,10 +14,19 @@ const STORAGE_SIZE_MAX_WALLET_CELLS = 112 // measured max = 109, rounded up
 const STORAGE_SIZE_INIT_STATE_WALLET_BITS = 56200 // measured init ≈ 56129, rounded up
 const STORAGE_SIZE_INIT_STATE_WALLET_CELLS = 112 // measured init = 110, rounded up
 
+const STORAGE_SIZE_MAX_MINTER_BITS = 10000
+const STORAGE_SIZE_MAX_MINTER_CELLS = 20
+const STORAGE_SIZE_MAX_PERSONAL_MINTER_BITS = 5000
+const STORAGE_SIZE_MAX_PERSONAL_MINTER_CELLS = 10
+const STORAGE_SIZE_MAX_DAO_BITS = 5000
+const STORAGE_SIZE_MAX_DAO_CELLS = 10
+const STORAGE_SIZE_MAX_LOCATION_BITS = 50000
+const STORAGE_SIZE_MAX_LOCATION_CELLS = 100
+
 const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 674 // NotifyMinter body, measured in bench-fees.test.tolk
 const MESSAGE_SIZE_BURN_NOTIFICATION_CELLS = 1 // body always in ref
 
-const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // todo: 5 years
+const MIN_STORAGE_DURATION = 5 * 365 * 24 * 3600 // 5 years
 
 // Gas costs
 // these constants are used to estimate gas fee (how much we should remain on balance for a swap to succeed);
@@ -42,17 +51,108 @@ fun calculateJettonWalletMinStorageFee(): coins {
     );
 }
 
+fun calculateMinterMinStorageFee(): coins {
+    return calculateStorageFee(
+        MY_WORKCHAIN,
+        MIN_STORAGE_DURATION,
+        STORAGE_SIZE_MAX_MINTER_BITS,
+        STORAGE_SIZE_MAX_MINTER_CELLS,
+    );
+}
+
+fun calculatePersonalMinterMinStorageFee(): coins {
+    return calculateStorageFee(
+        MY_WORKCHAIN,
+        MIN_STORAGE_DURATION,
+        STORAGE_SIZE_MAX_PERSONAL_MINTER_BITS,
+        STORAGE_SIZE_MAX_PERSONAL_MINTER_CELLS,
+    );
+}
+
+fun calculateDaoMinStorageFee(): coins {
+    return calculateStorageFee(
+        MY_WORKCHAIN,
+        MIN_STORAGE_DURATION,
+        STORAGE_SIZE_MAX_DAO_BITS,
+        STORAGE_SIZE_MAX_DAO_CELLS,
+    );
+}
+
+fun calculateLocationMinStorageFee(): coins {
+    return calculateStorageFee(
+        MY_WORKCHAIN,
+        MIN_STORAGE_DURATION,
+        STORAGE_SIZE_MAX_LOCATION_BITS,
+        STORAGE_SIZE_MAX_LOCATION_CELLS,
+    );
+}
+
 // Reserves TON on the balance so that after an outgoing message forwards `inValue`,
-// the contract still keeps enough to cover its storage; unifies the inline
-// reserveGramsOnBalance(..., RESERVE_MODE_AT_MOST) pattern used across the
-// minter and wallet transfer handlers.
-fun reserveForBalance(inValue: coins): void {
+// the contract still keeps enough to cover its storage
+fun reserveForWalletBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
     contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateJettonWalletMinStorageFee()),
         RESERVE_MODE_AT_MOST,
     );
+}
+
+// Legacy alias for reserveForWalletBalance
+fun reserveForBalance(inValue: coins): void {
+    reserveForWalletBalance(inValue);
+}
+
+fun reserveForMinterBalance(inValue: coins): void {
+    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
+    contract.getStorageDuePayment();
+    reserveGramsOnBalance(
+        max(toLeaveOnBalance, calculateMinterMinStorageFee()),
+        RESERVE_MODE_AT_MOST,
+    );
+}
+
+fun reserveForPersonalMinterBalance(inValue: coins): void {
+    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
+    contract.getStorageDuePayment();
+    reserveGramsOnBalance(
+        max(toLeaveOnBalance, calculatePersonalMinterMinStorageFee()),
+        RESERVE_MODE_AT_MOST,
+    );
+}
+
+fun reserveForDaoBalance(inValue: coins): void {
+    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
+    contract.getStorageDuePayment();
+    reserveGramsOnBalance(
+        max(toLeaveOnBalance, calculateDaoMinStorageFee()),
+        RESERVE_MODE_AT_MOST,
+    );
+}
+
+fun reserveForLocationBalance(inValue: coins): void {
+    val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
+    contract.getStorageDuePayment();
+    reserveGramsOnBalance(
+        max(toLeaveOnBalance, calculateLocationMinStorageFee()),
+        RESERVE_MODE_AT_MOST,
+    );
+}
+
+fun reserveWalletStorageFee(): void {
+    reserveGramsOnBalance(calculateJettonWalletMinStorageFee(), RESERVE_MODE_EXACT_AMOUNT);
+}
+
+fun reserveMinterStorageFee(): void {
+    reserveGramsOnBalance(calculateMinterMinStorageFee(), RESERVE_MODE_EXACT_AMOUNT);
+}
+
+fun reservePersonalMinterStorageFee(): void {
+    reserveGramsOnBalance(calculatePersonalMinterMinStorageFee(), RESERVE_MODE_EXACT_AMOUNT);
+}
+
+fun reserveDaoStorageFee(): void {
+    reserveGramsOnBalance(calculateDaoMinStorageFee(), RESERVE_MODE_EXACT_AMOUNT);
 }
 
 fun forwardInitStateOverhead(): coins {
