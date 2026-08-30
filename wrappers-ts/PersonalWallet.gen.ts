@@ -712,36 +712,6 @@ export const Upgrade = {
 }
 
 /**
- > struct (0x00001007) TopUpTons {
- > }
- */
-export interface TopUpTons {
-    readonly $: 'TopUpTons'
-}
-
-export const TopUpTons = {
-    PREFIX: 0x00001007,
-
-    create(): TopUpTons {
-        return {
-            $: 'TopUpTons',
-        }
-    },
-    fromSlice(s: c.Slice): TopUpTons {
-        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
-        return {
-            $: 'TopUpTons',
-        }
-    },
-    store(self: TopUpTons, b: c.Builder): void {
-        b.storeUint(0x00001007, 32);
-    },
-    toCell(self: TopUpTons): c.Cell {
-        return makeCellFrom<TopUpTons>(self, TopUpTons.store);
-    }
-}
-
-/**
  > struct (0x00001008) RequestUpgradeCode {
  >     sender: address
  >     version: uint10
@@ -921,7 +891,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFQEABHYAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAREgLH19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omh9AGmEkH0kfSQY/SQYAuuWEF41FGZxh+QsfQEJZYTnZPaqQYHAEutIRh2omh9AGmE/SR9JH0kaIHSZCgC/QEKZYT9KQl9KX0pZPaqQAP2NgXTP/oA0wnTADH6SPpQ+gD4kivHBY5N+JLtRND6ADHTCTH6SDH6SPpIMPgqJ8jPiAAI+lIT+lL6Usl4J1QSMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989QxwXy4ErfUUi8kTnjDVFzoCiVEEk4XwTjDSJuCAkKAvDXLCB8U/Usju3XLCLK+D3kjmE2+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBdM/+gD6UDBTUb7yr1FRocjPke92X3oTyz8B+gIW+lIT+lTJyM+FiBT6UnHPC24TzMmAUPsA4w4S4w0LDAA0+CjIz4UIG/pSgRAIzwuOGvpSJ88LCclz+wAAUsjPkc2LQnIlzws/UAT6AvpSzsnIz4UIGPpSUAb6AnHPC2oWzMmAEfsAAHqSMjOON/iX+CdvEKL4L6CAcIIA2sCCEAlmAYBw+De2CXL7AsjPhQgT+lKCENUydtvPC44Uyz/JgQCC+wDiAfjXLCAAAIBcjiQ0NVv4kljHBfiSUAPHBRKx8uK89ATXTCD7BNDtHu1T8QpC2zHgMdcsIAAAgDSOQdcsIAAAgESOHTA0+CjIz4UIFPpSgRAIzwuOE/pSIs8LCcmAQvsAjhc0A9csIAAAgDwxkTOYhA8ExwAU8vTiEuIS4w1ZDQH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gloIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysPiSK8cF8uBJU4S+8q9RhKHIIfoCKA4AaDX4klAExwXy4rwD0wAx0wn6SDH0BPQFU1K5jhQ1JG6RNJkk+wQE0O0e7VPiA/EKQpJfA+IC/M8LCSfPFsntVPiSJMcFU0rHBbGON1s0NDQ1+JL4klADxwUBbeMEyM+R73ZfehXLP1j6AvpSEvpUycjPhYgS+lJxzwtuzMmAUPsA2zHgOe1E0PoAMdMJMfpIMfpI+kgw+ColyM+IAAj6UhP6UvpSyXgqbrOUOosECt/Iic8WGA8QAAgXjUUZAJTLP1AG+gLPiABAG/pSEvpUAfoCFs7JyM+JiAFUcoPIz4PLBM+FoMzM+RaE97AHgAsl1yQ0E84Vy/eBFQ3PC3kWzBPMFMzJgFD7AAIBWBMUACG+t2dqJofQBphP0kfSR9JGjAAXtDIdqJofQAY64WEwACm3YF2omh9AGmEmP0kfSQY/SQYfBVA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFQEABGcAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAREgPd19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omh9AGmEkH0kfSQY/SQYAuuWEF41FGZHhOuWED4p+pZxh/GG5Cx9AQllhOdk9qpBgcIAEutIRh2omh9AGmE/SR9JH0kaIHSZCgC/QEKZYT9KQl9KX0pZPaqQAH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gloIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysPiSK8cF8uBJU4S+8q9RhKHIIfoCKAkC9NcsIsr4PeSO7tcsIAAAgFyOJDQ1W/iSWMcF+JJQA8cFErHy4rz0BNdMIPsE0O0e7VPxCkLbMeAx1ywgAACANI4z1ywgAACARDGOHDT4KMjPhQgU+lKBEAjPC44T+lIizwsJyYBC+wCaM4QPBMcAFPL0EuIS4w1Z4w0SDA0D9jYF0z/6ANMJ0wAx+kj6UPoA+JIrxwWOTfiS7UTQ+gAx0wkx+kgx+kj6SDD4KifIz4gACPpSE/pS+lLJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31FIvJE54w1Rc6AolRBJOF8E4w0ibg4PEAL8zwsJJ88Wye1U+JIkxwVTSscFsY43WzQ0NDX4kviSUAPHBQFt4wTIz5Hvdl96Fcs/WPoC+lIS+lTJyM+FiBL6UnHPC27MyYBQ+wDbMeA57UTQ+gAx0wkx+kgx+kj6SDD4KiXIz4gACPpSE/pS+lLJeCpus5Q6iwQK38iJzxYYCgsACBeNRRkAlMs/UAb6As+IAEAb+lIS+lQB+gIWzsnIz4mIAVRyg8jPg8sEz4WgzMz5FoT3sAeACyXXJDQTzhXL94EVDc8LeRbME8wUzMmAUPsAAGg1+JJQBMcF8uK8A9MAMdMJ+kgx9AT0BVNSuY4UNSRukTSZJPsEBNDtHu1T4gPxCkKSXwPiAMI2+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBdM/+gD6UDBTUb7yr1FRocjPke92X3oTyz8B+gIW+lIT+lTJyM+FiBT6UnHPC24TzMmAUPsAADT4KMjPhQgb+lKBEAjPC44a+lInzwsJyXP7AABQyM+RzYtCciXPCz9QBPoC+lLOycjPhQgY+lJQBvoCcc8LahbMyXP7AAB6kjIzjjf4l/gnbxCi+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOFMs/yYEAgvsA4gIBWBMUACG+t2dqJofQBphP0kfSR9JGjAAXtDIdqJofQAY64WEwACm3YF2omh9AGmEmP0kfSQY/SQYfBVA=');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -991,11 +961,6 @@ export class PersonalWallet implements c.Contract {
         forwardPayload: PayloadInline | PayloadInRef
     }) {
         return InternalTransferStep.toCell(InternalTransferStep.create(body));
-    }
-
-    static createCellOfTopUpTons(body: {
-    }) {
-        return TopUpTons.toCell(TopUpTons.create());
     }
 
     static createCellOfHotUpgrade(body: {
@@ -1072,15 +1037,6 @@ export class PersonalWallet implements c.Contract {
         return provider.internal(via, {
             value: msgValue,
             body: InternalTransferStep.toCell(InternalTransferStep.create(body)),
-            ...extraOptions
-        });
-    }
-
-    async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: TopUpTons.toCell(TopUpTons.create()),
             ...extraOptions
         });
     }

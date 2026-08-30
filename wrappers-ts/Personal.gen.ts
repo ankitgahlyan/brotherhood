@@ -980,8 +980,8 @@ export const Payback = {
  >     walletVersion: uint10
  >     fiJettonAddress: address
  >     adminAddress: address
- >     jettonWalletCode: cell
- >     metadataUri: cell?
+ >     latestWalletCodeLibRef: cell
+ >     metadataUri: cell
  > }
  */
 export interface PriStore {
@@ -991,8 +991,8 @@ export interface PriStore {
     walletVersion: uint10 /* = 0 */
     fiJettonAddress: c.Address
     adminAddress: c.Address
-    jettonWalletCode: c.Cell
-    metadataUri: c.Cell | null /* = null */
+    latestWalletCodeLibRef: c.Cell
+    metadataUri: c.Cell
 }
 
 export const PriStore = {
@@ -1002,15 +1002,14 @@ export const PriStore = {
         walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        jettonWalletCode: c.Cell
-        metadataUri?: c.Cell | null /* = null */
+        latestWalletCodeLibRef: c.Cell
+        metadataUri: c.Cell
     }): PriStore {
         return {
             $: 'PriStore',
             totalSupply: 0n,
             version: 0n,
             walletVersion: 0n,
-            metadataUri: null,
             ...args
         }
     },
@@ -1022,8 +1021,8 @@ export const PriStore = {
             walletVersion: s.loadUintBig(10),
             fiJettonAddress: s.loadAddress(),
             adminAddress: s.loadAddress(),
-            jettonWalletCode: s.loadRef(),
-            metadataUri: s.loadBoolean() ? s.loadRef() : null,
+            latestWalletCodeLibRef: s.loadRef(),
+            metadataUri: s.loadRef(),
         }
     },
     store(self: PriStore, b: c.Builder): void {
@@ -1032,10 +1031,8 @@ export const PriStore = {
         b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.fiJettonAddress);
         b.storeAddress(self.adminAddress);
-        b.storeRef(self.jettonWalletCode);
-        storeTolkNullable<c.Cell>(self.metadataUri, b,
-            (v,b) => b.storeRef(v)
-        );
+        b.storeRef(self.latestWalletCodeLibRef);
+        b.storeRef(self.metadataUri);
     },
     toCell(self: PriStore): c.Cell {
         return makeCellFrom<PriStore>(self, PriStore.store);
@@ -1098,7 +1095,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABQ8AART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAQEQPv19tF2/fxIx18Qa4WPwQh/////XXGBaY+Y65YQXjUUZk9rlhAAAEUiGMl5GPB5H/D2omgA6Z+Y/QAYAP0AAVDkAP0BZ2T2qnAQdqJofQBphOmE/SR9JGp6AoPrlhHvdl96cYfkKAL9AQnlhOWE/Sl9KQlmegBk9qpBgcIAFms7ph2omh9AGmE6YT9JH0kanoCaILSZCgD/QELZYSJ5YT9KX0pCWZ6AGT2qkAC/NcsJ/////Tyv9dM0O1E0AHXLCAAAIpE8r/TP/oA+kgwA/oAINMTMfpIMfpI10xRNKDIAfoCEs7J7VT4KCXIz4gACPpSEvpS+lLJeCVUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUG1tIG6zkzCLBN/Iic8WFQkKAOo4B9M/+gD6SPpQMPiS+ChTNsjPiAAIEvpS+lL6Usl4U9RUEzLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBKUYKhCG6SXwOOIcjPhYhSUPpSz4QQcfoCgRFIzwuFE8s/AfoC+lLJgFD7AOIB+NcsIWO1y5SOcTgH0z/6SNcKAJUgyPpSyZFt4m0i+kQwkTKOODD4KFMkyM+IAAgS+lL6UvpSyXhUMbHIz4PLBM+FoMzM+RaE97ATgAtQBNckyM+KAEDOEsv3z1AB4viSyM+FCPpSghDRc1RmzwuOE8s/+lT0AMmAUPsA4w4LAAgXjUUZAErLP1AD+gLPiABAFPpS+lTPhCDOycjPhQgS+lJxzwtuzMmAQvsAA/LXLCAAAIAMj27XLCAAAIAUjhA4+JJYxwXy4rwG0z8x+kgwj1LXLCAAAIAsnTc3+JIhxwXy4rwF10yPOdcsIAAAgFyOJTFsMzMz+JLHBfiSUAPHBRKx8uK89ATXTCD7BNDtHu1T8Qnd2zHg1ywgAACANOMPBeIF4uMNDA0OAJI4+JIjxwX4kiPHBbHy4rwH0gDTCfpIMfQE9AUDnFsDpCNukTOTNxAm4o4dU2G5jhQ2IW6RMZkh+wQB0O0e7VPiBPEJ3ZJfA+LiAJrXLCAAAIBEji0wN/iS+ChtyM+QAABAGybPCwkS+lL0AFKA9ADJyM+FCBL6UnHPC27MyYBC+wCOFNcsIAAAgDwxkTeYhA8IxwAY8vTi4gH6OPiSI8cF+JIjxwWx8uK8B9M/MfpI+gDXTCL6RDDy0U0g0NcsILxqKMzysdM/MfoA0wox+kgx+lAx+gD0BAFukTCR0eL4k3D4OiFyceME+DkgboFNDiLjBCFugShkWAPjBFAjqBOggHCCANuIcPg8oAJw+DYSoAFw+DaggHAPAMyCANrAghAJZgGAcPg3oCO58rAYoIIImJaAcPsC+ChTNMjPiAAIEvpS+lL6Usl4K8jPiYgBVHMSyM+DywTPhaDMzPkWhPewB4ALJNckMxLOFcv3UAP6AoEVDc8LdRPMzBbMyYAR+wACAWoSEwIBSBQVABewZDtRND6ADHXCwmAAIbDre1E0PoA0xMx+kj6SDABgAgFYFhcAHbbt3aiaH0AGOmEmOuFhMACNrbz2omh9ABjpiZj9JBj9JGumfBQR5GfEAAR9KQn9KQl9KWS8KJFkZ8HlgmfC0GZmfItCe9gJQAWoAeuSZGfFACBnZfvnqEAAK68W9qJofQBpiZj9JBj9JGp6Ar+hicA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECGwEABWIAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASASEwPt19tF2/fxIx18Qa4WPwQh/////XXGBaY+Y65YQXjUUZk9rlhAAAEUiGMl5GPB5H/D2omgA6Z+Y/QAYAP0AAVDkAP0BZ2T2qnAQdqJofQBphOmE/SR9JGprpgPrlhHvdl96cYfkKAL9AQnlhOWE/Sl9KQlmZmT2qkGBwgAVazumHaiaH0AaYTphP0kfSRqamiC0mQoA/0BC2WEieWE/Sl9KQlmZmT2qkAD/tcsJ/////Tyv9dM0O1E0AHXLCAAAIpE8r/TP/oA+kgwA/oAURKgyAH6As7J7VTtRND6ADHTEzH6SDH6SDD4KIglyM+IAAj6UhP6UvpSyXglVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1BtbSBus5MwiwTfyIkaCQoCwjgH0z/6APpI+lAw+JLtRND6ADHTEzH6SDH6SDD4KIglyM+IAAj6UhP6UvpSyXglVBIyyM+DywTPhaDMzPkWhPewEoALUAPXJMjPigBAzsv3z1DHBfLgSlGCoQhukl8D4w4aCwIS1ywhY7XLlOMPDA0ACBeNRRkAUM8WFcs/UAP6As+IAEAU+lL6VM+EIM7JyM+FCBL6UnHPC27MyYBC+wAAQsjPhYhSUPpSz4QQcfoCgRFIzwuFE8s/AfoC+lLJgFD7AAH+OAfTP/pI1woAlSDI+lLJkW3ibSL6RDCRMo7GMO1E0PoAMdMTMfpIMfpIMPgoiCTIz4gACPpSE/pS+lLJeFEiyM+DywTPhaDMzPkWhPewE4ALUATXJMjPigBAzhLL989QAeL4ksjPhQj6UoIQ0XNUZs8LjhPLP/pU9ADJgEL7ABoD8tcsIAAAgAyPbtcsIAAAgBSOEDj4kljHBfLivAbTPzH6SDCPUtcsIAAAgCydNzf4kiHHBfLivAXXTI851ywgAACAXI4lMWwzMzP4kscF+JJQA8cFErHy4rz0BNdMIPsE0O0e7VPxCd3bMeDXLCAAAIA04w8F4gXi4w0ODxAAkjj4kiPHBfiSI8cFsfLivAfSANMJ+kgx9AT0BQOcWwOkI26RM5M3ECbijh1TYbmOFDYhbpExmSH7BAHQ7R7tU+IE8Qndkl8D4uIAmtcsIAAAgESOLTA3+JL4KG3Iz5AAAEAbJs8LCRL6UvQAUoD0AMnIz4UIEvpScc8LbszJgEL7AI4U1ywgAACAPDGRN5iEDwjHABjy9OLiAfo4+JIjxwX4kiPHBbHy4rwH0z8x+kj6ANdMIvpEMPLRTSDQ1ywgvGoozPKx0z8x+gDTCjH6SDH6UDH6APQEAW6RMJHR4viTcPg6IXJx4wT4OSBugU0OIuMEIW6BKGRYA+MEUCOoE6CAcIIA24hw+DygAnD4NhKgAXD4NqCAcBEB3oIA2sCCEAlmAYBw+DegI7nysBigeoETiIIQCWYBgHD4N3D7AvgoiFNFyM+IAAgS+lL6UhL6Usl4yM+JiAFUcjHIz4PLBM+FoMzM+RaE97AHgAsj1yQyzhXL91AD+gKBFQ3PC3USzBLMFszJgBH7ABoCAWoUFQIBSBYXABewZDtRND6ADHXCwmAAIbDre1E0PoA0xMx+kj6SDABgAgFYGBkAHbbt3aiaH0AGOmEmOuFhMAGLrbz2omh9ABjpiZj9JBj9JBh8FEQR5GfEAAR9KQn9KX0pZLwokWRnweWCZ8LQZmZ8i0J72AlABagB65JkZ8UAIGdl++eoQBoBL68W9qJofQBpiZj9JBj9JGoY66Y/xCGYQBoIQgInX0bMym2rE3+Bb4hRzNFfYeyzUste8FOgtT4f/1zECw==');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1126,8 +1123,8 @@ export class PersonalMinter implements c.Contract {
         walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        jettonWalletCode: c.Cell
-        metadataUri?: c.Cell | null /* = null */
+        latestWalletCodeLibRef: c.Cell
+        metadataUri: c.Cell
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,

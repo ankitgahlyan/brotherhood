@@ -1,4 +1,3 @@
-import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -6,8 +5,14 @@ import "@acton/types/big_array"
 import "@acton/types/out_actions"
 import "@acton/types/transaction"
 
+import "@gen/Following.code"
 import "@gen/FossFiWallet.code"
+import "@gen/Location.code"
 import "@gen/Lottery.code"
+import "@gen/PersonalMinter.code"
+import "@gen/PersonalWallet.code"
+import "@gen/Poll.code"
+import "@gen/Voter.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -170,16 +175,14 @@ fun deployWalletFromStorage(
     return FossFiWallet { address };
 }
 
-// todo: fixme: replace with libRef
 fun registerAllTestLibraries(): void {
-    testing.registerLibrary(build("DaoProxy"));
-    testing.registerLibrary(build("Poll"));
-    testing.registerLibrary(build("Voter"));
-    testing.registerLibrary(build("Following"));
-    testing.registerLibrary(build("FossFiWallet"));
-    testing.registerLibrary(build("Location"));
-    testing.registerLibrary(build("PersonalMinter"));
-    testing.registerLibrary(build("PersonalWallet"));
+    testing.registerLibrary(pollCompiledCodeLibraryRef());
+    testing.registerLibrary(voterCompiledCodeLibraryRef());
+    testing.registerLibrary(followingCompiledCodeLibraryRef());
+    testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
+    testing.registerLibrary(locationCompiledCodeLibraryRef());
+    testing.registerLibrary(personalMinterCompiledCodeLibraryRef());
+    testing.registerLibrary(personalWalletCompiledCodeLibraryRef());
 }
 
 fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treasury, Treasury) {
@@ -325,8 +328,8 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(), // need code?
+            lotteryCode: lotteryCompiledCode(), // less than 1000 contracts expected
+            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
         }.toCell(),
     });
 

@@ -20,7 +20,7 @@ fun main() {
 
     printJettonMinterInfo(minter, "JETTON");
     printJettonWalletInfo(minter, admin, "JETTON_ADMIN");
-    // update FI_ADDRESS
-    // comment fossFiWalletLibraryRef
+    // update FI_ADDRESS for frontend and interaction scripts
+    // comment all libRefs
     // refactor code and send initial upgrade to fiWallet to replace code to lib ref
 }

@@ -120,16 +120,6 @@ fun Poll.sendCleanupProposalVotes(
     return net.send(from, genericMsg);
 }
 
-fun Poll.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: TopUpTons {},
-    });
-    return net.send(from, genericMsg);
-}
-
 /// Send message to the contract with a custom body cell
 fun Poll.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({

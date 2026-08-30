@@ -120,6 +120,84 @@ type uint33 = bigint
 type uint64 = bigint
 
 /**
+ > struct PollDataReply {
+ >     proposalId: uint64
+ >     proposerOwner: address
+ >     daoProxyAddress: address
+ >     fiAddress: address
+ >     targetMsg: cell
+ >     yesVotes: uint33
+ >     noVotes: uint33
+ >     totalAccounts: uint33
+ >     expiresAt: uint32
+ >     executed: bool
+ > }
+ */
+export interface PollDataReply {
+    readonly $: 'PollDataReply'
+    proposalId: uint64
+    proposerOwner: c.Address
+    daoProxyAddress: c.Address
+    fiAddress: c.Address
+    targetMsg: c.Cell
+    yesVotes: uint33
+    noVotes: uint33
+    totalAccounts: uint33
+    expiresAt: uint32
+    executed: boolean
+}
+
+export const PollDataReply = {
+    create(args: {
+        proposalId: uint64
+        proposerOwner: c.Address
+        daoProxyAddress: c.Address
+        fiAddress: c.Address
+        targetMsg: c.Cell
+        yesVotes: uint33
+        noVotes: uint33
+        totalAccounts: uint33
+        expiresAt: uint32
+        executed: boolean
+    }): PollDataReply {
+        return {
+            $: 'PollDataReply',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PollDataReply {
+        return {
+            $: 'PollDataReply',
+            proposalId: s.loadUintBig(64),
+            proposerOwner: s.loadAddress(),
+            daoProxyAddress: s.loadAddress(),
+            fiAddress: s.loadAddress(),
+            targetMsg: s.loadRef(),
+            yesVotes: s.loadUintBig(33),
+            noVotes: s.loadUintBig(33),
+            totalAccounts: s.loadUintBig(33),
+            expiresAt: s.loadUintBig(32),
+            executed: s.loadBoolean(),
+        }
+    },
+    store(self: PollDataReply, b: c.Builder): void {
+        b.storeUint(self.proposalId, 64);
+        b.storeAddress(self.proposerOwner);
+        b.storeAddress(self.daoProxyAddress);
+        b.storeAddress(self.fiAddress);
+        b.storeRef(self.targetMsg);
+        b.storeUint(self.yesVotes, 33);
+        b.storeUint(self.noVotes, 33);
+        b.storeUint(self.totalAccounts, 33);
+        b.storeUint(self.expiresAt, 32);
+        b.storeBit(self.executed);
+    },
+    toCell(self: PollDataReply): c.Cell {
+        return makeCellFrom<PollDataReply>(self, PollDataReply.store);
+    }
+}
+
+/**
  > struct (0xd53276db) ReturnExcessesBack {
  >     queryId: uint64
  > }
@@ -153,36 +231,6 @@ export const ReturnExcessesBack = {
     },
     toCell(self: ReturnExcessesBack): c.Cell {
         return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
-    }
-}
-
-/**
- > struct (0x00001007) TopUpTons {
- > }
- */
-export interface TopUpTons {
-    readonly $: 'TopUpTons'
-}
-
-export const TopUpTons = {
-    PREFIX: 0x00001007,
-
-    create(): TopUpTons {
-        return {
-            $: 'TopUpTons',
-        }
-    },
-    fromSlice(s: c.Slice): TopUpTons {
-        loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
-        return {
-            $: 'TopUpTons',
-        }
-    },
-    store(self: TopUpTons, b: c.Builder): void {
-        b.storeUint(0x00001007, 32);
-    },
-    toCell(self: TopUpTons): c.Cell {
-        return makeCellFrom<TopUpTons>(self, TopUpTons.store);
     }
 }
 
@@ -523,11 +571,52 @@ export const CleanupProposalVotes = {
 }
 
 /**
- > struct PollStore {
- >     proposalId: uint64
+ > struct PollAddresses {
  >     proposerOwner: address
  >     daoProxyAddress: address
  >     fiAddress: address
+ > }
+ */
+export interface PollAddresses {
+    readonly $: 'PollAddresses'
+    proposerOwner: c.Address
+    daoProxyAddress: c.Address
+    fiAddress: c.Address
+}
+
+export const PollAddresses = {
+    create(args: {
+        proposerOwner: c.Address
+        daoProxyAddress: c.Address
+        fiAddress: c.Address
+    }): PollAddresses {
+        return {
+            $: 'PollAddresses',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PollAddresses {
+        return {
+            $: 'PollAddresses',
+            proposerOwner: s.loadAddress(),
+            daoProxyAddress: s.loadAddress(),
+            fiAddress: s.loadAddress(),
+        }
+    },
+    store(self: PollAddresses, b: c.Builder): void {
+        b.storeAddress(self.proposerOwner);
+        b.storeAddress(self.daoProxyAddress);
+        b.storeAddress(self.fiAddress);
+    },
+    toCell(self: PollAddresses): c.Cell {
+        return makeCellFrom<PollAddresses>(self, PollAddresses.store);
+    }
+}
+
+/**
+ > struct PollStore {
+ >     proposalId: uint64
+ >     addresses: Cell<PollAddresses>
  >     targetMsg: cell
  >     yesVotes: uint33
  >     noVotes: uint33
@@ -539,9 +628,7 @@ export const CleanupProposalVotes = {
 export interface PollStore {
     readonly $: 'PollStore'
     proposalId: uint64
-    proposerOwner: c.Address
-    daoProxyAddress: c.Address
-    fiAddress: c.Address
+    addresses: CellRef<PollAddresses>
     targetMsg: c.Cell
     yesVotes: uint33 /* = 0 */
     noVotes: uint33 /* = 0 */
@@ -553,9 +640,7 @@ export interface PollStore {
 export const PollStore = {
     create(args: {
         proposalId: uint64
-        proposerOwner: c.Address
-        daoProxyAddress: c.Address
-        fiAddress: c.Address
+        addresses: CellRef<PollAddresses>
         targetMsg: c.Cell
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
@@ -577,9 +662,7 @@ export const PollStore = {
         return {
             $: 'PollStore',
             proposalId: s.loadUintBig(64),
-            proposerOwner: s.loadAddress(),
-            daoProxyAddress: s.loadAddress(),
-            fiAddress: s.loadAddress(),
+            addresses: loadCellRef<PollAddresses>(s, PollAddresses.fromSlice),
             targetMsg: s.loadRef(),
             yesVotes: s.loadUintBig(33),
             noVotes: s.loadUintBig(33),
@@ -590,9 +673,7 @@ export const PollStore = {
     },
     store(self: PollStore, b: c.Builder): void {
         b.storeUint(self.proposalId, 64);
-        b.storeAddress(self.proposerOwner);
-        b.storeAddress(self.daoProxyAddress);
-        b.storeAddress(self.fiAddress);
+        storeCellRef<PollAddresses>(self.addresses, b, PollAddresses.store);
         b.storeRef(self.targetMsg);
         b.storeUint(self.yesVotes, 33);
         b.storeUint(self.noVotes, 33);
@@ -644,7 +725,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Poll implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECEwEAA8oAART/APSkE/S88sgLAQIBYgIDAgLEBAUCAVgQEQH31/EjHK+mPmJBrpOEPxyXpj4DAiH7dRx/pn5jpn5jrhQB2omhrH/0kfSR9JGppkGmQBEwQ4QBJgNKA70sQYQBI0u9xA2RnCv0pCf0pfSlmZZBlkGdk9qpImHFwGHAQY4BImHAQdqJoaZ/9JH0kfSRqaZBpkGmQaY/rhQAFQYAB6xXGEAD/InXJ44ZEGhfCGwiyM+FCPpSgRAOzwuOyz/JgEL7AODXLCAAAIB8jiwyOviSJccF8uK80z8x1wsgB8jLPxb6UhT6UhL6UszLIMsgyyASyx/KAMntVODXLCAAAIf04wI5Xwcy1ywgAACH/OMCMdcsIAAAgDwxkTDghA8BxwDy9AcICQAIAAAQ+wT8OwrTP9M/+kjTAAGS0gCSbQHi1woAiIiIAcjMzM+IAALJcMjLf8ltbW0CyPpU+lT6VMmNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARtVhDIDwoKCwBKMviSIccF8uK8AdcLP8jPhQgS+lKCENUydtvPC47LP8mBAKD7AAAAAfz6UhP6UvpS9ADJJ8j6UhLMzMltbW3I9ABwzws/yW3I9ABwzws0yQPI9AAS9ADMzMnIjQUAAAAABAAAAAAAAAAEAUAAAACAAATPFhTMEszMzMl4JVQSMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989Q+JLHBfLivC0MA/zy0u/4Iy+58uLyIW6bMSCSBqSUBaQFBuKOE2a9niCUBqQFpZQGpQWk4gUG3gbi+CiII8j6UhL6Us+EgMmCCTEtAMjPiYgBUyPIz4TQzMz5Fs8L/wH6AoEAjM8LcBLMzM+QAABD9iTPCz8Tyz8WygAV+lLJgBH7ACGRceMNJLsSDQ4AECGqAKYCc6kEAbaUKbPDAJFw4o6yOX+IyM+QAABANhvLPynPCz9SgPpSK88LHxrMJM8UycjPhQhScPpScc8LbszJgQCw+wCRMOIHyMs/FvpSFPpSEvpSzMsgyyDLIBLLH8oAye1UDwhCAmuB0iRvWiezKR8JA07jvnr62qqpRLe04lQZUFrSf92GAUO5zO+CiIAsj6UvpSz4SAyQHIz4TQzMz5FsjPigBAy//PUIEgAzunm+1E0NM/+kj6SPpI1NMg0yDTINMf0gDRgIQgIXH49hkYExuXTBimAhhGcntLYUs+cFkx1tzV0rfkvKaA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECEgEAA9AAART/APSkE/S88sgLAQIBYgIDAgLEBAUCAVgPEAH31/EjHJmmPmJBrpOEPxyBpj4DAiH7dRxppn5jpn5jrhQB2omhrH+pqaZBpkANMEOEASYDSgO9LEGEASNLvcQJkZwnmZmWQZZBnZPaqSJhxcBhwEGOASJhwEHaiaGmf6mppkGmQaZBpj+uFABNofSR9JH0kGAXrlhAAAEPuQYAB6xXGEACzo4WXwoyyM+FCPpSgRAOzwuOyz/JgEL7AODXLCAAAIB8jic1Wzn4klAIxwXy4rzTPzHXCyAFyMs/FMwSzMsgyyDLIMsfygDJ7VTg1ywgAACH9OMCMWyS1ywgAACH/OMCW4QPAccA8vQHCAT8PAvTP9M/+kjTAAGS0gCSbQHi1woAiIiIAcjMzM+IAALJcMjLf8ltbW0CyPpU+lT6VMmNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASNCGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARtERXIDgkJCgBKMviSIccF8uK8AdcLP8jPhQgS+lKCENUydtvPC47LP8mBAKD7AAAAAfr6UhL6UvpSARETAfQAySbI+lIBERMBzAEREgHMyW1tbcj0AHDPCz/Jbcj0AHDPCzTJA8j0ABL0AMzMyciNBQAAAAAEAAAAAAAAAAQBQAAAAIAABM8WE8wBERIBzAEREQHMAREQAczJeCQREVQSAsjPg8sEz4WgzMz5FoT3sAsD/AEREAGACwEREdckyM+KAEDOH8v3z1D4kscF8uK8JfLS7/gjJ7ny4vIgbpswLJIIpJQHpAcI4o4TLb2eLJQIpAellAilB6TiBwjeCOL4KIgqyPpSEvpSz4SAyYIJMS0AyM+JiAFTI8jPhNDMzPkWzwv/AfoCgQCMzwtwEszMiREMDQAIAAAQ/QH0zxYjzws/Ess/HMoAF/pSyYAR+wAjmCOqAKYCc6kEkXHiKruUIbPDAJFw4o6xMX+IyM+QAABANhfLPynPCz8S+lIizwsfFcwlzxTJyM+FCBr6UnHPC24ZzMmBALD7AJMwNDjiBcjLPxTMEswUyyDLIMsgEssfygDJ7VQOCEICO9pzlscsb5obGBCjCd0NYcaNSn91KLcRdiwzHnT73sIBQ7nM74KIgCyPpS+lLPhIDJAcjPhNDMzPkWyM+KAEDL/89QgRAEe6eb7UTQ0z/U1NMg0yDTINMf1woABtD6SPpI+kgwSBZEdBUTgIQgIXH49hkYExuXTBimAhhGcntLYUs+cFkx1tzV0rfkvKaA==');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
@@ -666,9 +747,7 @@ export class Poll implements c.Contract {
 
     static fromStorage(emptyStorage: {
         proposalId: uint64
-        proposerOwner: c.Address
-        daoProxyAddress: c.Address
-        fiAddress: c.Address
+        addresses: CellRef<PollAddresses>
         targetMsg: c.Cell
         yesVotes?: uint33 /* = 0 */
         noVotes?: uint33 /* = 0 */
@@ -712,11 +791,6 @@ export class Poll implements c.Contract {
         proposalId: uint64
     }) {
         return CleanupProposalVotes.toCell(CleanupProposalVotes.create(body));
-    }
-
-    static createCellOfTopUpTons(body: {
-    }) {
-        return TopUpTons.toCell(TopUpTons.create());
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -773,19 +847,10 @@ export class Poll implements c.Contract {
         });
     }
 
-    async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: TopUpTons.toCell(TopUpTons.create()),
-            ...extraOptions
-        });
-    }
-
-    async getPollData(provider: ContractProvider): Promise<PollStore> {
+    async getPollData(provider: ContractProvider): Promise<PollDataReply> {
         const r = StackReader.fromGetMethod(10, await provider.get('get_poll_data', []));
         return ({
-            $: 'PollStore',
+            $: 'PollDataReply',
             proposalId: r.readBigInt(),
             proposerOwner: r.readSlice().loadAddress(),
             daoProxyAddress: r.readSlice().loadAddress(),
