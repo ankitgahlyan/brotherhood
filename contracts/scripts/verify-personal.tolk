@@ -98,7 +98,7 @@ fun main() {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: deployer,
-        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
+        latestWalletCodeLibRef: personalWalletCompiledCodeLibraryRef(),
         metadataUri: buildJettonMetadataCell({
             name: "Issuer Token",
             symbol: "IT",

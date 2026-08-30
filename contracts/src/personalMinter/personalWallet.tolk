@@ -13,7 +13,6 @@ type AllowedMsgToPersonalWallet =
     | AskToTransfer
     | AskToBurn
     | InternalTransferStep
-    | TopUpTons
     | HotUpgrade
     | Upgrade
     | RequestUpgradeCode
@@ -50,7 +49,7 @@ fun onInternalMessage(in: InMessage) {
             if (in.senderAddress != storage.minterAddress) {
                 // TODO: or treasury
                 assert (
-                    in.senderAddress == addrPriWallet(msg.transferInitiator)
+                    in.senderAddress == autoAddrPriWallet(msg.transferInitiator).calculateAddress()
                 ) throw Errors.NotValidWallet;
             }
 
@@ -217,10 +216,6 @@ fun onInternalMessage(in: InMessage) {
                 },
             });
             reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
-        }
-
-        TopUpTons => {
-            // just accept tons
         }
 
         else => {

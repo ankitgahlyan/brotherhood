@@ -34,7 +34,7 @@ fun onInternalMessage(in: InMessage): void {
 
         CleanupProposalVotes => {
             assert (in.senderAddress == store.voterOwner) throw Errors.IncorrectSender;
-            // todo: release some fi funds to encourage housekeeping
+            // todo: fixme: release some fi funds to encourage housekeeping and add time guard to not destroy before Poll ends otherwise someone will vote delete vote repeat for infinite vote glitch
             destroyContract(store.voterOwner);
         }
 

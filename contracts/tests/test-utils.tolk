@@ -135,7 +135,7 @@ fun activateUser(
 
 fun walletStateInit(storage: FiWalletStore): ContractState {
     return ContractState {
-        code: build("FossFiWallet"),
+        code: fossFiWalletCompiledCodeLibraryRef(),
         data: storage.toCell(),
     };
 }
@@ -149,7 +149,7 @@ fun deployWalletFromStorage(
         ? calcDeployFiWallet(
             storage.addresses.load().owner,
             storage.addresses.load().trustedJettonAddrs.load().minterAddr,
-            build("FossFiWallet"),
+            fossFiWalletCompiledCodeLibraryRef(),
         )
         : AutoDeployAddress { stateInit: walletStateInit(storage) };
     val address = init.calculateAddress();
@@ -170,6 +170,7 @@ fun deployWalletFromStorage(
     return FossFiWallet { address };
 }
 
+// todo: fixme: replace with libRef
 fun registerAllTestLibraries(): void {
     testing.registerLibrary(build("DaoProxy"));
     testing.registerLibrary(build("Poll"));

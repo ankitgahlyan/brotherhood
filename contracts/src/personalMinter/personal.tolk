@@ -1,5 +1,6 @@
 import "@stdlib/tvm-lowlevel"
 
+import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
@@ -48,12 +49,7 @@ fun onBouncedMessage(in: InMessageBounced) {
         val mintMsg = createMessage({
             bounce: BounceMode.NoBounce,
             value: 0,
-            dest: calcAddrPriWallet(
-                payback.sender,
-                store.adminAddress,
-                contract.getAddress(),
-                store.jettonWalletCode,
-            ),
+            dest: autoAddrPriWalletMinter(payback.sender),
             body: makeInternalTransferStep(
                 payback.queryId,
                 payback.amount,
@@ -88,13 +84,7 @@ fun onInternalMessage(in: InMessage) {
     match (msg) {
         NotifyMinter => {
             assert (
-                in.senderAddress ==
-                calcAddrPriWallet(
-                    msg.burnInitiator,
-                    storage.adminAddress,
-                    contract.getAddress(),
-                    storage.jettonWalletCode,
-                )
+                in.senderAddress == autoAddrPriWalletMinter(msg.burnInitiator)
             ) throw Errors.NotValidWallet;
             storage.totalSupply -= msg.jettonAmount;
 
@@ -121,12 +111,7 @@ fun onInternalMessage(in: InMessage) {
 
             var jettonWalletAddress: address? = null;
             if (msg.owner.getWorkchain() == MY_WORKCHAIN) {
-                jettonWalletAddress = calcAddrPriWallet(
-                    msg.owner,
-                    storage.adminAddress,
-                    contract.getAddress(),
-                    storage.jettonWalletCode,
-                );
+                jettonWalletAddress = autoAddrPriWalletMinter(msg.owner);
             }
 
             val respondMsg = createMessage({
@@ -175,7 +160,7 @@ fun onInternalMessage(in: InMessage) {
                     msg.mintRecipient,
                     storage.adminAddress,
                     contract.getAddress(),
-                    storage.jettonWalletCode,
+                    personalWalletCompiledCodeLibraryRef(),
                 ),
                 value: msg.tonAmount,
                 body: msg.internalTransferMsg,
@@ -215,7 +200,7 @@ fun onInternalMessage(in: InMessage) {
             if (msg.walletUpgrade) {
                 storage.walletVersion += 1;
                 if (msg.newCode != null) {
-                    storage.jettonWalletCode = msg.newCode;
+                    storage.latestWalletCodeLibRef = msg.newCode;
                 }
             } else {
                 if (storage.version < msg.walletVersion) {
@@ -239,7 +224,7 @@ fun onInternalMessage(in: InMessage) {
                     walletUpgrade: true,
                     walletVersion: storage.walletVersion,
                     sender: contract.getAddress(),
-                    newCode: storage.jettonWalletCode,
+                    newCode: storage.latestWalletCodeLibRef,
                 },
             });
             upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
@@ -297,18 +282,23 @@ get fun get_jetton_data(): JettonDataReply {
         totalSupply: storage.totalSupply,
         mintable: true,
         adminAddress: storage.adminAddress,
-        jettonContent: storage.metadataUri! as Cell<OnchainMetadataReply>, // todo nullCheck
-        jettonWalletCode: storage.jettonWalletCode,
+        jettonContent: storage.metadataUri as Cell<OnchainMetadataReply>,
+        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
     };
 }
 
 get fun get_wallet_address(owner: address): address {
-    val storage = lazy PriStore.load();
+    return autoAddrPriWalletMinter(owner);
+}
 
-    return calcAddrPriWallet(
+// used in minter
+fun autoAddrPriWalletMinter(owner: address): address {
+    // wallet calls this when deploy and checking on incoming
+    val st = lazy PriStore.load();
+    return calcDeployPriWallet(
         owner,
-        storage.adminAddress,
+        st.adminAddress,
         contract.getAddress(),
-        storage.jettonWalletCode,
-    );
+        personalWalletCompiledCodeLibraryRef(),
+    ).calculateAddress();
 }

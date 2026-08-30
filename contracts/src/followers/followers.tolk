@@ -1,4 +1,7 @@
+import "@stdlib/tvm-lowlevel"
+
 import "@contracts/common/errors"
+import "@contracts/common/messages"
 
 import "messages"
 import "store"
@@ -6,6 +9,7 @@ import "store"
 type FollowingAllowedMsg =
     | InitFollow
     | Unfollow
+    | HotUpgrade
 
 contract Following {
     author: "zeta"
@@ -113,6 +117,17 @@ fun onInternalMessage(in: InMessage) {
             );
         }
 
+        HotUpgrade => {
+            assert (
+                in.senderAddress == store.follower || in.senderAddress == store.followee
+            ) throw Errors.IncorrectSender;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: update continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradeFollowingData(msg.additionalData);
+            return;
+        }
+
         else => {
             // invalid input; a typical reaction is:
             // ignore empty messages, "wrong opcode" if not
@@ -120,6 +135,12 @@ fun onInternalMessage(in: InMessage) {
         }
     }
     store.save();
+}
+
+@method_id(2828)
+fun hotUpgradeFollowingData(_additionalData: cell?) {
+    val oldStore = FollowingStore.load();
+    oldStore.save();
 }
 
 get fun get_following_data(): FollowingStore {

@@ -7,6 +7,7 @@ import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/testing/assert"
 
+import "@contracts/common/messages"
 import "@contracts/followers/messages"
 import "@contracts/followers/store"
 
@@ -82,6 +83,41 @@ fun Followers.sendUnfollow(
         value: config.value,
         dest: self.address,
         body: Unfollow { queryId, initiator, followee },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Followers.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Followers.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
     });
     return net.send(from, genericMsg);
 }

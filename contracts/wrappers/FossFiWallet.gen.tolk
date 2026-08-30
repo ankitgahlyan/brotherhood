@@ -562,6 +562,22 @@ fun FossFiWallet.sendUpgrade(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFiWallet.sendVotingAction(
     self,
     from: address,

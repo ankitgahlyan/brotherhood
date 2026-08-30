@@ -20,9 +20,7 @@ fun calcDeployPoll(
 ): AutoDeployAddress {
     val store: PollStore = {
         proposalId,
-        proposerOwner,
-        daoProxyAddress,
-        fiAddress,
+        addresses: PollAddresses { proposerOwner, daoProxyAddress, fiAddress }.toCell(),
         targetMsg,
         yesVotes: 0,
         noVotes: 0,

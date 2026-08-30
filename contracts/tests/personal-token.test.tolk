@@ -21,8 +21,8 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
-        metadataUri: null,
+        latestWalletCodeLibRef: personalWalletCompiledCodeLibraryRef(),
+        metadataUri: createEmptyCell(),
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),

@@ -29,13 +29,14 @@ fun onInternalMessage(in: InMessage): void {
 
     val msg = lazy AllowedMessageToPoll.fromSlice(in.body);
     var store = lazy PollStore.load();
+    val addrs = lazy store.addresses.load();
 
     match (msg) {
         InitPoll => {
             val reqMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 value: 0,
-                dest: store.fiAddress,
+                dest: addrs.fiAddress,
                 body: RequestTotalAccounts { queryId: store.proposalId },
             });
             reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
@@ -43,7 +44,7 @@ fun onInternalMessage(in: InMessage): void {
 
         // lazy elections - convince voters to pass law
         ResponseTotalAccounts => {
-            assert (in.senderAddress == store.fiAddress) throw Errors.IncorrectSender;
+            assert (in.senderAddress == addrs.fiAddress) throw Errors.IncorrectSender;
             store.totalAccounts = msg.totalAccounts;
             store.save();
         }
@@ -51,7 +52,7 @@ fun onInternalMessage(in: InMessage): void {
         VoteProposal => {
             val expectedWallet = calcDeployFiWallet(
                 msg.voterOwner,
-                store.fiAddress,
+                addrs.fiAddress,
                 fossFiWalletCompiledCodeLibraryRef(),
             ).calculateAddress();
             assert (in.senderAddress == expectedWallet) throw Errors.IncorrectSender;
@@ -103,11 +104,11 @@ fun onInternalMessage(in: InMessage): void {
                 val execMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     value: 0,
-                    dest: store.daoProxyAddress,
+                    dest: addrs.daoProxyAddress,
                     body: ExecuteDaoProposal {
                         queryId: msg.queryId,
                         proposalId: store.proposalId,
-                        proposerOwner: store.proposerOwner,
+                        proposerOwner: addrs.proposerOwner,
                         expiresAt: store.expiresAt,
                         walletLibRef: fossFiWalletCompiledCodeLibraryRef(),
                         targetMsg: store.targetMsg,
@@ -124,12 +125,12 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         CleanupProposalVotes => {
-            assert (in.senderAddress == store.proposerOwner) throw Errors.IncorrectSender;
+            assert (in.senderAddress == addrs.proposerOwner) throw Errors.IncorrectSender;
 
             val excessesMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 value: 0,
-                dest: store.proposerOwner,
+                dest: addrs.proposerOwner,
                 body: ReturnExcessesBack { queryId: msg.queryId },
             });
             // safety:
@@ -178,8 +179,34 @@ fun onBouncedMessage(in: InMessageBounced): void {
 // GETTERS
 // ============================================================================
 
-get fun get_poll_data(): PollStore {
-    return PollStore.load();
+struct PollDataReply {
+    proposalId: uint64
+    proposerOwner: address
+    daoProxyAddress: address
+    fiAddress: address
+    targetMsg: cell
+    yesVotes: uint33
+    noVotes: uint33
+    totalAccounts: uint33
+    expiresAt: uint32
+    executed: bool
+}
+
+get fun get_poll_data(): PollDataReply {
+    val store = lazy PollStore.load();
+    val addrs = lazy store.addresses.load();
+    return {
+        proposalId: store.proposalId,
+        proposerOwner: addrs.proposerOwner,
+        daoProxyAddress: addrs.daoProxyAddress,
+        fiAddress: addrs.fiAddress,
+        targetMsg: store.targetMsg,
+        yesVotes: store.yesVotes,
+        noVotes: store.noVotes,
+        totalAccounts: store.totalAccounts,
+        expiresAt: store.expiresAt,
+        executed: store.executed,
+    };
 }
 
 get fun get_voter_address(voterOwner: address): address {

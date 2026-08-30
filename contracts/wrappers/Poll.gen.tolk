@@ -8,6 +8,7 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 
 import "@contracts/common/messages"
+import "@contracts/dao/Poll"
 import "@contracts/dao/storage"
 
 /// Storage `PollStore` is defined in `@contracts/dao/storage`
@@ -140,7 +141,7 @@ fun Poll.sendAny(self, from: address, body: cell, config: SendParams = {}): Send
     return net.send(from, genericMsg);
 }
 
-fun Poll.getPollData(self): PollStore {
+fun Poll.getPollData(self): PollDataReply {
     return net.runGetMethod(self.address, "get_poll_data");
 }
 

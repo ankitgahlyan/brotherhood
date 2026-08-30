@@ -35,6 +35,7 @@ type AllowedMessageToWallet =
     | TopUpTons
     | TransferNotificationForRecipient // forwards invite notif invitor0 owner
     | Upgrade
+    | HotUpgrade
     | VotingAction
     | EnterLottery
     | Follow
@@ -580,7 +581,6 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
-            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(),
@@ -595,9 +595,8 @@ fun onInternalMessage(in: InMessage): void {
                     store.version,
                 ),
             });
-            // safety:
             transferMsg.send(
-                SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
 
@@ -611,7 +610,6 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             store.jettonBalance -= msg.jettonAmount;
 
-            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(), // issuer's account
@@ -771,6 +769,17 @@ fun onInternalMessage(in: InMessage): void {
                 // any migration logic
                 hotUpgradeFiWalletData(msg.newData);
             }
+        }
+
+        HotUpgrade => {
+            assert (
+                in.senderAddress == addrs.owner || in.senderAddress == trustedAddrs.minterAddr
+            ) throw Errors.IncorrectSender;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: update continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradeFiWalletData(msg.additionalData);
+            return;
         }
 
         VotingAction => {
@@ -1193,7 +1202,6 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.goldCoins >= msg.amount) throw Errors.BalanceError;
             store.goldCoins -= msg.amount;
 
-            reserveForBalance(in.valueCoins);
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.receiver.getAddrFiWallet(),

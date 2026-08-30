@@ -13,11 +13,15 @@ fun DaoProxyStore.save(self): void {
     contract.setData(self.toCell());
 }
 
-struct PollStore {
-    proposalId: uint64
+struct PollAddresses {
     proposerOwner: address
     daoProxyAddress: address
     fiAddress: address
+}
+
+struct PollStore {
+    proposalId: uint64
+    addresses: Cell<PollAddresses>
     targetMsg: cell
     yesVotes: uint33 = 0
     noVotes: uint33 = 0
