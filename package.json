@@ -38,6 +38,8 @@
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^16.3.0",
     "@types/node": "^26.2.0",
+    "allure-js-commons": "^3.11.0",
+    "allure-playwright": "^3.11.0",
     "eslint": "^9.39.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^5.1.0",

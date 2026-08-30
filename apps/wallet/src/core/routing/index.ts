@@ -37,18 +37,12 @@ export function useNavigate() {
         return;
       }
 
-      if (options?.state) {
-        window.history.replaceState(
-          { ...window.history.state, __customState: options.state },
-          '',
-        );
-      }
-
       tanstackNavigate({
         to: to as any,
+        state: options?.state ? () => options.state : undefined,
         replace: options?.replace,
-        search: options?.search,
-        params: options?.params,
+        search: options?.search as any,
+        params: options?.params as any,
       });
     },
     [tanstackNavigate],
@@ -58,7 +52,10 @@ export function useNavigate() {
 export function useLocation() {
   const loc = useTanStackLocation();
   const state =
-    (window.history.state as any)?.__customState ?? window.history.state;
+    (loc.state as any) ??
+    (window.history.state as any)?.__customState ??
+    (window.history.state as any)?.state ??
+    window.history.state;
   return {
     ...loc,
     pathname: loc.pathname,

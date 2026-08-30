@@ -62,8 +62,8 @@ export type MnemonicPasteResult = {
 
 /**
  * Applies pasted tokens onto a fixed-length word grid.
- * 12+ tokens at index 0 → full overwrite; otherwise → fill in place from `atIndex`, capped at the grid length.
- * Caller is responsible for skipping empty paste.
+ * 12+ tokens (or overflow beyond remaining cells) → fills from index 0;
+ * otherwise → fills in place from `atIndex`.
  */
 export function applyMnemonicPaste(
   currentWords: readonly string[],
@@ -71,16 +71,20 @@ export function applyMnemonicPaste(
   pastedWords: readonly string[],
 ): MnemonicPasteResult {
   const total = currentWords.length;
-  const isFullOverwrite = pastedWords.length >= 12 && atIndex === 0;
-  const start = isFullOverwrite ? 0 : atIndex;
-  const next = isFullOverwrite
+  const isFullMnemonic = pastedWords.length >= 12;
+  const overflows = atIndex + pastedWords.length > total;
+  const start = isFullMnemonic || overflows ? 0 : Math.max(0, atIndex);
+
+  const next = isFullMnemonic
     ? Array<string>(total).fill('')
     : [...currentWords];
+
   const room = total - start;
   const written = pastedWords.slice(0, room);
   written.forEach((word, i) => {
-    next[start + i] = word;
+    next[start + i] = word.toLowerCase().replace(/[^a-z]/g, '');
   });
+
   return {
     nextWords: next,
     focusIndex: Math.min(start + Math.max(written.length - 1, 0), total - 1),

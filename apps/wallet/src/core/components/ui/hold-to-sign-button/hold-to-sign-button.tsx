@@ -86,30 +86,41 @@ export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
     }, holdDuration);
   }, [disabled, loading, isComplete, holdDuration, onComplete, clearTimers]);
 
-  const handleHoldEnd = useCallback(() => {
-    if (isComplete) return;
-
-    setIsHolding(false);
-    setShowRipples(false);
-    clearTimers();
-
-    // Smoothly animate progress back to 0
-    const currentProgress = progress;
-    const steps = 10;
-    const stepDuration = 100 / steps;
-    let step = 0;
-
-    const resetInterval = setInterval(() => {
-      step++;
-      const newProgress = currentProgress * (1 - step / steps);
-      setProgress(newProgress);
-
-      if (step >= steps) {
-        clearInterval(resetInterval);
-        setProgress(0);
+  const handleHoldEnd = useCallback(
+    (event?: React.MouseEvent | React.TouchEvent) => {
+      if (isComplete) return;
+      if (
+        event &&
+        'buttons' in event &&
+        (event.buttons & 1) === 1 &&
+        event.type === 'mouseleave'
+      ) {
+        return; // Mouse is still actively pressed down
       }
-    }, stepDuration);
-  }, [isComplete, progress, clearTimers]);
+
+      setIsHolding(false);
+      setShowRipples(false);
+      clearTimers();
+
+      // Smoothly animate progress back to 0
+      const currentProgress = progress;
+      const steps = 10;
+      const stepDuration = 100 / steps;
+      let step = 0;
+
+      const resetInterval = setInterval(() => {
+        step++;
+        const newProgress = currentProgress * (1 - step / steps);
+        setProgress(newProgress);
+
+        if (step >= steps) {
+          clearInterval(resetInterval);
+          setProgress(0);
+        }
+      }, stepDuration);
+    },
+    [isComplete, progress, clearTimers],
+  );
 
   useEffect(() => {
     return () => {

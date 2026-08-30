@@ -29,7 +29,7 @@ export default defineConfig({
     timeout: timeout,
   },
   fullyParallel: true,
-  reporter: process.env.CI ? [['list'], ['html']] : [['list'], ['html']],
+  reporter: [['list'], ['html', { open: 'never' }]],
   workers: workersCount,
   use: {
     screenshot: 'only-on-failure',

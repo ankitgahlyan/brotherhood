@@ -73,6 +73,34 @@ export const ImportWalletScreen: React.FC = () => {
   };
 
   const handleWordChange = (index: number, value: string) => {
+    const tokens = extractMnemonicWordsFromPaste(value);
+    if (tokens.length > 1) {
+      const { nextWords, focusIndex } = applyMnemonicPaste(
+        words,
+        index,
+        tokens,
+      );
+      setWords(nextWords);
+      focusCell(focusIndex);
+      return;
+    }
+
+    if (
+      tokens.length === 1 &&
+      (value.includes(' ') || value.includes('\n') || value.includes('\t'))
+    ) {
+      const cleanWord = tokens[0];
+      setWords((prev) => {
+        const next = [...prev];
+        next[index] = cleanWord;
+        return next;
+      });
+      if (index < TOTAL_WORDS - 1) {
+        focusCell(index + 1);
+      }
+      return;
+    }
+
     const cleanValue = value.toLowerCase().replace(/[^a-z]/g, '');
     setWords((prev) => {
       const next = [...prev];
@@ -228,8 +256,12 @@ export const ImportWalletScreen: React.FC = () => {
       ?.readText()
       .then((text) => {
         const tokens = extractMnemonicWordsFromPaste(text ?? '');
-        if (tokens.length < 12) return;
-        const { nextWords, focusIndex } = applyMnemonicPaste(words, 0, tokens);
+        if (tokens.length === 0) return;
+        const { nextWords, focusIndex } = applyMnemonicPaste(
+          words,
+          activeInput,
+          tokens,
+        );
         setWords(nextWords);
         focusCell(focusIndex);
       })

@@ -23,7 +23,8 @@ import { DemoWallet } from './DemoWallet';
 import { isExtensionWalletSource } from '../qa/WalletApp';
 
 export function detectWalletSource() {
-  const source = process.env.E2E_WALLET_SOURCE ?? 'http://localhost:5173/';
+  const source =
+    process.env.E2E_WALLET_SOURCE ?? 'http://localhost:3000/brotherhood/';
   const extensionPath = process.env.E2E_WALLET_SOURCE_EXTENSION;
   if (extensionPath && extensionPath !== 'false' && extensionPath !== '0') {
     const __filename = fileURLToPath(import.meta.url);

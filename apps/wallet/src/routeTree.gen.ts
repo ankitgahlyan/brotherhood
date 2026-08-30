@@ -8,198 +8,198 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BrotherhoodRouteImport } from './routes/brotherhood'
-import { Route as CityNetworkRouteImport } from './routes/city-network'
-import { Route as CreateWalletRouteImport } from './routes/create-wallet'
-import { Route as DaoRouteImport } from './routes/dao'
-import { Route as ImportWalletRouteImport } from './routes/import-wallet'
-import { Route as LedgerRouteImport } from './routes/ledger'
-import { Route as LotteryRouteImport } from './routes/lottery'
-import { Route as PersonalJettonRouteImport } from './routes/personal-jetton'
-import { Route as SendRouteImport } from './routes/send'
-import { Route as SetupPasswordRouteImport } from './routes/setup-password'
-import { Route as StakingRouteImport } from './routes/staking'
-import { Route as SwapRouteImport } from './routes/swap'
-import { Route as TonConnectRouteImport } from './routes/ton-connect'
-import { Route as UnlockRouteImport } from './routes/unlock'
-import { Route as WelcomeRouteImport } from './routes/welcome'
-import { Route as WalletIndexRouteImport } from './routes/wallet.index'
-import { Route as WalletAssetsRouteImport } from './routes/wallet.assets'
-import { Route as WalletHistoryRouteImport } from './routes/wallet.history'
-import { Route as WalletNftRouteImport } from './routes/wallet.nft'
+import { Route as rootRouteImport } from './routes/__root';
+import { Route as IndexRouteImport } from './routes/index';
+import { Route as BrotherhoodRouteImport } from './routes/brotherhood';
+import { Route as CityNetworkRouteImport } from './routes/city-network';
+import { Route as CreateWalletRouteImport } from './routes/create-wallet';
+import { Route as DaoRouteImport } from './routes/dao';
+import { Route as ImportWalletRouteImport } from './routes/import-wallet';
+import { Route as LedgerRouteImport } from './routes/ledger';
+import { Route as LotteryRouteImport } from './routes/lottery';
+import { Route as PersonalJettonRouteImport } from './routes/personal-jetton';
+import { Route as SendRouteImport } from './routes/send';
+import { Route as SetupPasswordRouteImport } from './routes/setup-password';
+import { Route as StakingRouteImport } from './routes/staking';
+import { Route as SwapRouteImport } from './routes/swap';
+import { Route as TonConnectRouteImport } from './routes/ton-connect';
+import { Route as UnlockRouteImport } from './routes/unlock';
+import { Route as WelcomeRouteImport } from './routes/welcome';
+import { Route as WalletIndexRouteImport } from './routes/wallet.index';
+import { Route as WalletAssetsRouteImport } from './routes/wallet.assets';
+import { Route as WalletHistoryRouteImport } from './routes/wallet.history';
+import { Route as WalletNftRouteImport } from './routes/wallet.nft';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const BrotherhoodRoute = BrotherhoodRouteImport.update({
   id: '/brotherhood',
   path: '/brotherhood',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CityNetworkRoute = CityNetworkRouteImport.update({
   id: '/city-network',
   path: '/city-network',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateWalletRoute = CreateWalletRouteImport.update({
   id: '/create-wallet',
   path: '/create-wallet',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DaoRoute = DaoRouteImport.update({
   id: '/dao',
   path: '/dao',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ImportWalletRoute = ImportWalletRouteImport.update({
   id: '/import-wallet',
   path: '/import-wallet',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LedgerRoute = LedgerRouteImport.update({
   id: '/ledger',
   path: '/ledger',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LotteryRoute = LotteryRouteImport.update({
   id: '/lottery',
   path: '/lottery',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const PersonalJettonRoute = PersonalJettonRouteImport.update({
   id: '/personal-jetton',
   path: '/personal-jetton',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SendRoute = SendRouteImport.update({
   id: '/send',
   path: '/send',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SetupPasswordRoute = SetupPasswordRouteImport.update({
   id: '/setup-password',
   path: '/setup-password',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const StakingRoute = StakingRouteImport.update({
   id: '/staking',
   path: '/staking',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SwapRoute = SwapRouteImport.update({
   id: '/swap',
   path: '/swap',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const TonConnectRoute = TonConnectRouteImport.update({
   id: '/ton-connect',
   path: '/ton-connect',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const UnlockRoute = UnlockRouteImport.update({
   id: '/unlock',
   path: '/unlock',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WalletIndexRoute = WalletIndexRouteImport.update({
   id: '/wallet/',
   path: '/wallet/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WalletAssetsRoute = WalletAssetsRouteImport.update({
   id: '/wallet/assets',
   path: '/wallet/assets',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WalletHistoryRoute = WalletHistoryRouteImport.update({
   id: '/wallet/history',
   path: '/wallet/history',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const WalletNftRoute = WalletNftRouteImport.update({
   id: '/wallet/nft',
   path: '/wallet/nft',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/brotherhood': typeof BrotherhoodRoute
-  '/city-network': typeof CityNetworkRoute
-  '/create-wallet': typeof CreateWalletRoute
-  '/dao': typeof DaoRoute
-  '/import-wallet': typeof ImportWalletRoute
-  '/ledger': typeof LedgerRoute
-  '/lottery': typeof LotteryRoute
-  '/personal-jetton': typeof PersonalJettonRoute
-  '/send': typeof SendRoute
-  '/setup-password': typeof SetupPasswordRoute
-  '/staking': typeof StakingRoute
-  '/swap': typeof SwapRoute
-  '/ton-connect': typeof TonConnectRoute
-  '/unlock': typeof UnlockRoute
-  '/welcome': typeof WelcomeRoute
-  '/wallet/assets': typeof WalletAssetsRoute
-  '/wallet/history': typeof WalletHistoryRoute
-  '/wallet/nft': typeof WalletNftRoute
-  '/wallet/': typeof WalletIndexRoute
+  '/': typeof IndexRoute;
+  '/brotherhood': typeof BrotherhoodRoute;
+  '/city-network': typeof CityNetworkRoute;
+  '/create-wallet': typeof CreateWalletRoute;
+  '/dao': typeof DaoRoute;
+  '/import-wallet': typeof ImportWalletRoute;
+  '/ledger': typeof LedgerRoute;
+  '/lottery': typeof LotteryRoute;
+  '/personal-jetton': typeof PersonalJettonRoute;
+  '/send': typeof SendRoute;
+  '/setup-password': typeof SetupPasswordRoute;
+  '/staking': typeof StakingRoute;
+  '/swap': typeof SwapRoute;
+  '/ton-connect': typeof TonConnectRoute;
+  '/unlock': typeof UnlockRoute;
+  '/welcome': typeof WelcomeRoute;
+  '/wallet/assets': typeof WalletAssetsRoute;
+  '/wallet/history': typeof WalletHistoryRoute;
+  '/wallet/nft': typeof WalletNftRoute;
+  '/wallet/': typeof WalletIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/brotherhood': typeof BrotherhoodRoute
-  '/city-network': typeof CityNetworkRoute
-  '/create-wallet': typeof CreateWalletRoute
-  '/dao': typeof DaoRoute
-  '/import-wallet': typeof ImportWalletRoute
-  '/ledger': typeof LedgerRoute
-  '/lottery': typeof LotteryRoute
-  '/personal-jetton': typeof PersonalJettonRoute
-  '/send': typeof SendRoute
-  '/setup-password': typeof SetupPasswordRoute
-  '/staking': typeof StakingRoute
-  '/swap': typeof SwapRoute
-  '/ton-connect': typeof TonConnectRoute
-  '/unlock': typeof UnlockRoute
-  '/welcome': typeof WelcomeRoute
-  '/wallet/assets': typeof WalletAssetsRoute
-  '/wallet/history': typeof WalletHistoryRoute
-  '/wallet/nft': typeof WalletNftRoute
-  '/wallet': typeof WalletIndexRoute
+  '/': typeof IndexRoute;
+  '/brotherhood': typeof BrotherhoodRoute;
+  '/city-network': typeof CityNetworkRoute;
+  '/create-wallet': typeof CreateWalletRoute;
+  '/dao': typeof DaoRoute;
+  '/import-wallet': typeof ImportWalletRoute;
+  '/ledger': typeof LedgerRoute;
+  '/lottery': typeof LotteryRoute;
+  '/personal-jetton': typeof PersonalJettonRoute;
+  '/send': typeof SendRoute;
+  '/setup-password': typeof SetupPasswordRoute;
+  '/staking': typeof StakingRoute;
+  '/swap': typeof SwapRoute;
+  '/ton-connect': typeof TonConnectRoute;
+  '/unlock': typeof UnlockRoute;
+  '/welcome': typeof WelcomeRoute;
+  '/wallet/assets': typeof WalletAssetsRoute;
+  '/wallet/history': typeof WalletHistoryRoute;
+  '/wallet/nft': typeof WalletNftRoute;
+  '/wallet': typeof WalletIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/brotherhood': typeof BrotherhoodRoute
-  '/city-network': typeof CityNetworkRoute
-  '/create-wallet': typeof CreateWalletRoute
-  '/dao': typeof DaoRoute
-  '/import-wallet': typeof ImportWalletRoute
-  '/ledger': typeof LedgerRoute
-  '/lottery': typeof LotteryRoute
-  '/personal-jetton': typeof PersonalJettonRoute
-  '/send': typeof SendRoute
-  '/setup-password': typeof SetupPasswordRoute
-  '/staking': typeof StakingRoute
-  '/swap': typeof SwapRoute
-  '/ton-connect': typeof TonConnectRoute
-  '/unlock': typeof UnlockRoute
-  '/welcome': typeof WelcomeRoute
-  '/wallet/assets': typeof WalletAssetsRoute
-  '/wallet/history': typeof WalletHistoryRoute
-  '/wallet/nft': typeof WalletNftRoute
-  '/wallet/': typeof WalletIndexRoute
+  __root__: typeof rootRouteImport;
+  '/': typeof IndexRoute;
+  '/brotherhood': typeof BrotherhoodRoute;
+  '/city-network': typeof CityNetworkRoute;
+  '/create-wallet': typeof CreateWalletRoute;
+  '/dao': typeof DaoRoute;
+  '/import-wallet': typeof ImportWalletRoute;
+  '/ledger': typeof LedgerRoute;
+  '/lottery': typeof LotteryRoute;
+  '/personal-jetton': typeof PersonalJettonRoute;
+  '/send': typeof SendRoute;
+  '/setup-password': typeof SetupPasswordRoute;
+  '/staking': typeof StakingRoute;
+  '/swap': typeof SwapRoute;
+  '/ton-connect': typeof TonConnectRoute;
+  '/unlock': typeof UnlockRoute;
+  '/welcome': typeof WelcomeRoute;
+  '/wallet/assets': typeof WalletAssetsRoute;
+  '/wallet/history': typeof WalletHistoryRoute;
+  '/wallet/nft': typeof WalletNftRoute;
+  '/wallet/': typeof WalletIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | '/'
     | '/brotherhood'
@@ -220,8 +220,8 @@ export interface FileRouteTypes {
     | '/wallet/assets'
     | '/wallet/history'
     | '/wallet/nft'
-    | '/wallet/'
-  fileRoutesByTo: FileRoutesByTo
+    | '/wallet/';
+  fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
     | '/brotherhood'
@@ -242,7 +242,7 @@ export interface FileRouteTypes {
     | '/wallet/assets'
     | '/wallet/history'
     | '/wallet/nft'
-    | '/wallet'
+    | '/wallet';
   id:
     | '__root__'
     | '/'
@@ -264,174 +264,174 @@ export interface FileRouteTypes {
     | '/wallet/assets'
     | '/wallet/history'
     | '/wallet/nft'
-    | '/wallet/'
-  fileRoutesById: FileRoutesById
+    | '/wallet/';
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BrotherhoodRoute: typeof BrotherhoodRoute
-  CityNetworkRoute: typeof CityNetworkRoute
-  CreateWalletRoute: typeof CreateWalletRoute
-  DaoRoute: typeof DaoRoute
-  ImportWalletRoute: typeof ImportWalletRoute
-  LedgerRoute: typeof LedgerRoute
-  LotteryRoute: typeof LotteryRoute
-  PersonalJettonRoute: typeof PersonalJettonRoute
-  SendRoute: typeof SendRoute
-  SetupPasswordRoute: typeof SetupPasswordRoute
-  StakingRoute: typeof StakingRoute
-  SwapRoute: typeof SwapRoute
-  TonConnectRoute: typeof TonConnectRoute
-  UnlockRoute: typeof UnlockRoute
-  WelcomeRoute: typeof WelcomeRoute
-  WalletAssetsRoute: typeof WalletAssetsRoute
-  WalletHistoryRoute: typeof WalletHistoryRoute
-  WalletNftRoute: typeof WalletNftRoute
-  WalletIndexRoute: typeof WalletIndexRoute
+  IndexRoute: typeof IndexRoute;
+  BrotherhoodRoute: typeof BrotherhoodRoute;
+  CityNetworkRoute: typeof CityNetworkRoute;
+  CreateWalletRoute: typeof CreateWalletRoute;
+  DaoRoute: typeof DaoRoute;
+  ImportWalletRoute: typeof ImportWalletRoute;
+  LedgerRoute: typeof LedgerRoute;
+  LotteryRoute: typeof LotteryRoute;
+  PersonalJettonRoute: typeof PersonalJettonRoute;
+  SendRoute: typeof SendRoute;
+  SetupPasswordRoute: typeof SetupPasswordRoute;
+  StakingRoute: typeof StakingRoute;
+  SwapRoute: typeof SwapRoute;
+  TonConnectRoute: typeof TonConnectRoute;
+  UnlockRoute: typeof UnlockRoute;
+  WelcomeRoute: typeof WelcomeRoute;
+  WalletAssetsRoute: typeof WalletAssetsRoute;
+  WalletHistoryRoute: typeof WalletHistoryRoute;
+  WalletNftRoute: typeof WalletNftRoute;
+  WalletIndexRoute: typeof WalletIndexRoute;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/';
+      path: '/';
+      fullPath: '/';
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/brotherhood': {
-      id: '/brotherhood'
-      path: '/brotherhood'
-      fullPath: '/brotherhood'
-      preLoaderRoute: typeof BrotherhoodRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/brotherhood';
+      path: '/brotherhood';
+      fullPath: '/brotherhood';
+      preLoaderRoute: typeof BrotherhoodRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/city-network': {
-      id: '/city-network'
-      path: '/city-network'
-      fullPath: '/city-network'
-      preLoaderRoute: typeof CityNetworkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/city-network';
+      path: '/city-network';
+      fullPath: '/city-network';
+      preLoaderRoute: typeof CityNetworkRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/create-wallet': {
-      id: '/create-wallet'
-      path: '/create-wallet'
-      fullPath: '/create-wallet'
-      preLoaderRoute: typeof CreateWalletRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/create-wallet';
+      path: '/create-wallet';
+      fullPath: '/create-wallet';
+      preLoaderRoute: typeof CreateWalletRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/dao': {
-      id: '/dao'
-      path: '/dao'
-      fullPath: '/dao'
-      preLoaderRoute: typeof DaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/dao';
+      path: '/dao';
+      fullPath: '/dao';
+      preLoaderRoute: typeof DaoRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/import-wallet': {
-      id: '/import-wallet'
-      path: '/import-wallet'
-      fullPath: '/import-wallet'
-      preLoaderRoute: typeof ImportWalletRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/import-wallet';
+      path: '/import-wallet';
+      fullPath: '/import-wallet';
+      preLoaderRoute: typeof ImportWalletRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/ledger': {
-      id: '/ledger'
-      path: '/ledger'
-      fullPath: '/ledger'
-      preLoaderRoute: typeof LedgerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/ledger';
+      path: '/ledger';
+      fullPath: '/ledger';
+      preLoaderRoute: typeof LedgerRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/lottery': {
-      id: '/lottery'
-      path: '/lottery'
-      fullPath: '/lottery'
-      preLoaderRoute: typeof LotteryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/lottery';
+      path: '/lottery';
+      fullPath: '/lottery';
+      preLoaderRoute: typeof LotteryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/personal-jetton': {
-      id: '/personal-jetton'
-      path: '/personal-jetton'
-      fullPath: '/personal-jetton'
-      preLoaderRoute: typeof PersonalJettonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/personal-jetton';
+      path: '/personal-jetton';
+      fullPath: '/personal-jetton';
+      preLoaderRoute: typeof PersonalJettonRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/send': {
-      id: '/send'
-      path: '/send'
-      fullPath: '/send'
-      preLoaderRoute: typeof SendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/send';
+      path: '/send';
+      fullPath: '/send';
+      preLoaderRoute: typeof SendRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/setup-password': {
-      id: '/setup-password'
-      path: '/setup-password'
-      fullPath: '/setup-password'
-      preLoaderRoute: typeof SetupPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/setup-password';
+      path: '/setup-password';
+      fullPath: '/setup-password';
+      preLoaderRoute: typeof SetupPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/staking': {
-      id: '/staking'
-      path: '/staking'
-      fullPath: '/staking'
-      preLoaderRoute: typeof StakingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/staking';
+      path: '/staking';
+      fullPath: '/staking';
+      preLoaderRoute: typeof StakingRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/swap': {
-      id: '/swap'
-      path: '/swap'
-      fullPath: '/swap'
-      preLoaderRoute: typeof SwapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/swap';
+      path: '/swap';
+      fullPath: '/swap';
+      preLoaderRoute: typeof SwapRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/ton-connect': {
-      id: '/ton-connect'
-      path: '/ton-connect'
-      fullPath: '/ton-connect'
-      preLoaderRoute: typeof TonConnectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/ton-connect';
+      path: '/ton-connect';
+      fullPath: '/ton-connect';
+      preLoaderRoute: typeof TonConnectRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/unlock': {
-      id: '/unlock'
-      path: '/unlock'
-      fullPath: '/unlock'
-      preLoaderRoute: typeof UnlockRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/unlock';
+      path: '/unlock';
+      fullPath: '/unlock';
+      preLoaderRoute: typeof UnlockRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/welcome';
+      path: '/welcome';
+      fullPath: '/welcome';
+      preLoaderRoute: typeof WelcomeRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/wallet/': {
-      id: '/wallet/'
-      path: '/wallet'
-      fullPath: '/wallet/'
-      preLoaderRoute: typeof WalletIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/wallet/';
+      path: '/wallet';
+      fullPath: '/wallet/';
+      preLoaderRoute: typeof WalletIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/wallet/assets': {
-      id: '/wallet/assets'
-      path: '/wallet/assets'
-      fullPath: '/wallet/assets'
-      preLoaderRoute: typeof WalletAssetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/wallet/assets';
+      path: '/wallet/assets';
+      fullPath: '/wallet/assets';
+      preLoaderRoute: typeof WalletAssetsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/wallet/history': {
-      id: '/wallet/history'
-      path: '/wallet/history'
-      fullPath: '/wallet/history'
-      preLoaderRoute: typeof WalletHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/wallet/history';
+      path: '/wallet/history';
+      fullPath: '/wallet/history';
+      preLoaderRoute: typeof WalletHistoryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/wallet/nft': {
-      id: '/wallet/nft'
-      path: '/wallet/nft'
-      fullPath: '/wallet/nft'
-      preLoaderRoute: typeof WalletNftRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+      id: '/wallet/nft';
+      path: '/wallet/nft';
+      fullPath: '/wallet/nft';
+      preLoaderRoute: typeof WalletNftRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -456,7 +456,7 @@ const rootRouteChildren: RootRouteChildren = {
   WalletHistoryRoute: WalletHistoryRoute,
   WalletNftRoute: WalletNftRoute,
   WalletIndexRoute: WalletIndexRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

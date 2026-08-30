@@ -46,23 +46,29 @@ export class SetupWalletPage {
    * timed in the component, so the press must really last that long.
    */
   private async pressHold(ms: number) {
-    await this.holdToContinue.hover();
-    await this.page.mouse.down();
-    await this.page.waitForTimeout(ms);
-    await this.page.mouse.up();
+    const box = await this.holdToContinue.boundingBox();
+    if (box) {
+      await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await this.page.mouse.down();
+      await this.page.waitForTimeout(ms);
+      await this.page.mouse.up().catch(() => {});
+    } else {
+      await this.holdToContinue.dispatchEvent('mousedown');
+      await this.page.waitForTimeout(ms);
+      await this.holdToContinue.dispatchEvent('mouseup').catch(() => {});
+    }
   }
 
   /** Open the modal and complete the hold-to-continue gesture to create the wallet. */
   async confirmAndCreate() {
     await this.openConfirm();
-    // Hold past the gesture duration plus the completion delay so onComplete fires.
-    await this.pressHold(SetupWalletPage.HOLD_DURATION + 700);
+    await this.pressHold(2500);
   }
 
   /** A short tap on the hold button — not long enough to confirm. */
   async tapHold() {
-    await this.holdToContinue.hover();
-    await this.page.mouse.down();
-    await this.page.mouse.up();
+    await this.holdToContinue.dispatchEvent('mousedown');
+    await this.page.waitForTimeout(100);
+    await this.holdToContinue.dispatchEvent('mouseup');
   }
 }

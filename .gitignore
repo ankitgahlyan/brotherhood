@@ -24,8 +24,11 @@ Session.vim
 .emacs/
 .helix/
 
-# coverage
-lcov.info
+# Test artifacts
+test-results/
+playwright-report/
+allure-results/
+allure-report/
 
 # TanStack / Cloudflare build artifacts
 dist-ssr
