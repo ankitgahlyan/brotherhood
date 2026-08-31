@@ -63,7 +63,6 @@ export async function buildDeployMessage(params: {
     metadata: content,
     others: {
       ref: FiCodes.create({
-        locationAddrs: Dictionary.empty(),
         lotteryCode: Cell.EMPTY,
         latestFiWalletCode: Cell.EMPTY,
       }),

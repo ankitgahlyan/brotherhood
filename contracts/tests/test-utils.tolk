@@ -9,7 +9,6 @@ import "@gen/Following.code"
 import "@gen/FossFiWallet.code"
 import "@gen/Location.code"
 import "@gen/Lottery.code"
-import "@gen/PersonalMinter.code"
 import "@gen/PersonalWallet.code"
 import "@gen/Poll.code"
 import "@gen/Voter.code"
@@ -182,7 +181,6 @@ fun registerAllTestLibraries(): void {
     testing.registerLibrary(followingCompiledCodeLibraryRef());
     testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
     testing.registerLibrary(locationCompiledCodeLibraryRef());
-    testing.registerLibrary(personalMinterCompiledCodeLibraryRef());
     testing.registerLibrary(personalWalletCompiledCodeLibraryRef());
 }
 

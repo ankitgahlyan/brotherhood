@@ -953,7 +953,7 @@ fun onInternalMessage(in: InMessage): void {
             val followingChild = calcDeployFollowing(
                 in.senderAddress,
                 contract.getAddress(),
-                followingCompiledCodeLibraryRef(),
+                getFollowingCode(),
                 msg.mintAmount,
             );
 
@@ -1034,7 +1034,7 @@ fun onInternalMessage(in: InMessage): void {
             val followingChild = calcDeployFollowing(
                 in.senderAddress,
                 contract.getAddress(),
-                followingCompiledCodeLibraryRef(),
+                getFollowingCode(),
                 msg.burnAmount,
             ).calculateAddress();
 
@@ -1435,6 +1435,10 @@ fun onInternalMessage(in: InMessage): void {
     store.maps = maps.toCell();
 
     store.save(); // save once for any matches above
+}
+
+fun getFollowingCode(): cell {
+    return followingCompiledCodeLibraryRef();
 }
 
 get fun get_wallet_data(): JettonWalletDataReply {

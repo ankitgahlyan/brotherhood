@@ -12,16 +12,15 @@ display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
     "Lottery", # small number deployed easy upgrades
-    { name = "FossFiWallet", kind = "library_ref", function = "fossFiWalletCompiledCodeLibraryRef" },
-    { name = "Location", kind = "library_ref", function = "locationCompiledCodeLibraryRef" },
+    # { name = "FossFiWallet", kind = "embed_code", function = "fossFiWalletCompiledCodeLibraryRef" },
+    { name = "Location", kind = "embed_code", function = "locationCompiledCodeLibraryRef" },
 ]
 
 [contracts.FossFiWallet]
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
-    { name = "Following", kind = "library_ref", function = "followingCompiledCodeLibraryRef" },
-    { name = "PersonalMinter", kind = "library_ref", function = "personalMinterCompiledCodeLibraryRef" },
+    { name = "Following", kind = "embed_code", function = "followingCompiledCodeLibraryRef" },
 ]
 
 [contracts.Following]
@@ -44,7 +43,7 @@ depends = []
 display-name = "Personal Token Minter"
 src = "contracts/src/personalMinter/personal.tolk"
 depends = [
-    { name = "PersonalWallet", kind = "library_ref", function = "personalWalletCompiledCodeLibraryRef" },
+    { name = "PersonalWallet", kind = "embed_code", function = "personalWalletCompiledCodeLibraryRef" },
 ]
 
 [contracts.PersonalWallet]
@@ -56,14 +55,14 @@ depends = []
 display-name = "DAO Proxy"
 src = "contracts/src/dao/DaoProxy.tolk"
 depends = [
-    { name = "Poll", kind = "library_ref", function = "pollCompiledCodeLibraryRef" },
+    { name = "Poll", kind = "embed_code", function = "pollCompiledCodeLibraryRef" },
 ]
 
 [contracts.Poll]
 display-name = "Poll Governance"
 src = "contracts/src/dao/Poll.tolk"
 depends = [
-    { name = "Voter", kind = "library_ref", function = "voterCompiledCodeLibraryRef" },
+    { name = "Voter", kind = "embed_code", function = "voterCompiledCodeLibraryRef" },
 ]
 
 [contracts.Voter]
@@ -101,6 +100,8 @@ mutable-variable-can-be-immutable = "warn"
 [scripts]
 loop = "acton build && acton wrapper --all && acton check --fix && acton fmt && acton build && acton wrapper --all"
 deploy-libs = "acton library publish FossFiWallet --duration 99d --wallet teleg --net testnet --local && acton library publish Voter --wallet teleg -y && acton library publish Poll --duration 99d -y && acton library publish Location --wallet teleg -y && acton library publish PersonalMinter --wallet teleg -y && acton library publish PersonalWallet --wallet teleg -y && acton library publish Following --wallet teleg -y"
+deploy-emulation = "acton script contracts/scripts/deploy-fi.tolk"
+deploy-testnet = "acton script contracts/scripts/deploy-fi.tolk --net testnet"
 deploy-personal = "acton script contracts/scripts/deploy-personal.tolk"
 verify-personal = "acton script contracts/scripts/verify-personal.tolk"
 jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"

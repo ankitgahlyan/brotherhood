@@ -157,7 +157,7 @@ fun onInternalMessage(in: InMessage) {
                     msg.mintRecipient,
                     storage.adminAddress,
                     contract.getAddress(),
-                    personalWalletCompiledCodeLibraryRef(),
+                    getPersonalWalletCode(),
                 ),
                 value: msg.tonAmount,
                 body: msg.internalTransferMsg,
@@ -280,7 +280,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,
         adminAddress: storage.adminAddress,
         jettonContent: storage.metadataUri as Cell<OnchainMetadataReply>,
-        jettonWalletCode: personalWalletCompiledCodeLibraryRef(),
+        jettonWalletCode: getPersonalWalletCode(),
     };
 }
 
@@ -296,6 +296,10 @@ fun autoAddrPriWalletMinter(owner: address): address {
         owner,
         st.adminAddress,
         contract.getAddress(),
-        personalWalletCompiledCodeLibraryRef(),
+        getPersonalWalletCode(),
     ).calculateAddress();
+}
+
+fun getPersonalWalletCode(): cell {
+    return personalWalletCompiledCodeLibraryRef();
 }

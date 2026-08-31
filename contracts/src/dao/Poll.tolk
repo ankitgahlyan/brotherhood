@@ -1,6 +1,6 @@
-import "@gen/FossFiWallet.code"
 import "@gen/Voter.code"
 import "@contracts/common/errors"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
 import "@contracts/fossFi/jetton-utils"
@@ -52,7 +52,7 @@ fun onInternalMessage(in: InMessage): void {
             val expectedWallet = calcDeployFiWallet(
                 msg.voterOwner,
                 addrs.fiAddress,
-                fossFiWalletCompiledCodeLibraryRef(),
+                getFiWalletCode(),
             ).calculateAddress();
             assert (in.senderAddress == expectedWallet) throw Errors.IncorrectSender;
 
@@ -78,7 +78,7 @@ fun onInternalMessage(in: InMessage): void {
             val voterDeploy = calcDeployVoter(
                 msg.voterOwner,
                 contract.getAddress(),
-                voterCompiledCodeLibraryRef(),
+                getVoterCode(),
             );
             val voterMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
@@ -109,7 +109,7 @@ fun onInternalMessage(in: InMessage): void {
                         proposalId: store.proposalId,
                         proposerOwner: addrs.proposerOwner,
                         expiresAt: store.expiresAt,
-                        walletLibRef: fossFiWalletCompiledCodeLibraryRef(),
+                        walletLibRef: getFiWalletCode(),
                         targetMsg: store.targetMsg,
                     },
                 });
@@ -208,6 +208,10 @@ get fun get_voter_address(voterOwner: address): address {
     return calcDeployVoter(
         voterOwner,
         contract.getAddress(),
-        voterCompiledCodeLibraryRef(),
+        getVoterCode(),
     ).calculateAddress();
+}
+
+fun getVoterCode(): cell {
+    return voterCompiledCodeLibraryRef();
 }

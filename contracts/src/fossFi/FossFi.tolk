@@ -1,9 +1,9 @@
 import "@stdlib/tvm-lowlevel"
 
-import "@gen/FossFiWallet.code"
 import "@gen/Location.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
@@ -99,7 +99,7 @@ fun onInternalMessage(in: InMessage): void {
             val locDeploy = calcDeployLocation(
                 msg.h3Cell,
                 contract.getAddress(),
-                locationCompiledCodeLibraryRef(),
+                getLocationCode(),
             );
             val locMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -123,7 +123,7 @@ fun onInternalMessage(in: InMessage): void {
             val oldLocDeploy = calcDeployLocation(
                 msg.oldH3Cell,
                 contract.getAddress(),
-                locationCompiledCodeLibraryRef(),
+                getLocationCode(),
             );
             val oldLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -140,7 +140,7 @@ fun onInternalMessage(in: InMessage): void {
             val newLocDeploy = calcDeployLocation(
                 msg.newH3Cell,
                 contract.getAddress(),
-                locationCompiledCodeLibraryRef(),
+                getLocationCode(),
             );
             val newLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -500,7 +500,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,                                              // but by peers only & not minter
         adminAddress: store.adminAddress,
         jettonContent: store.metadata as Cell<OnchainMetadataReply>, // metadata.toCell(),
-        jettonWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+        jettonWalletCode: getFiWalletCode(),
     };
 }
 
@@ -520,7 +520,7 @@ fun getAutoAddress(owner: address): AutoDeployAddress {
     return calcDeployFiWallet(
         owner,
         contract.getAddress(),
-        fossFiWalletCompiledCodeLibraryRef(),
+        getFiWalletCode(),
     );
 }
 
@@ -552,4 +552,8 @@ fun hotUpgradeFiData(_additionalData: cell?) {
         others: oldStorage.others,
     };
     storage.save();
+}
+
+fun getLocationCode(): cell {
+    return locationCompiledCodeLibraryRef();
 }
