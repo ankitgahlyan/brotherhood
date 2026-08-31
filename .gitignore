@@ -43,9 +43,9 @@ todos.json
 # Acton related files
 .studio/
 # gen/ // wallets are upgradable, so we don't want to ignore this folder to track init wallet code
-libraries.toml
+# libraries.toml
 .acton/
 *.mnemonic
 wallets.toml
 global.wallets.toml
-global.libraries.toml
+# global.libraries.toml

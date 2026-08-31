@@ -100,7 +100,7 @@ mutable-variable-can-be-immutable = "warn"
 
 [scripts]
 loop = "acton build && acton wrapper --all && acton check --fix && acton fmt && acton build && acton wrapper --all"
-deploy-libs = "acton library publish FossFiWallet --amount 1 --wallet teleg -y && acton library publish Voter --amount 1 --wallet teleg -y && acton library publish Poll --amount 1 --wallet teleg -y && acton library publish Location --amount 1 --wallet teleg -y"
+deploy-libs = "acton library publish FossFiWallet --duration 99d --wallet teleg --net testnet --local && acton library publish Voter --wallet teleg -y && acton library publish Poll --duration 99d -y && acton library publish Location --wallet teleg -y && acton library publish PersonalMinter --wallet teleg -y && acton library publish PersonalWallet --wallet teleg -y && acton library publish Following --wallet teleg -y"
 deploy-personal = "acton script contracts/scripts/deploy-personal.tolk"
 verify-personal = "acton script contracts/scripts/verify-personal.tolk"
 jetton-change-admin = "acton script contracts/scripts/change-admin.tolk"

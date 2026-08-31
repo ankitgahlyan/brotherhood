@@ -176,6 +176,7 @@ fun deployWalletFromStorage(
 }
 
 fun registerAllTestLibraries(): void {
+    testing.loadAndRegisterLibrary("c41f6128fdb234bf81e2c900af8ab6e9294da875f0b2f6b55c59fc21bdcc8e45");
     testing.registerLibrary(pollCompiledCodeLibraryRef());
     testing.registerLibrary(voterCompiledCodeLibraryRef());
     testing.registerLibrary(followingCompiledCodeLibraryRef());
@@ -314,7 +315,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     val deployer = testing.treasury("deployer");
     val notDeployer = testing.treasury("notDeployer");
 
-    registerAllTestLibraries();
+    // registerAllTestLibraries();
 
     val daoProxy = DaoProxy.fromStorage({
         adminAddress: deployer.address,
