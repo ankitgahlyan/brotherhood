@@ -1,5 +1,6 @@
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/lottery/messages"
@@ -38,7 +39,7 @@ fun address.getAddrFiWallet(self): address {
     return calcDeployFiWallet(
         self,
         addrs.trustedJettonAddrs.load().minterAddr,
-        contract.getCode(),
+        getFiWalletCode(),
     ).calculateAddress();
 }
 

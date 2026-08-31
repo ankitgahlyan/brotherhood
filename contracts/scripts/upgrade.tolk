@@ -16,7 +16,7 @@ fun main() {
     );
 
     // val newCode = walletUpgrade ? fossFiWalletCompiledCodeLibraryRef() : fossFiCompiledCode(); // no need to be lib on upgrade as init is already deployed as ref
-    val newCode = walletUpgrade ? build("fossFiWallet") : build("fossFi");
+    val newCode = walletUpgrade ? build("FossFiWallet") : build("FossFi");
 
     val res = minter.sendUpgrade(
         admin.address,

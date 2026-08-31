@@ -3,6 +3,7 @@ import "@stdlib/tvm-lowlevel"
 import "@gen/Following.code"
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
@@ -339,7 +340,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: calcDeployFiWallet(
                     msg.transferRecipient,
                     trustedAddrs.minterAddr,
-                    contract.getCode(), // todo: fixme: change to fossFiWalletCompiledCodeLibraryRef() after first upgrade at all places to avoid storage costs and now it creates a curcular dep
+                    getFiWalletCode(),
                 ),
                 // deploy in invite + standalone for idLess accounts
                 value: 0,
@@ -1449,7 +1450,7 @@ get fun get_wallet_data(): JettonWalletDataReply {
         jettonBalance: store.jettonBalance,
         ownerAddress: addrs.owner,
         minterAddress: addrs.trustedJettonAddrs.load().minterAddr,
-        jettonWalletCode: contract.getCode(),
+        jettonWalletCode: getFiWalletCode(),
     };
 }
 
