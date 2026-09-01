@@ -16,7 +16,7 @@ import {
 } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
 
-import { normalizeAddress } from '@/core/utils/formatters';
+import { assetUrl, normalizeAddress } from '@/core/utils';
 
 export type TokenInfo = Partial<Omit<JettonInfo, 'decimals' | 'image'>> & {
   decimals?: number;
@@ -28,7 +28,7 @@ export const GRAM_INFO: TokenInfo = {
   name: 'Gram',
   symbol: 'GRAM',
   decimals: 9,
-  images: ['/gram.svg'],
+  images: [assetUrl('gram.svg')],
 };
 
 export function useActiveWalletNetwork(): NetworkType {

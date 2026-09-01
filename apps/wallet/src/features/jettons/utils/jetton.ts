@@ -8,7 +8,23 @@
 
 import type { Jetton } from '@ton/walletkit';
 
-import { tokenImageUrls } from '@/core/utils';
+import { tokenImageUrls, normalizeAddress } from '@/core/utils';
+import { FI_ADDRESS } from '@/lib/brotherhood/config';
+
+export const isFiJetton = (
+  jetton:
+    | { address?: string; symbol?: string; info?: { symbol?: string } }
+    | undefined
+    | null,
+): boolean => {
+  if (!jetton) return false;
+  if (jetton.address) {
+    if (jetton.address === FI_ADDRESS) return true;
+    const norm = normalizeAddress(jetton.address);
+    if (norm && norm === normalizeAddress(FI_ADDRESS)) return true;
+  }
+  return false;
+};
 
 export const getJettonsSymbol = (jetton: Jetton): string | undefined => {
   if (!jetton?.info?.symbol) {

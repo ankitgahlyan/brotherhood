@@ -8,6 +8,7 @@
 
 import React from 'react';
 import type { Jetton } from '@ton/walletkit';
+import { useFormatAddress } from '@/core/utils/formatters';
 
 import { useFormattedJetton } from '@/features/jettons';
 
@@ -21,12 +22,15 @@ interface JettonRowProps {
 
 export const JettonRow: React.FC<JettonRowProps> = ({
   jetton,
-  formatAddress = (address: string) =>
-    `${address.slice(0, 4)}...${address.slice(-4)}`,
+  formatAddress: customFormatAddress,
   onClick,
   className = '',
   inline = false,
 }) => {
+  const { formatContractAddress } = useFormatAddress();
+  const formatAddress =
+    customFormatAddress ??
+    ((addr: string) => formatContractAddress(addr, true, 4));
   const jettonInfo = useFormattedJetton(jetton);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
