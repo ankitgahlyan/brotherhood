@@ -11,7 +11,7 @@ import type { Cell } from '@ton/core';
 import type { ApiClient } from '../api/interfaces';
 
 export type WalletOptions = {
-    code: Cell;
-    workchain: number;
-    client: ApiClient;
+  code: Cell;
+  workchain: number;
+  client: ApiClient;
 };

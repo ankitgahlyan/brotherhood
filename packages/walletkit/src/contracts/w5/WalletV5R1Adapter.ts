@@ -8,18 +8,22 @@
 
 // WalletV5R1 adapter that implements WalletInterface
 
-import type { CommonMessageInfoInternal, SignatureDomain, StateInit } from '@ton/core';
+import type {
+  CommonMessageInfoInternal,
+  SignatureDomain,
+  StateInit,
+} from '@ton/core';
 import {
-    Address,
-    beginCell,
-    Cell,
-    Dictionary,
-    loadStateInit,
-    SendMode,
-    signatureDomainPrefix,
-    storeMessage,
-    storeMessageRelaxed,
-    storeStateInit,
+  Address,
+  beginCell,
+  Cell,
+  Dictionary,
+  loadStateInit,
+  SendMode,
+  signatureDomainPrefix,
+  storeMessage,
+  storeMessageRelaxed,
+  storeStateInit,
 } from '@ton/core';
 import { external, internal } from '@ton/core';
 
@@ -39,13 +43,13 @@ import { createWalletId } from '../../utils/walletId';
 import type { WalletAdapter, WalletSigner } from '../../api/interfaces';
 import type { SignedSendTransactionOptions } from '../../api/models';
 import type {
-    Network,
-    PreparedSignData,
-    ProofMessage,
-    TransactionRequest,
-    UserFriendlyAddress,
-    Hex,
-    Base64String,
+  Network,
+  PreparedSignData,
+  ProofMessage,
+  TransactionRequest,
+  UserFriendlyAddress,
+  Hex,
+  Base64String,
 } from '../../api/models';
 import type { Feature } from '../../types/jsBridge';
 
@@ -55,385 +59,432 @@ export const defaultWalletIdV5R1 = 2147483409;
 type WalletV5AuthType = 'external' | 'internal';
 
 interface CreateBodyV5Options extends SignedSendTransactionOptions {
-    validUntil: number | undefined;
-    authType: WalletV5AuthType;
+  validUntil: number | undefined;
+  authType: WalletV5AuthType;
 }
 
 /**
  * Configuration for creating a WalletV5R1 adapter
  */
 export interface WalletV5R1AdapterConfig {
-    /** Signer function */
-    signer: WalletSigner;
-    /** Public key */
-    publicKey: Hex;
-    /** Wallet ID configuration */
-    walletId?: number | bigint;
-    /** Shared TON client instance */
-    tonClient: ApiClient;
-    /** Network */
-    network: Network;
-    /** Workchain */
-    workchain?: number;
-    /** Signature domain */
-    domain?: SignatureDomain;
+  /** Signer function */
+  signer: WalletSigner;
+  /** Public key */
+  publicKey: Hex;
+  /** Wallet ID configuration */
+  walletId?: number | bigint;
+  /** Shared TON client instance */
+  tonClient: ApiClient;
+  /** Network */
+  network: Network;
+  /** Workchain */
+  workchain?: number;
+  /** Signature domain */
+  domain?: SignatureDomain;
 }
 
 /**
  * WalletV5R1 adapter that implements WalletInterface for WalletV5 contracts
  */
 export class WalletV5R1Adapter implements WalletAdapter {
-    // private keyPair: { publicKey: Uint8Array; secretKey: Uint8Array };
-    private signer: WalletSigner;
-    private config: WalletV5R1AdapterConfig;
-    private domain?: SignatureDomain;
+  // private keyPair: { publicKey: Uint8Array; secretKey: Uint8Array };
+  private signer: WalletSigner;
+  private config: WalletV5R1AdapterConfig;
+  private domain?: SignatureDomain;
 
-    readonly walletContract: WalletV5;
-    readonly client: ApiClient;
-    public readonly publicKey: Hex;
-    public readonly version = 'v5r1';
+  readonly walletContract: WalletV5;
+  readonly client: ApiClient;
+  public readonly publicKey: Hex;
+  public readonly version = 'v5r1';
 
-    /**
-     * Static factory method to create a WalletV5R1Adapter
-     * @param signer - Signer function with publicKey property (from Signer utility)
-     * @param options - Configuration options for the wallet
-     */
-    static async create(
-        signer: WalletSigner,
-        options: {
-            client: ApiClient;
-            network: Network;
-            walletId?: number | bigint;
-            workchain?: number;
-            domain?: SignatureDomain;
-        },
-    ): Promise<WalletV5R1Adapter> {
-        return new WalletV5R1Adapter({
-            signer,
-            publicKey: signer.publicKey,
-            tonClient: options.client,
-            network: options.network,
-            walletId: options.walletId,
-            workchain: options.workchain,
-            domain: options.domain,
-        });
+  /**
+   * Static factory method to create a WalletV5R1Adapter
+   * @param signer - Signer function with publicKey property (from Signer utility)
+   * @param options - Configuration options for the wallet
+   */
+  static async create(
+    signer: WalletSigner,
+    options: {
+      client: ApiClient;
+      network: Network;
+      walletId?: number | bigint;
+      workchain?: number;
+      domain?: SignatureDomain;
+    },
+  ): Promise<WalletV5R1Adapter> {
+    return new WalletV5R1Adapter({
+      signer,
+      publicKey: signer.publicKey,
+      tonClient: options.client,
+      network: options.network,
+      walletId: options.walletId,
+      workchain: options.workchain,
+      domain: options.domain,
+    });
+  }
+
+  constructor(config: WalletV5R1AdapterConfig) {
+    this.config = config;
+    this.client = config.tonClient;
+    this.signer = config.signer;
+    this.domain = config.domain;
+
+    this.publicKey = this.config.publicKey;
+    this.walletContract = WalletV5.createFromConfig(
+      {
+        publicKey: HexToBigInt(this.publicKey),
+        seqno: 0,
+        signatureAllowed: true,
+        walletId:
+          typeof config.walletId === 'bigint'
+            ? Number(config.walletId)
+            : (config.walletId ?? defaultWalletIdV5R1),
+        extensions: Dictionary.empty(),
+      },
+      {
+        code: WalletV5R1CodeCell,
+        workchain: config.workchain ?? 0,
+        client: this.client,
+      },
+    );
+  }
+
+  getPublicKey(): Hex {
+    return this.publicKey;
+  }
+
+  getClient(): ApiClient {
+    return this.client;
+  }
+
+  /**
+   * Sign raw bytes with wallet's private key
+   */
+  async sign(bytes: Iterable<number>): Promise<Hex> {
+    return this.signer.sign(bytes);
+  }
+
+  getNetwork(): Network {
+    return this.config.network;
+  }
+
+  /**
+   * Get wallet's TON address
+   */
+  getAddress(options?: { testnet?: boolean }): UserFriendlyAddress {
+    return formatWalletAddress(this.walletContract.address, options?.testnet);
+  }
+
+  getWalletId(): WalletId {
+    return createWalletId(this.getNetwork(), this.getAddress());
+  }
+
+  async getSignedSendTransaction(
+    input: TransactionRequest,
+    options?: SignedSendTransactionOptions,
+  ): Promise<Base64String> {
+    const transfer = await this.createSignedTransferBody(
+      input,
+      options,
+      'external',
+    );
+    const ext = external({
+      to: this.walletContract.address,
+      init: this.walletContract.init,
+      body: transfer,
+    });
+    return beginCell()
+      .store(storeMessage(ext))
+      .endCell()
+      .toBoc()
+      .toString('base64') as Base64String;
+  }
+
+  async getSignedSignMessage(
+    input: TransactionRequest,
+    options?: SignedSendTransactionOptions,
+  ): Promise<Base64String> {
+    const transfer = await this.createSignedTransferBody(
+      input,
+      options,
+      'internal',
+    );
+
+    // For gasless relaying, the signed body (auth_signed_internal opcode) must be
+    // delivered to the wallet via an internal message from a relayer contract.
+    const msg = internal({
+      to: this.walletContract.address,
+      value: 0n,
+      body: transfer,
+      bounce: false,
+      init: this.walletContract.init,
+    });
+    msg.info = msg.info as CommonMessageInfoInternal;
+    msg.info.createdLt = 0n;
+    msg.info.createdAt = 0;
+    msg.info.ihrFee = 0n;
+    msg.info.forwardFee = 0n;
+    msg.info.ihrDisabled = false;
+    msg.info.bounce = false;
+    msg.info.bounced = false;
+    msg.info.src = new Address(0, Buffer.alloc(32));
+    return beginCell()
+      .store(storeMessageRelaxed(msg))
+      .endCell()
+      .toBoc()
+      .toString('base64') as Base64String;
+  }
+
+  /**
+   * Get state init for wallet deployment
+   */
+  async getStateInit(): Promise<Base64String> {
+    if (!this.walletContract.init) {
+      throw new Error('Wallet contract not properly initialized');
     }
 
-    constructor(config: WalletV5R1AdapterConfig) {
-        this.config = config;
-        this.client = config.tonClient;
-        this.signer = config.signer;
-        this.domain = config.domain;
+    const stateInit = beginCell()
+      .store(storeStateInit(this.walletContract.init as unknown as StateInit))
+      .endCell();
+    return stateInit.toBoc().toString('base64') as Base64String;
+  }
 
-        this.publicKey = this.config.publicKey;
-        this.walletContract = WalletV5.createFromConfig(
-            {
-                publicKey: HexToBigInt(this.publicKey),
-                seqno: 0,
-                signatureAllowed: true,
-                walletId:
-                    typeof config.walletId === 'bigint'
-                        ? Number(config.walletId)
-                        : (config.walletId ?? defaultWalletIdV5R1),
-                extensions: Dictionary.empty(),
-            },
-            {
-                code: WalletV5R1CodeCell,
-                workchain: config.workchain ?? 0,
-                client: this.client,
-            },
+  /**
+   * Get the underlying WalletV5 contract
+   */
+  getContract(): WalletV5 {
+    return this.walletContract;
+  }
+
+  /**
+   * Get current sequence number
+   */
+  async getSeqno(): Promise<number> {
+    try {
+      return await this.walletContract.seqno;
+    } catch (error) {
+      log.warn('Failed to get seqno', { error });
+      // return 0;
+      throw error;
+    }
+  }
+
+  /**
+   * Get wallet ID
+   */
+  async getWalletV5R1Id(): Promise<WalletV5R1Id> {
+    try {
+      return this.walletContract.walletId;
+    } catch (error) {
+      log.warn('Failed to get wallet ID', { error });
+      const walletId = this.config.walletId;
+      const subwalletNumber =
+        typeof walletId === 'bigint' ? Number(walletId) : walletId || 0;
+      return new WalletV5R1Id({ subwalletNumber });
+    }
+  }
+
+  /**
+   * Check if wallet is deployed on the network
+   */
+  async isDeployed(): Promise<boolean> {
+    try {
+      const state = await this.client.getAccountState(
+        asAddressFriendly(this.walletContract.address),
+      );
+      return state.status === 'active';
+    } catch (error) {
+      log.warn('Failed to check deployment status', { error });
+      return false;
+    }
+  }
+
+  private async createSignedTransferBody(
+    input: TransactionRequest,
+    options: SignedSendTransactionOptions | undefined,
+    authType: WalletV5AuthType,
+  ): Promise<Cell> {
+    const actions = packActionsList(
+      input.messages.map((message) => this.createTransferAction(message)),
+    );
+
+    let seqno = 0;
+    try {
+      seqno = await CallForSuccess(async () => this.getSeqno(), 5, 1000);
+    } catch (_) {
+      //
+    }
+
+    const walletId = (await this.walletContract.walletId).serialized;
+    if (!walletId) {
+      throw new Error('Failed to get seqno or walletId');
+    }
+
+    return this.createBodyV5(seqno, walletId, actions, {
+      ...options,
+      authType,
+      validUntil: this.resolveValidUntil(input.validUntil),
+    });
+  }
+
+  private createTransferAction(
+    message: TransactionRequest['messages'][number],
+  ): ActionSendMsg {
+    let bounce = true;
+    try {
+      const parsedAddress = Address.parseFriendly(message.address);
+      if (parsedAddress.isBounceable === false) {
+        bounce = false;
+      }
+    } catch {
+      // raw address — no bounceable flag, keep default true
+    }
+
+    const msg = internal({
+      to: message.address,
+      value: BigInt(message.amount),
+      bounce,
+      extracurrency: message.extraCurrency
+        ? Object.fromEntries(
+            Object.entries(message.extraCurrency).map(([k, v]) => [
+              Number(k),
+              BigInt(v),
+            ]),
+          )
+        : undefined,
+    });
+
+    if (message.payload) {
+      try {
+        msg.body = Cell.fromBase64(message.payload);
+      } catch (error) {
+        log.warn('Failed to load payload', { error });
+        throw WalletKitError.fromError(
+          ERROR_CODES.CONTRACT_VALIDATION_FAILED,
+          'Failed to parse transaction payload',
+          error,
         );
+      }
     }
 
-    getPublicKey(): Hex {
-        return this.publicKey;
+    if (message.stateInit) {
+      try {
+        msg.init = loadStateInit(Cell.fromBase64(message.stateInit).asSlice());
+      } catch (error) {
+        log.warn('Failed to load state init', { error });
+        throw WalletKitError.fromError(
+          ERROR_CODES.CONTRACT_VALIDATION_FAILED,
+          'Failed to parse state init',
+          error,
+        );
+      }
     }
 
-    getClient(): ApiClient {
-        return this.client;
+    return new ActionSendMsg(
+      SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      msg,
+    );
+  }
+
+  private resolveValidUntil(
+    validUntil: number | undefined,
+  ): number | undefined {
+    if (!validUntil) {
+      return undefined;
     }
 
-    /**
-     * Sign raw bytes with wallet's private key
-     */
-    async sign(bytes: Iterable<number>): Promise<Hex> {
-        return this.signer.sign(bytes);
+    const now = Math.floor(Date.now() / 1000);
+    const maxValidUntil = now + 600;
+
+    if (validUntil < now) {
+      throw new WalletKitError(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Transaction validUntil timestamp is in the past',
+        undefined,
+        { validUntil, currentTime: now },
+      );
     }
 
-    getNetwork(): Network {
-        return this.config.network;
-    }
+    return validUntil > maxValidUntil ? maxValidUntil : validUntil;
+  }
 
-    /**
-     * Get wallet's TON address
-     */
-    getAddress(options?: { testnet?: boolean }): UserFriendlyAddress {
-        return formatWalletAddress(this.walletContract.address, options?.testnet);
-    }
+  async createBodyV5(
+    seqno: number,
+    walletId: bigint,
+    actionsList: Cell,
+    options: CreateBodyV5Options,
+  ) {
+    // Opcodes defined in the WalletV5R1 contract spec, confirmed in @ton/ton WalletContractV5R1.js
+    const Opcodes = {
+      auth_signed: 0x7369676e, // external auth ("sign")
+      auth_signed_internal: 0x73696e74, // internal auth ("sint") — used for gasless relaying
+    };
 
-    getWalletId(): WalletId {
-        return createWalletId(this.getNetwork(), this.getAddress());
-    }
+    // Use internal opcode for gasless relaying (signOnly / signMsg intent)
+    const opcode =
+      options.authType === 'internal'
+        ? Opcodes.auth_signed_internal
+        : Opcodes.auth_signed;
+    log.debug('createBodyV5 signing with opcode', {
+      authType: options.authType,
+      opcode: `0x${opcode.toString(16)}`,
+    });
 
-    async getSignedSendTransaction(
-        input: TransactionRequest,
-        options?: SignedSendTransactionOptions,
-    ): Promise<Base64String> {
-        const transfer = await this.createSignedTransferBody(input, options, 'external');
-        const ext = external({
-            to: this.walletContract.address,
-            init: this.walletContract.init,
-            body: transfer,
-        });
-        return beginCell().store(storeMessage(ext)).endCell().toBoc().toString('base64') as Base64String;
-    }
+    const expireAt = options.validUntil ?? Math.floor(Date.now() / 1000) + 300;
+    const payload = beginCell()
+      .storeUint(opcode, 32)
+      .storeUint(walletId, 32)
+      .storeUint(expireAt, 32)
+      .storeUint(seqno, 32) // seqno
+      .storeSlice(actionsList.beginParse())
+      .endCell();
 
-    async getSignedSignMessage(
-        input: TransactionRequest,
-        options?: SignedSendTransactionOptions,
-    ): Promise<Base64String> {
-        const transfer = await this.createSignedTransferBody(input, options, 'internal');
+    const domainPrefix = this.domain
+      ? signatureDomainPrefix(this.domain)
+      : null;
+    const signingData = domainPrefix
+      ? Buffer.concat([domainPrefix, payload.hash()])
+      : payload.hash();
+    const signature = options.fakeSignature
+      ? FakeSignature(signingData)
+      : await this.sign(signingData);
+    return beginCell()
+      .storeSlice(payload.beginParse())
+      .storeBuffer(Buffer.from(HexToUint8Array(signature)))
+      .endCell();
+  }
 
-        // For gasless relaying, the signed body (auth_signed_internal opcode) must be
-        // delivered to the wallet via an internal message from a relayer contract.
-        const msg = internal({
-            to: this.walletContract.address,
-            value: 0n,
-            body: transfer,
-            bounce: false,
-            init: this.walletContract.init,
-        });
-        msg.info = msg.info as CommonMessageInfoInternal;
-        msg.info.createdLt = 0n;
-        msg.info.createdAt = 0;
-        msg.info.ihrFee = 0n;
-        msg.info.forwardFee = 0n;
-        msg.info.ihrDisabled = false;
-        msg.info.bounce = false;
-        msg.info.bounced = false;
-        msg.info.src = new Address(0, Buffer.alloc(32));
-        return beginCell().store(storeMessageRelaxed(msg)).endCell().toBoc().toString('base64') as Base64String;
-    }
+  async getSignedSignData(input: PreparedSignData): Promise<Hex> {
+    const signature = await this.sign(HexToUint8Array(input.hash));
+    return signature;
+  }
 
-    /**
-     * Get state init for wallet deployment
-     */
-    async getStateInit(): Promise<Base64String> {
-        if (!this.walletContract.init) {
-            throw new Error('Wallet contract not properly initialized');
-        }
+  async getSignedTonProof(input: ProofMessage): Promise<Hex> {
+    const message = await CreateTonProofMessageBytes(input);
+    const signature = await this.sign(message);
 
-        const stateInit = beginCell()
-            .store(storeStateInit(this.walletContract.init as unknown as StateInit))
-            .endCell();
-        return stateInit.toBoc().toString('base64') as Base64String;
-    }
+    return signature;
+  }
 
-    /**
-     * Get the underlying WalletV5 contract
-     */
-    getContract(): WalletV5 {
-        return this.walletContract;
-    }
-
-    /**
-     * Get current sequence number
-     */
-    async getSeqno(): Promise<number> {
-        try {
-            return await this.walletContract.seqno;
-        } catch (error) {
-            log.warn('Failed to get seqno', { error });
-            // return 0;
-            throw error;
-        }
-    }
-
-    /**
-     * Get wallet ID
-     */
-    async getWalletV5R1Id(): Promise<WalletV5R1Id> {
-        try {
-            return this.walletContract.walletId;
-        } catch (error) {
-            log.warn('Failed to get wallet ID', { error });
-            const walletId = this.config.walletId;
-            const subwalletNumber = typeof walletId === 'bigint' ? Number(walletId) : walletId || 0;
-            return new WalletV5R1Id({ subwalletNumber });
-        }
-    }
-
-    /**
-     * Check if wallet is deployed on the network
-     */
-    async isDeployed(): Promise<boolean> {
-        try {
-            const state = await this.client.getAccountState(asAddressFriendly(this.walletContract.address));
-            return state.status === 'active';
-        } catch (error) {
-            log.warn('Failed to check deployment status', { error });
-            return false;
-        }
-    }
-
-    private async createSignedTransferBody(
-        input: TransactionRequest,
-        options: SignedSendTransactionOptions | undefined,
-        authType: WalletV5AuthType,
-    ): Promise<Cell> {
-        const actions = packActionsList(input.messages.map((message) => this.createTransferAction(message)));
-
-        let seqno = 0;
-        try {
-            seqno = await CallForSuccess(async () => this.getSeqno(), 5, 1000);
-        } catch (_) {
-            //
-        }
-
-        const walletId = (await this.walletContract.walletId).serialized;
-        if (!walletId) {
-            throw new Error('Failed to get seqno or walletId');
-        }
-
-        return this.createBodyV5(seqno, walletId, actions, {
-            ...options,
-            authType,
-            validUntil: this.resolveValidUntil(input.validUntil),
-        });
-    }
-
-    private createTransferAction(message: TransactionRequest['messages'][number]): ActionSendMsg {
-        let bounce = true;
-        try {
-            const parsedAddress = Address.parseFriendly(message.address);
-            if (parsedAddress.isBounceable === false) {
-                bounce = false;
-            }
-        } catch {
-            // raw address — no bounceable flag, keep default true
-        }
-
-        const msg = internal({
-            to: message.address,
-            value: BigInt(message.amount),
-            bounce,
-            extracurrency: message.extraCurrency
-                ? Object.fromEntries(Object.entries(message.extraCurrency).map(([k, v]) => [Number(k), BigInt(v)]))
-                : undefined,
-        });
-
-        if (message.payload) {
-            try {
-                msg.body = Cell.fromBase64(message.payload);
-            } catch (error) {
-                log.warn('Failed to load payload', { error });
-                throw WalletKitError.fromError(
-                    ERROR_CODES.CONTRACT_VALIDATION_FAILED,
-                    'Failed to parse transaction payload',
-                    error,
-                );
-            }
-        }
-
-        if (message.stateInit) {
-            try {
-                msg.init = loadStateInit(Cell.fromBase64(message.stateInit).asSlice());
-            } catch (error) {
-                log.warn('Failed to load state init', { error });
-                throw WalletKitError.fromError(
-                    ERROR_CODES.CONTRACT_VALIDATION_FAILED,
-                    'Failed to parse state init',
-                    error,
-                );
-            }
-        }
-
-        return new ActionSendMsg(SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS, msg);
-    }
-
-    private resolveValidUntil(validUntil: number | undefined): number | undefined {
-        if (!validUntil) {
-            return undefined;
-        }
-
-        const now = Math.floor(Date.now() / 1000);
-        const maxValidUntil = now + 600;
-
-        if (validUntil < now) {
-            throw new WalletKitError(
-                ERROR_CODES.VALIDATION_ERROR,
-                'Transaction validUntil timestamp is in the past',
-                undefined,
-                { validUntil, currentTime: now },
-            );
-        }
-
-        return validUntil > maxValidUntil ? maxValidUntil : validUntil;
-    }
-
-    async createBodyV5(seqno: number, walletId: bigint, actionsList: Cell, options: CreateBodyV5Options) {
-        // Opcodes defined in the WalletV5R1 contract spec, confirmed in @ton/ton WalletContractV5R1.js
-        const Opcodes = {
-            auth_signed: 0x7369676e, // external auth ("sign")
-            auth_signed_internal: 0x73696e74, // internal auth ("sint") — used for gasless relaying
-        };
-
-        // Use internal opcode for gasless relaying (signOnly / signMsg intent)
-        const opcode = options.authType === 'internal' ? Opcodes.auth_signed_internal : Opcodes.auth_signed;
-        log.debug('createBodyV5 signing with opcode', {
-            authType: options.authType,
-            opcode: `0x${opcode.toString(16)}`,
-        });
-
-        const expireAt = options.validUntil ?? Math.floor(Date.now() / 1000) + 300;
-        const payload = beginCell()
-            .storeUint(opcode, 32)
-            .storeUint(walletId, 32)
-            .storeUint(expireAt, 32)
-            .storeUint(seqno, 32) // seqno
-            .storeSlice(actionsList.beginParse())
-            .endCell();
-
-        const domainPrefix = this.domain ? signatureDomainPrefix(this.domain) : null;
-        const signingData = domainPrefix ? Buffer.concat([domainPrefix, payload.hash()]) : payload.hash();
-        const signature = options.fakeSignature ? FakeSignature(signingData) : await this.sign(signingData);
-        return beginCell()
-            .storeSlice(payload.beginParse())
-            .storeBuffer(Buffer.from(HexToUint8Array(signature)))
-            .endCell();
-    }
-
-    async getSignedSignData(input: PreparedSignData): Promise<Hex> {
-        const signature = await this.sign(HexToUint8Array(input.hash));
-        return signature;
-    }
-
-    async getSignedTonProof(input: ProofMessage): Promise<Hex> {
-        const message = await CreateTonProofMessageBytes(input);
-        const signature = await this.sign(message);
-
-        return signature;
-    }
-
-    getSupportedFeatures(): Feature[] | undefined {
-        return [
-            'SendTransaction',
-            {
-                name: 'SendTransaction',
-                maxMessages: 255,
-                extraCurrencySupported: true,
-                itemTypes: ['ton', 'jetton', 'nft'],
-            },
-            { name: 'SignData', types: ['text', 'binary', 'cell'] },
-            {
-                name: 'SignMessage',
-                maxMessages: 255,
-                extraCurrencySupported: true,
-                itemTypes: ['ton', 'jetton', 'nft'],
-            },
-            {
-                name: 'EmbeddedRequest',
-            },
-        ] as Feature[];
-    }
+  getSupportedFeatures(): Feature[] | undefined {
+    return [
+      'SendTransaction',
+      {
+        name: 'SendTransaction',
+        maxMessages: 255,
+        extraCurrencySupported: true,
+        itemTypes: ['ton', 'jetton', 'nft'],
+      },
+      { name: 'SignData', types: ['text', 'binary', 'cell'] },
+      {
+        name: 'SignMessage',
+        maxMessages: 255,
+        extraCurrencySupported: true,
+        itemTypes: ['ton', 'jetton', 'nft'],
+      },
+      {
+        name: 'EmbeddedRequest',
+      },
+    ] as Feature[];
+  }
 }

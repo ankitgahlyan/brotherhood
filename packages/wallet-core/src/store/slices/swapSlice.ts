@@ -22,9 +22,9 @@ export const createSwapSlice: SwapSliceCreator = (set: SetState, get) => ({
   swap: {
     fromToken: { address: 'ton', decimals: 9, symbol: 'GRAM' },
     toToken: {
-      address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-      decimals: 6,
-      symbol: 'USDT',
+      address: 'kQCU0cAJ20PF7MX9CLBcjUCw6ZwOfYil1iiKWXZeeBlfv1gP',
+      decimals: 9,
+      symbol: 'FI',
     },
     amount: '',
     destinationAddress: '',

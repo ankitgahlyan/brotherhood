@@ -131,13 +131,13 @@ The entry amount is defined by the minter side
 
 ## Error Codes
 
-| Code | Description                              |
-| ---- | ---------------------------------------- |
-| 201  | Entry after the reveal deadline          |
-| 202  | Entry amount does not match entryAmount  |
-| 400  | Draw before the reveal deadline          |
-| 401  | Draw with no participants                |
-| 700  | EnterLottery sender is not the owner     |
+| Code | Description                                  |
+| ---- | -------------------------------------------- |
+| 201  | Entry after the reveal deadline              |
+| 202  | Entry amount does not match entryAmount      |
+| 400  | Draw before the reveal deadline              |
+| 401  | Draw with no participants                    |
+| 700  | EnterLottery sender is not the owner         |
 | 999  | Winner selection fallback (should never hit) |
 
 ## Testing

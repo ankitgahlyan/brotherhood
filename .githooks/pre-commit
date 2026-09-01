@@ -2,3 +2,5 @@
 set -e
 acton check
 acton fmt --check
+
+bun format

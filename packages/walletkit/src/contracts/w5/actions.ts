@@ -10,128 +10,148 @@ import type { Address, Cell, MessageRelaxed } from '@ton/core';
 import { beginCell, SendMode, storeMessageRelaxed } from '@ton/core';
 
 export class ActionSendMsg {
-    public static readonly tag = 0x0ec3c86d;
+  public static readonly tag = 0x0ec3c86d;
 
-    public readonly tag = ActionSendMsg.tag;
+  public readonly tag = ActionSendMsg.tag;
 
-    constructor(
-        public readonly mode: SendMode,
-        public readonly outMsg: MessageRelaxed,
-    ) {}
+  constructor(
+    public readonly mode: SendMode,
+    public readonly outMsg: MessageRelaxed,
+  ) {}
 
-    public serialize(): Cell {
-        return beginCell()
-            .storeUint(this.tag, 32)
-            .storeUint(this.mode | SendMode.IGNORE_ERRORS, 8)
-            .storeRef(beginCell().store(storeMessageRelaxed(this.outMsg)).endCell())
-            .endCell();
-    }
+  public serialize(): Cell {
+    return beginCell()
+      .storeUint(this.tag, 32)
+      .storeUint(this.mode | SendMode.IGNORE_ERRORS, 8)
+      .storeRef(beginCell().store(storeMessageRelaxed(this.outMsg)).endCell())
+      .endCell();
+  }
 }
 
 export class ActionAddExtension {
-    public static readonly tag = 0x02;
+  public static readonly tag = 0x02;
 
-    public readonly tag = ActionAddExtension.tag;
+  public readonly tag = ActionAddExtension.tag;
 
-    constructor(public readonly address: Address) {}
+  constructor(public readonly address: Address) {}
 
-    public serialize(): Cell {
-        return beginCell().storeUint(this.tag, 8).storeAddress(this.address).endCell();
-    }
+  public serialize(): Cell {
+    return beginCell()
+      .storeUint(this.tag, 8)
+      .storeAddress(this.address)
+      .endCell();
+  }
 }
 
 export class ActionRemoveExtension {
-    public static readonly tag = 0x03;
+  public static readonly tag = 0x03;
 
-    public readonly tag = ActionRemoveExtension.tag;
+  public readonly tag = ActionRemoveExtension.tag;
 
-    constructor(public readonly address: Address) {}
+  constructor(public readonly address: Address) {}
 
-    public serialize(): Cell {
-        return beginCell().storeUint(this.tag, 8).storeAddress(this.address).endCell();
-    }
+  public serialize(): Cell {
+    return beginCell()
+      .storeUint(this.tag, 8)
+      .storeAddress(this.address)
+      .endCell();
+  }
 }
 
 export class ActionSetSignatureAuthAllowed {
-    public static readonly tag = 0x04;
+  public static readonly tag = 0x04;
 
-    public readonly tag = ActionSetSignatureAuthAllowed.tag;
+  public readonly tag = ActionSetSignatureAuthAllowed.tag;
 
-    constructor(public readonly allowed: boolean) {}
+  constructor(public readonly allowed: boolean) {}
 
-    public serialize(): Cell {
-        return beginCell()
-            .storeUint(this.tag, 8)
-            .storeUint(this.allowed ? 1 : 0, 1)
-            .endCell();
-    }
+  public serialize(): Cell {
+    return beginCell()
+      .storeUint(this.tag, 8)
+      .storeUint(this.allowed ? 1 : 0, 1)
+      .endCell();
+  }
 }
 
 export type OutAction = ActionSendMsg;
-export type ExtendedAction = ActionAddExtension | ActionRemoveExtension | ActionSetSignatureAuthAllowed;
+export type ExtendedAction =
+  ActionAddExtension | ActionRemoveExtension | ActionSetSignatureAuthAllowed;
 
-export function isExtendedAction(action: OutAction | ExtendedAction): action is ExtendedAction {
-    return (
-        action.tag === ActionAddExtension.tag ||
-        action.tag === ActionRemoveExtension.tag ||
-        action.tag === ActionSetSignatureAuthAllowed.tag
-    );
+export function isExtendedAction(
+  action: OutAction | ExtendedAction,
+): action is ExtendedAction {
+  return (
+    action.tag === ActionAddExtension.tag ||
+    action.tag === ActionRemoveExtension.tag ||
+    action.tag === ActionSetSignatureAuthAllowed.tag
+  );
 }
 
 function packActionsListOut(actions: (OutAction | ExtendedAction)[]): Cell {
-    if (actions.length === 0) {
-        return beginCell().endCell();
-    }
+  if (actions.length === 0) {
+    return beginCell().endCell();
+  }
 
-    const [action, ...rest] = actions;
+  const [action, ...rest] = actions;
 
-    if (isExtendedAction(action)) {
-        throw new Error('Actions bust be in an order: all extended actions, all out actions');
-    }
+  if (isExtendedAction(action)) {
+    throw new Error(
+      'Actions bust be in an order: all extended actions, all out actions',
+    );
+  }
 
-    return beginCell().storeRef(packActionsListOut(rest)).storeSlice(action.serialize().beginParse()).endCell();
+  return beginCell()
+    .storeRef(packActionsListOut(rest))
+    .storeSlice(action.serialize().beginParse())
+    .endCell();
 }
 
 function packExtendedActions(extendedActions: ExtendedAction[]): Cell {
-    const first = extendedActions[0];
-    const rest = extendedActions.slice(1);
-    let builder = beginCell().storeSlice(first.serialize().beginParse());
-    if (rest.length > 0) {
-        builder = builder.storeRef(packExtendedActions(extendedActions.slice(1)));
-    }
-    return builder.endCell();
+  const first = extendedActions[0];
+  const rest = extendedActions.slice(1);
+  let builder = beginCell().storeSlice(first.serialize().beginParse());
+  if (rest.length > 0) {
+    builder = builder.storeRef(packExtendedActions(extendedActions.slice(1)));
+  }
+  return builder.endCell();
 }
 
-function packActionsListExtended(actions: (OutAction | ExtendedAction)[]): Cell {
-    const extendedActions: ExtendedAction[] = [];
-    const outActions: OutAction[] = [];
-    actions.forEach((action) => {
-        if (isExtendedAction(action)) {
-            extendedActions.push(action);
-        } else {
-            outActions.push(action);
-        }
-    });
+function packActionsListExtended(
+  actions: (OutAction | ExtendedAction)[],
+): Cell {
+  const extendedActions: ExtendedAction[] = [];
+  const outActions: OutAction[] = [];
+  actions.forEach((action) => {
+    if (isExtendedAction(action)) {
+      extendedActions.push(action);
+    } else {
+      outActions.push(action);
+    }
+  });
 
-    let builder = beginCell();
-    if (outActions.length === 0) {
-        builder = builder.storeUint(0, 1);
-    } else {
-        builder = builder.storeMaybeRef(packActionsListOut(outActions.slice().reverse()));
+  let builder = beginCell();
+  if (outActions.length === 0) {
+    builder = builder.storeUint(0, 1);
+  } else {
+    builder = builder.storeMaybeRef(
+      packActionsListOut(outActions.slice().reverse()),
+    );
+  }
+  if (extendedActions.length === 0) {
+    builder = builder.storeUint(0, 1);
+  } else {
+    const first = extendedActions[0];
+    const rest = extendedActions.slice(1);
+    builder = builder
+      .storeUint(1, 1)
+      .storeSlice(first.serialize().beginParse());
+    if (rest.length > 0) {
+      builder = builder.storeRef(packExtendedActions(rest));
     }
-    if (extendedActions.length === 0) {
-        builder = builder.storeUint(0, 1);
-    } else {
-        const first = extendedActions[0];
-        const rest = extendedActions.slice(1);
-        builder = builder.storeUint(1, 1).storeSlice(first.serialize().beginParse());
-        if (rest.length > 0) {
-            builder = builder.storeRef(packExtendedActions(rest));
-        }
-    }
-    return builder.endCell();
+  }
+  return builder.endCell();
 }
 
 export function packActionsList(actions: (OutAction | ExtendedAction)[]): Cell {
-    return packActionsListExtended(actions);
+  return packActionsListExtended(actions);
 }

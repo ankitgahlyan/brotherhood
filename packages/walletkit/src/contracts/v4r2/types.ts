@@ -14,18 +14,18 @@ import type { WalletSigner } from '../../api/interfaces';
  * Configuration for creating a WalletV4R2 adapter
  */
 export interface WalletV4R2AdapterConfig {
-    /** Signer function */
-    signer: WalletSigner;
-    /** Public key */
-    publicKey: Hex;
-    /** Wallet ID configuration */
-    walletId?: number;
-    /** Shared TON client instance */
-    tonClient: ApiClient;
-    /** Network */
-    network: Network;
-    /** Workchain */
-    workchain?: number;
-    /** Signature domain */
-    domain?: SignatureDomain;
+  /** Signer function */
+  signer: WalletSigner;
+  /** Public key */
+  publicKey: Hex;
+  /** Wallet ID configuration */
+  walletId?: number;
+  /** Shared TON client instance */
+  tonClient: ApiClient;
+  /** Network */
+  network: Network;
+  /** Workchain */
+  workchain?: number;
+  /** Signature domain */
+  domain?: SignatureDomain;
 }

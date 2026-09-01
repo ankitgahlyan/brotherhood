@@ -1,11 +1,32 @@
-wrappers-ts/
+# Dependencies & build
+node_modules
+dist
+dist-ssr
+dist/client
+build
+.output
+.tanstack
+.wrangler
 .agents
 .acton
 .git
 contracts
 docs
-gen
-node_modules
+.studio
+coverage
+lcov.info
+
+# Generated files
+**/routeTree.gen.ts
+**/*.gen.ts
+wrappers
 wrappers-ts
-src/routeTree.gen.ts
 bun.lock
+gen
+
+# Test artifacts
+test-results
+playwright-report
+allure-results
+allure-report
+public
