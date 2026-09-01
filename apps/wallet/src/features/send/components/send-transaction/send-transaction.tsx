@@ -44,7 +44,7 @@ export const SendTransaction: React.FC = () => {
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
 
-  const [selectedId, setSelectedId] = useState('TON');
+  const [selectedId, setSelectedId] = useState('HD');
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');

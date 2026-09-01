@@ -1,11 +1,4 @@
-import {
-  Address,
-  beginCell,
-  Cell,
-  Dictionary,
-  storeStateInit,
-  toNano,
-} from '@ton/core';
+import { Address, beginCell, Cell, storeStateInit, toNano } from '@ton/core';
 import {
   FossFi,
   MintNewJettons,

@@ -7,25 +7,10 @@
  */
 
 import React from 'react';
-import {
-  useWallet,
-  useTonConnect,
-  useTransactionRequests,
-  useSignDataRequests,
-  useSignMessageRequests,
-} from '@demo/wallet-core';
-
 import { DashboardHeader } from '../dashboard-header';
 import { BalanceTotal } from '../balance-total';
 import { DashboardActions } from '../dashboard-actions';
 import { DashboardAssets } from '../dashboard-assets';
-
-import {
-  ConnectRequestModal,
-  TransactionRequestModal,
-  SignDataRequestModal,
-  SignMessageRequestModal,
-} from '@/features/ton-connect';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { NftsCard } from '@/features/nft';
 import { TransactionHistory } from '@/features/transactions';
@@ -38,25 +23,6 @@ export const WalletDashboard: React.FC = () => {
   // before the store rehydrates (isUnlocked=false), skipping loadAllWallets with no retry.
   useTonWallet();
 
-  const { getAvailableWallets, savedWallets, getActiveWallet } = useWallet();
-  const activeWallet = getActiveWallet();
-  const {
-    pendingConnectRequest,
-    isConnectModalOpen,
-    approveConnectRequest,
-    rejectConnectRequest,
-  } = useTonConnect();
-  const { pendingTransactionRequest, isTransactionModalOpen } =
-    useTransactionRequests();
-  const {
-    pendingSignDataRequest,
-    isSignDataModalOpen,
-    approveSignDataRequest,
-    rejectSignDataRequest,
-  } = useSignDataRequests();
-  const { pendingSignMessageRequest, isSignMessageModalOpen } =
-    useSignMessageRequests();
-
   return (
     <NewLayout header={<DashboardHeader />}>
       <div className="space-y-4">
@@ -66,46 +32,6 @@ export const WalletDashboard: React.FC = () => {
         <NftsCard />
         <TransactionHistory />
       </div>
-
-      {pendingConnectRequest && (
-        <ConnectRequestModal
-          request={pendingConnectRequest}
-          availableWallets={getAvailableWallets()}
-          savedWallets={savedWallets}
-          currentWallet={getAvailableWallets().find(
-            (w) => w.getWalletId() === activeWallet?.kitWalletId,
-          )}
-          isOpen={isConnectModalOpen}
-          onApprove={approveConnectRequest}
-          onReject={rejectConnectRequest}
-        />
-      )}
-
-      {pendingTransactionRequest && (
-        <TransactionRequestModal
-          request={pendingTransactionRequest}
-          savedWallets={savedWallets}
-          isOpen={isTransactionModalOpen}
-        />
-      )}
-
-      {pendingSignDataRequest && (
-        <SignDataRequestModal
-          request={pendingSignDataRequest}
-          savedWallets={savedWallets}
-          isOpen={isSignDataModalOpen}
-          onApprove={approveSignDataRequest}
-          onReject={rejectSignDataRequest}
-        />
-      )}
-
-      {pendingSignMessageRequest && (
-        <SignMessageRequestModal
-          request={pendingSignMessageRequest}
-          savedWallets={savedWallets}
-          isOpen={isSignMessageModalOpen}
-        />
-      )}
     </NewLayout>
   );
 };

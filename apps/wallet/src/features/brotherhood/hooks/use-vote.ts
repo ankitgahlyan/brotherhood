@@ -6,13 +6,15 @@
  *
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildVoteBody, buildUnvoteBody } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
+import type { FiAccountData } from './use-fi-account';
+import { getAccountActionError } from './use-is-network-member';
 
 export interface UseVoteParams {
   wallet: Wallet | null | undefined;
@@ -21,6 +23,7 @@ export interface UseVoteParams {
   targetAddress: string;
   isUnvote?: boolean;
   network: Network;
+  accountData?: FiAccountData | null;
 }
 
 export interface UseVoteResult {
@@ -28,6 +31,7 @@ export interface UseVoteResult {
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
+  validationError: string | null;
 }
 
 export function useVote({
@@ -37,6 +41,7 @@ export function useVote({
   targetAddress,
   isUnvote = false,
   network,
+  accountData,
 }: UseVoteParams): UseVoteResult {
   const {
     send: sendTx,
@@ -44,11 +49,33 @@ export function useVote({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const validationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    if (accountData) {
+      if (!isUnvote && accountData.votes <= 0) {
+        return 'No votes available (all 10 votes are currently cast)';
+      }
+    }
+    if (!targetAddress.trim()) return 'Enter target member address';
+    try {
+      const parsed = Address.parse(targetAddress.trim());
+      if (walletAddress) {
+        const selfAddr = Address.parse(walletAddress);
+        if (parsed.equals(selfAddr)) return 'Cannot vote for yourself';
+      }
+    } catch {
+      return 'Invalid target address';
+    }
+    return null;
+  }, [wallet, walletAddress, accountData, isUnvote, targetAddress]);
+
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-    const target = Address.parse(targetAddress);
+    const target = Address.parse(targetAddress.trim());
 
     const payload = isUnvote
       ? buildUnvoteBody({ transferRecipient: target })
@@ -59,7 +86,7 @@ export function useVote({
     ]);
   }, [walletAddress, targetAddress, isUnvote, network, sendTx]);
 
-  const isDisabled = !wallet || !walletAddress || !targetAddress || isSending;
+  const isDisabled = Boolean(validationError) || isSending;
 
-  return { send, isDisabled, isSending, error };
+  return { send, isDisabled, isSending, error, validationError };
 }

@@ -34,19 +34,11 @@ This repository uses a single-context layout for domain documentation. The gloss
 
 ### Frontend (TanStack Start)
 
-The frontend was migrated from the old client-side Vite SPA (`app/`, now removed) into a fresh TanStack Start scaffold merged into this repo. Original scaffold command:
-
-```bash
-bunx @tanstack/cli@latest create my-tanstack-app --agent --package-manager pnpm --tailwind --deployment cloudflare --add-ons better-auth,prisma,tanstack-query,shadcn
-```
-
-The scaffold lives in a scratch dir (`/home/zeta/tanstack`); this repo is the merged product (bun-based).
-
 **Skill loading.** Before substantial frontend edits, run `bunx @tanstack/intent@latest list` from the workspace root; if a listed skill matches, run `bunx @tanstack/intent@latest load <package>#<skill>` and follow its `SKILL.md` (they also live under `node_modules/@tanstack/*/skills/*/SKILL.md`).
 
 **Stack & integrations:** React, TanStack Start + Router + Query + Store, Tailwind v4, shadcn/ui (Radix), `@tanstack/ai` + `@tanstack/ai-openai`, TonConnect + `@ton/ton`, PWA (`vite-plugin-pwa` manifest-only). The scaffold's `better-auth` and `prisma` add-ons were intentionally **not** ported — no server DB/auth backend yet; revisit when one lands.
 
-**Routes:** `/` → `src/pages/manage/ManagePage` (tab in URL as a zod-validated `?tab=` search param), `/deploy` → `src/pages/DeployPage`, `/api/chat` → Start server route proxying OpenRouter (Chat Completions wire format via `@tanstack/ai-openai` with `baseURL: https://openrouter.ai/api/v1`). The old `app/src/lib/router.ts` is gone; deep-linkable state lives in the URL, not React state.
+**Routes:** `/` → `src/pages/manage/ManagePage` (tab in URL as a zod-validated `?tab=` search param), `/deploy` → `src/pages/DeployPage` deep-linkable state lives in the URL, not React state.
 
 **Env vars:** `VITE_BASE` (Vite `base` + Router `basepath`, keep in sync with `src/router.tsx` and `vite.config.ts`; default `/brotherhood/` for the GH Pages project site), `TONCENTER_MAINNET_API_KEY` / `TONCENTER_TESTNET_API_KEY` (client-exposed, higher Toncenter rate limits), `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` (server-only, used by `/api/chat`). Local Cloudflare dev keys go in `.dev.vars`; on Workers bind them as secrets/vars.
 
@@ -67,5 +59,3 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - `.dev.vars` is copied into `dist/server` at build (dev keys only; never commit real secrets).
 - On Cloudflare Workers, module-scope `process.env` is undefined — read env vars inside the handler.
 - Client chunks are split via `build` `environments.client.rolldownOptions.output.codeSplitting` groups (react, react-router, tanstack-query, tanstack-store, ton-sdk, tonconnect, radix-ui, floating-ui, lucide-react, zod). SSR build stays monolithic.
-
-**Next steps:** add a chat UI consumer for `/api/chat`, review `git status`/PR.

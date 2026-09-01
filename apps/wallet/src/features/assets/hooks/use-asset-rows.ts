@@ -11,8 +11,19 @@ import { useJettons, useRates, useWallet } from '@demo/wallet-core';
 
 import type { AssetRowData } from '../components/asset-row';
 
-import { getJettonsName, getJettonsSymbol } from '@/features/jettons';
-import { findRate, formatRate, toDecimal, tokenImageUrls } from '@/core/utils';
+import {
+  getJettonsName,
+  getJettonsSymbol,
+  isFiJetton,
+} from '@/features/jettons';
+import { useIsNetworkMember } from '@/features/brotherhood';
+import {
+  assetUrl,
+  findRate,
+  formatRate,
+  toDecimal,
+  tokenImageUrls,
+} from '@/core/utils';
 
 const GRAM_DECIMALS = 9;
 
@@ -37,6 +48,7 @@ export const useAssetRows = (): AssetRows => {
   const { balance } = useWallet();
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
+  const { isMember } = useIsNetworkMember();
 
   const assetsReady =
     balance !== undefined && lastJettonsUpdate > 0 && ratesUpdated > 0;
@@ -47,7 +59,7 @@ export const useAssetRows = (): AssetRows => {
     const amount = toDecimal(balance, GRAM_DECIMALS);
     return {
       id: 'TON',
-      icon: '/gram.svg',
+      icon: assetUrl('gram.svg'),
       fallbackText: 'GR',
       name: 'Gram',
       symbol: 'GRAM',
@@ -60,11 +72,13 @@ export const useAssetRows = (): AssetRows => {
   const jettonRows = useMemo<AssetRowData[]>(() => {
     if (!assetsReady) return [];
     return userJettons
+      .filter((jetton) => (isMember ? true : !isFiJetton(jetton)))
       .map((jetton) => {
         const rateEntry = findRate(rates, jetton.address);
         const decimals = jetton.decimalsNumber ?? 9;
         const amount = toDecimal(jetton.balance, decimals);
         const symbol = getJettonsSymbol(jetton) ?? '';
+        const isFi = isFiJetton(jetton);
         return {
           row: {
             id: jetton.address,
@@ -79,16 +93,18 @@ export const useAssetRows = (): AssetRows => {
             rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
             fiat: rateEntry ? amount * rateEntry.rate : undefined,
           } satisfies AssetRowData,
+          isFi,
           isVerified: jetton.isVerified,
         };
       })
       .sort(
         (a, b) =>
+          Number(b.isFi) - Number(a.isFi) ||
           (b.row.fiat ?? 0) - (a.row.fiat ?? 0) ||
           Number(b.isVerified) - Number(a.isVerified),
       )
       .map((entry) => entry.row);
-  }, [assetsReady, userJettons, rates]);
+  }, [assetsReady, userJettons, rates, isMember]);
 
   return { tonRow, jettonRows, assetsReady };
 };

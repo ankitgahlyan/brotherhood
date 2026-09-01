@@ -17,6 +17,7 @@ import type { WalletSetupMode } from '../../routes';
 
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
 import { Button } from '@/core/components/ui/button';
+import { assetUrl } from '@/core/utils';
 
 /** First screen for a brand-new user: intro + entry into wallet setup. */
 export const WelcomeScreen: React.FC = () => {
@@ -69,7 +70,7 @@ export const WelcomeScreen: React.FC = () => {
     <CenteredScreen footer={footer}>
       <div className="flex flex-col items-center text-center px-6">
         <img
-          src="/favicon.svg"
+          src={assetUrl('favicon.svg')}
           alt="WalletKit"
           className="w-40 h-40 object-contain"
         />

@@ -7,8 +7,13 @@
  */
 
 export * from './components/brotherhood-screen';
+export * from './components/non-member-card';
+export * from './components/member-guard';
+export * from './components/activation-banner';
 export * from './hooks/use-brotherhood-transaction';
 export * from './hooks/use-fi-account';
+export * from './hooks/use-is-network-member';
+export * from './hooks/use-member-profiles';
 export * from './hooks/use-fi-transfer';
 export * from './hooks/use-fi-burn';
 export * from './hooks/use-weekly-claim';

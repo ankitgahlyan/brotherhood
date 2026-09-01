@@ -6,7 +6,7 @@
  *
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import {
@@ -17,6 +17,8 @@ import {
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
+import type { FiAccountData } from './use-fi-account';
+import { getAccountActionError } from './use-is-network-member';
 
 export interface UseProfileParams {
   wallet: Wallet | null | undefined;
@@ -26,6 +28,7 @@ export interface UseProfileParams {
   h3Cell: string;
   country: number;
   network: Network;
+  accountData?: FiAccountData | null;
 }
 
 export interface UseProfileResult {
@@ -35,6 +38,10 @@ export interface UseProfileResult {
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
+  usernameValidationError: string | null;
+  locationValidationError: string | null;
+  countryValidationError: string | null;
+  canChangeCountry: boolean;
 }
 
 export function useProfile({
@@ -45,12 +52,64 @@ export function useProfile({
   h3Cell,
   country,
   network,
+  accountData,
 }: UseProfileParams): UseProfileResult {
   const {
     send: sendTx,
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
+
+  const usernameValidationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    if (!username.trim()) return 'Enter a non-empty username';
+    return null;
+  }, [wallet, walletAddress, accountData, username]);
+
+  const locationValidationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    if (!h3Cell.trim()) return 'Enter a non-empty H3 spatial cell';
+    return null;
+  }, [wallet, walletAddress, accountData, h3Cell]);
+
+  const { countryValidationError, canChangeCountry } = useMemo<{
+    countryValidationError: string | null;
+    canChangeCountry: boolean;
+  }>(() => {
+    if (!wallet || !walletAddress) {
+      return {
+        countryValidationError: 'Connect wallet first',
+        canChangeCountry: false,
+      };
+    }
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) {
+      return {
+        countryValidationError: actionErr,
+        canChangeCountry: false,
+      };
+    }
+    if (accountData) {
+      // Contract rule: assert (store.votes == 10) throw Errors.HasActiveVotes;
+      if (accountData.votes < 10) {
+        return {
+          countryValidationError: `Cannot change country while having active votes (${10 - accountData.votes} votes cast). Please unvote all candidates first.`,
+          canChangeCountry: false,
+        };
+      }
+    }
+    if (country < 0 || isNaN(country)) {
+      return {
+        countryValidationError: 'Select a valid country code',
+        canChangeCountry: false,
+      };
+    }
+    return { countryValidationError: null, canChangeCountry: true };
+  }, [wallet, walletAddress, accountData, country]);
 
   const updateUsername = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
@@ -59,7 +118,7 @@ export function useProfile({
 
     const payload = ChangeUsername.toCell(
       ChangeUsername.create({
-        newUsername: username,
+        newUsername: username.trim(),
       }),
     );
 
@@ -75,7 +134,7 @@ export function useProfile({
 
     const payload = ChangeLocation.toCell(
       ChangeLocation.create({
-        newH3Cell: h3Cell,
+        newH3Cell: h3Cell.trim(),
       }),
     );
 
@@ -109,5 +168,9 @@ export function useProfile({
     isDisabled,
     isSending,
     error,
+    usernameValidationError,
+    locationValidationError,
+    countryValidationError,
+    canChangeCountry,
   };
 }

@@ -22,7 +22,7 @@ import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
 import { getJettonsImage, getJettonsSymbol } from '@/features/jettons';
 import { cn } from '@/core/lib/utils';
-import { formatUnits } from '@/core/utils/units';
+import { assetUrl, formatUnits } from '@/core/utils';
 
 /** Reserved on a MAX TON swap, so the transaction still has gas to pay for itself. */
 const TON_GAS_RESERVE = 0.1;
@@ -69,7 +69,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     if (token.address === 'ton') {
       return {
         symbol: token.symbol || 'GRAM',
-        icon: '/gram.svg',
+        icon: assetUrl('gram.svg'),
         balance: formatUnits(balance || '0', token.decimals),
       };
     }

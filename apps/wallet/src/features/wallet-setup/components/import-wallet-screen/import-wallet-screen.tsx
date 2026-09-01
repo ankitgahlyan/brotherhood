@@ -360,7 +360,7 @@ export const ImportWalletScreen: React.FC = () => {
                   <div className="mt-2.5 text-xs space-y-1 pl-6">
                     <div className="flex justify-between items-center text-gray-600">
                       <span>Address:</span>
-                      <span className="font-mono text-[11px] text-gray-800 truncate max-w-[200px]">
+                      <span className="font-mono text-[11px] text-gray-800 truncate max-w-50">
                         {w.address}
                       </span>
                     </div>

@@ -6,13 +6,15 @@
  *
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildSetAllowanceBody, parseUnits } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
+import type { FiAccountData } from './use-fi-account';
+import { getAccountActionError } from './use-is-network-member';
 
 export interface UseSetAllowanceParams {
   wallet: Wallet | null | undefined;
@@ -21,6 +23,7 @@ export interface UseSetAllowanceParams {
   grantee: string;
   amount: string;
   network: Network;
+  accountData?: FiAccountData | null;
 }
 
 export interface UseSetAllowanceResult {
@@ -28,6 +31,7 @@ export interface UseSetAllowanceResult {
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
+  validationError: string | null;
 }
 
 export function useSetAllowance({
@@ -37,6 +41,7 @@ export function useSetAllowance({
   grantee,
   amount,
   network,
+  accountData,
 }: UseSetAllowanceParams): UseSetAllowanceResult {
   const {
     send: sendTx,
@@ -44,11 +49,41 @@ export function useSetAllowance({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const validationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    if (!grantee.trim()) return 'Enter grantee address';
+    try {
+      const parsed = Address.parse(grantee.trim());
+      if (walletAddress) {
+        const self = Address.parse(walletAddress);
+        if (parsed.equals(self)) return 'Cannot grant allowance to yourself';
+      }
+    } catch {
+      return 'Invalid grantee address';
+    }
+    if (!amount || parseFloat(amount) < 0) return 'Enter allowance amount';
+
+    if (accountData && parseFloat(amount) > 0) {
+      try {
+        const amountNano = parseUnits(amount, 9);
+        if (amountNano > accountData.jettonBalance) {
+          return `Insufficient balance (available: ${(Number(accountData.jettonBalance) / 1e9).toFixed(4)} FI)`;
+        }
+      } catch {
+        return 'Invalid amount format';
+      }
+    }
+
+    return null;
+  }, [wallet, walletAddress, accountData, grantee, amount]);
+
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-    const granteeAddr = Address.parse(grantee);
+    const granteeAddr = Address.parse(grantee.trim());
     const amountNano = parseUnits(amount, 9);
 
     const payload = buildSetAllowanceBody({
@@ -61,13 +96,7 @@ export function useSetAllowance({
     ]);
   }, [walletAddress, grantee, amount, network, sendTx]);
 
-  const isDisabled =
-    !wallet ||
-    !walletAddress ||
-    !grantee ||
-    !amount ||
-    parseFloat(amount) <= 0 ||
-    isSending;
+  const isDisabled = Boolean(validationError) || isSending;
 
-  return { send, isDisabled, isSending, error };
+  return { send, isDisabled, isSending, error, validationError };
 }

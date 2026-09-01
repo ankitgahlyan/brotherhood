@@ -6,14 +6,15 @@
  *
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { buildTransferBody } from '@/lib/brotherhood/deploy';
-import { parseUnits } from '@/lib/brotherhood/deploy';
+import { buildTransferBody, parseUnits } from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
+import type { FiAccountData } from './use-fi-account';
+import { getAccountActionError } from './use-is-network-member';
 
 export interface UseFiTransferParams {
   wallet: Wallet | null | undefined;
@@ -22,6 +23,7 @@ export interface UseFiTransferParams {
   recipient: string;
   amount: string;
   network: Network;
+  accountData?: FiAccountData | null;
 }
 
 export interface UseFiTransferResult {
@@ -29,6 +31,7 @@ export interface UseFiTransferResult {
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
+  validationError: string | null;
 }
 
 export function useFiTransfer({
@@ -38,6 +41,7 @@ export function useFiTransfer({
   recipient,
   amount,
   network,
+  accountData,
 }: UseFiTransferParams): UseFiTransferResult {
   const {
     send: sendTx,
@@ -45,11 +49,43 @@ export function useFiTransfer({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const validationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    if (accountData) {
+      if (accountData.debts || accountData.debt > 0n) {
+        return 'Transfers blocked: Account has outstanding debt that must be repaid';
+      }
+    }
+    if (!recipient.trim()) return 'Enter recipient address';
+    try {
+      Address.parse(recipient.trim());
+    } catch {
+      return 'Invalid recipient address';
+    }
+    if (!amount || parseFloat(amount) <= 0)
+      return 'Enter a valid transfer amount';
+
+    if (accountData) {
+      try {
+        const amountNano = parseUnits(amount, 9);
+        if (amountNano > accountData.jettonBalance) {
+          return `Insufficient balance (available: ${(Number(accountData.jettonBalance) / 1e9).toFixed(4)} FI)`;
+        }
+      } catch {
+        return 'Invalid amount format';
+      }
+    }
+
+    return null;
+  }, [wallet, walletAddress, accountData, recipient, amount]);
+
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-    const recipientAddr = Address.parse(recipient);
+    const recipientAddr = Address.parse(recipient.trim());
     const amountNano = parseUnits(amount, 9);
 
     const payload = buildTransferBody({
@@ -64,13 +100,7 @@ export function useFiTransfer({
     ]);
   }, [walletAddress, recipient, amount, network, sendTx]);
 
-  const isDisabled =
-    !wallet ||
-    !walletAddress ||
-    !recipient ||
-    !amount ||
-    parseFloat(amount) <= 0 ||
-    isSending;
+  const isDisabled = Boolean(validationError) || isSending;
 
-  return { send, isDisabled, isSending, error };
+  return { send, isDisabled, isSending, error, validationError };
 }
