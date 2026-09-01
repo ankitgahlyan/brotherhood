@@ -9,6 +9,7 @@
 import React from 'react';
 import { getNetworkLabel } from '@demo/wallet-core';
 import type { SavedWallet } from '@demo/wallet-core';
+import { formatTonAddress } from '@/core/utils/formatters';
 
 /**
  * WalletPreview - A reusable component for displaying wallet information in lists
@@ -61,10 +62,14 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
 }) => {
   const formatAddress = (address: string, length: number = 16): string => {
     if (!address) return '';
-    if (showFullAddress) return address;
+    const normalized = formatTonAddress(address, {
+      isContract: false,
+      network: wallet.network,
+    });
+    if (showFullAddress) return normalized;
 
     const halfLength = Math.floor(length / 2);
-    return `${address.slice(0, halfLength)}...${address.slice(-halfLength)}`;
+    return `${normalized.slice(0, halfLength)}...${normalized.slice(-halfLength)}`;
   };
 
   const formatBalance = (balanceStr?: string | null): string => {

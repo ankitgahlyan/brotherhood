@@ -11,6 +11,7 @@ import { QrCode } from 'lucide-react';
 
 import { Input } from '@/core/components/ui/input';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
+import { useFormatAddress } from '@/core/utils/formatters';
 
 interface RecipientFieldProps {
   value: string;
@@ -28,6 +29,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
   onUseMyAddress,
 }) => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const { network } = useFormatAddress();
 
   return (
     <Input.Container error={Boolean(error)}>
@@ -48,7 +50,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
         <Input.Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="EQ…"
+          placeholder={network === 'mainnet' ? 'UQ… or EQ…' : '0Q… or kQ…'}
           data-testid="recipient-input"
         />
         <button

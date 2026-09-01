@@ -6,15 +6,31 @@
  *
  */
 
+import { toast } from 'sonner';
 import { Address } from '@ton/core';
 import { Base64ToHex } from '@ton/walletkit';
+import { useWalletStore, type NetworkType } from '@demo/wallet-core';
 
+export type AddressNetwork = NetworkType;
+
+/**
+ * Normalizes any TON address into standard userfriendly representation.
+ * - Testnet User Wallet: `0Q...` (testOnly: true, bounceable: false)
+ * - Testnet Smart Contract: `kQ...` (testOnly: true, bounceable: true)
+ * - Mainnet User Wallet: `UQ...` (testOnly: false, bounceable: false)
+ * - Mainnet Smart Contract: `EQ...` (testOnly: false, bounceable: true)
+ */
 export function normalizeAddress(
   address: string,
   bounceable = false,
+  network: AddressNetwork = 'testnet',
 ): string | null {
   try {
-    return Address.parse(address).toString({ bounceable });
+    return Address.parse(address).toString({
+      urlSafe: true,
+      bounceable,
+      testOnly: network === 'testnet',
+    });
   } catch {
     return null;
   }
@@ -24,16 +40,138 @@ export function shortenAddress(
   addr?: string,
   count = 4,
   bounceable = false,
+  network: AddressNetwork = 'testnet',
 ): string {
   if (!addr) return '';
-  const normalized = normalizeAddress(addr, bounceable) ?? addr;
+  const normalized = normalizeAddress(addr, bounceable, network) ?? addr;
   return normalized.length <= count * 2
     ? normalized
     : `${normalized.slice(0, count)}...${normalized.slice(-count)}`;
 }
 
+export interface FormatTonAddressOptions {
+  isContract?: boolean;
+  network?: AddressNetwork;
+  shorten?: boolean;
+  count?: number;
+}
+
 /**
- * Compare two TON addresses for equality (handles different formats: 0:xxx, EQxxx, UQxxx)
+ * Format any TON address string or Address instance with explicit contract/wallet semantics
+ */
+export function formatTonAddress(
+  address: Address | string | null | undefined,
+  options?: FormatTonAddressOptions,
+): string {
+  if (!address) return '';
+  const str = typeof address === 'string' ? address : address.toString();
+  const isContract = options?.isContract ?? false;
+  const network = options?.network ?? 'testnet';
+  const count = options?.count ?? 4;
+
+  if (options?.shorten) {
+    return shortenAddress(str, count, isContract, network);
+  }
+  return normalizeAddress(str, isContract, network) ?? str;
+}
+
+/**
+ * Copies a TON address to clipboard formatted according to network and contract semantics.
+ */
+export async function copyTonAddress(
+  address: Address | string | null | undefined,
+  options?: {
+    isContract?: boolean;
+    network?: AddressNetwork;
+    feedbackMessage?: string;
+  },
+): Promise<boolean> {
+  if (!address) return false;
+  const isContract = options?.isContract ?? false;
+  const network = options?.network ?? 'testnet';
+  const formatted = formatTonAddress(address, {
+    isContract,
+    network,
+    shorten: false,
+  });
+  if (!formatted) return false;
+  try {
+    await navigator.clipboard.writeText(formatted);
+    const msg =
+      options?.feedbackMessage ??
+      (isContract ? 'Contract address copied' : 'Address copied');
+    toast.success(msg);
+    return true;
+  } catch {
+    toast.error('Failed to copy address');
+    return false;
+  }
+}
+
+/**
+ * Hook providing reactive address formatters aligned with currently connected wallet network
+ */
+export function useFormatAddress() {
+  const savedWallets = useWalletStore(
+    (state) => state.walletManagement.savedWallets,
+  );
+  const activeWalletId = useWalletStore(
+    (state) => state.walletManagement.activeWalletId,
+  );
+  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
+  const network: AddressNetwork = activeWallet?.network || 'testnet';
+
+  return {
+    network,
+    formatAddress: (
+      address: Address | string | null | undefined,
+      options?: { isContract?: boolean; shorten?: boolean; count?: number },
+    ) => formatTonAddress(address, { ...options, network }),
+    formatWalletAddress: (
+      address: Address | string | null | undefined,
+      shorten = false,
+      count = 4,
+    ) =>
+      formatTonAddress(address, {
+        isContract: false,
+        network,
+        shorten,
+        count,
+      }),
+    formatContractAddress: (
+      address: Address | string | null | undefined,
+      shorten = false,
+      count = 4,
+    ) =>
+      formatTonAddress(address, {
+        isContract: true,
+        network,
+        shorten,
+        count,
+      }),
+    copyWalletAddress: async (
+      address: Address | string | null | undefined,
+      feedbackMessage?: string,
+    ) =>
+      copyTonAddress(address, {
+        isContract: false,
+        network,
+        feedbackMessage,
+      }),
+    copyContractAddress: async (
+      address: Address | string | null | undefined,
+      feedbackMessage?: string,
+    ) =>
+      copyTonAddress(address, {
+        isContract: true,
+        network,
+        feedbackMessage: feedbackMessage ?? 'Contract address copied',
+      }),
+  };
+}
+
+/**
+ * Compare two TON addresses for equality (handles different formats: 0:xxx, EQxxx, UQxxx, 0Qxxx, kQxxx)
  */
 export function sameAddress(a: string, b: string): boolean {
   if (!a || !b) return a === b;

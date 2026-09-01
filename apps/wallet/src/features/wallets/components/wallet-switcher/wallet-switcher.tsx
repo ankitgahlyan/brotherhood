@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 import { getNetworkLabel } from '@demo/wallet-core';
 import type { SavedWallet } from '@demo/wallet-core';
+import { formatTonAddress } from '@/core/utils/formatters';
 
 import { createComponentLogger } from '@/core/lib/logger';
 
@@ -76,8 +77,16 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
     }
   };
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const formatAddress = (
+    address: string,
+    network: SavedWallet['network'] = activeWallet?.network ?? 'testnet',
+  ) => {
+    return formatTonAddress(address, {
+      isContract: false,
+      network,
+      shorten: true,
+      count: 4,
+    });
   };
 
   const formatDate = (timestamp: number) => {
@@ -156,7 +165,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
             {!compact && (
               <p className="text-xs text-muted-foreground">
                 {activeWallet
-                  ? formatAddress(activeWallet.address)
+                  ? formatAddress(activeWallet.address, activeWallet.network)
                   : 'Select a wallet'}
               </p>
             )}
@@ -277,7 +286,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground font-mono mb-1">
-                        {formatAddress(wallet.address)}
+                        {formatAddress(wallet.address, wallet.network)}
                       </p>
                       <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                         <button

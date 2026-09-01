@@ -15,13 +15,14 @@ import QRCodeStyling from 'qr-code-styling';
 import type { Options as QrOptions } from 'qr-code-styling';
 
 import { Modal } from '@/core/components/ui/modal';
+import { assetUrl } from '@/core/utils';
 
 const QR_COLOR = '#14181F';
 
 const QR_OPTIONS: Partial<QrOptions> = {
   type: 'svg',
   margin: 0,
-  image: '/favicon.svg',
+  image: assetUrl('favicon.svg'),
   dotsOptions: { color: QR_COLOR, type: 'rounded' },
   cornersSquareOptions: { color: QR_COLOR, type: 'extra-rounded' },
   cornersDotOptions: { color: QR_COLOR, type: 'dot' },
@@ -66,19 +67,22 @@ interface ReceiveModalProps {
 
 type AddressFormat = 'uq' | 'eq' | 'raw';
 
-const FORMATS: { id: AddressFormat; label: string }[] = [
-  { id: 'uq', label: 'Non-bounceable' },
-  { id: 'eq', label: 'Bounceable' },
-  { id: 'raw', label: 'Raw' },
-];
-
 export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   isOpen,
   onClose,
 }) => {
   const { address, getActiveWallet } = useWallet();
-  const network = getActiveWallet()?.network ?? 'mainnet';
+  const network = getActiveWallet()?.network ?? 'testnet';
   const [format, setFormat] = useState<AddressFormat>('uq');
+
+  const formatTabs = useMemo<{ id: AddressFormat; label: string }[]>(() => {
+    const isTestnet = network === 'testnet';
+    return [
+      { id: 'uq', label: isTestnet ? '0Q (User)' : 'UQ (User)' },
+      { id: 'eq', label: isTestnet ? 'kQ (Contract)' : 'EQ (Contract)' },
+      { id: 'raw', label: 'Raw' },
+    ];
+  }, [network]);
 
   const parsed = useMemo(() => {
     if (!address) return null;
@@ -124,12 +128,12 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
           {formattedAddress ? (
             <StyledQrCode value={formattedAddress} />
           ) : (
-            <div className="w-[220px] h-[220px] rounded-lg bg-muted animate-pulse" />
+            <div className="w-55 h-55 rounded-lg bg-muted animate-pulse" />
           )}
         </div>
 
         <div className="grid grid-cols-3 gap-1 w-full bg-secondary/70 border border-border rounded-full p-1">
-          {FORMATS.map((f) => (
+          {formatTabs.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -154,7 +158,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
           <span className="flex-1 min-w-0 text-sm font-mono text-foreground break-all">
             {formattedAddress}
           </span>
-          <Copy className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Copy className="w-4 h-4 text-muted-foreground shrink-0" />
         </button>
       </Modal.Body>
     </Modal.Container>

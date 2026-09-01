@@ -8,22 +8,28 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { Copy } from 'lucide-react';
-import { toast } from 'sonner';
 import { useWallet, useJettons, useRates } from '@demo/wallet-core';
 
 import { useCountUp } from '@/core/hooks/use-count-up';
-import { findRate, shortenAddress, toDecimal } from '@/core/utils';
+import { assetUrl, findRate, toDecimal } from '@/core/utils';
+import { useFormatAddress } from '@/core/utils/formatters';
+import { isFiJetton } from '@/features/jettons';
+
+const fiFormat = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const usdFormat = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-/** USD value split into integer and fraction parts (no `$`), for the styled total. */
-const formatUsdParts = (
+/** Formats a numeric value into integer and fraction parts. */
+const formatNumberParts = (
   value: number,
 ): { intPart: string; fracPart: string } => {
-  const [intPart, fracPart = '00'] = usdFormat.format(value).split('.');
+  const [intPart, fracPart = '00'] = fiFormat.format(value).split('.');
   return { intPart, fracPart };
 };
 
@@ -31,14 +37,25 @@ const GRAM_DECIMALS = 9;
 
 export const BalanceTotal: React.FC = () => {
   const { address, balance } = useWallet();
+  const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
   const { userJettons } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
 
-  // Wait for both balance and real rates (not the bootstrap TON rate) before showing the total.
-  const ready = balance !== undefined && ratesUpdated > 0;
+  const ready = balance !== undefined;
+
+  // Primary token for BrotherHood is FI
+  const fiJetton = useMemo(
+    () => userJettons.find((j) => isFiJetton(j)),
+    [userJettons],
+  );
+
+  const fiAmount = useMemo(() => {
+    if (!fiJetton) return 0;
+    return toDecimal(fiJetton.balance, fiJetton.decimalsNumber ?? 9);
+  }, [fiJetton]);
 
   const totalUsd = useMemo(() => {
-    if (!ready) return 0;
+    if (!ready || ratesUpdated === 0) return 0;
 
     let total = 0;
     const tonRate = rates['GRAM']?.rate;
@@ -51,30 +68,39 @@ export const BalanceTotal: React.FC = () => {
       total += toDecimal(jetton.balance, jetton.decimalsNumber ?? 9) * rate;
     }
     return total;
-  }, [ready, rates, balance, userJettons]);
+  }, [ready, ratesUpdated, rates, balance, userJettons]);
 
   const handleCopy = useCallback(async () => {
     if (!address) return;
-    try {
-      await navigator.clipboard.writeText(address);
-      toast.success('Address copied');
-    } catch {
-      toast.error('Failed to copy address');
-    }
-  }, [address]);
+    await copyWalletAddress(address);
+  }, [address, copyWalletAddress]);
 
-  const animatedTotal = useCountUp(totalUsd);
-  const { intPart, fracPart } = formatUsdParts(animatedTotal);
+  const animatedFi = useCountUp(fiAmount);
+  const { intPart, fracPart } = formatNumberParts(animatedFi);
+  const tonDecimal =
+    balance !== undefined ? toDecimal(balance, GRAM_DECIMALS) : 0;
 
   return (
-    <section className="flex flex-col items-center pt-6 pb-6">
+    <section className="flex flex-col items-center pt-6 pb-6 text-center">
       {ready ? (
-        <div className="font-display font-bold tabular-nums leading-none tracking-[-2%]">
-          <span className="text-5xl text-muted-foreground mr-0.5">$</span>
-          <span className="text-5xl text-foreground">{intPart}</span>
-          <span className="text-5xl text-muted-foreground">.</span>
-          <span className="text-3xl text-muted-foreground">{fracPart}</span>
-        </div>
+        <>
+          <div className="flex items-baseline justify-center font-display font-bold tabular-nums leading-none tracking-[-2%]">
+            <span className="text-5xl text-foreground">{intPart}</span>
+            <span className="text-5xl text-muted-foreground">.</span>
+            <span className="text-3xl text-muted-foreground">{fracPart}</span>
+            <span className="ml-2 text-2xl font-semibold text-primary">FI</span>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground font-medium">
+            {totalUsd > 0 && (
+              <>
+                <span>≈ ${usdFormat.format(totalUsd)} USD</span>
+                <span>•</span>
+              </>
+            )}
+            <span>{tonDecimal.toFixed(2)} TON</span>
+          </div>
+        </>
       ) : (
         <div className="h-12 w-56 rounded-lg bg-muted animate-pulse" />
       )}
@@ -83,14 +109,14 @@ export const BalanceTotal: React.FC = () => {
         <button
           type="button"
           onClick={handleCopy}
-          className="mt-3 flex items-center gap-1.5 rounded-full hover:opacity-70 transition-opacity"
+          className="mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 bg-secondary/60 hover:bg-secondary transition-colors"
           aria-label="Copy address"
         >
-          <span className="w-4 h-4 rounded-full overflow-hidden inline-block flex-shrink-0">
-            <img src="/ton.svg" alt="" className="w-full h-full" />
+          <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0">
+            <img src={assetUrl('fi.svg')} alt="FI" className="w-full h-full" />
           </span>
-          <span className="text-xs font-medium text-muted-foreground">
-            {shortenAddress(address, 4)}
+          <span className="text-xs font-medium text-foreground">
+            {formatWalletAddress(address, true, 4)}
           </span>
           <Copy className="w-3.5 h-3.5 text-muted-foreground" />
         </button>

@@ -16,7 +16,6 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { getNetworkLabel } from '@demo/wallet-core';
 import type { SavedWallet } from '@demo/wallet-core';
 
@@ -25,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/core/components/ui/popover';
-import { shortenAddress } from '@/core/utils';
+import { formatTonAddress, copyTonAddress } from '@/core/utils/formatters';
 
 const networkBadgeClass = (network: SavedWallet['network']): string => {
   if (network === 'mainnet') return 'bg-green-100 text-green-800';
@@ -33,14 +32,12 @@ const networkBadgeClass = (network: SavedWallet['network']): string => {
   return 'bg-blue-100 text-blue-800';
 };
 
-const handleCopy = async (address: string, event: React.MouseEvent) => {
+const handleCopy = async (wallet: SavedWallet, event: React.MouseEvent) => {
   event.stopPropagation();
-  try {
-    await navigator.clipboard.writeText(address);
-    toast.success('Address copied');
-  } catch {
-    toast.error('Failed to copy address');
-  }
+  await copyTonAddress(wallet.address, {
+    isContract: false,
+    network: wallet.network,
+  });
 };
 
 interface WalletRowProps {
@@ -145,12 +142,17 @@ export const WalletRow: React.FC<WalletRowProps> = ({
         </div>
         <button
           type="button"
-          onClick={(e) => handleCopy(wallet.address, e)}
+          onClick={(e) => handleCopy(wallet, e)}
           className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors max-w-full"
           aria-label="Copy address"
         >
           <span className="font-mono truncate">
-            {shortenAddress(wallet.address, 6)}
+            {formatTonAddress(wallet.address, {
+              isContract: false,
+              network: wallet.network,
+              shorten: true,
+              count: 6,
+            })}
           </span>
           <Copy className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2} />
         </button>
