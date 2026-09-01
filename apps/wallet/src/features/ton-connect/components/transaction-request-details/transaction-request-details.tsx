@@ -28,7 +28,7 @@ function AddressLink({ address, label }: { address?: string; label?: string }) {
   const network = useActiveWalletNetwork();
   if (!address) return null;
 
-  const normalized = normalizeAddress(address) ?? address;
+  const normalized = normalizeAddress(address, false, network) ?? address;
 
   return (
     <a
@@ -38,7 +38,7 @@ function AddressLink({ address, label }: { address?: string; label?: string }) {
       className="text-blue-600 hover:underline"
       title={normalized}
     >
-      {label ?? shortenAddress(address, 8)}
+      {label ?? shortenAddress(address, 8, false, network)}
     </a>
   );
 }
