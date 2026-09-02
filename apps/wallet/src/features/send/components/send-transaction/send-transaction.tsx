@@ -226,7 +226,8 @@ export const SendTransaction: React.FC = () => {
             onUseMyAddress={address ? handleSendToSelf : undefined}
           />
 
-          <GaslessOptions gasless={gasless} />
+          {/* Gasless fees feature - hidden for now, will be re-enabled in future */}
+          {/* <GaslessOptions gasless={gasless} /> */}
 
           {error && <p className="text-center text-sm text-red-500">{error}</p>}
 

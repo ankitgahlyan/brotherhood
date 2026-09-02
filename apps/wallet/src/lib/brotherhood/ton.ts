@@ -5,6 +5,7 @@ import { FI_ADDRESS, network, type Network } from './config';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
+import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
 
 export type { Network } from './config';
 
@@ -40,9 +41,11 @@ export function getTonClient(network: Network): TonClient {
       network === 'mainnet'
         ? 'https://toncenter.com/api/v2/jsonRPC'
         : 'https://testnet.toncenter.com/api/v2/jsonRPC';
+    const apiKey = toncenterApiKey(network);
     clients[network] = new TonClient({
       endpoint,
-      apiKey: toncenterApiKey(network),
+      apiKey,
+      httpAdapter: createTonClientAxiosAdapter({ apiKey }) as any,
     });
   }
   return clients[network]!;
@@ -112,17 +115,9 @@ async function fetchWithRetry(
   init?: RequestInit,
   maxRetries = 4,
 ): Promise<Response> {
-  let delay = 1000;
-  for (let i = 0; i <= maxRetries; i++) {
-    const res = await fetch(url, init);
-    if (res.status === 429 && i < maxRetries) {
-      await new Promise((r) => setTimeout(r, delay));
-      delay *= 2;
-      continue;
-    }
-    return res;
-  }
-  throw new Error('Max retries exceeded');
+  const res = await rateLimitedFetch(url, init, { maxRetries });
+  if (!res.ok) throw new Error(`Toncenter API error: ${res.status}`);
+  return res;
 }
 
 export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
