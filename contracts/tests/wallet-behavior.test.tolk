@@ -16,12 +16,6 @@ import "@contracts/fossFi/storage"
 
 import "test-utils"
 
-// Sit past the storage-prices segment split (config 18 has entries at
-// utime_since=0 and utime_since=1777500000). With both last_paid and now
-// inside the latest segment, GETSTORAGEFEE — which uses a single active
-// segment — agrees with the chain's segmented storage-fee charge.
-const TEST_NOW_BASELINE = 1800000000
-
 get fun `test wallet: kitchenSink`() {
     val (minter, deployer, notDeployer) = setupTest();
     val transferAmount = ton("100");
@@ -638,7 +632,7 @@ get fun `test wallet: change country fails when active votes exist`() {
     });
 }
 
-@test.skip
+// @test.skip
 get fun `test wallet: granular voting, additive endorsements, and partial unvoting`() {
     val (minter, deployer, _) = setupTest();
     val rootWallet = userWallet(minter, deployer.address);

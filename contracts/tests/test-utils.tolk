@@ -37,6 +37,12 @@ fun buildTestMetadata(uri: string): cell {
     return metadata.toCell();
 }
 
+// Sit past the storage-prices segment split (config 18 has entries at
+// utime_since=0 and utime_since=1777500000). With both last_paid and now
+// inside the latest segment, GETSTORAGEFEE — which uses a single active
+// segment — agrees with the chain's segmented storage-fee charge.
+const TEST_NOW_BASELINE = 1800000000
+
 // Common values used across tests (nanotons for TON amounts)
 const TEST_JETTON_UNIT = 1
 const DEFAULT_MINTED_JETTONS = ton("5") // 5 TON in jetton units
@@ -311,6 +317,8 @@ fun deployDaoProxyTest(
 }
 
 fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
+    testing.setNow(TEST_NOW_BASELINE - 1000);
+
     val deployer = testing.treasury("deployer");
     val notDeployer = testing.treasury("notDeployer");
 
@@ -348,6 +356,17 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         { value: ton("10") },
     );
     expect(upgradeResult).toHaveSuccessfulTx<Upgrade>({
+        from: deployer.address,
+        to: minter.address,
+    });
+
+    testing.setNow(TEST_NOW_BASELINE - 500);
+
+    val approveUpgradeResult = minter.sendApproveUpgrade(
+        deployer.address,
+        { value: ton("10") },
+    );
+    expect(approveUpgradeResult).toHaveSuccessfulTx<ApproveUpgrade>({
         from: deployer.address,
         to: minter.address,
     });
