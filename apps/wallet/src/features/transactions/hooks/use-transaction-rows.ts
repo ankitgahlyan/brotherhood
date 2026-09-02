@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useWalletStore } from '@demo/wallet-core';
 import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
+import { useExplorer } from '@/core/explorer';
 
 import { mapEventToRow, mapPendingToRow } from '../utils/map-transaction-row';
 import type { TransactionRowModel } from '../utils/map-transaction-row';
@@ -27,6 +28,7 @@ interface TransactionRows {
  * and maps everything to rows. Shared by the dashboard preview and the full history page.
  */
 export const useTransactionRows = (limit: number): TransactionRows => {
+  const { explorer } = useExplorer();
   const { events, loadEvents, address, pendingTransactions, network, hasMore } =
     useWalletStore(
       useShallow((state) => {
@@ -76,14 +78,14 @@ export const useTransactionRows = (limit: number): TransactionRows => {
         const timestamp = p.preview?.timestamp ?? nowSeconds();
         return {
           timestamp,
-          row: mapPendingToRow(p, myAddress, timestamp, network),
+          row: mapPendingToRow(p, myAddress, timestamp, network, explorer),
         };
       });
 
     const eventRows = eventItems
       .map((ev) => ({
         timestamp: ev.timestamp,
-        row: mapEventToRow(ev, myAddress, network),
+        row: mapEventToRow(ev, myAddress, network, explorer),
       }))
       .filter(
         (item): item is { timestamp: number; row: TransactionRowModel } =>
@@ -93,7 +95,7 @@ export const useTransactionRows = (limit: number): TransactionRows => {
     return [...pendingRows, ...eventRows]
       .sort((a, b) => b.timestamp - a.timestamp)
       .map((item) => item.row);
-  }, [events, pendingTransactions, address, network]);
+  }, [events, pendingTransactions, address, network, explorer]);
 
   return { rows, hasMore };
 };

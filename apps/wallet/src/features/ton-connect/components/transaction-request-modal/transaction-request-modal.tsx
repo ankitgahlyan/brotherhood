@@ -20,6 +20,7 @@ import { RequestModal } from '../request-modal';
 import { TransactionRequestDetails } from '../transaction-request-details';
 
 import { useActiveWalletNetwork } from '@/features/jettons';
+import { useExplorer } from '@/core/explorer';
 
 interface TransactionRequestModalProps {
   request: SendTransactionRequestEvent;
@@ -31,6 +32,7 @@ export const TransactionRequestModal: React.FC<
   TransactionRequestModalProps
 > = ({ request, savedWallets, isOpen }) => {
   const network = useActiveWalletNetwork();
+  const { explorer } = useExplorer();
   const { approveTransactionRequest, rejectTransactionRequest } =
     useTransactionRequests();
 
@@ -39,24 +41,29 @@ export const TransactionRequestModal: React.FC<
     if (result?.signedBoc) {
       const { hash } = getNormalizedExtMessageHash(result.signedBoc);
       const { tonScan, tonViewer } = getTransactionExplorerUrls(hash, network);
+      const primaryUrl = explorer === 'tonviewer' ? tonViewer : tonScan;
+      const primaryLabel = explorer === 'tonviewer' ? 'TonViewer' : 'TonScan';
+      const secondaryUrl = explorer === 'tonviewer' ? tonScan : tonViewer;
+      const secondaryLabel = explorer === 'tonviewer' ? 'TonScan' : 'TonViewer';
+
       toast.success('Transaction is sent to the network', {
         description: (
-          <span className="flex gap-3 mt-1">
+          <span className="flex gap-3 mt-1 text-xs">
             <a
-              href={tonScan}
+              href={primaryUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline"
+              className="text-primary font-semibold underline"
             >
-              TonScan
+              {primaryLabel} (Preferred)
             </a>
             <a
-              href={tonViewer}
+              href={secondaryUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline"
+              className="text-muted-foreground hover:text-foreground underline"
             >
-              TonViewer
+              {secondaryLabel}
             </a>
           </span>
         ),

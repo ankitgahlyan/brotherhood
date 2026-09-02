@@ -23,6 +23,7 @@ import {
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
+import { useExplorer, type ExplorerChoice } from '@/core/explorer';
 
 import { ToggleRow } from '../toggle-row';
 
@@ -79,9 +80,18 @@ const THEME_OPTIONS: {
   { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
 ];
 
+const getExplorerHost = (choice: ExplorerChoice, network: string): string => {
+  const prefix =
+    network === 'testnet' ? 'testnet.' : network === 'tetra' ? 'tetra.' : '';
+  return choice === 'tonviewer'
+    ? `${prefix}tonviewer.com`
+    : `${prefix}tonscan.org`;
+};
+
 export const SettingsDropdown: React.FC = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { explorer, setExplorer } = useExplorer();
   const {
     lock,
     reset,
@@ -92,7 +102,7 @@ export const SettingsDropdown: React.FC = () => {
     showFastSend,
     setShowFastSend,
   } = useAuth();
-  const { getDecryptedMnemonic } = useWallet();
+  const { getDecryptedMnemonic, network = 'testnet' } = useWallet();
 
   const [panel, setPanel] = useState<'menu' | 'create' | 'mnemonic' | null>(
     null,
@@ -203,6 +213,69 @@ export const SettingsDropdown: React.FC = () => {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Block Explorer Section */}
+          <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Block Explorer
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground/80 bg-background/60 px-2 py-0.5 rounded-full border border-border">
+                {network}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 bg-background/60 p-1.5 rounded-xl border border-border">
+              <button
+                type="button"
+                onClick={() => setExplorer('tonscan')}
+                className={`flex flex-col p-2.5 rounded-lg text-left transition-all cursor-pointer ${
+                  explorer === 'tonscan'
+                    ? 'bg-card text-foreground shadow-sm font-semibold border border-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                }`}
+                data-testid="explorer-option-tonscan"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">
+                    TonScan
+                  </span>
+                  {explorer === 'tonscan' ? (
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
+                  {getExplorerHost('tonscan', network)}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExplorer('tonviewer')}
+                className={`flex flex-col p-2.5 rounded-lg text-left transition-all cursor-pointer ${
+                  explorer === 'tonviewer'
+                    ? 'bg-card text-foreground shadow-sm font-semibold border border-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                }`}
+                data-testid="explorer-option-tonviewer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">
+                    TonViewer
+                  </span>
+                  {explorer === 'tonviewer' && (
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
+                  {getExplorerHost('tonviewer', network)}
+                </span>
+              </button>
             </div>
           </div>
 

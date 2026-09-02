@@ -18,6 +18,7 @@ import {
   getTransactionExplorerUrls,
 } from '@demo/wallet-core';
 import { toast } from 'sonner';
+import { useExplorer } from '@/core/explorer';
 
 import { useSendToken } from '../../hooks/use-send-token';
 import { useSendTokens } from '../../hooks/use-send-tokens';
@@ -72,29 +73,35 @@ export const SendTransaction: React.FC = () => {
 
   // Success toast with explorer links — for flows that return a broadcast hash
   // immediately (gasless send, fast send).
+  const { explorer } = useExplorer();
   const notifySent = (normalizedHash: string) => {
     const { tonScan, tonViewer } = getTransactionExplorerUrls(
       normalizedHash,
       network,
     );
+    const primaryUrl = explorer === 'tonviewer' ? tonViewer : tonScan;
+    const primaryLabel = explorer === 'tonviewer' ? 'TonViewer' : 'TonScan';
+    const secondaryUrl = explorer === 'tonviewer' ? tonScan : tonViewer;
+    const secondaryLabel = explorer === 'tonviewer' ? 'TonScan' : 'TonViewer';
+
     toast.success('Transaction is sent to the network', {
       description: (
-        <span className="flex gap-3 mt-1">
+        <span className="flex gap-3 mt-1 text-xs">
           <a
-            href={tonScan}
+            href={primaryUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline"
+            className="text-primary font-semibold underline"
           >
-            TonScan
+            {primaryLabel} (Preferred)
           </a>
           <a
-            href={tonViewer}
+            href={secondaryUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline"
+            className="text-muted-foreground hover:text-foreground underline"
           >
-            TonViewer
+            {secondaryLabel}
           </a>
         </span>
       ),

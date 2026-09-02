@@ -12,12 +12,13 @@ import type { Action, Event } from '@ton/walletkit';
 import {
   formatLargeValue,
   formatUnits,
-  getTonviewerTxUrl,
   sameAddress,
 } from '@/core/utils';
+import { getExplorerTxUrl, type ExplorerChoice } from '@/core/explorer';
+import type { NetworkType } from '@demo/wallet-core';
 
 /** Network accepted by the explorer-url builder (mainnet/testnet/tetra). */
-type ExplorerNetwork = Parameters<typeof getTonviewerTxUrl>[0];
+type ExplorerNetwork = NetworkType;
 
 /** Status badge shown on the transaction icon. */
 export type TransactionRowStatus = 'success' | 'loading' | 'failed';
@@ -136,6 +137,7 @@ export const mapEventToRow = (
   event: Event,
   myAddress: string,
   network: ExplorerNetwork,
+  explorer: ExplorerChoice = 'tonscan',
 ): TransactionRowModel | null => {
   if (!event.actions || event.actions.length === 0) return null;
   const action = selectRelevantAction(event.actions, myAddress);
@@ -147,7 +149,7 @@ export const mapEventToRow = (
     : eventId;
   return {
     id: eventId,
-    explorerUrl: getTonviewerTxUrl(network, hash),
+    explorerUrl: getExplorerTxUrl(network, hash, explorer),
     title,
     subtitleId: truncateMiddle(eventId),
     amount: signedAmount(value, isOutgoing),
@@ -173,13 +175,18 @@ export const mapPendingToRow = (
   myAddress: string,
   timestamp: number,
   network: ExplorerNetwork,
+  explorer: ExplorerChoice = 'tonscan',
 ): TransactionRowModel => {
   const status = pendingStatus(pending);
   // Not-yet-on-chain (still loading) transactions have no explorer page yet.
   const explorerUrl =
     status === 'loading'
       ? undefined
-      : getTonviewerTxUrl(network, pending.externalHash ?? pending.traceId);
+      : getExplorerTxUrl(
+          network,
+          pending.externalHash ?? pending.traceId,
+          explorer,
+        );
   const base = {
     id: `pending-${pending.traceId}`,
     explorerUrl,
