@@ -21,6 +21,7 @@ import { NonMemberCard } from './non-member-card';
 import { ActivationBanner } from './activation-banner';
 import { useIsNetworkMember } from '../hooks/use-is-network-member';
 
+import { useFiMinterState } from '@/lib/brotherhood/queries';
 import { useFiAccount } from '../hooks/use-fi-account';
 import { useMemberProfiles } from '../hooks/use-member-profiles';
 import { useFiTransfer } from '../hooks/use-fi-transfer';
@@ -35,6 +36,7 @@ import { useSpendAllowance } from '../hooks/use-spend-allowance';
 import { useGoldTransfer } from '../hooks/use-gold-transfer';
 import { useProfile } from '../hooks/use-profile';
 import { useAuthorityActions } from '../hooks/use-authority-actions';
+import { useRequestUpgrade } from '../hooks/use-request-upgrade';
 
 type Tab =
   | 'account'
@@ -98,6 +100,7 @@ export const BrotherhoodScreen: React.FC = () => {
   const [targetAddress, setTargetAddress] = useState('');
   const [isUnvote, setIsUnvote] = useState(false);
   const [voteCount, setVoteCount] = useState<number>(1);
+  const [showVotedDropdown, setShowVotedDropdown] = useState(false);
   const [grantee, setGrantee] = useState('');
   const [granter, setGranter] = useState('');
   const [goldRecipient, setGoldRecipient] = useState('');
@@ -255,6 +258,18 @@ export const BrotherhoodScreen: React.FC = () => {
     accountData: account.data,
   });
 
+  const minter = useFiMinterState();
+  const minterVersion = minter.data ? Number(minter.data.walletVersion) : null;
+
+  const upgrade = useRequestUpgrade({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    network,
+    accountData: account.data,
+    minterVersion,
+  });
+
   const isAuthority = account.data?.isAuthorityAccount ?? false;
   const memberCountry = getCountryByCode(account.data?.country);
 
@@ -304,6 +319,31 @@ export const BrotherhoodScreen: React.FC = () => {
       <div className="space-y-4">
         {/* Activation & Status Banner */}
         <ActivationBanner />
+
+        {/* Contract Upgrade Alert Banner */}
+        {upgrade.hasUpgradeAvailable && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex justify-between items-center gap-3">
+            <div>
+              <span className="font-semibold block flex items-center gap-1.5">
+                <span>⚡ Contract Upgrade Available</span>
+              </span>
+              <span className="text-[11px] text-muted-foreground block mt-0.5">
+                Your wallet is on <span className="font-semibold text-foreground">v{upgrade.walletVersion}</span>. Latest minter version is <span className="font-semibold text-foreground">v{upgrade.minterVersion}</span>.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+              onClick={() => upgrade.send()}
+              disabled={upgrade.isDisabled}
+              loading={upgrade.isSending}
+              data-testid="brotherhood-upgrade-submit"
+            >
+              Upgrade to v{upgrade.minterVersion}
+            </Button>
+          </div>
+        )}
 
         {account.data && account.data.debts && (
           <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex justify-between items-center">
@@ -530,6 +570,32 @@ export const BrotherhoodScreen: React.FC = () => {
                     <span className="text-foreground text-[11px]">
                       {formatDate(account.data.accountInit)}
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Contract Version
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-foreground font-medium text-[11px]">
+                        v{account.data.version} (Minter: v{minterVersion ?? '...'})
+                      </span>
+                      {upgrade.hasUpgradeAvailable ? (
+                        <button
+                          type="button"
+                          onClick={() => upgrade.send()}
+                          disabled={upgrade.isDisabled}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition disabled:opacity-50"
+                        >
+                          {upgrade.isSending
+                            ? 'Upgrading...'
+                            : `Upgrade to v${upgrade.minterVersion}`}
+                        </button>
+                      ) : (
+                        <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          ✓ Up to date
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -941,15 +1007,116 @@ export const BrotherhoodScreen: React.FC = () => {
             )}
 
             {/* Voting Action Form */}
-            <div className="space-y-3 border-t border-border pt-2">
-              <h4 className="text-xs font-semibold text-foreground">
-                {isUnvote ? 'Unvote Candidate' : 'Vote for Candidate'}
-              </h4>
+            <div className="space-y-3.5 border-t border-border pt-3">
+              {/* Big Vote / Unvote Radio Segmented Control */}
+              <div className="grid grid-cols-2 gap-2 p-1.5 bg-secondary/60 border border-border/80 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUnvote(false);
+                    setVoteCount((c) =>
+                      Math.min(c, account.data?.votes ?? 10) || 1,
+                    );
+                  }}
+                  className={`flex flex-col items-start p-3 rounded-xl transition text-left cursor-pointer ${
+                    !isUnvote
+                      ? 'bg-card border-2 border-primary text-card-foreground shadow-sm'
+                      : 'border-2 border-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                  }`}
+                  data-testid="brotherhood-vote-mode-vote"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                      <span>🗳️ Vote</span>
+                    </span>
+                    <span
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        !isUnvote
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted-foreground/50 bg-transparent'
+                      }`}
+                    >
+                      {!isUnvote && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground mt-1">
+                    Endorse member ({account.data?.votes ?? 10} power left)
+                  </span>
+                </button>
 
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Target Member Address
-                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUnvote(true);
+                    if (
+                      (!targetAddress.trim() ||
+                        !account.data?.votedFor.some(
+                          (e) => e.addressString === targetAddress.trim(),
+                        )) &&
+                      account.data?.votedFor &&
+                      account.data.votedFor.length > 0
+                    ) {
+                      const first = account.data.votedFor[0];
+                      setTargetAddress(first.addressString);
+                      setVoteCount(first.count);
+                    } else if (candidateVotedEntry) {
+                      setVoteCount((c) =>
+                        Math.min(c, candidateVotedEntry.count),
+                      );
+                    }
+                  }}
+                  className={`flex flex-col items-start p-3 rounded-xl transition text-left cursor-pointer ${
+                    isUnvote
+                      ? 'bg-card border-2 border-primary text-card-foreground shadow-sm'
+                      : 'border-2 border-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                  }`}
+                  data-testid="brotherhood-vote-mode-unvote"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                      <span>↩️ Unvote</span>
+                    </span>
+                    <span
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        isUnvote
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted-foreground/50 bg-transparent'
+                      }`}
+                    >
+                      {isUnvote && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground mt-1">
+                    Reclaim power ({account.data?.votedFor.length ?? 0} active)
+                  </span>
+                </button>
+              </div>
+
+              {/* Target Member Address with Dropdown Suggestions */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-medium text-muted-foreground">
+                    Target Member Address
+                  </label>
+                  {account.data && account.data.votedFor.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowVotedDropdown((prev) => !prev)}
+                      className="text-xs text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>
+                        {showVotedDropdown
+                          ? 'Hide endorsements'
+                          : `Pick from active (${account.data.votedFor.length}) ▾`}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
                 <InputScan
                   value={targetAddress}
                   onChange={(val) => {
@@ -964,6 +1131,68 @@ export const BrotherhoodScreen: React.FC = () => {
                   placeholder="0Q..."
                   data-testid="brotherhood-vote-target"
                 />
+
+                {/* Dropdown suggestions list of already voted candidates */}
+                {account.data &&
+                  account.data.votedFor.length > 0 &&
+                  (showVotedDropdown || (isUnvote && !targetAddress.trim())) && (
+                    <div className="p-2 bg-secondary/80 border border-border rounded-xl space-y-1 mt-1 max-h-56 overflow-y-auto">
+                      <span className="text-[11px] font-semibold text-muted-foreground px-2 block">
+                        {isUnvote
+                          ? 'Select an endorsed candidate to unvote:'
+                          : 'Select an existing candidate to add votes:'}
+                      </span>
+                      {account.data.votedFor.map((entry) => {
+                        const prof =
+                          resolvedProfiles.data?.[entry.addressString];
+                        const candCountry = getCountryByCode(prof?.country);
+                        const isSelected =
+                          targetAddress.trim() === entry.addressString;
+                        return (
+                          <button
+                            key={entry.addressString}
+                            type="button"
+                            onClick={() => {
+                              setTargetAddress(entry.addressString);
+                              setShowVotedDropdown(false);
+                              if (isUnvote) {
+                                setVoteCount(entry.count);
+                              }
+                            }}
+                            className={`w-full p-2.5 rounded-lg text-left text-xs transition flex justify-between items-center cursor-pointer ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground font-semibold'
+                                : 'bg-card/70 hover:bg-card text-foreground border border-border/40'
+                            }`}
+                          >
+                            <div className="truncate pr-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate">
+                                  @{prof?.username || 'member'}
+                                </span>
+                                <span className="text-[10px] opacity-80">
+                                  {candCountry.flag} {candCountry.name}
+                                </span>
+                              </div>
+                              <span className="font-mono text-[10px] opacity-70 block truncate">
+                                {formatShortContract(entry.addressString)}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                isSelected
+                                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                                  : 'bg-secondary text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {entry.count}{' '}
+                              {entry.count === 1 ? 'vote' : 'votes'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
               </div>
 
               {/* Vote Count / Number of Votes */}
@@ -1077,36 +1306,17 @@ export const BrotherhoodScreen: React.FC = () => {
 
                 {!isUnvote && account.data && (
                   <p className="text-[11px] text-muted-foreground">
-                    Remaining voting power after vote: {Math.max(0, account.data.votes - voteCount)} / 10
+                    Remaining voting power after vote:{' '}
+                    {Math.max(0, account.data.votes - voteCount)} / 10
                   </p>
                 )}
                 {isUnvote && account.data && (
                   <p className="text-[11px] text-muted-foreground">
-                    Will restore {voteCount} {voteCount === 1 ? 'vote' : 'votes'} (available power will become {account.data.votes + voteCount} / 10)
+                    Will restore {voteCount}{' '}
+                    {voteCount === 1 ? 'vote' : 'votes'} (available power will
+                    become {account.data.votes + voteCount} / 10)
                   </p>
                 )}
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  id="unvote-check"
-                  checked={isUnvote}
-                  onChange={(e) => {
-                    const nextUnvote = e.target.checked;
-                    setIsUnvote(nextUnvote);
-                    if (nextUnvote && candidateVotedEntry) {
-                      setVoteCount(Math.min(voteCount, candidateVotedEntry.count));
-                    }
-                  }}
-                  className="rounded border-border"
-                />
-                <label
-                  htmlFor="unvote-check"
-                  className="text-foreground cursor-pointer"
-                >
-                  Unvote mode (reclaim endorsement votes)
-                </label>
               </div>
 
               {vote.validationError && (

@@ -16,6 +16,7 @@ import {
   AskToBurn,
   AskToTransfer,
   ActInvite,
+  ActRequestUpgrade,
   ActSetPersonalJettonMinter,
   ActUnvote,
   ActVote,
@@ -293,6 +294,10 @@ export function buildUnvoteBody(params: {
 
 export function buildDestroyBody(): Cell {
   return Destroy.toCell(Destroy.create());
+}
+
+export function buildRequestUpgradeBody(): Cell {
+  return ActRequestUpgrade.toCell(ActRequestUpgrade.create());
 }
 
 export function buildTopUpTonsBody(): Cell {

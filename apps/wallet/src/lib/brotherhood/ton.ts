@@ -2,6 +2,7 @@ import { TonClient } from '@ton/ton';
 import { Address, beginCell } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
+import { FossFi } from '@wrappers/FossFi.gen';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
@@ -187,6 +188,12 @@ export async function getFiWalletState(owner: Address) {
   return getTonClient(network)
     .open(FossFiWallet.fromAddress(await getWalletAddress(owner)))
     .getWalletDataAll();
+}
+
+export async function getFiMinterState() {
+  return getTonClient(network)
+    .open(FossFi.fromAddress(Address.parse(FI_ADDRESS)))
+    .getJettonDataAll();
 }
 
 export interface AllowanceEntry {

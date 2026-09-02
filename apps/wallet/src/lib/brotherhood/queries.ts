@@ -4,6 +4,7 @@ import {
   fetchJettonMaster,
   fetchWalletBalance,
   getCircle,
+  getFiMinterState,
   getFiWalletState,
   getPersonalMinterForIssuer,
   getPersonalWalletAddress,
@@ -51,6 +52,14 @@ export function useJettonMaster(enabled = true) {
   return useQuery<JettonMasterInfo>({
     queryKey: ['jetton-master'],
     queryFn: () => cachedQueryFn('jetton-master', fetchJettonMaster),
+    enabled,
+  });
+}
+
+export function useFiMinterState(enabled = true) {
+  return useQuery({
+    queryKey: ['fi-minter-state'],
+    queryFn: () => cachedQueryFn('fi-minter-state', getFiMinterState),
     enabled,
   });
 }
