@@ -44,7 +44,7 @@ fun deployTestMinter(admin: address): FossFi {
     return minter;
 }
 
-fun mintTo(minter: FossFi, from: address, recipient: address, amount: coins): address {
+fun mintToPersonal(minter: FossFi, from: address, recipient: address, amount: coins): address {
     val res = minter.sendMint(from, recipient, amount, ton("0.05"), ton("0.3"));
     res.waitForFirstTransaction();
     return minter.getWalletAddress(recipient);
@@ -88,7 +88,7 @@ fun main() {
 
     // 1. fresh jetton minter + an active issuer FI account
     val minter = deployTestMinter(deployer);
-    val buyerWallet = mintTo(minter, deployer, deployer, ton("1000"));
+    val buyerWallet = mintToPersonal(minter, deployer, deployer, ton("1000"));
     val issuerWallet = activateIssuer(minter, buyerWallet, deployer, issuerOwner);
     println("MINTER={}", minter.address);
     println("ISSUER_WALLET={}", issuerWallet);

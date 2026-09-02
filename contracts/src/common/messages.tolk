@@ -301,10 +301,12 @@ struct (0x000010a8) ChangeCountry {
 
 struct (0x000010f1) ActVote {
     transferRecipient: address
+    count: uint4 = 1
 }
 
 struct (0x000010f2) ActUnvote {
     transferRecipient: address
+    count: uint4 = 1
 }
 
 struct (0x000010f3) VotingAction {

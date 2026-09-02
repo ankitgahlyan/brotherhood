@@ -1,3 +1,4 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -295,7 +296,7 @@ fun buildLotteryAddrsMap(minterAddress: address, deployer: address): map<uint8, 
     return lotteryAddrs;
 }
 
-fun deployDaoProxy(
+fun deployDaoProxyTest(
     deployer: Treasury,
     adminAddress: address,
     targetAddress: address,
@@ -328,12 +329,26 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         adminHandoff: null,
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(), // less than 1000 contracts expected
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });
 
     val transactions = minter.sendDeploy(deployer.address, { value: ton("10") });
     expect(transactions).toHaveSuccessfulDeploy({
+        to: minter.address,
+    });
+    // send upgrade for fiWallet
+    val upgradeResult = minter.sendUpgrade(
+        deployer.address,
+        true,
+        0,
+        deployer.address,
+        null,
+        build("FossFiWallet"),
+        { value: ton("10") },
+    );
+    expect(upgradeResult).toHaveSuccessfulTx<Upgrade>({
+        from: deployer.address,
         to: minter.address,
     });
 

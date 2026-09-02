@@ -97,6 +97,7 @@ export const BrotherhoodScreen: React.FC = () => {
   const [inviteCountry, setInviteCountry] = useState(840);
   const [targetAddress, setTargetAddress] = useState('');
   const [isUnvote, setIsUnvote] = useState(false);
+  const [voteCount, setVoteCount] = useState<number>(1);
   const [grantee, setGrantee] = useState('');
   const [granter, setGranter] = useState('');
   const [goldRecipient, setGoldRecipient] = useState('');
@@ -109,6 +110,13 @@ export const BrotherhoodScreen: React.FC = () => {
 
   // FiAccount hook
   const account = useFiAccount(address ?? null);
+
+  const candidateVotedEntry = useMemo(() => {
+    if (!account.data || !targetAddress.trim()) return undefined;
+    return account.data.votedFor.find(
+      (e) => e.addressString === targetAddress.trim(),
+    );
+  }, [account.data, targetAddress]);
 
   // Address batch resolver for voted candidates & invitees
   const addressesToResolve = useMemo(() => {
@@ -169,9 +177,11 @@ export const BrotherhoodScreen: React.FC = () => {
     walletKit,
     walletAddress: address ?? null,
     targetAddress,
+    count: voteCount,
     isUnvote,
     network,
     accountData: account.data,
+    maxUnvoteCount: candidateVotedEntry?.count,
   });
 
   const credit = useBuyCredit({
@@ -848,15 +858,15 @@ export const BrotherhoodScreen: React.FC = () => {
               <h3 className="font-semibold text-base">Trust Graph Voting</h3>
               <p className="text-xs text-muted-foreground">
                 Cast endorsements for candidates within your Country (
-                {memberCountry.flag} {memberCountry.name}). Endorsement power is
-                10 votes per member.
+                {memberCountry.flag} {memberCountry.name}). Each member is endowed with
+                10 votes that can be cast granularly and incrementally across multiple candidates.
               </p>
             </div>
 
             <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 flex justify-between items-center text-xs">
               <div>
                 <span className="text-muted-foreground block">
-                  Your Voting Power
+                  Your Available Voting Power
                 </span>
                 <span className="text-sm font-bold text-foreground">
                   {account.data?.votes ?? 10} / 10 available
@@ -907,19 +917,22 @@ export const BrotherhoodScreen: React.FC = () => {
                             />
                           </div>
                           <span className="text-[10px] text-emerald-600 font-medium">
-                            Endorsed with {entry.count} votes
+                            Endorsed with {entry.count} {entry.count === 1 ? 'vote' : 'votes'}
                           </span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setTargetAddress(entry.addressString);
-                            setIsUnvote(true);
-                          }}
-                        >
-                          Unvote
-                        </Button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setTargetAddress(entry.addressString);
+                              setIsUnvote(true);
+                              setVoteCount(entry.count);
+                            }}
+                          >
+                            Unvote All ({entry.count})
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -939,10 +952,139 @@ export const BrotherhoodScreen: React.FC = () => {
                 </label>
                 <InputScan
                   value={targetAddress}
-                  onChange={setTargetAddress}
+                  onChange={(val) => {
+                    setTargetAddress(val);
+                    const matching = account.data?.votedFor.find(
+                      (e) => e.addressString === val.trim(),
+                    );
+                    if (isUnvote && matching) {
+                      setVoteCount((c) => Math.min(c, matching.count));
+                    }
+                  }}
                   placeholder="0Q..."
                   data-testid="brotherhood-vote-target"
                 />
+              </div>
+
+              {/* Vote Count / Number of Votes */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-medium text-muted-foreground">
+                    Number of Votes ({isUnvote ? 'to unvote' : 'to cast'})
+                  </label>
+                  <span className="text-muted-foreground text-[11px]">
+                    {isUnvote
+                      ? candidateVotedEntry
+                        ? `Max unvotable: ${candidateVotedEntry.count}`
+                        : 'Select candidate above'
+                      : `Available: ${account.data?.votes ?? 10}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden">
+                    <button
+                      type="button"
+                      className="px-3 py-2 text-foreground hover:bg-secondary transition disabled:opacity-40"
+                      disabled={voteCount <= 1}
+                      onClick={() => setVoteCount((c) => Math.max(1, c - 1))}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={
+                        isUnvote
+                          ? (candidateVotedEntry?.count ?? 10)
+                          : (account.data?.votes ?? 10)
+                      }
+                      value={voteCount}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          const maxVal = isUnvote
+                            ? (candidateVotedEntry?.count ?? 10)
+                            : (account.data?.votes ?? 10);
+                          setVoteCount(Math.max(1, Math.min(maxVal || 1, val)));
+                        }
+                      }}
+                      className="w-14 text-center text-sm font-semibold bg-transparent text-foreground focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      className="px-3 py-2 text-foreground hover:bg-secondary transition disabled:opacity-40"
+                      disabled={
+                        voteCount >=
+                        (isUnvote
+                          ? (candidateVotedEntry?.count ?? 10)
+                          : (account.data?.votes ?? 10))
+                      }
+                      onClick={() => {
+                        const maxVal = isUnvote
+                          ? (candidateVotedEntry?.count ?? 10)
+                          : (account.data?.votes ?? 10);
+                        setVoteCount((c) => Math.min(maxVal, c + 1));
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Preset quick buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[1, 2, 5].map((preset) => {
+                      const maxVal = isUnvote
+                        ? (candidateVotedEntry?.count ?? 10)
+                        : (account.data?.votes ?? 10);
+                      if (preset > maxVal && maxVal > 0) return null;
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setVoteCount(preset)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
+                            voteCount === preset
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-secondary/60 text-secondary-foreground border-border/70 hover:bg-secondary'
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const maxVal = isUnvote
+                          ? (candidateVotedEntry?.count ?? 10)
+                          : (account.data?.votes ?? 10);
+                        setVoteCount(Math.max(1, maxVal));
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
+                        voteCount ===
+                        (isUnvote
+                          ? (candidateVotedEntry?.count ?? 10)
+                          : (account.data?.votes ?? 10))
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-secondary/60 text-secondary-foreground border-border/70 hover:bg-secondary'
+                      }`}
+                    >
+                      Max
+                    </button>
+                  </div>
+                </div>
+
+                {!isUnvote && account.data && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Remaining voting power after vote: {Math.max(0, account.data.votes - voteCount)} / 10
+                  </p>
+                )}
+                {isUnvote && account.data && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Will restore {voteCount} {voteCount === 1 ? 'vote' : 'votes'} (available power will become {account.data.votes + voteCount} / 10)
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-xs">
@@ -950,14 +1092,20 @@ export const BrotherhoodScreen: React.FC = () => {
                   type="checkbox"
                   id="unvote-check"
                   checked={isUnvote}
-                  onChange={(e) => setIsUnvote(e.target.checked)}
+                  onChange={(e) => {
+                    const nextUnvote = e.target.checked;
+                    setIsUnvote(nextUnvote);
+                    if (nextUnvote && candidateVotedEntry) {
+                      setVoteCount(Math.min(voteCount, candidateVotedEntry.count));
+                    }
+                  }}
                   className="rounded border-border"
                 />
                 <label
                   htmlFor="unvote-check"
                   className="text-foreground cursor-pointer"
                 >
-                  Unvote (reclaim vote endorsement)
+                  Unvote mode (reclaim endorsement votes)
                 </label>
               </div>
 
@@ -974,7 +1122,9 @@ export const BrotherhoodScreen: React.FC = () => {
                 fullWidth
                 data-testid="brotherhood-vote-submit"
               >
-                {isUnvote ? 'Unvote Candidate' : 'Cast Vote (10 Power)'}
+                {isUnvote
+                  ? `Unvote Candidate (${voteCount} ${voteCount === 1 ? 'Vote' : 'Votes'})`
+                  : `Cast ${voteCount} ${voteCount === 1 ? 'Vote' : 'Votes'}`}
               </Button>
             </div>
           </div>

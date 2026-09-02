@@ -19,6 +19,7 @@ fun main() {
     val res = senderWallet.sendActVote(
         sender,
         recipient,
+        1,
         { value: ton("0.55") },
     );
     res.waitForFirstTransaction();

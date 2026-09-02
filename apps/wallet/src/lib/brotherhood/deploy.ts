@@ -265,20 +265,28 @@ export function buildBuyCreditBody(params: {
   );
 }
 
-export function buildVoteBody(params: { transferRecipient: Address }): Cell {
-  const { transferRecipient } = params;
+export function buildVoteBody(params: {
+  transferRecipient: Address;
+  count?: number | bigint;
+}): Cell {
+  const { transferRecipient, count = 1 } = params;
   return ActVote.toCell(
     ActVote.create({
       transferRecipient,
+      count: BigInt(count),
     }),
   );
 }
 
-export function buildUnvoteBody(params: { transferRecipient: Address }): Cell {
-  const { transferRecipient } = params;
+export function buildUnvoteBody(params: {
+  transferRecipient: Address;
+  count?: number | bigint;
+}): Cell {
+  const { transferRecipient, count = 1 } = params;
   return ActUnvote.toCell(
     ActUnvote.create({
       transferRecipient,
+      count: BigInt(count),
     }),
   );
 }

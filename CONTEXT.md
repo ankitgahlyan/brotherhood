@@ -96,7 +96,7 @@ _Avoid_: Referral chain, network
 
 ### Governance
 
-**Vote** — a unit of reputational endorsement cast by one Account for another within the same Country. Voting power is a fixed endowment per Account, deliberately not weighted by FI balance or staked capital: consensus is moral and regional, not economic.
+**Vote** — a unit of reputational endorsement cast by one Account for another within the same Country. Voting power is a fixed endowment of 10 votes per Account that can be allocated granularly and incrementally across multiple Candidates, deliberately not weighted by FI balance or staked capital: consensus is moral and regional, not economic.
 _Avoid_: Stake, token-weight, reputation (when meaning the tally)
 
 **Candidate** — an active Member Account receiving a Vote endorsement from another Member of the same Country.

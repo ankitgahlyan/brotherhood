@@ -492,7 +492,12 @@ get fun `test wallet: voting succeeds between accounts with matching country`() 
         { value: ton("1") },
     );
 
-    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    val voteRes = voterWallet.sendActVote(
+        voter.address,
+        candidate.address,
+        10,
+        { value: ton("0.2") },
+    );
     expect(voteRes).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
         to: candidateWallet.address,
@@ -532,7 +537,12 @@ get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
         { value: ton("1") },
     );
 
-    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    val voteRes = voterWallet.sendActVote(
+        voter.address,
+        candidate.address,
+        10,
+        { value: ton("0.2") },
+    );
     expect(voteRes).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
         to: candidateWallet.address,
@@ -570,7 +580,12 @@ get fun `test wallet: voting fails and bounces when country mismatches, restorin
         { value: ton("1") },
     );
 
-    val voteRes = voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    val voteRes = voterWallet.sendActVote(
+        voter.address,
+        candidate.address,
+        10,
+        { value: ton("0.2") },
+    );
     expect(voteRes).toHaveFailedTx<VotingAction>({
         from: voterWallet.address,
         to: candidateWallet.address,
@@ -613,12 +628,174 @@ get fun `test wallet: change country fails when active votes exist`() {
         { value: ton("1") },
     );
 
-    voterWallet.sendActVote(voter.address, candidate.address, { value: ton("0.2") });
+    voterWallet.sendActVote(voter.address, candidate.address, 10, { value: ton("0.2") });
 
     val failChange = voterWallet.sendChangeCountry(voter.address, 0, 840, { value: ton("0.1") });
     expect(failChange).toHaveFailedTx<ChangeCountry>({
         from: voter.address,
         to: voterWallet.address,
         exitCode: Errors.HasActiveVotes,
+    });
+}
+
+@test.skip
+get fun `test wallet: granular voting, additive endorsements, and partial unvoting`() {
+    val (minter, deployer, _) = setupTest();
+    val rootWallet = userWallet(minter, deployer.address);
+
+    val voter = testing.treasury("voter-multi");
+    val candidateA = testing.treasury("cand-A");
+    val candidateB = testing.treasury("cand-B");
+    // val voterWallet = activateUser(minter, rootWallet, deployer, voter.address);
+    val voterWallet = userWallet(minter, voter.address);
+    val candAWallet = userWallet(minter, candidateA.address);
+    val candBWallet = userWallet(minter, candidateB.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        voter.address,
+        "voterM",
+        "8828308281fffff",
+        840,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidateA.address,
+        "candA",
+        "8828308281fffff",
+        840,
+        { value: ton("1") },
+    );
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        candidateB.address,
+        "candB",
+        "8828308281fffff",
+        840,
+        { value: ton("1") },
+    );
+
+    // 1. Granular initial vote: 3 votes for candA, 4 votes for candB
+    val voterCodeInit = voterWallet.getWalletData();
+    val voterState = voterWallet.stateInit!;
+    val voterCodeNow = voterState.code;
+    expect(voterCodeInit.jettonWalletCode).toNotEqual(voterCodeNow);
+    val candACodeInit = candAWallet.getWalletData();
+    val candAState = candAWallet.stateInit!;
+    val candACodeNow = candAState.code;
+    expect(candACodeInit.jettonWalletCode).toNotEqual(candACodeNow);
+
+    val voterDataBefore = voterWallet.getWalletDataAll();
+    expect(voterDataBefore.votes).toEqual(10);
+
+    var vData = voterWallet.getWalletDataAll();
+    // println(vData);
+    val voteA1 = voterWallet.sendActVote(
+        voter.address,
+        candidateA.address,
+        3,
+        { value: ton("0.2") },
+    );
+    println(voteA1);
+    expect(voteA1).toHaveSuccessfulTx<VotingAction>({
+        from: voterWallet.address,
+        to: candAWallet.address,
+    });
+
+    vData = voterWallet.getWalletDataAll();
+    // println(vData);
+    expect(vData.votes).toEqual(7); // 10 - 3 = 7 remaining
+
+    val voteB1 = voterWallet.sendActVote(
+        voter.address,
+        candidateB.address,
+        4,
+        { value: ton("0.2") },
+    );
+    println(voteB1);
+    expect(voteB1).toHaveSuccessfulTx<VotingAction>({
+        from: voterWallet.address,
+        to: candBWallet.address,
+    });
+
+    vData = voterWallet.getWalletDataAll();
+    // println(vData);
+    expect(vData.votes).toEqual(3); // 10 - 3 - 4 = 3 remaining
+    expect(candAWallet.getWalletDataAll().receivedVotes).toEqual(3);
+    expect(candBWallet.getWalletDataAll().receivedVotes).toEqual(4);
+
+    // 2. Additive vote: cast 2 more votes for candA
+    val voteA2 = voterWallet.sendActVote(
+        voter.address,
+        candidateA.address,
+        2,
+        { value: ton("0.2") },
+    );
+    expect(
+        voteA2,
+    ).toHaveSuccessfulTx<VotingAction>({ from: voterWallet.address, to: candAWallet.address });
+
+    vData = voterWallet.getWalletDataAll();
+    expect(vData.votes).toEqual(1);                                  // 3 - 2 = 1 remaining
+    expect(candAWallet.getWalletDataAll().receivedVotes).toEqual(5); // 3 + 2 = 5 total
+
+    // 3. Partial unvote: unvote 2 votes from candA
+    val unvoteA1 = voterWallet.sendActUnvote(
+        voter.address,
+        candidateA.address,
+        2,
+        { value: ton("0.2") },
+    );
+    expect(
+        unvoteA1,
+    ).toHaveSuccessfulTx<VotingAction>({ from: voterWallet.address, to: candAWallet.address });
+
+    vData = voterWallet.getWalletDataAll();
+    expect(vData.votes).toEqual(3);                                  // 1 + 2 = 3
+    expect(candAWallet.getWalletDataAll().receivedVotes).toEqual(3); // 5 - 2 = 3
+
+    // 4. Over-unvote should fail
+    val failOverUnvote = voterWallet.sendActUnvote(
+        voter.address,
+        candidateA.address,
+        5,
+        { value: ton("0.2") },
+    );
+    expect(failOverUnvote).toHaveFailedTx<ActUnvote>({
+        from: voter.address,
+        to: voterWallet.address,
+        exitCode: Errors.NoVotesAvailable,
+    });
+
+    // 5. Full unvote of remaining 3 votes from candA
+    val unvoteA2 = voterWallet.sendActUnvote(
+        voter.address,
+        candidateA.address,
+        3,
+        { value: ton("0.2") },
+    );
+    expect(
+        unvoteA2,
+    ).toHaveSuccessfulTx<VotingAction>({ from: voterWallet.address, to: candAWallet.address });
+
+    vData = voterWallet.getWalletDataAll();
+    expect(vData.votes).toEqual(6); // 3 + 3 = 6
+    expect(candAWallet.getWalletDataAll().receivedVotes).toEqual(0);
+
+    // 6. Unvoting non-endorsed candidate should fail
+    val failUnvoteNonEndorsed = voterWallet.sendActUnvote(
+        voter.address,
+        candidateA.address,
+        1,
+        { value: ton("0.2") },
+    );
+    expect(failUnvoteNonEndorsed).toHaveFailedTx<ActUnvote>({
+        from: voter.address,
+        to: voterWallet.address,
+        exitCode: Errors.NotVotedYet,
     });
 }

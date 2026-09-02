@@ -21,9 +21,11 @@ export interface UseVoteParams {
   walletKit: ITonWalletKit | null;
   walletAddress: string | null;
   targetAddress: string;
+  count?: number;
   isUnvote?: boolean;
   network: Network;
   accountData?: FiAccountData | null;
+  maxUnvoteCount?: number;
 }
 
 export interface UseVoteResult {
@@ -39,9 +41,11 @@ export function useVote({
   walletKit,
   walletAddress,
   targetAddress,
+  count = 1,
   isUnvote = false,
   network,
   accountData,
+  maxUnvoteCount,
 }: UseVoteParams): UseVoteResult {
   const {
     send: sendTx,
@@ -53,9 +57,21 @@ export function useVote({
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
+
+    if (!Number.isInteger(count) || count < 1 || count > 10) {
+      return 'Votes must be a whole number between 1 and 10';
+    }
+
     if (accountData) {
-      if (!isUnvote && accountData.votes <= 0) {
-        return 'No votes available (all 10 votes are currently cast)';
+      if (!isUnvote) {
+        if (accountData.votes <= 0) {
+          return 'No votes available (all 10 votes are currently cast)';
+        }
+        if (count > accountData.votes) {
+          return `Not enough votes available (only ${accountData.votes} remaining)`;
+        }
+      } else if (maxUnvoteCount !== undefined && count > maxUnvoteCount) {
+        return `Cannot unvote more than ${maxUnvoteCount} ${maxUnvoteCount === 1 ? 'vote' : 'votes'} cast for this member`;
       }
     }
     if (!targetAddress.trim()) return 'Enter target member address';
@@ -69,7 +85,7 @@ export function useVote({
       return 'Invalid target address';
     }
     return null;
-  }, [wallet, walletAddress, accountData, isUnvote, targetAddress]);
+  }, [wallet, walletAddress, accountData, isUnvote, targetAddress, count, maxUnvoteCount]);
 
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
@@ -78,13 +94,13 @@ export function useVote({
     const target = Address.parse(targetAddress.trim());
 
     const payload = isUnvote
-      ? buildUnvoteBody({ transferRecipient: target })
-      : buildVoteBody({ transferRecipient: target });
+      ? buildUnvoteBody({ transferRecipient: target, count })
+      : buildVoteBody({ transferRecipient: target, count });
 
     await sendTx([
       { toAddress: fiWalletAddr.toString(), amount: GAS.VOTE, payload },
     ]);
-  }, [walletAddress, targetAddress, isUnvote, network, sendTx]);
+  }, [walletAddress, targetAddress, isUnvote, count, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
 

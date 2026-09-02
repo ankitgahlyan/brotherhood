@@ -12,6 +12,7 @@ display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
     "Lottery", # small number deployed easy upgrades
+    # don't touch this or it'll break address calculation in FossFiWallet contract
     # { name = "FossFiWallet", kind = "embed_code", function = "fossFiWalletCompiledCodeLibraryRef" },
     { name = "Location", kind = "embed_code", function = "locationCompiledCodeLibraryRef" },
 ]

@@ -303,13 +303,14 @@ fun FossFiWallet.sendActVote(
     self,
     from: address,
     transferRecipient: address,
+    count: uint4,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActVote { transferRecipient },
+        body: ActVote { transferRecipient, count },
     });
     return net.send(from, genericMsg);
 }
@@ -318,13 +319,14 @@ fun FossFiWallet.sendActUnvote(
     self,
     from: address,
     transferRecipient: address,
+    count: uint4,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActUnvote { transferRecipient },
+        body: ActUnvote { transferRecipient, count },
     });
     return net.send(from, genericMsg);
 }

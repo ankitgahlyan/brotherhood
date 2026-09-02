@@ -120,7 +120,15 @@ fun onBouncedMessage(in: InMessageBounced): void {
                 store.votes += msg.count;
                 var maps = store.maps.load();
                 var social = maps.social.load();
-                social.votedFor.delete(in.senderAddress);
+                val exists = social.votedFor.get(in.senderAddress);
+                if (exists.isFound) {
+                    val current: uint4 = exists.loadValue();
+                    if (current <= msg.count) {
+                        social.votedFor.delete(in.senderAddress);
+                    } else {
+                        social.votedFor.set(in.senderAddress, current - msg.count);
+                    }
+                }
                 maps.social = social.toCell();
                 store.maps = maps.toCell();
             }
@@ -319,11 +327,12 @@ fun onInternalMessage(in: InMessage): void {
             ) throw Errors.ProvideCoordinates;
 
             val now = blockchain.now();
+            // every 4 hours, spam protection
             assert (
                 ((now > (time.lastInvite + INVITE_WAIT)) &
                 (now > (time.accountInit + ACTIVATION_WAIT))) |
                 (store.isPrevilegedAccount)
-            ) throw Errors.WaitMore;                                                                                                                               // every 4 hours, spam protection
+            ) throw Errors.WaitMore;
             assert (store.connections < 11) throw Errors.MaxConnections;
             store.connections += 1;
             time.lastInvite = now;
@@ -366,26 +375,22 @@ fun onInternalMessage(in: InMessage): void {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
             // check if votingPower exists
-            assert (store.votes != 0) throw Errors.NoVotesAvailable;
-            assert (
-                msg.transferRecipient != in.senderAddress
-            ) throw Errors.IncorrectReceiver;                                                  // no self-voting
+            assert (msg.count > 0 && store.votes >= msg.count) throw Errors.NoVotesAvailable;
+            // no self-voting
+            assert (msg.transferRecipient != in.senderAddress) throw Errors.IncorrectReceiver;
             val candidate = msg.transferRecipient.getAddrFiWallet();
-            store.votes = 0;
-            social
-                .votedFor
-                .set(
-                    candidate,
-                    10,
-                );                                                                             // store to unVoteLater + total votes sent
+            store.votes -= msg.count;
+            val exists = social.votedFor.get(candidate);
+            val prevVotes: uint4 = exists.isFound ? exists.loadValue() : 0;
+            social.votedFor.set(candidate, prevVotes + msg.count);
 
             val votingMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: candidate,
                 value: 0,
                 body: VotingAction {
-                    // positiveVote: true, // default
-                    // count: 10, // default
+                    positiveVote: true,
+                    count: msg.count,
                     sender: addrs.owner,
                     country: profile.country,
                 },
@@ -399,10 +404,19 @@ fun onInternalMessage(in: InMessage): void {
         ActUnvote => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
+            assert (msg.count > 0) throw Errors.NoVotesAvailable;
             val candidate = msg.transferRecipient.getAddrFiWallet();
-            val exists = social.votedFor.deleteAndGetDeleted(candidate);
+            val exists = social.votedFor.get(candidate);
             assert (exists.isFound) throw Errors.NotVotedYet;
-            store.votes += exists.loadValue();
+            val votedCount: uint4 = exists.loadValue();
+            assert (msg.count <= votedCount) throw Errors.NoVotesAvailable;
+
+            if (msg.count == votedCount) {
+                social.votedFor.delete(candidate);
+            } else {
+                social.votedFor.set(candidate, votedCount - msg.count);
+            }
+            store.votes += msg.count;
 
             val votingMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -410,6 +424,7 @@ fun onInternalMessage(in: InMessage): void {
                 value: 0,
                 body: VotingAction {
                     positiveVote: false,
+                    count: msg.count,
                     sender: addrs.owner,
                 },
             });
@@ -687,6 +702,9 @@ fun onInternalMessage(in: InMessage): void {
                         transformSliceToContinuation(msg.currentWalletCode.beginParse()),
                     );
                     hotUpgradeFiWalletData(msg.currentStorage);
+                    // if (msg.currentStorage != null) {
+                    // return; // todo: fixme: if currentStorage is null, then continue with default storage    
+                    // }
                 }
             }
 
@@ -796,7 +814,9 @@ fun onInternalMessage(in: InMessage): void {
                 assert (msg.country == profile.country) throw Errors.CountryMismatch;
                 store.receivedVotes += msg.count;
             } else {
-                store.receivedVotes -= msg.count;
+                store.receivedVotes = store.receivedVotes >= msg.count
+                    ? store.receivedVotes - msg.count
+                    : 0;
             }
             if (!store.isPrevilegedAccount) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
