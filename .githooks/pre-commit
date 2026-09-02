@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-acton check
-acton fmt --check
 
-bun format
+# Run tests and checks only on changed/affected (git diff) files
+node scripts/pre-commit-tests.mjs

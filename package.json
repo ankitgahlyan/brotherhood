@@ -26,6 +26,8 @@
     "check": "prettier --check .",
     "typecheck": "bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
     "test": "acton test",
+    "test:affected": "node scripts/pre-commit-tests.mjs",
+    "test:changed": "node scripts/pre-commit-tests.mjs",
     "test:e2e": "bun run --cwd apps/wallet e2e",
     "icons": "node scripts/generate-icons.mjs",
     "smoke": "node scripts/smoke-test.mjs",

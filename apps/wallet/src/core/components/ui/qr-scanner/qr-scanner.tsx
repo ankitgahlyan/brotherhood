@@ -6,16 +6,21 @@
  *
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode, type CameraDevice } from 'html5-qrcode';
-import { X, RefreshCw, Camera } from 'lucide-react';
+import { X, RefreshCw, Camera, AlertCircle, Loader2 } from 'lucide-react';
 
-interface QrScannerProps {
+export interface QrScannerProps {
   isVisible: boolean;
   onScan: (data: string) => void | Promise<void>;
   onClose: () => void;
   title?: string;
 }
+
+const SCANNER_CONFIG = {
+  fps: 10,
+  qrbox: { width: 220, height: 220 },
+};
 
 export const QrScanner: React.FC<QrScannerProps> = ({
   isVisible,
@@ -23,131 +28,197 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   onClose,
   title = 'Scan QR code',
 }) => {
+  const rawId = useId();
+  const scannerElementId = `qr-scanner-${rawId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
   const scanLockRef = useRef(false);
-  const qrScannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const currentStartPromiseRef = useRef<Promise<unknown> | null>(null);
+
+  // Keep latest callbacks in refs so changes don't re-trigger effects
+  const onScanRef = useRef(onScan);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onScanRef.current = onScan;
+    onCloseRef.current = onClose;
+  });
+
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [cameraIndex, setCameraIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isFlipping, setIsFlipping] = useState(false);
 
-  const resetScanner = useCallback(() => {
-    scanLockRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) {
-      resetScanner();
-    }
-  }, [isVisible, resetScanner]);
-
-  const handleBarCodeScanned = useCallback(
-    ({ data }: { data: string }) => {
-      if (scanLockRef.current) return;
-      scanLockRef.current = true;
-      Promise.resolve(onScan(data)).catch(() => {
-        scanLockRef.current = false;
-      });
-    },
-    [onScan],
-  );
-
-  const stopQRScanner = useCallback(
-    async (shouldClose = true) => {
-      if (!qrScannerRef.current) return;
-      try {
-        if (qrScannerRef.current.isScanning) {
-          await qrScannerRef.current.stop();
-        }
-      } catch {
-        /* Ignore non-critical scanner state errors during unmount */
-      } finally {
-        if (shouldClose) {
-          onClose();
+  // Safely stop the active scanner instance
+  const safeStopScanner = useCallback(async (scanner: Html5Qrcode | null) => {
+    if (!scanner) return;
+    try {
+      if (currentStartPromiseRef.current) {
+        try {
+          await currentStartPromiseRef.current;
+        } catch {
+          // Ignore start error during teardown
         }
       }
-    },
-    [onClose],
-  );
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+    } catch {
+      // Ignore transition or unmount errors
+    }
+  }, []);
 
-  const onScanSuccess = useCallback(
-    (qrCodeMessage: string) => {
+  const handleClose = useCallback(async () => {
+    await safeStopScanner(scannerRef.current);
+    onCloseRef.current();
+  }, [safeStopScanner]);
+
+  const handleScanSuccess = useCallback(
+    async (qrCodeMessage: string) => {
+      if (scanLockRef.current) return;
+      scanLockRef.current = true;
+
       let address = qrCodeMessage.trim();
       const tonTransferMatch = address.match(/ton:\/\/transfer\/(.+)/);
       if (tonTransferMatch) {
         address = tonTransferMatch[1];
       }
-      handleBarCodeScanned({ data: address });
-      void stopQRScanner();
+
+      await safeStopScanner(scannerRef.current);
+      onCloseRef.current();
+
+      try {
+        await Promise.resolve(onScanRef.current(address));
+      } catch {
+        scanLockRef.current = false;
+      }
     },
-    [handleBarCodeScanned, stopQRScanner],
+    [safeStopScanner],
   );
 
-  const initializeQRScanner = useCallback(async () => {
-    if (!qrScannerRef.current) {
-      qrScannerRef.current = new Html5Qrcode('qr-scanner-element');
-    }
-
-    try {
-      const cams = await Html5Qrcode.getCameras();
-      setCameras(cams);
-
-      let backCamIndex = cams.findIndex((c) =>
-        /back|rear|environment|main|0/i.test(c.label),
-      );
-      if (backCamIndex === -1 && cams.length > 1) {
-        backCamIndex = cams.length - 1;
-      } else if (backCamIndex === -1) {
-        backCamIndex = 0;
-      }
-      setCameraIndex(backCamIndex);
-
-      const cameraConstraint =
-        cams.length > 0 && cams[backCamIndex]
-          ? cams[backCamIndex].id
-          : { facingMode: 'environment' };
-
-      await qrScannerRef.current.start(
-        cameraConstraint,
-        {
-          fps: 10,
-          qrbox: { width: 220, height: 220 },
-        },
-        onScanSuccess,
-        () => {},
-      );
-    } catch (err) {
-      console.error('QR Scanner initialization failed:', err);
-    }
-  }, [onScanSuccess]);
-
   useEffect(() => {
-    if (!isVisible) return;
-    initializeQRScanner();
-    return () => {
-      void stopQRScanner(false);
-    };
-  }, [isVisible, initializeQRScanner, stopQRScanner]);
+    if (!isVisible) {
+      scanLockRef.current = false;
+      setErrorMessage(null);
+      return;
+    }
 
-  if (!isVisible) return null;
+    let isCancelled = false;
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const initialize = async () => {
+      // Clean up previous scanner if still attached
+      if (scannerRef.current) {
+        await safeStopScanner(scannerRef.current);
+        scannerRef.current = null;
+      }
+
+      if (isCancelled) return;
+
+      const element = document.getElementById(scannerElementId);
+      if (!element) return;
+      element.innerHTML = '';
+
+      const scanner = new Html5Qrcode(scannerElementId);
+      scannerRef.current = scanner;
+
+      try {
+        const cams = await Html5Qrcode.getCameras().catch(() => []);
+        if (isCancelled) {
+          return;
+        }
+        setCameras(cams);
+
+        let backCamIndex = cams.findIndex((c) =>
+          /back|rear|environment|main|0/i.test(c.label),
+        );
+        if (backCamIndex === -1 && cams.length > 1) {
+          backCamIndex = cams.length - 1;
+        } else if (backCamIndex === -1) {
+          backCamIndex = 0;
+        }
+        setCameraIndex(backCamIndex);
+
+        const cameraConstraint =
+          cams.length > 0 && cams[backCamIndex]
+            ? cams[backCamIndex].id
+            : { facingMode: 'environment' };
+
+        const startPromise = scanner.start(
+          cameraConstraint,
+          SCANNER_CONFIG,
+          (message) => {
+            if (!isCancelled) {
+              void handleScanSuccess(message);
+            }
+          },
+          () => {},
+        );
+
+        currentStartPromiseRef.current = startPromise;
+        await startPromise;
+
+        if (isCancelled) {
+          await safeStopScanner(scanner);
+          return;
+        }
+
+        setIsLoading(false);
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('QR Scanner initialization failed:', err);
+          setErrorMessage(
+            'Failed to start camera. Please ensure camera permissions are granted.',
+          );
+          setIsLoading(false);
+        }
+      } finally {
+        currentStartPromiseRef.current = null;
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      isCancelled = true;
+      const scanner = scannerRef.current;
+      scannerRef.current = null;
+      void safeStopScanner(scanner);
+    };
+  }, [isVisible, scannerElementId, handleScanSuccess, safeStopScanner]);
 
   const flipCamera = async () => {
-    if (!qrScannerRef.current || cameras.length < 2) return;
+    const scanner = scannerRef.current;
+    if (!scanner || cameras.length < 2 || isFlipping) return;
+
+    setIsFlipping(true);
     const next = (cameraIndex + 1) % cameras.length;
-    setCameraIndex(next);
+
     try {
-      await qrScannerRef.current.stop();
-    } catch (err) {
-      console.error('Error stopping QR scanner before flipping:', err);
-    }
-    try {
-      await qrScannerRef.current.start(
+      await safeStopScanner(scanner);
+      setCameraIndex(next);
+
+      const startPromise = scanner.start(
         cameras[next].id,
-        undefined,
-        onScanSuccess,
+        SCANNER_CONFIG,
+        (message) => {
+          void handleScanSuccess(message);
+        },
         () => {},
       );
+
+      currentStartPromiseRef.current = startPromise;
+      await startPromise;
     } catch (err) {
       console.error('Error switching camera:', err);
+    } finally {
+      currentStartPromiseRef.current = null;
+      setIsFlipping(false);
     }
   };
+
+  if (!isVisible) return null;
 
   return (
     <div
@@ -155,7 +226,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       onClick={(e) => {
         e.stopPropagation();
         if (e.target === e.currentTarget) {
-          void stopQRScanner();
+          void handleClose();
         }
       }}
     >
@@ -178,17 +249,20 @@ export const QrScanner: React.FC<QrScannerProps> = ({
                   e.stopPropagation();
                   void flipCamera();
                 }}
-                className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                disabled={isFlipping || isLoading}
+                className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
                 title="Flip Camera"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw
+                  className={`w-4 h-4 ${isFlipping ? 'animate-spin' : ''}`}
+                />
               </button>
             )}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                void stopQRScanner();
+                void handleClose();
               }}
               className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
               title="Close"
@@ -198,9 +272,23 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           </div>
         </div>
 
-        <div className="rounded-xl bg-black p-2 overflow-hidden flex items-center justify-center min-h-[240px]">
+        <div className="relative rounded-xl bg-black p-2 overflow-hidden flex items-center justify-center min-h-[240px]">
+          {isLoading && !errorMessage && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/60 z-10">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              <span className="text-xs">Initializing camera...</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center gap-2 text-red-400 bg-black/90 z-10">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+              <p className="text-xs">{errorMessage}</p>
+            </div>
+          )}
+
           <div
-            id="qr-scanner-element"
+            id={scannerElementId}
             className="w-full h-full rounded-lg overflow-hidden"
           />
         </div>
