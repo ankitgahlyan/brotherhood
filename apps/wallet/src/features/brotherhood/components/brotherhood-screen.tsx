@@ -37,9 +37,12 @@ import { useGoldTransfer } from '../hooks/use-gold-transfer';
 import { useProfile } from '../hooks/use-profile';
 import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
+import { NetworkTab } from './network';
+import { Address } from '@ton/core';
 
 type Tab =
   | 'account'
+  | 'network'
   | 'transfer'
   | 'burn'
   | 'claim'
@@ -324,7 +327,7 @@ export const BrotherhoodScreen: React.FC = () => {
         {upgrade.hasUpgradeAvailable && (
           <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex justify-between items-center gap-3">
             <div>
-              <span className="font-semibold block flex items-center gap-1.5">
+              <span className="font-semibold flex items-center gap-1.5">
                 <span>⚡ Contract Upgrade Available</span>
               </span>
               <span className="text-[11px] text-muted-foreground block mt-0.5">
@@ -333,7 +336,7 @@ export const BrotherhoodScreen: React.FC = () => {
             </div>
             <Button
               size="sm"
-              variant="default"
+              variant="primary"
               className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
               onClick={() => upgrade.send()}
               disabled={upgrade.isDisabled}
@@ -371,6 +374,7 @@ export const BrotherhoodScreen: React.FC = () => {
           {(
             [
               'account',
+              'network',
               'transfer',
               'burn',
               'claim',
@@ -605,6 +609,28 @@ export const BrotherhoodScreen: React.FC = () => {
               </p>
             )}
           </div>
+        )}
+
+        {/* Trust Network & Lineage (Circle & Ring) */}
+        {activeTab === 'network' && (
+          <NetworkTab
+            invitedMembers={account.data?.invited ?? []}
+            resolvedProfiles={resolvedProfiles.data}
+            isLoading={account.isLoading || resolvedProfiles.isLoading}
+            onNavigateToInvite={() => setActiveTab('invite')}
+            onQuickAction={(action, target) => {
+              if (action === 'send') {
+                setRecipient(target);
+                setActiveTab('transfer');
+              } else if (action === 'vote') {
+                setTargetAddress(target);
+                setActiveTab('vote');
+              } else if (action === 'allowance') {
+                setGrantee(target);
+                setActiveTab('allowance');
+              }
+            }}
+          />
         )}
 
         {/* Transfer FI */}

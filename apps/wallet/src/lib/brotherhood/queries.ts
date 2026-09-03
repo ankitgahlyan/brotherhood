@@ -6,10 +6,12 @@ import {
   getCircle,
   getFiMinterState,
   getFiWalletState,
+  getFiWalletStateByContractAddress,
   getPersonalMinterForIssuer,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   type JettonMasterInfo,
+  type Network,
 } from './ton';
 import { setContractCache, getContractCache } from './contract-cache';
 
@@ -73,6 +75,22 @@ export function useFiWalletState(ownerAddress: Address | null) {
         getFiWalletState(ownerAddress!),
       ),
     enabled: !!ownerAddress,
+  });
+}
+
+export function useFiWalletStateByContract(
+  contractAddress: Address | null,
+  net?: Network,
+) {
+  const key = contractAddress?.toString() ?? 'none';
+  return useQuery({
+    queryKey: ['fi-wallet-state-by-contract', net ?? 'default', key],
+    queryFn: () =>
+      cachedQueryFn(
+        `fi-wallet-state-by-contract:${net ?? 'default'}:${key}`,
+        () => getFiWalletStateByContractAddress(contractAddress!, net),
+      ),
+    enabled: !!contractAddress,
   });
 }
 

@@ -94,6 +94,12 @@ _Avoid_: Referrer, sponsor, nominee
 **Invite Lineage** — the ordered chain of Inviters above an Account, making accountability traceable to its root and enabling closure propagation.
 _Avoid_: Referral chain, network
 
+**Circle** — the collection of Accounts directly invited by a Member (1st-degree invitees).
+_Avoid_: Direct referrals, friends, level 1
+
+**Ring** — the collection of Accounts invited by Members of one's Circle (2nd-degree invitees: invitees of invitees).
+_Avoid_: Indirect referrals, level 2, extended network
+
 ### Governance
 
 **Vote** — a unit of reputational endorsement cast by one Account for another within the same Country. Voting power is a fixed endowment of 10 votes per Account that can be allocated granularly and incrementally across multiple Candidates, deliberately not weighted by FI balance or staked capital: consensus is moral and regional, not economic.

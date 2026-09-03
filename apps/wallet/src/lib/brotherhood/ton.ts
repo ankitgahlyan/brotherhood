@@ -190,6 +190,15 @@ export async function getFiWalletState(owner: Address) {
     .getWalletDataAll();
 }
 
+export async function getFiWalletStateByContractAddress(
+  contractAddress: Address,
+  net: Network = network,
+) {
+  return getTonClient(net)
+    .open(FossFiWallet.fromAddress(contractAddress))
+    .getWalletDataAll();
+}
+
 export async function getFiMinterState() {
   return getTonClient(network)
     .open(FossFi.fromAddress(Address.parse(FI_ADDRESS)))
