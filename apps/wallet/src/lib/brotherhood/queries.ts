@@ -15,32 +15,55 @@ import {
 } from './ton';
 import { setContractCache, getContractCache } from './contract-cache';
 
-const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes cache validity
+const forceFreshKeys = new Set<string>();
+let forceFreshAll = false;
 
-async function cachedQueryFn<T>(
+export function markForceFresh(key?: string) {
+  if (key) {
+    forceFreshKeys.add(key);
+  } else {
+    forceFreshAll = true;
+  }
+}
+
+export function createRefetchWrapper<T>(
+  cacheKey: string,
+  refetchFn: () => Promise<T>,
+) {
+  return async () => {
+    markForceFresh(cacheKey);
+    return await refetchFn();
+  };
+}
+
+export async function cachedQueryFn<T>(
   cacheKey: string,
   fetcher: () => Promise<T>,
   forceFresh = false,
 ): Promise<T> {
-  if (!forceFresh) {
+  const shouldForce =
+    forceFresh || forceFreshAll || forceFreshKeys.has(cacheKey);
+
+  if (forceFreshKeys.has(cacheKey)) {
+    forceFreshKeys.delete(cacheKey);
+  }
+
+  // If not forcing fresh data, serve from IndexedDB indefinitely
+  if (!shouldForce) {
     const cached = await getContractCache<T>(cacheKey);
-    if (
-      cached &&
-      cached.data !== null &&
-      cached.data !== undefined &&
-      Date.now() - cached.timestamp < CACHE_MAX_AGE_MS
-    ) {
+    if (cached && cached.data !== null && cached.data !== undefined) {
       return cached.data;
     }
   }
 
+  // Otherwise fetch from network
   try {
     const data = await fetcher();
-    // Asynchronously save to IndexedDB
-    setContractCache(cacheKey, data).catch(() => {});
+    // Save to IndexedDB with updated timestamp
+    await setContractCache(cacheKey, data);
     return data;
   } catch (err) {
-    // Attempt fallback from IndexedDB cache even if older
+    // Attempt fallback from IndexedDB cache on network error
     const cached = await getContractCache<T>(cacheKey);
     if (cached && cached.data !== null && cached.data !== undefined) {
       console.log(`[ContractCache] Serving cached fallback for ${cacheKey}`);
@@ -51,31 +74,44 @@ async function cachedQueryFn<T>(
 }
 
 export function useJettonMaster(enabled = true) {
-  return useQuery<JettonMasterInfo>({
+  const cacheKey = 'jetton-master';
+  const query = useQuery<JettonMasterInfo>({
     queryKey: ['jetton-master'],
-    queryFn: () => cachedQueryFn('jetton-master', fetchJettonMaster),
+    queryFn: () => cachedQueryFn(cacheKey, fetchJettonMaster),
     enabled,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useFiMinterState(enabled = true) {
-  return useQuery({
+  const cacheKey = 'fi-minter-state';
+  const query = useQuery({
     queryKey: ['fi-minter-state'],
-    queryFn: () => cachedQueryFn('fi-minter-state', getFiMinterState),
+    queryFn: () => cachedQueryFn(cacheKey, getFiMinterState),
     enabled,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useFiWalletState(ownerAddress: Address | null) {
   const key = ownerAddress?.toString() ?? 'none';
-  return useQuery({
+  const cacheKey = `fi-wallet-state:${key}`;
+  const query = useQuery({
     queryKey: ['fi-wallet-state', key],
     queryFn: () =>
-      cachedQueryFn(`fi-wallet-state:${key}`, () =>
-        getFiWalletState(ownerAddress!),
-      ),
+      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
     enabled: !!ownerAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useFiWalletStateByContract(
@@ -83,27 +119,34 @@ export function useFiWalletStateByContract(
   net?: Network,
 ) {
   const key = contractAddress?.toString() ?? 'none';
-  return useQuery({
+  const cacheKey = `fi-wallet-state-by-contract:${net ?? 'default'}:${key}`;
+  const query = useQuery({
     queryKey: ['fi-wallet-state-by-contract', net ?? 'default', key],
     queryFn: () =>
-      cachedQueryFn(
-        `fi-wallet-state-by-contract:${net ?? 'default'}:${key}`,
-        () => getFiWalletStateByContractAddress(contractAddress!, net),
+      cachedQueryFn(cacheKey, () =>
+        getFiWalletStateByContractAddress(contractAddress!, net),
       ),
     enabled: !!contractAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useWalletBalance(ownerAddress: Address | null) {
   const key = ownerAddress?.toString() ?? 'none';
-  return useQuery({
+  const cacheKey = `wallet-balance:${key}`;
+  const query = useQuery({
     queryKey: ['wallet-balance', key],
     queryFn: () =>
-      cachedQueryFn(`wallet-balance:${key}`, () =>
-        fetchWalletBalance(ownerAddress!),
-      ),
+      cachedQueryFn(cacheKey, () => fetchWalletBalance(ownerAddress!)),
     enabled: !!ownerAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useCircle(invitedList: Address[] | null) {
@@ -114,24 +157,31 @@ export function useCircle(invitedList: Address[] | null) {
           .sort()
           .join(',')
       : 'none';
-  return useQuery({
+  const cacheKey = `circle:${key}`;
+  const query = useQuery({
     queryKey: ['circle', key],
-    queryFn: () =>
-      cachedQueryFn(`circle:${key}`, () => getCircle(invitedList!)),
+    queryFn: () => cachedQueryFn(cacheKey, () => getCircle(invitedList!)),
     enabled: !!invitedList && invitedList.length > 0,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
   const key = ownerAddress?.toString() ?? 'none';
-  return useQuery({
+  const cacheKey = `personal-minter:${key}`;
+  const query = useQuery({
     queryKey: ['personal-minter', key],
     queryFn: () =>
-      cachedQueryFn(`personal-minter:${key}`, () =>
-        getPersonalMinterForIssuer(ownerAddress!),
-      ),
+      cachedQueryFn(cacheKey, () => getPersonalMinterForIssuer(ownerAddress!)),
     enabled: !!ownerAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function usePersonalWalletAddress(
@@ -139,14 +189,19 @@ export function usePersonalWalletAddress(
   ownerAddress: Address | null,
 ) {
   const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
-  return useQuery({
+  const cacheKey = `personal-wallet-address:${key}`;
+  const query = useQuery({
     queryKey: ['personal-wallet-address', key],
     queryFn: () =>
-      cachedQueryFn(`personal-wallet-address:${key}`, () =>
+      cachedQueryFn(cacheKey, () =>
         getPersonalWalletAddress(personalMinter!, ownerAddress!),
       ),
     enabled: !!personalMinter && !!ownerAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function usePersonalWalletBalance(
@@ -154,21 +209,36 @@ export function usePersonalWalletBalance(
   ownerAddress: Address | null,
 ) {
   const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
-  return useQuery({
+  const cacheKey = `personal-wallet-balance:${key}`;
+  const query = useQuery({
     queryKey: ['personal-wallet-balance', key],
     queryFn: () =>
-      cachedQueryFn(`personal-wallet-balance:${key}`, () =>
+      cachedQueryFn(cacheKey, () =>
         getPersonalWalletBalance(personalMinter!, ownerAddress!),
       ),
     enabled: !!personalMinter && !!ownerAddress,
   });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }
 
 export function useRefreshContractQueries() {
   const queryClient = useQueryClient();
-  return async () => {
-    await queryClient.refetchQueries({
-      type: 'active',
-    });
+  return async (keys?: string[]) => {
+    if (keys && keys.length > 0) {
+      keys.forEach((k) => forceFreshKeys.add(k));
+    } else {
+      forceFreshAll = true;
+    }
+    try {
+      await queryClient.refetchQueries({
+        type: 'active',
+      });
+    } finally {
+      forceFreshAll = false;
+      forceFreshKeys.clear();
+    }
   };
 }

@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
 import { Location } from '@wrappers/Location.gen';
 import { network } from '@/lib/brotherhood/config';
+import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
 export interface UseLocationMembersResult {
   h3Cell: string | null;
@@ -24,46 +25,48 @@ export function useLocationMembers(
   locationAddressString: string | null,
   targetMemberAddressString?: string | null,
 ): UseLocationMembersResult {
+  const cacheKey = `location-members:${locationAddressString ?? 'none'}:${targetMemberAddressString ?? 'none'}`;
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       'location-members',
       locationAddressString,
       targetMemberAddressString,
     ],
-    queryFn: async () => {
-      if (!locationAddressString) return null;
-      const locAddr = Address.parse(locationAddressString);
-      const client = getTonClient(network);
-      const locationContract = client.open(Location.fromAddress(locAddr));
+    queryFn: () =>
+      cachedQueryFn(cacheKey, async () => {
+        if (!locationAddressString) return null;
+        const locAddr = Address.parse(locationAddressString);
+        const client = getTonClient(network);
+        const locationContract = client.open(Location.fromAddress(locAddr));
 
-      const [h3Cell, dict] = await Promise.all([
-        locationContract.getH3Cell().catch(() => null),
-        locationContract.getMembers().catch(() => null),
-      ]);
+        const [h3Cell, dict] = await Promise.all([
+          locationContract.getH3Cell().catch(() => null),
+          locationContract.getMembers().catch(() => null),
+        ]);
 
-      let isTargetMember: boolean | null = null;
-      if (targetMemberAddressString) {
-        try {
-          const target = Address.parse(targetMemberAddressString);
-          isTargetMember = await locationContract.getIsMember(target);
-        } catch {
-          isTargetMember = false;
+        let isTargetMember: boolean | null = null;
+        if (targetMemberAddressString) {
+          try {
+            const target = Address.parse(targetMemberAddressString);
+            isTargetMember = await locationContract.getIsMember(target);
+          } catch {
+            isTargetMember = false;
+          }
         }
-      }
 
-      const memberAddrs: string[] = [];
-      if (dict) {
-        for (const key of dict.keys()) {
-          memberAddrs.push(key.toString());
+        const memberAddrs: string[] = [];
+        if (dict) {
+          for (const key of dict.keys()) {
+            memberAddrs.push(key.toString());
+          }
         }
-      }
 
-      return {
-        h3Cell,
-        members: memberAddrs,
-        isTargetMember,
-      };
-    },
+        return {
+          h3Cell,
+          members: memberAddrs,
+          isTargetMember,
+        };
+      }),
     enabled: Boolean(locationAddressString),
   });
 
@@ -72,7 +75,7 @@ export function useLocationMembers(
     members: data?.members ?? [],
     isTargetMember: data?.isTargetMember ?? null,
     isLoading,
-    refetch,
+    refetch: createRefetchWrapper(cacheKey, refetch),
   };
 }
 

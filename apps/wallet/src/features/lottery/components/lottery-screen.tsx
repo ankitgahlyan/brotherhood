@@ -22,6 +22,7 @@ import {
 } from '@/features/brotherhood';
 
 import { useLotteryState } from '../hooks/use-lottery-state';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 import { useEnterLottery } from '../hooks/use-enter-lottery';
 import { useDrawWinner } from '../hooks/use-draw-winner';
 
@@ -54,6 +55,7 @@ export const LotteryScreen: React.FC = () => {
           <ScreenHeader
             title="On-Chain Lottery"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >

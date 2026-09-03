@@ -26,7 +26,6 @@ import { TokenSelectButton } from '../token-select-button';
 import { TokenSelectModal } from '../token-select-modal';
 import { AmountField } from '../amount-field';
 import { RecipientField } from '../recipient-field';
-import { GaslessOptions } from '../gasless-options';
 import type { TokenOption } from '../../types';
 
 import { Button } from '@/core/components/ui/button';

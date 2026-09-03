@@ -22,6 +22,7 @@ import {
 } from '@/features/brotherhood';
 
 import { useDeployPersonalJetton } from '../hooks/use-deploy-personal-jetton';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 import { useMintPersonal } from '../hooks/use-mint-personal';
 import { useBurnPersonal } from '../hooks/use-burn-personal';
 import {
@@ -115,6 +116,7 @@ export const PersonalJettonScreen: React.FC = () => {
           <ScreenHeader
             title="Personal Token Economy"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >

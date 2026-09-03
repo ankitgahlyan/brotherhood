@@ -22,6 +22,7 @@ import {
 } from '@/features/brotherhood';
 
 import { useProposals } from '../hooks/use-proposals';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 import { useSubmitProposal } from '../hooks/use-submit-proposal';
 import { useVoteProposal } from '../hooks/use-vote-proposal';
 
@@ -69,6 +70,7 @@ export const DaoScreen: React.FC = () => {
           <ScreenHeader
             title="DAO Governance"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >

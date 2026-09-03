@@ -20,6 +20,7 @@ import { getH3ViewerUrl } from '@/core/utils/h3';
 import { MemberGuard, ActivationBanner } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 import {
   useLocation,
@@ -77,7 +78,10 @@ export const CityNetworkScreen: React.FC = () => {
     if (!minterAddrInput || !calcH3CellInput.trim()) return null;
     try {
       const minter = Address.parse(minterAddrInput);
-      return calculateLocationAddress(calcH3CellInput.trim(), minter).toString();
+      return calculateLocationAddress(
+        calcH3CellInput.trim(),
+        minter,
+      ).toString();
     } catch {
       return null;
     }
@@ -92,6 +96,7 @@ export const CityNetworkScreen: React.FC = () => {
           <ScreenHeader
             title="Location & Spatial Network"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >
@@ -286,7 +291,8 @@ export const CityNetworkScreen: React.FC = () => {
                   <div className="space-y-2 pt-2 border-t border-border/50">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-xs text-foreground">
-                        Registered Members ({locationByH3Query.data.members.length})
+                        Registered Members (
+                        {locationByH3Query.data.members.length})
                       </h4>
                       {myH3Cell === h3CellInput && myH3Cell !== '' && (
                         <span className="text-[10px] text-muted-foreground">
@@ -392,7 +398,9 @@ export const CityNetworkScreen: React.FC = () => {
                           H3 Spatial Cell
                         </span>
                         <a
-                          href={getH3ViewerUrl(rawLocationQuery.location.h3Cell)}
+                          href={getH3ViewerUrl(
+                            rawLocationQuery.location.h3Cell,
+                          )}
                           target="_blank"
                           rel="noreferrer"
                           className="font-mono font-semibold text-blue-500 hover:underline text-xs"
@@ -423,7 +431,8 @@ export const CityNetworkScreen: React.FC = () => {
                   </div>
 
                   <h4 className="font-semibold text-xs text-foreground pt-1">
-                    Registered Members ({rawLocationQuery.location.members.length})
+                    Registered Members (
+                    {rawLocationQuery.location.members.length})
                   </h4>
                   {rawLocationQuery.location.members.length > 0 ? (
                     <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
@@ -462,7 +471,8 @@ export const CityNetworkScreen: React.FC = () => {
                 Calculate Location Address
               </h3>
               <p className="text-xs text-muted-foreground">
-                Derive the deterministic StateInit and address for any H3 cell using 8-bit shard depth matching the Minter.
+                Derive the deterministic StateInit and address for any H3 cell
+                using 8-bit shard depth matching the Minter.
               </p>
               <div className="space-y-2">
                 <InputScan

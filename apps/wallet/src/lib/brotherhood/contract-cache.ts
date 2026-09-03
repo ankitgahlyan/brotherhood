@@ -124,11 +124,24 @@ export async function setContractCache(key: string, data: any): Promise<void> {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const req = store.put(entry);
-      req.onsuccess = () => resolve();
+      req.onsuccess = () => {
+        notifyCacheUpdated(key, entry.timestamp);
+        resolve();
+      };
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
     console.warn('[ContractCache] Failed to save cache for key:', key, err);
+  }
+}
+
+export const CACHE_UPDATED_EVENT = 'brotherhood_contract_cache_updated';
+
+export function notifyCacheUpdated(key: string, timestamp: number) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(CACHE_UPDATED_EVENT, { detail: { key, timestamp } }),
+    );
   }
 }
 
@@ -201,5 +214,29 @@ export async function getContractCacheStats(): Promise<{
     });
   } catch {
     return { count: 0, lastUpdated: null };
+  }
+}
+
+export async function getLastFetchTime(
+  keys?: string[],
+): Promise<number | null> {
+  try {
+    if (!keys || keys.length === 0) {
+      const stats = await getContractCacheStats();
+      return stats.lastUpdated;
+    }
+    const timestamps = await Promise.all(
+      keys.map(async (k) => {
+        const item = await getContractCache(k);
+        return item?.timestamp ?? null;
+      }),
+    );
+    return timestamps.reduce<number | null>(
+      (latest, ts) =>
+        ts !== null && (latest === null || ts > latest) ? ts : latest,
+      null,
+    );
+  } catch {
+    return null;
   }
 }

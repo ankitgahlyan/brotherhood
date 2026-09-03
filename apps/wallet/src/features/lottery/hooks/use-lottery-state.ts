@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
 import { Lottery } from '@wrappers/Lottery.gen';
 import { network } from '@/lib/brotherhood/config';
+import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
 export interface UseLotteryStateResult {
   participantCount: number | null;
@@ -26,40 +27,42 @@ export function useLotteryState(
   lotteryAddressString: string | null,
   userAddressString: string | null,
 ): UseLotteryStateResult {
+  const cacheKey = `lottery-state:${lotteryAddressString ?? 'none'}:${userAddressString ?? 'none'}`;
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['lottery-state', lotteryAddressString, userAddressString],
-    queryFn: async () => {
-      if (!lotteryAddressString) return null;
-      const lotteryAddr = Address.parse(lotteryAddressString);
-      const client = getTonClient(network);
-      const lotteryContract = client.open(Lottery.fromAddress(lotteryAddr));
+    queryFn: () =>
+      cachedQueryFn(cacheKey, async () => {
+        if (!lotteryAddressString) return null;
+        const lotteryAddr = Address.parse(lotteryAddressString);
+        const client = getTonClient(network);
+        const lotteryContract = client.open(Lottery.fromAddress(lotteryAddr));
 
-      const [participantCount, prizePool, currentPhase, deadline] =
-        await Promise.all([
-          lotteryContract.getParticipantCount().catch(() => 0n),
-          lotteryContract.getPrizePool().catch(() => 0n),
-          lotteryContract.getCurrentPhase().catch(() => 0n),
-          lotteryContract.getDeadline().catch(() => 0n),
-        ]);
+        const [participantCount, prizePool, currentPhase, deadline] =
+          await Promise.all([
+            lotteryContract.getParticipantCount().catch(() => 0n),
+            lotteryContract.getPrizePool().catch(() => 0n),
+            lotteryContract.getCurrentPhase().catch(() => 0n),
+            lotteryContract.getDeadline().catch(() => 0n),
+          ]);
 
-      let isParticipant = false;
-      if (userAddressString) {
-        try {
-          const uAddr = Address.parse(userAddressString);
-          isParticipant = await lotteryContract.getIsParticipant(uAddr);
-        } catch {
-          isParticipant = false;
+        let isParticipant = false;
+        if (userAddressString) {
+          try {
+            const uAddr = Address.parse(userAddressString);
+            isParticipant = await lotteryContract.getIsParticipant(uAddr);
+          } catch {
+            isParticipant = false;
+          }
         }
-      }
 
-      return {
-        participantCount: Number(participantCount),
-        prizePool,
-        currentPhase: Number(currentPhase),
-        deadline: Number(deadline),
-        isParticipant,
-      };
-    },
+        return {
+          participantCount: Number(participantCount),
+          prizePool,
+          currentPhase: Number(currentPhase),
+          deadline: Number(deadline),
+          isParticipant,
+        };
+      }),
     enabled: Boolean(lotteryAddressString),
   });
 
@@ -70,6 +73,6 @@ export function useLotteryState(
     deadline: data?.deadline ?? null,
     isParticipant: data?.isParticipant ?? false,
     isLoading,
-    refetch,
+    refetch: createRefetchWrapper(cacheKey, refetch),
   };
 }

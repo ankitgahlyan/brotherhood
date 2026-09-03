@@ -42,6 +42,7 @@ import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
 import { NetworkTab } from './network';
 import { Address } from '@ton/core';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 type Tab =
   | 'account'
@@ -289,6 +290,7 @@ export const BrotherhoodScreen: React.FC = () => {
           <ScreenHeader
             title="BrotherHood"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >
@@ -308,6 +310,7 @@ export const BrotherhoodScreen: React.FC = () => {
           <ScreenHeader
             title="BrotherHood"
             onBack={() => navigate('/wallet')}
+            rightElement={<SyncStatusButton />}
           />
         }
       >
@@ -319,7 +322,11 @@ export const BrotherhoodScreen: React.FC = () => {
   return (
     <NewLayout
       header={
-        <ScreenHeader title="BrotherHood" onBack={() => navigate('/wallet')} />
+        <ScreenHeader
+          title="BrotherHood"
+          onBack={() => navigate('/wallet')}
+          rightElement={<SyncStatusButton />}
+        />
       }
     >
       <div className="space-y-4">
@@ -334,7 +341,15 @@ export const BrotherhoodScreen: React.FC = () => {
                 <span>⚡ Contract Upgrade Available</span>
               </span>
               <span className="text-[11px] text-muted-foreground block mt-0.5">
-                Your wallet is on <span className="font-semibold text-foreground">v{upgrade.walletVersion}</span>. Latest minter version is <span className="font-semibold text-foreground">v{upgrade.minterVersion}</span>.
+                Your wallet is on{' '}
+                <span className="font-semibold text-foreground">
+                  v{upgrade.walletVersion}
+                </span>
+                . Latest minter version is{' '}
+                <span className="font-semibold text-foreground">
+                  v{upgrade.minterVersion}
+                </span>
+                .
               </span>
             </div>
             <Button
@@ -436,7 +451,9 @@ export const BrotherhoodScreen: React.FC = () => {
                     {account.data.username ? (
                       <button
                         type="button"
-                        onClick={() => openTelegramProfile(account.data.username!)}
+                        onClick={() =>
+                          openTelegramProfile(account.data.username!)
+                        }
                         className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
                         title={`Open @${account.data.username} on Telegram`}
                         data-testid="brotherhood-account-telegram-link"
@@ -599,7 +616,8 @@ export const BrotherhoodScreen: React.FC = () => {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-foreground font-medium text-[11px]">
-                        v{account.data.version} (Minter: v{minterVersion ?? '...'})
+                        v{account.data.version} (Minter: v
+                        {minterVersion ?? '...'})
                       </span>
                       {upgrade.hasUpgradeAvailable ? (
                         <button
@@ -866,7 +884,8 @@ export const BrotherhoodScreen: React.FC = () => {
                   data-testid="brotherhood-invite-username"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Enter the invitee&apos;s Telegram handle. This will be registered as their on-chain username for peer communication.
+                  Enter the invitee&apos;s Telegram handle. This will be
+                  registered as their on-chain username for peer communication.
                 </p>
               </div>
 
@@ -942,11 +961,16 @@ export const BrotherhoodScreen: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (prof?.username) openTelegramProfile(prof.username);
+                                if (prof?.username)
+                                  openTelegramProfile(prof.username);
                               }}
                               disabled={!prof?.username}
                               className={`font-semibold text-foreground text-left ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
-                              title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                              title={
+                                prof?.username
+                                  ? `Open @${prof.username} on Telegram`
+                                  : undefined
+                              }
                             >
                               @{prof?.username || 'member'}
                             </button>
@@ -996,8 +1020,9 @@ export const BrotherhoodScreen: React.FC = () => {
               <h3 className="font-semibold text-base">Trust Graph Voting</h3>
               <p className="text-xs text-muted-foreground">
                 Cast endorsements for candidates within your Country (
-                {memberCountry.flag} {memberCountry.name}). Each member is endowed with
-                10 votes that can be cast granularly and incrementally across multiple candidates.
+                {memberCountry.flag} {memberCountry.name}). Each member is
+                endowed with 10 votes that can be cast granularly and
+                incrementally across multiple candidates.
               </p>
             </div>
 
@@ -1041,11 +1066,16 @@ export const BrotherhoodScreen: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (prof?.username) openTelegramProfile(prof.username);
+                                if (prof?.username)
+                                  openTelegramProfile(prof.username);
                               }}
                               disabled={!prof?.username}
                               className={`font-semibold text-foreground text-left truncate ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
-                              title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                              title={
+                                prof?.username
+                                  ? `Open @${prof.username} on Telegram`
+                                  : undefined
+                              }
                             >
                               @{prof?.username || 'member'}
                             </button>
@@ -1078,7 +1108,8 @@ export const BrotherhoodScreen: React.FC = () => {
                             />
                           </div>
                           <span className="text-[10px] text-emerald-600 font-medium">
-                            Endorsed with {entry.count} {entry.count === 1 ? 'vote' : 'votes'}
+                            Endorsed with {entry.count}{' '}
+                            {entry.count === 1 ? 'vote' : 'votes'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1109,8 +1140,8 @@ export const BrotherhoodScreen: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsUnvote(false);
-                    setVoteCount((c) =>
-                      Math.min(c, account.data?.votes ?? 10) || 1,
+                    setVoteCount(
+                      (c) => Math.min(c, account.data?.votes ?? 10) || 1,
                     );
                   }}
                   className={`flex flex-col items-start p-3 rounded-xl transition text-left cursor-pointer ${
@@ -1230,7 +1261,8 @@ export const BrotherhoodScreen: React.FC = () => {
                 {/* Dropdown suggestions list of already voted candidates */}
                 {account.data &&
                   account.data.votedFor.length > 0 &&
-                  (showVotedDropdown || (isUnvote && !targetAddress.trim())) && (
+                  (showVotedDropdown ||
+                    (isUnvote && !targetAddress.trim())) && (
                     <div className="p-2 bg-secondary/80 border border-border rounded-xl space-y-1 mt-1 max-h-56 overflow-y-auto">
                       <span className="text-[11px] font-semibold text-muted-foreground px-2 block">
                         {isUnvote

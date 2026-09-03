@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import { getTonClient } from '@/lib/brotherhood/ton';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
+import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
 export interface MemberProfileInfo {
   address: string;
@@ -39,54 +40,60 @@ export function useMemberProfiles(
     .sort();
 
   const key = addressStrings.join(',');
+  const cacheKey = `member-profiles:${network}:${key}`;
 
-  return useQuery<Record<string, MemberProfileInfo>>({
+  const query = useQuery<Record<string, MemberProfileInfo>>({
     queryKey: ['member-profiles', network, key],
-    queryFn: async () => {
-      if (addressStrings.length === 0) return {};
-      const client = getTonClient(
-        network === 'mainnet' ? 'mainnet' : 'testnet',
-      );
-      const results: Record<string, MemberProfileInfo> = {};
+    queryFn: () =>
+      cachedQueryFn(cacheKey, async () => {
+        if (addressStrings.length === 0) return {};
+        const client = getTonClient(
+          network === 'mainnet' ? 'mainnet' : 'testnet',
+        );
+        const results: Record<string, MemberProfileInfo> = {};
 
-      await Promise.all(
-        addressStrings.map(async (addrStr) => {
-          try {
-            const addr = Address.parse(addrStr);
-            const contract = client.open(FossFiWallet.fromAddress(addr));
-            const store = await contract.getWalletDataAll();
-            results[addrStr] = {
-              address: addrStr,
-              username: store.profile?.ref?.username ?? '',
-              h3Cell: store.profile?.ref?.h3Cell ?? '',
-              country: store.profile?.ref?.country
-                ? Number(store.profile.ref.country)
-                : 0,
-              active: Boolean(store.active),
-              jettonBalance: store.jettonBalance ?? 0n,
-              status: store.status ? Number(store.status) : 0,
-            };
-          } catch (e) {
-            console.warn(
-              `[useMemberProfiles] Could not fetch profile for ${addrStr}:`,
-              e,
-            );
-            results[addrStr] = {
-              address: addrStr,
-              username: '',
-              h3Cell: '',
-              country: 0,
-              active: false,
-              jettonBalance: 0n,
-              status: 0,
-            };
-          }
-        }),
-      );
+        await Promise.all(
+          addressStrings.map(async (addrStr) => {
+            try {
+              const addr = Address.parse(addrStr);
+              const contract = client.open(FossFiWallet.fromAddress(addr));
+              const store = await contract.getWalletDataAll();
+              results[addrStr] = {
+                address: addrStr,
+                username: store.profile?.ref?.username ?? '',
+                h3Cell: store.profile?.ref?.h3Cell ?? '',
+                country: store.profile?.ref?.country
+                  ? Number(store.profile.ref.country)
+                  : 0,
+                active: Boolean(store.active),
+                jettonBalance: store.jettonBalance ?? 0n,
+                status: store.status ? Number(store.status) : 0,
+              };
+            } catch (e) {
+              console.warn(
+                `[useMemberProfiles] Could not fetch profile for ${addrStr}:`,
+                e,
+              );
+              results[addrStr] = {
+                address: addrStr,
+                username: '',
+                h3Cell: '',
+                country: 0,
+                active: false,
+                jettonBalance: 0n,
+                status: 0,
+              };
+            }
+          }),
+        );
 
-      return results;
-    },
+        return results;
+      }),
     enabled: addressStrings.length > 0,
-    staleTime: 5 * 60 * 1000,
   });
+
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
 }

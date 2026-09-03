@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useAuth, useWallet } from '@demo/wallet-core';
 
@@ -33,7 +33,7 @@ export const UnlockScreen: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const autoPromptTriggered = useRef(false);
 
-  const handleBiometricUnlock = async () => {
+  const handleBiometricUnlock = useCallback(async () => {
     if (isLoading || isBiometricLoading) return;
     setIsBiometricLoading(true);
     setError('');
@@ -56,7 +56,7 @@ export const UnlockScreen: React.FC = () => {
       setIsBiometricLoading(false);
       setIsLoading(false);
     }
-  };
+  }, [isLoading, isBiometricLoading, authenticate, unlock, loadAllWallets, navigate]);
 
   // Auto-prompt biometrics once on mobile/supported devices if registered
   useEffect(() => {
@@ -66,7 +66,7 @@ export const UnlockScreen: React.FC = () => {
     } else if (!isEnabled) {
       inputRef.current?.focus();
     }
-  }, [isSupported, isEnabled]);
+  }, [isSupported, isEnabled, handleBiometricUnlock]);
 
   const handleSubmit = async () => {
     if (!password || isLoading) return;

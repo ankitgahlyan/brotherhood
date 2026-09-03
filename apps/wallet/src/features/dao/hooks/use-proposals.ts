@@ -12,6 +12,7 @@ import { getTonClient } from '@/lib/brotherhood/ton';
 import { Poll } from '@wrappers/Poll.gen';
 import { DaoProxy, type DaoProxyStore } from '@wrappers/DaoProxy.gen';
 import { network } from '@/lib/brotherhood/config';
+import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
 export interface ProposalItem {
   id: string;
@@ -35,47 +36,51 @@ export interface UseProposalsResult {
 }
 
 export function useProposals(addressString: string | null): UseProposalsResult {
+  const cacheKey = `dao-proposals:${addressString ?? 'none'}`;
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['dao-proposals', addressString],
-    queryFn: async () => {
-      if (!addressString) return null;
-      const targetAddr = Address.parse(addressString);
-      const client = getTonClient(network);
+    queryFn: () =>
+      cachedQueryFn(cacheKey, async () => {
+        if (!addressString) return null;
+        const targetAddr = Address.parse(addressString);
+        const client = getTonClient(network);
 
-      // Try loading as Poll first
-      try {
-        const pollContract = client.open(Poll.fromAddress(targetAddr));
-        const pollStore = await pollContract.getPollData();
-        return {
-          totalAccounts: pollStore.totalAccounts,
-          proposalCount: 1n,
-          daoProxy: null,
-          proposals: [
-            {
-              id: pollStore.proposalId.toString(),
-              proposer: pollStore.proposerOwner.toString(),
-              yesVotes: pollStore.yesVotes,
-              noVotes: pollStore.noVotes,
-              totalAccounts: pollStore.totalAccounts,
-              deadline: Number(pollStore.expiresAt),
-              executed: pollStore.executed,
-              daoProxyAddress: pollStore.daoProxyAddress.toString(),
-              fiAddress: pollStore.fiAddress.toString(),
-            },
-          ],
-        };
-      } catch {
-        // If not a Poll, try loading as DaoProxy
-        const daoProxyContract = client.open(DaoProxy.fromAddress(targetAddr));
-        const daoStore = await daoProxyContract.getDaoProxyData();
-        return {
-          totalAccounts: null,
-          proposalCount: daoStore.pollCount,
-          daoProxy: daoStore,
-          proposals: [],
-        };
-      }
-    },
+        // Try loading as Poll first
+        try {
+          const pollContract = client.open(Poll.fromAddress(targetAddr));
+          const pollStore = await pollContract.getPollData();
+          return {
+            totalAccounts: pollStore.totalAccounts,
+            proposalCount: 1n,
+            daoProxy: null,
+            proposals: [
+              {
+                id: pollStore.proposalId.toString(),
+                proposer: pollStore.proposerOwner.toString(),
+                yesVotes: pollStore.yesVotes,
+                noVotes: pollStore.noVotes,
+                totalAccounts: pollStore.totalAccounts,
+                deadline: Number(pollStore.expiresAt),
+                executed: pollStore.executed,
+                daoProxyAddress: pollStore.daoProxyAddress.toString(),
+                fiAddress: pollStore.fiAddress.toString(),
+              },
+            ],
+          };
+        } catch {
+          // If not a Poll, try loading as DaoProxy
+          const daoProxyContract = client.open(
+            DaoProxy.fromAddress(targetAddr),
+          );
+          const daoStore = await daoProxyContract.getDaoProxyData();
+          return {
+            totalAccounts: null,
+            proposalCount: daoStore.pollCount,
+            daoProxy: daoStore,
+            proposals: [],
+          };
+        }
+      }),
     enabled: Boolean(addressString),
   });
 
@@ -85,6 +90,6 @@ export function useProposals(addressString: string | null): UseProposalsResult {
     proposals: data?.proposals ?? [],
     daoProxy: data?.daoProxy ?? null,
     isLoading,
-    refetch,
+    refetch: createRefetchWrapper(cacheKey, refetch),
   };
 }

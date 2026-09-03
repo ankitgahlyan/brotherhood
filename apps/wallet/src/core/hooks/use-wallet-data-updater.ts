@@ -6,7 +6,7 @@
  *
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import {
   useAuth,
   useJettons,
@@ -14,6 +14,7 @@ import {
   useRates,
   useWallet,
 } from '@demo/wallet-core';
+import { notifyCacheUpdated } from '@/lib/brotherhood/contract-cache';
 
 export const useWalletDataUpdater = () => {
   const {
@@ -25,9 +26,9 @@ export const useWalletDataUpdater = () => {
     loadAllWallets,
   } = useWallet();
   const { isUnlocked } = useAuth();
-  const { loadUserJettons, clearJettons } = useJettons();
-  const { loadUserNfts, clearNfts, refreshNfts } = useNfts();
-  const { loadRates, clearRates } = useRates();
+  const { loadUserJettons } = useJettons();
+  const { loadUserNfts } = useNfts();
+  const { loadRates } = useRates();
 
   // Load wallets when hasWallet but currentWallet missing (e.g. refresh on /send before rehydration)
   useEffect(() => {
@@ -36,63 +37,52 @@ export const useWalletDataUpdater = () => {
     }
   }, [hasWallet, isUnlocked, currentWallet, loadAllWallets]);
 
-  // Update on wallet change. Keyed on activeWalletId, not address: same-key wallets on
-  // different networks (testnet/mainnet) share the same address string, so switching between
-  // them wouldn't re-run this effect and stale jettons/NFTs/rates would persist.
-  useEffect(() => {
-    if (!address) return;
-
-    clearNfts();
-    clearJettons();
-    clearRates();
-
-    void (async () => {
+  const executeWalletSync = useCallback(async () => {
+    if (!activeWalletId) return;
+    try {
       await Promise.allSettled([
         updateBalance(),
         loadUserJettons(),
         loadUserNfts(),
+        loadRates(),
       ]);
-      await loadRates();
-    })();
-  }, [
-    activeWalletId,
-    address,
-    updateBalance,
-    loadUserJettons,
-    loadUserNfts,
-    loadRates,
-    clearNfts,
-    clearJettons,
-    clearRates,
-  ]);
+      const now = Date.now();
+      localStorage.setItem(`wallet_synced_${activeWalletId}`, String(now));
+      notifyCacheUpdated(`wallet-data:${activeWalletId}`, now);
+    } catch (err) {
+      console.warn('[useWalletDataUpdater] Failed manual wallet sync:', err);
+    }
+  }, [activeWalletId, updateBalance, loadUserJettons, loadUserNfts, loadRates]);
 
-  // Periodic refresh — sequential to avoid overloading the backend (ported from main):
-  // balance → jettons → rates → NFTs, chained via setTimeout, every 20s. Rates self-throttle
-  // to 60s (see loadRates), so re-requesting on each tick is cheap.
+  // Initial cold-cache population only:
+  // If the wallet has never been synced in storage, perform one initial fetch.
+  // Once synced, subsequent app reloads immediately show cached state without auto-fetching.
   useEffect(() => {
-    if (!address) return;
+    if (!address || !activeWalletId) return;
 
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
-    const refreshInterval = 30_000;
+    const hasSyncedBefore = localStorage.getItem(
+      `wallet_synced_${activeWalletId}`,
+    );
+    if (!hasSyncedBefore) {
+      void executeWalletSync();
+    }
+  }, [activeWalletId, address, executeWalletSync]);
 
-    const tick = async () => {
-      await updateBalance().catch(() => {});
-      if (cancelled) return;
-      await loadUserJettons().catch(() => {});
-      if (cancelled) return;
-      await loadRates().catch(() => {});
-      if (cancelled) return;
-      await refreshNfts().catch(() => {});
-      if (cancelled) return;
-      timeout = setTimeout(() => void tick(), refreshInterval);
+  // Listen for global manual refresh requests from the dedicated refresh button
+  useEffect(() => {
+    const handleManualRefresh = () => {
+      void executeWalletSync();
     };
 
-    timeout = setTimeout(() => void tick(), refreshInterval);
-
+    window.addEventListener(
+      'brotherhood_manual_wallet_refresh',
+      handleManualRefresh,
+    );
     return () => {
-      cancelled = true;
-      clearTimeout(timeout);
+      window.removeEventListener(
+        'brotherhood_manual_wallet_refresh',
+        handleManualRefresh,
+      );
     };
-  }, [address, updateBalance, loadUserJettons, loadRates, refreshNfts]);
+  }, [executeWalletSync]);
 };

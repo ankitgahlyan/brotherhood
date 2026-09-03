@@ -13,7 +13,6 @@ import { useAuth } from '@demo/wallet-core';
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
 import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
-import { FingerprintIcon } from '@/core/components/ui/icons';
 import { useBiometrics } from '@/core/security/use-biometrics';
 import { WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
 import type { WalletSetupMode } from '@/features/wallet-setup';

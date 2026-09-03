@@ -13,8 +13,8 @@ export type { Network } from './config';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes: keep data fresh to prevent frequent API calls
-      gcTime: 30 * 60 * 1000, // 30 minutes in memory cache
+      staleTime: Infinity, // Never consider queries stale automatically; manual refresh only
+      gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days in memory cache
       refetchOnWindowFocus: false, // Prevent refetches when switching windows/tabs
       refetchOnMount: false, // Prevent refetches when re-mounting components if cached
       refetchOnReconnect: false, // Prevent auto refetching on network reconnect

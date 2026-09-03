@@ -16,6 +16,7 @@ import { SettingsDropdown } from '@/features/settings';
 import { ConnectDappModal } from '@/features/ton-connect';
 import { ScanIcon } from '@/core/components/ui/icons';
 import { usePasteHandler } from '@/core/hooks';
+import { SyncStatusButton } from '../sync-status-button';
 
 export const DashboardHeader: React.FC = () => {
   const [isWalletSelectorOpen, setIsWalletSelectorOpen] = useState(false);
@@ -40,17 +41,21 @@ export const DashboardHeader: React.FC = () => {
         <ScanIcon className="w-5 h-5 text-foreground" />
       </button>
 
-      <button
-        type="button"
-        onClick={() => setIsWalletSelectorOpen(true)}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary cursor-pointer hover:bg-secondary/80 border border-border transition-colors"
-        aria-label="Select wallet"
-      >
-        <span className="text-sm font-semibold text-foreground">
-          {activeWallet?.name || 'No wallet'}
-        </span>
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsWalletSelectorOpen(true)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary cursor-pointer hover:bg-secondary/80 border border-border transition-colors"
+          aria-label="Select wallet"
+        >
+          <span className="text-sm font-semibold text-foreground">
+            {activeWallet?.name || 'No wallet'}
+          </span>
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        </button>
+
+        <SyncStatusButton />
+      </div>
 
       <div className="flex items-center gap-1">
         <button
