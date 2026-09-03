@@ -72,8 +72,27 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
         className="w-full p-3 flex justify-between items-center text-left hover:bg-secondary/60 transition-colors cursor-pointer"
       >
         <div className="space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm text-foreground">
+          <div className="flex items-center gap-2">
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                if (circleProfile?.username) {
+                  e.stopPropagation();
+                  openTelegramProfile(circleProfile.username);
+                }
+              }}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && circleProfile?.username) {
+                  e.stopPropagation();
+                  openTelegramProfile(circleProfile.username);
+                }
+              }}
+              className={`font-semibold text-sm text-foreground transition-colors ${
+                circleProfile?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''
+              }`}
+              title={circleProfile?.username ? `Open @${circleProfile.username} on Telegram` : undefined}
+            >
               Invited by {inviterUsername}
             </span>
             {circleProfile?.username && (
@@ -90,11 +109,11 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                     openTelegramProfile(circleProfile.username!);
                   }
                 }}
-                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                 title={`Open @${circleProfile.username} on Telegram`}
                 aria-label={`Open @${circleProfile.username} on Telegram`}
               >
-                <TelegramIcon className="w-3.5 h-3.5" />
+                <TelegramIcon className="w-4.5 h-4.5" />
               </span>
             )}
             <span className="text-[10px] text-muted-foreground font-mono">
@@ -163,8 +182,27 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                     className="w-full text-left p-2.5 bg-secondary/40 hover:bg-secondary/80 border border-border/50 hover:border-primary/30 rounded-lg transition-all flex justify-between items-center group cursor-pointer"
                   >
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                      <div className="flex items-center gap-2">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            if (prof?.username) {
+                              e.stopPropagation();
+                              openTelegramProfile(prof.username);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || e.key === ' ') && prof?.username) {
+                              e.stopPropagation();
+                              openTelegramProfile(prof.username);
+                            }
+                          }}
+                          className={`font-semibold text-xs text-foreground transition-colors ${
+                            prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : 'group-hover:text-primary'
+                          }`}
+                          title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                        >
                           {username}
                         </span>
                         {prof?.username && (
@@ -181,11 +219,11 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                                 openTelegramProfile(prof.username!);
                               }
                             }}
-                            className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                             title={`Open @${prof.username} on Telegram`}
                             aria-label={`Open @${prof.username} on Telegram`}
                           >
-                            <TelegramIcon className="w-3 h-3" />
+                            <TelegramIcon className="w-4 h-4" />
                           </span>
                         )}
                       </div>

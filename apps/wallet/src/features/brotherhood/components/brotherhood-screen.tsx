@@ -436,12 +436,14 @@ export const BrotherhoodScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => openTelegramProfile(account.data.username!)}
-                        className="inline-flex items-center gap-1.5 text-base font-bold text-primary hover:underline cursor-pointer group text-left"
+                        className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
                         title={`Open @${account.data.username} on Telegram`}
                         data-testid="brotherhood-account-telegram-link"
                       >
                         <span>@{account.data.username}</span>
-                        <TelegramIcon className="w-4 h-4 text-primary opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <span className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+                          <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                        </span>
                       </button>
                     ) : (
                       <span className="text-base font-bold text-foreground block">
@@ -934,10 +936,19 @@ export const BrotherhoodScreen: React.FC = () => {
                         className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
                       >
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-foreground">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (prof?.username) openTelegramProfile(prof.username);
+                              }}
+                              disabled={!prof?.username}
+                              className={`font-semibold text-foreground text-left ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
+                              title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                            >
                               @{prof?.username || 'member'}
-                            </span>
+                            </button>
                             {prof?.username && (
                               <button
                                 type="button"
@@ -945,11 +956,11 @@ export const BrotherhoodScreen: React.FC = () => {
                                   e.stopPropagation();
                                   openTelegramProfile(prof.username!);
                                 }}
-                                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                                 title={`Open @${prof.username} on Telegram`}
                                 aria-label={`Open @${prof.username} on Telegram`}
                               >
-                                <TelegramIcon className="w-3.5 h-3.5" />
+                                <TelegramIcon className="w-4.5 h-4.5" />
                               </button>
                             )}
                           </div>
@@ -1024,11 +1035,34 @@ export const BrotherhoodScreen: React.FC = () => {
                         className="p-3 bg-secondary/40 border border-border/60 rounded-xl text-xs flex justify-between items-center gap-2"
                       >
                         <div className="truncate">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-foreground truncate">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (prof?.username) openTelegramProfile(prof.username);
+                              }}
+                              disabled={!prof?.username}
+                              className={`font-semibold text-foreground text-left truncate ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
+                              title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                            >
                               @{prof?.username || 'member'}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">
+                            </button>
+                            {prof?.username && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openTelegramProfile(prof.username!);
+                                }}
+                                className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                                title={`Open @${prof.username} on Telegram`}
+                                aria-label={`Open @${prof.username} on Telegram`}
+                              >
+                                <TelegramIcon className="w-4 h-4" />
+                              </button>
+                            )}
+                            <span className="text-[10px] text-muted-foreground truncate">
                               {candCountry.flag} {candCountry.name}
                             </span>
                           </div>
@@ -1226,10 +1260,35 @@ export const BrotherhoodScreen: React.FC = () => {
                             }`}
                           >
                             <div className="truncate pr-2">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <span className="truncate">
                                   @{prof?.username || 'member'}
                                 </span>
+                                {prof?.username && (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openTelegramProfile(prof.username!);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation();
+                                        openTelegramProfile(prof.username!);
+                                      }
+                                    }}
+                                    className={`min-w-[28px] min-h-[28px] p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
+                                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                    }`}
+                                    title={`Open @${prof.username} on Telegram`}
+                                    aria-label={`Open @${prof.username} on Telegram`}
+                                  >
+                                    <TelegramIcon className="w-3.5 h-3.5" />
+                                  </span>
+                                )}
                                 <span className="text-[10px] opacity-80">
                                   {candCountry.flag} {candCountry.name}
                                 </span>

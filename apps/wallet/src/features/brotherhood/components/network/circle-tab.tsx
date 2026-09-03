@@ -99,8 +99,27 @@ export const CircleTab: React.FC<CircleTabProps> = ({
               className="w-full text-left p-3 bg-secondary/40 hover:bg-secondary/70 border border-border/50 hover:border-primary/30 rounded-xl transition-all flex justify-between items-center group cursor-pointer"
             >
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                <div className="flex items-center gap-2">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      if (prof?.username) {
+                        e.stopPropagation();
+                        openTelegramProfile(prof.username);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && prof?.username) {
+                        e.stopPropagation();
+                        openTelegramProfile(prof.username);
+                      }
+                    }}
+                    className={`font-semibold text-sm text-foreground transition-colors ${
+                      prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : 'group-hover:text-primary'
+                    }`}
+                    title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                  >
                     {username}
                   </span>
                   {prof?.username && (
@@ -117,11 +136,11 @@ export const CircleTab: React.FC<CircleTabProps> = ({
                           openTelegramProfile(prof.username!);
                         }
                       }}
-                      className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                      className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                       title={`Open @${prof.username} on Telegram`}
                       aria-label={`Open @${prof.username} on Telegram`}
                     >
-                      <TelegramIcon className="w-3.5 h-3.5" />
+                      <TelegramIcon className="w-4.5 h-4.5" />
                     </span>
                   )}
                 </div>

@@ -124,12 +124,14 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => openTelegramProfile(data.username!)}
-                  className="inline-flex items-center gap-1.5 text-base font-bold text-primary hover:underline cursor-pointer group text-left"
+                  className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
                   title={`Open @${data.username} on Telegram`}
                   data-testid="brotherhood-member-telegram-link"
                 >
                   <span>@{data.username}</span>
-                  <TelegramIcon className="w-4 h-4 text-primary opacity-80 group-hover:opacity-100 transition-opacity" />
+                  <span className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+                    <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                  </span>
                 </button>
               ) : (
                 <span className="text-base font-bold text-foreground block">
