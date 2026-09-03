@@ -12,6 +12,7 @@ import { Button } from '@/core/components/ui/button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
+import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { useMemberDetail } from '../../hooks/use-member-detail';
@@ -287,7 +288,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
               <span className="text-muted-foreground">H3 Spatial Cell</span>
               {data.h3Cell ? (
                 <a
-                  href={`https://ankitgahlyan.github.io/h3-viewer/`}
+                  href={getH3ViewerUrl(data.h3Cell)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono text-blue-500 hover:underline text-[11px]"

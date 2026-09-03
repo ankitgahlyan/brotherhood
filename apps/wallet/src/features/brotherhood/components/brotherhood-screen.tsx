@@ -17,6 +17,7 @@ import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
+import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { NonMemberCard } from './non-member-card';
@@ -541,7 +542,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     </span>
                     {account.data.h3Cell ? (
                       <a
-                        href={`https://ankitgahlyan.github.io/h3-viewer/`}
+                        href={getH3ViewerUrl(account.data.h3Cell)}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono text-blue-500 hover:underline text-[11px]"
@@ -875,7 +876,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     H3 Spatial Cell
                   </label>
                   <a
-                    href="https://ankitgahlyan.github.io/h3-viewer/"
+                    href={getH3ViewerUrl(inviteH3Cell)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
@@ -1804,7 +1805,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   New H3 Spatial Cell
                 </label>
                 <a
-                  href="https://ankitgahlyan.github.io/h3-viewer/"
+                  href={getH3ViewerUrl(profileH3Cell)}
                   target="_blank"
                   rel="noreferrer"
                   className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"

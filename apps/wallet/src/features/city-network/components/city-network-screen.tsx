@@ -16,6 +16,7 @@ import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { getH3ViewerUrl } from '@/core/utils/h3';
 import { MemberGuard, ActivationBanner } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
@@ -155,15 +156,25 @@ export const CityNetworkScreen: React.FC = () => {
                   <span className="text-xs font-medium text-muted-foreground">
                     H3 Spatial Cell Index
                   </span>
-                  {myH3Cell && h3CellInput !== myH3Cell && (
-                    <button
-                      type="button"
-                      onClick={() => setH3CellInput(myH3Cell)}
-                      className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors"
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={getH3ViewerUrl(h3CellInput)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-medium text-blue-500 hover:underline flex items-center gap-0.5"
                     >
-                      Reset to My Cell
-                    </button>
-                  )}
+                      <span>Viewer</span> ↗
+                    </a>
+                    {myH3Cell && h3CellInput !== myH3Cell && (
+                      <button
+                        type="button"
+                        onClick={() => setH3CellInput(myH3Cell)}
+                        className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        Reset to My Cell
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <input
                   type="text"
@@ -375,13 +386,20 @@ export const CityNetworkScreen: React.FC = () => {
               ) : rawLocationQuery.location ? (
                 <div className="space-y-3">
                   {rawLocationQuery.location.h3Cell && (
-                    <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl text-xs">
-                      <span className="text-muted-foreground block text-[10px]">
-                        H3 Spatial Cell
-                      </span>
-                      <span className="font-mono font-semibold text-foreground">
-                        {rawLocationQuery.location.h3Cell}
-                      </span>
+                    <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl text-xs flex justify-between items-center">
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">
+                          H3 Spatial Cell
+                        </span>
+                        <a
+                          href={getH3ViewerUrl(rawLocationQuery.location.h3Cell)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono font-semibold text-blue-500 hover:underline text-xs"
+                        >
+                          {rawLocationQuery.location.h3Cell} ↗
+                        </a>
+                      </div>
                     </div>
                   )}
 

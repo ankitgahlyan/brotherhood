@@ -9,6 +9,7 @@
 export * from './asset';
 export * from './format';
 export * from './formatters';
+export * from './h3';
 export * from './payload';
 export * from './rates';
 export * from './telegram';
