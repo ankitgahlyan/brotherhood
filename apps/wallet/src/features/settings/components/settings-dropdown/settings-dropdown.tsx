@@ -30,7 +30,9 @@ import { ToggleRow } from '../toggle-row';
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
 import { Modal } from '@/core/components/ui/modal';
+import { Button } from '@/core/components/ui/button';
 import { SettingsIcon } from '@/core/components/ui/icons';
+import { useBiometrics } from '@/core/security/use-biometrics';
 import { CreateWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
 import type { CreateWalletMode } from '@/features/wallet-setup';
 
@@ -95,6 +97,7 @@ export const SettingsDropdown: React.FC = () => {
   const {
     lock,
     reset,
+    currentPassword,
     persistPassword,
     setPersistPassword,
     holdToSign,
@@ -103,13 +106,42 @@ export const SettingsDropdown: React.FC = () => {
     setShowFastSend,
   } = useAuth();
   const { getDecryptedMnemonic, network = 'testnet' } = useWallet();
+  const {
+    isSupported: isBiometricsSupported,
+    isEnabled: isBiometricsEnabled,
+    register: registerBiometrics,
+    disable: disableBiometrics,
+  } = useBiometrics();
 
   const [panel, setPanel] = useState<'menu' | 'create' | 'mnemonic' | null>(
     null,
   );
+  const [isBiometricPromptOpen, setIsBiometricPromptOpen] = useState(false);
+  const [biometricPasscode, setBiometricPasscode] = useState('');
+  const [biometricError, setBiometricError] = useState('');
+  const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
+
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
+
+  const handleToggleBiometrics = async (checked: boolean) => {
+    if (!checked) {
+      disableBiometrics();
+    } else {
+      if (currentPassword) {
+        try {
+          await registerBiometrics(currentPassword);
+        } catch (e) {
+          log.error('Failed to enable biometrics:', e);
+        }
+      } else {
+        setBiometricPasscode('');
+        setBiometricError('');
+        setIsBiometricPromptOpen(true);
+      }
+    }
+  };
 
   const handleLockWallet = () => {
     setPanel(null);
@@ -123,6 +155,7 @@ export const SettingsDropdown: React.FC = () => {
       )
     ) {
       setPanel(null);
+      disableBiometrics();
       reset();
     }
   };
@@ -280,6 +313,15 @@ export const SettingsDropdown: React.FC = () => {
           </div>
 
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+            {isBiometricsSupported && (
+              <ToggleRow
+                testId="biometric-unlock"
+                label="Fingerprint / Biometric Unlock"
+                description="Unlock wallet using device fingerprint or Face ID"
+                checked={isBiometricsEnabled}
+                onChange={handleToggleBiometrics}
+              />
+            )}
             <ToggleRow
               testId="auto-lock"
               label="Auto-Lock"
@@ -347,6 +389,65 @@ export const SettingsDropdown: React.FC = () => {
               {mnemonicError}
             </p>
           )}
+        </Modal.Body>
+      </Modal.Container>
+
+      <Modal.Container
+        isOpened={isBiometricPromptOpen}
+        onOpenChange={(open) => !open && setIsBiometricPromptOpen(false)}
+        className="px-2"
+      >
+        <Modal.Header onClose={() => setIsBiometricPromptOpen(false)}>
+          <Modal.Title>Enable Fingerprint Unlock</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="gap-3 p-4">
+          <p className="text-xs text-muted-foreground">
+            Enter your wallet passcode to register biometric authentication on this device.
+          </p>
+          <input
+            type="password"
+            value={biometricPasscode}
+            onChange={(e) => {
+              setBiometricPasscode(e.target.value);
+              setBiometricError('');
+            }}
+            placeholder="Enter Passcode"
+            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {biometricError && (
+            <p className="text-xs text-red-500">{biometricError}</p>
+          )}
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              fullWidth
+              onClick={() => setIsBiometricPromptOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              fullWidth
+              loading={isBiometricRegistering}
+              disabled={!biometricPasscode || isBiometricRegistering}
+              onClick={async () => {
+                setIsBiometricRegistering(true);
+                try {
+                  await registerBiometrics(biometricPasscode);
+                  setIsBiometricPromptOpen(false);
+                } catch (err) {
+                  setBiometricError(
+                    err instanceof Error ? err.message : 'Registration failed',
+                  );
+                } finally {
+                  setIsBiometricRegistering(false);
+                }
+              }}
+            >
+              Enable
+            </Button>
+          </div>
         </Modal.Body>
       </Modal.Container>
 

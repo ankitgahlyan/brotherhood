@@ -14,6 +14,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
+import { cleanTelegramUsername } from '@/core/utils/telegram';
 
 export interface UseInviteMemberParams {
   wallet: Wallet | null | undefined;
@@ -106,7 +107,7 @@ export function useInviteMember({
     } catch {
       return 'Invalid invitee address';
     }
-    if (!username.trim()) return 'Enter a username for the new member';
+    if (!cleanTelegramUsername(username)) return 'Enter a Telegram username for the new member';
     if (!h3Cell.trim()) return 'Enter an H3 spatial cell';
     if (country < 0 || isNaN(country)) return 'Select a valid country';
 
@@ -130,7 +131,7 @@ export function useInviteMember({
 
     const payload = buildInviteBody({
       transferRecipient: inviteeAddr,
-      username: username.trim(),
+      username: cleanTelegramUsername(username),
       h3Cell: h3Cell.trim(),
       country,
     });

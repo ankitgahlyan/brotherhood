@@ -22,6 +22,9 @@ _Avoid_: Coordinate, GPS, City name, Address
 **Account** — a member's on-chain record, implemented as a `FossFiWallet` contract. Holds the member's balance, votes, connections, and status. One member owns exactly one account.
 _Avoid_: Wallet, jetton wallet (reserved for the TON standard view)
 
+**Username** — the Telegram handle registered in a Member's Account profile (`ProfileInfo`), enabling peer communication and network coordination via Telegram deep-links.
+_Avoid_: Handle, nick, alias
+
 **Owner** — the external TON address that signs for and controls an Account's wallet contract.
 _Avoid_: Wallet, signer
 

@@ -36,3 +36,20 @@ export function openTelegramLink(url: string): void {
   }
   window.open(url, '_blank', 'noopener,noreferrer');
 }
+
+/** Strip leading @ and whitespace from a Telegram username. */
+export function cleanTelegramUsername(username: string): string {
+  return username.replace(/^@+/, '').trim();
+}
+
+/** Construct a canonical Telegram profile deep-link URL (e.g. https://t.me/username). */
+export function getTelegramProfileUrl(username: string): string {
+  const clean = cleanTelegramUsername(username);
+  return clean ? `https://t.me/${clean}` : 'https://t.me';
+}
+
+/** Open a user's Telegram profile/chat via native Telegram Mini App deeplink or browser. */
+export function openTelegramProfile(username: string): void {
+  const url = getTelegramProfileUrl(username);
+  openTelegramLink(url);
+}

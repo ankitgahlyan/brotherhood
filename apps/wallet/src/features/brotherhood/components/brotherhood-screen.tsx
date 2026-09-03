@@ -15,6 +15,8 @@ import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
+import { TelegramIcon } from '@/core/components/ui/icons';
+import { openTelegramProfile } from '@/core/utils/telegram';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { NonMemberCard } from './non-member-card';
@@ -430,9 +432,22 @@ export const BrotherhoodScreen: React.FC = () => {
                     <span className="text-xs text-muted-foreground block">
                       Member Username
                     </span>
-                    <span className="text-base font-bold text-foreground block">
-                      @{account.data.username || 'anonymous'}
-                    </span>
+                    {account.data.username ? (
+                      <button
+                        type="button"
+                        onClick={() => openTelegramProfile(account.data.username!)}
+                        className="inline-flex items-center gap-1.5 text-base font-bold text-primary hover:underline cursor-pointer group text-left"
+                        title={`Open @${account.data.username} on Telegram`}
+                        data-testid="brotherhood-account-telegram-link"
+                      >
+                        <span>@{account.data.username}</span>
+                        <TelegramIcon className="w-4 h-4 text-primary opacity-80 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ) : (
+                      <span className="text-base font-bold text-foreground block">
+                        @anonymous
+                      </span>
+                    )}
                     <span
                       className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
                         memberState === 'fully_active'
@@ -837,16 +852,19 @@ export const BrotherhoodScreen: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Username
+                  Invitee Telegram Username
                 </label>
                 <input
                   type="text"
                   value={inviteUsername}
                   onChange={(e) => setInviteUsername(e.target.value)}
-                  placeholder="alice"
+                  placeholder="@username or username"
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                   data-testid="brotherhood-invite-username"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Enter the invitee&apos;s Telegram handle. This will be registered as their on-chain username for peer communication.
+                </p>
               </div>
 
               <div className="space-y-1">
@@ -916,10 +934,26 @@ export const BrotherhoodScreen: React.FC = () => {
                         className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
                       >
                         <div>
-                          <span className="font-semibold text-foreground block">
-                            @{prof?.username || 'member'}
-                          </span>
-                          <span className="font-mono text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-foreground">
+                              @{prof?.username || 'member'}
+                            </span>
+                            {prof?.username && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openTelegramProfile(prof.username!);
+                                }}
+                                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                title={`Open @${prof.username} on Telegram`}
+                                aria-label={`Open @${prof.username} on Telegram`}
+                              >
+                                <TelegramIcon className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <span className="font-mono text-[10px] text-muted-foreground block">
                             {formatShortContract(entry.addressString)}
                           </span>
                         </div>
@@ -1671,16 +1705,19 @@ export const BrotherhoodScreen: React.FC = () => {
             {/* Username */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">
-                New Username
+                New Telegram Username
               </label>
               <input
                 type="text"
                 value={profileUsername}
                 onChange={(e) => setProfileUsername(e.target.value)}
-                placeholder="bob"
+                placeholder="@username or username"
                 className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                 data-testid="brotherhood-profile-username"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Enter your Telegram handle (with or without @).
+              </p>
               {profile.usernameValidationError && (
                 <p className="text-xs text-rose-500 font-medium">
                   {profile.usernameValidationError}

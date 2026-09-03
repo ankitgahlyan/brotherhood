@@ -10,6 +10,8 @@ import React from 'react';
 import { Address } from '@ton/core';
 import { Button } from '@/core/components/ui/button';
 import { CopyButton } from '@/core/components/ui/copy-button';
+import { TelegramIcon } from '@/core/components/ui/icons';
+import { openTelegramProfile } from '@/core/utils/telegram';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { useMemberDetail } from '../../hooks/use-member-detail';
@@ -118,9 +120,22 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
               <span className="text-xs text-muted-foreground block">
                 Member Profile
               </span>
-              <span className="text-base font-bold text-foreground block">
-                @{data.username || 'anonymous'}
-              </span>
+              {data.username ? (
+                <button
+                  type="button"
+                  onClick={() => openTelegramProfile(data.username!)}
+                  className="inline-flex items-center gap-1.5 text-base font-bold text-primary hover:underline cursor-pointer group text-left"
+                  title={`Open @${data.username} on Telegram`}
+                  data-testid="brotherhood-member-telegram-link"
+                >
+                  <span>@{data.username}</span>
+                  <TelegramIcon className="w-4 h-4 text-primary opacity-80 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ) : (
+                <span className="text-base font-bold text-foreground block">
+                  @anonymous
+                </span>
+              )}
               <span
                 className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
                   data.status === 0 && data.active

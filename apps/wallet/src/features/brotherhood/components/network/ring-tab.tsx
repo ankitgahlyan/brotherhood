@@ -9,6 +9,8 @@
 import React, { useState } from 'react';
 import { Address } from '@ton/core';
 import { Button } from '@/core/components/ui/button';
+import { TelegramIcon } from '@/core/components/ui/icons';
+import { openTelegramProfile } from '@/core/utils/telegram';
 import { useFormatAddress } from '@/core/utils/formatters';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import {
@@ -74,6 +76,27 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
             <span className="font-semibold text-sm text-foreground">
               Invited by {inviterUsername}
             </span>
+            {circleProfile?.username && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openTelegramProfile(circleProfile.username!);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                    openTelegramProfile(circleProfile.username!);
+                  }
+                }}
+                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                title={`Open @${circleProfile.username} on Telegram`}
+                aria-label={`Open @${circleProfile.username} on Telegram`}
+              >
+                <TelegramIcon className="w-3.5 h-3.5" />
+              </span>
+            )}
             <span className="text-[10px] text-muted-foreground font-mono">
               ({formatShortContract(circleMember.addressString)})
             </span>
@@ -140,9 +163,32 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                     className="w-full text-left p-2.5 bg-secondary/40 hover:bg-secondary/80 border border-border/50 hover:border-primary/30 rounded-lg transition-all flex justify-between items-center group cursor-pointer"
                   >
                     <div className="space-y-0.5">
-                      <span className="font-semibold text-xs text-foreground block group-hover:text-primary transition-colors">
-                        {username}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                          {username}
+                        </span>
+                        {prof?.username && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTelegramProfile(prof.username!);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.stopPropagation();
+                                openTelegramProfile(prof.username!);
+                              }
+                            }}
+                            className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            title={`Open @${prof.username} on Telegram`}
+                            aria-label={`Open @${prof.username} on Telegram`}
+                          >
+                            <TelegramIcon className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
                       <span className="font-mono text-[10px] text-muted-foreground block">
                         {formatShortContract(entry.addressString)}
                       </span>

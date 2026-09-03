@@ -11,7 +11,10 @@ import { useLocation, useNavigate } from '@/core/routing';
 import { useAuth } from '@demo/wallet-core';
 
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
+import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
+import { FingerprintIcon } from '@/core/components/ui/icons';
+import { useBiometrics } from '@/core/security/use-biometrics';
 import { WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
 import type { WalletSetupMode } from '@/features/wallet-setup';
 
@@ -25,10 +28,12 @@ export const SetupPasswordScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const { setPassword: setStorePassword } = useAuth();
+  const { isSupported, register } = useBiometrics();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,20 +45,43 @@ export const SetupPasswordScreen: React.FC = () => {
   const canSubmit =
     password.length >= MIN_LENGTH && password === confirmPassword && !isLoading;
 
+  const finishSetup = () => {
+    const tab = (location.state as { tab?: WalletSetupMode } | null)?.tab;
+    navigate(WALLET_SETUP_ROUTE[tab ?? 'create']);
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setError('');
     setIsLoading(true);
     try {
       await setStorePassword(password);
-      // Route by the chosen path — each has its own dedicated screen.
-      const tab = (location.state as { tab?: WalletSetupMode } | null)?.tab;
-      navigate(WALLET_SETUP_ROUTE[tab ?? 'create']);
+      if (isSupported) {
+        setShowBiometricPrompt(true);
+      } else {
+        finishSetup();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEnableBiometrics = async () => {
+    try {
+      await register(password);
+    } catch {
+      /* ignore if user cancelled native dialog */
+    } finally {
+      setShowBiometricPrompt(false);
+      finishSetup();
+    }
+  };
+
+  const handleSkipBiometrics = () => {
+    setShowBiometricPrompt(false);
+    finishSetup();
   };
 
   const footer = (
@@ -75,10 +103,10 @@ export const SetupPasswordScreen: React.FC = () => {
           className="text-2xl font-bold text-foreground"
           data-testid="subtitle"
         >
-          Create a password
+          Create a passcode
         </h1>
         <p className="mt-2 text-base text-muted-foreground">
-          Create a password to protect your wallet.
+          Create a passcode / password to protect your wallet.
         </p>
 
         <form
@@ -97,7 +125,7 @@ export const SetupPasswordScreen: React.FC = () => {
               setPassword(e.target.value);
               setError('');
             }}
-            placeholder="Password"
+            placeholder="Passcode / Password"
             autoComplete="new-password"
             aria-label="Password"
             className={INPUT_CLASS}
@@ -110,7 +138,7 @@ export const SetupPasswordScreen: React.FC = () => {
               setConfirmPassword(e.target.value);
               setError('');
             }}
-            placeholder="Confirm password"
+            placeholder="Confirm passcode / password"
             autoComplete="new-password"
             aria-label="Confirm password"
             className={INPUT_CLASS}
@@ -121,16 +149,26 @@ export const SetupPasswordScreen: React.FC = () => {
           <p className="mt-4 text-sm text-red-500">
             {error ||
               (tooShort
-                ? `Password must be at least ${MIN_LENGTH} characters`
-                : 'Passwords do not match')}
+                ? `Passcode must be at least ${MIN_LENGTH} characters`
+                : 'Passcodes do not match')}
           </p>
         )}
 
         <p className="mt-6 text-xs text-muted-foreground">
-          Make sure to remember your password — it can’t be recovered if
+          Make sure to remember your passcode — it cannot be recovered if
           forgotten.
         </p>
       </div>
+
+      <ConfirmModal
+        isOpen={showBiometricPrompt}
+        title="Enable Fingerprint Unlock?"
+        description="Unlock your wallet quickly and securely using your fingerprint or biometric authentication."
+        confirmLabel="Enable Fingerprint"
+        cancelLabel="Skip for Now"
+        onConfirm={handleEnableBiometrics}
+        onClose={handleSkipBiometrics}
+      />
     </CenteredScreen>
   );
 };

@@ -39,6 +39,7 @@ export const useAuth = () => {
     useShallow((state) => ({
       isPasswordSet: state.auth.isPasswordSet,
       isUnlocked: state.auth.isUnlocked,
+      currentPassword: state.auth.currentPassword,
       persistPassword: state.auth.persistPassword,
       holdToSign: state.auth.holdToSign,
       showFastSend: state.auth.showFastSend,

@@ -19,6 +19,7 @@ import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
+import { cleanTelegramUsername } from '@/core/utils/telegram';
 
 export interface UseProfileParams {
   wallet: Wallet | null | undefined;
@@ -64,7 +65,7 @@ export function useProfile({
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
-    if (!username.trim()) return 'Enter a non-empty username';
+    if (!cleanTelegramUsername(username)) return 'Enter a non-empty Telegram username';
     return null;
   }, [wallet, walletAddress, accountData, username]);
 
@@ -118,7 +119,7 @@ export function useProfile({
 
     const payload = ChangeUsername.toCell(
       ChangeUsername.create({
-        newUsername: username.trim(),
+        newUsername: cleanTelegramUsername(username),
       }),
     );
 
