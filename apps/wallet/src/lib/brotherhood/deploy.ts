@@ -17,7 +17,7 @@ import {
   AskToTransfer,
   ActInvite,
   ActRequestUpgrade,
-  ActSetPersonalJettonMinter,
+  ActSetPersonalJetton,
   ActUnvote,
   ActVote,
   BuyCredit,
@@ -131,8 +131,7 @@ export async function buildChangeContentBody(
 }
 
 // Deploy a Personal Token minter backed by the issuer's FI wallet.
-// PriStore layout: totalSupply (coins), fiJettonAddress, adminAddress,
-// jettonWalletCode (cell -> ref), metadataUri (cell? -> maybeRef).
+// PersonalStore layout: totalSupply (coins), fiJettonAddress, adminAddress, metadataUri.
 // The metadata cell uses the Tolk-exact OnchainMetadataReply layout so a
 // frontend-deployed minter is byte-identical to one from the Tolk scripts.
 export async function buildPersonalMinterDeploy(params: {
@@ -142,37 +141,70 @@ export async function buildPersonalMinterDeploy(params: {
 }) {
   const content = await buildTolkOnchainMetadata(params.metadata);
 
-  const data = beginCell()
-    .storeCoins(0n)
-    .storeAddress(params.issuerWallet)
-    .storeAddress(params.adminAddress)
-    .storeRef(PersonalWallet.CodeCell)
-    .storeMaybeRef(content)
-    .endCell();
+  const minter = PersonalMinter.fromStorage({
+    totalSupply: 0n,
+    fiJettonAddress: params.issuerWallet,
+    adminAddress: params.adminAddress,
+    metadataUri: content,
+  });
 
-  const stateInit = {
-    code: PersonalMinter.CodeCell,
-    data,
+  return {
+    contractAddress: minter.address,
+    stateInit: minter.init!,
   };
-  const contractAddress = new Address(
-    0,
-    beginCell().store(storeStateInit(stateInit)).endCell().hash(),
-  );
-
-  return { contractAddress, stateInit };
 }
 
-// The ActSetPersonalJettonMinter signal that points the issuer's FI wallet
-// at its Personal Token minter.
-export function buildPointPersonalMinterBody(params: {
+// Compute the expected personal token wallet address for a user on a given minter.
+export function getExpectedPersonalWalletAddress(params: {
   personalMinter: Address;
+  owner: Address;
+  adminAddress?: Address;
+}): Address {
+  return PersonalWallet.fromStorage(
+    {
+      owner: params.owner,
+      deployer: params.adminAddress ?? params.owner,
+      minterAddress: params.personalMinter,
+    },
+    {
+      toShard: { fixedPrefixLength: 8, closeTo: params.owner },
+    },
+  ).address;
+}
+
+// The unified ActSetPersonalJetton signal that points the issuer's FI wallet
+// at both its Personal Token minter and its Personal Token wallet in a single message.
+export function buildSetPersonalJettonBody(params: {
+  personalMinter: Address;
+  personalWallet: Address;
 }): Cell {
-  const { personalMinter } = params;
-  return ActSetPersonalJettonMinter.toCell(
-    ActSetPersonalJettonMinter.create({
-      transferRecipient: personalMinter,
+  const { personalMinter, personalWallet } = params;
+  return ActSetPersonalJetton.toCell(
+    ActSetPersonalJetton.create({
+      personalJettonMinter: personalMinter,
+      personalJettonWallet: personalWallet,
     }),
   );
+}
+
+// Backward compatibility alias for single-minter callers
+export function buildPointPersonalMinterBody(params: {
+  personalMinter: Address;
+  personalWallet?: Address;
+  ownerAddress?: Address;
+}): Cell {
+  const personalWallet =
+    params.personalWallet ??
+    (params.ownerAddress
+      ? getExpectedPersonalWalletAddress({
+          personalMinter: params.personalMinter,
+          owner: params.ownerAddress,
+        })
+      : params.personalMinter);
+  return buildSetPersonalJettonBody({
+    personalMinter: params.personalMinter,
+    personalWallet,
+  });
 }
 
 export function buildBurnBody(

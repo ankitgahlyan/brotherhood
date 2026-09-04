@@ -8,6 +8,7 @@ import {
   getFiWalletState,
   getFiWalletStateByContractAddress,
   getPersonalMinterForIssuer,
+  getPersonalWalletForIssuer,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   type JettonMasterInfo,
@@ -176,6 +177,21 @@ export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
     queryKey: ['personal-minter', key],
     queryFn: () =>
       cachedQueryFn(cacheKey, () => getPersonalMinterForIssuer(ownerAddress!)),
+    enabled: !!ownerAddress,
+  });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
+}
+
+export function usePersonalWalletForIssuer(ownerAddress: Address | null) {
+  const key = ownerAddress?.toString() ?? 'none';
+  const cacheKey = `personal-issuer-wallet:${key}`;
+  const query = useQuery({
+    queryKey: ['personal-issuer-wallet', key],
+    queryFn: () =>
+      cachedQueryFn(cacheKey, () => getPersonalWalletForIssuer(ownerAddress!)),
     enabled: !!ownerAddress,
   });
   return {

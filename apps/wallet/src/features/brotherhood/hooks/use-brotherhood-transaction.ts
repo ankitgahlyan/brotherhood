@@ -16,6 +16,7 @@ export interface BrotherhoodMessage {
   toAddress: string;
   amount: bigint;
   payload: Cell;
+  stateInit?: Cell;
 }
 
 export interface UseBrotherhoodTransactionResult {
@@ -56,6 +57,9 @@ export function useBrotherhoodTransaction(
             recipientAddress: msg.toAddress,
             transferAmount: msg.amount.toString(),
             payload: msg.payload.toBoc().toString('base64'),
+            stateInit: msg.stateInit
+              ? msg.stateInit.toBoc().toString('base64')
+              : undefined,
           });
           await walletKit.handleNewTransaction(wallet, tx);
         }
@@ -94,4 +98,5 @@ export const GAS = {
   MINT: toNano('0.1'),
   TOP_UP: toNano('0.1'),
   REQUEST_UPGRADE: toNano('0.15'),
+  SET_PERSONAL: toNano('0.6'),
 } as const;

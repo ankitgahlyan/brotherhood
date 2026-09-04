@@ -242,6 +242,17 @@ export async function getPersonalMinterForIssuer(
   return state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
 }
 
+// The Personal Token wallet an issuer registered on its FI wallet, or null if none.
+export async function getPersonalWalletForIssuer(
+  issuerOwner: Address,
+): Promise<Address | null> {
+  const issuerWalletAddr = await getWalletAddress(issuerOwner);
+  const state = await getTonClient(network)
+    .open(FossFiWallet.fromAddress(issuerWalletAddr))
+    .getWalletDataAll();
+  return state.addresses.ref.trustedJettonAddrs.ref.personalJettonWallet;
+}
+
 // The Personal Token wallet a buyer owns on the given minter.
 export async function getPersonalWalletAddress(
   personalMinter: Address,
