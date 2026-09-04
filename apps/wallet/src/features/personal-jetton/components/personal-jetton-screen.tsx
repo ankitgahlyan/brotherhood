@@ -7,9 +7,17 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, AlertCircle, CheckCircle2, Rocket, ArrowRight } from 'lucide-react';
+import {
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  Rocket,
+  ArrowRight,
+  ExternalLink,
+} from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { useExplorer, getExplorerAddressUrl } from '@/core/explorer/use-explorer';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
@@ -53,15 +61,22 @@ export const PersonalJettonScreen: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>('info');
 
+  const { explorer } = useExplorer();
+
   // Form inputs for Deploy
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [tokenDesc, setTokenDesc] = useState('');
   const [tokenImage, setTokenImage] = useState(DEFAULT_TOKEN_IMAGE);
+  const [initialMintAmount, setInitialMintAmount] = useState('');
+
+  // Form inputs for Update Metadata in Admin tab
+  const [adminTokenName, setAdminTokenName] = useState('');
+  const [adminTokenSymbol, setAdminTokenSymbol] = useState('');
+  const [adminTokenDesc, setAdminTokenDesc] = useState('');
+  const [adminTokenImage, setAdminTokenImage] = useState(DEFAULT_TOKEN_IMAGE);
 
   // Manual inputs for other actions
-  const [customMinterAddr, setCustomMinterAddr] = useState('');
-  const [customPersonalWalletAddr, setCustomPersonalWalletAddr] = useState('');
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [newAdmin, setNewAdmin] = useState('');
@@ -91,9 +106,8 @@ export const PersonalJettonScreen: React.FC = () => {
     }
   }, [isDeployed, activeTab]);
 
-  const activeMinter = customMinterAddr || info.personalMinterAddress || '';
-  const activePersonalWallet =
-    customPersonalWalletAddr || info.personalWalletAddress || '';
+  const activeMinter = info.personalMinterAddress || '';
+  const activePersonalWallet = info.personalWalletAddress || '';
 
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
@@ -103,6 +117,7 @@ export const PersonalJettonScreen: React.FC = () => {
     symbol: tokenSymbol,
     description: tokenDesc,
     image: tokenImage,
+    initialMintAmount,
     network,
   });
 
@@ -110,13 +125,13 @@ export const PersonalJettonScreen: React.FC = () => {
   const targetRegisterMinter =
     adminRegisterMinter ||
     deployer.deployedAddresses?.minterAddress ||
-    customMinterAddr ||
+    activeMinter ||
     '';
 
   const targetRegisterWallet =
     adminRegisterWallet ||
     deployer.deployedAddresses?.personalWalletAddress ||
-    customPersonalWalletAddr ||
+    activePersonalWallet ||
     '';
 
   const registrar = useRegisterPersonalJetton({
@@ -158,8 +173,10 @@ export const PersonalJettonScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     minterAddress: activeMinter,
-    name: tokenName,
-    symbol: tokenSymbol,
+    name: adminTokenName || tokenName,
+    symbol: adminTokenSymbol || tokenSymbol,
+    description: adminTokenDesc || tokenDesc,
+    image: adminTokenImage || tokenImage,
   });
 
   const topup = useTopUp({
@@ -312,17 +329,35 @@ export const PersonalJettonScreen: React.FC = () => {
                                 ) + ' (Pending Registration)'
                               : 'None deployed yet')}
                         </span>
-                        {(info.personalMinterAddress ||
-                          deployer.deployedAddresses?.minterAddress) && (
-                          <CopyButton
-                            address={
-                              info.personalMinterAddress ||
-                              deployer.deployedAddresses!.minterAddress
-                            }
-                            type="contract"
-                            size="xs"
-                          />
-                        )}
+                        <div className="flex items-center gap-1">
+                          {(info.personalMinterAddress ||
+                            deployer.deployedAddresses?.minterAddress) && (
+                            <>
+                              <CopyButton
+                                address={
+                                  info.personalMinterAddress ||
+                                  deployer.deployedAddresses!.minterAddress
+                                }
+                                type="contract"
+                                size="xs"
+                              />
+                              <a
+                                href={getExplorerAddressUrl(
+                                  network,
+                                  info.personalMinterAddress ||
+                                    deployer.deployedAddresses!.minterAddress,
+                                  explorer,
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                                title={`View on ${explorer === 'tonviewer' ? 'Tonviewer' : 'Tonscan'}`}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -340,25 +375,66 @@ export const PersonalJettonScreen: React.FC = () => {
                                 )
                               : 'None')}
                         </span>
-                        {(info.personalWalletAddress ||
-                          deployer.deployedAddresses?.personalWalletAddress) && (
-                          <CopyButton
-                            address={
-                              info.personalWalletAddress ||
-                              deployer.deployedAddresses!.personalWalletAddress
-                            }
-                            type="contract"
-                            size="xs"
-                          />
-                        )}
+                        <div className="flex items-center gap-1">
+                          {(info.personalWalletAddress ||
+                            deployer.deployedAddresses?.personalWalletAddress) && (
+                            <>
+                              <CopyButton
+                                address={
+                                  info.personalWalletAddress ||
+                                  deployer.deployedAddresses!.personalWalletAddress
+                                }
+                                type="contract"
+                                size="xs"
+                              />
+                              <a
+                                href={getExplorerAddressUrl(
+                                  network,
+                                  info.personalWalletAddress ||
+                                    deployer.deployedAddresses!.personalWalletAddress,
+                                  explorer,
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                                title={`View on ${explorer === 'tonviewer' ? 'Tonviewer' : 'Tonscan'}`}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
 
+                    {/* Minter State: Total Supply & Mintable */}
+                    {info.minterDetails && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                          <span className="text-muted-foreground block text-[11px]">
+                            Total Supply
+                          </span>
+                          <span className="font-semibold text-foreground text-sm">
+                            {(Number(info.minterDetails.totalSupply) / 1e9).toFixed(4)}
+                          </span>
+                        </div>
+                        <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
+                          <span className="text-muted-foreground block text-[11px]">
+                            Status
+                          </span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {info.minterDetails.mintable !== false ? 'Mintable' : 'Fixed'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
                       <span className="text-muted-foreground block">
-                        Personal Token Balance
+                        Your Personal Token Balance
                       </span>
-                      <span className="font-medium font-semibold text-sm text-foreground">
+                      <span className="font-semibold text-sm text-foreground">
                         {info.personalBalance !== null
                           ? (Number(info.personalBalance) / 1e9).toFixed(4)
                           : '0.0000'}
@@ -508,6 +584,28 @@ export const PersonalJettonScreen: React.FC = () => {
                     />
                   </div>
 
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground flex items-center justify-between">
+                      <span>Initial Mint Amount</span>
+                      <span className="text-muted-foreground text-[10px] font-normal">
+                        (Optional, defaults to 0)
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={initialMintAmount}
+                      onChange={(e) => setInitialMintAmount(e.target.value)}
+                      placeholder="e.g. 1000 (tokens minted to you upon deploy)"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="personal-deploy-initial-mint"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Tokens will be minted directly to your connected wallet in the deployment transaction.
+                    </p>
+                  </div>
+
                   {/* Token Image Picker with Cryptofonts icon browser & TON default */}
                   <TokenImagePicker
                     value={tokenImage}
@@ -550,26 +648,56 @@ export const PersonalJettonScreen: React.FC = () => {
                 </div>
               )}
               <div className="space-y-2">
-                <InputScan
-                  value={customMinterAddr}
-                  onChange={setCustomMinterAddr}
-                  placeholder={`Minter Address (Default: ${activeMinter || 'None'})`}
-                  data-testid="personal-mint-minter"
-                />
-                <InputScan
-                  value={recipient}
-                  onChange={setRecipient}
-                  placeholder={`Recipient Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                  data-testid="personal-mint-recipient"
-                />
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Amount to Mint"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="personal-mint-amount"
-                />
+                {activeMinter && (
+                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-muted-foreground block text-[11px]">
+                        Minter Contract
+                      </span>
+                      <span className="font-mono text-foreground font-medium">
+                        {formatContractAddress(activeMinter)}
+                      </span>
+                    </div>
+                    <CopyButton address={activeMinter} type="contract" size="xs" />
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-foreground">
+                      Recipient Address
+                    </label>
+                    {address && (
+                      <button
+                        type="button"
+                        onClick={() => setRecipient(address)}
+                        className="text-[11px] text-primary hover:underline font-medium"
+                      >
+                        Use My Address
+                      </button>
+                    )}
+                  </div>
+                  <InputScan
+                    value={recipient}
+                    onChange={setRecipient}
+                    placeholder={`Recipient Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="personal-mint-recipient"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1">
+                    Amount to Mint
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Amount to Mint"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="personal-mint-amount"
+                  />
+                </div>
               </div>
               <Button
                 onClick={() => minter.mint()}
@@ -604,20 +732,45 @@ export const PersonalJettonScreen: React.FC = () => {
                 </div>
               )}
               <div className="space-y-2">
-                <InputScan
-                  value={customPersonalWalletAddr}
-                  onChange={setCustomPersonalWalletAddr}
-                  placeholder={`Personal Wallet Address (Default: ${activePersonalWallet || 'None'})`}
-                  data-testid="personal-burn-wallet-addr"
-                />
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Amount to Burn"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="personal-burn-amount"
-                />
+                <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-[11px]">Minter Contract:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-foreground font-medium">
+                        {formatContractAddress(activeMinter) || 'None'}
+                      </span>
+                      {activeMinter && (
+                        <CopyButton address={activeMinter} type="contract" size="xs" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-[11px]">Personal Wallet:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-foreground font-medium">
+                        {formatContractAddress(activePersonalWallet) || 'None'}
+                      </span>
+                      {activePersonalWallet && (
+                        <CopyButton address={activePersonalWallet} type="contract" size="xs" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1">
+                    Amount to Burn
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Amount to Burn"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="personal-burn-amount"
+                  />
+                </div>
               </div>
 
               {/* Payback vs Simple Burn Checkbox */}
@@ -715,33 +868,69 @@ export const PersonalJettonScreen: React.FC = () => {
 
               <hr className="border-border" />
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h3 className="font-semibold text-base">Update Metadata</h3>
-                <input
-                  type="text"
-                  value={tokenName}
-                  onChange={(e) => setTokenName(e.target.value)}
-                  placeholder="New Name"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="personal-meta-name"
-                />
-                <input
-                  type="text"
-                  value={tokenSymbol}
-                  onChange={(e) => setTokenSymbol(e.target.value)}
-                  placeholder="New Symbol"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="personal-meta-symbol"
-                />
-                <Button
-                  onClick={() => metadata.changeMetadata()}
-                  disabled={!canOperate || metadata.isDisabled}
-                  loading={metadata.isSending}
-                  fullWidth
-                  data-testid="personal-meta-submit"
-                >
-                  Update Metadata
-                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Update your Personal Token onchain metadata. All fields can be customized.
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs font-medium text-foreground block mb-1">
+                      Token Name
+                    </label>
+                    <input
+                      type="text"
+                      value={adminTokenName}
+                      onChange={(e) => setAdminTokenName(e.target.value)}
+                      placeholder={tokenName || 'Token Name'}
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="personal-meta-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-foreground block mb-1">
+                      Symbol
+                    </label>
+                    <input
+                      type="text"
+                      value={adminTokenSymbol}
+                      onChange={(e) => setAdminTokenSymbol(e.target.value)}
+                      placeholder={tokenSymbol || 'Symbol'}
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="personal-meta-symbol"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-foreground block mb-1">
+                      Description <span className="text-muted-foreground text-[10px] font-normal">(Optional)</span>
+                    </label>
+                    <textarea
+                      value={adminTokenDesc}
+                      onChange={(e) => setAdminTokenDesc(e.target.value)}
+                      placeholder={tokenDesc || DEFAULT_TOKEN_DESCRIPTION}
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      data-testid="personal-meta-desc"
+                    />
+                  </div>
+
+                  {/* Token Image Picker */}
+                  <TokenImagePicker
+                    value={adminTokenImage}
+                    onChange={setAdminTokenImage}
+                    disabled={metadata.isSending}
+                  />
+
+                  <Button
+                    onClick={() => metadata.changeMetadata()}
+                    disabled={!canOperate || metadata.isDisabled}
+                    loading={metadata.isSending}
+                    fullWidth
+                    data-testid="personal-meta-submit"
+                  >
+                    Update Metadata
+                  </Button>
+                </div>
               </div>
             </div>
           )}

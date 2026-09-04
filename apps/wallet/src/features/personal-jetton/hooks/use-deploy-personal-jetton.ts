@@ -12,7 +12,9 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import {
   buildPersonalMinterDeploy,
+  buildMintBody,
   getExpectedPersonalWalletAddress,
+  parseUnits,
 } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
@@ -35,6 +37,7 @@ export interface UseDeployPersonalJettonParams {
   symbol: string;
   description?: string;
   image?: string;
+  initialMintAmount?: string;
   network: Network;
   onDeploySuccess?: (addresses: DeployedPersonalAddresses) => void;
 }
@@ -56,6 +59,7 @@ export function useDeployPersonalJetton({
   symbol,
   description,
   image,
+  initialMintAmount,
   network,
   onDeploySuccess,
 }: UseDeployPersonalJettonParams): UseDeployPersonalJettonResult {
@@ -115,12 +119,29 @@ export function useDeployPersonalJetton({
 
     const stateInitCell = beginCell().store(storeStateInit(stateInit)).endCell();
 
-    // Deploy message with stateInit
+    // Check if an initial mint amount was requested
+    let payload = beginCell().endCell();
+    let txAmount = GAS.DEPLOY;
+
+    const mintVal = initialMintAmount ? parseFloat(initialMintAmount) : 0;
+    if (mintVal > 0) {
+      const mintNano = parseUnits(initialMintAmount!, 9);
+      payload = buildMintBody({
+        toAddress: ownerAddr,
+        jettonAmount: mintNano,
+        forwardTonAmount: 20000000n,
+        totalTonAmount: 50000000n,
+      });
+      // Add mint gas to deploy transaction value
+      txAmount = GAS.DEPLOY + GAS.MINT;
+    }
+
+    // Deploy message with stateInit and optional MintNewJettons payload
     await sendTx([
       {
         toAddress: contractAddress.toString(),
-        amount: GAS.DEPLOY,
-        payload: beginCell().endCell(),
+        amount: txAmount,
+        payload,
         stateInit: stateInitCell,
       },
     ]);
@@ -131,7 +152,11 @@ export function useDeployPersonalJetton({
     };
 
     setDeployedAddresses(result);
-    toast.success('Personal Token minter deployed!');
+    toast.success(
+      mintVal > 0
+        ? 'Personal Token minter deployed and initial tokens minted!'
+        : 'Personal Token minter deployed!',
+    );
     onDeploySuccess?.(result);
     return result;
   }, [
@@ -140,6 +165,7 @@ export function useDeployPersonalJetton({
     symbol,
     description,
     image,
+    initialMintAmount,
     network,
     sendTx,
     onDeploySuccess,

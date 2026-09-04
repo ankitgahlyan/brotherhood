@@ -10,15 +10,17 @@ import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import {
   useFiWalletState,
+  usePersonalMinterDetails,
   usePersonalWalletAddress,
   usePersonalWalletBalance,
 } from '@/lib/brotherhood/queries';
-import { isZeroAddress } from '@/lib/brotherhood/ton';
+import { isZeroAddress, type PersonalMinterDetails } from '@/lib/brotherhood/ton';
 
 export interface UsePersonalJettonInfoResult {
   personalMinterAddress: string | null;
   personalWalletAddress: string | null;
   personalBalance: bigint | null;
+  minterDetails: PersonalMinterDetails | null;
   isRegistered: boolean;
   isLoading: boolean;
   refetch: () => void;
@@ -64,6 +66,12 @@ export function usePersonalJettonInfo(
     refetch: refetchBalance,
   } = usePersonalWalletBalance(minterAddrObj ?? null, ownerAddress);
 
+  const {
+    data: minterDetails,
+    isLoading: isMinterDetailsLoading,
+    refetch: refetchMinterDetails,
+  } = usePersonalMinterDetails(minterAddrObj ?? null);
+
   const resolvedWallet = registeredWalletObj || computedWalletAddrObj || null;
 
   const refetch = () => {
@@ -71,6 +79,7 @@ export function usePersonalJettonInfo(
     if (minterAddrObj) {
       refetchWalletAddr();
       refetchBalance();
+      refetchMinterDetails();
     }
   };
 
@@ -78,10 +87,12 @@ export function usePersonalJettonInfo(
     personalMinterAddress: minterAddrObj?.toString() ?? null,
     personalWalletAddress: resolvedWallet?.toString() ?? null,
     personalBalance: balance ?? null,
+    minterDetails: minterDetails ?? null,
     isRegistered: Boolean(minterAddrObj),
     isLoading:
       fiWalletQuery.isLoading ||
-      (Boolean(minterAddrObj) && (isWalletAddrLoading || isBalanceLoading)),
+      (Boolean(minterAddrObj) &&
+        (isWalletAddrLoading || isBalanceLoading || isMinterDetailsLoading)),
     refetch,
   };
 }
