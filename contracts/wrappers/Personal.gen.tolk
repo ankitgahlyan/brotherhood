@@ -8,10 +8,9 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 
 import "@contracts/common/messages"
-import "@contracts/personalMinter/personal"
 import "@contracts/personalMinter/storage"
 
-/// Storage `PriStore` is defined in `@contracts/personalMinter/storage`
+/// Storage `PersonalStore` is defined in `@contracts/personalMinter/storage`
 struct Personal {
     address: address
     stateInit: ContractState? = null
@@ -20,7 +19,7 @@ struct Personal {
 
 /// Creates a contract wrapper instance from the storage data
 fun Personal.fromStorage(
-    storage: PriStore,
+    storage: PersonalStore,
     toShard: AddressShardingOptions? = null,
     workchain: int8 = BASECHAIN,
 ): Personal {
@@ -179,28 +178,22 @@ fun Personal.sendHotUpgrade(
     return net.send(from, genericMsg);
 }
 
-fun Personal.sendRequestUpgradeCode(
-    self,
-    from: address,
-    sender: address,
-    version: uint10,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: RequestUpgradeCode { sender, version },
-    });
-    return net.send(from, genericMsg);
-}
-
 fun Personal.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
         body: TopUpTons {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendDestroy(self, from: address, config: SendParams = {}): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Destroy {},
     });
     return net.send(from, genericMsg);
 }
@@ -216,15 +209,7 @@ fun Personal.sendAny(self, from: address, body: cell, config: SendParams = {}): 
     return net.send(from, genericMsg);
 }
 
-fun Personal.getVersion(self): uint10 {
-    return net.runGetMethod(self.address, "get_version");
-}
-
-fun Personal.getWalletVersion(self): uint10 {
-    return net.runGetMethod(self.address, "get_wallet_version");
-}
-
-fun Personal.getState(self): State {
+fun Personal.getState(self): PersonalStore {
     return net.runGetMethod(self.address, "get_state");
 }
 

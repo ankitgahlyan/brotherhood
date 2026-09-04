@@ -1,10 +1,10 @@
-import "@stdlib/tvm-lowlevel"
-
 import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+
+import "@contracts/common/utils"
 
 import "jetton-utils"
 import "storage"
@@ -13,9 +13,7 @@ type AllowedMsgToPersonalWallet =
     | AskToTransfer
     | AskToBurn
     | InternalTransferStep
-    | HotUpgrade
-    | Upgrade
-    | RequestUpgradeCode
+    | Destroy
 
 type BounceOpToHandle = InternalTransferStep | NotifyMinter
 
@@ -23,7 +21,7 @@ contract PersonalWallet {
     author: "zeta"
     version: "0.1.0"
     description: "Jetton wallet contract for personal token"
-    storage: PriWalletStore
+    storage: PersonalWalletStore
     incomingMessages: AllowedMsgToPersonalWallet
 }
 
@@ -36,34 +34,20 @@ fun onBouncedMessage(in: InMessageBounced) {
         NotifyMinter => msg.jettonAmount,         // it's in the beginning of a message
     };
 
-    var storage = lazy PriWalletStore.load();
+    var storage = lazy PersonalWalletStore.load();
     storage.jettonBalance += restoreAmount;
     storage.save();
 }
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMsgToPersonalWallet.fromSlice(in.body);
-    var storage = lazy PriWalletStore.load();
+    var storage = lazy PersonalWalletStore.load();
     match (msg) {
         InternalTransferStep => {
             if (in.senderAddress != storage.minterAddress) {
-                // TODO: or treasury
                 assert (
                     in.senderAddress == autoAddrPriWallet(msg.transferInitiator).calculateAddress()
                 ) throw Errors.NotValidWallet;
-            }
-
-            if (msg.version > storage.version) {
-                val reqMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
-                    value: 0,
-                    dest: storage.minterAddress,
-                    body: RequestUpgradeCode {
-                        sender: contract.getAddress(),
-                        version: storage.version,
-                    },
-                });
-                reqMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
             }
 
             storage.jettonBalance += msg.jettonAmount;
@@ -110,37 +94,10 @@ fun onInternalMessage(in: InMessage) {
                 in.originalForwardFee,
             );
 
-            // var storage = lazy PriWalletStore.load();
             assert (in.senderAddress == storage.owner) throw Errors.NotOwner;
             assert (storage.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             storage.jettonBalance -= msg.jettonAmount;
-            storage.save();
 
-            // self-transfer means payback
-            if (
-                (in.senderAddress == msg.transferRecipient) |
-                (msg.transferRecipient == storage.minterAddress)
-            ) {
-                // burn for payback
-                val paybackMsg = createMessage({
-                    bounce: BounceMode.Only256BitsOfBody,
-                    dest: storage.minterAddress,
-                    value: 0,
-                    body: NotifyMinter {
-                        queryId: msg.queryId,
-                        jettonAmount: msg.jettonAmount,
-                        burnInitiator: in.senderAddress,
-                        sendExcessesTo: in.senderAddress == msg.transferRecipient
-                            ? msg.sendExcessesTo
-                            : null,
-                    },
-                });
-                paybackMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                );
-
-                return; // no further execution required
-            }
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: autoAddrPriWallet(msg.transferRecipient),
@@ -160,7 +117,9 @@ fun onInternalMessage(in: InMessage) {
         }
 
         AskToBurn => {
-            checkAmountIsEnoughToBurn(in.valueCoins);
+            // todo: bench
+            assert (in.valueCoins >= grams("0.5")) throw Errors.NotEnoughGas;
+            // checkAmountIsEnoughToBurn(in.valueCoins);
             assert (in.senderAddress == storage.owner) throw Errors.NotOwner;
             assert (storage.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             storage.jettonBalance -= msg.jettonAmount;
@@ -181,41 +140,11 @@ fun onInternalMessage(in: InMessage) {
             );
         }
 
-        HotUpgrade => {
+        Destroy => {
             assert (
-                (in.senderAddress == storage.minterAddress) | (in.senderAddress == storage.owner)
+                (in.senderAddress == storage.owner) | (in.senderAddress == storage.deployer)
             ) throw Errors.IncorrectSender;
-            contract.setCodePostponed(msg.code);
-            // SAFETY: updating continuation register C3 for new code
-            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
-            hotUpgradePersonalWalletData(msg.additionalData);
-            return;
-        }
-
-        Upgrade => {
-            assert (in.senderAddress == storage.minterAddress) throw Errors.IncorrectSender;
-            if (storage.version < msg.walletVersion) {
-                storage.version = msg.walletVersion;
-                if (msg.newCode != null) {
-                    contract.setCodePostponed(msg.newCode);
-                    // SAFETY: updating continuation register C3 for new code
-                    setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
-                }
-                hotUpgradePersonalWalletData(msg.newData);
-            }
-        }
-
-        RequestUpgradeCode => {
-            val reqMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                value: 0,
-                dest: storage.minterAddress,
-                body: RequestUpgradeCode {
-                    sender: contract.getAddress(),
-                    version: storage.version,
-                },
-            });
-            reqMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+            destroyContract(in.senderAddress);
         }
 
         else => {
@@ -227,24 +156,12 @@ fun onInternalMessage(in: InMessage) {
     storage.save();
 }
 
-@method_id(2626)
-fun hotUpgradePersonalWalletData(_additionalData: cell?) {
-    var oldStore = PriWalletStore.load();
-    oldStore.version += 1;
-    oldStore.save();
-}
-
-get fun get_version(): uint10 {
-    val storage = lazy PriWalletStore.load();
-    return storage.version;
-}
-
-get fun get_personal_wallet_state(): PriWalletStore {
-    return PriWalletStore.load();
+get fun get_personal_wallet_state(): PersonalWalletStore {
+    return PersonalWalletStore.load();
 }
 
 get fun get_wallet_data(): JettonWalletDataReply {
-    val storage = lazy PriWalletStore.load();
+    val storage = lazy PersonalWalletStore.load();
 
     return {
         jettonBalance: storage.jettonBalance,

@@ -385,17 +385,18 @@ fun FossFiWallet.sendActJoinLottery(self, from: address, config: SendParams = {}
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendActSetPersonalJettonMinter(
+fun FossFiWallet.sendActSetPersonalJetton(
     self,
     from: address,
-    transferRecipient: address,
+    personalJettonMinter: address,
+    personalJettonWallet: address,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActSetPersonalJettonMinter { transferRecipient },
+        body: ActSetPersonalJetton { personalJettonMinter, personalJettonWallet },
     });
     return net.send(from, genericMsg);
 }

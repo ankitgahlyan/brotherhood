@@ -8,7 +8,7 @@ fun calcDeployPriWallet(
     minterAddress: address,
     jettonWalletCode: cell,
 ): AutoDeployAddress {
-    val emptyPriWalletStore: PriWalletStore = {
+    val emptyPersonalWalletStore: PersonalWalletStore = {
         owner,
         deployer,
         minterAddress,
@@ -16,7 +16,7 @@ fun calcDeployPriWallet(
 
     return {
         workchain: MY_WORKCHAIN,
-        stateInit: { code: jettonWalletCode, data: emptyPriWalletStore.toCell() },
+        stateInit: { code: jettonWalletCode, data: emptyPersonalWalletStore.toCell() },
         toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: owner },
     };
 }
@@ -24,7 +24,7 @@ fun calcDeployPriWallet(
 // used in wallet only
 fun autoAddrPriWallet(owner: address): AutoDeployAddress {
     // wallet calls this when deploy and checking on incoming
-    val st = lazy PriWalletStore.load();
+    val st = lazy PersonalWalletStore.load();
     return calcDeployPriWallet(
         owner,
         st.deployer,

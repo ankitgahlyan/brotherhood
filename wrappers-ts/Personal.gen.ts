@@ -171,42 +171,6 @@ type uint64 = bigint
 type uint256 = bigint
 
 /**
- > struct State {
- >     supply: int
- >     admin: address
- >     fiJetton: address
- > }
- */
-export interface State {
-    readonly $: 'State'
-    supply: bigint
-    admin: c.Address
-    fiJetton: c.Address
-}
-
-export const State = {
-    create(args: {
-        supply: bigint
-        admin: c.Address
-        fiJetton: c.Address
-    }): State {
-        return {
-            $: 'State',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): State {
-        throw new Error(`Can't unpack 'State' from cell, because 'State.supply' is 'int' (not int32/uint64/etc.)`);
-    },
-    store(self: State, b: c.Builder): void {
-        throw new Error(`Can't pack 'State' to cell, because 'self.supply' is 'int' (not int32/uint64/etc.)`);
-    },
-    toCell(self: State): c.Cell {
-        return makeCellFrom<State>(self, State.store);
-    }
-}
-
-/**
  > type ForwardPayloadRemainder = RemainingBitsAndRefs
  */
 export type ForwardPayloadRemainder = RemainingBitsAndRefs
@@ -455,6 +419,43 @@ export const InternalTransferStep = {
     },
     toCell(self: InternalTransferStep): c.Cell {
         return makeCellFrom<InternalTransferStep>(self, InternalTransferStep.store);
+    }
+}
+
+/**
+ > struct (0xd53276db) ReturnExcessesBack {
+ >     queryId: uint64
+ > }
+ */
+export interface ReturnExcessesBack {
+    readonly $: 'ReturnExcessesBack'
+    queryId: uint64
+}
+
+export const ReturnExcessesBack = {
+    PREFIX: 0xd53276db,
+
+    create(args: {
+        queryId: uint64
+    }): ReturnExcessesBack {
+        return {
+            $: 'ReturnExcessesBack',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): ReturnExcessesBack {
+        loadAndCheckPrefix32(s, 0xd53276db, 'ReturnExcessesBack');
+        return {
+            $: 'ReturnExcessesBack',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: ReturnExcessesBack, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: ReturnExcessesBack): c.Cell {
+        return makeCellFrom<ReturnExcessesBack>(self, ReturnExcessesBack.store);
     }
 }
 
@@ -841,48 +842,6 @@ export const TopUpTons = {
 }
 
 /**
- > struct (0x00001008) RequestUpgradeCode {
- >     sender: address
- >     version: uint10
- > }
- */
-export interface RequestUpgradeCode {
-    readonly $: 'RequestUpgradeCode'
-    sender: c.Address
-    version: uint10
-}
-
-export const RequestUpgradeCode = {
-    PREFIX: 0x00001008,
-
-    create(args: {
-        sender: c.Address
-        version: uint10
-    }): RequestUpgradeCode {
-        return {
-            $: 'RequestUpgradeCode',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): RequestUpgradeCode {
-        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
-        return {
-            $: 'RequestUpgradeCode',
-            sender: s.loadAddress(),
-            version: s.loadUintBig(10),
-        }
-    },
-    store(self: RequestUpgradeCode, b: c.Builder): void {
-        b.storeUint(0x00001008, 32);
-        b.storeAddress(self.sender);
-        b.storeUint(self.version, 10);
-    },
-    toCell(self: RequestUpgradeCode): c.Cell {
-        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
-    }
-}
-
-/**
  > struct (0x0000100b) HotUpgrade {
  >     additionalData: cell?
  >     code: cell
@@ -923,6 +882,36 @@ export const HotUpgrade = {
     },
     toCell(self: HotUpgrade): c.Cell {
         return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
+ > struct (0x00001059) Destroy {
+ > }
+ */
+export interface Destroy {
+    readonly $: 'Destroy'
+}
+
+export const Destroy = {
+    PREFIX: 0x00001059,
+
+    create(): Destroy {
+        return {
+            $: 'Destroy',
+        }
+    },
+    fromSlice(s: c.Slice): Destroy {
+        loadAndCheckPrefix32(s, 0x00001059, 'Destroy');
+        return {
+            $: 'Destroy',
+        }
+    },
+    store(self: Destroy, b: c.Builder): void {
+        b.storeUint(0x00001059, 32);
+    },
+    toCell(self: Destroy): c.Cell {
+        return makeCellFrom<Destroy>(self, Destroy.store);
     }
 }
 
@@ -974,68 +963,51 @@ export const Payback = {
 }
 
 /**
- > struct PriStore {
+ > struct PersonalStore {
  >     totalSupply: coins
- >     version: uint10
- >     walletVersion: uint10
  >     fiJettonAddress: address
  >     adminAddress: address
- >     latestWalletCodeLibRef: cell
  >     metadataUri: cell
  > }
  */
-export interface PriStore {
-    readonly $: 'PriStore'
+export interface PersonalStore {
+    readonly $: 'PersonalStore'
     totalSupply: coins /* = 0 */
-    version: uint10 /* = 0 */
-    walletVersion: uint10 /* = 0 */
     fiJettonAddress: c.Address
     adminAddress: c.Address
-    latestWalletCodeLibRef: c.Cell
     metadataUri: c.Cell
 }
 
-export const PriStore = {
+export const PersonalStore = {
     create(args: {
         totalSupply?: coins /* = 0 */
-        version?: uint10 /* = 0 */
-        walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        latestWalletCodeLibRef: c.Cell
         metadataUri: c.Cell
-    }): PriStore {
+    }): PersonalStore {
         return {
-            $: 'PriStore',
+            $: 'PersonalStore',
             totalSupply: 0n,
-            version: 0n,
-            walletVersion: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): PriStore {
+    fromSlice(s: c.Slice): PersonalStore {
         return {
-            $: 'PriStore',
+            $: 'PersonalStore',
             totalSupply: s.loadCoins(),
-            version: s.loadUintBig(10),
-            walletVersion: s.loadUintBig(10),
             fiJettonAddress: s.loadAddress(),
             adminAddress: s.loadAddress(),
-            latestWalletCodeLibRef: s.loadRef(),
             metadataUri: s.loadRef(),
         }
     },
-    store(self: PriStore, b: c.Builder): void {
+    store(self: PersonalStore, b: c.Builder): void {
         b.storeCoins(self.totalSupply);
-        b.storeUint(self.version, 10);
-        b.storeUint(self.walletVersion, 10);
         b.storeAddress(self.fiJettonAddress);
         b.storeAddress(self.adminAddress);
-        b.storeRef(self.latestWalletCodeLibRef);
         b.storeRef(self.metadataUri);
     },
-    toCell(self: PriStore): c.Cell {
-        return makeCellFrom<PriStore>(self, PriStore.store);
+    toCell(self: PersonalStore): c.Cell {
+        return makeCellFrom<PersonalStore>(self, PersonalStore.store);
     }
 }
 
@@ -1095,7 +1067,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1119,16 +1091,13 @@ export class PersonalMinter implements c.Contract {
 
     static fromStorage(emptyStorage: {
         totalSupply?: coins /* = 0 */
-        version?: uint10 /* = 0 */
-        walletVersion?: uint10 /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        latestWalletCodeLibRef: c.Cell
         metadataUri: c.Cell
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,
-            data: PriStore.toCell(PriStore.create(emptyStorage)),
+            data: PersonalStore.toCell(PersonalStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new PersonalMinter(address, initialState);
@@ -1191,16 +1160,14 @@ export class PersonalMinter implements c.Contract {
         return HotUpgrade.toCell(HotUpgrade.create(body));
     }
 
-    static createCellOfRequestUpgradeCode(body: {
-        sender: c.Address
-        version: uint10
-    }) {
-        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
-    }
-
     static createCellOfTopUpTons(body: {
     }) {
         return TopUpTons.toCell(TopUpTons.create());
+    }
+
+    static createCellOfDestroy(body: {
+    }) {
+        return Destroy.toCell(Destroy.create());
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -1296,17 +1263,6 @@ export class PersonalMinter implements c.Contract {
         });
     }
 
-    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        sender: c.Address
-        version: uint10
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
-            ...extraOptions
-        });
-    }
-
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
@@ -1316,23 +1272,23 @@ export class PersonalMinter implements c.Contract {
         });
     }
 
-    async getVersion(provider: ContractProvider): Promise<uint10> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
-        return r.readBigInt();
+    async sendDestroy(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Destroy.toCell(Destroy.create()),
+            ...extraOptions
+        });
     }
 
-    async getWalletVersion(provider: ContractProvider): Promise<uint10> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_wallet_version', []));
-        return r.readBigInt();
-    }
-
-    async getState(provider: ContractProvider): Promise<State> {
-        const r = StackReader.fromGetMethod(3, await provider.get('get_state', []));
+    async getState(provider: ContractProvider): Promise<PersonalStore> {
+        const r = StackReader.fromGetMethod(4, await provider.get('get_state', []));
         return ({
-            $: 'State',
-            supply: r.readBigInt(),
-            admin: r.readSlice().loadAddress(),
-            fiJetton: r.readSlice().loadAddress(),
+            $: 'PersonalStore',
+            totalSupply: r.readBigInt(),
+            fiJettonAddress: r.readSlice().loadAddress(),
+            adminAddress: r.readSlice().loadAddress(),
+            metadataUri: r.readCell(),
         });
     }
 

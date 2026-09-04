@@ -10,7 +10,7 @@ import "@acton/testing/assert"
 import "@contracts/common/messages"
 import "@contracts/personalMinter/storage"
 
-/// Storage `PriWalletStore` is defined in `@contracts/personalMinter/storage`
+/// Storage `PersonalWalletStore` is defined in `@contracts/personalMinter/storage`
 struct PersonalWallet {
     address: address
     stateInit: ContractState? = null
@@ -19,7 +19,7 @@ struct PersonalWallet {
 
 /// Creates a contract wrapper instance from the storage data
 fun PersonalWallet.fromStorage(
-    storage: PriWalletStore,
+    storage: PersonalWalletStore,
     toShard: AddressShardingOptions? = null,
     workchain: int8 = BASECHAIN,
 ): PersonalWallet {
@@ -135,53 +135,12 @@ fun PersonalWallet.sendInternalTransferStep(
     return net.send(from, genericMsg);
 }
 
-fun PersonalWallet.sendHotUpgrade(
-    self,
-    from: address,
-    additionalData: cell?,
-    code: cell,
-    config: SendParams = {},
-): SendResultList {
+fun PersonalWallet.sendDestroy(self, from: address, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: HotUpgrade { additionalData, code },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun PersonalWallet.sendUpgrade(
-    self,
-    from: address,
-    walletUpgrade: bool,
-    walletVersion: uint10,
-    sender: address,
-    newData: cell?,
-    newCode: cell?,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun PersonalWallet.sendRequestUpgradeCode(
-    self,
-    from: address,
-    sender: address,
-    version: uint10,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: RequestUpgradeCode { sender, version },
+        body: Destroy {},
     });
     return net.send(from, genericMsg);
 }
@@ -202,11 +161,7 @@ fun PersonalWallet.sendAny(
     return net.send(from, genericMsg);
 }
 
-fun PersonalWallet.getVersion(self): uint10 {
-    return net.runGetMethod(self.address, "get_version");
-}
-
-fun PersonalWallet.getPersonalWalletState(self): PriWalletStore {
+fun PersonalWallet.getPersonalWalletState(self): PersonalWalletStore {
     return net.runGetMethod(self.address, "get_personal_wallet_state");
 }
 

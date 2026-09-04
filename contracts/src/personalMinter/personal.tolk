@@ -7,6 +7,8 @@ import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 
+import "@contracts/common/utils"
+
 import "jetton-utils"
 import "storage"
 
@@ -18,8 +20,8 @@ type AllowedMsgToPersonalMinter =
     | ChangeMinterMetadata
     | Upgrade
     | HotUpgrade
-    | RequestUpgradeCode
     | TopUpTons
+    | Destroy
 
 type AllowedBounced = InternalTransferStep | Payback
 
@@ -27,7 +29,7 @@ contract PersonalMinter {
     author: "zeta"
     version: "0.1.0"
     description: "minter contract for personal token of BrotherHood Network"
-    storage: PriStore
+    storage: PersonalStore
     incomingMessages: AllowedMsgToPersonalMinter
 }
 
@@ -42,7 +44,7 @@ fun onBouncedMessage(in: InMessageBounced) {
         val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
         val payback = lazy Payback.fromSlice(rich.originalBody.beginParse());
 
-        var store = lazy PriStore.load();
+        var store = lazy PersonalStore.load();
         store.totalSupply += payback.amount;
         store.save();
 
@@ -64,7 +66,7 @@ fun onBouncedMessage(in: InMessageBounced) {
 
         match (msg) {
             InternalTransferStep => {
-                var storage = lazy PriStore.load();
+                var storage = lazy PersonalStore.load();
                 storage.totalSupply -= msg.jettonAmount;
                 storage.save();
             }
@@ -79,7 +81,7 @@ fun onBouncedMessage(in: InMessageBounced) {
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMsgToPersonalMinter.fromSlice(in.body);
-    var storage = lazy PriStore.load();
+    var storage = lazy PersonalStore.load();
 
     match (msg) {
         NotifyMinter => {
@@ -91,7 +93,7 @@ fun onInternalMessage(in: InMessage) {
             // now transfer MINTS if payback
             if (msg.sendExcessesTo != null) {
                 val paybackMsg = createMessage({
-                    bounce: BounceMode.RichBounceOnlyRootCell,
+                    bounce: BounceMode.RichBounceOnlyRootCell, // todo: ok?
                     value: 0,
                     dest: storage.fiJettonAddress,
                     body: Payback {
@@ -164,7 +166,7 @@ fun onInternalMessage(in: InMessage) {
             });
             deployMsg.send(
                 SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-            ); // todo: bounce?
+            );
         }
 
         ChangeMinterAdmin => {
@@ -194,41 +196,27 @@ fun onInternalMessage(in: InMessage) {
                 (in.senderAddress == storage.fiJettonAddress) |
                 (in.senderAddress == storage.adminAddress)
             ) throw Errors.IncorrectSender;
-            if (msg.walletUpgrade) {
-                storage.walletVersion += 1;
-                if (msg.newCode != null) {
-                    storage.latestWalletCodeLibRef = msg.newCode;
-                }
-            } else {
-                if (storage.version < msg.walletVersion) {
-                    storage.version = msg.walletVersion;
-                    if (msg.newCode != null) {
-                        contract.setCodePostponed(msg.newCode);
-                        // SAFETY: updating continuation register C3 for new code
-                        setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
-                    }
-                    hotUpgradePersonalMinterData(msg.newData);
-                }
-            }
-        }
 
-        RequestUpgradeCode => {
-            val upgradeMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                value: 0,
-                dest: in.senderAddress,
-                body: Upgrade {
-                    walletUpgrade: true,
-                    walletVersion: storage.walletVersion,
-                    sender: contract.getAddress(),
-                    newCode: storage.latestWalletCodeLibRef,
-                },
-            });
-            upgradeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+            if (msg.newCode != null) {
+                contract.setCodePostponed(msg.newCode);
+            }
+
+            if (msg.newData != null) {
+                contract.setData(msg.newData);
+                return;
+            }
         }
 
         TopUpTons => {
             // just accept tons
+        }
+
+        Destroy => {
+            assert (
+                (in.senderAddress == storage.adminAddress) |
+                (in.senderAddress == storage.fiJettonAddress)
+            ) throw Errors.IncorrectSender;
+            destroyContract(in.senderAddress);
         }
 
         else => {
@@ -241,39 +229,14 @@ fun onInternalMessage(in: InMessage) {
 }
 
 @method_id(2525)
-fun hotUpgradePersonalMinterData(_additionalData: cell?) {
-    var oldStore = PriStore.load();
-    oldStore.version += 1;
-    oldStore.save();
-}
+fun hotUpgradePersonalMinterData(_additionalData: cell?) {}
 
-struct State {
-    supply: int
-    admin: address
-    fiJetton: address
-}
-
-get fun get_version(): uint10 {
-    val storage = lazy PriStore.load();
-    return storage.version;
-}
-
-get fun get_wallet_version(): uint10 {
-    val storage = lazy PriStore.load();
-    return storage.walletVersion;
-}
-
-get fun get_state(): State {
-    val store = lazy PriStore.load();
-    return {
-        supply: store.totalSupply,
-        admin: store.adminAddress,
-        fiJetton: store.fiJettonAddress,
-    };
+get fun get_state(): PersonalStore {
+    return PersonalStore.load();
 }
 
 get fun get_jetton_data(): JettonDataReply {
-    val storage = lazy PriStore.load();
+    val storage = lazy PersonalStore.load();
 
     return {
         totalSupply: storage.totalSupply,
@@ -291,7 +254,7 @@ get fun get_wallet_address(owner: address): address {
 // used in minter
 fun autoAddrPriWalletMinter(owner: address): address {
     // wallet calls this when deploy and checking on incoming
-    val st = lazy PriStore.load();
+    val st = lazy PersonalStore.load();
     return calcDeployPriWallet(
         owner,
         st.adminAddress,

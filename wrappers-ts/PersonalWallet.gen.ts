@@ -648,207 +648,81 @@ export const NotifyMinter = {
 }
 
 /**
- > struct (0x00001006) Upgrade {
- >     walletUpgrade: bool
- >     walletVersion: uint10
- >     sender: address
- >     newData: cell?
- >     newCode: cell?
+ > struct (0x00001059) Destroy {
  > }
  */
-export interface Upgrade {
-    readonly $: 'Upgrade'
-    walletUpgrade: boolean /* = true */
-    walletVersion: uint10
-    sender: c.Address
-    newData: c.Cell | null /* = null */
-    newCode: c.Cell | null /* = null */
+export interface Destroy {
+    readonly $: 'Destroy'
 }
 
-export const Upgrade = {
-    PREFIX: 0x00001006,
+export const Destroy = {
+    PREFIX: 0x00001059,
 
-    create(args: {
-        walletUpgrade?: boolean /* = true */
-        walletVersion: uint10
-        sender: c.Address
-        newData?: c.Cell | null /* = null */
-        newCode?: c.Cell | null /* = null */
-    }): Upgrade {
+    create(): Destroy {
         return {
-            $: 'Upgrade',
-            walletUpgrade: true,
-            newData: null,
-            newCode: null,
-            ...args
+            $: 'Destroy',
         }
     },
-    fromSlice(s: c.Slice): Upgrade {
-        loadAndCheckPrefix32(s, 0x00001006, 'Upgrade');
+    fromSlice(s: c.Slice): Destroy {
+        loadAndCheckPrefix32(s, 0x00001059, 'Destroy');
         return {
-            $: 'Upgrade',
-            walletUpgrade: s.loadBoolean(),
-            walletVersion: s.loadUintBig(10),
-            sender: s.loadAddress(),
-            newData: s.loadBoolean() ? s.loadRef() : null,
-            newCode: s.loadBoolean() ? s.loadRef() : null,
+            $: 'Destroy',
         }
     },
-    store(self: Upgrade, b: c.Builder): void {
-        b.storeUint(0x00001006, 32);
-        b.storeBit(self.walletUpgrade);
-        b.storeUint(self.walletVersion, 10);
-        b.storeAddress(self.sender);
-        storeTolkNullable<c.Cell>(self.newData, b,
-            (v,b) => b.storeRef(v)
-        );
-        storeTolkNullable<c.Cell>(self.newCode, b,
-            (v,b) => b.storeRef(v)
-        );
+    store(self: Destroy, b: c.Builder): void {
+        b.storeUint(0x00001059, 32);
     },
-    toCell(self: Upgrade): c.Cell {
-        return makeCellFrom<Upgrade>(self, Upgrade.store);
+    toCell(self: Destroy): c.Cell {
+        return makeCellFrom<Destroy>(self, Destroy.store);
     }
 }
 
 /**
- > struct (0x00001008) RequestUpgradeCode {
- >     sender: address
- >     version: uint10
- > }
- */
-export interface RequestUpgradeCode {
-    readonly $: 'RequestUpgradeCode'
-    sender: c.Address
-    version: uint10
-}
-
-export const RequestUpgradeCode = {
-    PREFIX: 0x00001008,
-
-    create(args: {
-        sender: c.Address
-        version: uint10
-    }): RequestUpgradeCode {
-        return {
-            $: 'RequestUpgradeCode',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): RequestUpgradeCode {
-        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
-        return {
-            $: 'RequestUpgradeCode',
-            sender: s.loadAddress(),
-            version: s.loadUintBig(10),
-        }
-    },
-    store(self: RequestUpgradeCode, b: c.Builder): void {
-        b.storeUint(0x00001008, 32);
-        b.storeAddress(self.sender);
-        b.storeUint(self.version, 10);
-    },
-    toCell(self: RequestUpgradeCode): c.Cell {
-        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
-    }
-}
-
-/**
- > struct (0x0000100b) HotUpgrade {
- >     additionalData: cell?
- >     code: cell
- > }
- */
-export interface HotUpgrade {
-    readonly $: 'HotUpgrade'
-    additionalData: c.Cell | null
-    code: c.Cell
-}
-
-export const HotUpgrade = {
-    PREFIX: 0x0000100b,
-
-    create(args: {
-        additionalData: c.Cell | null
-        code: c.Cell
-    }): HotUpgrade {
-        return {
-            $: 'HotUpgrade',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): HotUpgrade {
-        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
-        return {
-            $: 'HotUpgrade',
-            additionalData: s.loadBoolean() ? s.loadRef() : null,
-            code: s.loadRef(),
-        }
-    },
-    store(self: HotUpgrade, b: c.Builder): void {
-        b.storeUint(0x0000100b, 32);
-        storeTolkNullable<c.Cell>(self.additionalData, b,
-            (v,b) => b.storeRef(v)
-        );
-        b.storeRef(self.code);
-    },
-    toCell(self: HotUpgrade): c.Cell {
-        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
-    }
-}
-
-/**
- > struct PriWalletStore {
+ > struct PersonalWalletStore {
  >     jettonBalance: coins
- >     version: uint10
  >     owner: address
  >     deployer: address
  >     minterAddress: address
  > }
  */
-export interface PriWalletStore {
-    readonly $: 'PriWalletStore'
+export interface PersonalWalletStore {
+    readonly $: 'PersonalWalletStore'
     jettonBalance: coins /* = 0 */
-    version: uint10 /* = 0 */
     owner: c.Address
     deployer: c.Address
     minterAddress: c.Address
 }
 
-export const PriWalletStore = {
+export const PersonalWalletStore = {
     create(args: {
         jettonBalance?: coins /* = 0 */
-        version?: uint10 /* = 0 */
         owner: c.Address
         deployer: c.Address
         minterAddress: c.Address
-    }): PriWalletStore {
+    }): PersonalWalletStore {
         return {
-            $: 'PriWalletStore',
+            $: 'PersonalWalletStore',
             jettonBalance: 0n,
-            version: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): PriWalletStore {
+    fromSlice(s: c.Slice): PersonalWalletStore {
         return {
-            $: 'PriWalletStore',
+            $: 'PersonalWalletStore',
             jettonBalance: s.loadCoins(),
-            version: s.loadUintBig(10),
             owner: s.loadAddress(),
             deployer: s.loadAddress(),
             minterAddress: s.loadAddress(),
         }
     },
-    store(self: PriWalletStore, b: c.Builder): void {
+    store(self: PersonalWalletStore, b: c.Builder): void {
         b.storeCoins(self.jettonBalance);
-        b.storeUint(self.version, 10);
         b.storeAddress(self.owner);
         b.storeAddress(self.deployer);
         b.storeAddress(self.minterAddress);
     },
-    toCell(self: PriWalletStore): c.Cell {
-        return makeCellFrom<PriWalletStore>(self, PriWalletStore.store);
+    toCell(self: PersonalWalletStore): c.Cell {
+        return makeCellFrom<PersonalWalletStore>(self, PersonalWalletStore.store);
     }
 }
 
@@ -891,7 +765,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFQEABGcAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAREgPd19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omh9AGmEkH0kfSQY/SQYAuuWEF41FGZHhOuWED4p+pZxh/GG5Cx9AQllhOdk9qpBgcIAEutIRh2omh9AGmE/SR9JH0kaIHSZCgC/QEKZYT9KQl9KX0pZPaqQAH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BTQ4i4wQhboEoZFgD4wRQI6gloIBwggDbiHD4PKABcPg2oAFw+DaggHCCANrAghAJZgGAcPg3oLzysPiSK8cF8uBJU4S+8q9RhKHIIfoCKAkC9NcsIsr4PeSO7tcsIAAAgFyOJDQ1W/iSWMcF+JJQA8cFErHy4rz0BNdMIPsE0O0e7VPxCkLbMeAx1ywgAACANI4z1ywgAACARDGOHDT4KMjPhQgU+lKBEAjPC44T+lIizwsJyYBC+wCaM4QPBMcAFPL0EuIS4w1Z4w0SDA0D9jYF0z/6ANMJ0wAx+kj6UPoA+JIrxwWOTfiS7UTQ+gAx0wkx+kgx+kj6SDD4KifIz4gACPpSE/pS+lLJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31FIvJE54w1Rc6AolRBJOF8E4w0ibg4PEAL8zwsJJ88Wye1U+JIkxwVTSscFsY43WzQ0NDX4kviSUAPHBQFt4wTIz5Hvdl96Fcs/WPoC+lIS+lTJyM+FiBL6UnHPC27MyYBQ+wDbMeA57UTQ+gAx0wkx+kgx+kj6SDD4KiXIz4gACPpSE/pS+lLJeCpus5Q6iwQK38iJzxYYCgsACBeNRRkAlMs/UAb6As+IAEAb+lIS+lQB+gIWzsnIz4mIAVRyg8jPg8sEz4WgzMz5FoT3sAeACyXXJDQTzhXL94EVDc8LeRbME8wUzMmAUPsAAGg1+JJQBMcF8uK8A9MAMdMJ+kgx9AT0BVNSuY4UNSRukTSZJPsEBNDtHu1T4gPxCkKSXwPiAMI2+Jf4OSBugTWFWOMEcYEConD4OAFw+DaggSqvcPg2oLzysPiSIccF8uBJBdM/+gD6UDBTUb7yr1FRocjPke92X3oTyz8B+gIW+lIT+lTJyM+FiBT6UnHPC24TzMmAUPsAADT4KMjPhQgb+lKBEAjPC44a+lInzwsJyXP7AABQyM+RzYtCciXPCz9QBPoC+lLOycjPhQgY+lJQBvoCcc8LahbMyXP7AAB6kjIzjjf4l/gnbxCi+C+ggHCCANrAghAJZgGAcPg3tgly+wLIz4UIE/pSghDVMnbbzwuOFMs/yYEAgvsA4gIBWBMUACG+t2dqJofQBphP0kfSR9JGjAAXtDIdqJofQAY64WEwACm3YF2omh9AGmEmP0kfSQY/SQYfBVA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDQEAAzIAART/APSkE/S88sgLAQIBYgIDArTQ+JGONNMfMdcsILxqKMyW0z8x+gAwjhHXLCPe7L70kvI/4dM/MfoAMOLtRND6AAKgyAH6As7J7VTgIO1E0PoAIPpI+kj6SDAF1ywgvGoozOMPyFj6As7J7VQEBQIBIAsMAuwxNQTTP/oA0wox+kj6UPoA+JJQCccFjkn4ku1E0PoAMfpIMfpI+kgw+ComyM+EIPpSE/pS+lLJeCZUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31FjoCaWEEhQdl8F4w0ibpJsIuMOBgcC3tcsIHxT9SyO5NcsIsr4PeSOWTUE1ywgAACCzDGOPzT4klAExwX4klADxwUSsfLivPiSyM+FCPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAKD7AJswMoQPA8cAE/L0AeIB4w3jDQgJAFTIz5HNi0JyJc8LP1AE+gIS+lIWzsnIz4UIF/pSUAT6AnHPC2oVzMlz+wAAbviX+CdvEKL4L6CAcIIA2sCCEAlmAYBw+De2CXL7AsjPhQgT+lKCENUydtvPC44Tyz/JgQCC+wAAljE1+JeCEB3NZQC+8rD4kiHHBfLgSQTTP/oA+lAwU0G+8q9RQaHIz5Hvdl96E8s/AfoCFfpSEvpUycjPhYgT+lJxzwtuEszJgFD7AAH+MTQ0AtM/+gD6SPpQ9AH6ACD0BAFukTCR0eIj+kQw8tFN+Jf4k3D4OiNyceME+DkgboFNDiLjBCFugShkWAPjBFAjqCWggHCCANuIcPg8oAFw+DagAXD4NqCAcIIA2sCCEAlmAYBw+DegvPKw+JIpxwXy4ElTZL7yr1Fkoe1E0AoA6voAMfpIMfpI+kgw+ComyM+EIPpSE/pS+lLJeClus5Q5iwQJ38jPkF41FGYZyz9QB/oCz4gAQBr6UhP6VAH6AhXOycjPiYgBVHN0yM+DywTPhaDMzPkWhPewA4ALJtckNRTOy/eBFQ3PC3kVzBTME8zJgFD7AAAjv9gXaiaH0AfSR9JBj9JBh8FUAB2+t2dqJofQB9JH0kfSRow=');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -916,14 +790,13 @@ export class PersonalWallet implements c.Contract {
 
     static fromStorage(emptyStorage: {
         jettonBalance?: coins /* = 0 */
-        version?: uint10 /* = 0 */
         owner: c.Address
         deployer: c.Address
         minterAddress: c.Address
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalWallet.CodeCell,
-            data: PriWalletStore.toCell(PriWalletStore.create(emptyStorage)),
+            data: PersonalWalletStore.toCell(PersonalWalletStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new PersonalWallet(address, initialState);
@@ -963,28 +836,9 @@ export class PersonalWallet implements c.Contract {
         return InternalTransferStep.toCell(InternalTransferStep.create(body));
     }
 
-    static createCellOfHotUpgrade(body: {
-        additionalData: c.Cell | null
-        code: c.Cell
+    static createCellOfDestroy(body: {
     }) {
-        return HotUpgrade.toCell(HotUpgrade.create(body));
-    }
-
-    static createCellOfUpgrade(body: {
-        walletUpgrade?: boolean /* = true */
-        walletVersion: uint10
-        sender: c.Address
-        newData?: c.Cell | null /* = null */
-        newCode?: c.Cell | null /* = null */
-    }) {
-        return Upgrade.toCell(Upgrade.create(body));
-    }
-
-    static createCellOfRequestUpgradeCode(body: {
-        sender: c.Address
-        version: uint10
-    }) {
-        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
+        return Destroy.toCell(Destroy.create());
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -1041,53 +895,20 @@ export class PersonalWallet implements c.Contract {
         });
     }
 
-    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        additionalData: c.Cell | null
-        code: c.Cell
+    async sendDestroy(provider: ContractProvider, via: Sender, msgValue: coins, body: {
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            body: Destroy.toCell(Destroy.create()),
             ...extraOptions
         });
     }
 
-    async sendUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        walletUpgrade?: boolean /* = true */
-        walletVersion: uint10
-        sender: c.Address
-        newData?: c.Cell | null /* = null */
-        newCode?: c.Cell | null /* = null */
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: Upgrade.toCell(Upgrade.create(body)),
-            ...extraOptions
-        });
-    }
-
-    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        sender: c.Address
-        version: uint10
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
-            ...extraOptions
-        });
-    }
-
-    async getVersion(provider: ContractProvider): Promise<uint10> {
-        const r = StackReader.fromGetMethod(1, await provider.get('get_version', []));
-        return r.readBigInt();
-    }
-
-    async getPersonalWalletState(provider: ContractProvider): Promise<PriWalletStore> {
-        const r = StackReader.fromGetMethod(5, await provider.get('get_personal_wallet_state', []));
+    async getPersonalWalletState(provider: ContractProvider): Promise<PersonalWalletStore> {
+        const r = StackReader.fromGetMethod(4, await provider.get('get_personal_wallet_state', []));
         return ({
-            $: 'PriWalletStore',
+            $: 'PersonalWalletStore',
             jettonBalance: r.readBigInt(),
-            version: r.readBigInt(),
             owner: r.readSlice().loadAddress(),
             deployer: r.readSlice().loadAddress(),
             minterAddress: r.readSlice().loadAddress(),

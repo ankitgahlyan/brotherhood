@@ -1,33 +1,29 @@
-struct PriWalletStore {
+struct PersonalWalletStore {
     jettonBalance: coins = 0
-    version: uint10 = 0
     owner: address
     deployer: address
     minterAddress: address
 }
 
-struct PriStore {
+struct PersonalStore {
     totalSupply: coins = 0
-    version: uint10 = 0
-    walletVersion: uint10 = 0
     fiJettonAddress: address
     adminAddress: address
-    latestWalletCodeLibRef: cell
     metadataUri: cell // for on-chain deployment or use default
 }
 
-fun PriStore.load(): PriStore {
-    return PriStore.fromCell(contract.getData());
+fun PersonalStore.load(): PersonalStore {
+    return PersonalStore.fromCell(contract.getData());
 }
 
-fun PriStore.save(self) {
+fun PersonalStore.save(self) {
     contract.setData(self.toCell());
 }
 
-fun PriWalletStore.load(): PriWalletStore {
-    return PriWalletStore.fromCell(contract.getData());
+fun PersonalWalletStore.load(): PersonalWalletStore {
+    return PersonalWalletStore.fromCell(contract.getData());
 }
 
-fun PriWalletStore.save(self) {
+fun PersonalWalletStore.save(self) {
     contract.setData(self.toCell());
 }

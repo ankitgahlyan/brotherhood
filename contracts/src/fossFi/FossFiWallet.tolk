@@ -485,13 +485,16 @@ fun onInternalMessage(in: InMessage): void {
             );                                        // todo: fixme: use lottery addr
         }
 
-        // todo: implement
-        ActSetPersonalJettonMinter => {
+        ActSetPersonalJetton => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-            checkActionRecipient(msg.transferRecipient);
+            checkActionRecipient(msg.personalJettonMinter);
+            checkActionRecipient(msg.personalJettonWallet);
             if (trustedAddrs.personalJettonMinter == ZERO_ADDRESS) {
-                trustedAddrs.personalJettonMinter = msg.transferRecipient;
-            } // else ignore
+                trustedAddrs.personalJettonMinter = msg.personalJettonMinter;
+            }
+            if (trustedAddrs.personalJettonWallet == ZERO_ADDRESS) {
+                trustedAddrs.personalJettonWallet = msg.personalJettonWallet;
+            }
         }
 
         ActDestroyAccount => {
@@ -518,6 +521,9 @@ fun onInternalMessage(in: InMessage): void {
 
             if (msg.transferredAsCredit) {
                 // Credit Need gate (#23)
+                assert (
+                    trustedAddrs.personalJettonMinter != ZERO_ADDRESS
+                ) throw Errors.CreditNeedExceeded;
                 assert (store.creditNeed > 0) throw Errors.CreditNeedExceeded;
                 val acceptedAmount = min(msg.jettonAmount, store.creditNeed);
                 val refundAmount = msg.jettonAmount - acceptedAmount;
@@ -668,13 +674,13 @@ fun onInternalMessage(in: InMessage): void {
                     msg.queryId,
                     msg.amount,
                     addrs.owner,
-                    null,
+                    msg.sender,
                     0,
                     createEmptySlice(),
                     store.version,
                 ),
             });
-            // carry the Payback message value so the buyer's wallet can afford the transfer
+            // todo: what if this bounces?
             transferMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );

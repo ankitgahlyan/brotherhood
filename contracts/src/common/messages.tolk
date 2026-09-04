@@ -251,7 +251,7 @@ type ActAction =
     | ActRequestUpgrade
     | ActDispatchAuthorityAction
     | ActJoinLottery
-    | ActSetPersonalJettonMinter
+    | ActSetPersonalJetton
     | ActDestroyAccount
     | ActSubmitProposal
     | ActVoteProposal
@@ -428,8 +428,9 @@ struct (0x00001148) Payback {
     sender: address
 }
 
-struct (0x00001149) ActSetPersonalJettonMinter {
-    transferRecipient: address
+struct (0x00001149) ActSetPersonalJetton {
+    personalJettonMinter: address
+    personalJettonWallet: address
 }
 
 struct (0x0000114a) SetCreditNeed {
