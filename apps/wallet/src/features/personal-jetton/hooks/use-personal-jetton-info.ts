@@ -9,11 +9,11 @@
 import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import {
-  usePersonalMinterForIssuer,
-  usePersonalWalletForIssuer,
+  useFiWalletState,
   usePersonalWalletAddress,
   usePersonalWalletBalance,
 } from '@/lib/brotherhood/queries';
+import { isZeroAddress } from '@/lib/brotherhood/ton';
 
 export interface UsePersonalJettonInfoResult {
   personalMinterAddress: string | null;
@@ -36,17 +36,21 @@ export function usePersonalJettonInfo(
     }
   }, [walletAddress]);
 
-  const {
-    data: minterAddrObj,
-    isLoading: isMinterLoading,
-    refetch: refetchMinter,
-  } = usePersonalMinterForIssuer(ownerAddress);
+  const fiWalletQuery = useFiWalletState(ownerAddress);
 
-  const {
-    data: registeredWalletObj,
-    isLoading: isIssuerWalletLoading,
-    refetch: refetchIssuerWallet,
-  } = usePersonalWalletForIssuer(ownerAddress);
+  const minterAddrObj = useMemo(() => {
+    const minter =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonMinter;
+    return minter && !isZeroAddress(minter) ? minter : null;
+  }, [fiWalletQuery.data]);
+
+  const registeredWalletObj = useMemo(() => {
+    const wallet =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonWallet;
+    return wallet && !isZeroAddress(wallet) ? wallet : null;
+  }, [fiWalletQuery.data]);
 
   const {
     data: computedWalletAddrObj,
@@ -63,10 +67,11 @@ export function usePersonalJettonInfo(
   const resolvedWallet = registeredWalletObj || computedWalletAddrObj || null;
 
   const refetch = () => {
-    refetchMinter();
-    refetchIssuerWallet();
-    refetchWalletAddr();
-    refetchBalance();
+    fiWalletQuery.refetch();
+    if (minterAddrObj) {
+      refetchWalletAddr();
+      refetchBalance();
+    }
   };
 
   return {
@@ -75,10 +80,8 @@ export function usePersonalJettonInfo(
     personalBalance: balance ?? null,
     isRegistered: Boolean(minterAddrObj),
     isLoading:
-      isMinterLoading ||
-      isIssuerWalletLoading ||
-      isWalletAddrLoading ||
-      isBalanceLoading,
+      fiWalletQuery.isLoading ||
+      (Boolean(minterAddrObj) && (isWalletAddrLoading || isBalanceLoading)),
     refetch,
   };
 }

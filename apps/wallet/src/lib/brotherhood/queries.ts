@@ -11,6 +11,7 @@ import {
   getPersonalWalletForIssuer,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
+  isZeroAddress,
   type JettonMasterInfo,
   type Network,
 } from './ton';
@@ -172,12 +173,17 @@ export function useCircle(invitedList: Address[] | null) {
 
 export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
   const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `personal-minter:${key}`;
+  const cacheKey = `fi-wallet-state:${key}`;
   const query = useQuery({
-    queryKey: ['personal-minter', key],
+    queryKey: ['fi-wallet-state', key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, () => getPersonalMinterForIssuer(ownerAddress!)),
+      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
     enabled: !!ownerAddress,
+    select: (state) => {
+      const minter =
+        state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
+      return minter && !isZeroAddress(minter) ? minter : null;
+    },
   });
   return {
     ...query,
@@ -187,12 +193,17 @@ export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
 
 export function usePersonalWalletForIssuer(ownerAddress: Address | null) {
   const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `personal-issuer-wallet:${key}`;
+  const cacheKey = `fi-wallet-state:${key}`;
   const query = useQuery({
-    queryKey: ['personal-issuer-wallet', key],
+    queryKey: ['fi-wallet-state', key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, () => getPersonalWalletForIssuer(ownerAddress!)),
+      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
     enabled: !!ownerAddress,
+    select: (state) => {
+      const wallet =
+        state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonWallet;
+      return wallet && !isZeroAddress(wallet) ? wallet : null;
+    },
   });
   return {
     ...query,

@@ -7,6 +7,7 @@ import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
+import { getContractCache, setContractCache } from './contract-cache';
 
 export type { Network } from './config';
 
@@ -184,19 +185,65 @@ export async function fetchWalletBalance(ownerAddress: Address) {
   return BigInt(wallets[0].balance);
 }
 
-export async function getFiWalletState(owner: Address) {
-  return getTonClient(network)
-    .open(FossFiWallet.fromAddress(await getWalletAddress(owner)))
+export async function getFiWalletStateRaw(
+  owner: Address,
+  net: Network = network,
+) {
+  const walletAddr = await getWalletAddress(owner);
+  return getTonClient(net)
+    .open(FossFiWallet.fromAddress(walletAddr))
     .getWalletDataAll();
+}
+
+export type FiWalletStateData = Awaited<ReturnType<typeof getFiWalletStateRaw>>;
+
+/**
+ * Unified state accessor for a user's FiWallet.
+ * Reads from IndexedDB ('fi-wallet-state:<owner>') if present and not forceFresh;
+ * otherwise performs getWalletDataAll(), writes to IndexedDB, and returns.
+ */
+export async function getUnifiedFiWalletState(
+  owner: Address,
+  options: { forceFresh?: boolean; net?: Network } = {},
+): Promise<FiWalletStateData> {
+  const cacheKey = `fi-wallet-state:${owner.toString()}`;
+  if (!options.forceFresh) {
+    const cached = await getContractCache<FiWalletStateData>(cacheKey);
+    if (cached && cached.data) {
+      return cached.data;
+    }
+  }
+
+  const fresh = await getFiWalletStateRaw(owner, options.net);
+  await setContractCache(cacheKey, fresh);
+  return fresh;
+}
+
+export async function getFiWalletState(
+  owner: Address,
+  options?: { forceFresh?: boolean },
+) {
+  return getUnifiedFiWalletState(owner, options);
 }
 
 export async function getFiWalletStateByContractAddress(
   contractAddress: Address,
   net: Network = network,
+  options: { forceFresh?: boolean } = {},
 ) {
-  return getTonClient(net)
+  const cacheKey = `fi-wallet-state-by-contract:${net}:${contractAddress.toString()}`;
+  if (!options.forceFresh) {
+    const cached = await getContractCache<FiWalletStateData>(cacheKey);
+    if (cached && cached.data) {
+      return cached.data;
+    }
+  }
+
+  const fresh = await getTonClient(net)
     .open(FossFiWallet.fromAddress(contractAddress))
     .getWalletDataAll();
+  await setContractCache(cacheKey, fresh);
+  return fresh;
 }
 
 export async function getFiMinterState() {
@@ -237,26 +284,26 @@ export function isZeroAddress(address: Address | null | undefined): boolean {
 }
 
 // The Personal Token minter an issuer pointed its FI wallet at, or null if none.
+// Reads from unified FiWallet state accessor to avoid duplicate network calls.
 export async function getPersonalMinterForIssuer(
   issuerOwner: Address,
+  options?: { forceFresh?: boolean },
 ): Promise<Address | null> {
-  const issuerWalletAddr = await getWalletAddress(issuerOwner);
-  const state = await getTonClient(network)
-    .open(FossFiWallet.fromAddress(issuerWalletAddr))
-    .getWalletDataAll();
-  const minter = state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
+  const state = await getUnifiedFiWalletState(issuerOwner, options);
+  const minter =
+    state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
   return minter && !isZeroAddress(minter) ? minter : null;
 }
 
 // The Personal Token wallet an issuer registered on its FI wallet, or null if none.
+// Reads from unified FiWallet state accessor to avoid duplicate network calls.
 export async function getPersonalWalletForIssuer(
   issuerOwner: Address,
+  options?: { forceFresh?: boolean },
 ): Promise<Address | null> {
-  const issuerWalletAddr = await getWalletAddress(issuerOwner);
-  const state = await getTonClient(network)
-    .open(FossFiWallet.fromAddress(issuerWalletAddr))
-    .getWalletDataAll();
-  const wallet = state.addresses.ref.trustedJettonAddrs.ref.personalJettonWallet;
+  const state = await getUnifiedFiWalletState(issuerOwner, options);
+  const wallet =
+    state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonWallet;
   return wallet && !isZeroAddress(wallet) ? wallet : null;
 }
 
