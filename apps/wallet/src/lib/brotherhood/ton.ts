@@ -231,6 +231,11 @@ export async function getCircle(invitedList: Address[]) {
   return Promise.all(promises);
 }
 
+export function isZeroAddress(address: Address | null | undefined): boolean {
+  if (!address) return true;
+  return address.hash.every((byte) => byte === 0);
+}
+
 // The Personal Token minter an issuer pointed its FI wallet at, or null if none.
 export async function getPersonalMinterForIssuer(
   issuerOwner: Address,
@@ -239,7 +244,8 @@ export async function getPersonalMinterForIssuer(
   const state = await getTonClient(network)
     .open(FossFiWallet.fromAddress(issuerWalletAddr))
     .getWalletDataAll();
-  return state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
+  const minter = state.addresses.ref.trustedJettonAddrs.ref.personalJettonMinter;
+  return minter && !isZeroAddress(minter) ? minter : null;
 }
 
 // The Personal Token wallet an issuer registered on its FI wallet, or null if none.
@@ -250,7 +256,8 @@ export async function getPersonalWalletForIssuer(
   const state = await getTonClient(network)
     .open(FossFiWallet.fromAddress(issuerWalletAddr))
     .getWalletDataAll();
-  return state.addresses.ref.trustedJettonAddrs.ref.personalJettonWallet;
+  const wallet = state.addresses.ref.trustedJettonAddrs.ref.personalJettonWallet;
+  return wallet && !isZeroAddress(wallet) ? wallet : null;
 }
 
 // The Personal Token wallet a buyer owns on the given minter.
@@ -258,6 +265,9 @@ export async function getPersonalWalletAddress(
   personalMinter: Address,
   owner: Address,
 ): Promise<Address> {
+  if (isZeroAddress(personalMinter)) {
+    throw new Error('Personal minter is zero address');
+  }
   return getTonClient(network)
     .open(PersonalMinter.fromAddress(personalMinter))
     .getWalletAddress(owner);
@@ -268,9 +278,15 @@ export async function getPersonalWalletBalance(
   personalMinter: Address,
   owner: Address,
 ): Promise<bigint> {
-  const walletAddr = await getPersonalWalletAddress(personalMinter, owner);
-  const state = await getTonClient(network)
-    .open(PersonalWallet.fromAddress(walletAddr))
-    .getWalletData();
-  return state.jettonBalance;
+  if (isZeroAddress(personalMinter)) return 0n;
+  try {
+    const walletAddr = await getPersonalWalletAddress(personalMinter, owner);
+    if (!walletAddr || isZeroAddress(walletAddr)) return 0n;
+    const state = await getTonClient(network)
+      .open(PersonalWallet.fromAddress(walletAddr))
+      .getWalletData();
+    return state.jettonBalance;
+  } catch {
+    return 0n;
+  }
 }

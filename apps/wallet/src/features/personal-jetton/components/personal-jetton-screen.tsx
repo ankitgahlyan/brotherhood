@@ -517,6 +517,20 @@ export const PersonalJettonScreen: React.FC = () => {
               <h3 className="font-semibold text-base mb-1">
                 Mint Personal Tokens
               </h3>
+              {!activeMinter && (
+                <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
+                  <span>
+                    No personal minter registered. Deploy your token first or specify a custom minter address.
+                  </span>
+                  <Button
+                    size="xs"
+                    onClick={() => setActiveTab('deploy')}
+                    className="shrink-0 text-xs"
+                  >
+                    Deploy Token
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 <InputScan
                   value={customMinterAddr}
@@ -557,6 +571,20 @@ export const PersonalJettonScreen: React.FC = () => {
               <h3 className="font-semibold text-base mb-1">
                 Burn Personal Tokens
               </h3>
+              {!activePersonalWallet && (
+                <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
+                  <span>
+                    No personal wallet registered. Deploy your token first or specify a custom wallet address.
+                  </span>
+                  <Button
+                    size="xs"
+                    onClick={() => setActiveTab('deploy')}
+                    className="shrink-0 text-xs"
+                  >
+                    Deploy Token
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 <InputScan
                   value={customPersonalWalletAddr}
