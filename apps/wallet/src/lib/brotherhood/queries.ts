@@ -43,7 +43,7 @@ export function createRefetchWrapper<T>(
 
 export async function cachedQueryFn<T>(
   cacheKey: string,
-  fetcher: () => Promise<T>,
+  fetcher: (options?: { forceFresh?: boolean }) => Promise<T>,
   forceFresh = false,
 ): Promise<T> {
   const shouldForce =
@@ -63,7 +63,7 @@ export async function cachedQueryFn<T>(
 
   // Otherwise fetch from network
   try {
-    const data = await fetcher();
+    const data = await fetcher({ forceFresh: shouldForce });
     // Save to IndexedDB with updated timestamp
     await setContractCache(cacheKey, data);
     return data;
@@ -123,7 +123,9 @@ export function useFiWalletState(ownerAddress: Address | null) {
   const query = useQuery({
     queryKey: ['fi-wallet-state', key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
+      cachedQueryFn(cacheKey, (opts) =>
+        getFiWalletState(ownerAddress!, opts),
+      ),
     enabled: !!ownerAddress,
   });
   return {

@@ -190,6 +190,21 @@ export async function clearContractCache(): Promise<void> {
   }
 }
 
+export async function deleteContractCache(key: string): Promise<void> {
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[ContractCache] Failed to delete cache for key:', key, err);
+  }
+}
+
 export async function getContractCacheStats(): Promise<{
   count: number;
   lastUpdated: number | null;

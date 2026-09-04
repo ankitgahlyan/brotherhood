@@ -278,9 +278,27 @@ export async function getCircle(invitedList: Address[]) {
   return Promise.all(promises);
 }
 
-export function isZeroAddress(address: Address | null | undefined): boolean {
+export const CONTRACT_ZERO_ADDRESS_BOUNCEABLE =
+  'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
+export const RAW_ZERO_ADDRESS =
+  '0:0000000000000000000000000000000000000000000000000000000000000000';
+export const ZERO_ADDRESS = Address.parse(CONTRACT_ZERO_ADDRESS_BOUNCEABLE);
+
+export function isZeroAddress(
+  address: Address | string | null | undefined,
+): boolean {
   if (!address) return true;
-  return address.hash.every((byte) => byte === 0);
+  try {
+    const addr =
+      typeof address === 'string' ? Address.parse(address) : address;
+    return (
+      addr.equals(ZERO_ADDRESS) ||
+      addr.toRawString() === RAW_ZERO_ADDRESS ||
+      addr.hash.every((byte) => byte === 0)
+    );
+  } catch {
+    return true;
+  }
 }
 
 // The Personal Token minter an issuer pointed its FI wallet at, or null if none.
