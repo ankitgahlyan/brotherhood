@@ -7,5 +7,6 @@
  */
 
 export * from './components/asset-row';
+export * from './components/asset-details-modal';
 export * from './components/assets-screen';
 export * from './hooks/use-asset-rows';

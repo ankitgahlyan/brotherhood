@@ -7,6 +7,8 @@
  */
 
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Address } from '@ton/core';
 import { useJettons, useRates, useWallet } from '@demo/wallet-core';
 
 import type { AssetRowData } from '../components/asset-row';
@@ -17,10 +19,13 @@ import {
   isFiJetton,
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
+import { usePersonalJettonInfo } from '@/features/personal-jetton';
+import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
 import {
   assetUrl,
   findRate,
   formatRate,
+  normalizeAddress,
   toDecimal,
   tokenImageUrls,
 } from '@/core/utils';
@@ -45,13 +50,58 @@ interface AssetRows {
 
 /** Builds the TON row + a row per held jetton. Shared by the dashboard preview and the full assets page. */
 export const useAssetRows = (): AssetRows => {
-  const { balance } = useWallet();
+  const { balance, currentWallet } = useWallet();
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const { isMember } = useIsNetworkMember();
+  const { personalMinterAddress } = usePersonalJettonInfo(
+    currentWallet?.address ?? null,
+  );
 
   const assetsReady =
     balance !== undefined && lastJettonsUpdate > 0 && ratesUpdated > 0;
+
+  // Other jetton addresses (not FI and not user's own personal minter)
+  const candidatePersonalAddresses = useMemo(() => {
+    return userJettons
+      .filter((j) => {
+        if (isFiJetton(j)) return false;
+        if (
+          personalMinterAddress &&
+          normalizeAddress(j.address) ===
+            normalizeAddress(personalMinterAddress)
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .map((j) => j.address);
+  }, [userJettons, personalMinterAddress]);
+
+  const { data: verifiedPersonalMinterSet } = useQuery({
+    queryKey: [
+      'verified-personal-minters',
+      [...candidatePersonalAddresses].sort().join(','),
+    ],
+    queryFn: async () => {
+      const set = new Set<string>();
+      await Promise.all(
+        candidatePersonalAddresses.map(async (addr) => {
+          try {
+            const isPersonal = await isPersonalMinterContract(
+              Address.parse(addr),
+            );
+            if (isPersonal) set.add(addr);
+          } catch {
+            // ignore non-contracts
+          }
+        }),
+      );
+      return set;
+    },
+    enabled: candidatePersonalAddresses.length > 0,
+    staleTime: Infinity,
+  });
 
   const tonRow = useMemo<AssetRowData | null>(() => {
     if (!assetsReady) return null;
@@ -72,7 +122,23 @@ export const useAssetRows = (): AssetRows => {
   const jettonRows = useMemo<AssetRowData[]>(() => {
     if (!assetsReady) return [];
     return userJettons
-      .filter((jetton) => (isMember ? true : !isFiJetton(jetton)))
+      .filter((jetton) => {
+        // FI token
+        if (isFiJetton(jetton)) return isMember;
+        // User's own registered personal token minter
+        if (
+          personalMinterAddress &&
+          normalizeAddress(jetton.address) ===
+            normalizeAddress(personalMinterAddress)
+        ) {
+          return true;
+        }
+        // Another member's personal token minter
+        if (verifiedPersonalMinterSet?.has(jetton.address)) {
+          return true;
+        }
+        return false;
+      })
       .map((jetton) => {
         const rateEntry = findRate(rates, jetton.address);
         const decimals = jetton.decimalsNumber ?? 9;
@@ -104,7 +170,14 @@ export const useAssetRows = (): AssetRows => {
           Number(b.isVerified) - Number(a.isVerified),
       )
       .map((entry) => entry.row);
-  }, [assetsReady, userJettons, rates, isMember]);
+  }, [
+    assetsReady,
+    userJettons,
+    rates,
+    isMember,
+    personalMinterAddress,
+    verifiedPersonalMinterSet,
+  ]);
 
   return { tonRow, jettonRows, assetsReady };
 };

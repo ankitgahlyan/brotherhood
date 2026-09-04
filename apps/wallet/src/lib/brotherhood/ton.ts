@@ -337,3 +337,57 @@ export async function getPersonalWalletBalance(
     return 0n;
   }
 }
+
+export async function getFiMinterTotalAccounts(): Promise<bigint> {
+  return getTonClient(network)
+    .open(FossFi.fromAddress(Address.parse(FI_ADDRESS)))
+    .getTotalAccounts();
+}
+
+export interface PersonalMinterDetails {
+  totalSupply: bigint;
+  fiJettonAddress: Address;
+  adminAddress: Address;
+  mintable?: boolean;
+}
+
+export async function getPersonalMinterDetails(
+  personalMinter: Address,
+): Promise<PersonalMinterDetails | null> {
+  if (isZeroAddress(personalMinter)) return null;
+  try {
+    const client = getTonClient(network);
+    const minter = client.open(PersonalMinter.fromAddress(personalMinter));
+    const [state, jettonData] = await Promise.all([
+      minter.getState(),
+      minter.getJettonData().catch(() => null),
+    ]);
+    return {
+      totalSupply: state.totalSupply,
+      fiJettonAddress: state.fiJettonAddress,
+      adminAddress: state.adminAddress,
+      mintable: jettonData?.mintable,
+    };
+  } catch (err) {
+    console.error(
+      `Failed to load personal minter details for ${personalMinter.toString()}:`,
+      err,
+    );
+    return null;
+  }
+}
+
+export async function isPersonalMinterContract(
+  address: Address,
+): Promise<boolean> {
+  if (isZeroAddress(address)) return false;
+  try {
+    const client = getTonClient(network);
+    const minter = client.open(PersonalMinter.fromAddress(address));
+    const state = await minter.getState();
+    const fiAddr = Address.parse(FI_ADDRESS);
+    return state.fiJettonAddress.equals(fiAddr);
+  } catch {
+    return false;
+  }
+}

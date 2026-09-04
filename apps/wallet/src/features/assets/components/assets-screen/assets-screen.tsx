@@ -6,19 +6,29 @@
  *
  */
 
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 import { useNavigate } from '@/core/routing';
 
 import { AssetRow, AssetRowSkeleton } from '../asset-row';
+import { AssetDetailsModal } from '../asset-details-modal';
+import type { AssetRowData } from '../asset-row';
 import { useAssetRows } from '../../hooks/use-asset-rows';
 
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
-/** Full assets page: every token on the active wallet's balance (TON + all jettons). */
+/** Full assets page: every token on the active wallet's balance (TON + member jettons). */
 export const AssetsScreen: FC = () => {
   const navigate = useNavigate();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
+
+  const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleAssetClick = (asset: AssetRowData) => {
+    setSelectedAsset(asset);
+    setIsModalOpen(true);
+  };
 
   return (
     <NewLayout
@@ -29,9 +39,13 @@ export const AssetsScreen: FC = () => {
       <div className="space-y-1">
         {assetsReady && tonRow ? (
           <>
-            <AssetRow {...tonRow} />
+            <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
             {jettonRows.map((row) => (
-              <AssetRow key={row.id} {...row} />
+              <AssetRow
+                key={row.id}
+                {...row}
+                onClick={() => handleAssetClick(row)}
+              />
             ))}
           </>
         ) : (
@@ -42,6 +56,12 @@ export const AssetsScreen: FC = () => {
           </>
         )}
       </div>
+
+      <AssetDetailsModal
+        asset={selectedAsset}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </NewLayout>
   );
 };

@@ -7,10 +7,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import {
-  detectApiKey,
-  ToncenterQueue,
-} from './rate-limiter';
+import { detectApiKey, ToncenterQueue } from './rate-limiter';
 
 describe('detectApiKey', () => {
   it('detects explicit API key parameter', () => {
@@ -22,21 +19,48 @@ describe('detectApiKey', () => {
   it('detects x-api-key in Headers object', () => {
     const headers = new Headers();
     headers.set('X-API-Key', 'test-key-123');
-    expect(detectApiKey(undefined, headers, undefined, { checkEnv: false })).toBe(true);
+    expect(
+      detectApiKey(undefined, headers, undefined, { checkEnv: false }),
+    ).toBe(true);
   });
 
   it('detects x-api-key in plain header object', () => {
-    expect(detectApiKey(undefined, { 'X-API-Key': 'key' }, undefined, { checkEnv: false })).toBe(true);
-    expect(detectApiKey(undefined, { 'x-api-key': 'key' }, undefined, { checkEnv: false })).toBe(true);
-    expect(detectApiKey(undefined, { 'content-type': 'application/json' }, undefined, { checkEnv: false })).toBe(false);
+    expect(
+      detectApiKey(undefined, { 'X-API-Key': 'key' }, undefined, {
+        checkEnv: false,
+      }),
+    ).toBe(true);
+    expect(
+      detectApiKey(undefined, { 'x-api-key': 'key' }, undefined, {
+        checkEnv: false,
+      }),
+    ).toBe(true);
+    expect(
+      detectApiKey(
+        undefined,
+        { 'content-type': 'application/json' },
+        undefined,
+        { checkEnv: false },
+      ),
+    ).toBe(false);
   });
 
   it('detects api_key in URL query param', () => {
     expect(
-      detectApiKey('https://toncenter.com/api/v2/jsonRPC?api_key=custom_key', undefined, undefined, { checkEnv: false }),
+      detectApiKey(
+        'https://toncenter.com/api/v2/jsonRPC?api_key=custom_key',
+        undefined,
+        undefined,
+        { checkEnv: false },
+      ),
     ).toBe(true);
     expect(
-      detectApiKey('https://toncenter.com/api/v2/jsonRPC', undefined, undefined, { checkEnv: false }),
+      detectApiKey(
+        'https://toncenter.com/api/v2/jsonRPC',
+        undefined,
+        undefined,
+        { checkEnv: false },
+      ),
     ).toBe(false);
   });
 });

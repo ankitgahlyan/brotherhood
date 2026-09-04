@@ -24,6 +24,7 @@ export interface AssetRowData {
   rateLabel?: string;
   /** Fiat value to display on the right; omit to hide (asset has no rate). */
   fiat?: number;
+  onClick?: () => void;
 }
 
 export const AssetRow: React.FC<AssetRowData> = ({
@@ -34,13 +35,23 @@ export const AssetRow: React.FC<AssetRowData> = ({
   amount,
   rateLabel,
   fiat,
+  onClick,
 }) => {
   const animatedAmount = useCountUp(amount);
   const animatedFiat = useCountUp(fiat ?? 0);
   const hasFiat = fiat !== undefined;
+  const Component = onClick ? 'button' : 'div';
 
   return (
-    <div className="flex items-center gap-3 py-2">
+    <Component
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 py-2 text-left rounded-xl transition-colors ${
+        onClick
+          ? 'hover:bg-secondary/50 active:bg-secondary/80 px-2 -mx-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          : ''
+      }`}
+    >
       <span className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center">
         <FallbackImage
           src={icon}
@@ -69,7 +80,7 @@ export const AssetRow: React.FC<AssetRowData> = ({
           </div>
         </div>
       )}
-    </div>
+    </Component>
   );
 };
 

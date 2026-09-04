@@ -48,7 +48,10 @@ export function detectApiKey(
       }
     } else if (typeof headers === 'object') {
       for (const key of Object.keys(headers)) {
-        if (key.toLowerCase() === 'x-api-key' && (headers as Record<string, string>)[key]) {
+        if (
+          key.toLowerCase() === 'x-api-key' &&
+          (headers as Record<string, string>)[key]
+        ) {
           return true;
         }
       }
@@ -216,7 +219,12 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
     url?: string;
     baseURL?: string;
     method?: string;
-    headers?: Record<string, string> | { forEach?: (cb: (v: string, k: string) => void) => void; toJSON?: () => Record<string, string> };
+    headers?:
+      | Record<string, string>
+      | {
+          forEach?: (cb: (v: string, k: string) => void) => void;
+          toJSON?: () => Record<string, string>;
+        };
     data?: unknown;
   }): Promise<{
     data: unknown;
@@ -233,12 +241,28 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
     // Extract headers safely from Axios AxiosRequestHeaders / raw object
     const headers: Record<string, string> = {};
     if (config.headers) {
-      if (typeof (config.headers as { forEach?: (cb: (v: string, k: string) => void) => void }).forEach === 'function') {
-        (config.headers as { forEach: (cb: (v: string, k: string) => void) => void }).forEach((value: string, key: string) => {
+      if (
+        typeof (
+          config.headers as {
+            forEach?: (cb: (v: string, k: string) => void) => void;
+          }
+        ).forEach === 'function'
+      ) {
+        (
+          config.headers as {
+            forEach: (cb: (v: string, k: string) => void) => void;
+          }
+        ).forEach((value: string, key: string) => {
           headers[key] = value;
         });
-      } else if (typeof (config.headers as { toJSON?: () => Record<string, string> }).toJSON === 'function') {
-        Object.assign(headers, (config.headers as { toJSON: () => Record<string, string> }).toJSON());
+      } else if (
+        typeof (config.headers as { toJSON?: () => Record<string, string> })
+          .toJSON === 'function'
+      ) {
+        Object.assign(
+          headers,
+          (config.headers as { toJSON: () => Record<string, string> }).toJSON(),
+        );
       } else {
         Object.assign(headers, config.headers);
       }

@@ -5,8 +5,10 @@ import {
   fetchWalletBalance,
   getCircle,
   getFiMinterState,
+  getFiMinterTotalAccounts,
   getFiWalletState,
   getFiWalletStateByContractAddress,
+  getPersonalMinterDetails,
   getPersonalMinterForIssuer,
   getPersonalWalletForIssuer,
   getPersonalWalletAddress,
@@ -14,6 +16,7 @@ import {
   isZeroAddress,
   type JettonMasterInfo,
   type Network,
+  type PersonalMinterDetails,
 } from './ton';
 import { setContractCache, getContractCache } from './contract-cache';
 
@@ -93,6 +96,19 @@ export function useFiMinterState(enabled = true) {
   const query = useQuery({
     queryKey: ['fi-minter-state'],
     queryFn: () => cachedQueryFn(cacheKey, getFiMinterState),
+    enabled,
+  });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
+}
+
+export function useFiTotalAccounts(enabled = true) {
+  const cacheKey = 'fi-total-accounts';
+  const query = useQuery({
+    queryKey: ['fi-total-accounts'],
+    queryFn: () => cachedQueryFn(cacheKey, getFiMinterTotalAccounts),
     enabled,
   });
   return {
@@ -244,6 +260,24 @@ export function usePersonalWalletBalance(
         getPersonalWalletBalance(personalMinter!, ownerAddress!),
       ),
     enabled: !!personalMinter && !!ownerAddress,
+  });
+  return {
+    ...query,
+    refetch: createRefetchWrapper(cacheKey, query.refetch),
+  };
+}
+
+export function usePersonalMinterDetails(
+  personalMinter: Address | null,
+  enabled = true,
+) {
+  const key = personalMinter?.toString() ?? 'none';
+  const cacheKey = `personal-minter-details:${key}`;
+  const query = useQuery<PersonalMinterDetails | null>({
+    queryKey: ['personal-minter-details', key],
+    queryFn: () =>
+      cachedQueryFn(cacheKey, () => getPersonalMinterDetails(personalMinter!)),
+    enabled: enabled && !!personalMinter,
   });
   return {
     ...query,
