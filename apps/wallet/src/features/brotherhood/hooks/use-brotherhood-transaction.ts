@@ -82,7 +82,7 @@ export function useBrotherhoodTransaction(
 /** Default gas amounts for various operations */
 export const GAS = {
   TRANSFER: toNano('0.05'),
-  BURN: toNano('0.05'),
+  BURN: toNano('0.6'),
   CLAIM: toNano('0.05'),
   INVITE: toNano('0.1'),
   VOTE: toNano('0.05'),

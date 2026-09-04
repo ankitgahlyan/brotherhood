@@ -21,6 +21,7 @@ import {
   ActivationBanner,
   useIsNetworkMember,
 } from '@/features/brotherhood';
+import { isZeroAddress } from '@/lib/brotherhood/ton';
 
 import {
   useDeployPersonalJetton,
@@ -70,7 +71,25 @@ export const PersonalJettonScreen: React.FC = () => {
   const [adminRegisterMinter, setAdminRegisterMinter] = useState('');
   const [adminRegisterWallet, setAdminRegisterWallet] = useState('');
 
+  // Burn tab options
+  const [isPayback, setIsPayback] = useState(true);
+
   const info = usePersonalJettonInfo(address ?? null);
+
+  const isDeployed =
+    Boolean(info.personalMinterAddress) &&
+    !isZeroAddress(info.personalMinterAddress);
+
+  const availableTabs: Tab[] = isDeployed
+    ? ['info', 'mint', 'burn', 'admin', 'topup']
+    : ['info', 'deploy', 'mint', 'burn', 'admin', 'topup'];
+
+  // If already deployed and currently on deploy tab, switch to info
+  React.useEffect(() => {
+    if (isDeployed && activeTab === 'deploy') {
+      setActiveTab('info');
+    }
+  }, [isDeployed, activeTab]);
 
   const activeMinter = customMinterAddr || info.personalMinterAddress || '';
   const activePersonalWallet =
@@ -125,6 +144,7 @@ export const PersonalJettonScreen: React.FC = () => {
     walletKit,
     personalWalletAddress: activePersonalWallet,
     amount,
+    isPayback,
   });
 
   const admin = usePersonalMinterAdmin({
@@ -164,9 +184,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
           {/* Tabs */}
           <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-            {(
-              ['info', 'deploy', 'mint', 'burn', 'admin', 'topup'] as Tab[]
-            ).map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -601,6 +619,29 @@ export const PersonalJettonScreen: React.FC = () => {
                   data-testid="personal-burn-amount"
                 />
               </div>
+
+              {/* Payback vs Simple Burn Checkbox */}
+              <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 cursor-pointer select-none transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isPayback}
+                  onChange={(e) => setIsPayback(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary"
+                  data-testid="personal-burn-payback-checkbox"
+                />
+                <div className="space-y-0.5 text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    Burn for FI Token Payback
+                    <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      Recommended
+                    </span>
+                  </span>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Sends your wallet address with the burn request to trigger an automatic FI token payback from the issuer's account (requires credit maturity). Uncheck for a simple burn without payback.
+                  </p>
+                </div>
+              </label>
+
               <Button
                 onClick={() => burner.burn()}
                 disabled={!canOperate || burner.isDisabled}
@@ -608,7 +649,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 fullWidth
                 data-testid="personal-burn-submit"
               >
-                Burn Tokens
+                {isPayback ? 'Burn & Request Payback' : 'Burn Tokens'}
               </Button>
             </div>
           )}

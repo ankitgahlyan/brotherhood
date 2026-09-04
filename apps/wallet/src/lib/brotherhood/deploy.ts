@@ -209,14 +209,14 @@ export function buildPointPersonalMinterBody(params: {
 
 export function buildBurnBody(
   amount: bigint,
-  responseAddress: Address,
+  responseAddress?: Address | null,
   queryId = 0n,
 ): Cell {
   return AskToBurn.toCell(
     AskToBurn.create({
       queryId,
       jettonAmount: amount,
-      sendExcessesTo: responseAddress,
+      sendExcessesTo: responseAddress ?? null,
       customPayload: null,
     }),
   );

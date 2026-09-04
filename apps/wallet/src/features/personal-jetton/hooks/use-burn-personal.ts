@@ -18,6 +18,7 @@ export interface UseBurnPersonalParams {
   walletAddress: string | null;
   personalWalletAddress: string;
   amount: string;
+  isPayback?: boolean;
 }
 
 export interface UseBurnPersonalResult {
@@ -33,6 +34,7 @@ export function useBurnPersonal({
   walletAddress,
   personalWalletAddress,
   amount,
+  isPayback = true,
 }: UseBurnPersonalParams): UseBurnPersonalResult {
   const {
     send: sendTx,
@@ -46,12 +48,14 @@ export function useBurnPersonal({
     const ownerAddr = Address.parse(walletAddress);
     const amountNano = parseUnits(amount, 9);
 
-    const payload = buildBurnBody(amountNano, ownerAddr);
+    // If payback, pass ownerAddr so personal minter triggers Payback to issuer's FI wallet;
+    // otherwise pass null for a standard burn.
+    const payload = buildBurnBody(amountNano, isPayback ? ownerAddr : null);
 
     await sendTx([
       { toAddress: personalWalletAddress, amount: GAS.BURN, payload },
     ]);
-  }, [walletAddress, personalWalletAddress, amount, sendTx]);
+  }, [walletAddress, personalWalletAddress, amount, isPayback, sendTx]);
 
   const isDisabled =
     !wallet ||

@@ -18,6 +18,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
+import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 
 export interface UseRegisterPersonalJettonParams {
   wallet: Wallet | null | undefined;
@@ -80,8 +81,10 @@ export function useRegisterPersonalJetton({
       },
     ]);
 
+    // Explicitly delete cached fi-wallet-state from IndexedDB so fresh data is loaded
+    await deleteContractCache(`fi-wallet-state:${ownerAddr.toString()}`);
     toast.success('Personal Jetton registered successfully!');
-    await refreshQueries();
+    await refreshQueries([`fi-wallet-state:${ownerAddr.toString()}`]);
     onSuccess?.();
   }, [
     walletAddress,
