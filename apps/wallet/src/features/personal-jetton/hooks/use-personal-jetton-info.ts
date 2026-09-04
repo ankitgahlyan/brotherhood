@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import {
   usePersonalMinterForIssuer,
+  usePersonalWalletForIssuer,
   usePersonalWalletAddress,
   usePersonalWalletBalance,
 } from '@/lib/brotherhood/queries';
@@ -18,7 +19,9 @@ export interface UsePersonalJettonInfoResult {
   personalMinterAddress: string | null;
   personalWalletAddress: string | null;
   personalBalance: bigint | null;
+  isRegistered: boolean;
   isLoading: boolean;
+  refetch: () => void;
 }
 
 export function usePersonalJettonInfo(
@@ -33,19 +36,49 @@ export function usePersonalJettonInfo(
     }
   }, [walletAddress]);
 
-  const { data: minterAddrObj, isLoading: isMinterLoading } =
-    usePersonalMinterForIssuer(ownerAddress);
+  const {
+    data: minterAddrObj,
+    isLoading: isMinterLoading,
+    refetch: refetchMinter,
+  } = usePersonalMinterForIssuer(ownerAddress);
 
-  const { data: walletAddrObj, isLoading: isWalletAddrLoading } =
-    usePersonalWalletAddress(minterAddrObj ?? null, ownerAddress);
+  const {
+    data: registeredWalletObj,
+    isLoading: isIssuerWalletLoading,
+    refetch: refetchIssuerWallet,
+  } = usePersonalWalletForIssuer(ownerAddress);
 
-  const { data: balance, isLoading: isBalanceLoading } =
-    usePersonalWalletBalance(minterAddrObj ?? null, ownerAddress);
+  const {
+    data: computedWalletAddrObj,
+    isLoading: isWalletAddrLoading,
+    refetch: refetchWalletAddr,
+  } = usePersonalWalletAddress(minterAddrObj ?? null, ownerAddress);
+
+  const {
+    data: balance,
+    isLoading: isBalanceLoading,
+    refetch: refetchBalance,
+  } = usePersonalWalletBalance(minterAddrObj ?? null, ownerAddress);
+
+  const resolvedWallet = registeredWalletObj || computedWalletAddrObj || null;
+
+  const refetch = () => {
+    refetchMinter();
+    refetchIssuerWallet();
+    refetchWalletAddr();
+    refetchBalance();
+  };
 
   return {
     personalMinterAddress: minterAddrObj?.toString() ?? null,
-    personalWalletAddress: walletAddrObj?.toString() ?? null,
+    personalWalletAddress: resolvedWallet?.toString() ?? null,
     personalBalance: balance ?? null,
-    isLoading: isMinterLoading || isWalletAddrLoading || isBalanceLoading,
+    isRegistered: Boolean(minterAddrObj),
+    isLoading:
+      isMinterLoading ||
+      isIssuerWalletLoading ||
+      isWalletAddrLoading ||
+      isBalanceLoading,
+    refetch,
   };
 }
