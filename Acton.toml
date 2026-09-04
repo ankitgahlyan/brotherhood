@@ -111,6 +111,7 @@ jetton-claim-admin = "acton script contracts/scripts/claim-admin.tolk"
 jetton-info = "acton script contracts/scripts/info.tolk"
 jetton-mint = "acton script contracts/scripts/mint.tolk"
 jetton-transfer = "acton script contracts/scripts/transfer.tolk"
+upgrade-fi = "acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet"
 
 [import-mappings]
 acton = ".acton"

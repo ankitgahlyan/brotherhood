@@ -3,9 +3,9 @@ import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
-import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/Personal.gen"
 import "@contracts/personalMinter/storage"
 
 import "utils/common"
@@ -41,16 +41,15 @@ fun main() {
 
     val metadata = promptJettonMetadata("Personal Token");
 
-    val priStore: PriStore = {
+    val personalStore: PersonalStore = {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        latestWalletCodeLibRef: personalWalletCompiledCodeLibraryRef(),
         metadataUri: buildJettonMetadataCell(metadata),
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
-        data: priStore.toCell(),
+        data: personalStore.toCell(),
     };
     val pmAddress = AutoDeployAddress {
         workchain: BASECHAIN,
@@ -70,12 +69,14 @@ fun main() {
     val deployRes = net.send(deployer.address, deployMsg);
     deployRes.waitForFirstTransaction();
 
-    // point the issuer's FI wallet at the Personal Token minter (ActSetPersonalJettonMinter signal)
+    val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);
+    // point the issuer's FI wallet at the Personal Token minter and personal wallet (ActSetPersonalJetton signal)
     val pointRes = FossFiWallet
         .fromAddress(issuerWallet)
-        .sendActSetPersonalJettonMinter(
+        .sendActSetPersonalJetton(
             issuerOwner,
             pmAddress,
+            personalWalletAddress,
             { value: ton("0.6") },
         );
     pointRes.waitForFirstTransaction();

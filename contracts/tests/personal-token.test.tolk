@@ -3,7 +3,6 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@gen/PersonalWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
@@ -17,16 +16,15 @@ import "test-utils"
 
 // Deploy an issuer's Personal Token minter backed by the issuer's FI account.
 fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
-    val priStore: PriStore = {
+    val personalStore: PersonalStore = {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        latestWalletCodeLibRef: personalWalletCompiledCodeLibraryRef(),
         metadataUri: createEmptyCell(),
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
-        data: priStore.toCell(),
+        data: personalStore.toCell(),
     };
     val address = AutoDeployAddress {
         workchain: BASECHAIN,
@@ -38,15 +36,17 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
     return pm;
 }
 
-// Point the issuer's FI wallet at its Personal Token minter (ton("0.777") owner message).
+// Point the issuer's FI wallet at its Personal Token minter and personal wallet (ton("0.6") owner message).
 fun pointIssuerAtPersonalMinter(
     issuer: FossFiWallet,
     owner: address,
     personalMinter: address,
+    personalWallet: address,
 ): SendResultList {
-    return issuer.sendActSetPersonalJettonMinter(
+    return issuer.sendActSetPersonalJetton(
         owner,
         personalMinter,
+        personalWallet,
         { value: ton("0.6") }, // must exceed the > ton("0.5") owner-action gate
     );
 }
@@ -83,7 +83,13 @@ fun setupPersonalScenario(): (
 
     // deploy the issuer's Personal Token minter and point the issuer's FI wallet at it
     val pm = deployPersonalMinter(issuerWallet.address, notDeployer.address);
-    pointIssuerAtPersonalMinter(issuerWallet, notDeployer.address, pm.address);
+    val issuerPersonalWallet = pm.getWalletAddress(notDeployer.address);
+    pointIssuerAtPersonalMinter(
+        issuerWallet,
+        notDeployer.address,
+        pm.address,
+        issuerPersonalWallet,
+    );
     issuerWallet.sendSetCreditNeed(
         notDeployer.address,
         0,
@@ -136,6 +142,10 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
     // ... and the issuer's Personal Token was minted to the buyer
     expect(personalSupply(pm)).toEqual(supplyBefore + loan);
     expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+
+    val trusted = issuerWallet.getWalletDataAll().addresses.load().trustedJettonAddrs.load();
+    expect(trusted.personalJettonMinter).toEqual(pm.address);
+    expect(trusted.personalJettonWallet).toEqual(pm.getWalletAddress(notDeployer.address));
 }
 
 get fun `test personal token: cannot buy more FI than the buyer holds`() {
@@ -209,7 +219,7 @@ fun sendPayback(
     return buyerPriWallet.sendAny(
         buyerOwner,
         burnBody,
-        { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
+        { bounce: false, value: grams("0.5") },
     );
 }
 

@@ -3,10 +3,10 @@ import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 
-import "@gen/PersonalWallet.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/Personal.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
@@ -94,11 +94,10 @@ fun main() {
     println("ISSUER_WALLET={}", issuerWallet);
 
     // 2. the deploy-personal recipe steps: deploy the PM and point the issuer wallet at it
-    val priStore: PriStore = {
+    val personalStore: PersonalStore = {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: deployer,
-        latestWalletCodeLibRef: personalWalletCompiledCodeLibraryRef(),
         metadataUri: buildJettonMetadataCell({
             name: "Issuer Token",
             symbol: "IT",
@@ -109,7 +108,7 @@ fun main() {
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
-        data: priStore.toCell(),
+        data: personalStore.toCell(),
     };
     val pmAddress = AutoDeployAddress {
         workchain: BASECHAIN,
@@ -126,24 +125,30 @@ fun main() {
         },
     });
     net.send(deployer, deployMsg).waitForFirstTransaction();
-    println("PERSONAL_MINTER={}", pmAddress);
-
+    val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);
     val pointRes = FossFiWallet
         .fromAddress(issuerWallet)
-        .sendActSetPersonalJettonMinter(
+        .sendActSetPersonalJetton(
             issuerOwner,
             pmAddress,
+            personalWalletAddress,
             { value: ton("0.6") },
         );
     pointRes.waitForFirstTransaction();
 
     val walletData = FossFiWallet.fromAddress(issuerWallet).getWalletDataAll();
-    val trustedMinter = walletData.addresses.load().trustedJettonAddrs.load().personalJettonMinter;
+    val trusted = walletData.addresses.load().trustedJettonAddrs.load();
+    val trustedMinter = trusted.personalJettonMinter;
+    val trustedWallet = trusted.personalJettonWallet;
     println("ISSUER_TRUSTED_MINTER={}", trustedMinter);
-    if (trustedMinter != null && trustedMinter == pmAddress) {
-        println("VERIFY_OK: issuer wallet points at the Personal Token minter");
+    println("ISSUER_TRUSTED_WALLET={}", trustedWallet);
+    if (
+        trustedMinter != null && trustedMinter == pmAddress && trustedWallet != null &&
+        trustedWallet == personalWalletAddress
+    ) {
+        println("VERIFY_OK: issuer wallet points at the Personal Token minter and wallet");
     } else {
-        println("VERIFY_FAIL: trusted minter mismatch");
+        println("VERIFY_FAIL: trusted personal mismatch");
     }
 
     // Set issuer's credit need with a future maturity date
