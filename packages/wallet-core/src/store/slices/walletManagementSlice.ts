@@ -59,14 +59,12 @@ export const createWalletManagementSlice =
     // Load all saved wallets into WalletKit
     loadSavedWalletsIntoKit: async (walletKit: ITonWalletKit) => {
       const state = get();
-      if (!state.auth.currentPassword) {
-        log.warn('Cannot load wallets: user not authenticated');
+      const savedWallets = state.walletManagement.savedWallets;
+      if (!savedWallets || savedWallets.length === 0) {
         return;
       }
 
-      const savedWallets = state.walletManagement.savedWallets;
-      if (savedWallets.length === 0) {
-        log.info('No saved wallets to load');
+      if (!state.auth.currentPassword) {
         return;
       }
 

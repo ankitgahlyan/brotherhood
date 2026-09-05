@@ -92,12 +92,12 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
   return (
     <div className="border border-border/70 rounded-xl overflow-hidden bg-card transition-colors">
       {/* Accordion Header */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full p-3 flex justify-between items-center text-left hover:bg-secondary/40 transition-colors cursor-pointer"
-      >
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="w-full p-3 flex justify-between items-center bg-card hover:bg-secondary/40 transition-colors">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+        >
           {isExpanded ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
           ) : (
@@ -112,7 +112,7 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
               {creditMembers.length === 1 ? 'request' : 'requests'}
             </span>
           )}
-        </div>
+        </button>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -127,15 +127,19 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
               className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`}
             />
           </button>
-          <span className="text-[11px] text-muted-foreground">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer text-left"
+          >
             {isExpanded
               ? isLoading
                 ? 'Loading...'
                 : `${invitees.length} in Ring`
               : 'Click to inspect'}
-          </span>
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Accordion Body */}
       {isExpanded && (

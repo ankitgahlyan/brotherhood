@@ -203,8 +203,10 @@ export const createWalletCoreSlice =
           state.walletCore.initializationError = null;
         });
 
-        // Load all saved wallets into the WalletKit instance
-        await get().loadSavedWalletsIntoKit(walletKit);
+        // Load all saved wallets into the WalletKit instance if authenticated
+        if (get().auth.currentPassword) {
+          await get().loadSavedWalletsIntoKit(walletKit);
+        }
       } catch (error) {
         const errorMessage = getErrorMessage(error);
         log.error('WalletKit initialization failed', { errorMessage });
