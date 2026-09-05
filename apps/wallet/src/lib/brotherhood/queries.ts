@@ -9,8 +9,6 @@ import {
   getFiWalletState,
   getFiWalletStateByContractAddress,
   getPersonalMinterDetails,
-  getPersonalMinterForIssuer,
-  getPersonalWalletForIssuer,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   isZeroAddress,

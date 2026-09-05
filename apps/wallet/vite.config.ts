@@ -21,7 +21,38 @@ const pwaManifest: Partial<ManifestOptions> = {
   orientation: 'portrait',
   theme_color: '#0b0e14',
   background_color: '#0b0e14',
-  icons: [{ src: `${base}favicon.svg`, sizes: 'any', type: 'image/svg+xml' }],
+  icons: [
+    { src: `${base}favicon.svg`, sizes: 'any', type: 'image/svg+xml' },
+    {
+      src: `${base}web-app-manifest-192x192.png`,
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any',
+    },
+    {
+      src: `${base}web-app-manifest-192x192.png`,
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'maskable',
+    },
+    {
+      src: `${base}web-app-manifest-512x512.png`,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any',
+    },
+    {
+      src: `${base}web-app-manifest-512x512.png`,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable',
+    },
+    {
+      src: `${base}apple-touch-icon.png`,
+      sizes: '180x180',
+      type: 'image/png',
+    },
+  ],
 };
 
 export default defineConfig({

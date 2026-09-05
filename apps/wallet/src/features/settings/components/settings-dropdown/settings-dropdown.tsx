@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import {
   ChevronRight,
+  Download,
   KeyRound,
   Lock,
   Moon,
@@ -20,6 +21,7 @@ import {
   Trash2,
   Check,
 } from 'lucide-react';
+import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
@@ -120,6 +122,7 @@ export const SettingsDropdown: React.FC = () => {
   const [biometricPasscode, setBiometricPasscode] = useState('');
   const [biometricError, setBiometricError] = useState('');
   const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
+  const [isInstallOpen, setIsInstallOpen] = useState(false);
 
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
@@ -361,6 +364,14 @@ export const SettingsDropdown: React.FC = () => {
 
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
             <ActionRow
+              icon={<Download className="w-5 h-5" />}
+              label="Install App / Add Shortcut"
+              onClick={() => {
+                setPanel(null);
+                setIsInstallOpen(true);
+              }}
+            />
+            <ActionRow
               icon={<Plus className="w-5 h-5" />}
               label="Create New Wallet"
               onClick={handleCreateNewWallet}
@@ -402,7 +413,8 @@ export const SettingsDropdown: React.FC = () => {
         </Modal.Header>
         <Modal.Body className="gap-3 p-4">
           <p className="text-xs text-muted-foreground">
-            Enter your wallet passcode to register biometric authentication on this device.
+            Enter your wallet passcode to register biometric authentication on
+            this device.
           </p>
           <input
             type="password"
@@ -476,6 +488,11 @@ export const SettingsDropdown: React.FC = () => {
           )}
         </Modal.Body>
       </Modal.Container>
+
+      <InstallPromptDialog
+        open={isInstallOpen}
+        onOpenChange={setIsInstallOpen}
+      />
     </>
   );
 };

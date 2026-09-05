@@ -56,7 +56,7 @@ export const PersonalJettonScreen: React.FC = () => {
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
-  const { formatContractAddress } = useFormatAddress();
+  const { formatContractAddress, formatWalletAddress } = useFormatAddress();
   const { canOperate } = useIsNetworkMember();
 
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -669,7 +669,9 @@ export const PersonalJettonScreen: React.FC = () => {
                     {address && (
                       <button
                         type="button"
-                        onClick={() => setRecipient(address)}
+                        onClick={() =>
+                          setRecipient(formatWalletAddress(address, false))
+                        }
                         className="text-[11px] text-primary hover:underline font-medium"
                       >
                         Use My Address

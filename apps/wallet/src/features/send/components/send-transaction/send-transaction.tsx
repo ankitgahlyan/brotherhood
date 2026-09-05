@@ -19,6 +19,7 @@ import {
 } from '@demo/wallet-core';
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
+import { useFormatAddress } from '@/core/utils/formatters';
 
 import { useSendToken } from '../../hooks/use-send-token';
 import { useSendTokens } from '../../hooks/use-send-tokens';
@@ -114,8 +115,10 @@ export const SendTransaction: React.FC = () => {
     setShowTokenModal(false);
   };
 
+  const { formatWalletAddress } = useFormatAddress();
+
   const handleSendToSelf = () => {
-    if (address) setRecipient(address);
+    if (address) setRecipient(formatWalletAddress(address, false));
   };
 
   const handleSend = async (e: React.FormEvent) => {

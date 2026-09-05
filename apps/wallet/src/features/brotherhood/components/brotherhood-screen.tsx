@@ -687,7 +687,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={recipient}
                 onChange={setRecipient}
-                placeholder="0Q..."
+                placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
                 data-testid="brotherhood-transfer-recipient"
               />
             </div>
@@ -698,19 +698,12 @@ export const BrotherhoodScreen: React.FC = () => {
                   Amount (FI)
                 </label>
                 {account.data && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAmount(
-                        (
-                          Number(account.data?.jettonBalance ?? 0n) / 1e9
-                        ).toString(),
-                      )
-                    }
-                    className="text-[11px] text-blue-500 hover:underline font-medium"
-                  >
-                    Use Max
-                  </button>
+                  <span className="text-[11px] text-muted-foreground">
+                    Available:{' '}
+                    <span className="font-medium text-foreground">
+                      {fromNano(account.data.jettonBalance)} FI
+                    </span>
+                  </span>
                 )}
               </div>
               <input
@@ -736,7 +729,7 @@ export const BrotherhoodScreen: React.FC = () => {
               fullWidth
               data-testid="brotherhood-transfer-submit"
             >
-              Send FI Transfer
+              Send FI
             </Button>
           </div>
         )}
@@ -866,7 +859,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 <InputScan
                   value={invitee}
                   onChange={setInvitee}
-                  placeholder="0Q..."
+                  placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
                   data-testid="brotherhood-invite-recipient"
                 />
               </div>
@@ -1254,7 +1247,7 @@ export const BrotherhoodScreen: React.FC = () => {
                       setVoteCount((c) => Math.min(c, matching.count));
                     }
                   }}
-                  placeholder="0Q..."
+                  placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
                   data-testid="brotherhood-vote-target"
                 />
 
@@ -1528,7 +1521,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={recipient}
                 onChange={setRecipient}
-                placeholder="Borrower Address (0Q...)"
+                placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                 data-testid="brotherhood-credit-recipient"
               />
               <input
@@ -1658,7 +1651,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={grantee}
                 onChange={setGrantee}
-                placeholder="Grantee Address (0Q...)"
+                placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                 data-testid="brotherhood-grantee-address"
               />
               <input
@@ -1695,13 +1688,13 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={granter}
                 onChange={setGranter}
-                placeholder="Granter Address (0Q...)"
+                placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                 data-testid="brotherhood-granter-address"
               />
               <InputScan
                 value={recipient}
                 onChange={setRecipient}
-                placeholder="Receiver Address (0Q...)"
+                placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                 data-testid="brotherhood-spend-receiver"
               />
               <input
@@ -1752,7 +1745,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={goldRecipient}
                 onChange={setGoldRecipient}
-                placeholder="0Q..."
+                placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
                 data-testid="brotherhood-gold-recipient"
               />
             </div>
@@ -1940,7 +1933,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <InputScan
                 value={authTarget}
                 onChange={setAuthTarget}
-                placeholder="Target Address (0Q...)"
+                placeholder={`Target Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                 data-testid="brotherhood-authority-target"
               />
               <Button

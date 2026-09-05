@@ -11,3 +11,4 @@ export * from './use-media-query';
 export * from './use-paste-handler';
 export * from './use-ton-wallet';
 export * from './use-wallet-data-updater';
+export * from './use-pwa-install';

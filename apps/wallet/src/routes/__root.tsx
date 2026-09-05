@@ -8,6 +8,7 @@ import { useWalletStore } from '@demo/wallet-core';
 import { LoaderCircle } from '@/core/components/ui/loader-circle';
 import { Button } from '@/core/components/ui/button';
 import { GlobalRequestModals } from '@/features/ton-connect';
+import { PwaInstallBanner } from '@/core/components/pwa';
 
 function RootComponent() {
   const isWalletKitInitialized = useWalletStore(
@@ -66,6 +67,7 @@ function RootComponent() {
     <>
       <Outlet />
       <GlobalRequestModals />
+      <PwaInstallBanner />
       <Toaster />
       {process.env.NODE_ENV === 'development' && (
         <TanStackRouterDevtools position="bottom-right" />
