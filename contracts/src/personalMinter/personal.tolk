@@ -239,12 +239,13 @@ get fun get_state(): PersonalStore {
 
 get fun get_jetton_data(): JettonDataReply {
     val storage = lazy PersonalStore.load();
+    val content = storage.metadataUri != null ? storage.metadataUri : createEmptyCell();
 
     return {
         totalSupply: storage.totalSupply,
         mintable: true,
         adminAddress: storage.adminAddress,
-        jettonContent: storage.metadataUri as Cell<OnchainMetadataReply>,
+        jettonContent: content as Cell<OnchainMetadataReply>,
         jettonWalletCode: getPersonalWalletCode(),
     };
 }

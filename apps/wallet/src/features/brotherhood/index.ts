@@ -28,4 +28,5 @@ export * from './hooks/use-profile';
 export * from './hooks/use-authority-actions';
 export * from './hooks/use-member-detail';
 export * from './hooks/use-ring-invitees';
+export * from './hooks/use-set-credit-terms';
 export * from './components/network';

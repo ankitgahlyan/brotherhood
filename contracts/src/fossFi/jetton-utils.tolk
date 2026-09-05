@@ -147,6 +147,16 @@ fun sendExcesses(queryId: uint64, inValue: coins, to: address) {
     outMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
 }
 
+fun returnExcessesBack(queryId: uint64, to: address) {
+    val outMsg = createMessage({
+        bounce: BounceMode.NoBounce,
+        dest: to,
+        value: 0,
+        body: ReturnExcessesBack { queryId },
+    });
+    outMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+}
+
 fun notifyOwner(
     queryId: uint64,
     transferInitiator: address,

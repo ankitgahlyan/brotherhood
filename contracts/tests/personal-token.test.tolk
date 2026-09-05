@@ -20,7 +20,7 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        metadataUri: createEmptyCell(),
+        metadataUri: null,
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),

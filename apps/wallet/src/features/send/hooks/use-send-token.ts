@@ -7,6 +7,8 @@
  */
 
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { markForceFresh } from '@/lib/brotherhood/queries';
 import { toast } from 'sonner';
 import type {
   ITonWalletKit,
@@ -59,6 +61,7 @@ export const useSendToken = ({
   recipient,
   amount,
 }: UseSendTokenParams): UseSendTokenResult => {
+  const queryClient = useQueryClient();
   const gasless = useGaslessJettonSend({
     wallet,
     jetton: tokenType === 'JETTON' ? jetton : undefined,
@@ -94,10 +97,7 @@ export const useSendToken = ({
         transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
       });
       await walletKit.handleNewTransaction(wallet, tx);
-      return undefined;
-    }
-
-    if (jetton) {
+    } else if (jetton) {
       const decimals = jetton.decimalsNumber;
       if (decimals == null) throw new Error('Jetton decimals not found');
 
@@ -109,6 +109,16 @@ export const useSendToken = ({
       await walletKit.handleNewTransaction(wallet, tx);
     }
 
+    setTimeout(async () => {
+      try {
+        markForceFresh();
+        await queryClient.refetchQueries({ type: 'active' });
+        toast.info('On-chain state updated');
+      } catch (refreshErr) {
+        console.error('Auto-refresh after send failed:', refreshErr);
+      }
+    }, 3000);
+
     return undefined;
   }, [
     wallet,
@@ -119,6 +129,7 @@ export const useSendToken = ({
     amount,
     gaslessEffective,
     gaslessSend,
+    queryClient,
   ]);
 
   const isDisabled =

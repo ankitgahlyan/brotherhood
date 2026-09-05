@@ -967,7 +967,7 @@ export const Payback = {
  >     totalSupply: coins
  >     fiJettonAddress: address
  >     adminAddress: address
- >     metadataUri: cell
+ >     metadataUri: cell?
  > }
  */
 export interface PersonalStore {
@@ -975,7 +975,7 @@ export interface PersonalStore {
     totalSupply: coins /* = 0 */
     fiJettonAddress: c.Address
     adminAddress: c.Address
-    metadataUri: c.Cell
+    metadataUri: c.Cell | null /* = null */
 }
 
 export const PersonalStore = {
@@ -983,11 +983,12 @@ export const PersonalStore = {
         totalSupply?: coins /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        metadataUri: c.Cell
+        metadataUri?: c.Cell | null /* = null */
     }): PersonalStore {
         return {
             $: 'PersonalStore',
             totalSupply: 0n,
+            metadataUri: null,
             ...args
         }
     },
@@ -997,14 +998,16 @@ export const PersonalStore = {
             totalSupply: s.loadCoins(),
             fiJettonAddress: s.loadAddress(),
             adminAddress: s.loadAddress(),
-            metadataUri: s.loadRef(),
+            metadataUri: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: PersonalStore, b: c.Builder): void {
         b.storeCoins(self.totalSupply);
         b.storeAddress(self.fiJettonAddress);
         b.storeAddress(self.adminAddress);
-        b.storeRef(self.metadataUri);
+        storeTolkNullable<c.Cell>(self.metadataUri, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: PersonalStore): c.Cell {
         return makeCellFrom<PersonalStore>(self, PersonalStore.store);
@@ -1067,7 +1070,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1093,7 +1096,7 @@ export class PersonalMinter implements c.Contract {
         totalSupply?: coins /* = 0 */
         fiJettonAddress: c.Address
         adminAddress: c.Address
-        metadataUri: c.Cell
+        metadataUri?: c.Cell | null /* = null */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,
@@ -1288,7 +1291,9 @@ export class PersonalMinter implements c.Contract {
             totalSupply: r.readBigInt(),
             fiJettonAddress: r.readSlice().loadAddress(),
             adminAddress: r.readSlice().loadAddress(),
-            metadataUri: r.readCell(),
+            metadataUri: r.readNullable<c.Cell>(
+                (r) => r.readCell()
+            ),
         });
     }
 

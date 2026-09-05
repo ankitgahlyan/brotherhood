@@ -95,6 +95,19 @@ export async function getFiWalletAddress(
   return getWalletAddress(ownerAddress);
 }
 
+export async function checkIsContractDeployed(
+  address: Address,
+  targetNetwork: Network = network,
+): Promise<boolean> {
+  try {
+    const client = getTonClient(targetNetwork);
+    return await client.isContractDeployed(address);
+  } catch (err) {
+    console.error('Failed to check if contract is deployed:', err);
+    return false;
+  }
+}
+
 export interface JettonMasterInfo {
   totalSupply: bigint;
   mintable: boolean;

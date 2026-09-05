@@ -9,7 +9,7 @@ struct PersonalStore {
     totalSupply: coins = 0
     fiJettonAddress: address
     adminAddress: address
-    metadataUri: cell // for on-chain deployment or use default
+    metadataUri: cell? = null // null on deploy for deterministic address calculation
 }
 
 fun PersonalStore.load(): PersonalStore {

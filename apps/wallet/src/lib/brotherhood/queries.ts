@@ -12,6 +12,7 @@ import {
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   isZeroAddress,
+  checkIsContractDeployed,
   type JettonMasterInfo,
   type Network,
   type PersonalMinterDetails,
@@ -283,6 +284,18 @@ export function usePersonalMinterDetails(
     ...query,
     refetch: createRefetchWrapper(cacheKey, query.refetch),
   };
+}
+
+export function useIsContractDeployed(
+  address: Address | null,
+  enabled = true,
+) {
+  const key = address?.toString() ?? 'none';
+  return useQuery<boolean>({
+    queryKey: ['contract-deployed', key],
+    queryFn: () => (address ? checkIsContractDeployed(address) : false),
+    enabled: enabled && !!address,
+  });
 }
 
 export function useRefreshContractQueries() {

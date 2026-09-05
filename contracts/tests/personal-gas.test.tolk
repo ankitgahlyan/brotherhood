@@ -22,7 +22,7 @@ fun deployPersonalMinterDirect(admin: address): Personal {
         totalSupply: 0,
         fiJettonAddress: admin,
         adminAddress: admin,
-        metadataUri: createEmptyCell(),
+        metadataUri: null,
     };
     val pm = Personal.fromStorage(personalStore);
     val res = pm.deploy(admin, { value: ton("1") });

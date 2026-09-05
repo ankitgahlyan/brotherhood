@@ -45,7 +45,7 @@ fun main() {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        metadataUri: buildJettonMetadataCell(metadata),
+        metadataUri: null,
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
@@ -68,6 +68,17 @@ fun main() {
     });
     val deployRes = net.send(deployer.address, deployMsg);
     deployRes.waitForFirstTransaction();
+
+    // set metadata on the deployed minter
+    val metaMsg = Personal
+        .fromAddress(pmAddress)
+        .sendChangeMinterMetadata(
+            admin,
+            0,
+            buildJettonMetadataCell(metadata),
+            SendParams { value: ton("0.05") },
+        );
+    metaMsg.waitForFirstTransaction();
 
     val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);
     // point the issuer's FI wallet at the Personal Token minter and personal wallet (ActSetPersonalJetton signal)

@@ -30,7 +30,7 @@ import {
   useMemberProfiles,
   type MemberProfileInfo,
 } from '../hooks/use-member-profiles';
-import { useFiTransfer } from '../hooks/use-fi-transfer';
+import { useSetCreditTerms } from '../hooks/use-set-credit-terms';
 import { useFiBurn } from '../hooks/use-fi-burn';
 import { useWeeklyClaim } from '../hooks/use-weekly-claim';
 import { useInviteMember } from '../hooks/use-invite-member';
@@ -56,7 +56,6 @@ import { SyncStatusButton } from '@/features/dashboard/components/sync-status-bu
 type Tab =
   | 'account'
   | 'network'
-  | 'transfer'
   | 'burn'
   | 'claim'
   | 'invite'
@@ -233,15 +232,19 @@ export const BrotherhoodScreen: React.FC = () => {
     [account.data],
   );
 
-  // Transaction hooks with connected FiAccount state
-  const transfer = useFiTransfer({
+  // Credit terms state (Credit Need & Multiplier)
+  const [creditNeedInput, setCreditNeedInput] = useState('');
+  const [creditMaturityDays, setCreditMaturityDays] = useState('30');
+  const [creditMultiplierInput, setCreditMultiplierInput] = useState('1');
+
+  const creditTerms = useSetCreditTerms({
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
-    recipient,
-    amount,
     network,
-    accountData: account.data,
+    onSuccess: () => {
+      account.refetch();
+    },
   });
 
   const burn = useFiBurn({
@@ -484,7 +487,6 @@ export const BrotherhoodScreen: React.FC = () => {
             [
               'account',
               'network',
-              'transfer',
               'burn',
               'claim',
               'invite',
@@ -747,8 +749,7 @@ export const BrotherhoodScreen: React.FC = () => {
             onNavigateToInvite={() => setActiveTab('invite')}
             onQuickAction={(action, target) => {
               if (action === 'send') {
-                setRecipient(target);
-                setActiveTab('transfer');
+                navigate('/send');
               } else if (action === 'vote') {
                 setTargetAddress(target);
                 setActiveTab('vote');
@@ -758,71 +759,6 @@ export const BrotherhoodScreen: React.FC = () => {
               }
             }}
           />
-        )}
-
-        {/* Transfer FI */}
-        {activeTab === 'transfer' && (
-          <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            <h3 className="font-semibold text-base mb-1">Transfer FI Tokens</h3>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Available Balance:</span>
-              <span className="font-semibold text-foreground">
-                {formatFi(account.data?.jettonBalance)} FI
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Recipient Address
-              </label>
-              <InputScan
-                value={recipient}
-                onChange={setRecipient}
-                placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
-                data-testid="brotherhood-transfer-recipient"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Amount (FI)
-                </label>
-                {account.data && (
-                  <span className="text-[11px] text-muted-foreground">
-                    Available:{' '}
-                    <span className="font-medium text-foreground">
-                      {fromNano(account.data.jettonBalance)} FI
-                    </span>
-                  </span>
-                )}
-              </div>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.0"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-transfer-amount"
-              />
-            </div>
-
-            {transfer.validationError && (
-              <p className="text-xs text-rose-500 font-medium">
-                {transfer.validationError}
-              </p>
-            )}
-
-            <Button
-              onClick={() => transfer.send()}
-              disabled={transfer.isDisabled}
-              loading={transfer.isSending}
-              fullWidth
-              data-testid="brotherhood-transfer-submit"
-            >
-              Send FI
-            </Button>
-          </div>
         )}
 
         {/* Burn FI */}
@@ -1599,6 +1535,94 @@ export const BrotherhoodScreen: React.FC = () => {
               </div>
             </div>
 
+            {/* Borrowing Terms Configuration Card */}
+            <div className="p-3.5 bg-secondary/40 border border-border/50 rounded-xl space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground text-sm">
+                  My Borrowing Terms
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Multiplier: <strong className="text-foreground">{account.data?.multiplier ?? 1}x</strong>
+                  {account.data?.creditMaturity ? ` • Due: ${formatDate(account.data.creditMaturity)}` : ''}
+                </span>
+              </div>
+
+              {/* Set Credit Need Form */}
+              <div className="space-y-2 pt-1 border-t border-border/40">
+                <label className="text-xs font-medium text-foreground block">
+                  Set Credit Need (FI to Borrow)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={creditNeedInput}
+                    onChange={(e) => setCreditNeedInput(e.target.value)}
+                    placeholder={`Current: ${formatFi(account.data?.creditNeed)}`}
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="brotherhood-credit-need-input"
+                  />
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={creditMaturityDays}
+                    onChange={(e) => setCreditMaturityDays(e.target.value)}
+                    placeholder="Maturity (Days, e.g. 30)"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="brotherhood-credit-days-input"
+                  />
+                </div>
+                <Button
+                  size="xs"
+                  fullWidth
+                  onClick={() => {
+                    const days = parseInt(creditMaturityDays, 10) || 30;
+                    const maturitySec = Math.floor(Date.now() / 1000) + days * 86400;
+                    creditTerms.setCreditNeed(creditNeedInput || '0', maturitySec);
+                  }}
+                  disabled={!canOperate || creditTerms.isSending || !creditNeedInput}
+                  loading={creditTerms.isSending}
+                  data-testid="brotherhood-set-credit-need-submit"
+                >
+                  Update Credit Need
+                </Button>
+              </div>
+
+              {/* Set Multiplier Form */}
+              <div className="space-y-2 pt-2 border-t border-border/40">
+                <label className="text-xs font-medium text-foreground block">
+                  Set Credit Multiplier (Tokens minted per 1 FI borrowed)
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={creditMultiplierInput}
+                    onChange={(e) => setCreditMultiplierInput(e.target.value)}
+                    placeholder={`Current: ${account.data?.multiplier ?? 1}`}
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="brotherhood-credit-multiplier-input"
+                  />
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      const mult = parseInt(creditMultiplierInput, 10) || 1;
+                      creditTerms.setMultiplier(mult);
+                    }}
+                    disabled={!canOperate || creditTerms.isSending || !creditMultiplierInput}
+                    loading={creditTerms.isSending}
+                    className="shrink-0"
+                    data-testid="brotherhood-set-multiplier-submit"
+                  >
+                    Set Multiplier
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             <hr className="border-border/60" />
 
             {/* Circle Members Seeking Credit */}
@@ -1922,6 +1946,48 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Profile */}
         {activeTab === 'profile' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+            {/* Current Profile Card */}
+            <div className="p-3.5 rounded-xl border border-border/60 bg-secondary/40 space-y-2 text-xs">
+              <span className="font-semibold text-foreground text-sm block">
+                Current Member Profile
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
+                  <span className="text-muted-foreground block text-[11px]">Telegram Handle</span>
+                  <span className="font-medium text-foreground text-xs">
+                    {account.data?.username ? `@${account.data.username}` : 'Not registered'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
+                  <span className="text-muted-foreground block text-[11px]">Location (H3 Cell)</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-mono font-medium text-foreground text-xs truncate">
+                      {account.data?.h3Cell || 'Not registered'}
+                    </span>
+                    {account.data?.h3Cell && (
+                      <a
+                        href={getH3ViewerUrl(account.data.h3Cell)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-500 hover:underline shrink-0 text-xs font-semibold"
+                        title="View cell on map"
+                      >
+                        ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
+                  <span className="text-muted-foreground block text-[11px]">Country</span>
+                  <span className="font-medium text-foreground text-xs">
+                    {account.data?.country
+                      ? `${getCountryByCode(account.data.country)?.name || 'Country'} (${account.data.country})`
+                      : 'Global (0)'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <h3 className="font-semibold text-base">Update Member Profile</h3>
 
             {/* Username */}

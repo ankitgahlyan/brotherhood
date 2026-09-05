@@ -65,7 +65,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
         totalSupply: ton("1000000"),
         fiJettonAddress: deployer.address,
         adminAddress: deployer.address,
-        metadataUri: createEmptyCell(),
+        metadataUri: null,
     };
     val minterStoreCell = personalMinterStore.toCell();
     val (minterCells, minterBits, _) = minterStoreCell.calculateSizeStrict(4096);

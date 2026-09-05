@@ -48,7 +48,7 @@ import { usePersonalJettonInfo } from '../hooks/use-personal-jetton-info';
 import { TokenImagePicker } from './token-image-picker';
 import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
 
-type Tab = 'info' | 'deploy' | 'mint' | 'burn' | 'admin' | 'topup';
+type Tab = 'info' | 'deploy' | 'mint' | 'burn' | 'addresses' | 'admin' | 'topup';
 
 export const PersonalJettonScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -82,9 +82,11 @@ export const PersonalJettonScreen: React.FC = () => {
   const [newAdmin, setNewAdmin] = useState('');
   const [topUpTarget, setTopUpTarget] = useState('');
 
-  // Explicit registration overrides (in Admin tab)
+  // Explicit registration overrides
   const [adminRegisterMinter, setAdminRegisterMinter] = useState('');
   const [adminRegisterWallet, setAdminRegisterWallet] = useState('');
+  const [addressesTabMinter, setAddressesTabMinter] = useState('');
+  const [addressesTabWallet, setAddressesTabWallet] = useState('');
 
   // Burn tab options
   const [isPayback, setIsPayback] = useState(true);
@@ -92,12 +94,14 @@ export const PersonalJettonScreen: React.FC = () => {
   const info = usePersonalJettonInfo(address ?? null);
 
   const isDeployed =
-    Boolean(info.personalMinterAddress) &&
-    !isZeroAddress(info.personalMinterAddress);
+    info.isRegistered ||
+    info.isDeployedOnChain ||
+    (Boolean(info.personalMinterAddress) &&
+      !isZeroAddress(info.personalMinterAddress));
 
   const availableTabs: Tab[] = isDeployed
-    ? ['info', 'mint', 'burn', 'admin', 'topup']
-    : ['info', 'deploy', 'mint', 'burn', 'admin', 'topup'];
+    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup']
+    : ['info', 'deploy', 'mint', 'burn', 'addresses', 'admin', 'topup'];
 
   // If already deployed and currently on deploy tab, switch to info
   React.useEffect(() => {
@@ -106,8 +110,14 @@ export const PersonalJettonScreen: React.FC = () => {
     }
   }, [isDeployed, activeTab]);
 
-  const activeMinter = info.personalMinterAddress || '';
-  const activePersonalWallet = info.personalWalletAddress || '';
+  const activeMinter =
+    info.personalMinterAddress ||
+    (info.isDeployedOnChain ? info.deterministicMinterAddress : null) ||
+    '';
+  const activePersonalWallet =
+    info.personalWalletAddress ||
+    info.expectedPersonalWalletAddress ||
+    '';
 
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
@@ -123,15 +133,19 @@ export const PersonalJettonScreen: React.FC = () => {
 
   // Effective addresses to register
   const targetRegisterMinter =
+    addressesTabMinter ||
     adminRegisterMinter ||
     deployer.deployedAddresses?.minterAddress ||
     activeMinter ||
+    info.deterministicMinterAddress ||
     '';
 
   const targetRegisterWallet =
+    addressesTabWallet ||
     adminRegisterWallet ||
     deployer.deployedAddresses?.personalWalletAddress ||
     activePersonalWallet ||
+    info.expectedPersonalWalletAddress ||
     '';
 
   const registrar = useRegisterPersonalJetton({
@@ -157,6 +171,7 @@ export const PersonalJettonScreen: React.FC = () => {
   const burner = useBurnPersonal({
     wallet: currentWallet,
     walletKit,
+    walletAddress: address ?? null,
     personalWalletAddress: activePersonalWallet,
     amount,
     isPayback,
@@ -238,8 +253,8 @@ export const PersonalJettonScreen: React.FC = () => {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {/* Case 1: Deployed recently but not registered */}
-                  {!info.isRegistered && deployer.deployedAddresses && (
+                  {/* Case 1: Deployed (either recently or on-chain) but not registered */}
+                  {!info.isRegistered && (deployer.deployedAddresses || info.isDeployedOnChain) && (
                     <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2.5">
                       <div className="flex items-start gap-2.5">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
@@ -248,7 +263,7 @@ export const PersonalJettonScreen: React.FC = () => {
                             Registration Required
                           </span>
                           <p className="text-muted-foreground leading-relaxed">
-                            Your Personal Token minter is deployed! Register
+                            Your Personal Token minter is deployed on-chain! Register
                             both minter & wallet addresses to your FI Account in
                             a single unified transaction.
                           </p>
@@ -258,20 +273,21 @@ export const PersonalJettonScreen: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Minter:</span>
                           <span className="font-mono text-foreground font-medium">
-                            {formatContractAddress(
-                              deployer.deployedAddresses.minterAddress,
-                            )}
+                            {formatContractAddress(targetRegisterMinter)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Wallet:</span>
                           <span className="font-mono text-foreground font-medium">
-                            {formatContractAddress(
-                              deployer.deployedAddresses.personalWalletAddress,
-                            )}
+                            {formatContractAddress(targetRegisterWallet)}
                           </span>
                         </div>
                       </div>
+                      {!canOperate && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                          Note: Account is pending 1-day activation delay or suspended. Registration will be enabled once active.
+                        </p>
+                      )}
                       <Button
                         onClick={() => registrar.register()}
                         disabled={!canOperate || registrar.isDisabled}
@@ -287,7 +303,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   )}
 
                   {/* Case 2: Not deployed yet */}
-                  {!info.isRegistered && !deployer.deployedAddresses && (
+                  {!info.isRegistered && !info.isDeployedOnChain && !deployer.deployedAddresses && (
                     <div className="p-4 rounded-xl border border-dashed border-border bg-secondary/30 flex flex-col items-center text-center space-y-2.5 my-2">
                       <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
                         <Rocket className="w-5 h-5" />
@@ -806,6 +822,131 @@ export const PersonalJettonScreen: React.FC = () => {
               >
                 {isPayback ? 'Burn & Request Payback' : 'Burn Tokens'}
               </Button>
+            </div>
+          )}
+
+          {/* Addresses Tab: Manage & Link Personal Minter and Wallet */}
+          {activeTab === 'addresses' && (
+            <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <div>
+                <h3 className="font-semibold text-base mb-1">
+                  Personal Contract Addresses
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  View and update the Personal Minter and Personal Wallet contracts linked to your FI Account via <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">ActSetPersonalJetton</code>.
+                </p>
+              </div>
+
+              {/* Status Overview Card */}
+              <div className="space-y-2 p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">On-Chain Deployment:</span>
+                  <span
+                    className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                      info.isDeployedOnChain
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {info.isDeployedOnChain ? 'Deployed On-Chain' : 'Not Deployed'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Registration in FI Account:</span>
+                  <span
+                    className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                      info.isRegistered
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                    }`}
+                  >
+                    {info.isRegistered ? 'Registered' : 'Not Registered'}
+                  </span>
+                </div>
+                <div className="pt-1.5 border-t border-border/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Deterministic Minter:</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {formatContractAddress(info.deterministicMinterAddress)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Expected Personal Wallet:</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {formatContractAddress(info.expectedPersonalWalletAddress)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Form */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground">
+                      Personal Minter Address
+                    </label>
+                    {info.deterministicMinterAddress && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAddressesTabMinter(info.deterministicMinterAddress || '')
+                        }
+                        className="text-[11px] text-primary hover:underline font-medium"
+                      >
+                        Use Deterministic Address
+                      </button>
+                    )}
+                  </div>
+                  <InputScan
+                    value={addressesTabMinter || targetRegisterMinter}
+                    onChange={setAddressesTabMinter}
+                    placeholder="Enter Personal Minter Address"
+                    data-testid="personal-addresses-minter-input"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground">
+                      Personal Wallet Address
+                    </label>
+                    {info.expectedPersonalWalletAddress && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAddressesTabWallet(info.expectedPersonalWalletAddress || '')
+                        }
+                        className="text-[11px] text-primary hover:underline font-medium"
+                      >
+                        Use Expected Wallet
+                      </button>
+                    )}
+                  </div>
+                  <InputScan
+                    value={addressesTabWallet || targetRegisterWallet}
+                    onChange={setAddressesTabWallet}
+                    placeholder="Enter Personal Wallet Address"
+                    data-testid="personal-addresses-wallet-input"
+                  />
+                </div>
+
+                {!canOperate && (
+                  <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400">
+                    Account is in 1-day activation period or suspended. Transactions cannot be broadcast until activated.
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => registrar.register()}
+                  disabled={!canOperate || registrar.isDisabled}
+                  loading={registrar.isSending}
+                  fullWidth
+                  data-testid="personal-addresses-submit"
+                >
+                  Register / Update Addresses in FI Account
+                </Button>
+              </div>
             </div>
           )}
 

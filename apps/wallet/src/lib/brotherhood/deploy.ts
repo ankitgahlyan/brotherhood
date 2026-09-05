@@ -131,27 +131,42 @@ export async function buildChangeContentBody(
 }
 
 // Deploy a Personal Token minter backed by the issuer's FI wallet.
-// PersonalStore layout: totalSupply (coins), fiJettonAddress, adminAddress, metadataUri.
-// The metadata cell uses the Tolk-exact OnchainMetadataReply layout so a
-// frontend-deployed minter is byte-identical to one from the Tolk scripts.
-export async function buildPersonalMinterDeploy(params: {
+// PersonalStore layout: totalSupply (coins), fiJettonAddress, adminAddress, metadataUri (null on initial deterministic deploy).
+// This guarantees deterministic address calculation independent of metadata.
+export function getDeterministicPersonalMinter(params: {
   issuerWallet: Address;
   adminAddress: Address;
-  metadata: JettonMetadata;
 }) {
-  const content = await buildTolkOnchainMetadata(params.metadata);
-
   const minter = PersonalMinter.fromStorage({
     totalSupply: 0n,
     fiJettonAddress: params.issuerWallet,
     adminAddress: params.adminAddress,
-    metadataUri: content,
+    metadataUri: null,
   });
 
   return {
     contractAddress: minter.address,
     stateInit: minter.init!,
   };
+}
+
+export async function buildPersonalMinterDeploy(params: {
+  issuerWallet: Address;
+  adminAddress: Address;
+}) {
+  return getDeterministicPersonalMinter(params);
+}
+
+export async function buildChangeMetadataBody(
+  metadata: JettonMetadata,
+): Promise<Cell> {
+  const content = await buildTolkOnchainMetadata(metadata);
+  return ChangeMinterMetadata.toCell(
+    ChangeMinterMetadata.create({
+      queryId: 0n,
+      newMetadata: content,
+    }),
+  );
 }
 
 // Compute the expected personal token wallet address for a user on a given minter.

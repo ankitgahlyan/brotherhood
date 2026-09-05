@@ -308,8 +308,8 @@ fun onInternalMessage(in: InMessage): void {
                 body: NotifyMinter {
                     queryId: msg.queryId != 0 ? msg.queryId : 1, // to inform about MINT
                     jettonAmount: claimAmount,
-                    burnInitiator: addrs.owner,
-                    sendExcessesTo: msg.sendExcessesTo,
+                    burnInitiator: in.senderAddress,
+                    sendExcessesTo: in.senderAddress,
                 },
             });
             notifyMinterMsg.send(
@@ -438,12 +438,8 @@ fun onInternalMessage(in: InMessage): void {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
             // just use single for both txn
-            msg
-                .transferRecipient
-                .deActivate(
-                    0,
-                    store,
-                ); // todo fixme when implementing native ui then use jettonAddrs directly
+            // todo fixme when implementing native ui then use jettonAddrs directly
+            msg.transferRecipient.deActivate(0, store);
         }
 
         ActRequestUpgrade => {
@@ -488,14 +484,9 @@ fun onInternalMessage(in: InMessage): void {
 
         ActSetPersonalJetton => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-            checkActionRecipient(msg.personalJettonMinter);
-            checkActionRecipient(msg.personalJettonWallet);
-            if (trustedAddrs.personalJettonMinter == ZERO_ADDRESS) {
-                trustedAddrs.personalJettonMinter = msg.personalJettonMinter;
-            }
-            if (trustedAddrs.personalJettonWallet == ZERO_ADDRESS) {
-                trustedAddrs.personalJettonWallet = msg.personalJettonWallet;
-            }
+
+            trustedAddrs.personalJettonMinter = msg.personalJettonMinter;
+            trustedAddrs.personalJettonWallet = msg.personalJettonWallet;
         }
 
         ActDestroyAccount => {
@@ -793,21 +784,16 @@ fun onInternalMessage(in: InMessage): void {
 
         Upgrade => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
+            // ignore if manually upgraded
             if (store.version < msg.walletVersion) {
-                // ignore if manually upgraded
                 store.version = msg.walletVersion;
                 contract.setCodePostponed(msg.newCode!);
-                // safety
-                setTvmRegisterC3(transformSliceToContinuation(msg.newCode!.beginParse()));
-                // any migration logic
-                hotUpgradeFiWalletData(msg.newData);
             }
+            returnExcessesBack(msg.walletVersion as uint64, addrs.owner);
         }
 
         HotUpgrade => {
-            assert (
-                in.senderAddress == addrs.owner || in.senderAddress == trustedAddrs.minterAddr
-            ) throw Errors.IncorrectSender;
+            assert (in.senderAddress == trustedAddrs.minterAddr) throw Errors.IncorrectSender;
             contract.setCodePostponed(msg.code);
             // SAFETY: update continuation register C3 for new code
             setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
@@ -828,6 +814,8 @@ fun onInternalMessage(in: InMessage): void {
             if (!store.isPrevilegedAccount) {
                 store.isAuthorityAccount = store.receivedVotes > AUTHORITY_THRESHOLD ? true : false;
             }
+            // todo: if remaining    
+            returnExcessesBack(0, msg.sender);
         }
 
         ActSubmitProposal => {

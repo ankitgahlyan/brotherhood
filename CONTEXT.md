@@ -60,7 +60,7 @@ _Avoid_: Points, credits
 **Allowance** — a spending permission an Account grants to a friend, letting them spend a limited amount of the Account's balance (pocket money).
 _Avoid_: Spending limit, delegation
 
-**Credit Need** — an Account's recorded need for credit, checked before a loan to it is processed.
+**Credit Need** — an Account's recorded need for credit, specified as an amount and maturity date, checked before a loan or credit purchase to it is processed.
 _Avoid_: Credit score, risk rating
 
 **Credit Multiplier** — the ratio of Personal Tokens minted to a lender per unit of FI credit extended by buying credit from the Account (defaults to 1; e.g. a multiplier of 2 mints 2 Personal Tokens per 1 FI borrowed).
@@ -72,7 +72,7 @@ _Avoid_: Fee pool, fees payable
 **Nominee** — the Account designated to receive a Member's remaining tokens when that Member's Account closes on death.
 _Avoid_: Heir, beneficiary (when precision matters), successor
 
-**Personal Token** — a jetton minted by a Member against their own trust. Buying it is how another Member extends that Member a loan: the buyer's FI flows to the issuer, and the issuer repays by buying back and burning the token.
+**Personal Token** — a jetton minted by a Member against their own trust. Its minter address is derived deterministically at initialization with empty metadata (`metadataUri: null`), allowing on-chain verification before registration and post-deploy metadata configuration. Buying it is how another Member extends that Member a loan: the buyer's FI flows to the issuer, and the issuer repays by buying back and burning the token.
 _Avoid_: Credit token, IOU, social token
 
 **Loan** — FI owed between Members, collateralized by a borrower's Personal Token.

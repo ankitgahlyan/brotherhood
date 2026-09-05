@@ -104,12 +104,6 @@ export function useDeployPersonalJetton({
     const { contractAddress, stateInit } = await buildPersonalMinterDeploy({
       issuerWallet: fiWalletAddr,
       adminAddress: ownerAddr,
-      metadata: {
-        name: trimmedName,
-        symbol: trimmedSymbol,
-        description: finalDescription,
-        image: finalImage,
-      },
     });
 
     const expectedWallet = getExpectedPersonalWalletAddress({
@@ -136,7 +130,7 @@ export function useDeployPersonalJetton({
       txAmount = GAS.DEPLOY + GAS.MINT;
     }
 
-    // Deploy message with stateInit and optional MintNewJettons payload
+    // Deploy message with deterministic stateInit (metadataUri: null) and optional MintNewJettons payload
     await sendTx([
       {
         toAddress: contractAddress.toString(),
@@ -161,10 +155,6 @@ export function useDeployPersonalJetton({
     return result;
   }, [
     walletAddress,
-    name,
-    symbol,
-    description,
-    image,
     initialMintAmount,
     network,
     sendTx,
@@ -174,8 +164,6 @@ export function useDeployPersonalJetton({
   const isDisabled =
     !wallet ||
     !walletAddress ||
-    !name.trim() ||
-    !symbol.trim() ||
     isSending;
 
   return {

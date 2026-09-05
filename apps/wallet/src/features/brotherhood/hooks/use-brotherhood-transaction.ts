@@ -7,6 +7,8 @@
  */
 
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { markForceFresh } from '@/lib/brotherhood/queries';
 import { toast } from 'sonner';
 import type { Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
@@ -34,6 +36,7 @@ export function useBrotherhoodTransaction(
   wallet: Wallet | null | undefined,
   walletKit: ITonWalletKit | null,
 ): UseBrotherhoodTransactionResult {
+  const queryClient = useQueryClient();
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,8 +64,18 @@ export function useBrotherhoodTransaction(
               ? msg.stateInit.toBoc().toString('base64')
               : undefined,
           });
-          await walletKit.handleNewTransaction(wallet, tx);
         }
+
+        // Automatically refetch relevant screen state after 3 seconds
+        setTimeout(async () => {
+          try {
+            markForceFresh();
+            await queryClient.refetchQueries({ type: 'active' });
+            toast.info('On-chain state updated');
+          } catch (refreshErr) {
+            console.error('Auto-refresh after transaction failed:', refreshErr);
+          }
+        }, 3000);
       } catch (err) {
         const errMsg =
           err instanceof Error ? err.message : 'Transaction failed';
@@ -73,7 +86,7 @@ export function useBrotherhoodTransaction(
         setIsSending(false);
       }
     },
-    [wallet, walletKit],
+    [wallet, walletKit, queryClient],
   );
 
   return { send, isSending, error };

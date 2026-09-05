@@ -13,8 +13,6 @@ import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
 
-import "utils/common"
-
 fun mintToPersonal(minter: FossFi, from: address, recipient: address, amount: coins): address {
     val res = minter.sendMint(from, recipient, amount, ton("0.05"), ton("0.3"));
     res.waitForFirstTransaction();
@@ -60,13 +58,7 @@ fun main() {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
         adminAddress: issuerOwner,
-        metadataUri: buildJettonMetadataCell({
-            name: "Issuer Token",
-            symbol: "IT",
-            description: "test",
-            image: "",
-            decimals: "9",
-        }),
+        metadataUri: null,
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
