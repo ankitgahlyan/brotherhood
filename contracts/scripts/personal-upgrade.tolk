@@ -8,7 +8,7 @@ import "utils/common"
 
 fun main() {
     val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
-    val minter = promptPersonalMinter("Enter Jetton Minter address");
+    val minter = promptPersonalMinter("Enter Personal Minter address");
 
     minter.sendUpgrade(
         admin.address,

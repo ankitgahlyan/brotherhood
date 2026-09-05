@@ -8,6 +8,7 @@ import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
 import { getContractCache, setContractCache } from './contract-cache';
+import { sha256 } from './jettonContent';
 
 export type { Network } from './config';
 
@@ -402,10 +403,249 @@ export async function isPersonalMinterContract(
   try {
     const client = getTonClient(network);
     const minter = client.open(PersonalMinter.fromAddress(address));
-    const state = await minter.getState();
-    const fiAddr = Address.parse(FI_ADDRESS);
-    return state.fiJettonAddress.equals(fiAddr);
+    const [state, jettonData] = await Promise.all([
+      minter.getState(),
+      minter.getJettonData(),
+    ]);
+    return Boolean(
+      state &&
+      typeof state.totalSupply === 'bigint' &&
+      state.fiJettonAddress &&
+      state.adminAddress &&
+      jettonData &&
+      jettonData.jettonWalletCode,
+    );
   } catch {
     return false;
   }
+}
+
+export interface PersonalTokenMetadata {
+  name?: string;
+  symbol?: string;
+  image?: string;
+  description?: string;
+}
+
+export async function fetchPersonalTokenMetadata(
+  minterAddress: Address,
+): Promise<PersonalTokenMetadata> {
+  try {
+    const client = getTonClient(network);
+    const minter = client.open(PersonalMinter.fromAddress(minterAddress));
+    const jettonData = await minter.getJettonData();
+    const dict = jettonData.jettonContent?.ref?.contentDict;
+    if (!dict) return {};
+
+    const getVal = async (key: string): Promise<string | undefined> => {
+      try {
+        const keyHash = await sha256(key);
+        const bigKey = BigInt('0x' + keyHash.toString('hex'));
+        return dict.get(bigKey);
+      } catch {
+        return undefined;
+      }
+    };
+
+    const [name, symbol, image, description] = await Promise.all([
+      getVal('name'),
+      getVal('symbol'),
+      getVal('image'),
+      getVal('description'),
+    ]);
+
+    return { name, symbol, image, description };
+  } catch (err) {
+    console.warn(
+      `[fetchPersonalTokenMetadata] Error for ${minterAddress.toString()}:`,
+      err,
+    );
+    return {};
+  }
+}
+
+export async function isPersonalWalletContract(
+  address: Address,
+): Promise<{ owner: Address; minterAddress: Address; balance: bigint } | null> {
+  if (isZeroAddress(address)) return null;
+  try {
+    const client = getTonClient(network);
+    const wallet = client.open(PersonalWallet.fromAddress(address));
+    const data = await wallet.getWalletData();
+    if (!data.minterAddress || !data.owner) return null;
+    return {
+      owner: data.owner,
+      minterAddress: data.minterAddress,
+      balance: data.jettonBalance,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface DiscoveredPersonalToken {
+  minterAddress: string;
+  walletAddress: string;
+  balance: bigint;
+  name?: string;
+  symbol?: string;
+  image?: string;
+  description?: string;
+}
+
+export async function discoverPersonalTokensForWallet(
+  ownerAddress: Address,
+): Promise<DiscoveredPersonalToken[]> {
+  const candidateMinters = new Set<string>();
+  const client = getTonClient(network);
+
+  // 1. Check user's own registered personal minter from FI wallet & network members
+  try {
+    const fiState = await getUnifiedFiWalletState(ownerAddress);
+    const ownMinter =
+      fiState?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
+    if (ownMinter && !isZeroAddress(ownMinter)) {
+      candidateMinters.add(ownMinter.toString());
+    }
+
+    // Check connected circle members from FI wallet
+    const invitedMap = fiState?.maps?.ref?.invited;
+    if (invitedMap) {
+      const invitedAddrs = invitedMap.keys().slice(0, 20);
+      await Promise.all(
+        invitedAddrs.map(async (circleContractAddr) => {
+          try {
+            const memberState = await getFiWalletStateByContractAddress(
+              circleContractAddr,
+              network,
+            );
+            const mPersonalMinter =
+              memberState?.addresses?.ref?.trustedJettonAddrs?.ref
+                ?.personalJettonMinter;
+            if (mPersonalMinter && !isZeroAddress(mPersonalMinter)) {
+              candidateMinters.add(mPersonalMinter.toString());
+            }
+          } catch {
+            // ignore
+          }
+        }),
+      );
+    }
+  } catch (err) {
+    console.warn('[discoverPersonalTokens] Error reading FI wallet:', err);
+  }
+
+  // 2. Query Toncenter V3 for any jetton wallets owned by user
+  try {
+    const base = toncenterV3[network === 'mainnet' ? 'mainnet' : 'testnet'];
+    const res = await fetchWithRetry(
+      `${base}/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress.toString())}&limit=50&offset=0`,
+      { headers: toncenterApiHeaders(network) },
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const wallets = json.jetton_wallets || [];
+      for (const w of wallets) {
+        if (w.jetton) {
+          candidateMinters.add(w.jetton);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(
+      '[discoverPersonalTokens] Error querying Toncenter jetton wallets:',
+      err,
+    );
+  }
+
+  // 3. Scan recent account transactions (inspecting senders, notifications, and destinations)
+  try {
+    const txs = await client.getTransactions(ownerAddress, { limit: 50 });
+    for (const tx of txs) {
+      // Check inMessage
+      if (tx.inMessage && tx.inMessage.info.type === 'internal') {
+        const src = tx.inMessage.info.src;
+        if (src && !isZeroAddress(src)) {
+          const slice = tx.inMessage.body.beginParse();
+          // If opcode is TransferNotificationForRecipient (0x7362d09c), src is a PersonalWallet
+          if (
+            slice.remainingBits >= 32 &&
+            slice.preloadUint(32) === 0x7362d09c
+          ) {
+            const pw = await isPersonalWalletContract(src);
+            if (pw?.minterAddress) {
+              candidateMinters.add(pw.minterAddress.toString());
+            }
+          } else {
+            const pw = await isPersonalWalletContract(src);
+            if (pw?.minterAddress) {
+              candidateMinters.add(pw.minterAddress.toString());
+            } else {
+              const isMinter = await isPersonalMinterContract(src);
+              if (isMinter) candidateMinters.add(src.toString());
+            }
+          }
+        }
+      }
+
+      // Check outMessages
+      for (const out of tx.outMessages) {
+        if (out.info.type === 'internal') {
+          const dest = out.info.dest;
+          if (dest && !isZeroAddress(dest)) {
+            const pw = await isPersonalWalletContract(dest);
+            if (pw?.minterAddress) {
+              candidateMinters.add(pw.minterAddress.toString());
+            } else {
+              const isMinter = await isPersonalMinterContract(dest);
+              if (isMinter) candidateMinters.add(dest.toString());
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[discoverPersonalTokens] Error scanning transactions:', err);
+  }
+
+  // 4. Verify candidate minters, check balance > 0n, and fetch metadata
+  const discovered: DiscoveredPersonalToken[] = [];
+  await Promise.all(
+    Array.from(candidateMinters).map(async (minterStr) => {
+      try {
+        const minterAddr = Address.parse(minterStr);
+        const isMinter = await isPersonalMinterContract(minterAddr);
+        if (!isMinter) return;
+
+        const balance = await getPersonalWalletBalance(
+          minterAddr,
+          ownerAddress,
+        );
+        if (balance <= 0n) return;
+
+        const walletAddr = await getPersonalWalletAddress(
+          minterAddr,
+          ownerAddress,
+        );
+        const meta = await fetchPersonalTokenMetadata(minterAddr);
+
+        discovered.push({
+          minterAddress: minterAddr.toString(),
+          walletAddress: walletAddr.toString(),
+          balance,
+          name: meta.name,
+          symbol: meta.symbol,
+          image: meta.image,
+          description: meta.description,
+        });
+      } catch (err) {
+        console.warn(
+          `[discoverPersonalTokens] Failed checking minter ${minterStr}:`,
+          err,
+        );
+      }
+    }),
+  );
+
+  return discovered;
 }

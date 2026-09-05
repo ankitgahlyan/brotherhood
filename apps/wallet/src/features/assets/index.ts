@@ -8,5 +8,7 @@
 
 export * from './components/asset-row';
 export * from './components/asset-details-modal';
+export * from './components/add-token-modal';
 export * from './components/assets-screen';
 export * from './hooks/use-asset-rows';
+export * from './hooks/use-tracked-personal-tokens';

@@ -17,13 +17,15 @@ fun main() {
 
     val newCode = walletUpgrade ? build("FossFiWallet") : build("FossFi");
 
-    minter.sendUpgrade(
-        admin.address,
-        walletUpgrade,
-        0, // ignored by minter
-        admin.address,
-        null,
-        newCode,
-        { value: ton("0.2") },
-    );
+    minter
+        .sendUpgrade(
+            admin.address,
+            walletUpgrade,
+            0, // ignored by minter
+            admin.address,
+            null,
+            newCode,
+            { value: ton("0.2") },
+        )
+        .waitForTrace();
 }

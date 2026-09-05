@@ -14,6 +14,7 @@ import type { RateEntry } from '@demo/wallet-core';
 
 import { getJettonsSymbol } from '@/features/jettons';
 import { formatLargeValue, toDecimal } from '@/core/utils';
+import { useTrackedPersonalTokens } from '@/features/assets';
 
 const GRAM_KEY = 'GRAM';
 const GRAM_DECIMALS = 9;
@@ -52,6 +53,7 @@ export const useReceivedToasts = (): void => {
   const { address, balance } = useWallet();
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates } = useRates();
+  const { discoverTokens } = useTrackedPersonalTokens();
 
   const balancesRef = useRef<Map<string, bigint>>(new Map());
   const tonSeededRef = useRef(false);
@@ -86,8 +88,9 @@ export const useReceivedToasts = (): void => {
         'GRAM',
         ratesRef.current[GRAM_KEY]?.rate,
       );
+      void discoverTokens();
     }
-  }, [balance]);
+  }, [balance, discoverTokens]);
 
   // Jettons.
   useEffect(() => {
@@ -102,6 +105,7 @@ export const useReceivedToasts = (): void => {
       return;
     }
 
+    let hasGrowth = false;
     for (const jetton of userJettons) {
       const next = safeBigInt(jetton.balance);
       if (next === null) continue;
@@ -110,6 +114,7 @@ export const useReceivedToasts = (): void => {
       balancesRef.current.set(jetton.address, next);
 
       if (next > prev) {
+        hasGrowth = true;
         const decimals = jetton.decimalsNumber ?? 9;
         const symbol = getJettonsSymbol(jetton) ?? '';
         toastReceived(
@@ -119,5 +124,10 @@ export const useReceivedToasts = (): void => {
         );
       }
     }
-  }, [userJettons, lastJettonsUpdate]);
+
+    if (hasGrowth) {
+      void discoverTokens();
+    }
+  }, [userJettons, lastJettonsUpdate, discoverTokens]);
 };
+

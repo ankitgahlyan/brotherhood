@@ -21,6 +21,7 @@ import {
 import { useIsNetworkMember } from '@/features/brotherhood';
 import { usePersonalJettonInfo } from '@/features/personal-jetton';
 import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
+import { useTrackedPersonalTokens } from './use-tracked-personal-tokens';
 import {
   assetUrl,
   findRate,
@@ -119,57 +120,84 @@ export const useAssetRows = (): AssetRows => {
     };
   }, [assetsReady, balance, rates]);
 
+  const { personalTokens } = useTrackedPersonalTokens();
+
   const jettonRows = useMemo<AssetRowData[]>(() => {
     if (!assetsReady) return [];
-    return userJettons
-      .filter((jetton) => {
-        // FI token
-        if (isFiJetton(jetton)) return isMember;
-        // User's own registered personal token minter
-        if (
-          personalMinterAddress &&
+
+    const rows: AssetRowData[] = [];
+    const seenAddresses = new Set<string>();
+
+    // 1. Process userJettons (FI + any personal tokens indexed by walletkit)
+    for (const jetton of userJettons) {
+      const isFi = isFiJetton(jetton);
+      const isUserPersonal = Boolean(
+        personalMinterAddress &&
           normalizeAddress(jetton.address) ===
-            normalizeAddress(personalMinterAddress)
-        ) {
-          return true;
-        }
-        // Another member's personal token minter
-        if (verifiedPersonalMinterSet?.has(jetton.address)) {
-          return true;
-        }
-        return false;
-      })
-      .map((jetton) => {
-        const rateEntry = findRate(rates, jetton.address);
-        const decimals = jetton.decimalsNumber ?? 9;
-        const amount = toDecimal(jetton.balance, decimals);
-        const symbol = getJettonsSymbol(jetton) ?? '';
-        const isFi = isFiJetton(jetton);
-        return {
-          row: {
-            id: jetton.address,
-            icon: imageSources(
-              tokenImageUrls(jetton.info?.image),
-              jetton.info?.image?.data,
-            ),
-            fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
-            name: getJettonsName(jetton) ?? symbol,
-            symbol,
-            amount,
-            rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
-            fiat: rateEntry ? amount * rateEntry.rate : undefined,
-          } satisfies AssetRowData,
-          isFi,
-          isVerified: jetton.isVerified,
-        };
-      })
-      .sort(
-        (a, b) =>
-          Number(b.isFi) - Number(a.isFi) ||
-          (b.row.fiat ?? 0) - (a.row.fiat ?? 0) ||
-          Number(b.isVerified) - Number(a.isVerified),
-      )
-      .map((entry) => entry.row);
+            normalizeAddress(personalMinterAddress),
+      );
+      const isVerifiedPersonal = Boolean(
+        verifiedPersonalMinterSet?.has(jetton.address),
+      );
+
+      // Only include FI (if member) or verified Personal Tokens
+      if (isFi ? !isMember : !isUserPersonal && !isVerifiedPersonal) {
+        continue;
+      }
+
+      const normAddr = normalizeAddress(jetton.address) || jetton.address;
+      seenAddresses.add(normAddr);
+
+      const rateEntry = findRate(rates, jetton.address);
+      const decimals = jetton.decimalsNumber ?? 9;
+      const amount = toDecimal(jetton.balance, decimals);
+      const symbol = getJettonsSymbol(jetton) ?? '';
+
+      // Per user rule: only show tokens if balance > 0 (FI is shown if member)
+      if (!isFi && amount <= 0) continue;
+
+      rows.push({
+        id: jetton.address,
+        icon: imageSources(
+          tokenImageUrls(jetton.info?.image),
+          jetton.info?.image?.data,
+        ),
+        fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
+        name: getJettonsName(jetton) ?? symbol,
+        symbol,
+        amount,
+        rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
+        fiat: rateEntry ? amount * rateEntry.rate : undefined,
+      });
+    }
+
+    // 2. Process personalTokens (discovered on-chain and manually tracked where balance > 0)
+    for (const pt of personalTokens) {
+      const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
+      if (seenAddresses.has(normAddr)) continue;
+      seenAddresses.add(normAddr);
+
+      const amount = toDecimal(pt.balance, 9);
+      if (amount <= 0) continue;
+
+      const symbol = pt.symbol || 'PT';
+      rows.push({
+        id: pt.minterAddress,
+        icon: pt.image ? imageSources([pt.image]) : undefined,
+        fallbackText: symbol.slice(0, 2).toUpperCase() || 'PT',
+        name: pt.name || 'Personal Token',
+        symbol,
+        amount,
+      });
+    }
+
+    return rows.sort((a, b) => {
+      const aIsFi = isFiJetton({ address: a.id, symbol: a.symbol });
+      const bIsFi = isFiJetton({ address: b.id, symbol: b.symbol });
+      if (aIsFi && !bIsFi) return -1;
+      if (!aIsFi && bIsFi) return 1;
+      return (b.fiat ?? 0) - (a.fiat ?? 0) || b.amount - a.amount;
+    });
   }, [
     assetsReady,
     userJettons,
@@ -177,6 +205,7 @@ export const useAssetRows = (): AssetRows => {
     isMember,
     personalMinterAddress,
     verifiedPersonalMinterSet,
+    personalTokens,
   ]);
 
   return { tonRow, jettonRows, assetsReady };

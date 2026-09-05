@@ -74,7 +74,7 @@ fun promptJettonAddressRequired(envName: string, message: string): address {
     if (fromEnv != null) {
         return fromEnv;
     }
-    return parseAddress(prompt(message, "EQ... / kQ...", FI_ADDRESS));
+    return parseAddress(prompt(message, "EQ... / kQ..."));
 }
 
 fun promptJettonCoins(envName: string, message: string, default: string): coins {
@@ -94,12 +94,12 @@ fun promptJettonWallet(envName: string, message: string): ActonWallet {
 }
 
 fun promptJettonMinter(message: string): FossFi {
-    val addr = promptJettonAddressRequired("JETTON_MINTER_ADDRESS", message);
+    val addr = promptJettonAddressRequired("FI_ADDRESS", message);
     return FossFi.fromAddress(addr);
 }
 
 fun promptPersonalMinter(message: string): Personal {
-    val addr = promptJettonAddressRequired("JETTON_MINTER_ADDRESS", message);
+    val addr = promptJettonAddressRequired("PERSONAL_MINTER_ADDRESS", message);
     return Personal.fromAddress(addr);
 }
 

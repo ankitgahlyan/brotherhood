@@ -11,7 +11,7 @@ const SNAKE_DATA_PREFIX = 0x00;
 
 const sha256Keys: Record<string, Buffer> = {};
 
-async function sha256(key: string): Promise<Buffer> {
+export async function sha256(key: string): Promise<Buffer> {
   if (!sha256Keys[key]) {
     const data = new TextEncoder().encode(key);
     const hash = await crypto.subtle.digest('SHA-256', data);
