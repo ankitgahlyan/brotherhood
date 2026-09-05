@@ -6,6 +6,7 @@ import "@contracts/common/messages"
 
 import "FossFi.gen"
 import "FossFiWallet.gen"
+import "Personal.gen"
 
 fun FossFi.sendDiscovery(
     self,
@@ -61,6 +62,37 @@ fun FossFi.sendMint(
                 jettonAmount,
                 self.address,
                 self.address, // sendExcessesTo
+                forwardTonAmount,
+                forwardPayload,
+            ),
+        },
+    });
+    return net.send(from, outMessage);
+}
+
+fun Personal.sendMint(
+    self,
+    from: address,
+    recipient: address,
+    jettonAmount: int,
+    forwardTonAmount: int = 1,
+    totalTonAmount: int = ton("0.7"),
+    customPayload: cell? = null,
+): SendResultList {
+    val forwardPayload = beginCell().storeMaybeRef(customPayload).endCell().beginParse();
+    val outMessage = createMessage({
+        bounce: false,
+        value: totalTonAmount + ton("0.05"),
+        dest: self.address,
+        body: MintNewJettons {
+            queryId: 0,
+            mintRecipient: recipient,
+            tonAmount: totalTonAmount,
+            internalTransferMsg: makeInternalTransferStep(
+                0,
+                jettonAmount,
+                from,
+                from,
                 forwardTonAmount,
                 forwardPayload,
             ),

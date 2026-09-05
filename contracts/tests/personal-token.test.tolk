@@ -557,6 +557,36 @@ get fun `test personal token: secondary market transfer succeeds before maturity
     expect(personalBalanceOf(pm, friend.address)).toEqual(ton("30"));
 }
 
+get fun `test personal token: admin can directly mint personal tokens with 0.7 ton gas`() {
+    val (
+        _minter,
+        _deployer,
+        notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val recipient = testing.treasury("direct-mint-recipient");
+    val mintAmount = ton("50");
+
+    val mintRes = pm.sendMint(
+        notDeployer.address,
+        recipient.address,
+        mintAmount,
+        ton("0.02"),
+        ton("0.7"),
+    );
+
+    expect(mintRes).toHaveSuccessfulTx<MintNewJettons>({
+        from: notDeployer.address,
+        to: pm.address,
+    });
+
+    expect(personalBalanceOf(pm, recipient.address)).toEqual(mintAmount);
+    expect(personalSupply(pm)).toEqual(mintAmount);
+}
+
 fun personalBalanceOf(pm: Personal, owner: address): coins {
     return personalWalletForOwner(pm, owner).getWalletData().jettonBalance;
 }
