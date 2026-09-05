@@ -92,6 +92,7 @@ export const BrotherhoodScreen: React.FC = () => {
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
   const { formatWalletAddress, formatContractAddress } = useFormatAddress();
+  const { canOperate } = useIsNetworkMember();
 
   const formatShortWallet = (addr: Address | string | null | undefined) => {
     if (!addr) return 'None';
@@ -545,14 +546,14 @@ export const BrotherhoodScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          openTelegramProfile(account.data.username!)
+                          openTelegramProfile(account.data!.username)
                         }
                         className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
                         title={`Open @${account.data.username} on Telegram`}
                         data-testid="brotherhood-account-telegram-link"
                       >
                         <span>@{account.data.username}</span>
-                        <span className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+                        <span className="min-w-8 min-h-8 p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
                           <TelegramIcon className="w-4.5 h-4.5 text-primary" />
                         </span>
                       </button>
@@ -1001,7 +1002,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                   e.stopPropagation();
                                   openTelegramProfile(prof.username!);
                                 }}
-                                className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                                className="min-w-9 min-h-9 p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                                 title={`Open @${prof.username} on Telegram`}
                                 aria-label={`Open @${prof.username} on Telegram`}
                               >
@@ -1106,7 +1107,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                   e.stopPropagation();
                                   openTelegramProfile(prof.username!);
                                 }}
-                                className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                                className="min-w-8 min-h-8 p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
                                 title={`Open @${prof.username} on Telegram`}
                                 aria-label={`Open @${prof.username} on Telegram`}
                               >
@@ -1331,7 +1332,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                         openTelegramProfile(prof.username!);
                                       }
                                     }}
-                                    className={`min-w-[28px] min-h-[28px] p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                    className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                                       isSelected
                                         ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
                                         : 'bg-primary/10 text-primary hover:bg-primary/20'
@@ -1575,7 +1576,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   />
                 </div>
                 <Button
-                  size="xs"
+                  size="sm"
                   fullWidth
                   onClick={() => {
                     const days = parseInt(creditMaturityDays, 10) || 30;
@@ -1607,7 +1608,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     data-testid="brotherhood-credit-multiplier-input"
                   />
                   <Button
-                    size="xs"
+                    size="sm"
                     onClick={() => {
                       const mult = parseInt(creditMultiplierInput, 10) || 1;
                       creditTerms.setMultiplier(mult);
