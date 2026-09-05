@@ -1,11 +1,11 @@
 import "@contracts/common/errors"
-import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 
 import "@contracts/common/utils"
 
+import "fees-management"
 import "jetton-utils"
 import "storage"
 
@@ -70,7 +70,7 @@ fun onInternalMessage(in: InMessage) {
             }
 
             if (msg.sendExcessesTo != null) {
-                reserveForBalance(in.valueCoins);
+                reserveForPersonalWalletBalance(in.valueCoins);
 
                 val excessesMsg = createMessage({
                     bounce: BounceMode.NoBounce,
@@ -88,7 +88,7 @@ fun onInternalMessage(in: InMessage) {
             assert (
                 msg.transferRecipient.getWorkchain() == MY_WORKCHAIN
             ) throw Errors.WrongWorkchain;
-            checkAmountIsEnoughToTransfer(
+            checkAmountIsEnoughToPersonalTransfer(
                 in.valueCoins,
                 msg.forwardTonAmount,
                 in.originalForwardFee,
@@ -117,9 +117,8 @@ fun onInternalMessage(in: InMessage) {
         }
 
         AskToBurn => {
-            // todo: bench
             assert (in.valueCoins >= grams("0.5")) throw Errors.NotEnoughGas;
-            // checkAmountIsEnoughToBurn(in.valueCoins);
+            checkAmountIsEnoughToPersonalBurn(in.valueCoins);
             assert (in.senderAddress == storage.owner) throw Errors.NotOwner;
             assert (storage.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             storage.jettonBalance -= msg.jettonAmount;

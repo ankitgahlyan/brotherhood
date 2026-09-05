@@ -38,7 +38,7 @@ export interface UseInviteMemberResult {
 }
 
 const INVITE_COOLDOWN_SEC = 4 * 3600; // 4 hours
-const ACTIVATION_WAIT_SEC = 7 * 86400; // 7 days
+const ACTIVATION_WAIT_SEC = 86400; // 1 day (24 hours)
 
 export function useInviteMember({
   wallet,

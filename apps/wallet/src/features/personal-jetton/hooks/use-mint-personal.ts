@@ -50,7 +50,7 @@ export function useMintPersonal({
       toAddress: recipientAddr,
       jettonAmount: amountNano,
       forwardTonAmount: 20000000n,
-      totalTonAmount: 50000000n,
+      totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
     });
 
     await sendTx([{ toAddress: minterAddress, amount: GAS.MINT, payload }]);

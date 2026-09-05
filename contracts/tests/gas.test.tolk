@@ -12,6 +12,8 @@ import "@contracts/common/errors"
 import "@contracts/common/fees-management"
 import "@contracts/common/messages"
 
+import "@contracts/fossFi/fees-management"
+
 import "test-utils"
 
 get fun `test gas: transfer minimal value edge`() {

@@ -2,7 +2,6 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/Location.code"
 import "@contracts/common/errors"
-import "@contracts/common/fees-management"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
@@ -14,6 +13,8 @@ import "@contracts/fossFi/storage"
 import "@contracts/location/location-utils"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
+
+import "fees-management"
 
 type AllowedMessageToMinter =
     | MintNewJettons

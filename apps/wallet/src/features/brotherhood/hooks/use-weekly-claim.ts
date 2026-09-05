@@ -34,6 +34,7 @@ export interface UseWeeklyClaimResult {
   claimAmountFi: string;
 }
 
+const ACTIVATION_WAIT_SEC = 86400; // 1 day (24 hours)
 const CLAIM_WAIT_SEC = 7 * 86400; // 1 week (7 days)
 const MAX_CLAIM_PERIOD_SEC = 2 * 365 * 86400; // 2 years
 
@@ -83,15 +84,15 @@ export function useWeeklyClaim({
 
     const now = Math.floor(Date.now() / 1000);
 
-    // Initial 1-week activation wait
+    // Initial 1-day activation wait
     if (accountData.accountInit > 0) {
-      const firstClaimTime = accountData.accountInit + CLAIM_WAIT_SEC;
+      const firstClaimTime = accountData.accountInit + ACTIVATION_WAIT_SEC;
       if (now < firstClaimTime) {
         const remaining = firstClaimTime - now;
         return {
           isEligible: false,
           nextClaimSeconds: remaining,
-          validationError: `Initial claim unlocks in ${Math.ceil(remaining / 86400)} days`,
+          validationError: `Initial claim unlocks in ${Math.ceil(remaining / 3600)} hours`,
         };
       }
 

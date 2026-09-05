@@ -75,14 +75,14 @@ export const ActivationBanner: React.FC<ActivationBannerProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold">
             <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>1-Week Activation Waiting Period</span>
+            <span>1-Day Activation Waiting Period</span>
           </div>
           <span className="font-mono font-bold text-xs bg-amber-500/20 px-2 py-0.5 rounded-lg text-amber-700 dark:text-amber-300">
             {activationRemainingFormatted} left
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          New members undergo a mandatory 7-day security activation delay before
+          New members undergo a mandatory 24-hour security activation delay before
           write operations unlock. Full network operations will unlock on{' '}
           <strong className="text-foreground">{unlockDateStr}</strong>.
           Currently in view-only mode.

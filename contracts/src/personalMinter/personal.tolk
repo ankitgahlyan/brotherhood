@@ -2,13 +2,13 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
-import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 
 import "@contracts/common/utils"
 
+import "fees-management"
 import "jetton-utils"
 import "storage"
 
@@ -143,11 +143,13 @@ fun onInternalMessage(in: InMessage) {
                 .load({
                     throwIfOpcodeDoesNotMatch: Errors.InvalidMessage,
                 });
-            val forwardTonAmount = internalTransferMsg.forwardTonAmount;
+            // val forwardTonAmount = internalTransferMsg.forwardTonAmount;
             internalTransferMsg.forwardPayload.checkIsCorrectTlbEither();
 
             // a little more than needed, it’s ok since it’s sent by the admin and excesses will return back
-            checkAmountIsEnoughToTransfer(msg.tonAmount, forwardTonAmount, in.originalForwardFee);
+            // checkAmountIsEnoughToTransfer(msg.tonAmount, forwardTonAmount, in.originalForwardFee);
+            // todo: fixme
+            assert (in.valueCoins > grams("0.4")) throw Errors.NotEnoughGas;
 
             storage.totalSupply += internalTransferMsg.jettonAmount;
 

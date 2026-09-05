@@ -2,12 +2,12 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/Poll.code"
 import "@contracts/common/errors"
-import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
 import "@contracts/fossFi/consts"
 
+import "fees-management"
 import "storage"
 
 type AllowedMessageToDaoProxy =

@@ -12,6 +12,7 @@ import "@gen/Lottery.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
+import "@wrappers/Personal.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/dao/storage"
@@ -95,6 +96,11 @@ fun promptJettonWallet(envName: string, message: string): ActonWallet {
 fun promptJettonMinter(message: string): FossFi {
     val addr = promptJettonAddressRequired("JETTON_MINTER_ADDRESS", message);
     return FossFi.fromAddress(addr);
+}
+
+fun promptPersonalMinter(message: string): Personal {
+    val addr = promptJettonAddressRequired("JETTON_MINTER_ADDRESS", message);
+    return Personal.fromAddress(addr);
 }
 
 fun promptJettonMetadata(descriptionDefault: string): JettonMetadata {

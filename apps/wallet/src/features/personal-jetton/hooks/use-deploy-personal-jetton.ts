@@ -130,7 +130,7 @@ export function useDeployPersonalJetton({
         toAddress: ownerAddr,
         jettonAmount: mintNano,
         forwardTonAmount: 20000000n,
-        totalTonAmount: 50000000n,
+        totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
       });
       // Add mint gas to deploy transaction value
       txAmount = GAS.DEPLOY + GAS.MINT;

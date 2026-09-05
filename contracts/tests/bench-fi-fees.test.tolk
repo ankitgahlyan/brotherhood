@@ -10,9 +10,9 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
-import "@contracts/common/fees-management"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+import "@contracts/fossFi/fees-management"
 import "@contracts/fossFi/storage"
 
 import "test-utils"
@@ -38,7 +38,7 @@ fun maxGasOnAccount(res: SendResultList, account: address): int {
     return best;
 }
 
-get fun `test bench: measure storage, init-state, and message sizes`() {
+get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     val (minter, deployer, notDeployer) = setupTest();
 
     // ---- wallet storage at max: fill heavy maps so we capture upper bounds ----
@@ -164,7 +164,7 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     }.toCell();
     val (nmCells, nmBits, _) = notifyMinterBody.calculateSizeStrict(4096);
 
-    println("=== FEES-MGMT CONSTANT BENCH ===");
+    println("=== FOSSFI FEES-MGMT CONSTANT BENCH ===");
     println("STORAGE_SIZE_MAX_WALLET_BITS  := ");
     println(storeBits);
     println(" (const=");
@@ -202,8 +202,8 @@ get fun `test bench: measure storage, init-state, and message sizes`() {
     println(" CELLS := ");
     println(nmCells);
 
-    val computedMinStorage = calculateJettonWalletMinStorageFee();
-    println("calculateJettonWalletMinStorageFee() := ");
+    val computedMinStorage = calculateWalletMinStorageFee();
+    println("calculateWalletMinStorageFee() := ");
     println(computedMinStorage);
     println("forwardInitStateOverhead() := ");
     println(forwardInitStateOverhead());

@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '@demo/wallet-core';
 import { useFiAccount, type FiAccountData } from './use-fi-account';
 
-export const ACTIVATION_WAIT_SECONDS = 604800; // 1 week (7 days)
+export const ACTIVATION_WAIT_SECONDS = 86400; // 1 day (24 hours)
 
 export type MemberState =
   'not_member' | 'pending_activation' | 'deactivated' | 'fully_active';
@@ -27,7 +27,7 @@ export interface UseIsNetworkMemberResult {
   isLoading: boolean;
   fiAccount: FiAccountData | null;
   address: string | null;
-  /** Timestamp (in seconds) when the 1-week activation waiting period unlocks. */
+  /** Timestamp (in seconds) when the 1-day activation waiting period unlocks. */
   activationUnlockTime: number;
   /** Remaining seconds until activation unlocks (0 if already unlocked). */
   activationRemainingSeconds: number;
@@ -110,7 +110,7 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
       };
     }
 
-    // 1-Week activation delay check (privileged accounts bypass this)
+    // 1-Day activation delay check (privileged accounts bypass this)
     const isPendingActivation = remaining > 0 && !data.isPrevilegedAccount;
 
     if (isPendingActivation) {
@@ -151,7 +151,7 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
 
 /**
  * Returns a user-friendly error message if the account is not permitted to perform
- * state-changing operations (due to 1-week activation delay, authority deactivation, or suspended status).
+ * state-changing operations (due to 1-day activation delay, authority deactivation, or suspended status).
  */
 export function getAccountActionError(
   accountData?: FiAccountData | null,
@@ -168,7 +168,7 @@ export function getAccountActionError(
   ) {
     const remaining = accountData.accountInit + ACTIVATION_WAIT_SECONDS - now;
     const formatted = formatRemainingTime(remaining);
-    return `Account is in 1-week activation waiting period (${formatted} left)`;
+    return `Account is in 1-day activation waiting period (${formatted} left)`;
   }
   return null;
 }

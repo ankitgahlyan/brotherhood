@@ -18,8 +18,8 @@ get fun `test weekly claim: before activation wait fails with WaitMore`() {
 
     val activeWallet = activateUser(minter, userWallet(minter, owner.address), owner, user.address);
 
-    // Set time to 1 day after accountInit (less than 7 days ACTIVATION_WAIT)
-    testing.setNow(1_800_000_000 + 86400);
+    // Set time to 12 hours after accountInit (less than 1 day ACTIVATION_WAIT)
+    testing.setNow(1_800_000_000 + 43200);
 
     val claimTx = activeWallet.sendActClaimWeeklyGrant(
         user.address,
@@ -41,7 +41,7 @@ get fun `test weekly claim: after activation wait mints fixed 11111 FI without r
 
     val activeWallet = activateUser(minter, userWallet(minter, owner.address), owner, user.address);
 
-    // Advance time past activation wait (7 days)
+    // Advance time past activation wait (1 day)
     testing.setNow(1_800_000_000 + ACTIVATION_WAIT + 100);
 
     val balanceBefore = activeWallet.getJettonBalance();
@@ -78,8 +78,8 @@ get fun `test weekly claim: claiming twice in same period fails with WaitMore`()
         { value: ton("1") },
     );
 
-    // Attempt second claim 1 hour later
-    testing.setNow(1_800_000_000 + ACTIVATION_WAIT + 3700);
+    // Attempt second claim 1 day later (less than 7 days CLAIM_INTERVAL)
+    testing.setNow(1_800_000_000 + ACTIVATION_WAIT + 86400);
 
     val claimTx2 = activeWallet.sendActClaimWeeklyGrant(
         user.address,

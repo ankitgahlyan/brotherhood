@@ -3,46 +3,17 @@ import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 
-import "@wrappers/DaoProxy.gen"
+import "@tests/test-utils"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
-import "@contracts/dao/storage"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
 
 import "utils/common"
-
-fun deployTestMinter(admin: address): FossFi {
-    val daoProxy = DaoProxy.fromStorage({
-        adminAddress: admin,
-        targetAddress: RAW_ZERO_ADDRESS,
-    });
-    val minter = FossFi.fromStorage({
-        totalSupply: 0,
-        adminAddress: admin,
-        daoAddress: daoProxy.address,
-        metadata: buildJettonMetadataCell({
-            name: "BroTherHOOD",
-            symbol: "HD",
-            description: "test",
-            image: "",
-            decimals: "9",
-        }),
-        adminHandoff: null,
-        others: FiCodes {
-            lotteryCode: build("Lottery"),
-            latestFiWalletCode: build("FossFiWallet"),
-        }.toCell(),
-    });
-    val res = minter.sendDeploy(admin, { value: ton("10") });
-    res.waitForFirstTransaction();
-    return minter;
-}
 
 fun mintToPersonal(minter: FossFi, from: address, recipient: address, amount: coins): address {
     val res = minter.sendMint(from, recipient, amount, ton("0.05"), ton("0.3"));
@@ -75,19 +46,10 @@ fun main() {
     val deployer = testing.treasury("deployer").address;
     val issuerOwner = testing.treasury("issuer").address;
 
-    testing.registerLibrary(build("DaoProxy"));
-    testing.registerLibrary(build("Poll"));
-    testing.registerLibrary(build("Voter"));
-    testing.registerLibrary(build("Following"));
-    testing.registerLibrary(build("FossFiWallet"));
-    testing.registerLibrary(build("Location"));
-    testing.registerLibrary(build("PersonalMinter"));
-    testing.registerLibrary(build("PersonalWallet"));
-
     testing.setNow(1_800_000_000);
 
     // 1. fresh jetton minter + an active issuer FI account
-    val minter = deployTestMinter(deployer);
+    val (minter, _, _) = setupTest();
     val buyerWallet = mintToPersonal(minter, deployer, deployer, ton("1000"));
     val issuerWallet = activateIssuer(minter, buyerWallet, deployer, issuerOwner);
     println("MINTER={}", minter.address);
@@ -97,7 +59,7 @@ fun main() {
     val personalStore: PersonalStore = {
         totalSupply: 0,
         fiJettonAddress: issuerWallet,
-        adminAddress: deployer,
+        adminAddress: issuerOwner,
         metadataUri: buildJettonMetadataCell({
             name: "Issuer Token",
             symbol: "IT",
@@ -121,10 +83,10 @@ fun main() {
         dest: {
             workchain: BASECHAIN,
             stateInit,
-            toShard: null,
+            toShard: null, // todo: issuerOwner
         },
     });
-    net.send(deployer, deployMsg).waitForFirstTransaction();
+    net.send(issuerOwner, deployMsg).waitForFirstTransaction();
     val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);
     val pointRes = FossFiWallet
         .fromAddress(issuerWallet)

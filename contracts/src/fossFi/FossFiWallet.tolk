@@ -2,7 +2,6 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/Following.code"
 import "@contracts/common/errors"
-import "@contracts/common/fees-management"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
@@ -16,6 +15,8 @@ import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/lottery/messages"
+
+import "fees-management"
 
 type AllowedMessageToWallet =
     | AskToTransfer
@@ -287,11 +288,11 @@ fun onInternalMessage(in: InMessage): void {
             val now = blockchain.now();
             assert (
                 now > (time.accountInit + ACTIVATION_WAIT)
-            ) throw Errors.WaitMore;                                                   // claim starts after a week
+            ) throw Errors.WaitMore;                                                   // claim starts after 1 day
             assert (
                 // for 2 years, weekly 11,111 tokens can be claimed
                 (now < MAX_CLAIM_PERIOD + time.accountInit) &&
-                (now > ACTIVATION_WAIT + time.lastClaim)
+                (now > CLAIM_INTERVAL + time.lastClaim)
             ) throw Errors.WaitMore;
 
             // todo: votingPower based mint continue after 2 years
@@ -556,7 +557,7 @@ fun onInternalMessage(in: InMessage): void {
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
                     mintRecipient: msg.transferInitiator,
-                    tonAmount: ton("0.1"),
+                    tonAmount: ton("0.7"),
                     internalTransferMsg: makeInternalTransferStep(
                         msg.queryId,
                         mintPersonalAmount,
@@ -570,7 +571,7 @@ fun onInternalMessage(in: InMessage): void {
                 };
                 val mintMsg = createMessage({
                     bounce: BounceMode.NoBounce,
-                    value: ton("0.1"),
+                    value: ton("0.75"),
                     dest: trustedAddrs.personalJettonMinter, // fails if not set
                     body: mintBody.toCell(),
                 });

@@ -5,11 +5,11 @@ import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/transaction"
 
-import "@gen/FossFiWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/messages"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
@@ -150,7 +150,7 @@ get fun `test : addrs r same`() {
     val calcAddr = calcDeployFiWallet(
         deployer.address,
         minter.address,
-        fossFiWalletCompiledCodeLibraryRef(),
+        getFiWalletCode(),
     ).calculateAddress();
 
     expect(wallet.address).toEqual(calcAddr);
