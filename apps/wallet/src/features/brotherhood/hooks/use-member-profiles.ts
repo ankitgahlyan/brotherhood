@@ -15,12 +15,16 @@ import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
 export interface MemberProfileInfo {
   address: string;
+  ownerAddress: string;
   username: string;
   h3Cell: string;
   country: number;
   active: boolean;
   jettonBalance: bigint;
   status: number;
+  creditNeed: bigint;
+  creditMaturity: number;
+  multiplier: number;
 }
 
 export function useMemberProfiles(
@@ -58,8 +62,13 @@ export function useMemberProfiles(
               const addr = Address.parse(addrStr);
               const contract = client.open(FossFiWallet.fromAddress(addr));
               const store = await contract.getWalletDataAll();
+              const ownerAddr = store.addresses?.ref?.owner ?? null;
+              const ownerAddress = ownerAddr
+                ? formatTonAddress(ownerAddr, { isContract: false, network })
+                : '';
               results[addrStr] = {
                 address: addrStr,
+                ownerAddress,
                 username: store.profile?.ref?.username ?? '',
                 h3Cell: store.profile?.ref?.h3Cell ?? '',
                 country: store.profile?.ref?.country
@@ -68,6 +77,9 @@ export function useMemberProfiles(
                 active: Boolean(store.active),
                 jettonBalance: store.jettonBalance ?? 0n,
                 status: store.status ? Number(store.status) : 0,
+                creditNeed: store.creditNeed ?? 0n,
+                creditMaturity: Number(store.creditMaturity ?? 0),
+                multiplier: Number(store.multiplier ?? 1),
               };
             } catch (e) {
               console.warn(
@@ -76,12 +88,16 @@ export function useMemberProfiles(
               );
               results[addrStr] = {
                 address: addrStr,
+                ownerAddress: '',
                 username: '',
                 h3Cell: '',
                 country: 0,
                 active: false,
                 jettonBalance: 0n,
                 status: 0,
+                creditNeed: 0n,
+                creditMaturity: 0,
+                multiplier: 1,
               };
             }
           }),

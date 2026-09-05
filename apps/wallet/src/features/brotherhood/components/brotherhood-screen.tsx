@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -26,7 +26,10 @@ import { useIsNetworkMember } from '../hooks/use-is-network-member';
 
 import { useFiMinterState } from '@/lib/brotherhood/queries';
 import { useFiAccount } from '../hooks/use-fi-account';
-import { useMemberProfiles } from '../hooks/use-member-profiles';
+import {
+  useMemberProfiles,
+  type MemberProfileInfo,
+} from '../hooks/use-member-profiles';
 import { useFiTransfer } from '../hooks/use-fi-transfer';
 import { useFiBurn } from '../hooks/use-fi-burn';
 import { useWeeklyClaim } from '../hooks/use-weekly-claim';
@@ -41,6 +44,12 @@ import { useProfile } from '../hooks/use-profile';
 import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
 import { NetworkTab } from './network';
+import {
+  CircleCreditList,
+  RingCreditList,
+  MemberComboboxInput,
+  type SelectableMemberOption,
+} from './credit';
 import { Address } from '@ton/core';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
@@ -141,6 +150,88 @@ export const BrotherhoodScreen: React.FC = () => {
   }, [account.data]);
 
   const resolvedProfiles = useMemberProfiles(addressesToResolve, network);
+
+  const creditFormRef = useRef<HTMLDivElement>(null);
+  const [discoveredRingProfiles, setDiscoveredRingProfiles] = useState<
+    Record<string, MemberProfileInfo>
+  >({});
+
+  const handleRegisterRingMembers = useCallback(
+    (members: MemberProfileInfo[]) => {
+      setDiscoveredRingProfiles((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const m of members) {
+          if (
+            !next[m.address] ||
+            next[m.address].creditNeed !== m.creditNeed ||
+            next[m.address].multiplier !== m.multiplier ||
+            next[m.address].ownerAddress !== m.ownerAddress
+          ) {
+            next[m.address] = m;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    },
+    [],
+  );
+
+  const circleSelectableMembers: SelectableMemberOption[] = useMemo(() => {
+    if (!account.data?.invited) return [];
+    return account.data.invited.map((m) => {
+      const prof = resolvedProfiles.data?.[m.addressString];
+      return {
+        contractAddress: m.addressString,
+        ownerAddress: prof?.ownerAddress || '',
+        username: prof?.username || '',
+        degree: 'circle',
+        creditNeed: prof?.creditNeed,
+        multiplier: prof?.multiplier,
+      };
+    });
+  }, [account.data?.invited, resolvedProfiles.data]);
+
+  const ringSelectableMembers: SelectableMemberOption[] = useMemo(() => {
+    return Object.values(discoveredRingProfiles).map((prof) => ({
+      contractAddress: prof.address,
+      ownerAddress: prof.ownerAddress || '',
+      username: prof.username || '',
+      degree: 'ring',
+      creditNeed: prof.creditNeed,
+      multiplier: prof.multiplier,
+    }));
+  }, [discoveredRingProfiles]);
+
+  const handleSendCredit = useCallback(
+    (ownerAddress: string, creditNeedNano: bigint) => {
+      setRecipient(ownerAddress);
+      if (account.data) {
+        const maxAvailable = account.data.jettonBalance;
+        const targetNano =
+          creditNeedNano > 0n
+            ? creditNeedNano < maxAvailable
+              ? creditNeedNano
+              : maxAvailable
+            : 0n;
+        if (targetNano > 0n) {
+          const whole = targetNano / 1_000_000_000n;
+          const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
+          const amountStr =
+            frac === 0n
+              ? whole.toString()
+              : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
+          setAmount(amountStr);
+        }
+      }
+      creditFormRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    },
+    [account.data],
+  );
 
   // Transaction hooks with connected FiAccount state
   const transfer = useFiTransfer({
@@ -1508,20 +1599,66 @@ export const BrotherhoodScreen: React.FC = () => {
               </div>
             </div>
 
+            <hr className="border-border/60" />
+
+            {/* Circle Members Seeking Credit */}
+            <CircleCreditList
+              circleMembers={account.data?.invited ?? []}
+              profiles={resolvedProfiles.data}
+              isLoading={resolvedProfiles.isLoading}
+              onRefresh={() => resolvedProfiles.refetch()}
+              onSendCredit={handleSendCredit}
+            />
+
+            <hr className="border-border/60" />
+
+            {/* Ring Members Seeking Credit */}
+            <RingCreditList
+              circleMembers={account.data?.invited ?? []}
+              circleProfiles={resolvedProfiles.data}
+              onSendCredit={handleSendCredit}
+              onRegisterRingMembers={handleRegisterRingMembers}
+            />
+
+            <hr className="border-border/60" />
+
             {/* Buy Credit Section */}
-            <div className="space-y-2 pt-1">
+            <div ref={creditFormRef} className="space-y-2 pt-1">
               <h3 className="font-semibold text-base">
                 Buy Credit (Personal Loan)
               </h3>
               <p className="text-xs text-muted-foreground">
                 Extend credit to an issuer by buying their Personal Tokens with
-                FI.
+                FI. Select any Circle or Ring member from the list, or type/scan
+                their address.
               </p>
 
-              <InputScan
+              <MemberComboboxInput
                 value={recipient}
                 onChange={setRecipient}
                 placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                circleMembers={circleSelectableMembers}
+                ringMembers={ringSelectableMembers}
+                onSelectMember={(m) => {
+                  if (
+                    m.creditNeed &&
+                    m.creditNeed > 0n &&
+                    (!amount || amount === '0')
+                  ) {
+                    const targetNano = account.data
+                      ? m.creditNeed < account.data.jettonBalance
+                        ? m.creditNeed
+                        : account.data.jettonBalance
+                      : m.creditNeed;
+                    const whole = targetNano / 1_000_000_000n;
+                    const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
+                    const amountStr =
+                      frac === 0n
+                        ? whole.toString()
+                        : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
+                    setAmount(amountStr);
+                  }
+                }}
                 data-testid="brotherhood-credit-recipient"
               />
               <input

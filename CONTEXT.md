@@ -63,6 +63,9 @@ _Avoid_: Spending limit, delegation
 **Credit Need** — an Account's recorded need for credit, checked before a loan to it is processed.
 _Avoid_: Credit score, risk rating
 
+**Credit Multiplier** — the ratio of Personal Tokens minted to a lender per unit of FI credit extended by buying credit from the Account (defaults to 1; e.g. a multiplier of 2 mints 2 Personal Tokens per 1 FI borrowed).
+_Avoid_: Interest rate, token bonus, leverage
+
 **Accumulated Fees** — fees an Account collects and forwards to the minter in a single transaction once a threshold is crossed.
 _Avoid_: Fee pool, fees payable
 
