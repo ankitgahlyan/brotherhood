@@ -15,8 +15,8 @@ import type {
 import { getAddressExplorerUrls } from '@demo/wallet-core';
 
 import { useActiveWalletNetwork, useJettonInfo } from '@/features/jettons';
-import { normalizeAddress, shortenAddress } from '@/core/utils/formatters';
-import { decodeTextCommentPayload } from '@/core/utils/payload';
+import { formatTonAddress } from '@/core/utils/formatters';
+import { decodePayload } from '@/core/utils/payload';
 import { formatNanoTonAmount, formatTokenAmount } from '@/core/utils/units';
 
 interface TransactionRequestDetailsProps {
@@ -24,21 +24,43 @@ interface TransactionRequestDetailsProps {
   title?: string;
 }
 
-function AddressLink({ address, label }: { address?: string; label?: string }) {
+function AddressLink({
+  address,
+  label,
+  isContract = false,
+}: {
+  address?: string;
+  label?: string;
+  isContract?: boolean;
+}) {
   const network = useActiveWalletNetwork();
   if (!address) return null;
 
-  const normalized = normalizeAddress(address, false, network) ?? address;
+  const normalized =
+    formatTonAddress(address, {
+      isContract,
+      network,
+      shorten: false,
+    }) || address;
+
+  const display =
+    label ??
+    formatTonAddress(address, {
+      isContract,
+      network,
+      shorten: true,
+      count: 6,
+    });
 
   return (
     <a
       href={getAddressExplorerUrls(normalized, network).tonViewer}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 hover:underline"
+      className="text-primary hover:underline font-mono"
       title={normalized}
     >
-      {label ?? shortenAddress(address, 8, false, network)}
+      {display}
     </a>
   );
 }
@@ -59,16 +81,24 @@ function PayloadDetails({
   payload?: string;
 }) {
   if (!payload) return null;
-  const decoded = decodeTextCommentPayload(payload);
+  const decoded = decodePayload(payload);
+  if (!decoded) return null;
 
   return (
-    <div className="text-xs text-muted-foreground break-words">
-      <span className="font-medium text-foreground">{label}: </span>
-      {decoded ? (
-        <span>Comment “{decoded}”</span>
+    <div className="text-xs text-muted-foreground break-words flex items-center gap-1.5 flex-wrap mt-1">
+      <span className="font-medium text-foreground">{label}:</span>
+      {decoded.isComment ? (
+        <span className="text-foreground italic">
+          {decoded.comment ? `“${decoded.comment}”` : 'Empty comment'}
+        </span>
       ) : (
-        <span className="font-mono">
-          {payload.length > 48 ? `${payload.slice(0, 48)}...` : payload}
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-secondary/80 text-foreground text-[11px] font-medium border border-border/50">
+          <span>{decoded.messageName}</span>
+          {decoded.opcodeHex && (
+            <span className="text-muted-foreground font-mono text-[10px]">
+              {decoded.opcodeHex}
+            </span>
+          )}
         </span>
       )}
     </div>
@@ -97,15 +127,22 @@ function RawMessageAction({
   message: TransactionRequestMessage;
   index: number;
 }) {
+  const decoded = decodePayload(message.payload);
+  const actionTitle = decoded?.messageName ?? `Message #${index + 1}`;
+  const isContract = Boolean(
+    message.stateInit ||
+      (decoded && !decoded.isComment && decoded.opcode !== undefined),
+  );
+
   return (
     <div className="space-y-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-medium text-foreground">
-            Message #{index + 1}
+            {actionTitle}
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            To <AddressLink address={message.address} />
+            To <AddressLink address={message.address} isContract={isContract} />
           </div>
         </div>
         <div className="text-sm font-medium text-foreground whitespace-nowrap">
@@ -131,15 +168,22 @@ function TonItemAction({
   item: Extract<StructuredItem, { type: 'ton' }>;
   index: number;
 }) {
+  const decoded = decodePayload(item.payload);
+  const isContract = Boolean(
+    item.stateInit ||
+      (decoded && !decoded.isComment && decoded.opcode !== undefined),
+  );
+  const actionTitle = decoded?.messageName ?? `Send TON #${index + 1}`;
+
   return (
     <div className="space-y-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-medium text-foreground">
-            Send GRAM #{index + 1}
+            {actionTitle}
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            To <AddressLink address={item.address} />
+            To <AddressLink address={item.address} isContract={isContract} />
           </div>
         </div>
         <div className="text-sm font-medium text-foreground whitespace-nowrap">
@@ -164,6 +208,7 @@ function JettonItemAction({
   item: Extract<StructuredItem, { type: 'jetton' }>;
   index: number;
 }) {
+  const network = useActiveWalletNetwork();
   const jettonInfo = useJettonInfo(item.master);
 
   return (
@@ -171,12 +216,12 @@ function JettonItemAction({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-medium text-foreground">
-            Send jetton #{index + 1}
+            Send {jettonInfo?.name ?? 'Jetton'} #{index + 1}
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            To <AddressLink address={item.destination} />
+            To <AddressLink address={item.destination} isContract={false} />
           </div>
-          <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+          <div className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
             {jettonInfo?.images?.[0] && (
               <img
                 src={jettonInfo.images[0]}
@@ -187,7 +232,16 @@ function JettonItemAction({
             <span>{jettonInfo?.name ?? 'Jetton'}</span>
             <AddressLink
               address={item.master}
-              label={jettonInfo?.symbol ?? shortenAddress(item.master, 8)}
+              label={
+                jettonInfo?.symbol ??
+                formatTonAddress(item.master, {
+                  isContract: true,
+                  network,
+                  shorten: true,
+                  count: 6,
+                })
+              }
+              isContract={true}
             />
           </div>
         </div>
@@ -207,7 +261,7 @@ function JettonItemAction({
           ? `Forward ${formatNanoTonAmount(item.forwardAmount)}`
           : undefined,
         item.responseDestination
-          ? `Response ${shortenAddress(item.responseDestination, 8)}`
+          ? `Response ${formatTonAddress(item.responseDestination, { isContract: false, network, shorten: true, count: 4 })}`
           : undefined,
       ])}
       <PayloadDetails label="Custom payload" payload={item.customPayload} />
@@ -223,6 +277,8 @@ function NftItemAction({
   item: Extract<StructuredItem, { type: 'nft' }>;
   index: number;
 }) {
+  const network = useActiveWalletNetwork();
+
   return (
     <div className="space-y-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-3">
@@ -231,10 +287,10 @@ function NftItemAction({
             Transfer NFT #{index + 1}
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            To <AddressLink address={item.newOwner} />
+            To <AddressLink address={item.newOwner} isContract={false} />
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            NFT <AddressLink address={item.nftAddress} />
+            NFT <AddressLink address={item.nftAddress} isContract={true} />
           </div>
         </div>
       </div>
@@ -246,7 +302,7 @@ function NftItemAction({
           ? `Forward ${formatNanoTonAmount(item.forwardAmount)}`
           : undefined,
         item.responseDestination
-          ? `Response ${shortenAddress(item.responseDestination, 8)}`
+          ? `Response ${formatTonAddress(item.responseDestination, { isContract: false, network, shorten: true, count: 4 })}`
           : undefined,
       ])}
       <PayloadDetails label="Custom payload" payload={item.customPayload} />

@@ -17,15 +17,21 @@ import {
 } from '../../hooks/use-jetton-info';
 
 import { formatUnits } from '@/core/utils/units';
+import { useFormatAddress } from '@/core/utils/formatters';
 
 export const JettonNameDisplay = memo(function JettonNameDisplay({
   jettonAddress,
 }: {
   jettonAddress: Address | string | undefined;
 }) {
+  const { formatContractAddress } = useFormatAddress();
   const jettonInfo = useJettonInfo(resolveTokenAddress(jettonAddress));
   const name = jettonInfo?.name;
-  return <div>{name ?? jettonAddress?.toString() ?? 'UNKNOWN'}</div>;
+  if (name) return <div>{name}</div>;
+  if (!jettonAddress) return <div>UNKNOWN</div>;
+  const str = jettonAddress.toString();
+  if (str === 'TON' || str === 'GRAM' || str === 'UNKWN') return <div>{str}</div>;
+  return <div>{formatContractAddress(str, true, 4)}</div>;
 });
 
 export const JettonAmountDisplay = memo(function JettonAmountDisplay({
@@ -78,7 +84,7 @@ const JettonFlowItem = memo(function JettonFlowItem({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="truncate max-w-[200px] flex items-center gap-2">
+      <span className="truncate max-w-50 flex items-center gap-2">
         <JettonImage jettonAddress={jettonAddress} />
         <JettonNameDisplay jettonAddress={jettonAddress} />
       </span>

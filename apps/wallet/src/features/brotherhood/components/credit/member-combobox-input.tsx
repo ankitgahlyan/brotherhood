@@ -18,7 +18,6 @@ import {
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { cn } from '@/core/lib/utils';
-import type { MemberProfileInfo } from '../../hooks/use-member-profiles';
 import { formatFi } from './credit-member-card';
 
 export interface SelectableMemberOption {

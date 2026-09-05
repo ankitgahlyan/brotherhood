@@ -10,11 +10,7 @@ import React from 'react';
 import { ChevronsUpDown, Wallet } from 'lucide-react';
 
 import { cn } from '@/core/lib/utils';
-
-const shorten = (address: string): string =>
-  address.length > 16
-    ? `${address.slice(0, 6)}...${address.slice(-6)}`
-    : address;
+import { useFormatAddress } from '@/core/utils/formatters';
 
 interface WalletPlateProps {
   name: string;
@@ -31,6 +27,9 @@ export const WalletPlate: React.FC<WalletPlateProps> = ({
   selectable,
   onClick,
 }) => {
+  const { formatWalletAddress } = useFormatAddress();
+  const formatted = formatWalletAddress(address, true, 6);
+
   const className =
     'flex w-full items-center gap-3 rounded-2xl border border-gray-200 p-3.5 text-left';
   const content = (
@@ -40,8 +39,8 @@ export const WalletPlate: React.FC<WalletPlateProps> = ({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-bold text-gray-900">{name}</span>
-        <span className="block truncate text-sm text-gray-500">
-          {shorten(address)}
+        <span className="block truncate text-sm text-gray-500 font-mono">
+          {formatted || address}
         </span>
       </span>
       {selectable && (
