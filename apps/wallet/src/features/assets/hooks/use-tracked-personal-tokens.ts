@@ -25,8 +25,8 @@ const STORAGE_KEY_PREFIX = 'brotherhood_tracked_personal_tokens_';
 
 export function useTrackedPersonalTokens() {
   const queryClient = useQueryClient();
-  const { currentWallet } = useWallet();
-  const walletAddress = currentWallet?.address;
+  const { currentWallet, address, getActiveWallet } = useWallet();
+  const walletAddress = address || currentWallet?.address || getActiveWallet()?.address;
 
   const storageKey = walletAddress
     ? `${STORAGE_KEY_PREFIX}${walletAddress}`
@@ -104,7 +104,7 @@ export function useTrackedPersonalTokens() {
               parsedOwnerAddress,
             );
 
-            // Per user rule: only show tokens if balance > 0
+            // Per user rule: only show tokens in asset list if balance > 0
             if (balance <= 0n) return;
 
             const walletAddr = await getPersonalWalletAddress(
@@ -196,48 +196,95 @@ export function useTrackedPersonalTokens() {
     }
   }, [storageKey, parsedOwnerAddress, walletAddress, discoverTokens]);
 
-  // Manual import / add token with validation
-  const addTokenManually = useCallback(
+  // Inspect contract address and return token preview
+  const inspectToken = useCallback(
     async (
       inputAddress: string,
     ): Promise<{
-      success: boolean;
+      valid: boolean;
       error?: string;
+      isVerifiedEcosystem: boolean;
       token?: DiscoveredPersonalToken;
     }> => {
       if (!parsedOwnerAddress) {
-        return { success: false, error: 'No wallet connected' };
+        return {
+          valid: false,
+          isVerifiedEcosystem: false,
+          error: 'No wallet connected. Please select an active wallet.',
+        };
       }
 
       let parsedMinter: Address;
       try {
         parsedMinter = Address.parse(inputAddress.trim());
       } catch {
-        return { success: false, error: 'Invalid TON address format' };
-      }
-
-      // Check if it is a personal minter contract
-      const isMinter = await isPersonalMinterContract(parsedMinter);
-      if (!isMinter) {
         return {
-          success: false,
-          error:
-            'Warning: This address is not a verified BrotherHood personal token minter.',
+          valid: false,
+          isVerifiedEcosystem: false,
+          error: 'Invalid TON address format.',
         };
       }
 
-      const balance = await getPersonalWalletBalance(
-        parsedMinter,
-        parsedOwnerAddress,
-      );
+      const isMinter = await isPersonalMinterContract(parsedMinter);
+      let balance = 0n;
+      let walletAddrStr = '';
+      try {
+        balance = await getPersonalWalletBalance(
+          parsedMinter,
+          parsedOwnerAddress,
+        );
+        const walletAddr = await getPersonalWalletAddress(
+          parsedMinter,
+          parsedOwnerAddress,
+        );
+        walletAddrStr = walletAddr.toString();
+      } catch {
+        // May fail if contract does not match personal minter interface
+      }
 
-      const walletAddr = await getPersonalWalletAddress(
-        parsedMinter,
-        parsedOwnerAddress,
-      );
       const meta = await fetchPersonalTokenMetadata(parsedMinter);
+      const token: DiscoveredPersonalToken = {
+        minterAddress: parsedMinter.toString(),
+        walletAddress: walletAddrStr,
+        balance,
+        name: meta.name || (isMinter ? 'Personal Token' : 'Custom Token'),
+        symbol: meta.symbol || (isMinter ? 'PT' : 'TOKEN'),
+        image: meta.image,
+        description: meta.description,
+      };
 
-      const minterStr = parsedMinter.toString();
+      return {
+        valid: true,
+        isVerifiedEcosystem: isMinter,
+        token,
+        error: isMinter
+          ? undefined
+          : 'Note: This address is not a verified BrotherHood personal token minter.',
+      };
+    },
+    [parsedOwnerAddress],
+  );
+
+  // Manual import / add token to tracked list
+  const addTokenManually = useCallback(
+    async (
+      inputAddress: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+      warning?: string;
+      token?: DiscoveredPersonalToken;
+    }> => {
+      if (!parsedOwnerAddress) {
+        return { success: false, error: 'No wallet connected. Please select a wallet.' };
+      }
+
+      const inspection = await inspectToken(inputAddress);
+      if (!inspection.valid || !inspection.token) {
+        return { success: false, error: inspection.error || 'Invalid address' };
+      }
+
+      const minterStr = inspection.token.minterAddress;
       if (!trackedMinters.includes(minterStr)) {
         const nextList = [...trackedMinters, minterStr];
         persistMinters(nextList);
@@ -249,18 +296,11 @@ export function useTrackedPersonalTokens() {
 
       return {
         success: true,
-        token: {
-          minterAddress: minterStr,
-          walletAddress: walletAddr.toString(),
-          balance,
-          name: meta.name,
-          symbol: meta.symbol,
-          image: meta.image,
-          description: meta.description,
-        },
+        warning: !inspection.isVerifiedEcosystem ? inspection.error : undefined,
+        token: inspection.token,
       };
     },
-    [parsedOwnerAddress, trackedMinters, persistMinters, queryClient, walletAddress],
+    [parsedOwnerAddress, inspectToken, trackedMinters, persistMinters, queryClient, walletAddress],
   );
 
   return {

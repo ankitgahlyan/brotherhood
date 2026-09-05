@@ -51,12 +51,13 @@ interface AssetRows {
 
 /** Builds the TON row + a row per held jetton. Shared by the dashboard preview and the full assets page. */
 export const useAssetRows = (): AssetRows => {
-  const { balance, currentWallet } = useWallet();
+  const { balance, currentWallet, address, getActiveWallet } = useWallet();
+  const walletAddress = address || currentWallet?.address || getActiveWallet()?.address;
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const { isMember } = useIsNetworkMember();
   const { personalMinterAddress } = usePersonalJettonInfo(
-    currentWallet?.address ?? null,
+    walletAddress ?? null,
   );
 
   const assetsReady =

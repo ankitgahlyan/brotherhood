@@ -31,12 +31,14 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
   const [inputAddress, setInputAddress] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [verifiedToken, setVerifiedToken] =
     useState<DiscoveredPersonalToken | null>(null);
 
   const handleReset = () => {
     setInputAddress('');
     setWarningMessage(null);
+    setErrorMessage(null);
     setVerifiedToken(null);
     setIsValidating(false);
   };
@@ -48,28 +50,32 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
 
   const handleValidate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputAddress.trim()) return;
+    if (!inputAddress.trim() || isValidating) return;
 
     setIsValidating(true);
     setWarningMessage(null);
-    setVerifiedToken(null);
+    setErrorMessage(null);
 
     try {
       const result = await addTokenManually(inputAddress.trim());
       if (!result.success) {
-        setWarningMessage(
-          result.error ||
-            'Warning: This address is not a verified BrotherHood personal token minter.',
-        );
+        setErrorMessage(result.error || 'Failed to add token.');
       } else if (result.token) {
         setVerifiedToken(result.token);
-        toast.success(`Added ${result.token.symbol || 'Personal Token'} to assets!`);
-        handleClose();
+        if (result.warning) {
+          setWarningMessage(result.warning);
+        }
+        toast.success(
+          `Added ${result.token.symbol || 'Personal Token'} to tracked tokens!`,
+        );
+        setTimeout(() => {
+          handleClose();
+        }, 800);
       }
     } catch (err: any) {
-      setWarningMessage(
+      setErrorMessage(
         err?.message ||
-          'Failed to inspect contract. Ensure address is a valid personal token minter.',
+          'Failed to inspect contract. Ensure address is a valid TON contract address.',
       );
     } finally {
       setIsValidating(false);
@@ -105,6 +111,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
               onChange={(e) => {
                 setInputAddress(e.target.value);
                 if (warningMessage) setWarningMessage(null);
+                if (errorMessage) setErrorMessage(null);
                 if (verifiedToken) setVerifiedToken(null);
               }}
               placeholder="e.g. kQ... or 0:..."
@@ -112,6 +119,14 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
               autoFocus
             />
           </div>
+
+          {/* Error banner */}
+          {errorMessage && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0 font-medium">{errorMessage}</div>
+            </div>
+          )}
 
           {/* Warning banner if not ecosystem token */}
           {warningMessage && (
@@ -121,7 +136,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
             </div>
           )}
 
-          {/* Verified Token Preview if balance == 0 or prior to saving */}
+          {/* Verified Token Preview */}
           {verifiedToken && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -144,7 +159,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
           <Button
             type="submit"
             disabled={!inputAddress.trim() || isValidating}
-            className="w-full flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2 cursor-pointer"
           >
             {isValidating ? (
               <>
