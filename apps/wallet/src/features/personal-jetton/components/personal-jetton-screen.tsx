@@ -16,6 +16,7 @@ import {
   ArrowRight,
   ExternalLink,
   Trash2,
+  Info,
 } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
@@ -84,13 +85,6 @@ export const PersonalJettonScreen: React.FC = () => {
 
   const { explorer } = useExplorer();
 
-  // Form inputs for Deploy
-  const [tokenName, setTokenName] = useState('');
-  const [tokenSymbol, setTokenSymbol] = useState('');
-  const [tokenDesc, setTokenDesc] = useState('');
-  const [tokenImage, setTokenImage] = useState(DEFAULT_TOKEN_IMAGE);
-  const [initialMintAmount, setInitialMintAmount] = useState('');
-
   // Form inputs for Update Metadata in Admin tab
   const [adminTokenName, setAdminTokenName] = useState('');
   const [adminTokenSymbol, setAdminTokenSymbol] = useState('');
@@ -153,36 +147,39 @@ export const PersonalJettonScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
-    name: tokenName,
-    symbol: tokenSymbol,
-    description: tokenDesc,
-    image: tokenImage,
-    initialMintAmount,
     network,
+    onDeploySuccess: () => {
+      info.refetch();
+    },
   });
 
   const isDeployed =
     info.isDeployedOnChain || Boolean(deployer.deployedAddresses);
 
-  const availableTabs: Tab[] = isDeployed
-    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
-    : [
-        'info',
-        'deploy',
-        'mint',
-        'burn',
-        'addresses',
-        'admin',
-        'topup',
-        'destroy',
-      ];
+  const availableTabs: Tab[] =
+    info.isDeployedOnChain && !deployer.deployedAddresses
+      ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
+      : [
+          'info',
+          'deploy',
+          'mint',
+          'burn',
+          'addresses',
+          'admin',
+          'topup',
+          'destroy',
+        ];
 
-  // If already deployed and currently on deploy tab, switch to info
+  // If already deployed on-chain and not in post-deploy success state, switch to info
   React.useEffect(() => {
-    if (isDeployed && activeTab === 'deploy') {
+    if (
+      info.isDeployedOnChain &&
+      !deployer.deployedAddresses &&
+      activeTab === 'deploy'
+    ) {
       setActiveTab('info');
     }
-  }, [isDeployed, activeTab]);
+  }, [info.isDeployedOnChain, deployer.deployedAddresses, activeTab]);
 
   // Effective addresses to register
   const targetRegisterMinter =
@@ -252,10 +249,10 @@ export const PersonalJettonScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     minterAddress: activeMinter,
-    name: adminTokenName || tokenName,
-    symbol: adminTokenSymbol || tokenSymbol,
-    description: adminTokenDesc || tokenDesc,
-    image: adminTokenImage || tokenImage,
+    name: adminTokenName,
+    symbol: adminTokenSymbol,
+    description: adminTokenDesc,
+    image: adminTokenImage,
   });
 
   const topup = useTopUp({
@@ -551,179 +548,141 @@ export const PersonalJettonScreen: React.FC = () => {
                   Issue Personal Token
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Deploy your Personal Token minter contract. Name and symbol
-                  are required. Description and token icon are optional with
-                  sensible defaults.
+                  Deploy your Personal Token minter and link it to your FI Account in a single transaction.
                 </p>
               </div>
 
-              {/* Success & Registration step after deployment */}
+              {/* Success state after deployment & registration */}
               {deployer.deployedAddresses ? (
-                <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 space-y-3">
+                <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 space-y-4">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Personal Token Minter Deployed!
+                    <CheckCircle2 className="w-5 h-5" />
+                    Personal Token Deployed & Registered!
                   </div>
 
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Contract created at{' '}
-                    <span className="font-mono font-medium text-foreground">
-                      {formatContractAddress(
-                        deployer.deployedAddresses.minterAddress,
-                      )}
-                    </span>
-                    . Now register both your Personal Minter and Personal Wallet
-                    to your Account (FI Wallet) in a single unified message.
+                    Your Personal Minter contract has been deployed and linked to your FI Account in a single multi-message transaction.
                   </p>
 
-                  <div className="space-y-1.5 text-xs bg-background/70 p-2.5 rounded-lg border border-border">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Minter:</span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-foreground font-medium">
-                          {formatContractAddress(
-                            deployer.deployedAddresses.minterAddress,
-                          )}
+                  <div className="space-y-2 text-xs bg-background/80 p-3 rounded-xl border border-border">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground block text-[11px]">Minter Address:</span>
+                        <span className="font-mono text-foreground font-medium text-xs break-all">
+                          {deployer.deployedAddresses.minterAddress}
                         </span>
-                        <CopyButton
-                          address={deployer.deployedAddresses.minterAddress}
-                          type="contract"
-                          size="xs"
-                        />
                       </div>
+                      <CopyButton
+                        address={deployer.deployedAddresses.minterAddress}
+                        type="contract"
+                        size="xs"
+                      />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">
-                        Personal Wallet:
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-foreground font-medium">
-                          {formatContractAddress(
-                            deployer.deployedAddresses.personalWalletAddress,
-                          )}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-2 border-t border-border/50">
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground block text-[11px]">Personal Wallet Address:</span>
+                        <span className="font-mono text-foreground font-medium text-xs break-all">
+                          {deployer.deployedAddresses.personalWalletAddress}
                         </span>
-                        <CopyButton
-                          address={
-                            deployer.deployedAddresses.personalWalletAddress
-                          }
-                          type="contract"
-                          size="xs"
-                        />
                       </div>
+                      <CopyButton
+                        address={deployer.deployedAddresses.personalWalletAddress}
+                        type="contract"
+                        size="xs"
+                      />
                     </div>
                   </div>
 
-                  {info.isRegistered ? (
-                    <div className="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
-                      <span>✓ Successfully Registered to Account!</span>
-                      <Button
-                        size="sm"
-                        onClick={() => setActiveTab('info')}
-                        className="text-xs"
-                      >
-                        View Overview <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => registrar.register()}
-                      disabled={!canOperate || registrar.isDisabled}
-                      loading={registrar.isSending}
-                      fullWidth
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-                      data-testid="personal-deploy-register-btn"
-                    >
-                      Register to Account (ActSetPersonalJetton)
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                      Token Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={tokenName}
-                      onChange={(e) => setTokenName(e.target.value)}
-                      placeholder="Token Name (e.g. Alice Credit)"
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      data-testid="personal-deploy-name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                      Symbol <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={tokenSymbol}
-                      onChange={(e) => setTokenSymbol(e.target.value)}
-                      placeholder="Symbol (e.g. ALICE)"
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      data-testid="personal-deploy-symbol"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">
-                      Description{' '}
-                      <span className="text-muted-foreground text-[10px] font-normal">
-                        (Optional)
-                      </span>
-                    </label>
-                    <textarea
-                      value={tokenDesc}
-                      onChange={(e) => setTokenDesc(e.target.value)}
-                      placeholder={DEFAULT_TOKEN_DESCRIPTION}
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={2}
-                      data-testid="personal-deploy-desc"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground flex items-center justify-between">
-                      <span>Initial Mint Amount</span>
-                      <span className="text-muted-foreground text-[10px] font-normal">
-                        (Optional, defaults to 0)
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={initialMintAmount}
-                      onChange={(e) => setInitialMintAmount(e.target.value)}
-                      placeholder="e.g. 1000 (tokens minted to you upon deploy)"
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      data-testid="personal-deploy-initial-mint"
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Tokens will be minted directly to your connected wallet in
-                      the deployment transaction.
+                  {/* Nudge user to configure metadata */}
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                    <p className="font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-blue-500" />
+                      Set Token Name, Symbol & Icon
+                    </p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Your token was deployed with pure deterministic parameters. Configure its branding and metadata now in the Admin tab.
                     </p>
                   </div>
 
-                  {/* Token Image Picker with Cryptofonts icon browser & TON default */}
-                  <TokenImagePicker
-                    value={tokenImage}
-                    onChange={setTokenImage}
-                    disabled={deployer.isSending}
-                  />
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <Button
+                      onClick={() => setActiveTab('admin')}
+                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                      data-testid="personal-deploy-goto-metadata-btn"
+                    >
+                      <Sparkles className="w-4 h-4 mr-1.5" />
+                      Set Token Metadata Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActiveTab('info')}
+                      className="w-full sm:w-auto text-xs"
+                    >
+                      View Token Overview <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-xl border border-border/70 bg-secondary/30 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                      <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
+                        <p>
+                          Personal Tokens on BrotherHood are deployed to strictly <span className="font-semibold text-foreground">deterministic addresses</span> in the same shard as your wallet.
+                        </p>
+                        <p>
+                          To guarantee predictable addresses across the network, the contract is deployed initially without metadata. Once deployed, you can customize your token's name, symbol, description, and icon at any time in the <strong className="text-foreground">Admin</strong> tab.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-border/50 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-background/80 p-2.5 rounded-lg border border-border">
+                        <div className="min-w-0">
+                          <span className="text-muted-foreground block text-[11px]">Deterministic Minter Address</span>
+                          <span className="font-mono text-foreground font-medium text-xs break-all">
+                            {info.deterministicMinterAddress || 'Calculating...'}
+                          </span>
+                        </div>
+                        {info.deterministicMinterAddress && (
+                          <CopyButton
+                            address={info.deterministicMinterAddress}
+                            type="contract"
+                            size="xs"
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-background/80 p-2.5 rounded-lg border border-border">
+                        <div className="min-w-0">
+                          <span className="text-muted-foreground block text-[11px]">Expected Personal Wallet Address</span>
+                          <span className="font-mono text-foreground font-medium text-xs break-all">
+                            {info.expectedPersonalWalletAddress || 'Calculating...'}
+                          </span>
+                        </div>
+                        {info.expectedPersonalWalletAddress && (
+                          <CopyButton
+                            address={info.expectedPersonalWalletAddress}
+                            type="contract"
+                            size="xs"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <Button
                     onClick={() => deployer.deploy()}
-                    disabled={!canOperate || deployer.isDisabled}
+                    disabled={!canOperate || deployer.isDisabled || !info.deterministicMinterAddress}
                     loading={deployer.isSending}
                     fullWidth
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5"
                     data-testid="personal-deploy-submit"
                   >
-                    Deploy Personal Token
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Deploy & Register Personal Token
                   </Button>
                 </div>
               )}
@@ -1196,7 +1155,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       type="text"
                       value={adminTokenName}
                       onChange={(e) => setAdminTokenName(e.target.value)}
-                      placeholder={tokenName || 'Token Name'}
+                      placeholder={info.minterDetails?.name || 'Token Name (e.g. Alice Credit)'}
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       data-testid="personal-meta-name"
                     />
@@ -1209,7 +1168,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       type="text"
                       value={adminTokenSymbol}
                       onChange={(e) => setAdminTokenSymbol(e.target.value)}
-                      placeholder={tokenSymbol || 'Symbol'}
+                      placeholder={info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'}
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       data-testid="personal-meta-symbol"
                     />
@@ -1224,7 +1183,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     <textarea
                       value={adminTokenDesc}
                       onChange={(e) => setAdminTokenDesc(e.target.value)}
-                      placeholder={tokenDesc || DEFAULT_TOKEN_DESCRIPTION}
+                      placeholder={info.minterDetails?.description || DEFAULT_TOKEN_DESCRIPTION}
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={2}
                       data-testid="personal-meta-desc"

@@ -12,14 +12,14 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import {
   buildPersonalMinterDeploy,
-  buildMintBody,
+  buildSetPersonalJettonBody,
   getExpectedPersonalWalletAddress,
-  parseUnits,
 } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
-import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
+import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
+import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 
 export const DEFAULT_TOKEN_DESCRIPTION =
   'Personal Token backed by Member trust on BrotherHood Network';
@@ -33,11 +33,6 @@ export interface UseDeployPersonalJettonParams {
   wallet: Wallet | null | undefined;
   walletKit: ITonWalletKit | null;
   walletAddress: string | null;
-  name: string;
-  symbol: string;
-  description?: string;
-  image?: string;
-  initialMintAmount?: string;
   network: Network;
   onDeploySuccess?: (addresses: DeployedPersonalAddresses) => void;
 }
@@ -55,11 +50,6 @@ export function useDeployPersonalJetton({
   wallet,
   walletKit,
   walletAddress,
-  name,
-  symbol,
-  description,
-  image,
-  initialMintAmount,
   network,
   onDeploySuccess,
 }: UseDeployPersonalJettonParams): UseDeployPersonalJettonResult {
@@ -68,6 +58,7 @@ export function useDeployPersonalJetton({
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
+  const refreshQueries = useRefreshContractQueries();
 
   const [deployedAddresses, setDeployedAddresses] =
     useState<DeployedPersonalAddresses | null>(null);
@@ -82,25 +73,10 @@ export function useDeployPersonalJetton({
       throw new Error('No wallet address');
     }
 
-    const trimmedName = name.trim();
-    const trimmedSymbol = symbol.trim();
-
-    if (!trimmedName || !trimmedSymbol) {
-      toast.error('Token name and symbol are required');
-      throw new Error('Token name and symbol are required');
-    }
-
-    const finalDescription =
-      description && description.trim().length > 0
-        ? description.trim()
-        : DEFAULT_TOKEN_DESCRIPTION;
-
-    const finalImage =
-      image && image.trim().length > 0 ? image.trim() : DEFAULT_TOKEN_IMAGE;
-
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
+    // Pure deterministic deployment: null metadata ensures minter address calculation is strictly deterministic
     const { contractAddress, stateInit } = await buildPersonalMinterDeploy({
       issuerWallet: fiWalletAddr,
       adminAddress: ownerAddr,
@@ -113,32 +89,32 @@ export function useDeployPersonalJetton({
 
     const stateInitCell = beginCell().store(storeStateInit(stateInit)).endCell();
 
-    // Check if an initial mint amount was requested
-    let payload = beginCell().endCell();
-    let txAmount = GAS.DEPLOY;
+    // Message 1: Deploy Personal Minter contract with stateInit
+    const deployMsg = {
+      toAddress: contractAddress.toString(),
+      amount: GAS.DEPLOY,
+      payload: beginCell().endCell(),
+      stateInit: stateInitCell,
+    };
 
-    const mintVal = initialMintAmount ? parseFloat(initialMintAmount) : 0;
-    if (mintVal > 0) {
-      const mintNano = parseUnits(initialMintAmount!, 9);
-      payload = buildMintBody({
-        toAddress: ownerAddr,
-        jettonAmount: mintNano,
-        forwardTonAmount: 20000000n,
-        totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
-      });
-      // Add mint gas to deploy transaction value
-      txAmount = GAS.DEPLOY + GAS.MINT;
-    }
+    // Message 2: Register minter and wallet to the issuer's FI Wallet in the same transaction
+    const setBody = buildSetPersonalJettonBody({
+      personalMinter: contractAddress,
+      personalWallet: expectedWallet,
+    });
 
-    // Deploy message with deterministic stateInit (metadataUri: null) and optional MintNewJettons payload
-    await sendTx([
-      {
-        toAddress: contractAddress.toString(),
-        amount: txAmount,
-        payload,
-        stateInit: stateInitCell,
-      },
-    ]);
+    const registerMsg = {
+      toAddress: fiWalletAddr.toString(),
+      amount: GAS.SET_PERSONAL,
+      payload: setBody,
+    };
+
+    // Send both messages bundled into a single multi-message transaction
+    await sendTx([deployMsg, registerMsg]);
+
+    // Clear local fi-wallet-state cache and trigger query refreshes
+    await deleteContractCache(`fi-wallet-state:${ownerAddr.toString()}`);
+    await refreshQueries([`fi-wallet-state:${ownerAddr.toString()}`]);
 
     const result: DeployedPersonalAddresses = {
       minterAddress: contractAddress.toString(),
@@ -146,18 +122,14 @@ export function useDeployPersonalJetton({
     };
 
     setDeployedAddresses(result);
-    toast.success(
-      mintVal > 0
-        ? 'Personal Token minter deployed and initial tokens minted!'
-        : 'Personal Token minter deployed!',
-    );
+    toast.success('Personal Token deployed and registered to Account!');
     onDeploySuccess?.(result);
     return result;
   }, [
     walletAddress,
-    initialMintAmount,
     network,
     sendTx,
+    refreshQueries,
     onDeploySuccess,
   ]);
 
