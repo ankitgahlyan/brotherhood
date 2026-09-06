@@ -19,7 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
-import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { useWallet, useWalletKit, useAuth } from '@demo/wallet-core';
 import {
   useExplorer,
   getExplorerAddressUrl,
@@ -109,9 +109,14 @@ export const PersonalJettonScreen: React.FC = () => {
   // Burn tab options
   const [isPayback, setIsPayback] = useState(true);
 
-  // Destroy tab confirmation dialog states
+  // Destroy tab confirmation dialog states & auth gate
+  const { isPasswordSet, unlock } = useAuth();
   const [isConfirmWalletOpen, setIsConfirmWalletOpen] = useState(false);
   const [isConfirmMinterOpen, setIsConfirmMinterOpen] = useState(false);
+  const [confirmDestroyPhrase, setConfirmDestroyPhrase] = useState('');
+  const [confirmDestroyPassword, setConfirmDestroyPassword] = useState('');
+  const [destroyAuthError, setDestroyAuthError] = useState('');
+  const [isAuthenticatingDestroy, setIsAuthenticatingDestroy] = useState(false);
 
   const info = usePersonalJettonInfo(address ?? null);
 
@@ -1430,7 +1435,14 @@ export const PersonalJettonScreen: React.FC = () => {
               {/* Confirmation Dialog: Wallet */}
               <Dialog
                 open={isConfirmWalletOpen}
-                onOpenChange={setIsConfirmWalletOpen}
+                onOpenChange={(open) => {
+                  setIsConfirmWalletOpen(open);
+                  if (!open) {
+                    setConfirmDestroyPhrase('');
+                    setConfirmDestroyPassword('');
+                    setDestroyAuthError('');
+                  }
+                }}
               >
                 <DialogContent className="max-w-md w-[92vw] sm:w-full p-5 gap-4">
                   <DialogHeader>
@@ -1446,12 +1458,61 @@ export const PersonalJettonScreen: React.FC = () => {
                       This cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
+
+                  <div className="space-y-3 py-1">
+                    {isPasswordSet && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-foreground block">
+                          Wallet Passcode / Password
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmDestroyPassword}
+                          onChange={(e) => {
+                            setConfirmDestroyPassword(e.target.value);
+                            setDestroyAuthError('');
+                          }}
+                          placeholder="Enter your wallet passcode"
+                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                          data-testid="personal-destroy-wallet-password"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground block">
+                        Type{' '}
+                        <span className="font-mono font-bold text-rose-500">
+                          DESTROY
+                        </span>{' '}
+                        to confirm
+                      </label>
+                      <input
+                        type="text"
+                        value={confirmDestroyPhrase}
+                        onChange={(e) => {
+                          setConfirmDestroyPhrase(e.target.value);
+                          setDestroyAuthError('');
+                        }}
+                        placeholder="DESTROY"
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        data-testid="personal-destroy-wallet-phrase"
+                      />
+                    </div>
+
+                    {destroyAuthError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {destroyAuthError}
+                      </p>
+                    )}
+                  </div>
+
                   <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
                     <Button
                       variant="gray"
                       size="sm"
                       onClick={() => setIsConfirmWalletOpen(false)}
-                      disabled={destroyer.isSending}
+                      disabled={destroyer.isSending || isAuthenticatingDestroy}
                     >
                       Cancel
                     </Button>
@@ -1459,10 +1520,50 @@ export const PersonalJettonScreen: React.FC = () => {
                       variant="danger"
                       size="sm"
                       onClick={async () => {
+                        if (
+                          confirmDestroyPhrase.trim().toUpperCase() !==
+                          'DESTROY'
+                        ) {
+                          setDestroyAuthError(
+                            'Please type DESTROY to confirm.',
+                          );
+                          return;
+                        }
+                        if (isPasswordSet) {
+                          if (!confirmDestroyPassword) {
+                            setDestroyAuthError(
+                              'Passcode is required to authorize destruction.',
+                            );
+                            return;
+                          }
+                          setIsAuthenticatingDestroy(true);
+                          try {
+                            const ok = await unlock(confirmDestroyPassword);
+                            if (!ok) {
+                              setDestroyAuthError('Incorrect passcode.');
+                              setIsAuthenticatingDestroy(false);
+                              return;
+                            }
+                          } catch (e) {
+                            setDestroyAuthError(
+                              e instanceof Error
+                                ? e.message
+                                : 'Authentication failed.',
+                            );
+                            setIsAuthenticatingDestroy(false);
+                            return;
+                          }
+                          setIsAuthenticatingDestroy(false);
+                        }
                         setIsConfirmWalletOpen(false);
                         await destroyer.destroyWallet();
                       }}
-                      loading={destroyer.isSending}
+                      loading={destroyer.isSending || isAuthenticatingDestroy}
+                      disabled={
+                        confirmDestroyPhrase.trim().toUpperCase() !==
+                          'DESTROY' ||
+                        (isPasswordSet && !confirmDestroyPassword)
+                      }
                       data-testid="personal-destroy-wallet-confirm"
                     >
                       Yes, Destroy Wallet
@@ -1474,7 +1575,14 @@ export const PersonalJettonScreen: React.FC = () => {
               {/* Confirmation Dialog: Minter */}
               <Dialog
                 open={isConfirmMinterOpen}
-                onOpenChange={setIsConfirmMinterOpen}
+                onOpenChange={(open) => {
+                  setIsConfirmMinterOpen(open);
+                  if (!open) {
+                    setConfirmDestroyPhrase('');
+                    setConfirmDestroyPassword('');
+                    setDestroyAuthError('');
+                  }
+                }}
               >
                 <DialogContent className="max-w-md w-[92vw] sm:w-full p-5 gap-4">
                   <DialogHeader>
@@ -1490,12 +1598,61 @@ export const PersonalJettonScreen: React.FC = () => {
                       be refunded to your admin address. This cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
+
+                  <div className="space-y-3 py-1">
+                    {isPasswordSet && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-foreground block">
+                          Wallet Passcode / Password
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmDestroyPassword}
+                          onChange={(e) => {
+                            setConfirmDestroyPassword(e.target.value);
+                            setDestroyAuthError('');
+                          }}
+                          placeholder="Enter your wallet passcode"
+                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                          data-testid="personal-destroy-minter-password"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground block">
+                        Type{' '}
+                        <span className="font-mono font-bold text-rose-500">
+                          DESTROY
+                        </span>{' '}
+                        to confirm
+                      </label>
+                      <input
+                        type="text"
+                        value={confirmDestroyPhrase}
+                        onChange={(e) => {
+                          setConfirmDestroyPhrase(e.target.value);
+                          setDestroyAuthError('');
+                        }}
+                        placeholder="DESTROY"
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        data-testid="personal-destroy-minter-phrase"
+                      />
+                    </div>
+
+                    {destroyAuthError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {destroyAuthError}
+                      </p>
+                    )}
+                  </div>
+
                   <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
                     <Button
                       variant="gray"
                       size="sm"
                       onClick={() => setIsConfirmMinterOpen(false)}
-                      disabled={destroyer.isSending}
+                      disabled={destroyer.isSending || isAuthenticatingDestroy}
                     >
                       Cancel
                     </Button>
@@ -1503,10 +1660,50 @@ export const PersonalJettonScreen: React.FC = () => {
                       variant="danger"
                       size="sm"
                       onClick={async () => {
+                        if (
+                          confirmDestroyPhrase.trim().toUpperCase() !==
+                          'DESTROY'
+                        ) {
+                          setDestroyAuthError(
+                            'Please type DESTROY to confirm.',
+                          );
+                          return;
+                        }
+                        if (isPasswordSet) {
+                          if (!confirmDestroyPassword) {
+                            setDestroyAuthError(
+                              'Passcode is required to authorize destruction.',
+                            );
+                            return;
+                          }
+                          setIsAuthenticatingDestroy(true);
+                          try {
+                            const ok = await unlock(confirmDestroyPassword);
+                            if (!ok) {
+                              setDestroyAuthError('Incorrect passcode.');
+                              setIsAuthenticatingDestroy(false);
+                              return;
+                            }
+                          } catch (e) {
+                            setDestroyAuthError(
+                              e instanceof Error
+                                ? e.message
+                                : 'Authentication failed.',
+                            );
+                            setIsAuthenticatingDestroy(false);
+                            return;
+                          }
+                          setIsAuthenticatingDestroy(false);
+                        }
                         setIsConfirmMinterOpen(false);
                         await destroyer.destroyMinter();
                       }}
-                      loading={destroyer.isSending}
+                      loading={destroyer.isSending || isAuthenticatingDestroy}
+                      disabled={
+                        confirmDestroyPhrase.trim().toUpperCase() !==
+                          'DESTROY' ||
+                        (isPasswordSet && !confirmDestroyPassword)
+                      }
                       data-testid="personal-destroy-minter-confirm"
                     >
                       Yes, Destroy Minter
