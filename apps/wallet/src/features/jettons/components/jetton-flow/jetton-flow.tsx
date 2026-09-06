@@ -30,7 +30,8 @@ export const JettonNameDisplay = memo(function JettonNameDisplay({
   if (name) return <div>{name}</div>;
   if (!jettonAddress) return <div>UNKNOWN</div>;
   const str = jettonAddress.toString();
-  if (str === 'TON' || str === 'GRAM' || str === 'UNKWN') return <div>{str}</div>;
+  if (str === 'TON' || str === 'GRAM' || str === 'UNKWN')
+    return <div>{str}</div>;
   return <div>{formatContractAddress(str, true, 4)}</div>;
 });
 

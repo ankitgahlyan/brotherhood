@@ -85,7 +85,15 @@ export function useVote({
       return 'Invalid target address';
     }
     return null;
-  }, [wallet, walletAddress, accountData, isUnvote, targetAddress, count, maxUnvoteCount]);
+  }, [
+    wallet,
+    walletAddress,
+    accountData,
+    isUnvote,
+    targetAddress,
+    count,
+    maxUnvoteCount,
+  ]);
 
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');

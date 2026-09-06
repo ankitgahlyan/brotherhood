@@ -35,10 +35,7 @@ export function useLastFetchTime(keys?: string[]) {
   const [timestamp, setTimestamp] = useState<number | null>(null);
   const [, setTick] = useState(0);
 
-  const keysList = useMemo(
-    () => (keys ? [...keys].sort() : undefined),
-    [keys],
-  );
+  const keysList = useMemo(() => (keys ? [...keys].sort() : undefined), [keys]);
 
   const updateTimestamp = useCallback(async () => {
     const ts = await getLastFetchTime(

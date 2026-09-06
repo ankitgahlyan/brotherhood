@@ -26,6 +26,7 @@ type AllowedMessageToWallet =
     | ChangeUsername
     | ChangeLocation
     | ChangeCountry
+    | ChangeNominee
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
@@ -279,6 +280,17 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.votes == 10) throw Errors.HasActiveVotes;
 
             profile.country = msg.newCountry;
+        }
+
+        ChangeNominee => {
+            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
+            if (in.senderAddress != addrs.owner) {
+                throw Errors.IncorrectSender;
+            }
+            assert (msg.newNominee != addrs.owner) throw Errors.InvalidMessage;
+            assert (msg.newNominee != contract.getAddress()) throw Errors.InvalidMessage;
+
+            nomins.nominee = msg.newNominee;
         }
 
         ActClaimWeeklyGrant => {

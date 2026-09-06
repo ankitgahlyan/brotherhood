@@ -55,7 +55,8 @@ export function useRegisterPersonalJetton({
 
   const register = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet connected');
-    if (!personalMinterAddress) throw new Error('No Personal Minter address provided');
+    if (!personalMinterAddress)
+      throw new Error('No Personal Minter address provided');
 
     const ownerAddr = Address.parse(walletAddress);
     const minterAddr = Address.parse(personalMinterAddress);

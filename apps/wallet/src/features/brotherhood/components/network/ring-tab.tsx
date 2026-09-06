@@ -83,15 +83,24 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                 }
               }}
               onKeyDown={(e) => {
-                if ((e.key === 'Enter' || e.key === ' ') && circleProfile?.username) {
+                if (
+                  (e.key === 'Enter' || e.key === ' ') &&
+                  circleProfile?.username
+                ) {
                   e.stopPropagation();
                   openTelegramProfile(circleProfile.username);
                 }
               }}
               className={`font-semibold text-sm text-foreground transition-colors ${
-                circleProfile?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''
+                circleProfile?.username
+                  ? 'hover:text-primary hover:underline cursor-pointer'
+                  : ''
               }`}
-              title={circleProfile?.username ? `Open @${circleProfile.username} on Telegram` : undefined}
+              title={
+                circleProfile?.username
+                  ? `Open @${circleProfile.username} on Telegram`
+                  : undefined
+              }
             >
               Invited by {inviterUsername}
             </span>
@@ -193,15 +202,24 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                             }
                           }}
                           onKeyDown={(e) => {
-                            if ((e.key === 'Enter' || e.key === ' ') && prof?.username) {
+                            if (
+                              (e.key === 'Enter' || e.key === ' ') &&
+                              prof?.username
+                            ) {
                               e.stopPropagation();
                               openTelegramProfile(prof.username);
                             }
                           }}
                           className={`font-semibold text-xs text-foreground transition-colors ${
-                            prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : 'group-hover:text-primary'
+                            prof?.username
+                              ? 'hover:text-primary hover:underline cursor-pointer'
+                              : 'group-hover:text-primary'
                           }`}
-                          title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                          title={
+                            prof?.username
+                              ? `Open @${prof.username} on Telegram`
+                              : undefined
+                          }
                         >
                           {username}
                         </span>
@@ -306,7 +324,8 @@ export const RingTab: React.FC<RingTabProps> = ({
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
         <span className="text-xs font-semibold text-foreground">
-          Ring Branches ({circleMembers.length} Circle {circleMembers.length === 1 ? 'inviter' : 'inviters'})
+          Ring Branches ({circleMembers.length} Circle{' '}
+          {circleMembers.length === 1 ? 'inviter' : 'inviters'})
         </span>
         <span className="text-[11px] text-muted-foreground">
           Expand inviter to view Ring members
@@ -324,9 +343,7 @@ export const RingTab: React.FC<RingTabProps> = ({
               circleMember={member}
               circleProfile={prof}
               isExpanded={isExpanded}
-              onToggle={() =>
-                setExpandedIndex(isExpanded ? null : index)
-              }
+              onToggle={() => setExpandedIndex(isExpanded ? null : index)}
               onSelectMember={onSelectMember}
             />
           );

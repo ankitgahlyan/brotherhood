@@ -153,7 +153,7 @@ export const PersonalJettonScreen: React.FC = () => {
     },
   });
 
-  const isDeployed =
+  const _isDeployed =
     info.isDeployedOnChain || Boolean(deployer.deployedAddresses);
 
   const availableTabs: Tab[] =
@@ -548,7 +548,8 @@ export const PersonalJettonScreen: React.FC = () => {
                   Issue Personal Token
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Deploy your Personal Token minter and link it to your FI Account in a single transaction.
+                  Deploy your Personal Token minter and link it to your FI
+                  Account in a single transaction.
                 </p>
               </div>
 
@@ -561,13 +562,16 @@ export const PersonalJettonScreen: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your Personal Minter contract has been deployed and linked to your FI Account in a single multi-message transaction.
+                    Your Personal Minter contract has been deployed and linked
+                    to your FI Account in a single multi-message transaction.
                   </p>
 
                   <div className="space-y-2 text-xs bg-background/80 p-3 rounded-xl border border-border">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <div className="min-w-0">
-                        <span className="text-muted-foreground block text-[11px]">Minter Address:</span>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Minter Address:
+                        </span>
                         <span className="font-mono text-foreground font-medium text-xs break-all">
                           {deployer.deployedAddresses.minterAddress}
                         </span>
@@ -580,13 +584,17 @@ export const PersonalJettonScreen: React.FC = () => {
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-2 border-t border-border/50">
                       <div className="min-w-0">
-                        <span className="text-muted-foreground block text-[11px]">Personal Wallet Address:</span>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Personal Wallet Address:
+                        </span>
                         <span className="font-mono text-foreground font-medium text-xs break-all">
                           {deployer.deployedAddresses.personalWalletAddress}
                         </span>
                       </div>
                       <CopyButton
-                        address={deployer.deployedAddresses.personalWalletAddress}
+                        address={
+                          deployer.deployedAddresses.personalWalletAddress
+                        }
                         type="contract"
                         size="xs"
                       />
@@ -600,7 +608,9 @@ export const PersonalJettonScreen: React.FC = () => {
                       Set Token Name, Symbol & Icon
                     </p>
                     <p className="text-muted-foreground text-[11px]">
-                      Your token was deployed with pure deterministic parameters. Configure its branding and metadata now in the Admin tab.
+                      Your token was deployed with pure deterministic
+                      parameters. Configure its branding and metadata now in the
+                      Admin tab.
                     </p>
                   </div>
 
@@ -619,7 +629,8 @@ export const PersonalJettonScreen: React.FC = () => {
                       onClick={() => setActiveTab('info')}
                       className="w-full sm:w-auto text-xs"
                     >
-                      View Token Overview <ArrowRight className="w-3 h-3 ml-1" />
+                      View Token Overview{' '}
+                      <ArrowRight className="w-3 h-3 ml-1" />
                     </Button>
                   </div>
                 </div>
@@ -630,10 +641,20 @@ export const PersonalJettonScreen: React.FC = () => {
                       <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                       <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
                         <p>
-                          Personal Tokens on BrotherHood are deployed to strictly <span className="font-semibold text-foreground">deterministic addresses</span> in the same shard as your wallet.
+                          Personal Tokens on BrotherHood are deployed to
+                          strictly{' '}
+                          <span className="font-semibold text-foreground">
+                            deterministic addresses
+                          </span>{' '}
+                          in the same shard as your wallet.
                         </p>
                         <p>
-                          To guarantee predictable addresses across the network, the contract is deployed initially without metadata. Once deployed, you can customize your token's name, symbol, description, and icon at any time in the <strong className="text-foreground">Admin</strong> tab.
+                          To guarantee predictable addresses across the network,
+                          the contract is deployed initially without metadata.
+                          Once deployed, you can customize your token's name,
+                          symbol, description, and icon at any time in the{' '}
+                          <strong className="text-foreground">Admin</strong>{' '}
+                          tab.
                         </p>
                       </div>
                     </div>
@@ -641,9 +662,12 @@ export const PersonalJettonScreen: React.FC = () => {
                     <div className="space-y-2 pt-2 border-t border-border/50 text-xs">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-background/80 p-2.5 rounded-lg border border-border">
                         <div className="min-w-0">
-                          <span className="text-muted-foreground block text-[11px]">Deterministic Minter Address</span>
+                          <span className="text-muted-foreground block text-[11px]">
+                            Deterministic Minter Address
+                          </span>
                           <span className="font-mono text-foreground font-medium text-xs break-all">
-                            {info.deterministicMinterAddress || 'Calculating...'}
+                            {info.deterministicMinterAddress ||
+                              'Calculating...'}
                           </span>
                         </div>
                         {info.deterministicMinterAddress && (
@@ -657,9 +681,12 @@ export const PersonalJettonScreen: React.FC = () => {
 
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-background/80 p-2.5 rounded-lg border border-border">
                         <div className="min-w-0">
-                          <span className="text-muted-foreground block text-[11px]">Expected Personal Wallet Address</span>
+                          <span className="text-muted-foreground block text-[11px]">
+                            Expected Personal Wallet Address
+                          </span>
                           <span className="font-mono text-foreground font-medium text-xs break-all">
-                            {info.expectedPersonalWalletAddress || 'Calculating...'}
+                            {info.expectedPersonalWalletAddress ||
+                              'Calculating...'}
                           </span>
                         </div>
                         {info.expectedPersonalWalletAddress && (
@@ -675,7 +702,11 @@ export const PersonalJettonScreen: React.FC = () => {
 
                   <Button
                     onClick={() => deployer.deploy()}
-                    disabled={!canOperate || deployer.isDisabled || !info.deterministicMinterAddress}
+                    disabled={
+                      !canOperate ||
+                      deployer.isDisabled ||
+                      !info.deterministicMinterAddress
+                    }
                     loading={deployer.isSending}
                     fullWidth
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5"
@@ -1155,7 +1186,10 @@ export const PersonalJettonScreen: React.FC = () => {
                       type="text"
                       value={adminTokenName}
                       onChange={(e) => setAdminTokenName(e.target.value)}
-                      placeholder={info.minterDetails?.name || 'Token Name (e.g. Alice Credit)'}
+                      placeholder={
+                        info.minterDetails?.name ||
+                        'Token Name (e.g. Alice Credit)'
+                      }
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       data-testid="personal-meta-name"
                     />
@@ -1168,7 +1202,9 @@ export const PersonalJettonScreen: React.FC = () => {
                       type="text"
                       value={adminTokenSymbol}
                       onChange={(e) => setAdminTokenSymbol(e.target.value)}
-                      placeholder={info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'}
+                      placeholder={
+                        info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'
+                      }
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       data-testid="personal-meta-symbol"
                     />
@@ -1183,7 +1219,10 @@ export const PersonalJettonScreen: React.FC = () => {
                     <textarea
                       value={adminTokenDesc}
                       onChange={(e) => setAdminTokenDesc(e.target.value)}
-                      placeholder={info.minterDetails?.description || DEFAULT_TOKEN_DESCRIPTION}
+                      placeholder={
+                        info.minterDetails?.description ||
+                        DEFAULT_TOKEN_DESCRIPTION
+                      }
                       className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={2}
                       data-testid="personal-meta-desc"

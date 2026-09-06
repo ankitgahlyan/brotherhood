@@ -56,7 +56,14 @@ export const UnlockScreen: React.FC = () => {
       setIsBiometricLoading(false);
       setIsLoading(false);
     }
-  }, [isLoading, isBiometricLoading, authenticate, unlock, loadAllWallets, navigate]);
+  }, [
+    isLoading,
+    isBiometricLoading,
+    authenticate,
+    unlock,
+    loadAllWallets,
+    navigate,
+  ]);
 
   // Auto-prompt biometrics once on mobile/supported devices if registered
   useEffect(() => {

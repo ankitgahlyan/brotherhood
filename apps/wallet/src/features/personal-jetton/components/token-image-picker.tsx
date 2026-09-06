@@ -7,7 +7,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, Image as ImageIcon, Check, RotateCcw, Sparkles } from 'lucide-react';
+import {
+  Search,
+  Image as ImageIcon,
+  Check,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -242,7 +248,9 @@ export const TokenImagePicker: React.FC<TokenImagePickerProps> = ({
                     onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Load More ({filteredSymbols.length - displayedSymbols.length} remaining)
+                    Load More (
+                    {filteredSymbols.length - displayedSymbols.length}{' '}
+                    remaining)
                   </Button>
                 </div>
               )}

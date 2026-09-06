@@ -87,7 +87,9 @@ export function useDeployPersonalJetton({
       owner: ownerAddr,
     });
 
-    const stateInitCell = beginCell().store(storeStateInit(stateInit)).endCell();
+    const stateInitCell = beginCell()
+      .store(storeStateInit(stateInit))
+      .endCell();
 
     // Message 1: Deploy Personal Minter contract with stateInit
     const deployMsg = {
@@ -125,18 +127,9 @@ export function useDeployPersonalJetton({
     toast.success('Personal Token deployed and registered to Account!');
     onDeploySuccess?.(result);
     return result;
-  }, [
-    walletAddress,
-    network,
-    sendTx,
-    refreshQueries,
-    onDeploySuccess,
-  ]);
+  }, [walletAddress, network, sendTx, refreshQueries, onDeploySuccess]);
 
-  const isDisabled =
-    !wallet ||
-    !walletAddress ||
-    isSending;
+  const isDisabled = !wallet || !walletAddress || isSending;
 
   return {
     deploy,

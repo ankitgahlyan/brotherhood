@@ -26,7 +26,8 @@ const STORAGE_KEY_PREFIX = 'brotherhood_tracked_personal_tokens_';
 export function useTrackedPersonalTokens() {
   const queryClient = useQueryClient();
   const { currentWallet, address, getActiveWallet } = useWallet();
-  const walletAddress = address || currentWallet?.address || getActiveWallet()?.address;
+  const walletAddress =
+    address || currentWallet?.address || getActiveWallet()?.address;
 
   const storageKey = walletAddress
     ? `${STORAGE_KEY_PREFIX}${walletAddress}`
@@ -184,7 +185,13 @@ export function useTrackedPersonalTokens() {
     } finally {
       setIsDiscovering(false);
     }
-  }, [parsedOwnerAddress, trackedMinters, persistMinters, queryClient, walletAddress]);
+  }, [
+    parsedOwnerAddress,
+    trackedMinters,
+    persistMinters,
+    queryClient,
+    walletAddress,
+  ]);
 
   // Initial discovery on first connect if never tracked before
   useEffect(() => {
@@ -276,7 +283,10 @@ export function useTrackedPersonalTokens() {
       token?: DiscoveredPersonalToken;
     }> => {
       if (!parsedOwnerAddress) {
-        return { success: false, error: 'No wallet connected. Please select a wallet.' };
+        return {
+          success: false,
+          error: 'No wallet connected. Please select a wallet.',
+        };
       }
 
       const inspection = await inspectToken(inputAddress);
@@ -300,7 +310,14 @@ export function useTrackedPersonalTokens() {
         token: inspection.token,
       };
     },
-    [parsedOwnerAddress, inspectToken, trackedMinters, persistMinters, queryClient, walletAddress],
+    [
+      parsedOwnerAddress,
+      inspectToken,
+      trackedMinters,
+      persistMinters,
+      queryClient,
+      walletAddress,
+    ],
   );
 
   return {

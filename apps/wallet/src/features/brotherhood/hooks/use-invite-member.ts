@@ -107,7 +107,8 @@ export function useInviteMember({
     } catch {
       return 'Invalid invitee address';
     }
-    if (!cleanTelegramUsername(username)) return 'Enter a Telegram username for the new member';
+    if (!cleanTelegramUsername(username))
+      return 'Enter a Telegram username for the new member';
     if (!h3Cell.trim()) return 'Enter an H3 spatial cell';
     if (country < 0 || isNaN(country)) return 'Select a valid country';
 

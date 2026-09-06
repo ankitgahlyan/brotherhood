@@ -131,7 +131,7 @@ function RawMessageAction({
   const actionTitle = decoded?.messageName ?? `Message #${index + 1}`;
   const isContract = Boolean(
     message.stateInit ||
-      (decoded && !decoded.isComment && decoded.opcode !== undefined),
+    (decoded && !decoded.isComment && decoded.opcode !== undefined),
   );
 
   return (
@@ -171,7 +171,7 @@ function TonItemAction({
   const decoded = decodePayload(item.payload);
   const isContract = Boolean(
     item.stateInit ||
-      (decoded && !decoded.isComment && decoded.opcode !== undefined),
+    (decoded && !decoded.isComment && decoded.opcode !== undefined),
   );
   const actionTitle = decoded?.messageName ?? `Send TON #${index + 1}`;
 

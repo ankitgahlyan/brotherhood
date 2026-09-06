@@ -65,7 +65,8 @@ export function useProfile({
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
-    if (!cleanTelegramUsername(username)) return 'Enter a non-empty Telegram username';
+    if (!cleanTelegramUsername(username))
+      return 'Enter a non-empty Telegram username';
     return null;
   }, [wallet, walletAddress, accountData, username]);
 

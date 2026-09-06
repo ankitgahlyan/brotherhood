@@ -294,6 +294,11 @@ struct (0x000010a8) ChangeCountry {
     newCountry: uint16
 }
 
+struct (0x000010a9) ChangeNominee {
+    queryId: uint64 = 0
+    newNominee: address
+}
+
 // ============================================================================
 // GROUP 4: SOCIAL, VOTING, & AUTHORITY (Range: 0x000010F0 - 0x0000113F)
 // Buffer: 50 reserved opcodes for future social & governance features

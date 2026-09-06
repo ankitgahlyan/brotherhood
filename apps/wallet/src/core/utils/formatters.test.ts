@@ -8,7 +8,8 @@ import {
 
 describe('address formatters', () => {
   // A testnet address: 0:0000000000000000000000000000000000000000000000000000000000000000
-  const zeroRaw = '0:0000000000000000000000000000000000000000000000000000000000000000';
+  const zeroRaw =
+    '0:0000000000000000000000000000000000000000000000000000000000000000';
   const sampleAddr = Address.parseRaw(zeroRaw);
 
   it('formats testnet wallet address as 0Q...', () => {

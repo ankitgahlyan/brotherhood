@@ -49,27 +49,24 @@ export function useBiometrics(): UseBiometricsResult {
     void refresh();
   }, [refresh]);
 
-  const register = useCallback(
-    async (password: string) => {
-      setError(null);
-      setIsLoading(true);
-      try {
-        const success = await registerBiometrics(password);
-        if (success) {
-          setIsEnabled(true);
-        }
-        return success;
-      } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : 'Failed to register biometrics';
-        setError(msg);
-        throw err;
-      } finally {
-        setIsLoading(false);
+  const register = useCallback(async (password: string) => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const success = await registerBiometrics(password);
+      if (success) {
+        setIsEnabled(true);
       }
-    },
-    [],
-  );
+      return success;
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Failed to register biometrics';
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const authenticate = useCallback(async () => {
     setError(null);

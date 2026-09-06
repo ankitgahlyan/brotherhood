@@ -41,6 +41,7 @@ import { useSetAllowance } from '../hooks/use-set-allowance';
 import { useSpendAllowance } from '../hooks/use-spend-allowance';
 import { useGoldTransfer } from '../hooks/use-gold-transfer';
 import { useProfile } from '../hooks/use-profile';
+import { useNominee } from '../hooks/use-nominee';
 import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
 import { NetworkTab } from './network';
@@ -60,6 +61,7 @@ type Tab =
   | 'claim'
   | 'invite'
   | 'vote'
+  | 'nominee'
   | 'credit'
   | 'allowance'
   | 'gold'
@@ -124,6 +126,7 @@ export const BrotherhoodScreen: React.FC = () => {
   const [profileUsername, setProfileUsername] = useState('');
   const [profileH3Cell, setProfileH3Cell] = useState('');
   const [profileCountry, setProfileCountry] = useState(840);
+  const [nomineeAddressInput, setNomineeAddressInput] = useState('');
   const [authTarget, setAuthTarget] = useState('');
   const [authStatus, setAuthStatus] = useState(0);
 
@@ -145,6 +148,9 @@ export const BrotherhoodScreen: React.FC = () => {
     }
     if (account.data?.invited) {
       account.data.invited.forEach((i) => list.push(i.addressString));
+    }
+    if (account.data?.nominee) {
+      list.push(account.data.nominee.toString());
     }
     return list;
   }, [account.data]);
@@ -350,6 +356,15 @@ export const BrotherhoodScreen: React.FC = () => {
     accountData: account.data,
   });
 
+  const nominee = useNominee({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    nomineeAddress: nomineeAddressInput,
+    network,
+    accountData: account.data,
+  });
+
   const authority = useAuthorityActions({
     wallet: currentWallet,
     walletKit,
@@ -492,6 +507,7 @@ export const BrotherhoodScreen: React.FC = () => {
               'claim',
               'invite',
               'vote',
+              'nominee',
               'credit',
               'allowance',
               'gold',
@@ -683,16 +699,42 @@ export const BrotherhoodScreen: React.FC = () => {
                     <span className="text-muted-foreground">
                       Nominee Successor
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-[11px] text-foreground">
-                        {formatShortWallet(account.data.nominee)}
-                      </span>
-                      {account.data.nominee && (
-                        <CopyButton
-                          address={account.data.nominee}
-                          type="wallet"
-                          size="xs"
-                        />
+                    <div className="flex items-center gap-1.5">
+                      {account.data.nominee ? (
+                        <>
+                          <span className="font-mono text-[11px] text-foreground">
+                            {formatShortWallet(account.data.nominee)}
+                          </span>
+                          <CopyButton
+                            address={account.data.nominee}
+                            type="wallet"
+                            size="xs"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={() => setActiveTab('nominee')}
+                            data-testid="brotherhood-change-nominee-btn"
+                          >
+                            Change
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                            Not Set
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] font-semibold text-primary border-primary/40 hover:bg-primary/10"
+                            onClick={() => setActiveTab('nominee')}
+                            data-testid="brotherhood-set-nominee-btn"
+                          >
+                            🛡️ Set Nominee
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1250,17 +1292,62 @@ export const BrotherhoodScreen: React.FC = () => {
                     Target Member Address
                   </label>
                   {account.data && account.data.votedFor.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowVotedDropdown((prev) => !prev)}
-                      className="text-xs text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>
-                        {showVotedDropdown
-                          ? 'Hide endorsements'
-                          : `Pick from active (${account.data.votedFor.length}) ▾`}
-                      </span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        aria-label="Select from already voted accounts"
+                        value={
+                          account.data.votedFor.some(
+                            (e) => e.addressString === targetAddress.trim(),
+                          )
+                            ? targetAddress.trim()
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const selected = e.target.value;
+                          if (selected) {
+                            setTargetAddress(selected);
+                            const matching = account.data?.votedFor.find(
+                              (item) => item.addressString === selected,
+                            );
+                            if (isUnvote && matching) {
+                              setVoteCount(matching.count);
+                            }
+                          }
+                        }}
+                        className="bg-secondary text-foreground text-xs rounded-lg px-2 py-1 border border-border outline-none max-w-[210px] truncate cursor-pointer hover:bg-secondary/80 font-medium"
+                        data-testid="brotherhood-voted-dropdown-select"
+                      >
+                        <option value="">
+                          Choose from voted ({account.data.votedFor.length}) ▾
+                        </option>
+                        {account.data.votedFor.map((entry) => {
+                          const prof =
+                            resolvedProfiles.data?.[entry.addressString];
+                          const flag = getCountryByCode(prof?.country).flag;
+                          const label = prof?.username
+                            ? `@${prof.username}`
+                            : formatShortContract(entry.addressString);
+                          return (
+                            <option
+                              key={entry.addressString}
+                              value={entry.addressString}
+                            >
+                              {flag} {label} ({entry.count}{' '}
+                              {entry.count === 1 ? 'vote' : 'votes'})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowVotedDropdown((prev) => !prev)}
+                        className="text-xs text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>
+                          {showVotedDropdown ? 'Hide cards' : 'Cards ▾'}
+                        </span>
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -1513,6 +1600,203 @@ export const BrotherhoodScreen: React.FC = () => {
           </div>
         )}
 
+        {/* Nominee Tab */}
+        {activeTab === 'nominee' && (
+          <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+            <div>
+              <h3 className="font-semibold text-base flex items-center gap-1.5">
+                <span>🛡️ Nominee Successor</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The Nominee is the designated successor Account that receives
+                your remaining FI tokens and Gold coins upon Account Closure
+                (such as on death or permanent closure). You can set or change
+                your nominee at any time.
+              </p>
+            </div>
+
+            {/* Current Nominee Status Card */}
+            <div className="p-3.5 bg-secondary/50 rounded-xl border border-border/60 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-medium text-muted-foreground">
+                  Current Designation Status
+                </span>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    account.data?.nominee
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                  }`}
+                >
+                  {account.data?.nominee ? 'Designated' : 'Not Set'}
+                </span>
+              </div>
+
+              {account.data?.nominee ? (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground text-[11px]">
+                      Nominee Address
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-xs font-semibold text-foreground">
+                        {formatShortWallet(account.data.nominee)}
+                      </span>
+                      <CopyButton
+                        address={account.data.nominee}
+                        type="wallet"
+                        size="xs"
+                      />
+                    </div>
+                  </div>
+                  {resolvedProfiles.data?.[account.data.nominee.toString()] && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground text-[11px]">
+                        Profile
+                      </span>
+                      <span className="font-medium text-primary text-xs">
+                        @
+                        {resolvedProfiles.data[account.data.nominee.toString()]
+                          .username || 'member'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                  <span className="font-medium block">
+                    No Nominee Currently Designated
+                  </span>
+                  <p className="text-[11px] opacity-90">
+                    If this account ever closes or in the event of death,
+                    remaining funds cannot be transferred to a designated
+                    successor without an active nominee.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Set / Change Nominee Form */}
+            <div className="space-y-3 border-t border-border pt-3">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-medium text-muted-foreground">
+                    {account.data?.nominee
+                      ? 'New Nominee Address'
+                      : 'Designate Nominee Address'}
+                  </label>
+                  {account.data?.nominee && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNomineeAddressInput(
+                          account.data?.nominee?.toString() ?? '',
+                        )
+                      }
+                      className="text-[11px] text-primary hover:underline cursor-pointer"
+                    >
+                      Pre-fill current
+                    </button>
+                  )}
+                </div>
+
+                <InputScan
+                  value={nomineeAddressInput}
+                  onChange={(val) => setNomineeAddressInput(val)}
+                  placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
+                  data-testid="brotherhood-nominee-input"
+                />
+              </div>
+
+              {/* Quick Suggestions (Inviter, Endorsed Candidates) */}
+              {((account.data?.invitor &&
+                account.data.invitor.toString() !==
+                  nomineeAddressInput.trim()) ||
+                (account.data?.votedFor &&
+                  account.data.votedFor.length > 0)) && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-muted-foreground block">
+                    Quick suggestions:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {account.data?.invitor && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNomineeAddressInput(
+                            account.data?.invitor?.toString() ?? '',
+                          )
+                        }
+                        className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg text-[11px] font-medium border border-border/60 transition cursor-pointer"
+                      >
+                        Inviter ({formatShortWallet(account.data.invitor)})
+                      </button>
+                    )}
+                    {account.data?.votedFor.slice(0, 3).map((entry) => {
+                      const prof = resolvedProfiles.data?.[entry.addressString];
+                      const label = prof?.username
+                        ? `@${prof.username}`
+                        : formatShortContract(entry.addressString);
+                      return (
+                        <button
+                          key={entry.addressString}
+                          type="button"
+                          onClick={() =>
+                            setNomineeAddressInput(entry.addressString)
+                          }
+                          className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg text-[11px] font-medium border border-border/60 transition cursor-pointer"
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Validation or Error Message */}
+              {nominee.validationError && nomineeAddressInput.trim() && (
+                <p className="text-xs text-rose-500 font-medium">
+                  {nominee.validationError}
+                </p>
+              )}
+              {nominee.error && (
+                <p className="text-xs text-rose-500 font-medium">
+                  {nominee.error}
+                </p>
+              )}
+
+              {/* Notice */}
+              <div className="text-[11px] text-muted-foreground space-y-0.5">
+                <p>
+                  • Requires ~0.05 TON network gas; unspent gas is refunded to
+                  your wallet.
+                </p>
+                <p>
+                  • You cannot designate your own owner wallet or wallet
+                  contract.
+                </p>
+              </div>
+
+              {/* Action Button */}
+              <Button
+                onClick={async () => {
+                  await nominee.updateNominee();
+                  setNomineeAddressInput('');
+                }}
+                disabled={Boolean(nominee.validationError) || nominee.isSending}
+                loading={nominee.isSending}
+                fullWidth
+                data-testid="brotherhood-submit-nominee-btn"
+              >
+                {account.data?.nominee
+                  ? 'Update Nominee Successor'
+                  : 'Designate Nominee Successor'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Buy Credit & Repay Debt */}
         {activeTab === 'credit' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
@@ -1543,8 +1827,13 @@ export const BrotherhoodScreen: React.FC = () => {
                   My Borrowing Terms
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  Multiplier: <strong className="text-foreground">{account.data?.multiplier ?? 1}x</strong>
-                  {account.data?.creditMaturity ? ` • Due: ${formatDate(account.data.creditMaturity)}` : ''}
+                  Multiplier:{' '}
+                  <strong className="text-foreground">
+                    {account.data?.multiplier ?? 1}x
+                  </strong>
+                  {account.data?.creditMaturity
+                    ? ` • Due: ${formatDate(account.data.creditMaturity)}`
+                    : ''}
                 </span>
               </div>
 
@@ -1580,10 +1869,16 @@ export const BrotherhoodScreen: React.FC = () => {
                   fullWidth
                   onClick={() => {
                     const days = parseInt(creditMaturityDays, 10) || 30;
-                    const maturitySec = Math.floor(Date.now() / 1000) + days * 86400;
-                    creditTerms.setCreditNeed(creditNeedInput || '0', maturitySec);
+                    const maturitySec =
+                      Math.floor(Date.now() / 1000) + days * 86400;
+                    creditTerms.setCreditNeed(
+                      creditNeedInput || '0',
+                      maturitySec,
+                    );
                   }}
-                  disabled={!canOperate || creditTerms.isSending || !creditNeedInput}
+                  disabled={
+                    !canOperate || creditTerms.isSending || !creditNeedInput
+                  }
                   loading={creditTerms.isSending}
                   data-testid="brotherhood-set-credit-need-submit"
                 >
@@ -1613,7 +1908,11 @@ export const BrotherhoodScreen: React.FC = () => {
                       const mult = parseInt(creditMultiplierInput, 10) || 1;
                       creditTerms.setMultiplier(mult);
                     }}
-                    disabled={!canOperate || creditTerms.isSending || !creditMultiplierInput}
+                    disabled={
+                      !canOperate ||
+                      creditTerms.isSending ||
+                      !creditMultiplierInput
+                    }
                     loading={creditTerms.isSending}
                     className="shrink-0"
                     data-testid="brotherhood-set-multiplier-submit"
@@ -1954,13 +2253,19 @@ export const BrotherhoodScreen: React.FC = () => {
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                 <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">Telegram Handle</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Telegram Handle
+                  </span>
                   <span className="font-medium text-foreground text-xs">
-                    {account.data?.username ? `@${account.data.username}` : 'Not registered'}
+                    {account.data?.username
+                      ? `@${account.data.username}`
+                      : 'Not registered'}
                   </span>
                 </div>
                 <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">Location (H3 Cell)</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Location (H3 Cell)
+                  </span>
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-mono font-medium text-foreground text-xs truncate">
                       {account.data?.h3Cell || 'Not registered'}
@@ -1979,7 +2284,9 @@ export const BrotherhoodScreen: React.FC = () => {
                   </div>
                 </div>
                 <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">Country</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Country
+                  </span>
                   <span className="font-medium text-foreground text-xs">
                     {account.data?.country
                       ? `${getCountryByCode(account.data.country)?.name || 'Country'} (${account.data.country})`

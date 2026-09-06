@@ -334,11 +334,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                   {formatShortWallet(data.invitor)}
                 </span>
                 {data.invitor && (
-                  <CopyButton
-                    address={data.invitor}
-                    type="wallet"
-                    size="xs"
-                  />
+                  <CopyButton address={data.invitor} type="wallet" size="xs" />
                 )}
               </div>
             </div>
@@ -349,11 +345,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                   {formatShortWallet(data.invitor0)}
                 </span>
                 {data.invitor0 && (
-                  <CopyButton
-                    address={data.invitor0}
-                    type="wallet"
-                    size="xs"
-                  />
+                  <CopyButton address={data.invitor0} type="wallet" size="xs" />
                 )}
               </div>
             </div>
@@ -364,11 +356,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                   {formatShortWallet(data.nominee)}
                 </span>
                 {data.nominee && (
-                  <CopyButton
-                    address={data.nominee}
-                    type="wallet"
-                    size="xs"
-                  />
+                  <CopyButton address={data.nominee} type="wallet" size="xs" />
                 )}
               </div>
             </div>

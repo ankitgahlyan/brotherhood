@@ -94,7 +94,8 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
 
       <Modal.Body className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          Enter a BrotherHood personal token minter address to track its balance in your assets.
+          Enter a BrotherHood personal token minter address to track its balance
+          in your assets.
         </p>
 
         <form onSubmit={handleValidate} className="space-y-3">
@@ -142,7 +143,8 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-foreground">
-                  {verifiedToken.name || 'Personal Token'} ({verifiedToken.symbol})
+                  {verifiedToken.name || 'Personal Token'} (
+                  {verifiedToken.symbol})
                 </div>
                 <div className="text-muted-foreground tabular-nums">
                   Your Balance:{' '}

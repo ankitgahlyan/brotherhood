@@ -9,11 +9,7 @@
 import { Base64ToHex } from '@ton/walletkit';
 import type { Action, Event } from '@ton/walletkit';
 
-import {
-  formatLargeValue,
-  formatUnits,
-  sameAddress,
-} from '@/core/utils';
+import { formatLargeValue, formatUnits, sameAddress } from '@/core/utils';
 import { getExplorerTxUrl, type ExplorerChoice } from '@/core/explorer';
 import type { NetworkType } from '@demo/wallet-core';
 

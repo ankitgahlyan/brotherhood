@@ -52,7 +52,8 @@ interface AssetRows {
 /** Builds the TON row + a row per held jetton. Shared by the dashboard preview and the full assets page. */
 export const useAssetRows = (): AssetRows => {
   const { balance, currentWallet, address, getActiveWallet } = useWallet();
-  const walletAddress = address || currentWallet?.address || getActiveWallet()?.address;
+  const walletAddress =
+    address || currentWallet?.address || getActiveWallet()?.address;
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const { isMember } = useIsNetworkMember();
@@ -134,8 +135,8 @@ export const useAssetRows = (): AssetRows => {
       const isFi = isFiJetton(jetton);
       const isUserPersonal = Boolean(
         personalMinterAddress &&
-          normalizeAddress(jetton.address) ===
-            normalizeAddress(personalMinterAddress),
+        normalizeAddress(jetton.address) ===
+          normalizeAddress(personalMinterAddress),
       );
       const isVerifiedPersonal = Boolean(
         verifiedPersonalMinterSet?.has(jetton.address),

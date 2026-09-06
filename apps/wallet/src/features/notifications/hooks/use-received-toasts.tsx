@@ -130,4 +130,3 @@ export const useReceivedToasts = (): void => {
     }
   }, [userJettons, lastJettonsUpdate, discoverTokens]);
 };
-

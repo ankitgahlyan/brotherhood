@@ -37,7 +37,8 @@ describe('QrScanner Component', () => {
   });
 
   it('parses ton transfer URLs correctly', () => {
-    const rawUrl = 'ton://transfer/EQCGScrZe1xKqqPu1GtZtUdtJRFLXdUx7zsBoRwGc8u_guTB';
+    const rawUrl =
+      'ton://transfer/EQCGScrZe1xKqqPu1GtZtUdtJRFLXdUx7zsBoRwGc8u_guTB';
     let address = rawUrl.trim();
     const tonTransferMatch = address.match(/ton:\/\/transfer\/(.+)/);
     if (tonTransferMatch) {

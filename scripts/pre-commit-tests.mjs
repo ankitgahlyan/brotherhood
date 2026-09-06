@@ -24,7 +24,10 @@ function getChangedFiles() {
     ).trim();
 
     if (stagedOutput) {
-      return stagedOutput.split('\n').map((f) => f.trim()).filter(Boolean);
+      return stagedOutput
+        .split('\n')
+        .map((f) => f.trim())
+        .filter(Boolean);
     }
 
     // Fallback: check working tree vs HEAD if run standalone
@@ -33,16 +36,25 @@ function getChangedFiles() {
     }).trim();
 
     if (headOutput) {
-      return headOutput.split('\n').map((f) => f.trim()).filter(Boolean);
+      return headOutput
+        .split('\n')
+        .map((f) => f.trim())
+        .filter(Boolean);
     }
 
     // Fallback: untracked files
-    const untrackedOutput = execSync('git ls-files --others --exclude-standard', {
-      encoding: 'utf-8',
-    }).trim();
+    const untrackedOutput = execSync(
+      'git ls-files --others --exclude-standard',
+      {
+        encoding: 'utf-8',
+      },
+    ).trim();
 
     if (untrackedOutput) {
-      return untrackedOutput.split('\n').map((f) => f.trim()).filter(Boolean);
+      return untrackedOutput
+        .split('\n')
+        .map((f) => f.trim())
+        .filter(Boolean);
     }
 
     return [];
@@ -60,7 +72,9 @@ async function main() {
     process.exit(0);
   }
 
-  console.log(`\x1b[32m[pre-commit] Detected ${changedFiles.length} changed file(s):\x1b[0m`);
+  console.log(
+    `\x1b[32m[pre-commit] Detected ${changedFiles.length} changed file(s):\x1b[0m`,
+  );
   changedFiles.forEach((file) => console.log(`  • ${file}`));
   console.log('');
 
@@ -72,12 +86,15 @@ async function main() {
       f === 'libraries.toml',
   );
 
-  const tolkTestFiles = changedFiles.filter((f) =>
-    f.startsWith('contracts/tests/') && f.endsWith('.test.tolk'),
+  const tolkTestFiles = changedFiles.filter(
+    (f) => f.startsWith('contracts/tests/') && f.endsWith('.test.tolk'),
   );
 
   const otherTolkFiles = changedFiles.filter(
-    (f) => f.endsWith('.tolk') && !tolkContractFiles.includes(f) && !tolkTestFiles.includes(f),
+    (f) =>
+      f.endsWith('.tolk') &&
+      !tolkContractFiles.includes(f) &&
+      !tolkTestFiles.includes(f),
   );
 
   const hasTolkChanges =
@@ -86,13 +103,15 @@ async function main() {
     otherTolkFiles.length > 0;
 
   // TypeScript / JavaScript / Frontend file categorisation
-  const tsJsFiles = changedFiles.filter((f) =>
-    /\.(ts|tsx|js|jsx|mjs|cjs|json)$/i.test(f) && !f.endsWith('.tolk'),
+  const tsJsFiles = changedFiles.filter(
+    (f) => /\.(ts|tsx|js|jsx|mjs|cjs|json)$/i.test(f) && !f.endsWith('.tolk'),
   );
 
   // 1. Run Tolk checks & tests if affected
   if (hasTolkChanges) {
-    console.log('\x1b[34m[Tolk / Acton] Running affected Tolk checks and tests...\x1b[0m');
+    console.log(
+      '\x1b[34m[Tolk / Acton] Running affected Tolk checks and tests...\x1b[0m',
+    );
     run('acton fmt --check');
     run('acton check');
 
@@ -100,28 +119,41 @@ async function main() {
       console.log('Tolk contract source changed: running all Tolk tests...');
       run('acton test');
     } else if (tolkTestFiles.length > 0) {
-      console.log(`Running ${tolkTestFiles.length} changed Tolk test file(s)...`);
+      console.log(
+        `Running ${tolkTestFiles.length} changed Tolk test file(s)...`,
+      );
       run(`acton test ${tolkTestFiles.join(' ')}`);
     }
     console.log('');
   } else {
-    console.log('\x1b[90m[Tolk / Acton] No Tolk contract files changed. Skipping Acton tests.\x1b[0m');
+    console.log(
+      '\x1b[90m[Tolk / Acton] No Tolk contract files changed. Skipping Acton tests.\x1b[0m',
+    );
   }
 
   // 2. Run TypeScript / JavaScript tests if affected
   if (tsJsFiles.length > 0) {
-    console.log('\x1b[34m[TypeScript / Bun] Running affected TS/JS tests...\x1b[0m');
+    console.log(
+      '\x1b[34m[TypeScript / Bun] Running affected TS/JS tests...\x1b[0m',
+    );
     // bun test --changed runs test files affected by changed files according to git
     run('bun test --changed=HEAD --pass-with-no-tests');
     console.log('');
   } else {
-    console.log('\x1b[90m[TypeScript / Bun] No TS/JS files changed. Skipping Bun tests.\x1b[0m');
+    console.log(
+      '\x1b[90m[TypeScript / Bun] No TS/JS files changed. Skipping Bun tests.\x1b[0m',
+    );
   }
 
-  console.log('\x1b[32m✔ All affected tests and checks passed successfully!\x1b[0m');
+  console.log(
+    '\x1b[32m✔ All affected tests and checks passed successfully!\x1b[0m',
+  );
 }
 
 main().catch((err) => {
-  console.error('\x1b[31m✖ Tests or checks failed:\x1b[0m', err?.message || err);
+  console.error(
+    '\x1b[31m✖ Tests or checks failed:\x1b[0m',
+    err?.message || err,
+  );
   process.exit(1);
 });

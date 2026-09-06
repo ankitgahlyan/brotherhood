@@ -82,8 +82,8 @@ export const ActivationBanner: React.FC<ActivationBannerProps> = ({
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          New members undergo a mandatory 24-hour security activation delay before
-          write operations unlock. Full network operations will unlock on{' '}
+          New members undergo a mandatory 24-hour security activation delay
+          before write operations unlock. Full network operations will unlock on{' '}
           <strong className="text-foreground">{unlockDateStr}</strong>.
           Currently in view-only mode.
         </p>

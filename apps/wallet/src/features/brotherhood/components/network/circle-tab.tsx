@@ -110,15 +110,24 @@ export const CircleTab: React.FC<CircleTabProps> = ({
                       }
                     }}
                     onKeyDown={(e) => {
-                      if ((e.key === 'Enter' || e.key === ' ') && prof?.username) {
+                      if (
+                        (e.key === 'Enter' || e.key === ' ') &&
+                        prof?.username
+                      ) {
                         e.stopPropagation();
                         openTelegramProfile(prof.username);
                       }
                     }}
                     className={`font-semibold text-sm text-foreground transition-colors ${
-                      prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : 'group-hover:text-primary'
+                      prof?.username
+                        ? 'hover:text-primary hover:underline cursor-pointer'
+                        : 'group-hover:text-primary'
                     }`}
-                    title={prof?.username ? `Open @${prof.username} on Telegram` : undefined}
+                    title={
+                      prof?.username
+                        ? `Open @${prof.username} on Telegram`
+                        : undefined
+                    }
                   >
                     {username}
                   </span>
