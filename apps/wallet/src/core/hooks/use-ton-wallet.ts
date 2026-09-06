@@ -30,7 +30,7 @@ interface UseTonWalletReturn {
   createLedgerWallet: (network?: NetworkType, name?: string) => Promise<void>;
   importWallet: (
     mnemonic: string[],
-    version?: 'v5r1' | 'v4r2',
+    version?: 'v5r1',
     network?: NetworkType,
     subwalletId?: number,
     name?: string,
@@ -110,7 +110,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
   const importWallet = useCallback(
     async (
       mnemonic: string[],
-      version?: 'v5r1' | 'v4r2',
+      version?: 'v5r1',
       network?: NetworkType,
       subwalletId?: number,
       name?: string,

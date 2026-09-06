@@ -18,26 +18,20 @@ const test = testWithUIFixture();
 // Test mnemonic - this should be a valid test mnemonic for e2e tests
 const TEST_MNEMONIC = process.env.WALLET_MNEMONIC ?? '';
 
-type WalletVersion = 'v4r2' | 'v5r1';
 type InterfaceType = 'mnemonic' | 'signer';
 
 interface ImportWalletTestCase {
   network: NetworkType;
-  version: WalletVersion;
   interfaceType: InterfaceType;
 }
 
 const testMatrix: ImportWalletTestCase[] = [
   // Mainnet combinations
-  { network: 'mainnet', version: 'v4r2', interfaceType: 'mnemonic' },
-  { network: 'mainnet', version: 'v4r2', interfaceType: 'signer' },
-  { network: 'mainnet', version: 'v5r1', interfaceType: 'mnemonic' },
-  { network: 'mainnet', version: 'v5r1', interfaceType: 'signer' },
+  { network: 'mainnet', interfaceType: 'mnemonic' },
+  { network: 'mainnet', interfaceType: 'signer' },
   // Testnet combinations
-  { network: 'testnet', version: 'v4r2', interfaceType: 'mnemonic' },
-  { network: 'testnet', version: 'v4r2', interfaceType: 'signer' },
-  { network: 'testnet', version: 'v5r1', interfaceType: 'mnemonic' },
-  { network: 'testnet', version: 'v5r1', interfaceType: 'signer' },
+  { network: 'testnet', interfaceType: 'mnemonic' },
+  { network: 'testnet', interfaceType: 'signer' },
 ];
 
 /** Welcome → "Add wallet" → "Recovery phrase" → set a password → land on the import screen. */
@@ -59,17 +53,12 @@ test.describe('Import Wallet Flow', () => {
   });
 
   for (const testCase of testMatrix) {
-    const testName = `Import wallet - ${testCase.network} / ${testCase.version} / ${testCase.interfaceType}`;
+    const testName = `Import wallet - ${testCase.network} / ${testCase.interfaceType}`;
 
     test(testName, async ({ page }) => {
       await page.getByTestId(`network-select-${testCase.network}`).click();
       await expect(
         page.getByTestId(`network-select-${testCase.network}`),
-      ).toBeEnabled();
-
-      await page.getByTestId(`version-select-${testCase.version}`).click();
-      await expect(
-        page.getByTestId(`version-select-${testCase.version}`),
       ).toBeEnabled();
 
       await page

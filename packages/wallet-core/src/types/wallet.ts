@@ -36,6 +36,7 @@ export interface SavedWallet {
   walletInterfaceType: 'signer' | 'mnemonic' | 'ledger';
   version?: 'v5r1' | 'v4r2';
   network: NetworkType;
+  subwalletId?: number;
   createdAt: number;
   /** WalletKit wallet ID */
   kitWalletId?: string;

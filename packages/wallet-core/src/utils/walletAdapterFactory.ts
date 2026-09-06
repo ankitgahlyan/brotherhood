@@ -13,7 +13,6 @@ import type {
 } from '@ton/walletkit';
 import {
   WalletV5R1Adapter,
-  WalletV4R2Adapter,
   DefaultSignature,
   MnemonicToKeyPair,
   Uint8ArrayToHex,
@@ -70,7 +69,7 @@ export async function createWalletAdapter(
     storedLedgerConfig,
     network,
     walletKit,
-    version = 'v5r1',
+    version: _version = 'v5r1',
     walletId,
     createLedgerTransport,
   } = params;
@@ -104,18 +103,12 @@ export async function createWalletAdapter(
         publicKey: Uint8ArrayToHex(keyPair.publicKey),
       };
 
-      if (version === 'v5r1') {
-        return await WalletV5R1Adapter.create(customSigner, {
-          client: walletKit.getApiClient(chainNetwork),
-          network: chainNetwork,
-          walletId: w5WalletId,
-        });
-      } else {
-        return await WalletV4R2Adapter.create(customSigner, {
-          client: walletKit.getApiClient(chainNetwork),
-          network: chainNetwork,
-        });
-      }
+      return await WalletV5R1Adapter.create(customSigner, {
+        client: walletKit.getApiClient(chainNetwork),
+        network: chainNetwork,
+        domain: domain,
+        walletId: w5WalletId,
+      });
     }
     case 'mnemonic': {
       if (!mnemonic) {
@@ -124,20 +117,12 @@ export async function createWalletAdapter(
 
       const signer = await Signer.fromMnemonic(mnemonic, { type: 'ton' });
 
-      if (version === 'v5r1') {
-        return await WalletV5R1Adapter.create(signer, {
-          client: walletKit.getApiClient(chainNetwork),
-          network: chainNetwork,
-          domain: domain,
-          walletId: w5WalletId,
-        });
-      } else {
-        return await WalletV4R2Adapter.create(signer, {
-          client: walletKit.getApiClient(chainNetwork),
-          network: chainNetwork,
-          domain: domain,
-        });
-      }
+      return await WalletV5R1Adapter.create(signer, {
+        client: walletKit.getApiClient(chainNetwork),
+        network: chainNetwork,
+        domain: domain,
+        walletId: w5WalletId,
+      });
     }
     case 'ledger': {
       if (!createLedgerTransport) {

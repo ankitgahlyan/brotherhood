@@ -105,7 +105,7 @@ export const createWalletManagementSlice =
     createWallet: async (
       mnemonic: string[],
       name?: string,
-      version?: 'v5r1' | 'v4r2',
+      version?: 'v5r1',
       network?: NetworkType,
       subwalletId?: number,
     ) => {
@@ -132,9 +132,12 @@ export const createWalletManagementSlice =
           state.auth.currentPassword,
         );
 
-        const walletVersion = version || 'v5r1';
-
+        const walletVersion = 'v5r1';
         const walletNetwork = network || 'testnet';
+        const resolvedSubwalletId =
+          subwalletId ??
+          (walletNetwork === 'testnet' ? 2147483645 : 2147483409);
+
         const walletAdapter = await createWalletAdapter({
           mnemonic,
           useWalletInterfaceType:
@@ -144,7 +147,7 @@ export const createWalletManagementSlice =
           network: walletNetwork,
           walletKit: state.walletCore.walletKit,
           version: walletVersion,
-          walletId: subwalletId,
+          walletId: resolvedSubwalletId,
         });
 
         const wallet =
@@ -166,6 +169,7 @@ export const createWalletManagementSlice =
           walletInterfaceType: state.auth.useWalletInterfaceType || 'mnemonic',
           version: walletVersion,
           network: walletNetwork,
+          subwalletId: resolvedSubwalletId,
           createdAt: Date.now(),
           kitWalletId: wallet.getWalletId(),
         };
@@ -197,7 +201,7 @@ export const createWalletManagementSlice =
     importWallet: async (
       mnemonic: string[],
       name?: string,
-      version?: 'v5r1' | 'v4r2',
+      version?: 'v5r1',
       network?: NetworkType,
       subwalletId?: number,
     ) => {
@@ -1002,27 +1006,20 @@ export const createWalletManagementSlice =
         );
         const mnemonic = JSON.parse(mnemonicJson) as string[];
 
-        if (savedWallet.version === 'v5r1') {
-          walletAdapter = await createWalletAdapter({
-            mnemonic,
-            useWalletInterfaceType: savedWallet.walletInterfaceType,
-            ledgerAccountNumber: state.auth.ledgerAccountNumber,
-            storedLedgerConfig: undefined,
-            network: walletNetwork,
-            walletKit,
-            version: 'v5r1',
-          });
-        } else {
-          walletAdapter = await createWalletAdapter({
-            mnemonic,
-            useWalletInterfaceType: savedWallet.walletInterfaceType,
-            ledgerAccountNumber: state.auth.ledgerAccountNumber,
-            storedLedgerConfig: undefined,
-            network: walletNetwork,
-            walletKit,
-            version: savedWallet.version || 'v4r2',
-          });
-        }
+        const resolvedSubwalletId =
+          savedWallet.subwalletId ??
+          (walletNetwork === 'testnet' ? 2147483645 : 2147483409);
+
+        walletAdapter = await createWalletAdapter({
+          mnemonic,
+          useWalletInterfaceType: savedWallet.walletInterfaceType,
+          ledgerAccountNumber: state.auth.ledgerAccountNumber,
+          storedLedgerConfig: undefined,
+          network: walletNetwork,
+          walletKit,
+          version: 'v5r1',
+          walletId: resolvedSubwalletId,
+        });
       }
 
       return walletAdapter;

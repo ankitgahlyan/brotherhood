@@ -17,4 +17,3 @@ export * from './components/mnemonic-skeleton';
 export * from './components/receive-modal';
 export * from './components/network-selector';
 export * from './utils/bip39-english';
-export * from './utils/wallet-scanner';
