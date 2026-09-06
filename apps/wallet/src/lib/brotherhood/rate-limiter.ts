@@ -6,6 +6,8 @@
  *
  */
 
+import { notifyRateLimit429 } from '@/core/lib/dev-telemetry';
+
 export interface RateLimiterOptions {
   apiKey?: string;
   maxRetries?: number;
@@ -124,6 +126,7 @@ export class ToncenterQueue {
     console.warn(
       `[ToncenterRateLimiter] Hit rate limit (429). Backing off queue for ${delay}ms (attempt #${this.consecutive429s})...`,
     );
+    notifyRateLimit429();
   }
 
   private async process() {

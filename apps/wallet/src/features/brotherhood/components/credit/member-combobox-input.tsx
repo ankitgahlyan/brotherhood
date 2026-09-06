@@ -112,8 +112,9 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
   );
 
   const handleSelect = (member: SelectableMemberOption) => {
-    const targetAddr = member.ownerAddress || member.contractAddress;
-    onChange(targetAddr);
+    const raw = member.ownerAddress || member.contractAddress;
+    const targetAddr = formatWalletAddress(raw, false);
+    onChange(targetAddr || raw);
     onSelectMember?.(member);
     setIsOpen(false);
     setSearchQuery('');

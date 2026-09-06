@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 
 import { DashboardActionButton } from '../dashboard-action-button';
-import { SendIcon, ReceiveIcon } from '@/core/components/ui/icons';
+import { SendIcon, ReceiveIcon, VoteIcon } from '@/core/components/ui/icons';
 import { ReceiveModal } from '@/features/wallets/components/receive-modal';
 import { useIsNetworkMember, NonMemberCard } from '@/features/brotherhood';
 
@@ -21,18 +21,27 @@ export const DashboardActions: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-stretch gap-2">
+      <div className="flex items-stretch gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <DashboardActionButton
           icon={<SendIcon className="w-6 h-6 text-primary" />}
           label="Send"
           onClick={() => navigate('/send')}
           testId="send-button"
+          className="min-w-[105px] shrink-0 snap-start"
         />
         <DashboardActionButton
           icon={<ReceiveIcon className="w-6 h-6 text-primary" />}
           label="Receive"
           onClick={() => setIsReceiveOpen(true)}
           testId="receive-button"
+          className="min-w-[105px] shrink-0 snap-start"
+        />
+        <DashboardActionButton
+          icon={<VoteIcon className="w-6 h-6 text-primary" />}
+          label="Vote"
+          onClick={() => navigate('/brotherhood', { search: { tab: 'vote' } })}
+          testId="vote-button"
+          className="min-w-[105px] shrink-0 snap-start"
         />
       </div>
 

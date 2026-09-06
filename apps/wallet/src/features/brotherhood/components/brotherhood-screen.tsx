@@ -13,7 +13,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { useNavigate } from '@/core/routing';
+import { useNavigate, useLocation } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
@@ -25,7 +25,7 @@ import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
 import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
-import { useFormatAddress } from '@/core/utils/formatters';
+import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
 import { NonMemberCard } from './non-member-card';
 import { ActivationBanner } from './activation-banner';
 import { useIsNetworkMember } from '../hooks/use-is-network-member';
@@ -95,6 +95,7 @@ function formatDate(timestampSec: number | undefined | null): string {
 
 export const BrotherhoodScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const walletKit = useWalletKit();
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const network =
@@ -112,7 +113,52 @@ export const BrotherhoodScreen: React.FC = () => {
     return formatContractAddress(addr, true, 4);
   };
 
-  const [activeTab, setActiveTab] = useState<Tab>('account');
+  const initialTab = useMemo<Tab>(() => {
+    const searchParams = new URLSearchParams(location.search as any);
+    const requestedTab = searchParams.get('tab') as Tab;
+    const validTabs: Tab[] = [
+      'account',
+      'network',
+      'burn',
+      'claim',
+      'invite',
+      'vote',
+      'nominee',
+      'credit',
+      'allowance',
+      'gold',
+      'profile',
+      'authority',
+    ];
+    if (requestedTab && validTabs.includes(requestedTab)) {
+      return requestedTab;
+    }
+    return 'account';
+  }, [location.search]);
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search as any);
+    const requestedTab = searchParams.get('tab') as Tab;
+    const validTabs: Tab[] = [
+      'account',
+      'network',
+      'burn',
+      'claim',
+      'invite',
+      'vote',
+      'nominee',
+      'credit',
+      'allowance',
+      'gold',
+      'profile',
+      'authority',
+    ];
+    if (requestedTab && validTabs.includes(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [location.search]);
 
   // Forms state
   const [recipient, setRecipient] = useState('');
@@ -142,6 +188,9 @@ export const BrotherhoodScreen: React.FC = () => {
   const [profileSubTab, setProfileSubTab] = useState<
     'username' | 'location' | 'country'
   >('username');
+  const [creditSubTab, setCreditSubTab] = useState<
+    'buy' | 'seekers' | 'terms' | 'repay'
+  >('buy');
   const [nomineeAddressInput, setNomineeAddressInput] = useState('');
   const [authTarget, setAuthTarget] = useState('');
   const [authStatus, setAuthStatus] = useState(0);
@@ -175,13 +224,6 @@ export const BrotherhoodScreen: React.FC = () => {
     }
   }, [account.data]);
 
-  const candidateVotedEntry = useMemo(() => {
-    if (!account.data || !targetAddress.trim()) return undefined;
-    return account.data.votedFor.find(
-      (e) => e.addressString === targetAddress.trim(),
-    );
-  }, [account.data, targetAddress]);
-
   // Address batch resolver for voted candidates & invitees
   const addressesToResolve = useMemo(() => {
     const list: string[] = [];
@@ -198,6 +240,36 @@ export const BrotherhoodScreen: React.FC = () => {
   }, [account.data]);
 
   const resolvedProfiles = useMemberProfiles(addressesToResolve, network);
+
+  const getCandidateWalletAddress = useCallback(
+    (contractAddressStr: string) => {
+      const prof = resolvedProfiles.data?.[contractAddressStr];
+      if (prof?.ownerAddress) {
+        return formatWalletAddress(prof.ownerAddress, false);
+      }
+      return formatWalletAddress(contractAddressStr, false);
+    },
+    [resolvedProfiles.data, formatWalletAddress],
+  );
+
+  const candidateVotedEntry = useMemo(() => {
+    if (!account.data || !targetAddress.trim()) return undefined;
+    const trimmed = targetAddress.trim();
+    return account.data.votedFor.find((e) => {
+      if (sameAddress(e.addressString, trimmed)) return true;
+      const prof = resolvedProfiles.data?.[e.addressString];
+      if (prof?.ownerAddress && sameAddress(prof.ownerAddress, trimmed))
+        return true;
+      const walletAddr = getCandidateWalletAddress(e.addressString);
+      if (sameAddress(walletAddr, trimmed)) return true;
+      return false;
+    });
+  }, [
+    account.data,
+    targetAddress,
+    resolvedProfiles.data,
+    getCandidateWalletAddress,
+  ]);
 
   const creditFormRef = useRef<HTMLDivElement>(null);
   const [discoveredRingProfiles, setDiscoveredRingProfiles] = useState<
@@ -254,7 +326,7 @@ export const BrotherhoodScreen: React.FC = () => {
 
   const handleSendCredit = useCallback(
     (ownerAddress: string, creditNeedNano: bigint) => {
-      setRecipient(ownerAddress);
+      setRecipient(formatWalletAddress(ownerAddress, false));
       if (account.data) {
         const maxAvailable = account.data.jettonBalance;
         const targetNano =
@@ -273,12 +345,13 @@ export const BrotherhoodScreen: React.FC = () => {
           setAmount(amountStr);
         }
       }
+      setCreditSubTab('buy');
       creditFormRef.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
     },
-    [account.data],
+    [account.data, formatWalletAddress],
   );
 
   // Credit terms state (Credit Need & Multiplier)
@@ -836,10 +909,10 @@ export const BrotherhoodScreen: React.FC = () => {
               if (action === 'send') {
                 navigate('/send');
               } else if (action === 'vote') {
-                setTargetAddress(target);
+                setTargetAddress(formatWalletAddress(target, false));
                 setActiveTab('vote');
               } else if (action === 'allowance') {
-                setGrantee(target);
+                setGrantee(formatWalletAddress(target, false));
                 setActiveTab('allowance');
               }
             }}
@@ -1160,6 +1233,9 @@ export const BrotherhoodScreen: React.FC = () => {
                   {account.data.votedFor.map((entry) => {
                     const prof = resolvedProfiles.data?.[entry.addressString];
                     const candCountry = getCountryByCode(prof?.country);
+                    const candidateWallet = getCandidateWalletAddress(
+                      entry.addressString,
+                    );
                     return (
                       <div
                         key={entry.addressString}
@@ -1204,11 +1280,11 @@ export const BrotherhoodScreen: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="font-mono text-[10px] text-muted-foreground truncate">
-                              {formatShortContract(entry.addressString)}
+                              {formatShortWallet(candidateWallet)}
                             </span>
                             <CopyButton
-                              address={entry.addressString}
-                              type="contract"
+                              address={candidateWallet}
+                              type="wallet"
                               size="xs"
                             />
                           </div>
@@ -1222,7 +1298,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             size="sm"
                             variant="secondary"
                             onClick={() => {
-                              setTargetAddress(entry.addressString);
+                              setTargetAddress(candidateWallet);
                               setIsUnvote(true);
                               setVoteCount(entry.count);
                             }}
@@ -1281,16 +1357,25 @@ export const BrotherhoodScreen: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsUnvote(true);
+                    const isMatchingAny = account.data?.votedFor.some((e) => {
+                      const walletAddr = getCandidateWalletAddress(
+                        e.addressString,
+                      );
+                      return (
+                        sameAddress(walletAddr, targetAddress) ||
+                        sameAddress(e.addressString, targetAddress)
+                      );
+                    });
                     if (
-                      (!targetAddress.trim() ||
-                        !account.data?.votedFor.some(
-                          (e) => e.addressString === targetAddress.trim(),
-                        )) &&
+                      (!targetAddress.trim() || !isMatchingAny) &&
                       account.data?.votedFor &&
                       account.data.votedFor.length > 0
                     ) {
                       const first = account.data.votedFor[0];
-                      setTargetAddress(first.addressString);
+                      const walletAddr = getCandidateWalletAddress(
+                        first.addressString,
+                      );
+                      setTargetAddress(walletAddr);
                       setVoteCount(first.count);
                     } else if (candidateVotedEntry) {
                       setVoteCount((c) =>
@@ -1339,22 +1424,54 @@ export const BrotherhoodScreen: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <select
                           aria-label="Select candidate account"
-                          value={
-                            account.data.votedFor.some(
-                              (e) => e.addressString === targetAddress.trim(),
-                            ) ||
-                            account.data.invited.some(
-                              (e) => e.addressString === targetAddress.trim(),
-                            )
-                              ? targetAddress.trim()
-                              : ''
-                          }
+                          value={(() => {
+                            if (!targetAddress.trim()) return '';
+                            const matchVoted = account.data.votedFor.find(
+                              (e) => {
+                                const walletAddr = getCandidateWalletAddress(
+                                  e.addressString,
+                                );
+                                return (
+                                  sameAddress(walletAddr, targetAddress) ||
+                                  sameAddress(e.addressString, targetAddress)
+                                );
+                              },
+                            );
+                            if (matchVoted)
+                              return getCandidateWalletAddress(
+                                matchVoted.addressString,
+                              );
+                            const matchInvited = account.data.invited.find(
+                              (e) => {
+                                const walletAddr = getCandidateWalletAddress(
+                                  e.addressString,
+                                );
+                                return (
+                                  sameAddress(walletAddr, targetAddress) ||
+                                  sameAddress(e.addressString, targetAddress)
+                                );
+                              },
+                            );
+                            if (matchInvited)
+                              return getCandidateWalletAddress(
+                                matchInvited.addressString,
+                              );
+                            return '';
+                          })()}
                           onChange={(e) => {
                             const selected = e.target.value;
                             if (selected) {
                               setTargetAddress(selected);
                               const matching = account.data?.votedFor.find(
-                                (item) => item.addressString === selected,
+                                (item) => {
+                                  const walletAddr = getCandidateWalletAddress(
+                                    item.addressString,
+                                  );
+                                  return (
+                                    sameAddress(walletAddr, selected) ||
+                                    sameAddress(item.addressString, selected)
+                                  );
+                                },
                               );
                               if (isUnvote && matching) {
                                 setVoteCount(matching.count);
@@ -1380,13 +1497,16 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const flag = getCountryByCode(
                                   prof?.country,
                                 ).flag;
+                                const walletAddr = getCandidateWalletAddress(
+                                  entry.addressString,
+                                );
                                 const label = prof?.username
                                   ? `@${prof.username}`
-                                  : formatShortContract(entry.addressString);
+                                  : formatShortWallet(walletAddr);
                                 return (
                                   <option
                                     key={`voted-${entry.addressString}`}
-                                    value={entry.addressString}
+                                    value={walletAddr}
                                   >
                                     {flag} {label} ({entry.count}{' '}
                                     {entry.count === 1 ? 'vote' : 'votes'})
@@ -1405,13 +1525,16 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const flag = getCountryByCode(
                                   prof?.country,
                                 ).flag;
+                                const walletAddr = getCandidateWalletAddress(
+                                  entry.addressString,
+                                );
                                 const label = prof?.username
                                   ? `@${prof.username}`
-                                  : formatShortContract(entry.addressString);
+                                  : formatShortWallet(walletAddr);
                                 return (
                                   <option
                                     key={`circle-${entry.addressString}`}
-                                    value={entry.addressString}
+                                    value={walletAddr}
                                   >
                                     {flag} {label} (Circle)
                                   </option>
@@ -1437,9 +1560,15 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={targetAddress}
                   onChange={(val) => {
                     setTargetAddress(val);
-                    const matching = account.data?.votedFor.find(
-                      (e) => e.addressString === val.trim(),
-                    );
+                    const matching = account.data?.votedFor.find((e) => {
+                      const walletAddr = getCandidateWalletAddress(
+                        e.addressString,
+                      );
+                      return (
+                        sameAddress(walletAddr, val.trim()) ||
+                        sameAddress(e.addressString, val.trim())
+                      );
+                    });
                     if (isUnvote && matching) {
                       setVoteCount((c) => Math.min(c, matching.count));
                     }
@@ -1523,9 +1652,13 @@ export const BrotherhoodScreen: React.FC = () => {
                               const q = candidateFilterQuery.toLowerCase();
                               const prof =
                                 resolvedProfiles.data?.[entry.addressString];
+                              const walletAddr = getCandidateWalletAddress(
+                                entry.addressString,
+                              );
                               return (
                                 prof?.username?.toLowerCase().includes(q) ||
-                                entry.addressString.toLowerCase().includes(q)
+                                entry.addressString.toLowerCase().includes(q) ||
+                                walletAddr.toLowerCase().includes(q)
                               );
                             })
                             .map((entry) => {
@@ -1534,14 +1667,18 @@ export const BrotherhoodScreen: React.FC = () => {
                               const candCountry = getCountryByCode(
                                 prof?.country,
                               );
+                              const walletAddr = getCandidateWalletAddress(
+                                entry.addressString,
+                              );
                               const isSelected =
-                                targetAddress.trim() === entry.addressString;
+                                sameAddress(targetAddress, walletAddr) ||
+                                sameAddress(targetAddress, entry.addressString);
                               return (
                                 <button
                                   key={`card-voted-${entry.addressString}`}
                                   type="button"
                                   onClick={() => {
-                                    setTargetAddress(entry.addressString);
+                                    setTargetAddress(walletAddr);
                                     if (isUnvote) {
                                       setVoteCount(entry.count);
                                     }
@@ -1592,7 +1729,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                       </span>
                                     </div>
                                     <span className="font-mono text-[10px] opacity-70 block truncate">
-                                      {formatShortContract(entry.addressString)}
+                                      {formatShortWallet(walletAddr)}
                                     </span>
                                   </div>
                                   <span
@@ -1625,23 +1762,31 @@ export const BrotherhoodScreen: React.FC = () => {
                             const q = candidateFilterQuery.toLowerCase();
                             const prof =
                               resolvedProfiles.data?.[entry.addressString];
+                            const walletAddr = getCandidateWalletAddress(
+                              entry.addressString,
+                            );
                             return (
                               prof?.username?.toLowerCase().includes(q) ||
-                              entry.addressString.toLowerCase().includes(q)
+                              entry.addressString.toLowerCase().includes(q) ||
+                              walletAddr.toLowerCase().includes(q)
                             );
                           })
                           .map((entry) => {
                             const prof =
                               resolvedProfiles.data?.[entry.addressString];
                             const candCountry = getCountryByCode(prof?.country);
+                            const walletAddr = getCandidateWalletAddress(
+                              entry.addressString,
+                            );
                             const isSelected =
-                              targetAddress.trim() === entry.addressString;
+                              sameAddress(targetAddress, walletAddr) ||
+                              sameAddress(targetAddress, entry.addressString);
                             return (
                               <button
                                 key={`card-circle-${entry.addressString}`}
                                 type="button"
                                 onClick={() => {
-                                  setTargetAddress(entry.addressString);
+                                  setTargetAddress(walletAddr);
                                 }}
                                 className={`w-full p-2.5 rounded-lg text-left text-xs transition flex justify-between items-center cursor-pointer ${
                                   isSelected
@@ -1687,16 +1832,10 @@ export const BrotherhoodScreen: React.FC = () => {
                                     </span>
                                   </div>
                                   <span className="font-mono text-[10px] opacity-70 block truncate">
-                                    {formatShortContract(entry.addressString)}
+                                    {formatShortWallet(walletAddr)}
                                   </span>
                                 </div>
-                                <span
-                                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                                    isSelected
-                                      ? 'bg-primary-foreground/20 text-primary-foreground'
-                                      : 'bg-secondary text-primary'
-                                  }`}
-                                >
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 bg-secondary text-muted-foreground">
                                   Circle
                                 </span>
                               </button>
@@ -1943,7 +2082,10 @@ export const BrotherhoodScreen: React.FC = () => {
                       type="button"
                       onClick={() =>
                         setNomineeAddressInput(
-                          account.data?.nominee?.toString() ?? '',
+                          formatWalletAddress(
+                            account.data?.nominee?.toString() ?? '',
+                            false,
+                          ),
                         )
                       }
                       className="text-[11px] text-primary hover:underline cursor-pointer"
@@ -1963,8 +2105,10 @@ export const BrotherhoodScreen: React.FC = () => {
 
               {/* Quick Suggestions (Inviter, Endorsed Candidates) */}
               {((account.data?.invitor &&
-                account.data.invitor.toString() !==
-                  nomineeAddressInput.trim()) ||
+                !sameAddress(
+                  account.data.invitor,
+                  nomineeAddressInput.trim(),
+                )) ||
                 (account.data?.votedFor &&
                   account.data.votedFor.length > 0)) && (
                 <div className="space-y-1.5">
@@ -1977,7 +2121,10 @@ export const BrotherhoodScreen: React.FC = () => {
                         type="button"
                         onClick={() =>
                           setNomineeAddressInput(
-                            account.data?.invitor?.toString() ?? '',
+                            formatWalletAddress(
+                              account.data?.invitor?.toString() ?? '',
+                              false,
+                            ),
                           )
                         }
                         className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg text-[11px] font-medium border border-border/60 transition cursor-pointer"
@@ -1987,15 +2134,18 @@ export const BrotherhoodScreen: React.FC = () => {
                     )}
                     {account.data?.votedFor.slice(0, 3).map((entry) => {
                       const prof = resolvedProfiles.data?.[entry.addressString];
+                      const candidateWallet = getCandidateWalletAddress(
+                        entry.addressString,
+                      );
                       const label = prof?.username
                         ? `@${prof.username}`
-                        : formatShortContract(entry.addressString);
+                        : formatShortWallet(candidateWallet);
                       return (
                         <button
                           key={entry.addressString}
                           type="button"
                           onClick={() =>
-                            setNomineeAddressInput(entry.addressString)
+                            setNomineeAddressInput(candidateWallet)
                           }
                           className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg text-[11px] font-medium border border-border/60 transition cursor-pointer"
                         >
@@ -2053,262 +2203,335 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Buy Credit & Repay Debt */}
         {activeTab === 'credit' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            {/* Credit Overview */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">
-                  Your Credit Need
-                </span>
-                <span className="font-semibold text-foreground">
-                  {formatFi(account.data?.creditNeed)} FI
-                </span>
-              </div>
-              <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">
-                  Outstanding Debt
-                </span>
-                <span className="font-semibold text-rose-500">
-                  {formatFi(account.data?.debt)} FI
-                </span>
-              </div>
+            {/* Sub-tabs header */}
+            <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setCreditSubTab('buy')}
+                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                  creditSubTab === 'buy'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-credit-subtab-buy"
+              >
+                Buy Credit
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreditSubTab('seekers')}
+                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                  creditSubTab === 'seekers'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-credit-subtab-seekers"
+              >
+                Seekers Directory
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreditSubTab('terms')}
+                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                  creditSubTab === 'terms'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-credit-subtab-terms"
+              >
+                My Terms
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreditSubTab('repay')}
+                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                  creditSubTab === 'repay'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-credit-subtab-repay"
+              >
+                Repay Debt
+              </button>
             </div>
 
-            {/* Borrowing Terms Configuration Card */}
-            <div className="p-3.5 bg-secondary/40 border border-border/50 rounded-xl space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground text-sm">
-                  My Borrowing Terms
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  Multiplier:{' '}
-                  <strong className="text-foreground">
-                    {account.data?.multiplier ?? 1}x
-                  </strong>
-                  {account.data?.creditMaturity
-                    ? ` • Due: ${formatDate(account.data.creditMaturity)}`
-                    : ''}
-                </span>
-              </div>
-
-              {/* Set Credit Need Form */}
-              <div className="space-y-2 pt-1 border-t border-border/40">
-                <label className="text-xs font-medium text-foreground block">
-                  Set Credit Need (FI to Borrow)
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    value={creditNeedInput}
-                    onChange={(e) => setCreditNeedInput(e.target.value)}
-                    placeholder={`Current: ${formatFi(account.data?.creditNeed)}`}
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="brotherhood-credit-need-input"
-                  />
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={creditMaturityDays}
-                    onChange={(e) => setCreditMaturityDays(e.target.value)}
-                    placeholder="Maturity (Days, e.g. 30)"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="brotherhood-credit-days-input"
-                  />
+            {/* Sub-tab 1: Buy Credit */}
+            {creditSubTab === 'buy' && (
+              <div ref={creditFormRef} className="space-y-3 pt-1">
+                <div>
+                  <h3 className="font-semibold text-base">
+                    Buy Credit (Personal Loan)
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Extend credit to an issuer by buying their Personal Tokens
+                    with FI. Select any Circle or Ring member from the list, or
+                    type/scan their address.
+                  </p>
                 </div>
-                <Button
-                  size="sm"
-                  fullWidth
-                  onClick={() => {
-                    const days = parseInt(creditMaturityDays, 10) || 30;
-                    const maturitySec =
-                      Math.floor(Date.now() / 1000) + days * 86400;
-                    creditTerms.setCreditNeed(
-                      creditNeedInput || '0',
-                      maturitySec,
-                    );
+
+                <MemberComboboxInput
+                  value={recipient}
+                  onChange={setRecipient}
+                  placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                  circleMembers={circleSelectableMembers}
+                  ringMembers={ringSelectableMembers}
+                  onSelectMember={(m) => {
+                    if (
+                      m.creditNeed &&
+                      m.creditNeed > 0n &&
+                      (!amount || amount === '0')
+                    ) {
+                      const targetNano = account.data
+                        ? m.creditNeed < account.data.jettonBalance
+                          ? m.creditNeed
+                          : account.data.jettonBalance
+                        : m.creditNeed;
+                      const whole = targetNano / 1_000_000_000n;
+                      const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
+                      const amountStr =
+                        frac === 0n
+                          ? whole.toString()
+                          : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
+                      setAmount(amountStr);
+                    }
                   }}
-                  disabled={
-                    !canOperate || creditTerms.isSending || !creditNeedInput
-                  }
-                  loading={creditTerms.isSending}
-                  data-testid="brotherhood-set-credit-need-submit"
+                  data-testid="brotherhood-credit-recipient"
+                />
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Credit Amount (FI)"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="brotherhood-credit-amount"
+                />
+
+                {credit.validationError && (
+                  <p className="text-xs text-rose-500 font-medium">
+                    {credit.validationError}
+                  </p>
+                )}
+
+                <Button
+                  onClick={() => credit.send()}
+                  disabled={credit.isDisabled}
+                  loading={credit.isSending}
+                  fullWidth
+                  data-testid="brotherhood-credit-submit"
                 >
-                  Update Credit Need
+                  Buy Credit
                 </Button>
               </div>
+            )}
 
-              {/* Set Multiplier Form */}
-              <div className="space-y-2 pt-2 border-t border-border/40">
-                <label className="text-xs font-medium text-foreground block">
-                  Set Credit Multiplier (Tokens minted per 1 FI borrowed)
-                </label>
-                <div className="flex gap-2 items-center">
+            {/* Sub-tab 2: Seekers Directory */}
+            {creditSubTab === 'seekers' && (
+              <div className="space-y-4">
+                <CircleCreditList
+                  circleMembers={account.data?.invited ?? []}
+                  profiles={resolvedProfiles.data}
+                  isLoading={resolvedProfiles.isLoading}
+                  onRefresh={() => resolvedProfiles.refetch()}
+                  onSendCredit={handleSendCredit}
+                />
+
+                <hr className="border-border/60" />
+
+                <RingCreditList
+                  circleMembers={account.data?.invited ?? []}
+                  circleProfiles={resolvedProfiles.data}
+                  onSendCredit={handleSendCredit}
+                  onRegisterRingMembers={handleRegisterRingMembers}
+                />
+              </div>
+            )}
+
+            {/* Sub-tab 3: My Terms */}
+            {creditSubTab === 'terms' && (
+              <div className="space-y-4">
+                {/* Credit Overview */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
+                    <span className="text-muted-foreground block text-[11px]">
+                      Your Credit Need
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {formatFi(account.data?.creditNeed)} FI
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
+                    <span className="text-muted-foreground block text-[11px]">
+                      Outstanding Debt
+                    </span>
+                    <span className="font-semibold text-rose-500">
+                      {formatFi(account.data?.debt)} FI
+                    </span>
+                  </div>
+                </div>
+
+                {/* Borrowing Terms Configuration Card */}
+                <div className="p-3.5 bg-secondary/40 border border-border/50 rounded-xl space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground text-sm">
+                      My Borrowing Terms
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Multiplier:{' '}
+                      <strong className="text-foreground">
+                        {account.data?.multiplier ?? 1}x
+                      </strong>
+                      {account.data?.creditMaturity
+                        ? ` • Due: ${formatDate(account.data.creditMaturity)}`
+                        : ''}
+                    </span>
+                  </div>
+
+                  {/* Set Credit Need Form */}
+                  <div className="space-y-2 pt-1 border-t border-border/40">
+                    <label className="text-xs font-medium text-foreground block">
+                      Set Credit Need (FI to Borrow)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={creditNeedInput}
+                        onChange={(e) => setCreditNeedInput(e.target.value)}
+                        placeholder={`Current: ${formatFi(account.data?.creditNeed)}`}
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="brotherhood-credit-need-input"
+                      />
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={creditMaturityDays}
+                        onChange={(e) => setCreditMaturityDays(e.target.value)}
+                        placeholder="Maturity (Days, e.g. 30)"
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="brotherhood-credit-days-input"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      fullWidth
+                      onClick={() => {
+                        const days = parseInt(creditMaturityDays, 10) || 30;
+                        const maturitySec =
+                          Math.floor(Date.now() / 1000) + days * 86400;
+                        creditTerms.setCreditNeed(
+                          creditNeedInput || '0',
+                          maturitySec,
+                        );
+                      }}
+                      disabled={
+                        !canOperate || creditTerms.isSending || !creditNeedInput
+                      }
+                      loading={creditTerms.isSending}
+                      data-testid="brotherhood-set-credit-need-submit"
+                    >
+                      Update Credit Need
+                    </Button>
+                  </div>
+
+                  {/* Set Multiplier Form */}
+                  <div className="space-y-2 pt-2 border-t border-border/40">
+                    <label className="text-xs font-medium text-foreground block">
+                      Set Credit Multiplier (Tokens minted per 1 FI borrowed)
+                    </label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={creditMultiplierInput}
+                        onChange={(e) =>
+                          setCreditMultiplierInput(e.target.value)
+                        }
+                        placeholder={`Current: ${account.data?.multiplier ?? 1}`}
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="brotherhood-credit-multiplier-input"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const mult = parseInt(creditMultiplierInput, 10) || 1;
+                          creditTerms.setMultiplier(mult);
+                        }}
+                        disabled={
+                          !canOperate ||
+                          creditTerms.isSending ||
+                          !creditMultiplierInput
+                        }
+                        loading={creditTerms.isSending}
+                        className="shrink-0"
+                        data-testid="brotherhood-set-multiplier-submit"
+                      >
+                        Set Multiplier
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 4: Repay Debt */}
+            {creditSubTab === 'repay' && (
+              <div className="space-y-4">
+                <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50 text-xs">
+                  <span className="text-muted-foreground block text-[11px]">
+                    Outstanding Debt
+                  </span>
+                  <span className="font-semibold text-rose-500 text-sm">
+                    {formatFi(account.data?.debt)} FI
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-base">Repay Debt</h3>
+                    {account.data && account.data.debt > 0n && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAmount(
+                            (Number(account.data?.debt ?? 0n) / 1e9).toString(),
+                          )
+                        }
+                        className="text-[11px] text-blue-500 hover:underline font-medium cursor-pointer"
+                      >
+                        Repay All Debt
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="number"
-                    step="1"
-                    min="1"
-                    value={creditMultiplierInput}
-                    onChange={(e) => setCreditMultiplierInput(e.target.value)}
-                    placeholder={`Current: ${account.data?.multiplier ?? 1}`}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Repayment Amount (FI)"
                     className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="brotherhood-credit-multiplier-input"
+                    data-testid="brotherhood-repay-amount"
                   />
+
+                  {repay.validationError && (
+                    <p className="text-xs text-rose-500 font-medium">
+                      {repay.validationError}
+                    </p>
+                  )}
+
                   <Button
-                    size="sm"
-                    onClick={() => {
-                      const mult = parseInt(creditMultiplierInput, 10) || 1;
-                      creditTerms.setMultiplier(mult);
-                    }}
-                    disabled={
-                      !canOperate ||
-                      creditTerms.isSending ||
-                      !creditMultiplierInput
-                    }
-                    loading={creditTerms.isSending}
-                    className="shrink-0"
-                    data-testid="brotherhood-set-multiplier-submit"
+                    onClick={() => repay.send()}
+                    disabled={repay.isDisabled}
+                    loading={repay.isSending}
+                    fullWidth
+                    data-testid="brotherhood-repay-submit"
                   >
-                    Set Multiplier
+                    Repay Debt
                   </Button>
                 </div>
               </div>
-            </div>
-
-            <hr className="border-border/60" />
-
-            {/* Circle Members Seeking Credit */}
-            <CircleCreditList
-              circleMembers={account.data?.invited ?? []}
-              profiles={resolvedProfiles.data}
-              isLoading={resolvedProfiles.isLoading}
-              onRefresh={() => resolvedProfiles.refetch()}
-              onSendCredit={handleSendCredit}
-            />
-
-            <hr className="border-border/60" />
-
-            {/* Ring Members Seeking Credit */}
-            <RingCreditList
-              circleMembers={account.data?.invited ?? []}
-              circleProfiles={resolvedProfiles.data}
-              onSendCredit={handleSendCredit}
-              onRegisterRingMembers={handleRegisterRingMembers}
-            />
-
-            <hr className="border-border/60" />
-
-            {/* Buy Credit Section */}
-            <div ref={creditFormRef} className="space-y-2 pt-1">
-              <h3 className="font-semibold text-base">
-                Buy Credit (Personal Loan)
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Extend credit to an issuer by buying their Personal Tokens with
-                FI. Select any Circle or Ring member from the list, or type/scan
-                their address.
-              </p>
-
-              <MemberComboboxInput
-                value={recipient}
-                onChange={setRecipient}
-                placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                circleMembers={circleSelectableMembers}
-                ringMembers={ringSelectableMembers}
-                onSelectMember={(m) => {
-                  if (
-                    m.creditNeed &&
-                    m.creditNeed > 0n &&
-                    (!amount || amount === '0')
-                  ) {
-                    const targetNano = account.data
-                      ? m.creditNeed < account.data.jettonBalance
-                        ? m.creditNeed
-                        : account.data.jettonBalance
-                      : m.creditNeed;
-                    const whole = targetNano / 1_000_000_000n;
-                    const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
-                    const amountStr =
-                      frac === 0n
-                        ? whole.toString()
-                        : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
-                    setAmount(amountStr);
-                  }
-                }}
-                data-testid="brotherhood-credit-recipient"
-              />
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Credit Amount (FI)"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-credit-amount"
-              />
-
-              {credit.validationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {credit.validationError}
-                </p>
-              )}
-
-              <Button
-                onClick={() => credit.send()}
-                disabled={credit.isDisabled}
-                loading={credit.isSending}
-                fullWidth
-                data-testid="brotherhood-credit-submit"
-              >
-                Buy Credit
-              </Button>
-            </div>
-
-            <hr className="border-border" />
-
-            {/* Repay Debt Section */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-base">Repay Debt</h3>
-                {account.data && account.data.debt > 0n && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAmount(
-                        (Number(account.data?.debt ?? 0n) / 1e9).toString(),
-                      )
-                    }
-                    className="text-[11px] text-blue-500 hover:underline font-medium"
-                  >
-                    Repay All Debt
-                  </button>
-                )}
-              </div>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Repayment Amount (FI)"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-repay-amount"
-              />
-
-              {repay.validationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {repay.validationError}
-                </p>
-              )}
-
-              <Button
-                onClick={() => repay.send()}
-                disabled={repay.isDisabled}
-                loading={repay.isSending}
-                fullWidth
-                data-testid="brotherhood-repay-submit"
-              >
-                Repay Debt
-              </Button>
-            </div>
+            )}
           </div>
         )}
 

@@ -191,7 +191,10 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                 variant="secondary"
                 size="sm"
                 onClick={() =>
-                  onQuickAction('vote', data.contractAddressString)
+                  onQuickAction(
+                    'vote',
+                    data.ownerAddressString || data.contractAddressString,
+                  )
                 }
                 className="text-xs py-1.5"
               >
