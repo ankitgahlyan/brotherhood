@@ -104,17 +104,14 @@ export function usePersonalJettonInfo(
     return wallet && !isZeroAddress(wallet) ? wallet : null;
   }, [fiWalletQuery.data]);
 
-  const isDeployedOnChain = Boolean(deployedCheckQuery.data);
-  const isRegistered = Boolean(registeredMinterObj);
-
-  // Active minter is registered minter if available; otherwise deterministic minter if deployed on-chain
+  // Active minter is registered minter if available; otherwise deterministic minter
   const activeMinterObj = useMemo(() => {
     if (registeredMinterObj) return registeredMinterObj;
-    if (isDeployedOnChain && deterministicMinterAddrObj) {
+    if (deterministicMinterAddrObj) {
       return deterministicMinterAddrObj;
     }
     return null;
-  }, [registeredMinterObj, isDeployedOnChain, deterministicMinterAddrObj]);
+  }, [registeredMinterObj, deterministicMinterAddrObj]);
 
   const {
     data: computedWalletAddrObj,
@@ -133,6 +130,9 @@ export function usePersonalJettonInfo(
     isLoading: isMinterDetailsLoading,
     refetch: refetchMinterDetails,
   } = usePersonalMinterDetails(activeMinterObj ?? null);
+
+  const isDeployedOnChain = Boolean(deployedCheckQuery.data || minterDetails);
+  const isRegistered = Boolean(registeredMinterObj);
 
   const fallbackWalletObj = useMemo(() => {
     const targetMinter = activeMinterObj || deterministicMinterAddrObj;

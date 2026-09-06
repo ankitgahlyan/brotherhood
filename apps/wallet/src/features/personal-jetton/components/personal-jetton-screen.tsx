@@ -6,7 +6,8 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Address } from '@ton/core';
 import {
   Sparkles,
   AlertCircle,
@@ -145,17 +146,35 @@ export const PersonalJettonScreen: React.FC = () => {
   }, [isDeployed, activeTab]);
 
   const activeMinter =
-    info.personalMinterAddress ||
-    (info.isDeployedOnChain ? info.deterministicMinterAddress : null) ||
-    '';
+    info.personalMinterAddress || info.deterministicMinterAddress || '';
   const activePersonalWallet =
     info.personalWalletAddress || info.expectedPersonalWalletAddress || '';
 
-  const isMinterAdmin = Boolean(
-    address &&
-    info.minterDetails?.adminAddress &&
-    info.minterDetails.adminAddress.toString() === address,
-  );
+  const isMinterAdmin = useMemo(() => {
+    if (!address) return false;
+    try {
+      const userAddr = Address.parse(address);
+      if (info.minterDetails?.adminAddress) {
+        return userAddr.equals(info.minterDetails.adminAddress);
+      }
+      // Fallback: If deterministic minter is defined and matches activeMinter,
+      // the connected user is the default admin for their own deterministic minter
+      if (info.deterministicMinterAddress && activeMinter) {
+        const detMinter = Address.parse(info.deterministicMinterAddress);
+        if (Address.parse(activeMinter).equals(detMinter)) {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [
+    address,
+    info.minterDetails?.adminAddress,
+    info.deterministicMinterAddress,
+    activeMinter,
+  ]);
 
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
