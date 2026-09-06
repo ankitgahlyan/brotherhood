@@ -71,11 +71,15 @@ export function detectApiKey(
   // Check Vite environment variables if checkEnv is enabled (default true)
   if (options?.checkEnv !== false) {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
+      const mainnetKey =
+        import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
+        import.meta.env.TONCENTER_MAINNET_API_KEY;
+      const testnetKey =
+        import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
+        import.meta.env.TONCENTER_TESTNET_API_KEY;
       if (
-        (import.meta.env.TONCENTER_MAINNET_API_KEY &&
-          String(import.meta.env.TONCENTER_MAINNET_API_KEY).trim()) ||
-        (import.meta.env.TONCENTER_TESTNET_API_KEY &&
-          String(import.meta.env.TONCENTER_TESTNET_API_KEY).trim())
+        (mainnetKey && String(mainnetKey).trim()) ||
+        (testnetKey && String(testnetKey).trim())
       ) {
         return true;
       }

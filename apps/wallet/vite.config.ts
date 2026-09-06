@@ -58,6 +58,8 @@ const pwaManifest: Partial<ManifestOptions> = {
 export default defineConfig({
   base,
   root: projectRoot,
+  envDir: path.resolve(projectRoot, '../../'),
+  envPrefix: ['VITE_', 'TONCENTER_'],
   plugins: [
     react(),
     tailwindcss(),

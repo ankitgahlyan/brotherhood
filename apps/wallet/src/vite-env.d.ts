@@ -9,8 +9,13 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  readonly VITE_BASE?: string;
   readonly VITE_BRIDGE_URL?: string;
   readonly VITE_TON_API_KEY?: string;
+  readonly VITE_TONCENTER_TESTNET_API_KEY?: string;
+  readonly VITE_TONCENTER_MAINNET_API_KEY?: string;
+  readonly TONCENTER_TESTNET_API_KEY?: string;
+  readonly TONCENTER_MAINNET_API_KEY?: string;
 }
 
 interface ImportMeta {

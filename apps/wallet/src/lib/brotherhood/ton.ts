@@ -28,9 +28,13 @@ export const queryClient = new QueryClient({
 const clients: Record<string, TonClient> = {};
 
 function toncenterApiKey(network: Network): string | undefined {
-  return network === 'mainnet'
-    ? import.meta.env.TONCENTER_MAINNET_API_KEY
-    : import.meta.env.TONCENTER_TESTNET_API_KEY;
+  const key =
+    network === 'mainnet'
+      ? import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
+        import.meta.env.TONCENTER_MAINNET_API_KEY
+      : import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
+        import.meta.env.TONCENTER_TESTNET_API_KEY;
+  return key && typeof key === 'string' && key.trim() ? key.trim() : undefined;
 }
 
 function toncenterApiHeaders(network: Network): HeadersInit | undefined {
