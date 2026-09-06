@@ -40,9 +40,9 @@ const testMatrix: ImportWalletTestCase[] = [
   { network: 'testnet', version: 'v5r1', interfaceType: 'signer' },
 ];
 
-/** Welcome → "Add an existing wallet" → "Recovery phrase" → set a password → land on the import screen. */
+/** Welcome → "Add wallet" → "Recovery phrase" → set a password → land on the import screen. */
 async function openImportScreen(page: Page): Promise<void> {
-  await page.getByTestId('welcome-add-existing').click();
+  await page.getByTestId('welcome-add-wallet').click();
   await page.getByTestId('add-wallet-import').click();
   await page.getByTestId('password').fill(TEST_PASSWORD);
   await page.getByTestId('password-confirm').fill(TEST_PASSWORD);

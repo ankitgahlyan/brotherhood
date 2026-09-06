@@ -122,8 +122,8 @@ try {
 
   const expectations = {
     'welcome title': 'Your TON wallet',
-    'create wallet button': 'Create a new wallet',
-    'add existing wallet button': 'Add an existing wallet',
+    'welcome description': 'Create a new wallet',
+    'add wallet button': 'Add wallet',
   };
 
   console.log(`Loaded: ${url}\n`);

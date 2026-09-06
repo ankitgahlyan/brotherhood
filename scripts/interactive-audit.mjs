@@ -71,12 +71,18 @@ try {
   console.log(
     '\n--- Step 2: Onboarding Flow (Password Setup & Wallet Creation) ---',
   );
-  const createBtn = page
-    .getByRole('button', { name: /create a new wallet/i })
+  const addWalletBtn = page
+    .getByRole('button', { name: /add wallet/i })
+    .or(page.locator('[data-testid="welcome-add-wallet"]'))
     .or(page.locator('[data-testid="welcome-create"]'));
-  if (await createBtn.isVisible()) {
-    console.log('Clicking "Create a new wallet"...');
-    await createBtn.click();
+  if (await addWalletBtn.isVisible()) {
+    console.log('Clicking "Add wallet"...');
+    await addWalletBtn.click();
+    await page.waitForTimeout(400);
+    const newWalletOption = page.locator('[data-testid="add-wallet-create"]');
+    if (await newWalletOption.isVisible()) {
+      await newWalletOption.click();
+    }
     await page.waitForTimeout(800);
   }
 

@@ -30,8 +30,8 @@ export class DemoWallet extends WalletApp {
     }
     const app = await this.open();
 
-    // Welcome → "Add an existing wallet" → "Recovery phrase"
-    await app.getByTestId('welcome-add-existing').click();
+    // Welcome → "Add wallet" → "Recovery phrase"
+    await app.getByTestId('welcome-add-wallet').click();
     await app.getByTestId('add-wallet-import').click();
 
     // Setup password

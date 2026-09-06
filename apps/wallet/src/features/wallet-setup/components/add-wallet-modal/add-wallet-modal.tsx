@@ -7,12 +7,12 @@
  */
 
 import React from 'react';
-import { KeyRound, Usb } from 'lucide-react';
+import { KeyRound, Plus, Usb } from 'lucide-react';
 
 import { Modal } from '@/core/components/ui/modal';
 import { OptionRow } from '@/core/components/ui/option-row';
 
-export type AddWalletMode = 'import' | 'ledger';
+export type AddWalletMode = 'create' | 'import' | 'ledger';
 
 const OPTIONS: {
   mode: AddWalletMode;
@@ -20,6 +20,12 @@ const OPTIONS: {
   subtitle: string;
   Icon: typeof KeyRound;
 }[] = [
+  {
+    mode: 'create',
+    title: 'New wallet',
+    subtitle: 'Generate a new recovery phrase',
+    Icon: Plus,
+  },
   {
     mode: 'import',
     title: 'Recovery phrase',
@@ -37,11 +43,11 @@ const OPTIONS: {
 interface AddWalletModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Chosen way to add an existing wallet. */
+  /** Chosen way to add a wallet. */
   onSelect: (mode: AddWalletMode) => void;
 }
 
-/** "Add an existing wallet" picker: import via recovery phrase or connect a Ledger. */
+/** Wallet picker: create a fresh wallet, import a recovery phrase, or connect a Ledger. */
 export const AddWalletModal: React.FC<AddWalletModalProps> = ({
   isOpen,
   onClose,
@@ -53,7 +59,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({
     className="px-2"
   >
     <Modal.Header onClose={onClose}>
-      <Modal.Title>Add an existing wallet</Modal.Title>
+      <Modal.Title>Add wallet</Modal.Title>
     </Modal.Header>
 
     <Modal.Body className="px-3 gap-2">

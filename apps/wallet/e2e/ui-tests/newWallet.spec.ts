@@ -16,8 +16,9 @@ const test = testWithUIFixture();
 
 test.describe('New Wallet Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Welcome → "Create a new wallet" → set a password → land on the Recovery phrase screen.
-    await page.getByTestId('welcome-create').click();
+    // Welcome → "Add wallet" → "New wallet" → set a password → land on the Recovery phrase screen.
+    await page.getByTestId('welcome-add-wallet').click();
+    await page.getByTestId('add-wallet-create').click();
     await page.getByTestId('password').fill(TEST_PASSWORD);
     await page.getByTestId('password-confirm').fill(TEST_PASSWORD);
     await page.getByTestId('password-submit').click();

@@ -31,7 +31,7 @@ export const WelcomeScreen: React.FC = () => {
     else navigate('/setup-password', { state: { tab } });
   };
 
-  const handleAddExisting = (mode: AddWalletMode) => {
+  const handleAddSelect = (mode: AddWalletMode) => {
     setIsAddOpen(false);
     start(mode);
   };
@@ -40,18 +40,10 @@ export const WelcomeScreen: React.FC = () => {
     <div className="space-y-2">
       <Button
         fullWidth
-        onClick={() => start('create')}
-        data-testid="welcome-create"
-      >
-        Create a new wallet
-      </Button>
-      <Button
-        variant="secondary"
-        fullWidth
         onClick={() => setIsAddOpen(true)}
-        data-testid="welcome-add-existing"
+        data-testid="welcome-add-wallet"
       >
-        Add an existing wallet
+        Add wallet
       </Button>
       <p className="pt-1 text-center text-xs text-gray-400">
         By continuing, you agree to the{' '}
@@ -86,7 +78,7 @@ export const WelcomeScreen: React.FC = () => {
       <AddWalletModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        onSelect={handleAddExisting}
+        onSelect={handleAddSelect}
       />
     </CenteredScreen>
   );

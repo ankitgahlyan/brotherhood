@@ -31,8 +31,9 @@ const test = testWithUIFixture().extend<{
 
 test.describe('SetupPassword', () => {
   test.beforeEach(async ({ page, setupPassword }) => {
-    // The redesign starts on Welcome; "Create a new wallet" leads to the password screen.
-    await page.getByTestId('welcome-create').click();
+    // The redesign starts on Welcome; "Add wallet" → "New wallet" leads to the password screen.
+    await page.getByTestId('welcome-add-wallet').click();
+    await page.getByTestId('add-wallet-create').click();
     await setupPassword.waitForPage();
   });
 
