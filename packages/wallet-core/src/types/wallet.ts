@@ -13,7 +13,6 @@ import type {
   SignDataRequestEvent,
   SignMessageRequestEvent,
   SendTransactionRequestEvent,
-  AnalyticsManagerOptions,
 } from '@ton/walletkit';
 import type Transport from '@ledgerhq/hw-transport';
 
@@ -135,7 +134,6 @@ export interface WalletKitConfig {
   tonApiKeyMainnet?: string;
   tonApiKeyTestnet?: string;
   tonApiKeyTetra?: string;
-  analytics?: AnalyticsManagerOptions;
   disableAutoEmulation?: boolean;
   /**
    * Factory function to create Ledger transport.

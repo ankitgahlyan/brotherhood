@@ -13,7 +13,6 @@ pnpm demo-wallet dev # Watch mode for development demo wallet and use kit
 
 ```
 src/
-├── analytics/                     # Analytics and telemetry
 ├── bridge/                        # Bridge communication layer
 ├── contracts/                     # Smart contract wrappers
 │   ├── v4r2/                      # Wallet V4R2 implementation

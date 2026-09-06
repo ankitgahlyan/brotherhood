@@ -27,12 +27,13 @@ interface UseTonWalletReturn {
   error: string | null;
   initializeWallet: () => Promise<void>;
   createNewWallet: () => Promise<string[]>;
-  createLedgerWallet: (network?: NetworkType) => Promise<void>;
+  createLedgerWallet: (network?: NetworkType, name?: string) => Promise<void>;
   importWallet: (
     mnemonic: string[],
     version?: 'v5r1' | 'v4r2',
     network?: NetworkType,
     subwalletId?: number,
+    name?: string,
   ) => Promise<void>;
 }
 
@@ -88,14 +89,14 @@ export const useTonWallet = (): UseTonWalletReturn => {
   }, [tonKit, walletStore]);
 
   const createLedgerWallet = useCallback(
-    async (network?: NetworkType): Promise<void> => {
+    async (network?: NetworkType, name?: string): Promise<void> => {
       if (!tonKit) throw new Error('TON Kit not initialized');
 
       try {
         setError(null);
 
         // Create Ledger wallet
-        await walletStore.createLedgerWallet(undefined, network);
+        await walletStore.createLedgerWallet(name, network);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to create Ledger wallet';
@@ -112,6 +113,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
       version?: 'v5r1' | 'v4r2',
       network?: NetworkType,
       subwalletId?: number,
+      name?: string,
     ): Promise<void> => {
       if (!tonKit) throw new Error('TON Kit not initialized');
 
@@ -128,7 +130,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
         // Import wallet
         await walletStore.importWallet(
           mnemonic,
-          undefined,
+          name,
           version,
           network,
           subwalletId,

@@ -35,18 +35,6 @@ import './storePatch';
  */
 const createWebLedgerTransport = () => TransportWebHID.create();
 
-const getPlatform = ():
-  'ios' | 'ipad' | 'android' | 'macos' | 'windows' | 'linux' | undefined => {
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('ipad')) return 'ipad';
-  if (ua.includes('iphone')) return 'ios';
-  if (ua.includes('android')) return 'android';
-  if (ua.includes('mac')) return 'macos';
-  if (ua.includes('win')) return 'windows';
-  if (ua.includes('linux')) return 'linux';
-  return undefined;
-};
-
 const walletKitConfig: WalletKitConfig = {
   disableHttpBridge: DISABLE_HTTP_BRIDGE,
   disableNetworkSend: DISABLE_NETWORK_SEND,
@@ -57,14 +45,6 @@ const walletKitConfig: WalletKitConfig = {
   tonApiKeyTestnet: ENV_TON_API_KEY_TESTNET,
   tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
   createLedgerTransport: createWebLedgerTransport,
-  analytics: {
-    appInfo: {
-      env: 'web',
-      platform: getPlatform(),
-      browser: navigator.userAgent,
-      getLocale: () => navigator.language,
-    },
-  },
   disableAutoEmulation: DISABLE_AUTO_EMULATION,
 };
 

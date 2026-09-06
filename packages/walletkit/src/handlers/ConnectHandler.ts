@@ -18,7 +18,6 @@ import type {
 } from '../types/internal';
 import { globalLogger } from '../core/Logger';
 import { BasicHandler } from './BasicHandler';
-import type { AnalyticsManager, Analytics } from '../analytics';
 import { isValidHost } from '../utils/url';
 import type {
   ConnectionRequestEvent,
@@ -35,15 +34,11 @@ export class ConnectHandler
   extends BasicHandler<ConnectionRequestEvent>
   implements EventHandler<ConnectionRequestEvent, RawBridgeEventConnect>
 {
-  private analytics?: Analytics;
-
   constructor(
     notify: (event: ConnectionRequestEvent) => void,
     private readonly config: TonWalletKitOptions,
-    analyticsManager?: AnalyticsManager,
   ) {
     super(notify);
-    this.analytics = analyticsManager?.scoped();
   }
 
   canHandle(event: RawBridgeEvent): event is RawBridgeEventConnect {
@@ -87,23 +82,6 @@ export class ConnectHandler
       returnStrategy: event.params.returnStrategy,
       embeddedRequest: event.embeddedRequest,
     };
-
-    // Send wallet-connect-request-received event
-    this.analytics?.emitWalletConnectRequestReceived({
-      trace_id: event.traceId,
-      client_id: event.from,
-      manifest_json_url: manifestUrl || preview?.dAppInfo?.manifestUrl,
-      is_ton_addr:
-        event.params?.items?.some((item) => item.name === 'ton_addr') || false,
-      is_ton_proof:
-        event.params?.items?.some((item) => item.name === 'ton_proof') || false,
-      proof_payload_size: event.params?.items?.some(
-        (item) => item.name === 'ton_proof',
-      )
-        ? event.params?.items?.find((item) => item.name === 'ton_proof')
-            ?.payload?.length
-        : 0,
-    });
 
     return connectEvent;
   }

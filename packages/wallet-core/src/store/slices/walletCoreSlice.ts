@@ -95,11 +95,6 @@ function createWalletKitInstance(
 
     storage: walletKitConfig?.storage,
 
-    analytics: {
-      ...walletKitConfig?.analytics,
-      enabled: true,
-    },
-
     eventProcessor: {
       disableTransactionEmulation: walletKitConfig?.disableAutoEmulation,
     },

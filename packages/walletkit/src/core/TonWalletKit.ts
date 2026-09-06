@@ -57,7 +57,6 @@ import { StreamingManager } from '../streaming/StreamingManager';
 import { CustomProvidersManager } from '../providers';
 import type { CustomProvider } from '../providers';
 import type { WalletKitEvents, WalletKitEventEmitter } from '../types/emitter';
-import { AnalyticsManager } from '../analytics';
 import { getDeviceInfoForWallet } from '../utils/getDefaultWalletConfig';
 import { WalletKitError, ERROR_CODES } from '../errors';
 import { CallForSuccess } from '../utils/retry';
@@ -125,21 +124,9 @@ export class TonWalletKit implements ITonWalletKit {
   // State
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
-  private analyticsManager?: AnalyticsManager;
 
   constructor(options: TonWalletKitOptions) {
     this.config = options;
-
-    if (options?.analytics?.enabled) {
-      this.analyticsManager = new AnalyticsManager({
-        ...options?.analytics,
-        appInfo: {
-          appName: options?.deviceInfo?.appName,
-          appVersion: options?.deviceInfo?.appVersion,
-          ...options?.analytics?.appInfo,
-        },
-      });
-    }
 
     // Initialize NetworkManager for multi-network support
     this.networkManager = new KitNetworkManager(options);
@@ -148,11 +135,7 @@ export class TonWalletKit implements ITonWalletKit {
     this.streamingManager = new StreamingManager(() =>
       this.createFactoryContext(),
     );
-    this.initializer = new Initializer(
-      options,
-      this.eventEmitter,
-      this.analyticsManager,
-    );
+    this.initializer = new Initializer(options, this.eventEmitter);
 
     // Auto-initialize (lazy)
     this.initializationPromise = this.initialize();
@@ -623,11 +606,7 @@ export class TonWalletKit implements ITonWalletKit {
 
     try {
       const bridgeEvent = this.parseBridgeConnectEventFromUrl(url);
-      const handler = new ConnectHandler(
-        () => {},
-        this.config,
-        this.analyticsManager,
-      );
+      const handler = new ConnectHandler(() => {}, this.config);
       return await handler.handle(bridgeEvent);
     } catch (error) {
       log.error('Failed to create connection event from URL', { error, url });

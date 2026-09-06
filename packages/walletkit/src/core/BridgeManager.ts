@@ -27,7 +27,6 @@ import type {
 } from '../types/jsBridge';
 import { uuidv7 } from '../utils/uuid.mjs';
 import { WalletKitError, ERROR_CODES } from '../errors';
-import type { Analytics, AnalyticsManager } from '../analytics';
 import type { TonWalletKitOptions } from '../types/config';
 import { TONCONNECT_BRIDGE_RESPONSE } from '../bridge/JSBridgeInjector';
 import type { BridgeEvent, TONConnectSession } from '../api/models';
@@ -56,7 +55,6 @@ export class BridgeManager {
   private eventStore: EventStore;
   private eventRouter: EventRouter;
   private eventEmitter?: WalletKitEventEmitter;
-  private analytics?: Analytics;
 
   private requestProcessingTimeoutId?: number;
 
@@ -69,7 +67,6 @@ export class BridgeManager {
     eventRouter: EventRouter,
     walletKitConfig: TonWalletKitOptions,
     eventEmitter?: WalletKitEventEmitter,
-    analyticsManager?: AnalyticsManager,
   ) {
     const isManifestJsBridge =
       walletManifest && 'jsBridgeKey' in walletManifest ? true : false;
@@ -98,9 +95,6 @@ export class BridgeManager {
     this.eventStore = eventStore;
     this.eventEmitter = eventEmitter;
     this.eventRouter = eventRouter;
-    this.analytics = analyticsManager?.scoped({
-      bridge_url: this.config.bridgeUrl,
-    });
     this.walletKitConfig = walletKitConfig;
     this.jsBridgeTransport = config?.jsBridgeTransport;
 
@@ -111,12 +105,6 @@ export class BridgeManager {
 
         (error: any) => {
           log.error('Bridge listener error', { error: error.toString() });
-          // Send bridge-client-connect-error event for listener errors
-          this.analytics?.emitBridgeClientConnectError({
-            error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
-            trace_id: error?.traceId,
-            client_id: error?.clientId,
-          });
         },
       );
     }
@@ -437,7 +425,6 @@ export class BridgeManager {
       );
     }
 
-    const connectTraceId = uuidv7();
     try {
       // Prepare clients array for existing sessions
       const clients = await this.getClients();
@@ -449,41 +436,14 @@ export class BridgeManager {
         });
       }
 
-      // Send bridge-client-connect-started event
-      if (this.analytics) {
-        const client = clients[0];
-
-        this.analytics.emitBridgeClientConnectStarted({
-          trace_id: connectTraceId,
-          client_id: client?.clientId,
-        });
-      }
-
       await this.bridgeProvider?.restoreConnection(clients, {
         lastEventId: this.lastEventId,
       });
       this.isConnected = true;
       this.reconnectAttempts = 0;
       log.info('Bridge connected successfully');
-
-      // Send bridge-client-connect-established event
-      if (this.analytics) {
-        const client = clients[0];
-
-        this.analytics.emitBridgeClientConnectEstablished({
-          trace_id: connectTraceId,
-          client_id: client?.clientId,
-        });
-      }
     } catch (error: any) {
       log.error('Bridge connection failed', { error: error?.toString() });
-
-      // Send bridge-client-connect-error event
-      this.analytics?.emitBridgeClientConnectError({
-        error_message: `${error?.toString() || 'Unknown error'}${error?.errorCode ? ` (Code: ${error?.errorCode})` : ''}`,
-        trace_id: error?.traceId ?? connectTraceId,
-        client_id: error?.clientId,
-      });
 
       if (!this.config.disableHttpConnection) {
         // Attempt reconnection if not at max attempts

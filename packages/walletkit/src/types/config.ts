@@ -13,7 +13,6 @@ import type { EventProcessorConfig } from '../core/EventProcessor';
 import type { DeviceInfo, WalletInfo } from './jsBridge';
 import type { BridgeConfig } from './internal';
 import type { ApiClient } from '../api/interfaces';
-import type { AnalyticsManagerOptions } from '../analytics';
 import type { TONConnectSessionManager } from '../api/interfaces';
 import type { ManifestFetchResult } from '../api/models/core/ManifestFetchResult';
 
@@ -70,10 +69,6 @@ export interface TonWalletKitOptions {
   };
   /** Event processor settings */
   eventProcessor?: EventProcessorConfig;
-
-  analytics?: AnalyticsManagerOptions & {
-    enabled?: boolean;
-  };
 
   dev?: {
     disableNetworkSend?: boolean;

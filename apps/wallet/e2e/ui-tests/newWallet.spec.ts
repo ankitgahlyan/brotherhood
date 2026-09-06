@@ -28,8 +28,12 @@ test.describe('New Wallet Flow', () => {
   test('Create new wallet on Mainnet', async ({ page }) => {
     const setupWallet = new SetupWalletPage(page);
 
-    // Mainnet is selected by default.
+    // Switch to Mainnet (since Testnet is selected by default).
+    await page.getByTestId('network-select-mainnet').click();
     await expect(page.getByTestId('network-select-mainnet')).toBeEnabled();
+
+    // Set custom wallet name
+    await page.getByTestId('wallet-name-input').fill('Mainnet Wallet');
 
     await page.getByTestId('reveal-mnemonic').click();
 
@@ -46,8 +50,9 @@ test.describe('New Wallet Flow', () => {
   test('Create new wallet on Testnet', async ({ page }) => {
     const setupWallet = new SetupWalletPage(page);
 
-    await page.getByTestId('network-select-testnet').click();
+    // Testnet is selected by default.
     await expect(page.getByTestId('network-select-testnet')).toBeEnabled();
+    await expect(page.getByTestId('wallet-name-input')).toBeVisible();
 
     await page.getByTestId('reveal-mnemonic').click();
 

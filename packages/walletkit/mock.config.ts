@@ -42,10 +42,11 @@ export const clearAllMocks = isJest
         throw new Error('No test framework detected');
       };
 
-export const mocked = isJest
-  ? jest.mocked
-  : isVitest
-    ? (global as any).vi.mocked
-    : (fn: any) => fn;
+export const mocked =
+  isJest && typeof (jest as any).mocked === 'function'
+    ? (jest as any).mocked
+    : isVitest && typeof (global as any).vi?.mocked === 'function'
+      ? (global as any).vi.mocked
+      : (fn: any) => fn;
 
 export type MockFunction = ReturnType<typeof mockFn>;

@@ -26,7 +26,6 @@ import type {
   TransactionRequest,
   SignMessageRequestEvent,
 } from '../api/models';
-import type { Analytics, AnalyticsManager } from '../analytics';
 import type { TONConnectSessionManager } from '../api/interfaces/TONConnectSessionManager';
 import { createTransactionPreviewIfPossible } from '../utils';
 import {
@@ -48,7 +47,6 @@ export class SignMessageHandler
   implements EventHandler<SignMessageRequestEvent, RawBridgeEventSignMessage>
 {
   private eventEmitter: EventEmitter<WalletKitEvents>;
-  private analytics?: Analytics;
 
   constructor(
     notify: (event: SignMessageRequestEvent) => void,
@@ -56,12 +54,10 @@ export class SignMessageHandler
     eventEmitter: EventEmitter<WalletKitEvents>,
     private readonly walletManager: WalletManager,
     private readonly sessionManager: TONConnectSessionManager,
-    analyticsManager?: AnalyticsManager,
   ) {
     super(notify);
     this.eventEmitter = eventEmitter;
     this.sessionManager = sessionManager;
-    this.analytics = analyticsManager?.scoped();
   }
 
   canHandle(event: RawBridgeEvent): event is RawBridgeEventSignMessage {
@@ -126,20 +122,6 @@ export class SignMessageHandler
       walletId: wallet.getWalletId(),
       walletAddress: wallet.getAddress(),
     };
-
-    if (this.analytics) {
-      const sessionData = event.from
-        ? await this.sessionManager.getSession(event.from)
-        : undefined;
-      this.analytics?.emitWalletTransactionRequestReceived({
-        trace_id: event.traceId,
-        client_id: event.from,
-        wallet_id: sessionData?.publicKey,
-        dapp_name: event.dAppInfo?.name,
-        network_id: wallet.getNetwork().chainId,
-        origin_url: event.dAppInfo?.url,
-      });
-    }
 
     return signMessageEvent;
   }

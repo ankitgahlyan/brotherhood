@@ -6,10 +6,10 @@
  *
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { CreateTonMnemonic } from '@ton/walletkit';
-import { useAuth } from '@demo/wallet-core';
+import { useAuth, useWallet, generateWalletName } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
 import { toast } from 'sonner';
 
@@ -25,9 +25,16 @@ export const CreateWalletScreen: React.FC = () => {
   const navigate = useNavigate();
   const { importWallet } = useTonWallet();
   const { setUseWalletInterfaceType } = useAuth();
+  const { savedWallets } = useWallet();
+
+  const defaultName = useMemo(
+    () => generateWalletName(savedWallets, 'mnemonic'),
+    [savedWallets],
+  );
 
   const [mnemonic, setMnemonic] = useState<string[]>([]);
-  const [network, setNetwork] = useState<NetworkType>('mainnet');
+  const [walletName, setWalletName] = useState('');
+  const [network, setNetwork] = useState<NetworkType>('testnet');
   const [revealed, setRevealed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +68,8 @@ export const CreateWalletScreen: React.FC = () => {
     setIsLoading(true);
     try {
       setUseWalletInterfaceType('mnemonic');
-      await importWallet(mnemonic, 'v5r1', network);
+      const finalName = walletName.trim() || defaultName;
+      await importWallet(mnemonic, 'v5r1', network, undefined, finalName);
       navigate('/wallet');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create wallet');
@@ -98,8 +106,21 @@ export const CreateWalletScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-3">
           <NetworkSelector value={network} onChange={setNetwork} compact />
+          <div className="space-y-1 text-left">
+            <label className="text-xs font-medium text-foreground block">
+              Wallet name
+            </label>
+            <input
+              type="text"
+              value={walletName}
+              onChange={(e) => setWalletName(e.target.value)}
+              placeholder={defaultName}
+              className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="wallet-name-input"
+            />
+          </div>
         </div>
 
         <div className="relative mt-6">

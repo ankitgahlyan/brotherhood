@@ -25,7 +25,6 @@ import type { WalletKitEventEmitter } from '../types/emitter';
 import type { TONConnectSessionManager } from '../api/interfaces/TONConnectSessionManager';
 import type { WalletManager } from './WalletManager';
 import type { BridgeManager } from './BridgeManager';
-import type { AnalyticsManager } from '../analytics';
 import type {
   SendTransactionRequestEvent,
   BridgeEvent,
@@ -62,7 +61,6 @@ export class EventRouter {
     private eventEmitter: WalletKitEventEmitter,
     private sessionManager: TONConnectSessionManager,
     private walletManager: WalletManager,
-    private analyticsManager?: AnalyticsManager,
   ) {
     this.setupHandlers();
   }
@@ -190,7 +188,6 @@ export class EventRouter {
       new ConnectHandler(
         this.notifyConnectRequestCallbacks.bind(this),
         this.config,
-        this.analyticsManager,
       ),
       new TransactionHandler(
         this.notifyTransactionRequestCallbacks.bind(this),
@@ -198,13 +195,11 @@ export class EventRouter {
         this.eventEmitter,
         this.walletManager,
         this.sessionManager,
-        this.analyticsManager,
       ),
       new SignDataHandler(
         this.notifySignDataRequestCallbacks.bind(this),
         this.walletManager,
         this.sessionManager,
-        this.analyticsManager,
       ),
       new SignMessageHandler(
         this.notifySignMessageRequestCallbacks.bind(this),
@@ -212,7 +207,6 @@ export class EventRouter {
         this.eventEmitter,
         this.walletManager,
         this.sessionManager,
-        this.analyticsManager,
       ),
       new DisconnectHandler(
         this.notifyDisconnectCallbacks.bind(this),

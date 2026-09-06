@@ -85,7 +85,7 @@ export async function checkTransactionRequestItems(
 
   const newRequest = { ...request };
   newRequest.messages = await resolveItemsToMessages(request.items, wallet);
-  // probably we should not remove items here, it can be used for analytics and debugging
+  // probably we should not remove items here, it can be used for debugging
   // newRequest.items = undefined;
 
   return newRequest;

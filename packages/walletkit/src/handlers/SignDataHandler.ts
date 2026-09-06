@@ -24,7 +24,6 @@ import type {
   SignDataRequestEvent,
   SignDataPreview,
 } from '../api/models';
-import type { Analytics, AnalyticsManager } from '../analytics';
 import type { TONConnectSessionManager } from '../api/interfaces/TONConnectSessionManager';
 
 const log = globalLogger.createChild('SignDataHandler');
@@ -33,7 +32,6 @@ export class SignDataHandler
   extends BasicHandler<SignDataRequestEvent>
   implements EventHandler<SignDataRequestEvent, RawBridgeEventSignData>
 {
-  private analytics?: Analytics;
   private walletManager: WalletManager;
   private sessionManager: TONConnectSessionManager;
 
@@ -41,12 +39,10 @@ export class SignDataHandler
     notify: (event: SignDataRequestEvent) => void,
     walletManager: WalletManager,
     sessionManager: TONConnectSessionManager,
-    analyticsManager?: AnalyticsManager,
   ) {
     super(notify);
     this.walletManager = walletManager;
     this.sessionManager = sessionManager;
-    this.analytics = analyticsManager?.scoped();
   }
 
   canHandle(event: RawBridgeEvent): event is RawBridgeEventSignData {
@@ -109,23 +105,6 @@ export class SignDataHandler
         walletId ?? (wallet ? this.walletManager.getWalletId(wallet) : ''),
       walletAddress: walletAddress ?? wallet?.getAddress() ?? undefined,
     };
-
-    if (this.analytics) {
-      const sessionData = event.from
-        ? await this.sessionManager.getSession(event.from)
-        : undefined;
-
-      // Send wallet-sign-data-request-received event
-      this.analytics?.emitWalletSignDataRequestReceived({
-        trace_id: event.traceId,
-        client_id: event.from,
-        wallet_id: sessionData?.publicKey,
-        dapp_name: event.dAppInfo?.name,
-        network_id: wallet?.getNetwork().chainId,
-        // manifest_json_url: event.dAppInfo?.url, // todo
-        origin_url: event.dAppInfo?.url,
-      });
-    }
 
     return signEvent;
   }

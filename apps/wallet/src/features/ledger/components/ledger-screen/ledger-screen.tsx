@@ -6,10 +6,10 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { Minus, Plus } from 'lucide-react';
-import { useAuth } from '@demo/wallet-core';
+import { useAuth, useWallet, generateWalletName } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
 
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
@@ -26,8 +26,15 @@ export const LedgerScreen: React.FC = () => {
     setLedgerAccountNumber,
     setUseWalletInterfaceType,
   } = useAuth();
+  const { savedWallets } = useWallet();
 
-  const [network, setNetwork] = useState<NetworkType>('mainnet');
+  const defaultName = useMemo(
+    () => generateWalletName(savedWallets, 'ledger'),
+    [savedWallets],
+  );
+
+  const [walletName, setWalletName] = useState('');
+  const [network, setNetwork] = useState<NetworkType>('testnet');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,7 +43,7 @@ export const LedgerScreen: React.FC = () => {
     setIsLoading(true);
     try {
       setUseWalletInterfaceType('ledger');
-      await createLedgerWallet(network);
+      await createLedgerWallet(network, walletName.trim() || defaultName);
       navigate('/wallet');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect Ledger');
@@ -63,6 +70,19 @@ export const LedgerScreen: React.FC = () => {
 
         <div className="mt-6 space-y-2">
           <NetworkSelector value={network} onChange={setNetwork} compact />
+          <div className="space-y-1 text-left">
+            <label className="text-xs font-medium text-gray-700 block">
+              Wallet name
+            </label>
+            <input
+              type="text"
+              value={walletName}
+              onChange={(e) => setWalletName(e.target.value)}
+              placeholder={defaultName}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="wallet-name-input"
+            />
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Account</span>
             <div className="flex items-center gap-3">

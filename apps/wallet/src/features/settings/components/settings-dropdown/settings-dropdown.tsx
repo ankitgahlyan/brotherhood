@@ -103,7 +103,7 @@ export const SettingsDropdown: React.FC = () => {
     showFastSend,
     setShowFastSend,
   } = useAuth();
-  const { getDecryptedMnemonic, network = 'testnet' } = useWallet();
+  const { getDecryptedMnemonic } = useWallet();
   const {
     isSupported: isBiometricsSupported,
     isEnabled: isBiometricsEnabled,

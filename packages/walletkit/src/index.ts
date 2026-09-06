@@ -157,7 +157,6 @@ export {
   DEFAULT_REQUEST_TIMEOUT,
 } from './bridge/utils/timeouts';
 export { CreateTonProofMessageBytes } from './utils/tonProof';
-export type { AnalyticsAppInfo, AnalyticsManagerOptions } from './analytics';
 
 export type { AccountState, AccountStates, TransactionId } from './api/models';
 export type { ToncenterResponseJettonMasters } from './types/toncenter/emulation';

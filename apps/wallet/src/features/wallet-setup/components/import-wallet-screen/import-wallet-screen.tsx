@@ -8,7 +8,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@/core/routing';
-import { useAuth, useWalletKit } from '@demo/wallet-core';
+import {
+  useAuth,
+  useWallet,
+  useWalletKit,
+  generateWalletName,
+} from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
 
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
@@ -45,8 +50,15 @@ export const ImportWalletScreen: React.FC = () => {
   const walletKit = useWalletKit();
   const { importWallet } = useTonWallet();
   const { setUseWalletInterfaceType } = useAuth();
+  const { savedWallets } = useWallet();
+
+  const defaultName = useMemo(
+    () => generateWalletName(savedWallets, 'mnemonic'),
+    [savedWallets],
+  );
 
   const [words, setWords] = useState<string[]>(Array(TOTAL_WORDS).fill(''));
+  const [walletName, setWalletName] = useState('');
   const [activeInput, setActiveInput] = useState(0);
   const [version, setVersion] = useState<WalletVersion>('v5r1');
   const [interfaceType, setInterfaceType] =
@@ -164,14 +176,21 @@ export const ImportWalletScreen: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      for (const id of Array.from(selectedWalletIds)) {
+      const baseName = walletName.trim() || defaultName;
+      const selectedList = Array.from(selectedWalletIds);
+      for (const id of selectedList) {
         const target = discoveredWallets?.find((w) => w.id === id);
         if (target) {
+          const name =
+            selectedList.length > 1
+              ? `${baseName} (${target.versionLabel})`
+              : baseName;
           await importWallet(
             validation.nonEmptyWords,
             target.version,
             network,
             target.subwalletId,
+            name,
           );
         }
       }
@@ -426,6 +445,19 @@ export const ImportWalletScreen: React.FC = () => {
               value={interfaceType}
               onChange={setInterfaceType}
               options={INTERFACES}
+            />
+          </div>
+          <div className="space-y-1 text-left pt-1">
+            <label className="text-xs font-medium text-foreground block">
+              Wallet name
+            </label>
+            <input
+              type="text"
+              value={walletName}
+              onChange={(e) => setWalletName(e.target.value)}
+              placeholder={defaultName}
+              className="w-full rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="wallet-name-input"
             />
           </div>
         </div>

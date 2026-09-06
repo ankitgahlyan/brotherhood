@@ -25,7 +25,6 @@ import { StorageEventProcessor } from './EventProcessor';
 import { WalletTonClass } from './wallet/extensions/ton';
 import { WalletJettonClass } from './wallet/extensions/jetton';
 import { WalletNftClass } from './wallet/extensions/nft';
-import type { AnalyticsManager } from '../analytics';
 import type { NetworkManager } from './NetworkManager';
 import type { Wallet, WalletAdapter } from '../api/interfaces';
 
@@ -51,16 +50,13 @@ export class Initializer {
   private config: TonWalletKitOptions;
   private networkManager!: NetworkManager;
   private eventEmitter: WalletKitEventEmitter;
-  private analyticsManager?: AnalyticsManager;
 
   constructor(
     config: TonWalletKitOptions,
     eventEmitter: WalletKitEventEmitter,
-    analyticsManager?: AnalyticsManager,
   ) {
     this.config = config;
     this.eventEmitter = eventEmitter;
-    this.analyticsManager = analyticsManager;
   }
 
   /**
@@ -178,7 +174,6 @@ export class Initializer {
       this.eventEmitter,
       sessionManager,
       walletManager,
-      this.analyticsManager,
     );
 
     const bridgeManager = new BridgeManager(
@@ -190,7 +185,6 @@ export class Initializer {
       eventRouter,
       options,
       this.eventEmitter,
-      this.analyticsManager,
     );
     eventRouter.setBridgeManager(bridgeManager);
     bridgeManager
@@ -238,7 +232,6 @@ export class Initializer {
       sessionManager,
       bridgeManager,
       walletManager,
-      this.analyticsManager,
     );
 
     return {
