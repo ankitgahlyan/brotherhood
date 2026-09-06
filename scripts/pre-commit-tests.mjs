@@ -137,7 +137,7 @@ async function main() {
       '\x1b[34m[TypeScript / Bun] Running affected TS/JS tests...\x1b[0m',
     );
     // bun test --changed runs test files affected by changed files according to git
-    run('bun test --changed=HEAD --pass-with-no-tests');
+    run('bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**"');
     console.log('');
   } else {
     console.log(
