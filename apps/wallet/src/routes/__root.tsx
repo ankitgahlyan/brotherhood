@@ -10,6 +10,7 @@ import { Button } from '@/core/components/ui/button';
 import { GlobalRequestModals } from '@/features/ton-connect';
 import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
+import { FloatingDevButton } from '@/features/developer';
 
 function RootComponent() {
   const isWalletKitInitialized = useWalletStore(
@@ -69,6 +70,7 @@ function RootComponent() {
       <Outlet />
       <GlobalRequestModals />
       <PwaInstallBanner />
+      <FloatingDevButton />
       <Toaster />
       {process.env.NODE_ENV === 'development' && (
         <TanStackRouterDevtools position="bottom-right" />

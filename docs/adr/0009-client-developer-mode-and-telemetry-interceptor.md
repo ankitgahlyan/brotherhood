@@ -4,11 +4,12 @@
 Developers and QA engineers troubleshooting client-side issues (especially in embedded Telegram Mini App or mobile PWA webviews) do not have native access to browser developer tools, the JavaScript console, or network inspection panels. Diagnosing failed Toncenter RPCs, serialization errors, or API rate-limiting issues on real devices currently requires tethered USB remote debugging or guesswork.
 
 ## Decision
-1. **Easter Egg Activation Mechanism**:
-   - In the Settings modal, tapping the bottom "Brotherhood" brand text 7 times permanently unlocks Developer Mode on that device.
-   - Taps are tracked with a 2-second sliding reset interval to prevent accidental activation.
-   - Gentle toast feedback is provided on taps 4 through 6, culminating in a confirmation toast and automatic redirect to `/developer` on the 7th tap.
-   - Unlocking is persisted in `localStorage` under `brotherhood_developer_mode_enabled`. Once unlocked, a permanent "Developer Diagnostics" navigation entry is rendered in the Settings modal. An explicit disable switch is provided on the Developer Diagnostics screen to revert.
+1. **Easter Egg Activation & Draggable Floating Trigger**:
+   - In the Settings modal, tapping the bottom "Brotherhood" brand text 7 times unlocks Developer Mode on that device.
+   - Taps are tracked with a sliding reset interval to prevent accidental activation.
+   - Gentle toast feedback is provided on taps 4 through 6, culminating in a confirmation toast and immediate launch of the diagnostics modal on the 7th tap.
+   - Unlocking is persisted in `localStorage` under `brotherhood_developer_mode_enabled`. Once unlocked, a small non-intrusive draggable floating icon appears globally with live status badges (in-flight network activity and error counters).
+   - Tapping the floating icon opens an in-place fullscreen modal with slide-down gesture dismissal, ensuring current page state, active transaction prompts, and forms remain preserved. An explicit disable switch is provided in the header to deactivate Developer Mode and hide the floating icon.
 
 2. **Global Telemetry Interception**:
    - Outgoing HTTP/HTTPS network calls are intercepted by wrapping `window.fetch` at the earliest point of application bootstrap (`main.tsx`).

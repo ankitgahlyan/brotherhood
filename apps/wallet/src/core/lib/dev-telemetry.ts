@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 export interface ApiCallLog {
   type: 'api';
   id: string;
@@ -32,6 +34,23 @@ export interface TelemetryMetrics {
 
 const MAX_BUFFER_SIZE = 1000;
 const MAX_PREVIEW_LENGTH = 4000;
+
+let last429ToastTime = 0;
+const COOLDOWN_429_MS = 3000;
+
+export function notifyRateLimit429(_url?: string): void {
+  const now = Date.now();
+  if (now - last429ToastTime < COOLDOWN_429_MS) {
+    return;
+  }
+  last429ToastTime = now;
+
+  toast.error('Too Many Requests (429)', {
+    id: 'rate-limit-429',
+    description: 'Rate limit reached. Requests are backing off.',
+    position: 'top-center',
+  });
+}
 
 class DevTelemetryManager {
   private buffer: TelemetryItem[] = [];
@@ -241,6 +260,9 @@ class DevTelemetryManager {
 
         if (!response.ok) {
           this.metrics.failedApiCalls++;
+          if (response.status === 429) {
+            notifyRateLimit429(url);
+          }
         }
 
         this.updateApiCall(callId, {
@@ -277,6 +299,13 @@ class DevTelemetryManager {
           this.metrics.activeApiCalls - 1,
         );
         this.metrics.failedApiCalls++;
+
+        if (
+          err?.status === 429 ||
+          (err?.message && String(err.message).includes('429'))
+        ) {
+          notifyRateLimit429(url);
+        }
 
         this.updateApiCall(callId, {
           status: 'failed',

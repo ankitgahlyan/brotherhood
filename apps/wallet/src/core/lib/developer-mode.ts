@@ -62,3 +62,40 @@ export function useDeveloperMode(): [boolean, (enabled: boolean) => void] {
 
   return [enabled, toggle];
 }
+
+const MODAL_EVENT_NAME = 'brotherhood:devmodal-change';
+let isModalOpenGlobal = false;
+
+export function isDeveloperModalOpen(): boolean {
+  return isModalOpenGlobal;
+}
+
+export function setDeveloperModalOpen(open: boolean): void {
+  isModalOpenGlobal = open;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(MODAL_EVENT_NAME, { detail: { open } }),
+    );
+  }
+}
+
+export function useDeveloperModal(): [boolean, (open: boolean) => void] {
+  const [isOpen, setIsOpen] = useState(isModalOpenGlobal);
+
+  useEffect(() => {
+    const handleModalChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open: boolean }>;
+      setIsOpen(customEvent.detail.open);
+    };
+    window.addEventListener(MODAL_EVENT_NAME, handleModalChange);
+    return () => {
+      window.removeEventListener(MODAL_EVENT_NAME, handleModalChange);
+    };
+  }, []);
+
+  const toggle = useCallback((nextOpen: boolean) => {
+    setDeveloperModalOpen(nextOpen);
+  }, []);
+
+  return [isOpen, toggle];
+}

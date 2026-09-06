@@ -12,6 +12,7 @@ import {
   ChevronUp,
   XCircle,
   Clock,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -24,7 +25,15 @@ import {
 import { useDeveloperMode } from '@/core/lib/developer-mode';
 import { Button } from '@/core/components/ui/button';
 
-export const DeveloperScreen: React.FC = () => {
+export interface DeveloperScreenProps {
+  onClose?: () => void;
+  isModal?: boolean;
+}
+
+export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
+  onClose,
+  isModal: _isModal = false,
+}) => {
   const navigate = useNavigate();
   const [developerMode, setDeveloperMode] = useDeveloperMode();
   const [items, setItems] = useState<TelemetryItem[]>(() =>
@@ -135,10 +144,18 @@ export const DeveloperScreen: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => navigate('/')}
-              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold border border-border transition-colors"
+              onClick={onClose ? onClose : () => navigate('/')}
+              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold border border-border transition-colors flex items-center gap-1 cursor-pointer"
+              aria-label={onClose ? 'Close diagnostics' : 'Back to wallet'}
             >
-              ← Back
+              {onClose ? (
+                <>
+                  <X className="w-3.5 h-3.5" />
+                  <span>Close</span>
+                </>
+              ) : (
+                <span>← Back</span>
+              )}
             </button>
             <div className="flex items-center gap-2">
               <Terminal className="w-5 h-5 text-blue-500" />
@@ -159,11 +176,12 @@ export const DeveloperScreen: React.FC = () => {
                 setDeveloperMode(nextState);
                 if (!nextState) {
                   toast.info('Developer Mode disabled');
+                  if (onClose) onClose();
                 } else {
                   toast.success('Developer Mode enabled');
                 }
               }}
-              className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors ${
+              className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors cursor-pointer ${
                 developerMode
                   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
                   : 'bg-muted text-muted-foreground border-border'
