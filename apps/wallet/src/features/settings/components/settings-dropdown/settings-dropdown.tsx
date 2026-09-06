@@ -30,7 +30,7 @@ import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
-
+import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
 
