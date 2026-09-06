@@ -562,9 +562,14 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
             >
               <span>
                 View Minter on{' '}
-                {explorer === 'tonviewer' ? 'Tonviewer' : 'Tonscan'}
+                {explorer === 'actonscan'
+                  ? 'ActonScan'
+                  : explorer === 'tonviewer'
+                    ? 'Tonviewer'
+                    : 'Tonscan'}
               </span>
               <ExternalLink className="w-3.5 h-3.5" />
+
             </a>
 
             {/* Issuer shortcut button */}

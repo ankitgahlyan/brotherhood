@@ -10,7 +10,7 @@ import { create } from 'zustand';
 import { Base64ToHex } from '@ton/walletkit';
 import type { NetworkType } from '@demo/wallet-core';
 
-export type ExplorerChoice = 'tonscan' | 'tonviewer';
+export type ExplorerChoice = 'tonscan' | 'tonviewer' | 'actonscan';
 
 export const EXPLORER_STORAGE_KEY = 'brotherhood-explorer';
 
@@ -23,7 +23,11 @@ const getInitialExplorer = (): ExplorerChoice => {
   if (typeof window === 'undefined') return 'tonscan';
   try {
     const stored = localStorage.getItem(EXPLORER_STORAGE_KEY);
-    if (stored === 'tonscan' || stored === 'tonviewer') {
+    if (
+      stored === 'tonscan' ||
+      stored === 'tonviewer' ||
+      stored === 'actonscan'
+    ) {
       return stored;
     }
   } catch {
@@ -67,8 +71,12 @@ export function getExplorerTxUrl(
   hash: string,
   explorer: ExplorerChoice = 'tonscan',
 ): string {
-  const prefix = getPrefix(network);
   const cleanHash = toHexHash(hash);
+  if (explorer === 'actonscan') {
+    const query = network === 'testnet' ? '?network=testnet' : '';
+    return `https://actonscan.com/tx/${cleanHash}${query}`;
+  }
+  const prefix = getPrefix(network);
   if (explorer === 'tonviewer') {
     return `https://${prefix}tonviewer.com/transaction/${cleanHash}`;
   }
@@ -80,9 +88,14 @@ export function getExplorerAddressUrl(
   address: string,
   explorer: ExplorerChoice = 'tonscan',
 ): string {
+  if (explorer === 'actonscan') {
+    const query = network === 'testnet' ? '?network=testnet' : '';
+    return `https://actonscan.com/address/${address}${query}`;
+  }
   const prefix = getPrefix(network);
   if (explorer === 'tonviewer') {
     return `https://${prefix}tonviewer.com/${address}`;
   }
   return `https://${prefix}tonscan.org/address/${address}`;
 }
+

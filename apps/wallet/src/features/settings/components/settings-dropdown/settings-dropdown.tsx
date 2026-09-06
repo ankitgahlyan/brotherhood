@@ -20,15 +20,17 @@ import {
   Sparkles,
   Trash2,
   Check,
-  Terminal,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDeveloperMode } from '@/core/lib/developer-mode';
+import {
+  useDeveloperMode,
+  setDeveloperModalOpen,
+} from '@/core/lib/developer-mode';
 import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
-import { useExplorer, type ExplorerChoice } from '@/core/explorer';
+
 
 import { ToggleRow } from '../toggle-row';
 
@@ -37,9 +39,8 @@ import { createComponentLogger } from '@/core/lib/logger';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
 import { SettingsIcon } from '@/core/components/ui/icons';
-import { useBiometrics } from '@/core/security/use-biometrics';
-import { CreateWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
-import type { CreateWalletMode } from '@/features/wallet-setup';
+import { AddWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
+import type { AddWalletMode } from '@/features/wallet-setup';
 
 const log = createComponentLogger('SettingsDropdown');
 
@@ -87,18 +88,10 @@ const THEME_OPTIONS: {
   { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
 ];
 
-const getExplorerHost = (choice: ExplorerChoice, network: string): string => {
-  const prefix =
-    network === 'testnet' ? 'testnet.' : network === 'tetra' ? 'tetra.' : '';
-  return choice === 'tonviewer'
-    ? `${prefix}tonviewer.com`
-    : `${prefix}tonscan.org`;
-};
-
 export const SettingsDropdown: React.FC = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const { explorer, setExplorer } = useExplorer();
+
   const {
     lock,
     reset,
@@ -131,7 +124,7 @@ export const SettingsDropdown: React.FC = () => {
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
 
-  const [developerMode, setDeveloperMode] = useDeveloperMode();
+  const [, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
   const devTapTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -150,9 +143,9 @@ export const SettingsDropdown: React.FC = () => {
     if (nextCount >= 7) {
       setDevTapCount(0);
       setDeveloperMode(true);
-      toast.success('Developer Mode permanently unlocked!');
+      setDeveloperModalOpen(true);
+      toast.success('Developer Mode enabled!');
       setPanel(null);
-      navigate('/developer');
     } else if (nextCount >= 4) {
       const remaining = 7 - nextCount;
       toast.info(
@@ -196,9 +189,9 @@ export const SettingsDropdown: React.FC = () => {
     }
   };
 
-  const handleCreateNewWallet = () => setPanel('create');
+  const handleAddWallet = () => setPanel('create');
 
-  const handleSelectCreateMode = (mode: CreateWalletMode) => {
+  const handleSelectAddMode = (mode: AddWalletMode) => {
     setPanel(null);
     navigate(WALLET_SETUP_ROUTE[mode]);
   };
@@ -285,69 +278,6 @@ export const SettingsDropdown: React.FC = () => {
             </div>
           </div>
 
-          {/* Block Explorer Section */}
-          <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
-            <div className="flex items-center justify-between px-1 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Block Explorer
-              </span>
-              <span className="text-[10px] font-medium text-muted-foreground/80 bg-background/60 px-2 py-0.5 rounded-full border border-border">
-                {network}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 bg-background/60 p-1.5 rounded-xl border border-border">
-              <button
-                type="button"
-                onClick={() => setExplorer('tonscan')}
-                className={`flex flex-col p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                  explorer === 'tonscan'
-                    ? 'bg-card text-foreground shadow-sm font-semibold border border-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
-                }`}
-                data-testid="explorer-option-tonscan"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">
-                    TonScan
-                  </span>
-                  {explorer === 'tonscan' ? (
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground font-normal">
-                      Default
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
-                  {getExplorerHost('tonscan', network)}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setExplorer('tonviewer')}
-                className={`flex flex-col p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                  explorer === 'tonviewer'
-                    ? 'bg-card text-foreground shadow-sm font-semibold border border-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
-                }`}
-                data-testid="explorer-option-tonviewer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">
-                    TonViewer
-                  </span>
-                  {explorer === 'tonviewer' && (
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
-                  {getExplorerHost('tonviewer', network)}
-                </span>
-              </button>
-            </div>
-          </div>
-
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
             {isBiometricsSupported && (
               <ToggleRow
@@ -396,16 +326,6 @@ export const SettingsDropdown: React.FC = () => {
           </div>
 
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-            {developerMode && (
-              <ActionRow
-                icon={<Terminal className="w-5 h-5 text-blue-500" />}
-                label="Developer Diagnostics"
-                onClick={() => {
-                  setPanel(null);
-                  navigate('/developer');
-                }}
-              />
-            )}
             <ActionRow
               icon={<Download className="w-5 h-5" />}
               label="Install App / Add Shortcut"
@@ -416,8 +336,8 @@ export const SettingsDropdown: React.FC = () => {
             />
             <ActionRow
               icon={<Plus className="w-5 h-5" />}
-              label="Create New Wallet"
-              onClick={handleCreateNewWallet}
+              label="Add Wallet"
+              onClick={handleAddWallet}
             />
             <ActionRow
               icon={<KeyRound className="w-5 h-5" />}
@@ -517,10 +437,10 @@ export const SettingsDropdown: React.FC = () => {
         </Modal.Body>
       </Modal.Container>
 
-      <CreateWalletModal
+      <AddWalletModal
         isOpen={panel === 'create'}
         onClose={() => setPanel(null)}
-        onSelect={handleSelectCreateMode}
+        onSelect={handleSelectAddMode}
       />
 
       <Modal.Container

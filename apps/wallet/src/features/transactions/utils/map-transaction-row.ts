@@ -23,7 +23,11 @@ export type TransactionRowStatus = 'success' | 'loading' | 'failed';
 export interface TransactionRowModel {
   /** Unique React key. */
   id: string;
-  /** Tonviewer transaction URL. Undefined for not-yet-on-chain pending transactions (row is not clickable). */
+  /** Raw transaction hash or trace ID for explorer lookups. */
+  txHash?: string;
+  /** Active blockchain network (e.g. testnet, mainnet). */
+  network?: ExplorerNetwork;
+  /** Default explorer transaction URL. Undefined for not-yet-on-chain pending transactions. */
   explorerUrl?: string;
   /** Primary label, e.g. "Sent 5 GRAM" / "Received 1 USDT". */
   title: string;
@@ -37,6 +41,7 @@ export interface TransactionRowModel {
   /** Formatted date+time, e.g. "Sep 10, 14:30". */
   date: string;
 }
+
 
 /** Minimal shape of a streaming pending transaction (structural — avoids a cross-package type import). */
 interface PendingLike {
@@ -145,6 +150,8 @@ export const mapEventToRow = (
     : eventId;
   return {
     id: eventId,
+    txHash: hash,
+    network,
     explorerUrl: getExplorerTxUrl(network, hash, explorer),
     title,
     subtitleId: truncateMiddle(eventId),
@@ -174,22 +181,26 @@ export const mapPendingToRow = (
   explorer: ExplorerChoice = 'tonscan',
 ): TransactionRowModel => {
   const status = pendingStatus(pending);
+  const hash = pending.externalHash ?? pending.traceId;
   // Not-yet-on-chain (still loading) transactions have no explorer page yet.
   const explorerUrl =
     status === 'loading'
       ? undefined
       : getExplorerTxUrl(
           network,
-          pending.externalHash ?? pending.traceId,
+          hash,
           explorer,
         );
   const base = {
     id: `pending-${pending.traceId}`,
+    txHash: hash,
+    network,
     explorerUrl,
     subtitleId: truncateMiddle(pending.traceId),
     status,
     date: formatTxDate(timestamp),
   };
+
 
   if (pending.action) {
     const isOutgoing = isOutgoingFromAction(pending.action, myAddress);
