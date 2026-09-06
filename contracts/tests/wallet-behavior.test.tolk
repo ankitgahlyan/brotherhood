@@ -448,8 +448,16 @@ get fun `test wallet: change country succeeds when no active votes`() {
         { value: ton("1") },
     );
 
-    val changeRes = userWallet2.sendChangeCountry(user.address, 0, 356, { value: ton("0.1") });
-    expect(changeRes).toHaveSuccessfulTx<ChangeCountry>({
+    val changeRes = userWallet2.sendChangeProfile(
+        user.address,
+        0,
+        null,
+        null,
+        356,
+        null,
+        { value: ton("1") },
+    );
+    expect(changeRes).toHaveSuccessfulTx<ChangeProfile>({
         from: user.address,
         to: userWallet2.address,
     });
@@ -624,8 +632,16 @@ get fun `test wallet: change country fails when active votes exist`() {
 
     voterWallet.sendActVote(voter.address, candidate.address, 10, { value: ton("0.2") });
 
-    val failChange = voterWallet.sendChangeCountry(voter.address, 0, 840, { value: ton("0.1") });
-    expect(failChange).toHaveFailedTx<ChangeCountry>({
+    val failChange = voterWallet.sendChangeProfile(
+        voter.address,
+        0,
+        null,
+        null,
+        840,
+        null,
+        { value: ton("1") },
+    );
+    expect(failChange).toHaveFailedTx<ChangeProfile>({
         from: voter.address,
         to: voterWallet.address,
         exitCode: Errors.HasActiveVotes,
@@ -791,5 +807,109 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         from: voter.address,
         to: voterWallet.address,
         exitCode: Errors.NotVotedYet,
+    });
+}
+
+get fun `test wallet: change profile multi-field update succeeds`() {
+    val (minter, deployer, _) = setupTest();
+    val user = testing.treasury("user-change-profile-multi");
+    val userW = userWallet(minter, user.address);
+    val rootWallet = userWallet(minter, deployer.address);
+    val nomineeAcc = testing.treasury("multi-nominee");
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        user.address,
+        "initial_user",
+        "8828308281fffff",
+        250,
+        { value: ton("1") },
+    );
+
+    val res = userW.sendChangeProfile(
+        user.address,
+        0,
+        "updated_user",
+        null,
+        356,
+        nomineeAcc.address,
+        { value: ton("1") },
+    );
+    expect(res).toHaveSuccessfulTx<ChangeProfile>({
+        from: user.address,
+        to: userW.address,
+    });
+
+    val (uname, _, ctry) = userW.getProfile();
+    expect(uname).toEqual("updated_user");
+    expect(ctry).toEqual(356);
+
+    val wData = userW.getWalletDataAll();
+    val nom = wData.addresses.load().nomInAddrs.load().nominee;
+    expect(nom! == nomineeAcc.address).toBeTrue();
+}
+
+get fun `test wallet: change profile fails when all fields are null`() {
+    val (minter, deployer, _) = setupTest();
+    val user = testing.treasury("user-change-profile-empty");
+    val userW = userWallet(minter, user.address);
+    val rootWallet = userWallet(minter, deployer.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        user.address,
+        "user_empty",
+        "8828308281fffff",
+        250,
+        { value: ton("1") },
+    );
+
+    val failRes = userW.sendChangeProfile(
+        user.address,
+        0,
+        null,
+        null,
+        null,
+        null,
+        { value: ton("1") },
+    );
+    expect(failRes).toHaveFailedTx<ChangeProfile>({
+        from: user.address,
+        to: userW.address,
+        exitCode: Errors.InvalidMessage,
+    });
+}
+
+get fun `test wallet: change profile fails when gas is below 1 ton`() {
+    val (minter, deployer, _) = setupTest();
+    val user = testing.treasury("user-change-profile-gas");
+    val userW = userWallet(minter, user.address);
+    val rootWallet = userWallet(minter, deployer.address);
+
+    rootWallet.sendActInvite(
+        deployer.address,
+        0,
+        user.address,
+        "user_gas",
+        "8828308281fffff",
+        250,
+        { value: ton("1") },
+    );
+
+    val failGas = userW.sendChangeProfile(
+        user.address,
+        0,
+        "new_name",
+        null,
+        null,
+        null,
+        { value: ton("0.5") },
+    );
+    expect(failGas).toHaveFailedTx<ChangeProfile>({
+        from: user.address,
+        to: userW.address,
+        exitCode: Errors.NotEnoughGas,
     });
 }

@@ -261,13 +261,12 @@ type ActAction =
 // Buffer: 50 reserved opcodes for future location & profile features
 // ============================================================================
 
-struct (0x000010a1) ChangeUsername {
-    newUsername: string
-}
-
-struct (0x000010a2) ChangeLocation {
+struct (0x000010a1) ChangeProfile {
     queryId: uint64 = 0
-    newH3Cell: string
+    username: string? = null
+    h3Cell: string? = null
+    country: uint16? = null
+    nominee: address? = null
 }
 
 struct (0x000010a3) InformMinterChangeLocation {
@@ -287,16 +286,6 @@ struct (0x000010a5) LocationRemoveMember {
     queryId: uint64
     userAddress: address
     sendExcessesTo: address?
-}
-
-struct (0x000010a8) ChangeCountry {
-    queryId: uint64 = 0
-    newCountry: uint16
-}
-
-struct (0x000010a9) ChangeNominee {
-    queryId: uint64 = 0
-    newNominee: address
 }
 
 // ============================================================================

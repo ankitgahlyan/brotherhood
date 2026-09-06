@@ -185,9 +185,7 @@ export const BrotherhoodScreen: React.FC = () => {
   const [profileUsername, setProfileUsername] = useState('');
   const [profileH3Cell, setProfileH3Cell] = useState('');
   const [profileCountry, setProfileCountry] = useState(0);
-  const [profileSubTab, setProfileSubTab] = useState<
-    'username' | 'location' | 'country'
-  >('username');
+  const [profileNominee, setProfileNominee] = useState('');
   const [creditSubTab, setCreditSubTab] = useState<
     'buy' | 'seekers' | 'terms' | 'repay'
   >('buy');
@@ -215,6 +213,10 @@ export const BrotherhoodScreen: React.FC = () => {
         const c = account.data.h3Cell;
         setProfileH3Cell((prev) => prev || c);
       }
+      if (account.data.nominee) {
+        const nom = formatWalletAddress(account.data.nominee.toString(), false);
+        setProfileNominee((prev) => prev || nom);
+      }
       if (
         account.data.votedFor.length === 0 &&
         account.data.invited.length > 0
@@ -222,7 +224,7 @@ export const BrotherhoodScreen: React.FC = () => {
         setCandidateSourceTab('circle');
       }
     }
-  }, [account.data]);
+  }, [account.data, formatWalletAddress]);
 
   // Address batch resolver for voted candidates & invitees
   const addressesToResolve = useMemo(() => {
@@ -467,6 +469,7 @@ export const BrotherhoodScreen: React.FC = () => {
     username: profileUsername,
     h3Cell: profileH3Cell,
     country: profileCountry,
+    nominee: profileNominee,
     network,
     accountData: account.data,
   });
@@ -2843,7 +2846,7 @@ export const BrotherhoodScreen: React.FC = () => {
               <span className="font-semibold text-foreground text-sm block">
                 Current Member Profile
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
                 <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
                   <span className="text-muted-foreground block text-[11px]">
                     Telegram Handle
@@ -2885,54 +2888,35 @@ export const BrotherhoodScreen: React.FC = () => {
                       : 'Global (0)'}
                   </span>
                 </div>
+                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
+                  <span className="text-muted-foreground block text-[11px]">
+                    Nominee (Succession)
+                  </span>
+                  <span className="font-medium text-foreground text-xs truncate block font-mono">
+                    {account.data?.nominee
+                      ? formatShortWallet(account.data.nominee.toString())
+                      : 'Not designated'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Sub-tabs header */}
-            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setProfileSubTab('username')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  profileSubTab === 'username'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-profile-subtab-username"
-              >
-                Username
-              </button>
-              <button
-                type="button"
-                onClick={() => setProfileSubTab('location')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  profileSubTab === 'location'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-profile-subtab-location"
-              >
-                Spatial Location
-              </button>
-              <button
-                type="button"
-                onClick={() => setProfileSubTab('country')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  profileSubTab === 'country'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-profile-subtab-country"
-              >
-                Country
-              </button>
-            </div>
+            {/* Unified Edit Form */}
+            <div className="space-y-4 pt-1">
+              <div>
+                <h4 className="font-semibold text-foreground text-sm">
+                  Update Profile & Nominee
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Modify any fields below. Changes are batched and applied in a
+                  single on-chain transaction.
+                </p>
+              </div>
 
-            {/* Username Sub-Tab */}
-            {profileSubTab === 'username' && (
-              <div className="space-y-2 pt-1">
+              {/* Username Input */}
+              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  New Telegram Username
+                  Telegram Username
                 </label>
                 <input
                   type="text"
@@ -2942,35 +2926,18 @@ export const BrotherhoodScreen: React.FC = () => {
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                   data-testid="brotherhood-profile-username"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Enter your Telegram handle (with or without @).
-                </p>
                 {profile.usernameValidationError && (
                   <p className="text-xs text-rose-500 font-medium">
                     {profile.usernameValidationError}
                   </p>
                 )}
-                <Button
-                  onClick={() => profile.updateUsername()}
-                  disabled={
-                    Boolean(profile.usernameValidationError) ||
-                    profile.isSending
-                  }
-                  loading={profile.isSending}
-                  fullWidth
-                  data-testid="brotherhood-update-username-submit"
-                >
-                  Update Username
-                </Button>
               </div>
-            )}
 
-            {/* H3 Spatial Cell Sub-Tab */}
-            {profileSubTab === 'location' && (
-              <div className="space-y-2 pt-1">
+              {/* H3 Spatial Location Input */}
+              <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-medium text-muted-foreground">
-                    New H3 Spatial Cell
+                    H3 Spatial Cell
                   </label>
                   <a
                     href={getH3ViewerUrl(profileH3Cell)}
@@ -2994,26 +2961,12 @@ export const BrotherhoodScreen: React.FC = () => {
                     {profile.locationValidationError}
                   </p>
                 )}
-                <Button
-                  onClick={() => profile.updateLocation()}
-                  disabled={
-                    Boolean(profile.locationValidationError) ||
-                    profile.isSending
-                  }
-                  loading={profile.isSending}
-                  fullWidth
-                  data-testid="brotherhood-update-location-submit"
-                >
-                  Update Location
-                </Button>
               </div>
-            )}
 
-            {/* Country Sub-Tab */}
-            {profileSubTab === 'country' && (
-              <div className="space-y-2 pt-1">
+              {/* Country Select */}
+              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  New Country Code (ISO 3166-1)
+                  Country Code (ISO 3166-1)
                 </label>
                 <CountrySelect
                   value={profileCountry}
@@ -3025,17 +2978,77 @@ export const BrotherhoodScreen: React.FC = () => {
                     {profile.countryValidationError}
                   </p>
                 )}
-                <Button
-                  onClick={() => profile.updateCountry()}
-                  disabled={!profile.canChangeCountry || profile.isSending}
-                  loading={profile.isSending}
-                  fullWidth
-                  data-testid="brotherhood-update-country-submit"
-                >
-                  Update Country
-                </Button>
               </div>
-            )}
+
+              {/* Nominee Input */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Succession Nominee Address
+                  </label>
+                  {account.data?.nominee && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProfileNominee(
+                          formatWalletAddress(
+                            account.data?.nominee?.toString() ?? '',
+                            false,
+                          ),
+                        )
+                      }
+                      className="text-[11px] text-primary hover:underline cursor-pointer"
+                    >
+                      Pre-fill current
+                    </button>
+                  )}
+                </div>
+                <InputScan
+                  value={profileNominee}
+                  onChange={(val) => setProfileNominee(val)}
+                  placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
+                  data-testid="brotherhood-profile-nominee"
+                />
+                {profile.nomineeValidationError && (
+                  <p className="text-xs text-rose-500 font-medium">
+                    {profile.nomineeValidationError}
+                  </p>
+                )}
+              </div>
+
+              {/* Error feedback */}
+              {profile.error && (
+                <p className="text-xs text-rose-500 font-medium">
+                  {profile.error}
+                </p>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onClick={() => profile.updateProfile()}
+                disabled={profile.isDisabled}
+                loading={profile.isSending}
+                fullWidth
+                data-testid="brotherhood-update-profile-submit"
+              >
+                {profile.isSending
+                  ? 'Updating Profile...'
+                  : profile.isDirty
+                    ? 'Save Profile Changes'
+                    : 'No Changes to Save'}
+              </Button>
+
+              <div className="text-[11px] text-muted-foreground space-y-0.5">
+                <p>
+                  • Requires 1.0 TON network gas; unspent gas is automatically
+                  refunded to your wallet.
+                </p>
+                <p>
+                  • Changing country requires no active votes cast (must unvote
+                  all candidates first).
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

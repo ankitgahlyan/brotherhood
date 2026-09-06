@@ -9,7 +9,7 @@
 import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { ChangeNominee } from '@wrappers/FossFiWallet.gen';
+import { ChangeProfile } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
@@ -56,11 +56,7 @@ export function useNominee({
     if (!trimmed) return 'Enter a nominee address';
 
     try {
-      const parsed = Address.parse(trimmed);
-      const owner = Address.parse(walletAddress);
-      if (parsed.equals(owner)) {
-        return 'Cannot designate your own owner wallet as nominee';
-      }
+      Address.parse(trimmed);
     } catch {
       return 'Invalid TON address format';
     }
@@ -76,14 +72,10 @@ export function useNominee({
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const parsedNominee = Address.parse(nomineeAddress.trim());
 
-    if (parsedNominee.equals(fiWalletAddr)) {
-      throw new Error('Cannot designate your own FiWallet contract as nominee');
-    }
-
-    const payload = ChangeNominee.toCell(
-      ChangeNominee.create({
+    const payload = ChangeProfile.toCell(
+      ChangeProfile.create({
         queryId: 0n,
-        newNominee: parsedNominee,
+        nominee: parsedNominee,
       }),
     );
 

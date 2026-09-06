@@ -117,7 +117,7 @@ export const GAS = {
   REPAY: toNano('0.5'),
   ALLOWANCE: toNano('0.5'),
   GOLD: toNano('0.5'),
-  PROFILE: toNano('0.5'),
+  PROFILE: toNano('1.0'),
   AUTHORITY: toNano('0.1'),
   LOTTERY: toNano('0.5'),
   DAO: toNano('0.1'),

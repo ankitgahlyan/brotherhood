@@ -137,65 +137,21 @@ fun FossFiWallet.sendAuthorityAction(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendChangeUsername(
-    self,
-    from: address,
-    newUsername: string,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: ChangeUsername { newUsername },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendChangeLocation(
+fun FossFiWallet.sendChangeProfile(
     self,
     from: address,
     queryId: uint64,
-    newH3Cell: string,
+    username: string?,
+    h3Cell: string?,
+    country: uint16?,
+    nominee: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ChangeLocation { queryId, newH3Cell },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendChangeCountry(
-    self,
-    from: address,
-    queryId: uint64,
-    newCountry: uint16,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: ChangeCountry { queryId, newCountry },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendChangeNominee(
-    self,
-    from: address,
-    queryId: uint64,
-    newNominee: address,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: ChangeNominee { queryId, newNominee },
+        body: ChangeProfile { queryId, username, h3Cell, country, nominee },
     });
     return net.send(from, genericMsg);
 }

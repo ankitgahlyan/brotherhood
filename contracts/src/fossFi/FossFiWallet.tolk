@@ -23,10 +23,7 @@ type AllowedMessageToWallet =
     | AskToBurn
     | BuyCredit
     | AuthorityAction
-    | ChangeUsername
-    | ChangeLocation
-    | ChangeCountry
-    | ChangeNominee
+    | ChangeProfile
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
@@ -236,61 +233,53 @@ fun onInternalMessage(in: InMessage): void {
     // forceDestroy ? destroyContract(in.senderAddress) :
 
     match (msg) {
-        ChangeUsername => {
-            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
-            assert (isNonEmptyString(msg.newUsername)) throw Errors.ProvideCoordinates;
-
+        ChangeProfile => {
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
-            profile.username = msg.newUsername;
-        }
+            assert (in.valueCoins >= ton("1")) throw Errors.NotEnoughGas;
+            assert (
+                msg.username != null || msg.h3Cell != null || msg.country != null ||
+                msg.nominee != null
+            ) throw Errors.InvalidMessage;
 
-        ChangeLocation => {
-            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
-            if (in.senderAddress != addrs.owner) {
-                throw Errors.IncorrectSender;
+            if (msg.username != null) {
+                assert (isNonEmptyString(msg.username)) throw Errors.ProvideCoordinates;
+                profile.username = msg.username;
             }
-            assert (isNonEmptyString(msg.newH3Cell)) throw Errors.ProvideCoordinates;
 
-            val oldH3Cell = profile.h3Cell;
-            profile.h3Cell = msg.newH3Cell;
-
-            val notifyMinterMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: trustedAddrs.minterAddr,
-                value: 0,
-                body: InformMinterChangeLocation {
-                    queryId: msg.queryId,
-                    owner: addrs.owner,
-                    oldH3Cell,
-                    newH3Cell: msg.newH3Cell,
-                },
-            });
-            notifyMinterMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-            );
-        }
-
-        ChangeCountry => {
-            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
-            if (in.senderAddress != addrs.owner) {
-                throw Errors.IncorrectSender;
+            if (msg.country != null) {
+                assert (store.votes == 10) throw Errors.HasActiveVotes;
+                profile.country = msg.country;
             }
-            assert (store.votes == 10) throw Errors.HasActiveVotes;
 
-            profile.country = msg.newCountry;
-        }
-
-        ChangeNominee => {
-            assert (in.valueCoins > ton("0.05")) throw Errors.NotEnoughGas;
-            if (in.senderAddress != addrs.owner) {
-                throw Errors.IncorrectSender;
+            if (msg.nominee != null) {
+                nomins.nominee = msg.nominee;
             }
-            assert (msg.newNominee != addrs.owner) throw Errors.InvalidMessage;
-            assert (msg.newNominee != contract.getAddress()) throw Errors.InvalidMessage;
 
-            nomins.nominee = msg.newNominee;
+            if (msg.h3Cell != null) {
+                assert (isNonEmptyString(msg.h3Cell)) throw Errors.ProvideCoordinates;
+
+                val oldH3Cell = profile.h3Cell;
+                profile.h3Cell = msg.h3Cell;
+
+                val notifyMinterMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: InformMinterChangeLocation {
+                        queryId: msg.queryId,
+                        owner: addrs.owner,
+                        oldH3Cell,
+                        newH3Cell: msg.h3Cell,
+                    },
+                });
+                notifyMinterMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            } else {
+                returnExcessesBack(msg.queryId, addrs.owner);
+            }
         }
 
         ActClaimWeeklyGrant => {
@@ -699,7 +688,7 @@ fun onInternalMessage(in: InMessage): void {
             store.jettonBalance = ton("1");
             if (time.accountInit == 0) {
                 time.accountInit = blockchain.now();
-                nomins.nominee = in.senderAddress; // must be null at init
+                nomins.nominee = msg.sender; // must be null at init
                 profile.username = msg.username;
                 profile.h3Cell = msg.h3Cell;
                 profile.country = msg.country;
@@ -907,6 +896,7 @@ fun onInternalMessage(in: InMessage): void {
         TopUpTons => {
             // deploy + just accept tons
             if (time.accountInit == 0 && (in.senderAddress == trustedAddrs.minterAddr)) {
+                // todo: set profile
                 store.active = true;
                 store.jettonBalance += ton("1");
                 store.isAuthorityAccount = true;

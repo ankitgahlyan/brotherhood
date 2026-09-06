@@ -100,13 +100,16 @@ get fun `test location: change location migrates between H3 cells`() {
     expect(locationNyc.isMember(alice.address)).toBeTrue();
 
     // Alice moves from NYC to SF
-    val moveRes = aliceWallet.sendChangeLocation(
+    val moveRes = aliceWallet.sendChangeProfile(
         alice.address,
         0,
+        null,
         H3_SF,
-        { value: ton("0.2") },
+        null,
+        null,
+        { value: ton("1") },
     );
-    expect(moveRes).toHaveSuccessfulTx<ChangeLocation>({
+    expect(moveRes).toHaveSuccessfulTx<ChangeProfile>({
         from: alice.address,
         to: aliceWallet.address,
     });

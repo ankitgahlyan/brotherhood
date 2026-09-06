@@ -9,11 +9,7 @@
 import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import {
-  ChangeUsername,
-  ChangeLocation,
-  ChangeCountry,
-} from '@wrappers/FossFiWallet.gen';
+import { ChangeProfile } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
@@ -28,20 +24,21 @@ export interface UseProfileParams {
   username: string;
   h3Cell: string;
   country: number;
+  nominee?: string;
   network: Network;
   accountData?: FiAccountData | null;
 }
 
 export interface UseProfileResult {
-  updateUsername: () => Promise<void>;
-  updateLocation: () => Promise<void>;
-  updateCountry: () => Promise<void>;
+  updateProfile: () => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
+  isDirty: boolean;
   error: string | null;
   usernameValidationError: string | null;
   locationValidationError: string | null;
   countryValidationError: string | null;
+  nomineeValidationError: string | null;
   canChangeCountry: boolean;
 }
 
@@ -52,6 +49,7 @@ export function useProfile({
   username,
   h3Cell,
   country,
+  nominee = '',
   network,
   accountData,
 }: UseProfileParams): UseProfileResult {
@@ -61,22 +59,69 @@ export function useProfile({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const cleanUsername = cleanTelegramUsername(username);
+  const currentUsername = accountData?.username ?? '';
+  const isUsernameDirty =
+    Boolean(cleanUsername) && cleanUsername !== currentUsername;
+
+  const trimmedH3Cell = h3Cell.trim();
+  const currentH3Cell = accountData?.h3Cell ?? '';
+  const isLocationDirty =
+    Boolean(trimmedH3Cell) && trimmedH3Cell !== currentH3Cell;
+
+  const currentCountry = accountData?.country ?? 0;
+  const isCountryDirty = country !== currentCountry;
+
+  const trimmedNominee = nominee.trim();
+  const { parsedNominee, isNomineeDirty, nomineeValidationError } = useMemo<{
+    parsedNominee: Address | null;
+    isNomineeDirty: boolean;
+    nomineeValidationError: string | null;
+  }>(() => {
+    if (!trimmedNominee) {
+      return {
+        parsedNominee: null,
+        isNomineeDirty: false,
+        nomineeValidationError: null,
+      };
+    }
+    try {
+      const parsed = Address.parse(trimmedNominee);
+      const currentNom = accountData?.nominee;
+      const isDirty = !currentNom || !parsed.equals(currentNom);
+      return {
+        parsedNominee: parsed,
+        isNomineeDirty: isDirty,
+        nomineeValidationError: null,
+      };
+    } catch {
+      return {
+        parsedNominee: null,
+        isNomineeDirty: true,
+        nomineeValidationError: 'Invalid nominee TON address format',
+      };
+    }
+  }, [trimmedNominee, accountData?.nominee]);
+
   const usernameValidationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
-    if (!cleanTelegramUsername(username))
+    if (isUsernameDirty && !cleanUsername) {
       return 'Enter a non-empty Telegram username';
+    }
     return null;
-  }, [wallet, walletAddress, accountData, username]);
+  }, [wallet, walletAddress, accountData, isUsernameDirty, cleanUsername]);
 
   const locationValidationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
-    if (!h3Cell.trim()) return 'Enter a non-empty H3 spatial cell';
+    if (isLocationDirty && !trimmedH3Cell) {
+      return 'Enter a non-empty H3 spatial cell';
+    }
     return null;
-  }, [wallet, walletAddress, accountData, h3Cell]);
+  }, [wallet, walletAddress, accountData, isLocationDirty, trimmedH3Cell]);
 
   const { countryValidationError, canChangeCountry } = useMemo<{
     countryValidationError: string | null;
@@ -113,66 +158,65 @@ export function useProfile({
     return { countryValidationError: null, canChangeCountry: true };
   }, [wallet, walletAddress, accountData, country]);
 
-  const updateUsername = useCallback(async () => {
+  const isDirty =
+    isUsernameDirty || isLocationDirty || isCountryDirty || isNomineeDirty;
+
+  const hasValidationError =
+    Boolean(usernameValidationError) ||
+    Boolean(locationValidationError) ||
+    (isCountryDirty && Boolean(countryValidationError)) ||
+    Boolean(nomineeValidationError);
+
+  const isDisabled =
+    !wallet || !walletAddress || isSending || !isDirty || hasValidationError;
+
+  const updateProfile = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
+    if (!isDirty) throw new Error('No profile fields modified');
+    if (hasValidationError) throw new Error('Resolve validation errors first');
+
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
-    const payload = ChangeUsername.toCell(
-      ChangeUsername.create({
-        newUsername: cleanTelegramUsername(username),
+    const payload = ChangeProfile.toCell(
+      ChangeProfile.create({
+        queryId: 0n,
+        username: isUsernameDirty ? cleanUsername : null,
+        h3Cell: isLocationDirty ? trimmedH3Cell : null,
+        country: isCountryDirty ? BigInt(country) : null,
+        nominee: isNomineeDirty ? parsedNominee : null,
       }),
     );
 
     await sendTx([
       { toAddress: fiWalletAddr.toString(), amount: GAS.PROFILE, payload },
     ]);
-  }, [walletAddress, username, network, sendTx]);
-
-  const updateLocation = useCallback(async () => {
-    if (!walletAddress) throw new Error('No wallet address');
-    const ownerAddr = Address.parse(walletAddress);
-    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-
-    const payload = ChangeLocation.toCell(
-      ChangeLocation.create({
-        newH3Cell: h3Cell.trim(),
-      }),
-    );
-
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.PROFILE, payload },
-    ]);
-  }, [walletAddress, h3Cell, network, sendTx]);
-
-  const updateCountry = useCallback(async () => {
-    if (!walletAddress) throw new Error('No wallet address');
-    const ownerAddr = Address.parse(walletAddress);
-    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-
-    const payload = ChangeCountry.toCell(
-      ChangeCountry.create({
-        newCountry: BigInt(country),
-      }),
-    );
-
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.PROFILE, payload },
-    ]);
-  }, [walletAddress, country, network, sendTx]);
-
-  const isDisabled = !wallet || !walletAddress || isSending;
+  }, [
+    walletAddress,
+    isDirty,
+    hasValidationError,
+    network,
+    isUsernameDirty,
+    cleanUsername,
+    isLocationDirty,
+    trimmedH3Cell,
+    isCountryDirty,
+    country,
+    isNomineeDirty,
+    parsedNominee,
+    sendTx,
+  ]);
 
   return {
-    updateUsername,
-    updateLocation,
-    updateCountry,
+    updateProfile,
     isDisabled,
     isSending,
+    isDirty,
     error,
     usernameValidationError,
     locationValidationError,
     countryValidationError,
+    nomineeValidationError,
     canChangeCountry,
   };
 }
