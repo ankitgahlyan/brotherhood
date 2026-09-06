@@ -55,7 +55,8 @@ export function useBrotherhoodTransaction(
       setError(null);
 
       try {
-        for (const msg of messages) {
+        if (messages.length === 1) {
+          const msg = messages[0];
           const tx = await wallet.createTransferTonTransaction({
             recipientAddress: msg.toAddress,
             transferAmount: msg.amount.toString(),
@@ -64,6 +65,19 @@ export function useBrotherhoodTransaction(
               ? msg.stateInit.toBoc().toString('base64')
               : undefined,
           });
+          await walletKit.handleNewTransaction(wallet, tx);
+        } else {
+          for (const msg of messages) {
+            const tx = await wallet.createTransferTonTransaction({
+              recipientAddress: msg.toAddress,
+              transferAmount: msg.amount.toString(),
+              payload: msg.payload.toBoc().toString('base64'),
+              stateInit: msg.stateInit
+                ? msg.stateInit.toBoc().toString('base64')
+                : undefined,
+            });
+            await walletKit.handleNewTransaction(wallet, tx);
+          }
         }
 
         // Automatically refetch relevant screen state after 3 seconds

@@ -152,3 +152,8 @@ _Avoid_: Admin wallet, operator
 
 **Identifier** — an offchain identity (email, phone, or username) an Account stores for web integrations and potential social recovery; distinct from the on-chain Account and Owner.
 _Avoid_: ID, username, handle
+
+### Client & Diagnostics
+
+**Developer Mode** — a device-local diagnostic state unlocked on the client via Easter egg (tapping "Brotherhood" 7 times in Settings), exposing real-time API telemetry and console logs without altering on-chain Account permissions.
+_Avoid_: Developer user, debug account, admin user

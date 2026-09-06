@@ -307,8 +307,7 @@ export function isZeroAddress(
 ): boolean {
   if (!address) return true;
   try {
-    const addr =
-      typeof address === 'string' ? Address.parse(address) : address;
+    const addr = typeof address === 'string' ? Address.parse(address) : address;
     return (
       addr.equals(ZERO_ADDRESS) ||
       addr.toRawString() === RAW_ZERO_ADDRESS ||
@@ -393,6 +392,9 @@ export async function getPersonalMinterDetails(
   if (isZeroAddress(personalMinter)) return null;
   try {
     const client = getTonClient(network);
+    const isDeployed = await client.isContractDeployed(personalMinter);
+    if (!isDeployed) return null;
+
     const minter = client.open(PersonalMinter.fromAddress(personalMinter));
     const [state, jettonData] = await Promise.all([
       minter.getState(),
@@ -404,7 +406,10 @@ export async function getPersonalMinterDetails(
       adminAddress: state.adminAddress,
       mintable: jettonData?.mintable,
     };
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.includes('exit_code: -13')) {
+      return null;
+    }
     console.error(
       `Failed to load personal minter details for ${personalMinter.toString()}:`,
       err,
@@ -419,6 +424,9 @@ export async function isPersonalMinterContract(
   if (isZeroAddress(address)) return false;
   try {
     const client = getTonClient(network);
+    const isDeployed = await client.isContractDeployed(address);
+    if (!isDeployed) return false;
+
     const minter = client.open(PersonalMinter.fromAddress(address));
     const [state, jettonData] = await Promise.all([
       minter.getState(),

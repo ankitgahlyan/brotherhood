@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from '@/core/routing';
 import {
   ChevronRight,
@@ -20,7 +20,10 @@ import {
   Sparkles,
   Trash2,
   Check,
+  Terminal,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useDeveloperMode } from '@/core/lib/developer-mode';
 import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
@@ -127,6 +130,36 @@ export const SettingsDropdown: React.FC = () => {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
+
+  const [developerMode, setDeveloperMode] = useDeveloperMode();
+  const [devTapCount, setDevTapCount] = useState(0);
+  const devTapTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleBrotherhoodTap = () => {
+    if (devTapTimerRef.current) {
+      clearTimeout(devTapTimerRef.current);
+    }
+
+    devTapTimerRef.current = setTimeout(() => {
+      setDevTapCount(0);
+    }, 2500);
+
+    const nextCount = devTapCount + 1;
+    setDevTapCount(nextCount);
+
+    if (nextCount >= 7) {
+      setDevTapCount(0);
+      setDeveloperMode(true);
+      toast.success('Developer Mode permanently unlocked!');
+      setPanel(null);
+      navigate('/developer');
+    } else if (nextCount >= 4) {
+      const remaining = 7 - nextCount;
+      toast.info(
+        `You are ${remaining} ${remaining === 1 ? 'step' : 'steps'} away from Developer Mode`,
+      );
+    }
+  };
 
   const handleToggleBiometrics = async (checked: boolean) => {
     if (!checked) {
@@ -363,6 +396,16 @@ export const SettingsDropdown: React.FC = () => {
           </div>
 
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+            {developerMode && (
+              <ActionRow
+                icon={<Terminal className="w-5 h-5 text-blue-500" />}
+                label="Developer Diagnostics"
+                onClick={() => {
+                  setPanel(null);
+                  navigate('/developer');
+                }}
+              />
+            )}
             <ActionRow
               icon={<Download className="w-5 h-5" />}
               label="Install App / Add Shortcut"
@@ -400,6 +443,17 @@ export const SettingsDropdown: React.FC = () => {
               {mnemonicError}
             </p>
           )}
+
+          <div className="pt-2 pb-1 text-center">
+            <button
+              type="button"
+              onClick={handleBrotherhoodTap}
+              className="text-xs font-mono text-muted-foreground/60 hover:text-muted-foreground transition-colors select-none tracking-widest uppercase cursor-pointer py-1 px-3 rounded-md hover:bg-muted/40"
+              data-testid="brotherhood-tap-easter-egg"
+            >
+              brotherhood
+            </button>
+          </div>
         </Modal.Body>
       </Modal.Container>
 

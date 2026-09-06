@@ -113,25 +113,35 @@ export function usePersonalJettonInfo(
     return null;
   }, [registeredMinterObj, deterministicMinterAddrObj]);
 
+  const isDeployed = Boolean(registeredMinterObj || deployedCheckQuery.data);
+
   const {
     data: computedWalletAddrObj,
     isLoading: isWalletAddrLoading,
     refetch: refetchWalletAddr,
-  } = usePersonalWalletAddress(activeMinterObj ?? null, ownerAddress);
+  } = usePersonalWalletAddress(
+    activeMinterObj ?? null,
+    ownerAddress,
+    isDeployed,
+  );
 
   const {
     data: balance,
     isLoading: isBalanceLoading,
     refetch: refetchBalance,
-  } = usePersonalWalletBalance(activeMinterObj ?? null, ownerAddress);
+  } = usePersonalWalletBalance(
+    activeMinterObj ?? null,
+    ownerAddress,
+    isDeployed,
+  );
 
   const {
     data: minterDetails,
     isLoading: isMinterDetailsLoading,
     refetch: refetchMinterDetails,
-  } = usePersonalMinterDetails(activeMinterObj ?? null);
+  } = usePersonalMinterDetails(activeMinterObj ?? null, isDeployed);
 
-  const isDeployedOnChain = Boolean(deployedCheckQuery.data || minterDetails);
+  const isDeployedOnChain = Boolean(isDeployed || minterDetails);
   const isRegistered = Boolean(registeredMinterObj);
 
   const fallbackWalletObj = useMemo(() => {

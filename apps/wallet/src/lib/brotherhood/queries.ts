@@ -122,9 +122,7 @@ export function useFiWalletState(ownerAddress: Address | null) {
   const query = useQuery({
     queryKey: ['fi-wallet-state', key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, (opts) =>
-        getFiWalletState(ownerAddress!, opts),
-      ),
+      cachedQueryFn(cacheKey, (opts) => getFiWalletState(ownerAddress!, opts)),
     enabled: !!ownerAddress,
   });
   return {
@@ -231,6 +229,7 @@ export function usePersonalWalletForIssuer(ownerAddress: Address | null) {
 export function usePersonalWalletAddress(
   personalMinter: Address | null,
   ownerAddress: Address | null,
+  enabled = true,
 ) {
   const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
   const cacheKey = `personal-wallet-address:${key}`;
@@ -240,7 +239,7 @@ export function usePersonalWalletAddress(
       cachedQueryFn(cacheKey, () =>
         getPersonalWalletAddress(personalMinter!, ownerAddress!),
       ),
-    enabled: !!personalMinter && !!ownerAddress,
+    enabled: enabled && !!personalMinter && !!ownerAddress,
   });
   return {
     ...query,
@@ -251,6 +250,7 @@ export function usePersonalWalletAddress(
 export function usePersonalWalletBalance(
   personalMinter: Address | null,
   ownerAddress: Address | null,
+  enabled = true,
 ) {
   const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
   const cacheKey = `personal-wallet-balance:${key}`;
@@ -260,7 +260,7 @@ export function usePersonalWalletBalance(
       cachedQueryFn(cacheKey, () =>
         getPersonalWalletBalance(personalMinter!, ownerAddress!),
       ),
-    enabled: !!personalMinter && !!ownerAddress,
+    enabled: enabled && !!personalMinter && !!ownerAddress,
   });
   return {
     ...query,
@@ -286,10 +286,7 @@ export function usePersonalMinterDetails(
   };
 }
 
-export function useIsContractDeployed(
-  address: Address | null,
-  enabled = true,
-) {
+export function useIsContractDeployed(address: Address | null, enabled = true) {
   const key = address?.toString() ?? 'none';
   return useQuery<boolean>({
     queryKey: ['contract-deployed', key],

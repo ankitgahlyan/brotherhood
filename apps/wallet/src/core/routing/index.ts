@@ -27,13 +27,21 @@ export function useNavigate() {
   const tanstackNavigate = useTanStackNavigate();
 
   return React.useCallback(
-    (to: string | number, options?: NavigateOptions) => {
+    (
+      to: string | number | { to: string; [key: string]: any },
+      options?: NavigateOptions,
+    ) => {
       if (typeof to === 'number') {
         if (to === -1) {
           window.history.back();
         } else {
           window.history.go(to);
         }
+        return;
+      }
+
+      if (typeof to === 'object' && to !== null) {
+        tanstackNavigate(to as any);
         return;
       }
 

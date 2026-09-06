@@ -9,6 +9,7 @@ import { LoaderCircle } from '@/core/components/ui/loader-circle';
 import { Button } from '@/core/components/ui/button';
 import { GlobalRequestModals } from '@/features/ton-connect';
 import { PwaInstallBanner } from '@/core/components/pwa';
+import { NotFound } from '@/core/components/shared/not-found';
 
 function RootComponent() {
   const isWalletKitInitialized = useWalletStore(
@@ -78,4 +79,5 @@ function RootComponent() {
 
 export const Route = createRootRoute({
   component: RootComponent,
+  notFoundComponent: NotFound,
 });
