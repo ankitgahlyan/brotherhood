@@ -6,7 +6,13 @@
  *
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -763,7 +769,7 @@ export const BrotherhoodScreen: React.FC = () => {
                           </span>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             className="h-6 px-2 text-[10px] font-semibold text-primary border-primary/40 hover:bg-primary/10"
                             onClick={() => setActiveTab('nominee')}
                             data-testid="brotherhood-set-nominee-btn"
@@ -1355,7 +1361,7 @@ export const BrotherhoodScreen: React.FC = () => {
                               }
                             }
                           }}
-                          className="bg-secondary text-foreground text-xs rounded-lg px-2 py-1 border border-border outline-none max-w-[210px] truncate cursor-pointer hover:bg-secondary/80 font-medium"
+                          className="bg-secondary text-foreground text-xs rounded-lg px-2 py-1 border border-border outline-none max-w-52.5 truncate cursor-pointer hover:bg-secondary/80 font-medium"
                           data-testid="brotherhood-voted-dropdown-select"
                         >
                           <option value="">
@@ -2411,7 +2417,7 @@ export const BrotherhoodScreen: React.FC = () => {
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="danger"
                             className="text-xs h-7"
                             onClick={() => {
                               setGrantee(entry.addressString);
