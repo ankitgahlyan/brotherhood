@@ -114,24 +114,60 @@ export const BrotherhoodScreen: React.FC = () => {
   const [invitee, setInvitee] = useState('');
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteH3Cell, setInviteH3Cell] = useState('');
-  const [inviteCountry, setInviteCountry] = useState(840);
+  const [inviteCountry, setInviteCountry] = useState(0);
   const [targetAddress, setTargetAddress] = useState('');
   const [isUnvote, setIsUnvote] = useState(false);
   const [voteCount, setVoteCount] = useState<number>(1);
-  const [showVotedDropdown, setShowVotedDropdown] = useState(false);
+  const [showVotedDropdown, setShowVotedDropdown] = useState(true);
+  const [candidateSourceTab, setCandidateSourceTab] = useState<
+    'voted' | 'circle'
+  >('voted');
+  const [candidateFilterQuery, setCandidateFilterQuery] = useState('');
   const [grantee, setGrantee] = useState('');
   const [granter, setGranter] = useState('');
+  const [allowanceSubTab, setAllowanceSubTab] = useState<
+    'active' | 'grant' | 'spend'
+  >('active');
   const [goldRecipient, setGoldRecipient] = useState('');
   const [goldAmount, setGoldAmount] = useState(1);
   const [profileUsername, setProfileUsername] = useState('');
   const [profileH3Cell, setProfileH3Cell] = useState('');
-  const [profileCountry, setProfileCountry] = useState(840);
+  const [profileCountry, setProfileCountry] = useState(0);
+  const [profileSubTab, setProfileSubTab] = useState<
+    'username' | 'location' | 'country'
+  >('username');
   const [nomineeAddressInput, setNomineeAddressInput] = useState('');
   const [authTarget, setAuthTarget] = useState('');
   const [authStatus, setAuthStatus] = useState(0);
+  const [authoritySubTab, setAuthoritySubTab] = useState<'status' | 'close'>(
+    'status',
+  );
 
   // FiAccount hook
   const account = useFiAccount(address ?? null);
+
+  // Sync profile & candidate defaults when on-chain account data loads
+  useEffect(() => {
+    if (account.data) {
+      if (account.data.country !== undefined) {
+        setProfileCountry(account.data.country);
+      }
+      if (account.data.username) {
+        const u = account.data.username;
+        setProfileUsername((prev) => prev || u);
+      }
+      if (account.data.h3Cell) {
+        const c = account.data.h3Cell;
+        setProfileH3Cell((prev) => prev || c);
+      }
+      if (
+        account.data.votedFor.length === 0 &&
+        account.data.invited.length > 0
+      ) {
+        setCandidateSourceTab('circle');
+      }
+    }
+  }, [account.data]);
 
   const candidateVotedEntry = useMemo(() => {
     if (!account.data || !targetAddress.trim()) return undefined;
@@ -1285,70 +1321,110 @@ export const BrotherhoodScreen: React.FC = () => {
                 </button>
               </div>
 
-              {/* Target Member Address with Dropdown Suggestions */}
+              {/* Target Member Address with Candidate Suggestions */}
               <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-xs flex-wrap gap-1">
                   <label className="font-medium text-muted-foreground">
                     Target Member Address
                   </label>
-                  {account.data && account.data.votedFor.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        aria-label="Select from already voted accounts"
-                        value={
-                          account.data.votedFor.some(
-                            (e) => e.addressString === targetAddress.trim(),
-                          )
-                            ? targetAddress.trim()
-                            : ''
-                        }
-                        onChange={(e) => {
-                          const selected = e.target.value;
-                          if (selected) {
-                            setTargetAddress(selected);
-                            const matching = account.data?.votedFor.find(
-                              (item) => item.addressString === selected,
-                            );
-                            if (isUnvote && matching) {
-                              setVoteCount(matching.count);
-                            }
+                  {account.data &&
+                    (account.data.votedFor.length > 0 ||
+                      account.data.invited.length > 0) && (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          aria-label="Select candidate account"
+                          value={
+                            account.data.votedFor.some(
+                              (e) => e.addressString === targetAddress.trim(),
+                            ) ||
+                            account.data.invited.some(
+                              (e) => e.addressString === targetAddress.trim(),
+                            )
+                              ? targetAddress.trim()
+                              : ''
                           }
-                        }}
-                        className="bg-secondary text-foreground text-xs rounded-lg px-2 py-1 border border-border outline-none max-w-[210px] truncate cursor-pointer hover:bg-secondary/80 font-medium"
-                        data-testid="brotherhood-voted-dropdown-select"
-                      >
-                        <option value="">
-                          Choose from voted ({account.data.votedFor.length}) ▾
-                        </option>
-                        {account.data.votedFor.map((entry) => {
-                          const prof =
-                            resolvedProfiles.data?.[entry.addressString];
-                          const flag = getCountryByCode(prof?.country).flag;
-                          const label = prof?.username
-                            ? `@${prof.username}`
-                            : formatShortContract(entry.addressString);
-                          return (
-                            <option
-                              key={entry.addressString}
-                              value={entry.addressString}
+                          onChange={(e) => {
+                            const selected = e.target.value;
+                            if (selected) {
+                              setTargetAddress(selected);
+                              const matching = account.data?.votedFor.find(
+                                (item) => item.addressString === selected,
+                              );
+                              if (isUnvote && matching) {
+                                setVoteCount(matching.count);
+                              }
+                            }
+                          }}
+                          className="bg-secondary text-foreground text-xs rounded-lg px-2 py-1 border border-border outline-none max-w-[210px] truncate cursor-pointer hover:bg-secondary/80 font-medium"
+                          data-testid="brotherhood-voted-dropdown-select"
+                        >
+                          <option value="">
+                            Choose candidate (
+                            {account.data.votedFor.length +
+                              account.data.invited.length}
+                            ) ▾
+                          </option>
+                          {account.data.votedFor.length > 0 && (
+                            <optgroup
+                              label={`Previously Endorsed (${account.data.votedFor.length})`}
                             >
-                              {flag} {label} ({entry.count}{' '}
-                              {entry.count === 1 ? 'vote' : 'votes'})
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setShowVotedDropdown((prev) => !prev)}
-                        className="text-xs text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>
-                          {showVotedDropdown ? 'Hide cards' : 'Cards ▾'}
-                        </span>
-                      </button>
-                    </div>
-                  )}
+                              {account.data.votedFor.map((entry) => {
+                                const prof =
+                                  resolvedProfiles.data?.[entry.addressString];
+                                const flag = getCountryByCode(
+                                  prof?.country,
+                                ).flag;
+                                const label = prof?.username
+                                  ? `@${prof.username}`
+                                  : formatShortContract(entry.addressString);
+                                return (
+                                  <option
+                                    key={`voted-${entry.addressString}`}
+                                    value={entry.addressString}
+                                  >
+                                    {flag} {label} ({entry.count}{' '}
+                                    {entry.count === 1 ? 'vote' : 'votes'})
+                                  </option>
+                                );
+                              })}
+                            </optgroup>
+                          )}
+                          {!isUnvote && account.data.invited.length > 0 && (
+                            <optgroup
+                              label={`Circle Members (${account.data.invited.length})`}
+                            >
+                              {account.data.invited.map((entry) => {
+                                const prof =
+                                  resolvedProfiles.data?.[entry.addressString];
+                                const flag = getCountryByCode(
+                                  prof?.country,
+                                ).flag;
+                                const label = prof?.username
+                                  ? `@${prof.username}`
+                                  : formatShortContract(entry.addressString);
+                                return (
+                                  <option
+                                    key={`circle-${entry.addressString}`}
+                                    value={entry.addressString}
+                                  >
+                                    {flag} {label} (Circle)
+                                  </option>
+                                );
+                              })}
+                            </optgroup>
+                          )}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowVotedDropdown((prev) => !prev)}
+                          className="text-xs text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>
+                            {showVotedDropdown ? 'Hide cards' : 'Cards ▾'}
+                          </span>
+                        </button>
+                      </div>
+                    )}
                 </div>
 
                 <InputScan
@@ -1366,93 +1442,264 @@ export const BrotherhoodScreen: React.FC = () => {
                   data-testid="brotherhood-vote-target"
                 />
 
-                {/* Dropdown suggestions list of already voted candidates */}
-                {account.data &&
-                  account.data.votedFor.length > 0 &&
-                  (showVotedDropdown ||
-                    (isUnvote && !targetAddress.trim())) && (
-                    <div className="p-2 bg-secondary/80 border border-border rounded-xl space-y-1 mt-1 max-h-56 overflow-y-auto">
-                      <span className="text-[11px] font-semibold text-muted-foreground px-2 block">
-                        {isUnvote
-                          ? 'Select an endorsed candidate to unvote:'
-                          : 'Select an existing candidate to add votes:'}
-                      </span>
-                      {account.data.votedFor.map((entry) => {
-                        const prof =
-                          resolvedProfiles.data?.[entry.addressString];
-                        const candCountry = getCountryByCode(prof?.country);
-                        const isSelected =
-                          targetAddress.trim() === entry.addressString;
-                        return (
+                {/* Candidate Selection Cards Container */}
+                {account.data && showVotedDropdown && (
+                  <div className="p-2.5 bg-secondary/80 border border-border rounded-xl space-y-2 mt-1">
+                    {/* Candidate source tabs */}
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex gap-1 bg-background/60 p-0.5 rounded-lg border border-border/50 text-[11px] font-medium flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setCandidateSourceTab('voted')}
+                          className={`flex-1 py-1 rounded-md transition-colors cursor-pointer text-center ${
+                            candidateSourceTab === 'voted'
+                              ? 'bg-card shadow-sm text-foreground font-semibold border border-border/60'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Previously Voted ({account.data.votedFor.length})
+                        </button>
+                        {!isUnvote && (
                           <button
-                            key={entry.addressString}
                             type="button"
-                            onClick={() => {
-                              setTargetAddress(entry.addressString);
-                              setShowVotedDropdown(false);
-                              if (isUnvote) {
-                                setVoteCount(entry.count);
-                              }
-                            }}
-                            className={`w-full p-2.5 rounded-lg text-left text-xs transition flex justify-between items-center cursor-pointer ${
-                              isSelected
-                                ? 'bg-primary text-primary-foreground font-semibold'
-                                : 'bg-card/70 hover:bg-card text-foreground border border-border/40'
+                            onClick={() => setCandidateSourceTab('circle')}
+                            className={`flex-1 py-1 rounded-md transition-colors cursor-pointer text-center ${
+                              candidateSourceTab === 'circle'
+                                ? 'bg-card shadow-sm text-foreground font-semibold border border-border/60'
+                                : 'text-muted-foreground hover:text-foreground'
                             }`}
                           >
-                            <div className="truncate pr-2">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate">
-                                  @{prof?.username || 'member'}
-                                </span>
-                                {prof?.username && (
-                                  <span
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openTelegramProfile(prof.username!);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.stopPropagation();
-                                        openTelegramProfile(prof.username!);
-                                      }
-                                    }}
-                                    className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
-                                        : 'bg-primary/10 text-primary hover:bg-primary/20'
-                                    }`}
-                                    title={`Open @${prof.username} on Telegram`}
-                                    aria-label={`Open @${prof.username} on Telegram`}
-                                  >
-                                    <TelegramIcon className="w-3.5 h-3.5" />
-                                  </span>
-                                )}
-                                <span className="text-[10px] opacity-80">
-                                  {candCountry.flag} {candCountry.name}
-                                </span>
-                              </div>
-                              <span className="font-mono text-[10px] opacity-70 block truncate">
-                                {formatShortContract(entry.addressString)}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                                isSelected
-                                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                                  : 'bg-secondary text-emerald-600 dark:text-emerald-400'
-                              }`}
-                            >
-                              {entry.count}{' '}
-                              {entry.count === 1 ? 'vote' : 'votes'}
-                            </span>
+                            Circle Members ({account.data.invited.length})
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
                     </div>
-                  )}
+
+                    {/* Search Filter if multiple candidates exist */}
+                    {((candidateSourceTab === 'voted'
+                      ? account.data.votedFor.length
+                      : account.data.invited.length) > 2 ||
+                      candidateFilterQuery) && (
+                      <input
+                        type="text"
+                        value={candidateFilterQuery}
+                        onChange={(e) =>
+                          setCandidateFilterQuery(e.target.value)
+                        }
+                        placeholder="Filter candidates by name or address..."
+                        className="w-full px-2.5 py-1 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    )}
+
+                    {/* Candidate Cards List */}
+                    {candidateSourceTab === 'voted' ? (
+                      account.data.votedFor.length === 0 ? (
+                        <div className="py-4 text-center space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            You haven't endorsed any accounts yet.
+                          </p>
+                          {account.data.invited.length > 0 && !isUnvote && (
+                            <button
+                              type="button"
+                              onClick={() => setCandidateSourceTab('circle')}
+                              className="text-xs text-primary hover:underline font-medium cursor-pointer"
+                            >
+                              Pick from your Circle members (
+                              {account.data.invited.length}) →
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1 max-h-56 overflow-y-auto">
+                          {account.data.votedFor
+                            .filter((entry) => {
+                              if (!candidateFilterQuery) return true;
+                              const q = candidateFilterQuery.toLowerCase();
+                              const prof =
+                                resolvedProfiles.data?.[entry.addressString];
+                              return (
+                                prof?.username?.toLowerCase().includes(q) ||
+                                entry.addressString.toLowerCase().includes(q)
+                              );
+                            })
+                            .map((entry) => {
+                              const prof =
+                                resolvedProfiles.data?.[entry.addressString];
+                              const candCountry = getCountryByCode(
+                                prof?.country,
+                              );
+                              const isSelected =
+                                targetAddress.trim() === entry.addressString;
+                              return (
+                                <button
+                                  key={`card-voted-${entry.addressString}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setTargetAddress(entry.addressString);
+                                    if (isUnvote) {
+                                      setVoteCount(entry.count);
+                                    }
+                                  }}
+                                  className={`w-full p-2.5 rounded-lg text-left text-xs transition flex justify-between items-center cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-primary text-primary-foreground font-semibold'
+                                      : 'bg-card/70 hover:bg-card text-foreground border border-border/40'
+                                  }`}
+                                >
+                                  <div className="truncate pr-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate">
+                                        @{prof?.username || 'member'}
+                                      </span>
+                                      {prof?.username && (
+                                        <span
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openTelegramProfile(prof.username!);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (
+                                              e.key === 'Enter' ||
+                                              e.key === ' '
+                                            ) {
+                                              e.stopPropagation();
+                                              openTelegramProfile(
+                                                prof.username!,
+                                              );
+                                            }
+                                          }}
+                                          className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                            isSelected
+                                              ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
+                                              : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                          }`}
+                                          title={`Open @${prof.username} on Telegram`}
+                                          aria-label={`Open @${prof.username} on Telegram`}
+                                        >
+                                          <TelegramIcon className="w-3.5 h-3.5" />
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] opacity-80">
+                                        {candCountry.flag} {candCountry.name}
+                                      </span>
+                                    </div>
+                                    <span className="font-mono text-[10px] opacity-70 block truncate">
+                                      {formatShortContract(entry.addressString)}
+                                    </span>
+                                  </div>
+                                  <span
+                                    className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                      isSelected
+                                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                                        : 'bg-secondary text-emerald-600 dark:text-emerald-400'
+                                    }`}
+                                  >
+                                    {entry.count}{' '}
+                                    {entry.count === 1 ? 'vote' : 'votes'}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      )
+                    ) : account.data.invited.length === 0 ? (
+                      <div className="py-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          No Circle members found. Invite members in the Network
+                          tab first.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 max-h-56 overflow-y-auto">
+                        {account.data.invited
+                          .filter((entry) => {
+                            if (!candidateFilterQuery) return true;
+                            const q = candidateFilterQuery.toLowerCase();
+                            const prof =
+                              resolvedProfiles.data?.[entry.addressString];
+                            return (
+                              prof?.username?.toLowerCase().includes(q) ||
+                              entry.addressString.toLowerCase().includes(q)
+                            );
+                          })
+                          .map((entry) => {
+                            const prof =
+                              resolvedProfiles.data?.[entry.addressString];
+                            const candCountry = getCountryByCode(prof?.country);
+                            const isSelected =
+                              targetAddress.trim() === entry.addressString;
+                            return (
+                              <button
+                                key={`card-circle-${entry.addressString}`}
+                                type="button"
+                                onClick={() => {
+                                  setTargetAddress(entry.addressString);
+                                }}
+                                className={`w-full p-2.5 rounded-lg text-left text-xs transition flex justify-between items-center cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-primary text-primary-foreground font-semibold'
+                                    : 'bg-card/70 hover:bg-card text-foreground border border-border/40'
+                                }`}
+                              >
+                                <div className="truncate pr-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate">
+                                      @{prof?.username || 'member'}
+                                    </span>
+                                    {prof?.username && (
+                                      <span
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openTelegramProfile(prof.username!);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (
+                                            e.key === 'Enter' ||
+                                            e.key === ' '
+                                          ) {
+                                            e.stopPropagation();
+                                            openTelegramProfile(prof.username!);
+                                          }
+                                        }}
+                                        className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
+                                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                        }`}
+                                        title={`Open @${prof.username} on Telegram`}
+                                        aria-label={`Open @${prof.username} on Telegram`}
+                                      >
+                                        <TelegramIcon className="w-3.5 h-3.5" />
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] opacity-80">
+                                      {candCountry.flag} {candCountry.name}
+                                    </span>
+                                  </div>
+                                  <span className="font-mono text-[10px] opacity-70 block truncate">
+                                    {formatShortContract(entry.addressString)}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                    isSelected
+                                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                                      : 'bg-secondary text-primary'
+                                  }`}
+                                >
+                                  Circle
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Vote Count / Number of Votes */}
@@ -2062,127 +2309,243 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Allowances */}
         {activeTab === 'allowance' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            {/* Active Allowances List */}
-            {account.data && account.data.allowances.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-foreground">
-                  Granted Spending Permissions ({account.data.allowances.length}
-                  )
-                </h4>
-                <div className="space-y-1.5">
-                  {account.data.allowances.map((entry) => (
-                    <div
-                      key={entry.addressString}
-                      className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
-                    >
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-foreground">
-                            {formatShortWallet(entry.addressString)}
-                          </span>
-                          <CopyButton
-                            address={entry.addressString}
-                            type="wallet"
-                            size="xs"
-                          />
-                        </div>
-                        <span className="text-[11px] text-muted-foreground block">
-                          Limit: {formatFi(entry.amount)} FI
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          setGrantee(entry.addressString);
-                          setAmount('0');
-                        }}
+            {/* Sub-tabs header */}
+            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setAllowanceSubTab('active')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  allowanceSubTab === 'active'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-allowance-subtab-active"
+              >
+                Active Permissions ({account.data?.allowances.length ?? 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllowanceSubTab('grant')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  allowanceSubTab === 'grant'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-allowance-subtab-grant"
+              >
+                Grant Allowance
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllowanceSubTab('spend')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  allowanceSubTab === 'spend'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-allowance-subtab-spend"
+              >
+                Spend Allowance
+              </button>
+            </div>
+
+            {/* Active Allowances List Sub-Tab */}
+            {allowanceSubTab === 'active' && (
+              <div className="space-y-3 pt-1">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">
+                      Granted Spending Permissions
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Accounts authorized to spend FI tokens from your wallet
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setAllowanceSubTab('grant')}
+                    className="text-xs"
+                  >
+                    + Grant New
+                  </Button>
+                </div>
+
+                {account.data && account.data.allowances.length > 0 ? (
+                  <div className="space-y-2">
+                    {account.data.allowances.map((entry) => (
+                      <div
+                        key={entry.addressString}
+                        className="p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
                       >
-                        Revoke
-                      </Button>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-foreground font-medium">
+                              {formatShortWallet(entry.addressString)}
+                            </span>
+                            <CopyButton
+                              address={entry.addressString}
+                              type="wallet"
+                              size="xs"
+                            />
+                          </div>
+                          <span className="text-[11px] text-muted-foreground block">
+                            Spending Limit:{' '}
+                            <strong className="text-foreground">
+                              {formatFi(entry.amount)} FI
+                            </strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-xs h-7"
+                            onClick={() => {
+                              setGrantee(entry.addressString);
+                              setAmount(formatFi(entry.amount));
+                              setAllowanceSubTab('grant');
+                            }}
+                          >
+                            Adjust
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="text-xs h-7"
+                            onClick={() => {
+                              setGrantee(entry.addressString);
+                              setAmount('0');
+                              setAllowanceSubTab('grant');
+                            }}
+                          >
+                            Revoke
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 px-4 text-center space-y-3 bg-secondary/20 border border-border/50 rounded-2xl">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg">
+                      🛡️
                     </div>
-                  ))}
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        No Active Allowances
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                        You have not granted spending permissions to any account
+                        yet.
+                      </p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setAllowanceSubTab('grant')}
+                      className="text-xs"
+                    >
+                      Grant First Allowance
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Grant Allowance Sub-Tab */}
+            {allowanceSubTab === 'grant' && (
+              <div className="space-y-3 pt-1">
+                <div>
+                  <h3 className="font-semibold text-base">Grant Allowance</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Authorize an account to spend up to a maximum amount of FI
+                    from your wallet. Setting amount to 0 revokes the allowance.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <InputScan
+                    value={grantee}
+                    onChange={setGrantee}
+                    placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="brotherhood-grantee-address"
+                  />
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Allowance Amount (FI)"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="brotherhood-allowance-amount"
+                  />
+
+                  {setAllowance.validationError && (
+                    <p className="text-xs text-rose-500 font-medium">
+                      {setAllowance.validationError}
+                    </p>
+                  )}
+
+                  <Button
+                    onClick={() => setAllowance.send()}
+                    disabled={setAllowance.isDisabled}
+                    loading={setAllowance.isSending}
+                    fullWidth
+                    data-testid="brotherhood-grant-allowance-submit"
+                  >
+                    Grant Allowance
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Grant Allowance */}
-            <div className="space-y-2 border-t border-border pt-2">
-              <h3 className="font-semibold text-base">Grant Allowance</h3>
-              <InputScan
-                value={grantee}
-                onChange={setGrantee}
-                placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                data-testid="brotherhood-grantee-address"
-              />
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Allowance Amount (FI)"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-allowance-amount"
-              />
+            {/* Spend Allowance Sub-Tab */}
+            {allowanceSubTab === 'spend' && (
+              <div className="space-y-3 pt-1">
+                <div>
+                  <h3 className="font-semibold text-base">Spend Allowance</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Spend FI tokens authorized to you by a granter account.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <InputScan
+                    value={granter}
+                    onChange={setGranter}
+                    placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="brotherhood-granter-address"
+                  />
+                  <InputScan
+                    value={recipient}
+                    onChange={setRecipient}
+                    placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="brotherhood-spend-receiver"
+                  />
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Amount to Spend (FI)"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="brotherhood-spend-amount"
+                  />
 
-              {setAllowance.validationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {setAllowance.validationError}
-                </p>
-              )}
+                  {spendAllowance.validationError && (
+                    <p className="text-xs text-rose-500 font-medium">
+                      {spendAllowance.validationError}
+                    </p>
+                  )}
 
-              <Button
-                onClick={() => setAllowance.send()}
-                disabled={setAllowance.isDisabled}
-                loading={setAllowance.isSending}
-                fullWidth
-                data-testid="brotherhood-grant-allowance-submit"
-              >
-                Grant Allowance
-              </Button>
-            </div>
-
-            <hr className="border-border" />
-
-            {/* Spend Allowance */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-base">Spend Allowance</h3>
-              <InputScan
-                value={granter}
-                onChange={setGranter}
-                placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                data-testid="brotherhood-granter-address"
-              />
-              <InputScan
-                value={recipient}
-                onChange={setRecipient}
-                placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                data-testid="brotherhood-spend-receiver"
-              />
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Amount to Spend (FI)"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-spend-amount"
-              />
-
-              {spendAllowance.validationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {spendAllowance.validationError}
-                </p>
-              )}
-
-              <Button
-                onClick={() => spendAllowance.send()}
-                disabled={spendAllowance.isDisabled}
-                loading={spendAllowance.isSending}
-                fullWidth
-                data-testid="brotherhood-spend-allowance-submit"
-              >
-                Spend Allowance
-              </Button>
-            </div>
+                  <Button
+                    onClick={() => spendAllowance.send()}
+                    disabled={spendAllowance.isDisabled}
+                    loading={spendAllowance.isSending}
+                    fullWidth
+                    data-testid="brotherhood-spend-allowance-submit"
+                  >
+                    Spend Allowance
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2296,168 +2659,246 @@ export const BrotherhoodScreen: React.FC = () => {
               </div>
             </div>
 
-            <h3 className="font-semibold text-base">Update Member Profile</h3>
-
-            {/* Username */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                New Telegram Username
-              </label>
-              <input
-                type="text"
-                value={profileUsername}
-                onChange={(e) => setProfileUsername(e.target.value)}
-                placeholder="@username or username"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-profile-username"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Enter your Telegram handle (with or without @).
-              </p>
-              {profile.usernameValidationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {profile.usernameValidationError}
-                </p>
-              )}
-              <Button
-                onClick={() => profile.updateUsername()}
-                disabled={
-                  Boolean(profile.usernameValidationError) || profile.isSending
-                }
-                loading={profile.isSending}
-                fullWidth
-                data-testid="brotherhood-update-username-submit"
+            {/* Sub-tabs header */}
+            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setProfileSubTab('username')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  profileSubTab === 'username'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-profile-subtab-username"
               >
-                Update Username
-              </Button>
+                Username
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfileSubTab('location')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  profileSubTab === 'location'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-profile-subtab-location"
+              >
+                Spatial Location
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfileSubTab('country')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  profileSubTab === 'country'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-profile-subtab-country"
+              >
+                Country
+              </button>
             </div>
 
-            <hr className="border-border" />
-
-            {/* H3 Spatial Cell */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
+            {/* Username Sub-Tab */}
+            {profileSubTab === 'username' && (
+              <div className="space-y-2 pt-1">
                 <label className="text-xs font-medium text-muted-foreground">
-                  New H3 Spatial Cell
+                  New Telegram Username
                 </label>
-                <a
-                  href={getH3ViewerUrl(profileH3Cell)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
+                <input
+                  type="text"
+                  value={profileUsername}
+                  onChange={(e) => setProfileUsername(e.target.value)}
+                  placeholder="@username or username"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="brotherhood-profile-username"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Enter your Telegram handle (with or without @).
+                </p>
+                {profile.usernameValidationError && (
+                  <p className="text-xs text-rose-500 font-medium">
+                    {profile.usernameValidationError}
+                  </p>
+                )}
+                <Button
+                  onClick={() => profile.updateUsername()}
+                  disabled={
+                    Boolean(profile.usernameValidationError) ||
+                    profile.isSending
+                  }
+                  loading={profile.isSending}
+                  fullWidth
+                  data-testid="brotherhood-update-username-submit"
                 >
-                  <span>H3 Converter</span> ↗
-                </a>
+                  Update Username
+                </Button>
               </div>
-              <input
-                type="text"
-                value={profileH3Cell}
-                onChange={(e) => setProfileH3Cell(e.target.value)}
-                placeholder="882681a339fffff"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-profile-location"
-              />
-              {profile.locationValidationError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {profile.locationValidationError}
-                </p>
-              )}
-              <Button
-                onClick={() => profile.updateLocation()}
-                disabled={
-                  Boolean(profile.locationValidationError) || profile.isSending
-                }
-                loading={profile.isSending}
-                fullWidth
-                data-testid="brotherhood-update-location-submit"
-              >
-                Update Location
-              </Button>
-            </div>
+            )}
 
-            <hr className="border-border" />
+            {/* H3 Spatial Cell Sub-Tab */}
+            {profileSubTab === 'location' && (
+              <div className="space-y-2 pt-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    New H3 Spatial Cell
+                  </label>
+                  <a
+                    href={getH3ViewerUrl(profileH3Cell)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
+                  >
+                    <span>H3 Converter</span> ↗
+                  </a>
+                </div>
+                <input
+                  type="text"
+                  value={profileH3Cell}
+                  onChange={(e) => setProfileH3Cell(e.target.value)}
+                  placeholder="882681a339fffff"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="brotherhood-profile-location"
+                />
+                {profile.locationValidationError && (
+                  <p className="text-xs text-rose-500 font-medium">
+                    {profile.locationValidationError}
+                  </p>
+                )}
+                <Button
+                  onClick={() => profile.updateLocation()}
+                  disabled={
+                    Boolean(profile.locationValidationError) ||
+                    profile.isSending
+                  }
+                  loading={profile.isSending}
+                  fullWidth
+                  data-testid="brotherhood-update-location-submit"
+                >
+                  Update Location
+                </Button>
+              </div>
+            )}
 
-            {/* Country */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                New Country Code (ISO 3166-1)
-              </label>
-              <CountrySelect
-                value={profileCountry}
-                onChange={setProfileCountry}
-                data-testid="brotherhood-profile-country"
-              />
-              {profile.countryValidationError && (
-                <p className="text-xs text-amber-500 font-medium">
-                  {profile.countryValidationError}
-                </p>
-              )}
-              <Button
-                onClick={() => profile.updateCountry()}
-                disabled={!profile.canChangeCountry || profile.isSending}
-                loading={profile.isSending}
-                fullWidth
-                data-testid="brotherhood-update-country-submit"
-              >
-                Update Country
-              </Button>
-            </div>
+            {/* Country Sub-Tab */}
+            {profileSubTab === 'country' && (
+              <div className="space-y-2 pt-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  New Country Code (ISO 3166-1)
+                </label>
+                <CountrySelect
+                  value={profileCountry}
+                  onChange={setProfileCountry}
+                  data-testid="brotherhood-profile-country"
+                />
+                {profile.countryValidationError && (
+                  <p className="text-xs text-amber-500 font-medium">
+                    {profile.countryValidationError}
+                  </p>
+                )}
+                <Button
+                  onClick={() => profile.updateCountry()}
+                  disabled={!profile.canChangeCountry || profile.isSending}
+                  loading={profile.isSending}
+                  fullWidth
+                  data-testid="brotherhood-update-country-submit"
+                >
+                  Update Country
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Authority Panel */}
         {activeTab === 'authority' && isAuthority && (
           <div className="space-y-4 bg-amber-500/10 p-4 border rounded-2xl shadow-sm text-sm border-amber-500/30 text-card-foreground">
-            <h3 className="font-semibold text-base text-amber-500 mb-1">
-              Authority Actions
-            </h3>
+            <div>
+              <h3 className="font-semibold text-base text-amber-500 mb-0.5">
+                Authority Actions
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Administrative controls for governance and account status
+                enforcement.
+              </p>
+            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Set Account Status (0 = Active, 1 = Suspended, 2 = Review)
-              </label>
-              <input
-                type="number"
-                value={authStatus}
-                onChange={(e) => setAuthStatus(parseInt(e.target.value) || 0)}
-                placeholder="0 = active, 1 = suspended, 2 = review"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-authority-status-input"
-              />
-              <Button
-                onClick={() => authority.setStatus()}
-                disabled={authority.isDisabled}
-                loading={authority.isSending}
-                fullWidth
-                data-testid="brotherhood-authority-set-status-submit"
+            {/* Sub-tabs header */}
+            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setAuthoritySubTab('status')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  authoritySubTab === 'status'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-authority-subtab-status"
               >
                 Set Account Status
-              </Button>
-            </div>
-
-            <hr className="border-border" />
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Close Member Account
-              </label>
-              <InputScan
-                value={authTarget}
-                onChange={setAuthTarget}
-                placeholder={`Target Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                data-testid="brotherhood-authority-target"
-              />
-              <Button
-                variant="secondary"
-                onClick={() => authority.closeAccount()}
-                disabled={authority.isDisabled || !authTarget}
-                loading={authority.isSending}
-                fullWidth
-                data-testid="brotherhood-authority-close-submit"
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthoritySubTab('close')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  authoritySubTab === 'close'
+                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                }`}
+                data-testid="brotherhood-authority-subtab-close"
               >
-                Close Account (Authority)
-              </Button>
+                Close Member Account
+              </button>
             </div>
+
+            {authoritySubTab === 'status' && (
+              <div className="space-y-2 pt-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Set Account Status (0 = Active, 1 = Suspended, 2 = Review)
+                </label>
+                <input
+                  type="number"
+                  value={authStatus}
+                  onChange={(e) => setAuthStatus(parseInt(e.target.value) || 0)}
+                  placeholder="0 = active, 1 = suspended, 2 = review"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="brotherhood-authority-status-input"
+                />
+                <Button
+                  onClick={() => authority.setStatus()}
+                  disabled={authority.isDisabled}
+                  loading={authority.isSending}
+                  fullWidth
+                  data-testid="brotherhood-authority-set-status-submit"
+                >
+                  Set Account Status
+                </Button>
+              </div>
+            )}
+
+            {authoritySubTab === 'close' && (
+              <div className="space-y-2 pt-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Close Member Account
+                </label>
+                <InputScan
+                  value={authTarget}
+                  onChange={setAuthTarget}
+                  placeholder={`Target Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                  data-testid="brotherhood-authority-target"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => authority.closeAccount()}
+                  disabled={authority.isDisabled || !authTarget}
+                  loading={authority.isSending}
+                  fullWidth
+                  data-testid="brotherhood-authority-close-submit"
+                >
+                  Close Account (Authority)
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

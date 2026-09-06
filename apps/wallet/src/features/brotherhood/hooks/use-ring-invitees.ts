@@ -83,7 +83,7 @@ export function useRingInvitees(
   });
 
   return {
-    invitees: data ?? [],
+    invitees: Array.isArray(data) ? data : [],
     isLoading,
     error: error instanceof Error ? error : null,
     refetch: createRefetchWrapper(cacheKey, refetch),

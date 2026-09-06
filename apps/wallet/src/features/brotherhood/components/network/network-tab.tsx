@@ -49,14 +49,31 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
     );
   }
 
+  const safeInvitedMembers = Array.isArray(invitedMembers)
+    ? invitedMembers
+    : [];
+
   return (
-    <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-      {/* Title & Info */}
-      <div>
-        <h3 className="font-semibold text-base">Trust Network & Lineage</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Explore your 1st-degree Circle (direct invitees) and 2nd-degree Ring
-          (invitees of invitees) within the BrotherHood trust graph.
+    <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-semibold text-base text-foreground">
+            Trust Network
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Your 1st-degree Circle & 2nd-degree Ring relationships
+          </p>
+        </div>
+      </div>
+
+      {/* Network Explanation Banner */}
+      <div className="p-3 bg-secondary/40 border border-border/50 rounded-xl space-y-1">
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Your <strong className="text-foreground">Circle</strong> contains
+          members you directly invited and trust. Your{' '}
+          <strong className="text-foreground">Ring</strong> expands your reach
+          to members invited by your Circle (2nd degree).
         </p>
       </div>
 
@@ -72,7 +89,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
           }`}
           data-testid="network-subtab-circle"
         >
-          Circle ({invitedMembers.length})
+          Circle ({safeInvitedMembers.length})
         </button>
         <button
           type="button"
@@ -91,7 +108,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
       {/* Sub-tab content */}
       {subTab === 'circle' ? (
         <CircleTab
-          invitedMembers={invitedMembers}
+          invitedMembers={safeInvitedMembers}
           resolvedProfiles={resolvedProfiles}
           isLoading={isLoading}
           onSelectMember={(addr) => setSelectedMemberAddress(addr)}
@@ -99,7 +116,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
         />
       ) : (
         <RingTab
-          circleMembers={invitedMembers}
+          circleMembers={safeInvitedMembers}
           circleProfiles={resolvedProfiles}
           isLoading={isLoading}
           onSelectMember={(addr) => setSelectedMemberAddress(addr)}

@@ -57,7 +57,8 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
     isExpanded,
   );
 
-  const inviteeAddresses = invitees.map((i) => i.addressString);
+  const safeInvitees = Array.isArray(invitees) ? invitees : [];
+  const inviteeAddresses = safeInvitees.map((i) => i.addressString);
   const resolvedRingProfiles = useMemberProfiles(
     inviteeAddresses,
     network === 'mainnet' ? 'mainnet' : 'testnet',
@@ -168,7 +169,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                 Retry
               </Button>
             </div>
-          ) : invitees.length === 0 ? (
+          ) : safeInvitees.length === 0 ? (
             <div className="py-4 text-center">
               <p className="text-xs text-muted-foreground">
                 No 2nd-degree invitees under {inviterUsername} yet.
@@ -176,7 +177,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
             </div>
           ) : (
             <div className="space-y-1.5 pt-1.5 max-h-64 overflow-y-auto">
-              {invitees.map((entry) => {
+              {safeInvitees.map((entry) => {
                 const prof = resolvedRingProfiles.data?.[entry.addressString];
                 const username = prof?.username
                   ? `@${prof.username}`
@@ -292,7 +293,9 @@ export const RingTab: React.FC<RingTabProps> = ({
     );
   }
 
-  if (circleMembers.length === 0) {
+  const safeCircleMembers = Array.isArray(circleMembers) ? circleMembers : [];
+
+  if (safeCircleMembers.length === 0) {
     return (
       <div className="py-8 px-4 text-center space-y-3 bg-secondary/20 border border-border/50 rounded-2xl">
         <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg">
@@ -324,8 +327,8 @@ export const RingTab: React.FC<RingTabProps> = ({
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
         <span className="text-xs font-semibold text-foreground">
-          Ring Branches ({circleMembers.length} Circle{' '}
-          {circleMembers.length === 1 ? 'inviter' : 'inviters'})
+          Ring Branches ({safeCircleMembers.length} Circle{' '}
+          {safeCircleMembers.length === 1 ? 'inviter' : 'inviters'})
         </span>
         <span className="text-[11px] text-muted-foreground">
           Expand inviter to view Ring members
@@ -333,7 +336,7 @@ export const RingTab: React.FC<RingTabProps> = ({
       </div>
 
       <div className="space-y-2 max-h-105 overflow-y-auto">
-        {circleMembers.map((member, index) => {
+        {safeCircleMembers.map((member, index) => {
           const prof = circleProfiles?.[member.addressString];
           const isExpanded = expandedIndex === index;
 

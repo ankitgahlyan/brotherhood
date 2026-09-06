@@ -102,6 +102,9 @@ export const PersonalJettonScreen: React.FC = () => {
   const [adminRegisterWallet, setAdminRegisterWallet] = useState('');
   const [addressesTabMinter, setAddressesTabMinter] = useState('');
   const [addressesTabWallet, setAddressesTabWallet] = useState('');
+  const [adminSubTab, setAdminSubTab] = useState<
+    'register' | 'transfer' | 'metadata'
+  >('register');
 
   // Burn tab options
   const [isPayback, setIsPayback] = useState(true);
@@ -1108,145 +1111,193 @@ export const PersonalJettonScreen: React.FC = () => {
           {/* Admin Management */}
           {activeTab === 'admin' && (
             <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-              {/* Register / Link Personal Jetton to FI Account */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-base">
-                  Register Personal Jetton to Account
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Send a unified{' '}
-                  <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">
-                    ActSetPersonalJetton
-                  </code>{' '}
-                  message to register both minter and wallet addresses in your
-                  FI Wallet contract.
-                </p>
-                <div className="space-y-2">
-                  <InputScan
-                    value={adminRegisterMinter}
-                    onChange={setAdminRegisterMinter}
-                    placeholder={`Personal Minter Address (Default: ${activeMinter || 'None'})`}
-                    data-testid="personal-admin-register-minter"
-                  />
-                  <InputScan
-                    value={adminRegisterWallet}
-                    onChange={setAdminRegisterWallet}
-                    placeholder="Personal Wallet Address (Leave blank to auto-calculate)"
-                    data-testid="personal-admin-register-wallet"
-                  />
-                  <Button
-                    onClick={() => registrar.register()}
-                    disabled={!canOperate || registrar.isDisabled}
-                    loading={registrar.isSending}
-                    fullWidth
-                    data-testid="personal-admin-register-submit"
-                  >
-                    Register to Account
-                  </Button>
-                </div>
-              </div>
-
-              <hr className="border-border" />
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-base">
-                  Transfer Minter Admin
-                </h3>
-                <InputScan
-                  value={newAdmin}
-                  onChange={setNewAdmin}
-                  placeholder={`New Admin Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                  data-testid="personal-admin-new-admin"
-                />
-                <Button
-                  onClick={() => admin.changeAdmin()}
-                  disabled={!canOperate || admin.isDisabled}
-                  loading={admin.isSending}
-                  fullWidth
-                  data-testid="personal-admin-change-submit"
+              {/* Sub-tabs header */}
+              <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setAdminSubTab('register')}
+                  className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    adminSubTab === 'register'
+                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  }`}
+                  data-testid="personal-admin-subtab-register"
+                >
+                  Register
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminSubTab('transfer')}
+                  className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    adminSubTab === 'transfer'
+                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  }`}
+                  data-testid="personal-admin-subtab-transfer"
                 >
                   Transfer Admin
-                </Button>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminSubTab('metadata')}
+                  className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    adminSubTab === 'metadata'
+                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  }`}
+                  data-testid="personal-admin-subtab-metadata"
+                >
+                  Metadata
+                </button>
               </div>
 
-              <hr className="border-border" />
+              {/* Register / Link Personal Jetton to FI Account */}
+              {adminSubTab === 'register' && (
+                <div className="space-y-2 pt-1">
+                  <h3 className="font-semibold text-base">
+                    Register Personal Jetton to Account
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Send a unified{' '}
+                    <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">
+                      ActSetPersonalJetton
+                    </code>{' '}
+                    message to register both minter and wallet addresses in your
+                    FI Wallet contract.
+                  </p>
+                  <div className="space-y-2">
+                    <InputScan
+                      value={adminRegisterMinter}
+                      onChange={setAdminRegisterMinter}
+                      placeholder={`Personal Minter Address (Default: ${activeMinter || 'None'})`}
+                      data-testid="personal-admin-register-minter"
+                    />
+                    <InputScan
+                      value={adminRegisterWallet}
+                      onChange={setAdminRegisterWallet}
+                      placeholder="Personal Wallet Address (Leave blank to auto-calculate)"
+                      data-testid="personal-admin-register-wallet"
+                    />
+                    <Button
+                      onClick={() => registrar.register()}
+                      disabled={!canOperate || registrar.isDisabled}
+                      loading={registrar.isSending}
+                      fullWidth
+                      data-testid="personal-admin-register-submit"
+                    >
+                      Register to Account
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-              <div className="space-y-3">
-                <h3 className="font-semibold text-base">Update Metadata</h3>
-                <p className="text-xs text-muted-foreground">
-                  Update your Personal Token onchain metadata. All fields can be
-                  customized.
-                </p>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-xs font-medium text-foreground block mb-1">
-                      Token Name
-                    </label>
-                    <input
-                      type="text"
-                      value={adminTokenName}
-                      onChange={(e) => setAdminTokenName(e.target.value)}
-                      placeholder={
-                        info.minterDetails?.name ||
-                        'Token Name (e.g. Alice Credit)'
-                      }
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      data-testid="personal-meta-name"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-foreground block mb-1">
-                      Symbol
-                    </label>
-                    <input
-                      type="text"
-                      value={adminTokenSymbol}
-                      onChange={(e) => setAdminTokenSymbol(e.target.value)}
-                      placeholder={
-                        info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'
-                      }
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      data-testid="personal-meta-symbol"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-foreground block mb-1">
-                      Description{' '}
-                      <span className="text-muted-foreground text-[10px] font-normal">
-                        (Optional)
-                      </span>
-                    </label>
-                    <textarea
-                      value={adminTokenDesc}
-                      onChange={(e) => setAdminTokenDesc(e.target.value)}
-                      placeholder={
-                        info.minterDetails?.description ||
-                        DEFAULT_TOKEN_DESCRIPTION
-                      }
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={2}
-                      data-testid="personal-meta-desc"
-                    />
-                  </div>
-
-                  {/* Token Image Picker */}
-                  <TokenImagePicker
-                    value={adminTokenImage}
-                    onChange={setAdminTokenImage}
-                    disabled={metadata.isSending}
+              {/* Transfer Minter Admin */}
+              {adminSubTab === 'transfer' && (
+                <div className="space-y-2 pt-1">
+                  <h3 className="font-semibold text-base">
+                    Transfer Minter Admin
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Transfer ownership and administration of this Personal
+                    Minter contract to another TON address.
+                  </p>
+                  <InputScan
+                    value={newAdmin}
+                    onChange={setNewAdmin}
+                    placeholder={`New Admin Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="personal-admin-new-admin"
                   />
-
                   <Button
-                    onClick={() => metadata.changeMetadata()}
-                    disabled={!canOperate || metadata.isDisabled}
-                    loading={metadata.isSending}
+                    onClick={() => admin.changeAdmin()}
+                    disabled={!canOperate || admin.isDisabled}
+                    loading={admin.isSending}
                     fullWidth
-                    data-testid="personal-meta-submit"
+                    data-testid="personal-admin-change-submit"
                   >
-                    Update Metadata
+                    Transfer Admin
                   </Button>
                 </div>
-              </div>
+              )}
+
+              {/* Update Metadata */}
+              {adminSubTab === 'metadata' && (
+                <div className="space-y-3 pt-1">
+                  <h3 className="font-semibold text-base">Update Metadata</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Update your Personal Token onchain metadata. All fields can
+                    be customized.
+                  </p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">
+                        Token Name
+                      </label>
+                      <input
+                        type="text"
+                        value={adminTokenName}
+                        onChange={(e) => setAdminTokenName(e.target.value)}
+                        placeholder={
+                          info.minterDetails?.name ||
+                          'Token Name (e.g. Alice Credit)'
+                        }
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="personal-meta-name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">
+                        Symbol
+                      </label>
+                      <input
+                        type="text"
+                        value={adminTokenSymbol}
+                        onChange={(e) => setAdminTokenSymbol(e.target.value)}
+                        placeholder={
+                          info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'
+                        }
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="personal-meta-symbol"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground block mb-1">
+                        Description{' '}
+                        <span className="text-muted-foreground text-[10px] font-normal">
+                          (Optional)
+                        </span>
+                      </label>
+                      <textarea
+                        value={adminTokenDesc}
+                        onChange={(e) => setAdminTokenDesc(e.target.value)}
+                        placeholder={
+                          info.minterDetails?.description ||
+                          DEFAULT_TOKEN_DESCRIPTION
+                        }
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={2}
+                        data-testid="personal-meta-desc"
+                      />
+                    </div>
+
+                    {/* Token Image Picker */}
+                    <TokenImagePicker
+                      value={adminTokenImage}
+                      onChange={setAdminTokenImage}
+                      disabled={metadata.isSending}
+                    />
+
+                    <Button
+                      onClick={() => metadata.changeMetadata()}
+                      disabled={!canOperate || metadata.isDisabled}
+                      loading={metadata.isSending}
+                      fullWidth
+                      data-testid="personal-meta-submit"
+                    >
+                      Update Metadata
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

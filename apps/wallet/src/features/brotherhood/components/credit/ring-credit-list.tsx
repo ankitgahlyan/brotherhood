@@ -51,7 +51,8 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
     refetch: refetchInvitees,
   } = useRingInvitees(circleMember.addressString, isExpanded);
 
-  const inviteeAddresses = invitees.map((i) => i.addressString);
+  const safeInvitees = Array.isArray(invitees) ? invitees : [];
+  const inviteeAddresses = safeInvitees.map((i) => i.addressString);
   const {
     data: ringProfiles,
     isLoading: isProfilesLoading,
@@ -64,7 +65,7 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
   const isLoading = isInviteesLoading || isProfilesLoading;
 
   // Filter for members with active credit need
-  const creditMembers = invitees
+  const creditMembers = safeInvitees
     .map((i) => ringProfiles?.[i.addressString])
     .filter(
       (p): p is MemberProfileInfo =>
