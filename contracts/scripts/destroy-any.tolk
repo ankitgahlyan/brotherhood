@@ -1,18 +1,27 @@
+import "@acton/io"
+import "@acton/prompts"
+import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
-import "@wrappers/Personal.gen"
-
-import "@wrappers/PersonalWallet.gen"
+import "@contracts/common/messages"
 
 import "utils/common"
 
+// Opcode used by BrotherHood personal minters and wallets for destruction
+const OP_DESTROY = 0x00001059 // 'dest' or match your contract's specific op::destroy
+
 fun main() {
-    val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
+    // 1. Prompt for sender ActonWallet
+    val sender = promptJettonWallet("SENDE", "Select sender ActonWallet to authorize destroy");
+    val targetAddress = promptAddress("Enter target contract address to destroy");
 
-    val minter = promptPersonalMinter("Enter Jetton Minter address");
-    val personalWalletAddress = minter.getWalletAddress(admin.address);
-    val personalWallet = PersonalWallet.fromAddress(personalWalletAddress);
+    val genericMsg = createMessage({
+        bounce: true,
+        value: grams("0.1"),
+        dest: targetAddress,
+        body: Destroy {},
+    });
+    return net.send(sender.address, genericMsg);
 
-    personalWallet.sendDestroy(admin.address);
-    minter.sendDestroy(admin.address);
+    println("Destroy message dispatched to target contract.");
 }
