@@ -42,7 +42,6 @@ import {
   ActivationBanner,
   useIsNetworkMember,
 } from '@/features/brotherhood';
-import { isZeroAddress } from '@/lib/brotherhood/ton';
 
 import {
   useDeployPersonalJetton,
@@ -119,32 +118,6 @@ export const PersonalJettonScreen: React.FC = () => {
 
   const info = usePersonalJettonInfo(address ?? null);
 
-  const isDeployed =
-    info.isRegistered ||
-    info.isDeployedOnChain ||
-    (Boolean(info.personalMinterAddress) &&
-      !isZeroAddress(info.personalMinterAddress));
-
-  const availableTabs: Tab[] = isDeployed
-    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
-    : [
-        'info',
-        'deploy',
-        'mint',
-        'burn',
-        'addresses',
-        'admin',
-        'topup',
-        'destroy',
-      ];
-
-  // If already deployed and currently on deploy tab, switch to info
-  React.useEffect(() => {
-    if (isDeployed && activeTab === 'deploy') {
-      setActiveTab('info');
-    }
-  }, [isDeployed, activeTab]);
-
   const activeMinter =
     info.personalMinterAddress || info.deterministicMinterAddress || '';
   const activePersonalWallet =
@@ -187,6 +160,29 @@ export const PersonalJettonScreen: React.FC = () => {
     initialMintAmount,
     network,
   });
+
+  const isDeployed =
+    info.isDeployedOnChain || Boolean(deployer.deployedAddresses);
+
+  const availableTabs: Tab[] = isDeployed
+    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
+    : [
+        'info',
+        'deploy',
+        'mint',
+        'burn',
+        'addresses',
+        'admin',
+        'topup',
+        'destroy',
+      ];
+
+  // If already deployed and currently on deploy tab, switch to info
+  React.useEffect(() => {
+    if (isDeployed && activeTab === 'deploy') {
+      setActiveTab('info');
+    }
+  }, [isDeployed, activeTab]);
 
   // Effective addresses to register
   const targetRegisterMinter =
@@ -249,7 +245,7 @@ export const PersonalJettonScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     minterAddress: activeMinter,
-    newAdminAddress: newAdmin,
+    newAdmin,
   });
 
   const metadata = usePersonalMinterMetadata({
@@ -329,12 +325,14 @@ export const PersonalJettonScreen: React.FC = () => {
                           <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <div className="text-xs space-y-1">
                             <span className="font-semibold text-amber-700 dark:text-amber-400 block">
-                              Registration Required
+                              {info.hasMismatchedRegistration
+                                ? 'Update FI Account Registration'
+                                : 'Registration Required'}
                             </span>
                             <p className="text-muted-foreground leading-relaxed">
-                              Your Personal Token minter is deployed on-chain!
-                              Register both minter & wallet addresses to your FI
-                              Account in a single unified transaction.
+                              {info.hasMismatchedRegistration
+                                ? 'Your FI Account points to outdated or mismatched addresses. Register both deterministic minter & wallet addresses to link your active token.'
+                                : 'Your Personal Token minter is deployed on-chain! Register both minter & wallet addresses to your FI Account in a single unified transaction.'}
                             </p>
                           </div>
                         </div>
@@ -367,7 +365,7 @@ export const PersonalJettonScreen: React.FC = () => {
                           disabled={!canOperate || registrar.isDisabled}
                           loading={registrar.isSending}
                           fullWidth
-                          size="xs"
+                          size="sm"
                           className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
                           data-testid="personal-register-info-submit"
                         >
@@ -619,7 +617,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     <div className="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
                       <span>✓ Successfully Registered to Account!</span>
                       <Button
-                        size="xs"
+                        size="sm"
                         onClick={() => setActiveTab('info')}
                         className="text-xs"
                       >
@@ -745,7 +743,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     specify a custom minter address.
                   </span>
                   <Button
-                    size="xs"
+                    size="sm"
                     onClick={() => setActiveTab('deploy')}
                     className="shrink-0 text-xs"
                   >
@@ -836,7 +834,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     specify a custom wallet address.
                   </span>
                   <Button
-                    size="xs"
+                    size="sm"
                     onClick={() => setActiveTab('deploy')}
                     className="shrink-0 text-xs"
                   >
@@ -994,18 +992,37 @@ export const PersonalJettonScreen: React.FC = () => {
                     className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
                       info.isRegistered
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                        : info.hasMismatchedRegistration
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {info.isRegistered ? 'Registered' : 'Not Registered'}
+                    {info.isRegistered
+                      ? 'Registered'
+                      : info.hasMismatchedRegistration
+                        ? 'Outdated / Mismatched'
+                        : 'Not Registered'}
                   </span>
                 </div>
+                {info.hasMismatchedRegistration && (
+                  <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] space-y-1 text-amber-700 dark:text-amber-400">
+                    <p className="font-semibold">FI Account Address Mismatch</p>
+                    <p className="text-muted-foreground">
+                      FI Account points to registered minter{' '}
+                      <span className="font-mono text-foreground font-medium">
+                        {formatContractAddress(info.registeredMinterAddress)}
+                      </span>{' '}
+                      instead of current deterministic minter. Register below to
+                      link your active token.
+                    </p>
+                  </div>
+                )}
                 <div className="pt-2 border-t border-border/50 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-muted-foreground shrink-0">
                       Deterministic Minter:
                     </span>
-                    <span className="font-mono font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px] text-right">
+                    <span className="font-mono font-medium text-foreground truncate max-w-45 sm:max-w-60 text-right">
                       {formatContractAddress(info.deterministicMinterAddress)}
                     </span>
                   </div>
@@ -1013,7 +1030,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     <span className="text-muted-foreground shrink-0">
                       Expected Personal Wallet:
                     </span>
-                    <span className="font-mono font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px] text-right">
+                    <span className="font-mono font-medium text-foreground truncate max-w-45 sm:max-w-60 text-right">
                       {formatContractAddress(
                         info.expectedPersonalWalletAddress,
                       )}
@@ -1037,7 +1054,7 @@ export const PersonalJettonScreen: React.FC = () => {
                             info.deterministicMinterAddress || '',
                           )
                         }
-                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-[200px]"
+                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-50"
                       >
                         Use Deterministic Address
                       </button>
@@ -1064,7 +1081,7 @@ export const PersonalJettonScreen: React.FC = () => {
                             info.expectedPersonalWalletAddress || '',
                           )
                         }
-                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-[200px]"
+                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-50"
                       >
                         Use Expected Wallet
                       </button>
@@ -1284,7 +1301,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     <span className="text-muted-foreground shrink-0">
                       Wallet Contract:
                     </span>
-                    <span className="font-mono font-medium text-foreground truncate max-w-[200px] text-right">
+                    <span className="font-mono font-medium text-foreground truncate max-w-50 text-right">
                       {activePersonalWallet
                         ? formatContractAddress(activePersonalWallet)
                         : 'Not configured'}
@@ -1309,7 +1326,7 @@ export const PersonalJettonScreen: React.FC = () => {
 
               {/* Minter Destroy Card */}
               {isMinterAdmin ? (
-                <div className="bg-card text-card-foreground p-4 border border-destructive/30 bg-destructive/5 rounded-2xl shadow-sm space-y-3">
+                <div className="bg-card text-card-foreground p-4 border border-destructive/30 rounded-2xl shadow-sm space-y-3">
                   <div className="flex items-center gap-2 text-destructive">
                     <Trash2 className="w-5 h-5 shrink-0" />
                     <h3 className="font-semibold text-base text-foreground">
@@ -1328,7 +1345,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       <span className="text-muted-foreground shrink-0">
                         Minter Contract:
                       </span>
-                      <span className="font-mono font-medium text-foreground truncate max-w-[200px] text-right">
+                      <span className="font-mono font-medium text-foreground truncate max-w-50 text-right">
                         {activeMinter
                           ? formatContractAddress(activeMinter)
                           : 'Not configured'}
@@ -1354,7 +1371,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 info.minterDetails?.adminAddress && (
                   <div className="p-3 bg-secondary/30 border border-border rounded-xl text-xs text-muted-foreground flex items-center justify-between gap-2">
                     <span>Personal Minter Admin:</span>
-                    <span className="font-mono font-medium text-foreground truncate max-w-[180px]">
+                    <span className="font-mono font-medium text-foreground truncate max-w-45">
                       {formatContractAddress(info.minterDetails.adminAddress)}
                     </span>
                   </div>

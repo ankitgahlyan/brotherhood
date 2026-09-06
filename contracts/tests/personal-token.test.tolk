@@ -1,4 +1,3 @@
-import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -22,17 +21,10 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         adminAddress: admin,
         metadataUri: null,
     };
-    val stateInit = ContractState {
-        code: build("PersonalMinter"),
-        data: personalStore.toCell(),
-    };
-    val address = AutoDeployAddress {
-        workchain: BASECHAIN,
-        stateInit,
-    }.calculateAddress();
-    val pm = Personal { address, stateInit };
+    val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
+    val pm = Personal.fromStorage(personalStore, toShard);
     val res = pm.deploy(admin, { value: ton("1") });
-    expect(res).toHaveSuccessfulDeploy({ to: address });
+    expect(res).toHaveSuccessfulDeploy({ to: pm.address });
     return pm;
 }
 

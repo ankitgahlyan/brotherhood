@@ -137,16 +137,24 @@ export function getDeterministicPersonalMinter(params: {
   issuerWallet: Address;
   adminAddress: Address;
 }) {
-  const minter = PersonalMinter.fromStorage({
-    totalSupply: 0n,
-    fiJettonAddress: params.issuerWallet,
-    adminAddress: params.adminAddress,
-    metadataUri: null,
-  });
+  const minter = PersonalMinter.fromStorage(
+    {
+      totalSupply: 0n,
+      fiJettonAddress: params.issuerWallet,
+      adminAddress: params.adminAddress,
+      metadataUri: null,
+    },
+    {
+      toShard: { fixedPrefixLength: 8, closeTo: params.adminAddress },
+    },
+  );
 
   return {
     contractAddress: minter.address,
-    stateInit: minter.init!,
+    stateInit: {
+      ...minter.init!,
+      splitDepth: 8,
+    },
   };
 }
 

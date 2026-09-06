@@ -163,7 +163,10 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
     println(forwardInitStatePersonalWalletOverhead());
 
     // ---- 5. Real gas consumption per flow in PersonalToken ----
-    val pm = Personal.fromStorage(personalMinterStore);
+    val pm = Personal.fromStorage(
+        personalMinterStore,
+        { fixedPrefixLength: 8, closeTo: deployer.address },
+    );
     pm.deploy(deployer.address, { value: ton("1") });
 
     // Mint to deployer and to recipient

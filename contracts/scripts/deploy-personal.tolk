@@ -51,9 +51,11 @@ fun main() {
         code: build("PersonalMinter"),
         data: personalStore.toCell(),
     };
+    val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pmAddress = AutoDeployAddress {
         workchain: BASECHAIN,
         stateInit,
+        toShard,
     }.calculateAddress();
 
     // deploy the Personal Token minter
@@ -63,7 +65,7 @@ fun main() {
         dest: {
             workchain: BASECHAIN,
             stateInit,
-            toShard: null,
+            toShard,
         },
     });
     val deployRes = net.send(deployer.address, deployMsg);

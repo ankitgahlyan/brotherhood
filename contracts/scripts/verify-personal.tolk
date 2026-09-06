@@ -64,9 +64,11 @@ fun main() {
         code: build("PersonalMinter"),
         data: personalStore.toCell(),
     };
+    val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: issuerOwner };
     val pmAddress = AutoDeployAddress {
         workchain: BASECHAIN,
         stateInit,
+        toShard,
     }.calculateAddress();
 
     val deployMsg = createMessage({
@@ -75,7 +77,7 @@ fun main() {
         dest: {
             workchain: BASECHAIN,
             stateInit,
-            toShard: null, // todo: issuerOwner
+            toShard,
         },
     });
     net.send(issuerOwner, deployMsg).waitForFirstTransaction();

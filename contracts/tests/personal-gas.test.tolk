@@ -24,7 +24,8 @@ fun deployPersonalMinterDirect(admin: address): Personal {
         adminAddress: admin,
         metadataUri: null,
     };
-    val pm = Personal.fromStorage(personalStore);
+    val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
+    val pm = Personal.fromStorage(personalStore, toShard);
     val res = pm.deploy(admin, { value: ton("1") });
     expect(res).toHaveSuccessfulDeploy({ to: pm.address });
     return pm;

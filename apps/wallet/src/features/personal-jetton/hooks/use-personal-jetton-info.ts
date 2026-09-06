@@ -30,10 +30,13 @@ export interface UsePersonalJettonInfoResult {
   personalWalletAddress: string | null;
   deterministicMinterAddress: string | null;
   expectedPersonalWalletAddress: string | null;
+  registeredMinterAddress: string | null;
+  registeredWalletAddress: string | null;
   personalBalance: bigint | null;
   minterDetails: PersonalMinterDetails | null;
   isRegistered: boolean;
   isDeployedOnChain: boolean;
+  hasMismatchedRegistration: boolean;
   isLoading: boolean;
   refetch: () => void;
 }
@@ -83,11 +86,6 @@ export function usePersonalJettonInfo(
     }
   }, [ownerAddress, fiWalletAddr]);
 
-  const deployedCheckQuery = useIsContractDeployed(
-    deterministicMinterAddrObj,
-    Boolean(deterministicMinterAddrObj),
-  );
-
   const fiWalletQuery = useFiWalletState(ownerAddress);
 
   const registeredMinterObj = useMemo(() => {
@@ -104,48 +102,36 @@ export function usePersonalJettonInfo(
     return wallet && !isZeroAddress(wallet) ? wallet : null;
   }, [fiWalletQuery.data]);
 
-  // Active minter is registered minter if available; otherwise deterministic minter
+  const deterministicDeployedQuery = useIsContractDeployed(
+    deterministicMinterAddrObj,
+    Boolean(deterministicMinterAddrObj),
+  );
+
+  const registeredDeployedQuery = useIsContractDeployed(
+    registeredMinterObj,
+    Boolean(registeredMinterObj),
+  );
+
+  const isRegisteredMinterDeployed = Boolean(registeredDeployedQuery.data);
+
+  // Active minter: if fiWallet has non-zero addresses that are deployed on-chain, use them;
+  // otherwise use deterministic minter
   const activeMinterObj = useMemo(() => {
-    if (registeredMinterObj) return registeredMinterObj;
+    if (registeredMinterObj && isRegisteredMinterDeployed) {
+      return registeredMinterObj;
+    }
     if (deterministicMinterAddrObj) {
       return deterministicMinterAddrObj;
     }
     return null;
-  }, [registeredMinterObj, deterministicMinterAddrObj]);
-
-  const isDeployed = Boolean(registeredMinterObj || deployedCheckQuery.data);
-
-  const {
-    data: computedWalletAddrObj,
-    isLoading: isWalletAddrLoading,
-    refetch: refetchWalletAddr,
-  } = usePersonalWalletAddress(
-    activeMinterObj ?? null,
-    ownerAddress,
-    isDeployed,
-  );
-
-  const {
-    data: balance,
-    isLoading: isBalanceLoading,
-    refetch: refetchBalance,
-  } = usePersonalWalletBalance(
-    activeMinterObj ?? null,
-    ownerAddress,
-    isDeployed,
-  );
-
-  const {
-    data: minterDetails,
-    isLoading: isMinterDetailsLoading,
-    refetch: refetchMinterDetails,
-  } = usePersonalMinterDetails(activeMinterObj ?? null, isDeployed);
-
-  const isDeployedOnChain = Boolean(isDeployed || minterDetails);
-  const isRegistered = Boolean(registeredMinterObj);
+  }, [
+    registeredMinterObj,
+    isRegisteredMinterDeployed,
+    deterministicMinterAddrObj,
+  ]);
 
   const fallbackWalletObj = useMemo(() => {
-    const targetMinter = activeMinterObj || deterministicMinterAddrObj;
+    const targetMinter = deterministicMinterAddrObj;
     if (!targetMinter || !ownerAddress) return null;
     try {
       return getExpectedPersonalWalletAddress({
@@ -155,10 +141,70 @@ export function usePersonalJettonInfo(
     } catch {
       return null;
     }
-  }, [activeMinterObj, deterministicMinterAddrObj, ownerAddress]);
+  }, [deterministicMinterAddrObj, ownerAddress]);
+
+  const isMinterRegistered = Boolean(
+    registeredMinterObj &&
+    deterministicMinterAddrObj &&
+    registeredMinterObj.equals(deterministicMinterAddrObj),
+  );
+
+  const isWalletRegistered = Boolean(
+    registeredWalletObj &&
+    fallbackWalletObj &&
+    registeredWalletObj.equals(fallbackWalletObj),
+  );
+
+  const isRegistered = Boolean(isMinterRegistered && isWalletRegistered);
+
+  const hasMismatchedRegistration = Boolean(
+    (registeredMinterObj && !isMinterRegistered) ||
+    (registeredWalletObj && !isWalletRegistered),
+  );
+
+  const {
+    data: minterDetails,
+    isLoading: isMinterDetailsLoading,
+    refetch: refetchMinterDetails,
+  } = usePersonalMinterDetails(activeMinterObj ?? null);
+
+  const isDeployedOnChain = Boolean(
+    (activeMinterObj &&
+    registeredMinterObj &&
+    activeMinterObj.equals(registeredMinterObj)
+      ? isRegisteredMinterDeployed
+      : deterministicDeployedQuery.data) || minterDetails,
+  );
+
+  const {
+    data: computedWalletAddrObj,
+    isLoading: isWalletAddrLoading,
+    refetch: refetchWalletAddr,
+  } = usePersonalWalletAddress(
+    activeMinterObj ?? null,
+    ownerAddress,
+    isDeployedOnChain,
+  );
+
+  const {
+    data: balance,
+    isLoading: isBalanceLoading,
+    refetch: refetchBalance,
+  } = usePersonalWalletBalance(
+    activeMinterObj ?? null,
+    ownerAddress,
+    isDeployedOnChain,
+  );
 
   const resolvedWallet =
-    registeredWalletObj || computedWalletAddrObj || fallbackWalletObj || null;
+    (activeMinterObj &&
+    registeredMinterObj &&
+    activeMinterObj.equals(registeredMinterObj)
+      ? registeredWalletObj
+      : null) ||
+    computedWalletAddrObj ||
+    fallbackWalletObj ||
+    null;
 
   const expectedWalletAddrStr = fallbackWalletObj
     ? fallbackWalletObj.toString()
@@ -166,7 +212,8 @@ export function usePersonalJettonInfo(
 
   const refetch = () => {
     fiWalletQuery.refetch();
-    deployedCheckQuery.refetch();
+    deterministicDeployedQuery.refetch();
+    registeredDeployedQuery.refetch();
     if (activeMinterObj) {
       refetchWalletAddr();
       refetchBalance();
@@ -179,13 +226,17 @@ export function usePersonalJettonInfo(
     personalWalletAddress: resolvedWallet?.toString() ?? null,
     deterministicMinterAddress: deterministicMinterAddrObj?.toString() ?? null,
     expectedPersonalWalletAddress: expectedWalletAddrStr,
+    registeredMinterAddress: registeredMinterObj?.toString() ?? null,
+    registeredWalletAddress: registeredWalletObj?.toString() ?? null,
     personalBalance: balance ?? null,
     minterDetails: minterDetails ?? null,
     isRegistered,
     isDeployedOnChain,
+    hasMismatchedRegistration,
     isLoading:
       fiWalletQuery.isLoading ||
-      deployedCheckQuery.isLoading ||
+      deterministicDeployedQuery.isLoading ||
+      (Boolean(registeredMinterObj) && registeredDeployedQuery.isLoading) ||
       (Boolean(activeMinterObj) &&
         (isWalletAddrLoading || isBalanceLoading || isMinterDetailsLoading)),
     refetch,
