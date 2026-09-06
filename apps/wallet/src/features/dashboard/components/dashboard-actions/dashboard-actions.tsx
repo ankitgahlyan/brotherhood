@@ -43,46 +43,47 @@ export const DashboardActions: React.FC = () => {
         <div className="grid grid-cols-5 gap-1.5 pt-1">
           <button
             onClick={() => navigate('/brotherhood')}
-            className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
             data-testid="brotherhood-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground">
+            <span className="block text-[11px] font-semibold text-foreground truncate">
               Fi
             </span>
           </button>
           <button
             onClick={() => navigate('/personal-jetton')}
-            className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
             data-testid="personal-jetton-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground">
+            <span className="block text-[11px] font-semibold text-foreground truncate">
               My Coin
             </span>
           </button>
           <button
             onClick={() => navigate('/dao')}
-            className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
             data-testid="dao-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground">
+            <span className="block text-[11px] font-semibold text-foreground truncate">
               DAO
             </span>
           </button>
           <button
             onClick={() => navigate('/lottery')}
-            className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
             data-testid="lottery-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground">
+            <span className="block text-[11px] font-semibold text-foreground truncate">
               Lottery
             </span>
           </button>
           <button
             onClick={() => navigate('/city-network')}
-            className="p-2 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
             data-testid="city-network-button"
+            title="NeighbourHOOD"
           >
-            <span className="block text-[11px] font-semibold text-foreground">
+            <span className="block text-[10px] sm:text-[11px] font-semibold text-foreground truncate">
               NeighbourHOOD
             </span>
           </button>

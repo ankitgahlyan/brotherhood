@@ -14,15 +14,27 @@ import {
   Rocket,
   ArrowRight,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
-import { useExplorer, getExplorerAddressUrl } from '@/core/explorer/use-explorer';
+import {
+  useExplorer,
+  getExplorerAddressUrl,
+} from '@/core/explorer/use-explorer';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/core/components/ui/dialog';
 import { useFormatAddress } from '@/core/utils/formatters';
 import {
   MemberGuard,
@@ -39,6 +51,7 @@ import { useRegisterPersonalJetton } from '../hooks/use-register-personal-jetton
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 import { useMintPersonal } from '../hooks/use-mint-personal';
 import { useBurnPersonal } from '../hooks/use-burn-personal';
+import { useDestroyPersonal } from '../hooks/use-destroy-personal';
 import {
   usePersonalMinterAdmin,
   usePersonalMinterMetadata,
@@ -48,7 +61,15 @@ import { usePersonalJettonInfo } from '../hooks/use-personal-jetton-info';
 import { TokenImagePicker } from './token-image-picker';
 import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
 
-type Tab = 'info' | 'deploy' | 'mint' | 'burn' | 'addresses' | 'admin' | 'topup';
+type Tab =
+  | 'info'
+  | 'deploy'
+  | 'mint'
+  | 'burn'
+  | 'addresses'
+  | 'admin'
+  | 'topup'
+  | 'destroy';
 
 export const PersonalJettonScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -91,6 +112,10 @@ export const PersonalJettonScreen: React.FC = () => {
   // Burn tab options
   const [isPayback, setIsPayback] = useState(true);
 
+  // Destroy tab confirmation dialog states
+  const [isConfirmWalletOpen, setIsConfirmWalletOpen] = useState(false);
+  const [isConfirmMinterOpen, setIsConfirmMinterOpen] = useState(false);
+
   const info = usePersonalJettonInfo(address ?? null);
 
   const isDeployed =
@@ -100,8 +125,17 @@ export const PersonalJettonScreen: React.FC = () => {
       !isZeroAddress(info.personalMinterAddress));
 
   const availableTabs: Tab[] = isDeployed
-    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup']
-    : ['info', 'deploy', 'mint', 'burn', 'addresses', 'admin', 'topup'];
+    ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
+    : [
+        'info',
+        'deploy',
+        'mint',
+        'burn',
+        'addresses',
+        'admin',
+        'topup',
+        'destroy',
+      ];
 
   // If already deployed and currently on deploy tab, switch to info
   React.useEffect(() => {
@@ -115,9 +149,13 @@ export const PersonalJettonScreen: React.FC = () => {
     (info.isDeployedOnChain ? info.deterministicMinterAddress : null) ||
     '';
   const activePersonalWallet =
-    info.personalWalletAddress ||
-    info.expectedPersonalWalletAddress ||
-    '';
+    info.personalWalletAddress || info.expectedPersonalWalletAddress || '';
+
+  const isMinterAdmin = Boolean(
+    address &&
+    info.minterDetails?.adminAddress &&
+    info.minterDetails.adminAddress.toString() === address,
+  );
 
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
@@ -175,6 +213,17 @@ export const PersonalJettonScreen: React.FC = () => {
     personalWalletAddress: activePersonalWallet,
     amount,
     isPayback,
+  });
+
+  const destroyer = useDestroyPersonal({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    personalWalletAddress: activePersonalWallet || null,
+    personalMinterAddress: activeMinter || null,
+    onSuccess: () => {
+      info.refetch();
+    },
   });
 
   const admin = usePersonalMinterAdmin({
@@ -254,81 +303,89 @@ export const PersonalJettonScreen: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {/* Case 1: Deployed (either recently or on-chain) but not registered */}
-                  {!info.isRegistered && (deployer.deployedAddresses || info.isDeployedOnChain) && (
-                    <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2.5">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <div className="text-xs space-y-1">
-                          <span className="font-semibold text-amber-700 dark:text-amber-400 block">
-                            Registration Required
-                          </span>
-                          <p className="text-muted-foreground leading-relaxed">
-                            Your Personal Token minter is deployed on-chain! Register
-                            both minter & wallet addresses to your FI Account in
-                            a single unified transaction.
+                  {!info.isRegistered &&
+                    (deployer.deployedAddresses || info.isDeployedOnChain) && (
+                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2.5">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="text-xs space-y-1">
+                            <span className="font-semibold text-amber-700 dark:text-amber-400 block">
+                              Registration Required
+                            </span>
+                            <p className="text-muted-foreground leading-relaxed">
+                              Your Personal Token minter is deployed on-chain!
+                              Register both minter & wallet addresses to your FI
+                              Account in a single unified transaction.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 text-[11px] bg-background/60 p-2 rounded-lg border border-border">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Minter:
+                            </span>
+                            <span className="font-mono text-foreground font-medium">
+                              {formatContractAddress(targetRegisterMinter)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Wallet:
+                            </span>
+                            <span className="font-mono text-foreground font-medium">
+                              {formatContractAddress(targetRegisterWallet)}
+                            </span>
+                          </div>
+                        </div>
+                        {!canOperate && (
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                            Note: Account is pending 1-day activation delay or
+                            suspended. Registration will be enabled once active.
                           </p>
-                        </div>
+                        )}
+                        <Button
+                          onClick={() => registrar.register()}
+                          disabled={!canOperate || registrar.isDisabled}
+                          loading={registrar.isSending}
+                          fullWidth
+                          size="xs"
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                          data-testid="personal-register-info-submit"
+                        >
+                          Register Personal Token to Account
+                        </Button>
                       </div>
-                      <div className="space-y-1.5 text-[11px] bg-background/60 p-2 rounded-lg border border-border">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Minter:</span>
-                          <span className="font-mono text-foreground font-medium">
-                            {formatContractAddress(targetRegisterMinter)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Wallet:</span>
-                          <span className="font-mono text-foreground font-medium">
-                            {formatContractAddress(targetRegisterWallet)}
-                          </span>
-                        </div>
-                      </div>
-                      {!canOperate && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                          Note: Account is pending 1-day activation delay or suspended. Registration will be enabled once active.
-                        </p>
-                      )}
-                      <Button
-                        onClick={() => registrar.register()}
-                        disabled={!canOperate || registrar.isDisabled}
-                        loading={registrar.isSending}
-                        fullWidth
-                        size="xs"
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
-                        data-testid="personal-register-info-submit"
-                      >
-                        Register Personal Token to Account
-                      </Button>
-                    </div>
-                  )}
+                    )}
 
                   {/* Case 2: Not deployed yet */}
-                  {!info.isRegistered && !info.isDeployedOnChain && !deployer.deployedAddresses && (
-                    <div className="p-4 rounded-xl border border-dashed border-border bg-secondary/30 flex flex-col items-center text-center space-y-2.5 my-2">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
-                        <Rocket className="w-5 h-5" />
+                  {!info.isRegistered &&
+                    !info.isDeployedOnChain &&
+                    !deployer.deployedAddresses && (
+                      <div className="p-4 rounded-xl border border-dashed border-border bg-secondary/30 flex flex-col items-center text-center space-y-2.5 my-2">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
+                          <Rocket className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground text-sm">
+                            Personal Token Not Deployed
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
+                            You haven't deployed your personal token yet. Deploy
+                            it now to issue credit, establish member trust, and
+                            borrow in BrotherHood Network.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setActiveTab('deploy')}
+                          className="mt-1 text-xs"
+                          data-testid="personal-deploy-prompt-btn"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1" />
+                          Deploy Personal Token
+                        </Button>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground text-sm">
-                          Personal Token Not Deployed
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
-                          You haven't deployed your personal token yet. Deploy it
-                          now to issue credit, establish member trust, and borrow
-                          in BrotherHood Network.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => setActiveTab('deploy')}
-                        className="mt-1 text-xs"
-                        data-testid="personal-deploy-prompt-btn"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 mr-1" />
-                        Deploy Personal Token
-                      </Button>
-                    </div>
-                  )}
+                    )}
 
                   {/* Address & Balance Summary */}
                   <div className="space-y-2 text-xs">
@@ -393,12 +450,14 @@ export const PersonalJettonScreen: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-1">
                           {(info.personalWalletAddress ||
-                            deployer.deployedAddresses?.personalWalletAddress) && (
+                            deployer.deployedAddresses
+                              ?.personalWalletAddress) && (
                             <>
                               <CopyButton
                                 address={
                                   info.personalWalletAddress ||
-                                  deployer.deployedAddresses!.personalWalletAddress
+                                  deployer.deployedAddresses!
+                                    .personalWalletAddress
                                 }
                                 type="contract"
                                 size="xs"
@@ -407,7 +466,8 @@ export const PersonalJettonScreen: React.FC = () => {
                                 href={getExplorerAddressUrl(
                                   network,
                                   info.personalWalletAddress ||
-                                    deployer.deployedAddresses!.personalWalletAddress,
+                                    deployer.deployedAddresses!
+                                      .personalWalletAddress,
                                   explorer,
                                 )}
                                 target="_blank"
@@ -431,7 +491,9 @@ export const PersonalJettonScreen: React.FC = () => {
                             Total Supply
                           </span>
                           <span className="font-semibold text-foreground text-sm">
-                            {(Number(info.minterDetails.totalSupply) / 1e9).toFixed(4)}
+                            {(
+                              Number(info.minterDetails.totalSupply) / 1e9
+                            ).toFixed(4)}
                           </span>
                         </div>
                         <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl">
@@ -440,7 +502,9 @@ export const PersonalJettonScreen: React.FC = () => {
                           </span>
                           <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-1 mt-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            {info.minterDetails.mintable !== false ? 'Mintable' : 'Fixed'}
+                            {info.minterDetails.mintable !== false
+                              ? 'Mintable'
+                              : 'Fixed'}
                           </span>
                         </div>
                       </div>
@@ -470,8 +534,8 @@ export const PersonalJettonScreen: React.FC = () => {
                   Issue Personal Token
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Deploy your Personal Token minter contract. Name and symbol are
-                  required. Description and token icon are optional with
+                  Deploy your Personal Token minter contract. Name and symbol
+                  are required. Description and token icon are optional with
                   sensible defaults.
                 </p>
               </div>
@@ -512,7 +576,9 @@ export const PersonalJettonScreen: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Personal Wallet:</span>
+                      <span className="text-muted-foreground">
+                        Personal Wallet:
+                      </span>
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-foreground font-medium">
                           {formatContractAddress(
@@ -588,7 +654,10 @@ export const PersonalJettonScreen: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">
-                      Description <span className="text-muted-foreground text-[10px] font-normal">(Optional)</span>
+                      Description{' '}
+                      <span className="text-muted-foreground text-[10px] font-normal">
+                        (Optional)
+                      </span>
                     </label>
                     <textarea
                       value={tokenDesc}
@@ -618,7 +687,8 @@ export const PersonalJettonScreen: React.FC = () => {
                       data-testid="personal-deploy-initial-mint"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Tokens will be minted directly to your connected wallet in the deployment transaction.
+                      Tokens will be minted directly to your connected wallet in
+                      the deployment transaction.
                     </p>
                   </div>
 
@@ -652,7 +722,8 @@ export const PersonalJettonScreen: React.FC = () => {
               {!activeMinter && (
                 <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
                   <span>
-                    No personal minter registered. Deploy your token first or specify a custom minter address.
+                    No personal minter registered. Deploy your token first or
+                    specify a custom minter address.
                   </span>
                   <Button
                     size="xs"
@@ -674,7 +745,11 @@ export const PersonalJettonScreen: React.FC = () => {
                         {formatContractAddress(activeMinter)}
                       </span>
                     </div>
-                    <CopyButton address={activeMinter} type="contract" size="xs" />
+                    <CopyButton
+                      address={activeMinter}
+                      type="contract"
+                      size="xs"
+                    />
                   </div>
                 )}
                 <div>
@@ -738,7 +813,8 @@ export const PersonalJettonScreen: React.FC = () => {
               {!activePersonalWallet && (
                 <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
                   <span>
-                    No personal wallet registered. Deploy your token first or specify a custom wallet address.
+                    No personal wallet registered. Deploy your token first or
+                    specify a custom wallet address.
                   </span>
                   <Button
                     size="xs"
@@ -752,24 +828,36 @@ export const PersonalJettonScreen: React.FC = () => {
               <div className="space-y-2">
                 <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">Minter Contract:</span>
+                    <span className="text-muted-foreground text-[11px]">
+                      Minter Contract:
+                    </span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-foreground font-medium">
                         {formatContractAddress(activeMinter) || 'None'}
                       </span>
                       {activeMinter && (
-                        <CopyButton address={activeMinter} type="contract" size="xs" />
+                        <CopyButton
+                          address={activeMinter}
+                          type="contract"
+                          size="xs"
+                        />
                       )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">Personal Wallet:</span>
+                    <span className="text-muted-foreground text-[11px]">
+                      Personal Wallet:
+                    </span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-foreground font-medium">
                         {formatContractAddress(activePersonalWallet) || 'None'}
                       </span>
                       {activePersonalWallet && (
-                        <CopyButton address={activePersonalWallet} type="contract" size="xs" />
+                        <CopyButton
+                          address={activePersonalWallet}
+                          type="contract"
+                          size="xs"
+                        />
                       )}
                     </div>
                   </div>
@@ -808,7 +896,10 @@ export const PersonalJettonScreen: React.FC = () => {
                     </span>
                   </span>
                   <p className="text-muted-foreground leading-relaxed">
-                    Sends your wallet address with the burn request to trigger an automatic FI token payback from the issuer's account (requires credit maturity). Uncheck for a simple burn without payback.
+                    Sends your wallet address with the burn request to trigger
+                    an automatic FI token payback from the issuer's account
+                    (requires credit maturity). Uncheck for a simple burn
+                    without payback.
                   </p>
                 </div>
               </label>
@@ -833,26 +924,53 @@ export const PersonalJettonScreen: React.FC = () => {
                   Personal Contract Addresses
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  View and update the Personal Minter and Personal Wallet contracts linked to your FI Account via <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">ActSetPersonalJetton</code>.
+                  View and update the Personal Minter and Personal Wallet
+                  contracts linked to your FI Account via{' '}
+                  <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">
+                    ActSetPersonalJetton
+                  </code>
+                  .
                 </p>
               </div>
 
               {/* Status Overview Card */}
-              <div className="space-y-2 p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">On-Chain Deployment:</span>
-                  <span
-                    className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
-                      info.isDeployedOnChain
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {info.isDeployedOnChain ? 'Deployed On-Chain' : 'Not Deployed'}
+              <div className="space-y-2.5 p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-muted-foreground">
+                    On-Chain Deployment:
                   </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                        info.isDeployedOnChain
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {info.isDeployedOnChain
+                        ? 'Deployed On-Chain'
+                        : 'Not Deployed'}
+                    </span>
+                    {!info.isDeployedOnChain && (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => deployer.deploy()}
+                        disabled={!canOperate || deployer.isDisabled}
+                        loading={deployer.isSending}
+                        className="text-xs px-2.5 py-1 h-7 font-medium rounded-lg"
+                        data-testid="personal-addresses-deploy-button"
+                      >
+                        <Rocket className="w-3 h-3 mr-1" />
+                        Deploy Now
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Registration in FI Account:</span>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-muted-foreground">
+                    Registration in FI Account:
+                  </span>
                   <span
                     className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
                       info.isRegistered
@@ -863,17 +981,23 @@ export const PersonalJettonScreen: React.FC = () => {
                     {info.isRegistered ? 'Registered' : 'Not Registered'}
                   </span>
                 </div>
-                <div className="pt-1.5 border-t border-border/50 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Deterministic Minter:</span>
-                    <span className="font-mono font-medium text-foreground">
+                <div className="pt-2 border-t border-border/50 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">
+                      Deterministic Minter:
+                    </span>
+                    <span className="font-mono font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px] text-right">
                       {formatContractAddress(info.deterministicMinterAddress)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Expected Personal Wallet:</span>
-                    <span className="font-mono font-medium text-foreground">
-                      {formatContractAddress(info.expectedPersonalWalletAddress)}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">
+                      Expected Personal Wallet:
+                    </span>
+                    <span className="font-mono font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px] text-right">
+                      {formatContractAddress(
+                        info.expectedPersonalWalletAddress,
+                      )}
                     </span>
                   </div>
                 </div>
@@ -882,7 +1006,7 @@ export const PersonalJettonScreen: React.FC = () => {
               {/* Input Form */}
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <label className="text-xs font-medium text-foreground">
                       Personal Minter Address
                     </label>
@@ -890,9 +1014,11 @@ export const PersonalJettonScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          setAddressesTabMinter(info.deterministicMinterAddress || '')
+                          setAddressesTabMinter(
+                            info.deterministicMinterAddress || '',
+                          )
                         }
-                        className="text-[11px] text-primary hover:underline font-medium"
+                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-[200px]"
                       >
                         Use Deterministic Address
                       </button>
@@ -907,7 +1033,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <label className="text-xs font-medium text-foreground">
                       Personal Wallet Address
                     </label>
@@ -915,9 +1041,11 @@ export const PersonalJettonScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          setAddressesTabWallet(info.expectedPersonalWalletAddress || '')
+                          setAddressesTabWallet(
+                            info.expectedPersonalWalletAddress || '',
+                          )
                         }
-                        className="text-[11px] text-primary hover:underline font-medium"
+                        className="text-[11px] text-primary hover:underline font-medium truncate max-w-[200px]"
                       >
                         Use Expected Wallet
                       </button>
@@ -933,7 +1061,8 @@ export const PersonalJettonScreen: React.FC = () => {
 
                 {!canOperate && (
                   <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400">
-                    Account is in 1-day activation period or suspended. Transactions cannot be broadcast until activated.
+                    Account is in 1-day activation period or suspended.
+                    Transactions cannot be broadcast until activated.
                   </div>
                 )}
 
@@ -959,7 +1088,12 @@ export const PersonalJettonScreen: React.FC = () => {
                   Register Personal Jetton to Account
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Send a unified <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">ActSetPersonalJetton</code> message to register both minter and wallet addresses in your FI Wallet contract.
+                  Send a unified{' '}
+                  <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">
+                    ActSetPersonalJetton
+                  </code>{' '}
+                  message to register both minter and wallet addresses in your
+                  FI Wallet contract.
                 </p>
                 <div className="space-y-2">
                   <InputScan
@@ -1014,7 +1148,8 @@ export const PersonalJettonScreen: React.FC = () => {
               <div className="space-y-3">
                 <h3 className="font-semibold text-base">Update Metadata</h3>
                 <p className="text-xs text-muted-foreground">
-                  Update your Personal Token onchain metadata. All fields can be customized.
+                  Update your Personal Token onchain metadata. All fields can be
+                  customized.
                 </p>
                 <div className="space-y-2">
                   <div>
@@ -1045,7 +1180,10 @@ export const PersonalJettonScreen: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-xs font-medium text-foreground block mb-1">
-                      Description <span className="text-muted-foreground text-[10px] font-normal">(Optional)</span>
+                      Description{' '}
+                      <span className="text-muted-foreground text-[10px] font-normal">
+                        (Optional)
+                      </span>
                     </label>
                     <textarea
                       value={adminTokenDesc}
@@ -1101,6 +1239,196 @@ export const PersonalJettonScreen: React.FC = () => {
               >
                 Top Up Contract TONs
               </Button>
+            </div>
+          )}
+
+          {/* Destroy Contracts Tab */}
+          {activeTab === 'destroy' && (
+            <div className="space-y-4 text-sm">
+              {/* Wallet Destroy Card */}
+              <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-destructive">
+                  <Trash2 className="w-5 h-5 shrink-0" />
+                  <h3 className="font-semibold text-base text-foreground">
+                    Destroy Personal Wallet
+                  </h3>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Permanently destroys your Personal Jetton Wallet contract. Any
+                  remaining TON balance in the contract will be reclaimed and
+                  returned to your connected wallet address. This action is
+                  irreversible.
+                </p>
+
+                <div className="space-y-1 text-xs bg-secondary/40 p-2.5 rounded-xl border border-border/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">
+                      Wallet Contract:
+                    </span>
+                    <span className="font-mono font-medium text-foreground truncate max-w-[200px] text-right">
+                      {activePersonalWallet
+                        ? formatContractAddress(activePersonalWallet)
+                        : 'Not configured'}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="danger"
+                  onClick={() => setIsConfirmWalletOpen(true)}
+                  disabled={
+                    !canOperate || !activePersonalWallet || destroyer.isSending
+                  }
+                  loading={destroyer.isSending}
+                  fullWidth
+                  data-testid="personal-destroy-wallet-trigger"
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  Destroy Personal Wallet
+                </Button>
+              </div>
+
+              {/* Minter Destroy Card */}
+              {isMinterAdmin ? (
+                <div className="bg-card text-card-foreground p-4 border border-destructive/30 bg-destructive/5 rounded-2xl shadow-sm space-y-3">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <Trash2 className="w-5 h-5 shrink-0" />
+                    <h3 className="font-semibold text-base text-foreground">
+                      Destroy Personal Minter
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Permanently destroys the Personal Token Minter contract. You
+                    are verified as the Minter Admin. Any remaining TON balance
+                    in the minter will be returned to your wallet. Once
+                    destroyed, this token cannot be minted or recovered.
+                  </p>
+
+                  <div className="space-y-1 text-xs bg-secondary/40 p-2.5 rounded-xl border border-border/50">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground shrink-0">
+                        Minter Contract:
+                      </span>
+                      <span className="font-mono font-medium text-foreground truncate max-w-[200px] text-right">
+                        {activeMinter
+                          ? formatContractAddress(activeMinter)
+                          : 'Not configured'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="danger"
+                    onClick={() => setIsConfirmMinterOpen(true)}
+                    disabled={
+                      !canOperate || !activeMinter || destroyer.isSending
+                    }
+                    loading={destroyer.isSending}
+                    fullWidth
+                    data-testid="personal-destroy-minter-trigger"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Destroy Personal Minter
+                  </Button>
+                </div>
+              ) : (
+                info.minterDetails?.adminAddress && (
+                  <div className="p-3 bg-secondary/30 border border-border rounded-xl text-xs text-muted-foreground flex items-center justify-between gap-2">
+                    <span>Personal Minter Admin:</span>
+                    <span className="font-mono font-medium text-foreground truncate max-w-[180px]">
+                      {formatContractAddress(info.minterDetails.adminAddress)}
+                    </span>
+                  </div>
+                )
+              )}
+
+              {/* Confirmation Dialog: Wallet */}
+              <Dialog
+                open={isConfirmWalletOpen}
+                onOpenChange={setIsConfirmWalletOpen}
+              >
+                <DialogContent className="max-w-md w-[92vw] sm:w-full p-5 gap-4">
+                  <DialogHeader>
+                    <DialogTitle className="text-destructive flex items-center gap-2">
+                      <Trash2 className="w-5 h-5" />
+                      Confirm Destroy Personal Wallet
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground pt-1">
+                      Are you sure you want to permanently self-destruct your
+                      Personal Jetton Wallet contract (
+                      {formatContractAddress(activePersonalWallet)})? Any
+                      remaining TON balance will be refunded to your address.
+                      This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                    <Button
+                      variant="gray"
+                      size="sm"
+                      onClick={() => setIsConfirmWalletOpen(false)}
+                      disabled={destroyer.isSending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={async () => {
+                        setIsConfirmWalletOpen(false);
+                        await destroyer.destroyWallet();
+                      }}
+                      loading={destroyer.isSending}
+                      data-testid="personal-destroy-wallet-confirm"
+                    >
+                      Yes, Destroy Wallet
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Confirmation Dialog: Minter */}
+              <Dialog
+                open={isConfirmMinterOpen}
+                onOpenChange={setIsConfirmMinterOpen}
+              >
+                <DialogContent className="max-w-md w-[92vw] sm:w-full p-5 gap-4">
+                  <DialogHeader>
+                    <DialogTitle className="text-destructive flex items-center gap-2">
+                      <Trash2 className="w-5 h-5" />
+                      Confirm Destroy Personal Minter
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground pt-1">
+                      Are you sure you want to permanently self-destruct your
+                      Personal Token Minter contract (
+                      {formatContractAddress(activeMinter)})? All token
+                      operations will terminate and remaining TON balance will
+                      be refunded to your admin address. This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                    <Button
+                      variant="gray"
+                      size="sm"
+                      onClick={() => setIsConfirmMinterOpen(false)}
+                      disabled={destroyer.isSending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={async () => {
+                        setIsConfirmMinterOpen(false);
+                        await destroyer.destroyMinter();
+                      }}
+                      loading={destroyer.isSending}
+                      data-testid="personal-destroy-minter-confirm"
+                    >
+                      Yes, Destroy Minter
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </div>

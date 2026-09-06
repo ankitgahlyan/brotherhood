@@ -141,7 +141,8 @@ fun onInternalMessage(in: InMessage) {
 
         Destroy => {
             assert (
-                (in.senderAddress == storage.owner) | (in.senderAddress == storage.deployer)
+                (in.senderAddress == storage.owner) | (in.senderAddress == storage.deployer) |
+                (in.senderAddress == storage.minterAddress)
             ) throw Errors.IncorrectSender;
             destroyContract(in.senderAddress);
         }
