@@ -485,9 +485,9 @@ export async function isPersonalWalletContract(
     const client = getTonClient(network);
     const wallet = client.open(PersonalWallet.fromAddress(address));
     const data = await wallet.getWalletData();
-    if (!data.minterAddress || !data.owner) return null;
+    if (!data.minterAddress || !data.ownerAddress) return null;
     return {
-      owner: data.owner,
+      owner: data.ownerAddress,
       minterAddress: data.minterAddress,
       balance: data.jettonBalance,
     };
@@ -524,7 +524,16 @@ export async function discoverPersonalTokensForWallet(
     // Check connected circle members from FI wallet
     const invitedMap = fiState?.maps?.ref?.invited;
     if (invitedMap) {
-      const invitedAddrs = invitedMap.keys().slice(0, 20);
+      let invitedAddrs: Address[] = [];
+      if (typeof invitedMap.keys === 'function') {
+        const k = invitedMap.keys();
+        invitedAddrs = Array.isArray(k) ? k : Array.from(k);
+      } else if (Array.isArray(invitedMap)) {
+        invitedAddrs = invitedMap.map((entry: any) =>
+          Array.isArray(entry) ? entry[0] : entry?.address || entry,
+        );
+      }
+      invitedAddrs = invitedAddrs.slice(0, 20);
       await Promise.all(
         invitedAddrs.map(async (circleContractAddr) => {
           try {
@@ -576,7 +585,7 @@ export async function discoverPersonalTokensForWallet(
     const txs = await client.getTransactions(ownerAddress, { limit: 50 });
     for (const tx of txs) {
       // Check inMessage
-      if (tx.inMessage && tx.inMessage.info.type === 'internal') {
+      if (tx.inMessage && tx.inMessage.info?.type === 'internal') {
         const src = tx.inMessage.info.src;
         if (src && !isZeroAddress(src)) {
           const slice = tx.inMessage.body.beginParse();
@@ -601,9 +610,17 @@ export async function discoverPersonalTokensForWallet(
         }
       }
 
-      // Check outMessages
-      for (const out of tx.outMessages) {
-        if (out.info.type === 'internal') {
+      // Check outMessages (Dictionary<number, Message> in @ton/core)
+      const outMsgs = tx.outMessages
+        ? typeof tx.outMessages.values === 'function'
+          ? tx.outMessages.values()
+          : Array.isArray(tx.outMessages)
+            ? tx.outMessages
+            : Object.values(tx.outMessages)
+        : [];
+
+      for (const out of outMsgs) {
+        if (out && out.info?.type === 'internal') {
           const dest = out.info.dest;
           if (dest && !isZeroAddress(dest)) {
             const pw = await isPersonalWalletContract(dest);
