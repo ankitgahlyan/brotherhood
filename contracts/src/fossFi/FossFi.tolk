@@ -339,25 +339,22 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         RequestUpgradeCode => {
-            assertCorrectSender(in.senderAddress, msg.sender);
-            if (msg.version < store.walletVersion) {
-                // sendUpgradeMinter(in.senderAddress, store);
-                val upgradeMsg = createMessage({
-                    // bounce for collecting fees back
-                    bounce: BounceMode.NoBounce,
-                    value: 0,
-                    dest: in.senderAddress,
-                    body: Upgrade {
-                        // todo: fixme: send HotUpgrades only to support state migration
-                        walletVersion: store.walletVersion,
-                        sender: store.adminAddress,
-                        newCode: others.latestFiWalletCode,
-                    },
-                });
-                upgradeMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
-                );
-            }
+            val fiWallet = getAutoAddress(in.senderAddress).calculateAddress();
+            val upgradeMsg = createMessage({
+                // bounce for collecting fees back
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: fiWallet,
+                body: Upgrade {
+                    // todo: fixme: send HotUpgrades only to support state migration
+                    walletVersion: store.walletVersion,
+                    sender: store.adminAddress,
+                    newCode: others.latestFiWalletCode,
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
         TopUpTons => {

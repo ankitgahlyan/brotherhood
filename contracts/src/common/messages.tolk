@@ -150,10 +150,7 @@ struct (0x00001006) Upgrade {
 
 struct (0x00001007) TopUpTons
 
-struct (0x00001008) RequestUpgradeCode {
-    sender: address
-    version: uint10
-}
+struct (0x00001008) RequestUpgradeCode {}
 
 struct (0x00001009) ApproveUpgrade {}
 
@@ -236,25 +233,9 @@ struct (0x00001055) ActDeactivate {
 
 struct (0x00001056) InternalDeActivate {}
 
-struct (0x00001057) ActRequestUpgrade {}
-
 struct (0x00001058) ActDestroyAccount {}
 
 struct (0x00001059) Destroy {}
-
-type ActAction =
-    | ActClaimWeeklyGrant
-    | ActInvite
-    | ActVote
-    | ActUnvote
-    | ActDeactivate
-    | ActRequestUpgrade
-    | ActDispatchAuthorityAction
-    | ActJoinLottery
-    | ActSetPersonalJetton
-    | ActDestroyAccount
-    | ActSubmitProposal
-    | ActVoteProposal
 
 // ============================================================================
 // GROUP 3: PROFILE & LOCATION INDEXING (Range: 0x000010A0 - 0x000010EF)

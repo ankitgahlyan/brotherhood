@@ -98,4 +98,3 @@ export function getExplorerAddressUrl(
   }
   return `https://${prefix}tonscan.org/address/${address}`;
 }
-

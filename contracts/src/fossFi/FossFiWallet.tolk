@@ -19,6 +19,18 @@ import "@contracts/lottery/messages"
 import "fees-management"
 
 type AllowedMessageToWallet =
+// owner-initiated actions (invite, vote, claim, lottery, destroy, ...)
+    | ActClaimWeeklyGrant
+    | ActInvite
+    | ActVote
+    | ActUnvote
+    | ActDeactivate
+    | ActDispatchAuthorityAction
+    | ActJoinLottery
+    | ActSetPersonalJetton
+    | ActDestroyAccount
+    | ActSubmitProposal
+    | ActVoteProposal
     | AskToTransfer
     | AskToBurn
     | BuyCredit
@@ -27,7 +39,6 @@ type AllowedMessageToWallet =
     | InternalTransferStep
     | InternalInvite
     | InternalDeActivate
-    | ActAction // owner-initiated actions (invite, vote, claim, lottery, destroy, ...)
     | Payback
     | RequestState
     | RequestUpgradeCode
@@ -443,16 +454,6 @@ fun onInternalMessage(in: InMessage): void {
             msg.transferRecipient.deActivate(0, store);
         }
 
-        ActRequestUpgrade => {
-            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-            // todo: fixme redundant
-            requestUpgrade(
-                trustedAddrs.minterAddr,
-                addrs.owner,
-                store.version,
-            );
-        }
-
         ActDispatchAuthorityAction => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
@@ -505,7 +506,7 @@ fun onInternalMessage(in: InMessage): void {
             } else if (msg.version < store.version) {
                 sendUpgrade(in.senderAddress, addrs.owner, store.version);
             } else {
-                requestUpgrade(in.senderAddress, addrs.owner, store.version);
+                requestUpgrade(in.senderAddress);
             }
             // val incomingTransfersLocked = ((self.status & 2) == 2);
             // val incomingTransfersLocked = (store.locked != false);
@@ -779,8 +780,19 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         RequestUpgradeCode => {
-            checkCorrectSenderInternal(in.senderAddress, msg.sender);
-            sendUpgrade(in.senderAddress, addrs.owner, store.version);
+            val upgradeMsg = createMessage({
+                dest: in.senderAddress,
+                value: 0,
+                bounce: false,
+                body: Upgrade {
+                    walletVersion: store.version,
+                    sender: addrs.owner,
+                    newCode: contract.getCode(),
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
         Upgrade => {

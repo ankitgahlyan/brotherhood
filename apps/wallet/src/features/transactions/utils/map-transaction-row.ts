@@ -42,7 +42,6 @@ export interface TransactionRowModel {
   date: string;
 }
 
-
 /** Minimal shape of a streaming pending transaction (structural — avoids a cross-package type import). */
 interface PendingLike {
   traceId: string;
@@ -186,11 +185,7 @@ export const mapPendingToRow = (
   const explorerUrl =
     status === 'loading'
       ? undefined
-      : getExplorerTxUrl(
-          network,
-          hash,
-          explorer,
-        );
+      : getExplorerTxUrl(network, hash, explorer);
   const base = {
     id: `pending-${pending.traceId}`,
     txHash: hash,
@@ -200,7 +195,6 @@ export const mapPendingToRow = (
     status,
     date: formatTxDate(timestamp),
   };
-
 
   if (pending.action) {
     const isOutgoing = isOutgoingFromAction(pending.action, myAddress);

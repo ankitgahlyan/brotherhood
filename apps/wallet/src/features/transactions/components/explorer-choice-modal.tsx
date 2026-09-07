@@ -93,9 +93,7 @@ export const ExplorerChoiceModal: React.FC<ExplorerChoiceModalProps> = ({
   };
 
   const truncatedHash =
-    txHash.length > 18
-      ? `${txHash.slice(0, 8)}…${txHash.slice(-8)}`
-      : txHash;
+    txHash.length > 18 ? `${txHash.slice(0, 8)}…${txHash.slice(-8)}` : txHash;
 
   return (
     <Modal.Container

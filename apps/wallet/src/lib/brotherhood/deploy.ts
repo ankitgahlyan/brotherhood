@@ -11,12 +11,12 @@ import {
   TopUpTons,
   ApproveUpgrade,
   RejectUpgrade,
+  RequestUpgradeCode,
 } from '@wrappers/FossFi.gen';
 import {
   AskToBurn,
   AskToTransfer,
   ActInvite,
-  ActRequestUpgrade,
   ActSetPersonalJetton,
   ActUnvote,
   ActVote,
@@ -352,7 +352,7 @@ export function buildDestroyBody(): Cell {
 }
 
 export function buildRequestUpgradeBody(): Cell {
-  return ActRequestUpgrade.toCell(ActRequestUpgrade.create());
+  return RequestUpgradeCode.toCell(RequestUpgradeCode.create());
 }
 
 export function buildTopUpTonsBody(): Cell {

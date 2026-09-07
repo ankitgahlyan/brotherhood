@@ -40,4 +40,3 @@ export function getAddressExplorerUrls(
     actonScan: `https://actonscan.com/address/${address}${actonQuery}`,
   };
 }
-

@@ -913,3 +913,29 @@ get fun `test wallet: change profile fails when gas is below 1 ton`() {
         exitCode: Errors.NotEnoughGas,
     });
 }
+
+get fun `test : direct minter upgrade request from owner`() {
+    val (minter, deployer, _) = setupTest();
+    val wallet = userWallet(minter, deployer.address);
+
+    // Send RequestUpgradeCode directly from deployer (Owner / W5) to minter
+    val reqUpgradeRes = minter.sendRequestUpgradeCode(
+        deployer.address,
+        { value: ton("0.08") },
+    );
+
+    // Verify minter receives RequestUpgradeCode and forwards Upgrade to wallet
+    expect(reqUpgradeRes).toHaveSuccessfulTx<RequestUpgradeCode>({
+        from: deployer.address,
+        to: minter.address,
+    });
+    expect(reqUpgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: minter.address,
+        to: wallet.address,
+    });
+    // And wallet returns excess gas back to deployer
+    expect(reqUpgradeRes).toHaveSuccessfulTx<ReturnExcessesBack>({
+        from: wallet.address,
+        to: deployer.address,
+    });
+}

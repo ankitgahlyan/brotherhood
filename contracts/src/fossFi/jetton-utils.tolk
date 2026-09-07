@@ -96,12 +96,12 @@ fun address.deActivate(self, _commandAmount: coins, store: FiWalletStore) {
 }
 
 @inline
-fun requestUpgrade(from: address, sender: address, version: uint10) {
+fun requestUpgrade(dest: address) {
     val outMsg = createMessage({
-        dest: from,
+        dest,
         bounce: BounceMode.NoBounce,
         value: ton("0.1"),
-        body: RequestUpgradeCode { sender, version },
+        body: RequestUpgradeCode {},
     });
     outMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
 }

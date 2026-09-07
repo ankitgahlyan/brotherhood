@@ -59,7 +59,8 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
 
-  const hashForModal = txHash || (id.startsWith('pending-') ? id.replace('pending-', '') : id);
+  const hashForModal =
+    txHash || (id.startsWith('pending-') ? id.replace('pending-', '') : id);
 
   const startPressTimer = () => {
     isLongPressRef.current = false;
@@ -178,4 +179,3 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
     </>
   );
 };
-

@@ -8,16 +8,10 @@
 
 import { Address } from '@ton/core';
 
-import {
-  mockFn,
-  useFakeTimers,
-  useRealTimers,
-} from '../../mock.config';
+import { mockFn, useFakeTimers, useRealTimers } from '../../mock.config';
 import { TonWalletKit } from './TonWalletKit';
 import type { TonWalletKitOptions } from '../types';
-import {
-  createDummyWallet,
-} from '../contracts/w5/WalletV5R1.fixture';
+import { createDummyWallet } from '../contracts/w5/WalletV5R1.fixture';
 import type {
   InjectedToExtensionBridgeRequest,
   InjectedToExtensionBridgeRequestPayload,

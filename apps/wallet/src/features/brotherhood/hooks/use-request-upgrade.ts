@@ -7,12 +7,10 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { Address } from '@ton/core';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
-import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 
@@ -40,7 +38,7 @@ export function useRequestUpgrade({
   wallet,
   walletKit,
   walletAddress,
-  network,
+  network: _network,
   accountData,
   minterVersion,
 }: UseRequestUpgradeParams): UseRequestUpgradeResult {
@@ -72,14 +70,12 @@ export function useRequestUpgrade({
 
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
-    const ownerAddr = Address.parse(walletAddress);
-    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
     const payload = buildRequestUpgradeBody();
 
     await sendTx([
       {
-        toAddress: fiWalletAddr.toString(),
+        toAddress: FI_ADDRESS,
         amount: GAS.REQUEST_UPGRADE,
         payload,
       },
@@ -88,7 +84,7 @@ export function useRequestUpgrade({
     // Invalidate cached state so new version reflects on next refetch
     queryClient.invalidateQueries({ queryKey: ['fi-wallet-state'] });
     queryClient.invalidateQueries({ queryKey: ['fi-minter-state'] });
-  }, [walletAddress, network, sendTx, queryClient]);
+  }, [walletAddress, sendTx, queryClient]);
 
   const isDisabled = Boolean(validationError) || isSending;
 

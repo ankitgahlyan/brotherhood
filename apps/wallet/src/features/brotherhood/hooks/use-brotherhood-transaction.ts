@@ -124,6 +124,6 @@ export const GAS = {
   DEPLOY: toNano('0.5'),
   MINT: toNano('0.75'),
   TOP_UP: toNano('0.1'),
-  REQUEST_UPGRADE: toNano('0.15'),
+  REQUEST_UPGRADE: toNano('0.08'),
   SET_PERSONAL: toNano('0.6'),
 } as const;
