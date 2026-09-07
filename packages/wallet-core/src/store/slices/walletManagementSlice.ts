@@ -408,6 +408,17 @@ export const createWalletManagementSlice =
             balance ?? state.walletManagement.balance;
           state.walletManagement.currentWallet = wallet;
           state.walletManagement.events = [];
+
+          // Restore cached jettons and nfts for the newly active wallet (or reset to empty if not yet loaded)
+          const cachedJettons = savedWallet.address
+            ? state.jettons.jettonsByAddress[savedWallet.address]
+            : undefined;
+          state.jettons.userJettons = cachedJettons ?? [];
+
+          const cachedNfts = savedWallet.address
+            ? state.nfts.nftsByAddress[savedWallet.address]
+            : undefined;
+          state.nfts.userNfts = cachedNfts ?? [];
         });
 
         await get().startWebSocketStreaming();
@@ -462,6 +473,8 @@ export const createWalletManagementSlice =
           state.walletManagement.confirmedTraceIds = [];
           state.walletManagement.confirmedExternalHashes = [];
           state.walletManagement.isStreamingConnected = false;
+          state.jettons.userJettons = [];
+          state.nfts.userNfts = [];
         }
       });
 
@@ -642,6 +655,12 @@ export const createWalletManagementSlice =
         state.tonConnect.isTransactionModalOpen = false;
         state.tonConnect.pendingSignDataRequestEvent = undefined;
         state.tonConnect.isSignDataModalOpen = false;
+
+        // Clear assets
+        state.jettons.userJettons = [];
+        state.jettons.jettonsByAddress = {};
+        state.nfts.userNfts = [];
+        state.nfts.nftsByAddress = {};
       });
     },
 

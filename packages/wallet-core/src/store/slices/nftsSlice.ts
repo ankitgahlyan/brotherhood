@@ -6,6 +6,7 @@
  *
  */
 
+import { compareAddress } from '@ton/walletkit';
 import type { NFTsResponse } from '@ton/walletkit';
 import type { NFT, NftItem } from '@ton/walletkit';
 
@@ -16,6 +17,7 @@ const log = createComponentLogger('NftsSlice');
 
 export interface NftsState {
   userNfts: NftItem[];
+  nftsByAddress: Record<string, NftItem[]>;
   isLoadingNfts: boolean;
   isRefreshing: boolean;
   error: string | null;
@@ -27,6 +29,7 @@ export interface NftsState {
 export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
   nfts: {
     userNfts: [],
+    nftsByAddress: {},
     isLoadingNfts: false,
     isRefreshing: false,
     error: null,
@@ -67,13 +70,19 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
         pagination: { limit, offset: 0 },
       });
 
-      set((state) => {
-        state.nfts.userNfts = result.nfts;
-        state.nfts.lastNftsUpdate = Date.now();
-        state.nfts.isLoadingNfts = false;
-        state.nfts.error = null;
-        state.nfts.hasMore = result.nfts.length === limit;
-        state.nfts.offset = result.nfts.length;
+      set((s) => {
+        const targetAddress = userAddress || s.walletManagement.address || address;
+        s.nfts.nftsByAddress[targetAddress] = result.nfts;
+
+        const currentActiveAddress = s.walletManagement.address;
+        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+          s.nfts.userNfts = result.nfts;
+          s.nfts.lastNftsUpdate = Date.now();
+          s.nfts.hasMore = result.nfts.length === limit;
+          s.nfts.offset = result.nfts.length;
+        }
+        s.nfts.isLoadingNfts = false;
+        s.nfts.error = null;
       });
 
       log.info('Successfully loaded user NFTs', { count: result.nfts.length });
@@ -122,13 +131,19 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
         pagination: { limit: 20, offset: 0 },
       });
 
-      set((state) => {
-        state.nfts.userNfts = result.nfts;
-        state.nfts.lastNftsUpdate = Date.now();
-        state.nfts.isRefreshing = false;
-        state.nfts.error = null;
-        state.nfts.hasMore = result.nfts.length === 20;
-        state.nfts.offset = result.nfts.length;
+      set((s) => {
+        const targetAddress = userAddress || s.walletManagement.address || address;
+        s.nfts.nftsByAddress[targetAddress] = result.nfts;
+
+        const currentActiveAddress = s.walletManagement.address;
+        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+          s.nfts.userNfts = result.nfts;
+          s.nfts.lastNftsUpdate = Date.now();
+          s.nfts.hasMore = result.nfts.length === 20;
+          s.nfts.offset = result.nfts.length;
+        }
+        s.nfts.isRefreshing = false;
+        s.nfts.error = null;
       });
 
       log.info('Successfully refreshed user NFTs', {
@@ -181,13 +196,21 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
         pagination: { limit: 20, offset: state.nfts.offset },
       });
 
-      set((state) => {
-        state.nfts.userNfts = [...state.nfts.userNfts, ...result.nfts];
-        state.nfts.lastNftsUpdate = Date.now();
-        state.nfts.isLoadingNfts = false;
-        state.nfts.error = null;
-        state.nfts.hasMore = result.nfts.length === 20;
-        state.nfts.offset = state.nfts.offset + result.nfts.length;
+      set((s) => {
+        const targetAddress = userAddress || s.walletManagement.address || address;
+        const currentList = s.nfts.nftsByAddress[targetAddress] || [];
+        const mergedList = [...currentList, ...result.nfts];
+        s.nfts.nftsByAddress[targetAddress] = mergedList;
+
+        const currentActiveAddress = s.walletManagement.address;
+        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+          s.nfts.userNfts = [...s.nfts.userNfts, ...result.nfts];
+          s.nfts.lastNftsUpdate = Date.now();
+          s.nfts.hasMore = result.nfts.length === 20;
+          s.nfts.offset = s.nfts.offset + result.nfts.length;
+        }
+        s.nfts.isLoadingNfts = false;
+        s.nfts.error = null;
       });
 
       log.info('Successfully loaded more user NFTs', {
@@ -209,6 +232,7 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
   clearNfts: () => {
     set((state) => {
       state.nfts.userNfts = [];
+      state.nfts.nftsByAddress = {};
       state.nfts.isLoadingNfts = false;
       state.nfts.isRefreshing = false;
       state.nfts.error = null;

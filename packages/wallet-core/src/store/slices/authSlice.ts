@@ -135,6 +135,12 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       state.tonConnect.pendingSignDataRequestEvent = undefined;
       state.tonConnect.isSignDataModalOpen = false;
       state.tonConnect.disconnectedSessions = [];
+
+      // Jettons & NFTs
+      state.jettons.userJettons = [];
+      state.jettons.jettonsByAddress = {};
+      state.nfts.userNfts = [];
+      state.nfts.nftsByAddress = {};
     });
   },
 

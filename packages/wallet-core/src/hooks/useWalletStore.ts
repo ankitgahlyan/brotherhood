@@ -180,6 +180,7 @@ export const useNfts = () => {
   return useWalletStore(
     useShallow((state) => ({
       userNfts: state.nfts.userNfts,
+      nftsByAddress: state.nfts.nftsByAddress,
       lastNftsUpdate: state.nfts.lastNftsUpdate,
       isLoadingNfts: state.nfts.isLoadingNfts,
       isRefreshing: state.nfts.isRefreshing,
@@ -203,6 +204,7 @@ export const useJettons = () => {
   return useWalletStore(
     useShallow((state) => ({
       userJettons: state.jettons.userJettons,
+      jettonsByAddress: state.jettons.jettonsByAddress,
       jettonTransfers: state.jettons.jettonTransfers,
       popularJettons: state.jettons.popularJettons,
       lastJettonsUpdate: state.jettons.lastJettonsUpdate,

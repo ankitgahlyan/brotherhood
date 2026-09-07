@@ -208,6 +208,7 @@ export interface TonConnectSlice {
 export interface JettonsSlice {
   jettons: {
     userJettons: Jetton[];
+    jettonsByAddress: Record<string, Jetton[]>;
     jettonTransfers: JettonTransfer[];
     popularJettons: JettonInfo[];
     isLoadingJettons: boolean;
@@ -238,6 +239,7 @@ export interface JettonsSlice {
 export interface NftsSlice {
   nfts: {
     userNfts: NFT[];
+    nftsByAddress: Record<string, NFT[]>;
     isLoadingNfts: boolean;
     isRefreshing: boolean;
     error: string | null;
