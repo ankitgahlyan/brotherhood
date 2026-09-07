@@ -19,6 +19,10 @@ export const ENV_TON_API_KEY_TESTNET =
 export const ENV_TON_API_KEY_TETRA =
   import.meta.env.VITE_TON_API_TETRA_KEY ?? '';
 
+export const ENV_CUSTOM_TON_TESTNET_RPC =
+  import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC ??
+  'https://noncohesively-unenervated-tereasa.ngrok-free.app/api/v2/jsonRPC';
+
 export const DISABLE_NETWORK_SEND =
   import.meta.env?.VITE_DISABLE_NETWORK_SEND === 'true' || false;
 export const DISABLE_MANIFEST_DOMAIN_CHECK =

@@ -7,11 +7,13 @@
  */
 
 import { notifyRateLimit429 } from '@/core/lib/dev-telemetry';
+import { testnetRpcManager } from './testnet-rpc-manager';
 
 export interface RateLimiterOptions {
   apiKey?: string;
   maxRetries?: number;
   baseBackoffMs?: number;
+  network?: 'mainnet' | 'testnet';
 }
 
 interface QueueItem<T> {
@@ -241,9 +243,18 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
     config: unknown;
     request: Record<string, unknown>;
   }> {
-    const fullUrl = config.baseURL
+    const initialUrl = config.baseURL
       ? new URL(config.url || '', config.baseURL).toString()
       : config.url || '';
+
+    const isTestnet =
+      options?.network === 'testnet' ||
+      initialUrl.includes('testnet.toncenter.com') ||
+      testnetRpcManager.getCandidates().some((c) => initialUrl.includes(c));
+
+    let activeUrl = isTestnet
+      ? testnetRpcManager.getActiveEndpoint()
+      : initialUrl;
 
     // Extract headers safely from Axios AxiosRequestHeaders / raw object
     const headers: Record<string, string> = {};
@@ -275,12 +286,16 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
       }
     }
 
-    const hasKey = detectApiKey(fullUrl, headers, options?.apiKey);
+    const hasKey = detectApiKey(activeUrl, headers, options?.apiKey);
     const maxRetries = options?.maxRetries ?? 4;
 
     let attempt = 0;
     while (true) {
       try {
+        if (isTestnet && testnetRpcManager.isCustomEndpoint(activeUrl)) {
+          headers['ngrok-skip-browser-warning'] = 'true';
+        }
+
         const response = await globalToncenterQueue.enqueue(async () => {
           const body =
             typeof config.data === 'string'
@@ -289,12 +304,22 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
                 ? JSON.stringify(config.data)
                 : undefined;
 
-          return await fetch(fullUrl, {
+          return await fetch(activeUrl, {
             method: (config.method || 'POST').toUpperCase(),
             headers,
             body,
           });
         }, hasKey);
+
+        if (
+          isTestnet &&
+          testnetRpcManager.isCustomEndpoint(activeUrl) &&
+          response.status >= 500
+        ) {
+          activeUrl = testnetRpcManager.markEndpointFailed(activeUrl);
+          attempt++;
+          continue;
+        }
 
         if (response.status === 429) {
           globalToncenterQueue.record429(options?.baseBackoffMs ?? 1500);
@@ -337,6 +362,11 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
           throw error;
         }
       } catch (err: unknown) {
+        if (isTestnet && testnetRpcManager.isCustomEndpoint(activeUrl)) {
+          activeUrl = testnetRpcManager.markEndpointFailed(activeUrl);
+          attempt++;
+          continue;
+        }
         const errorObj = err as { response?: { status?: number } };
         if (errorObj?.response?.status === 429 && attempt < maxRetries) {
           attempt++;

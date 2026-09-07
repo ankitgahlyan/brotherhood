@@ -7,6 +7,7 @@ import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
+import { testnetRpcManager } from './testnet-rpc-manager';
 import { getContractCache, setContractCache } from './contract-cache';
 import { sha256 } from './jettonContent';
 
@@ -47,12 +48,12 @@ export function getTonClient(network: Network): TonClient {
     const endpoint =
       network === 'mainnet'
         ? 'https://toncenter.com/api/v2/jsonRPC'
-        : 'https://testnet.toncenter.com/api/v2/jsonRPC';
+        : testnetRpcManager.getActiveEndpoint();
     const apiKey = toncenterApiKey(network);
     clients[network] = new TonClient({
       endpoint,
       apiKey,
-      httpAdapter: createTonClientAxiosAdapter({ apiKey }) as any,
+      httpAdapter: createTonClientAxiosAdapter({ apiKey, network }) as any,
     });
   }
   return clients[network]!;
