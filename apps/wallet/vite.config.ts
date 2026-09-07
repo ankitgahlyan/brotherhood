@@ -61,7 +61,11 @@ export default defineConfig({
   envDir: path.resolve(projectRoot, '../../'),
   envPrefix: ['VITE_', 'TONCENTER_'],
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler', {}]],
+      },
+    }),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',

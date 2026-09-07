@@ -43,6 +43,6 @@
     "build:cjs": "tsc -p tsconfig.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "dev": "tsc -p tsconfig.esm.json --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "../../node_modules/typescript-7/bin/tsc --noEmit"
   }
 }

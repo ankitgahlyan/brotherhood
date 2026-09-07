@@ -3,7 +3,6 @@
     "target": "ES2024",
     "outDir": "dist/cjs",
     "module": "commonjs",
-    "moduleResolution": "node",
     "declaration": true,
     "declarationDir": "dist/cjs",
     "esModuleInterop": true,

@@ -31,7 +31,8 @@
     "test:e2e": "bun run --cwd apps/wallet e2e",
     "icons": "node scripts/generate-icons.mjs",
     "smoke": "node scripts/smoke-test.mjs",
-    "smoke:build": "node scripts/gh-pages-404.mjs && node scripts/smoke-test.mjs"
+    "smoke:build": "node scripts/gh-pages-404.mjs && node scripts/smoke-test.mjs",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -50,10 +51,8 @@
     "globals": "^16.5.0",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
-    "typescript": "5.8.2",
+    "typescript": "^6.0.0",
+    "typescript-7": "npm:typescript@^7.0.0",
     "typescript-eslint": "^8.69.0"
-  },
-  "overrides": {
-    "typescript": "5.8.2"
   }
 }

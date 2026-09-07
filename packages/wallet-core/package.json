@@ -27,7 +27,7 @@
     "build:cjs": "tsc -p tsconfig.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "dev": "tsc -p tsconfig.esm.json --watch",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "../../node_modules/typescript-7/bin/tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@demo/v4ledger-adapter": "workspace:*",
