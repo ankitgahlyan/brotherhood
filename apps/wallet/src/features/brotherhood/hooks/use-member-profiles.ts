@@ -8,8 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
-import { getTonClient } from '@/lib/brotherhood/ton';
-import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { getFiWalletStateByContractAddress } from '@/lib/brotherhood/ton';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 
@@ -49,19 +48,18 @@ export function useMemberProfiles(
   const query = useQuery<Record<string, MemberProfileInfo>>({
     queryKey: ['member-profiles', network, key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, async () => {
+      cachedQueryFn(cacheKey, async (options) => {
         if (addressStrings.length === 0) return {};
-        const client = getTonClient(
-          network === 'mainnet' ? 'mainnet' : 'testnet',
-        );
+        const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const results: Record<string, MemberProfileInfo> = {};
 
         await Promise.all(
           addressStrings.map(async (addrStr) => {
             try {
               const addr = Address.parse(addrStr);
-              const contract = client.open(FossFiWallet.fromAddress(addr));
-              const store = await contract.getWalletDataAll();
+              const store = await getFiWalletStateByContractAddress(addr, net, {
+                forceFresh: options?.forceFresh,
+              });
               const ownerAddr = store.addresses?.ref?.owner ?? null;
               const ownerAddress = ownerAddr
                 ? formatTonAddress(ownerAddr, { isContract: false, network })

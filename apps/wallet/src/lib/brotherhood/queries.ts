@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Address } from '@ton/core';
 import {
   fetchJettonMaster,
@@ -17,16 +17,63 @@ import {
   type Network,
   type PersonalMinterDetails,
 } from './ton';
-import { setContractCache, getContractCache } from './contract-cache';
+import {
+  setContractCache,
+  getContractCache,
+  deleteContractCache,
+  getNormalizedContractCacheKey,
+  invalidateContractCache,
+} from './contract-cache';
 
 const forceFreshKeys = new Set<string>();
-let forceFreshAll = false;
 
+/**
+ * Mark a specific cache key or contract address as needing fresh on-chain data.
+ * Avoid calling without arguments (deprecated) to prevent 429 rate limit spikes.
+ */
 export function markForceFresh(key?: string) {
   if (key) {
     forceFreshKeys.add(key);
-  } else {
-    forceFreshAll = true;
+  }
+}
+
+/**
+ * Targeted invalidation for a specific contract.
+ * Cleans IndexedDB cache and forces fresh fetch for matching TanStack Query keys.
+ */
+export async function invalidateContractState(
+  contractAddress: Address | string,
+  net: Network = 'testnet',
+  queryClient?: QueryClient,
+): Promise<void> {
+  const addrStr =
+    typeof contractAddress === 'string'
+      ? contractAddress
+      : contractAddress.toString();
+
+  // 1. Purge from IndexedDB
+  await invalidateContractCache(net, addrStr);
+  await deleteContractCache(`fi-wallet-state-by-contract:${net}:${addrStr}`);
+
+  // 2. Mark force fresh in memory
+  const normalizedKey = getNormalizedContractCacheKey(net, addrStr);
+  markForceFresh(normalizedKey);
+  markForceFresh(`fi-wallet-state-by-contract:${net}:${addrStr}`);
+
+  // 3. Selectively invalidate TanStack queries matching this contract
+  if (queryClient) {
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey;
+        if (!Array.isArray(queryKey)) return false;
+        // Matches ['fi-wallet-state-by-contract', net, addrStr]
+        // or ['fi-wallet-state', owner] if key includes addrStr
+        return queryKey.some(
+          (k) =>
+            typeof k === 'string' && k.toLowerCase() === addrStr.toLowerCase(),
+        );
+      },
+    });
   }
 }
 
@@ -45,8 +92,7 @@ export async function cachedQueryFn<T>(
   fetcher: (options?: { forceFresh?: boolean }) => Promise<T>,
   forceFresh = false,
 ): Promise<T> {
-  const shouldForce =
-    forceFresh || forceFreshAll || forceFreshKeys.has(cacheKey);
+  const shouldForce = forceFresh || forceFreshKeys.has(cacheKey);
 
   if (forceFreshKeys.has(cacheKey)) {
     forceFreshKeys.delete(cacheKey);

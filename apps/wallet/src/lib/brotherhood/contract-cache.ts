@@ -255,3 +255,22 @@ export async function getLastFetchTime(
     return null;
   }
 }
+
+export function getNormalizedContractCacheKey(
+  network: string,
+  contractAddress: Address | string,
+): string {
+  const addrStr =
+    typeof contractAddress === 'string'
+      ? contractAddress
+      : contractAddress.toString();
+  return `contract_state:${network}:${addrStr}`;
+}
+
+export async function invalidateContractCache(
+  network: string,
+  contractAddress: Address | string,
+): Promise<void> {
+  const key = getNormalizedContractCacheKey(network, contractAddress);
+  await deleteContractCache(key);
+}

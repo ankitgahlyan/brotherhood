@@ -8,7 +8,11 @@ import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
 import { testnetRpcManager } from './testnet-rpc-manager';
-import { getContractCache, setContractCache } from './contract-cache';
+import {
+  getContractCache,
+  setContractCache,
+  getNormalizedContractCacheKey,
+} from './contract-cache';
 import { sha256 } from './jettonContent';
 
 export type { Network } from './config';
@@ -59,45 +63,97 @@ export function getTonClient(network: Network): TonClient {
   return clients[network]!;
 }
 
+export function getDeterministicWalletStorageKey(
+  net: Network,
+  minter: Address | string,
+  owner: Address | string,
+): string {
+  const minterStr = typeof minter === 'string' ? minter : minter.toString();
+  const ownerStr = typeof owner === 'string' ? owner : owner.toString();
+  return `deterministic_wallet:${net}:${minterStr}:${ownerStr}`;
+}
+
+export function getCachedDeterministicWalletAddress(
+  net: Network,
+  minter: Address | string,
+  owner: Address | string,
+): Address | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  const key = getDeterministicWalletStorageKey(net, minter, owner);
+  const val = localStorage.getItem(key);
+  if (val) {
+    try {
+      return Address.parse(val);
+    } catch {
+      /* pass */
+    }
+  }
+  // Fallback for legacy key
+  const legacyKey =
+    'fiWalletAddress_' +
+    FI_ADDRESS +
+    (typeof owner === 'string' ? owner : owner.toString());
+  const legacyVal = localStorage.getItem(legacyKey);
+  if (legacyVal) {
+    try {
+      const parsed = Address.parse(legacyVal);
+      localStorage.setItem(key, parsed.toString());
+      return parsed;
+    } catch {
+      /* pass */
+    }
+  }
+  return null;
+}
+
+export function setCachedDeterministicWalletAddress(
+  net: Network,
+  minter: Address | string,
+  owner: Address | string,
+  walletAddress: Address | string,
+): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  const key = getDeterministicWalletStorageKey(net, minter, owner);
+  const addrStr =
+    typeof walletAddress === 'string'
+      ? walletAddress
+      : walletAddress.toString();
+  localStorage.setItem(key, addrStr);
+}
+
 export async function getWalletAddress( // todo: calc offchain
   // client: TonClient,
   // minterAddress: Address,
   ownerAddress: Address,
+  net: Network = network,
 ): Promise<Address> {
-  // get from local storage
-  if (
-    localStorage.getItem(
-      'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
-    ) != null
-  ) {
-    return Address.parse(
-      localStorage.getItem(
-        'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
-      )!,
-    );
-  } else {
-    const client = getTonClient(network);
-    const minterAddress = Address.parse(FI_ADDRESS);
-    const result = await client.runMethod(minterAddress, 'get_wallet_address', [
-      {
-        type: 'slice',
-        cell: beginCell().storeAddress(ownerAddress).endCell(),
-      },
-    ]);
-    const addr = result.stack.readAddress();
-    localStorage.setItem(
-      'fiWalletAddress_' + FI_ADDRESS + ownerAddress.toString(),
-      addr.toString(),
-    );
-    return addr;
+  const minterAddress = Address.parse(FI_ADDRESS);
+  const cached = getCachedDeterministicWalletAddress(
+    net,
+    minterAddress,
+    ownerAddress,
+  );
+  if (cached) {
+    return cached;
   }
+
+  const client = getTonClient(net);
+  const result = await client.runMethod(minterAddress, 'get_wallet_address', [
+    {
+      type: 'slice',
+      cell: beginCell().storeAddress(ownerAddress).endCell(),
+    },
+  ]);
+  const addr = result.stack.readAddress();
+  setCachedDeterministicWalletAddress(net, minterAddress, ownerAddress, addr);
+  return addr;
 }
 
 export async function getFiWalletAddress(
   ownerAddress: Address,
   _network?: Network,
 ): Promise<Address> {
-  return getWalletAddress(ownerAddress);
+  return getWalletAddress(ownerAddress, _network ?? network);
 }
 
 export async function checkIsContractDeployed(
@@ -208,7 +264,7 @@ export async function getFiWalletStateRaw(
   owner: Address,
   net: Network = network,
 ) {
-  const walletAddr = await getWalletAddress(owner);
+  const walletAddr = await getWalletAddress(owner, net);
   return getTonClient(net)
     .open(FossFiWallet.fromAddress(walletAddr))
     .getWalletDataAll();
@@ -218,29 +274,21 @@ export type FiWalletStateData = Awaited<ReturnType<typeof getFiWalletStateRaw>>;
 
 /**
  * Unified state accessor for a user's FiWallet.
- * Reads from IndexedDB ('fi-wallet-state:<owner>') if present and not forceFresh;
- * otherwise performs getWalletDataAll(), writes to IndexedDB, and returns.
+ * Resolves the deterministic contract address and normalizes storage
+ * under `contract_state:${net}:${walletAddr}`.
  */
 export async function getUnifiedFiWalletState(
   owner: Address,
   options: { forceFresh?: boolean; net?: Network } = {},
 ): Promise<FiWalletStateData> {
-  const cacheKey = `fi-wallet-state:${owner.toString()}`;
-  if (!options.forceFresh) {
-    const cached = await getContractCache<FiWalletStateData>(cacheKey);
-    if (cached && cached.data) {
-      return cached.data;
-    }
-  }
-
-  const fresh = await getFiWalletStateRaw(owner, options.net);
-  await setContractCache(cacheKey, fresh);
-  return fresh;
+  const net = options.net ?? network;
+  const walletAddr = await getWalletAddress(owner, net);
+  return getFiWalletStateByContractAddress(walletAddr, net, options);
 }
 
 export async function getFiWalletState(
   owner: Address,
-  options?: { forceFresh?: boolean },
+  options?: { forceFresh?: boolean; net?: Network },
 ) {
   return getUnifiedFiWalletState(owner, options);
 }
@@ -250,18 +298,28 @@ export async function getFiWalletStateByContractAddress(
   net: Network = network,
   options: { forceFresh?: boolean } = {},
 ) {
-  const cacheKey = `fi-wallet-state-by-contract:${net}:${contractAddress.toString()}`;
+  const normalizedKey = getNormalizedContractCacheKey(net, contractAddress);
+  // Also check legacy key for smooth migration
+  const legacyKey = `fi-wallet-state-by-contract:${net}:${contractAddress.toString()}`;
+
   if (!options.forceFresh) {
-    const cached = await getContractCache<FiWalletStateData>(cacheKey);
+    const cached = await getContractCache<FiWalletStateData>(normalizedKey);
     if (cached && cached.data) {
       return cached.data;
+    }
+    const legacyCached = await getContractCache<FiWalletStateData>(legacyKey);
+    if (legacyCached && legacyCached.data) {
+      // Migrate to normalized key in background
+      setContractCache(normalizedKey, legacyCached.data).catch(() => {});
+      return legacyCached.data;
     }
   }
 
   const fresh = await getTonClient(net)
     .open(FossFiWallet.fromAddress(contractAddress))
     .getWalletDataAll();
-  await setContractCache(cacheKey, fresh);
+
+  await setContractCache(normalizedKey, fresh);
   return fresh;
 }
 
@@ -289,10 +347,13 @@ export function listAllowances(state: {
     .sort((a, b) => a.grantee.toString().localeCompare(b.grantee.toString()));
 }
 
-export async function getCircle(invitedList: Address[]) {
-  const client = getTonClient(network);
+export async function getCircle(
+  invitedList: Address[],
+  options?: { forceFresh?: boolean; net?: Network },
+) {
+  const net = options?.net ?? network;
   const promises = invitedList.map((addr) =>
-    client.open(FossFiWallet.fromAddress(addr)).getWalletDataAll(),
+    getFiWalletStateByContractAddress(addr, net, options),
   );
   return Promise.all(promises);
 }
@@ -347,13 +408,27 @@ export async function getPersonalWalletForIssuer(
 export async function getPersonalWalletAddress(
   personalMinter: Address,
   owner: Address,
+  net: Network = network,
 ): Promise<Address> {
   if (isZeroAddress(personalMinter)) {
     throw new Error('Personal minter is zero address');
   }
-  return getTonClient(network)
+
+  const cached = getCachedDeterministicWalletAddress(
+    net,
+    personalMinter,
+    owner,
+  );
+  if (cached) {
+    return cached;
+  }
+
+  const addr = await getTonClient(net)
     .open(PersonalMinter.fromAddress(personalMinter))
     .getWalletAddress(owner);
+
+  setCachedDeterministicWalletAddress(net, personalMinter, owner, addr);
+  return addr;
 }
 
 // The raw balance (nano) a buyer holds on the given Personal Token minter.

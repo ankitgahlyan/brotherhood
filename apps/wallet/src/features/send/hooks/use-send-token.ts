@@ -8,7 +8,8 @@
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { markForceFresh } from '@/lib/brotherhood/queries';
+import { invalidateContractState } from '@/lib/brotherhood/queries';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { toast } from 'sonner';
 import type {
   ITonWalletKit,
@@ -109,15 +110,33 @@ export const useSendToken = ({
       await walletKit.handleNewTransaction(wallet, tx);
     }
 
+    const senderAddress = wallet.account?.address;
+    const recipientAddress = recipient;
+
     setTimeout(async () => {
       try {
-        markForceFresh();
-        await queryClient.refetchQueries({ type: 'active' });
+        const targets: string[] = [];
+        if (recipientAddress) targets.push(recipientAddress);
+        if (senderAddress) {
+          targets.push(senderAddress.toString());
+          try {
+            const userFiWallet = await getFiWalletAddress(senderAddress);
+            targets.push(userFiWallet.toString());
+          } catch {
+            /* pass */
+          }
+        }
+
+        await Promise.all(
+          targets.map((addr) =>
+            invalidateContractState(addr, 'testnet', queryClient),
+          ),
+        );
         toast.info('On-chain state updated');
       } catch (refreshErr) {
-        console.error('Auto-refresh after send failed:', refreshErr);
+        console.error('Targeted refresh after send failed:', refreshErr);
       }
-    }, 3000);
+    }, 4000);
 
     return undefined;
   }, [

@@ -8,9 +8,10 @@
 
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { markForceFresh } from '@/lib/brotherhood/queries';
+import { invalidateContractState } from '@/lib/brotherhood/queries';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { toast } from 'sonner';
-import type { Cell } from '@ton/core';
+import type { Cell, Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toNano } from '@ton/core';
 
@@ -22,7 +23,10 @@ export interface BrotherhoodMessage {
 }
 
 export interface UseBrotherhoodTransactionResult {
-  send: (messages: BrotherhoodMessage[]) => Promise<void>;
+  send: (
+    messages: BrotherhoodMessage[],
+    options?: { affectedContracts?: (Address | string)[] },
+  ) => Promise<void>;
   isSending: boolean;
   error: string | null;
 }
@@ -41,7 +45,10 @@ export function useBrotherhoodTransaction(
   const [error, setError] = useState<string | null>(null);
 
   const send = useCallback(
-    async (messages: BrotherhoodMessage[]) => {
+    async (
+      messages: BrotherhoodMessage[],
+      options?: { affectedContracts?: (Address | string)[] },
+    ) => {
       if (!wallet) {
         toast.error('No wallet connected');
         throw new Error('No wallet available');
@@ -80,16 +87,46 @@ export function useBrotherhoodTransaction(
           }
         }
 
-        // Automatically refetch relevant screen state after 3 seconds
+        // Determine affected contracts
+        const targets = new Set<string>();
+        if (
+          options?.affectedContracts &&
+          options.affectedContracts.length > 0
+        ) {
+          options.affectedContracts.forEach((c) => targets.add(c.toString()));
+        } else {
+          // Default to destination contracts in messages
+          messages.forEach((m) => targets.add(m.toAddress));
+          // Plus user's own FiWallet address
+          try {
+            if (wallet.account?.address) {
+              const userFiWallet = await getFiWalletAddress(
+                wallet.account.address,
+              );
+              targets.add(userFiWallet.toString());
+            }
+          } catch {
+            /* pass */
+          }
+        }
+
+        // Target invalidation after 4 seconds (1-2 TON blocks)
         setTimeout(async () => {
           try {
-            markForceFresh();
-            await queryClient.refetchQueries({ type: 'active' });
+            const targetList = Array.from(targets);
+            await Promise.all(
+              targetList.map((addr) =>
+                invalidateContractState(addr, 'testnet', queryClient),
+              ),
+            );
             toast.info('On-chain state updated');
           } catch (refreshErr) {
-            console.error('Auto-refresh after transaction failed:', refreshErr);
+            console.error(
+              'Targeted refresh after transaction failed:',
+              refreshErr,
+            );
           }
-        }, 3000);
+        }, 4000);
       } catch (err) {
         const errMsg =
           err instanceof Error ? err.message : 'Transaction failed';
