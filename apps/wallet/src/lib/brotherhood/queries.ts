@@ -26,14 +26,18 @@ import {
 } from './contract-cache';
 
 const forceFreshKeys = new Set<string>();
+let forceFreshAll = false;
 
 /**
  * Mark a specific cache key or contract address as needing fresh on-chain data.
- * Avoid calling without arguments (deprecated) to prevent 429 rate limit spikes.
+ * When called with key, marks that specific key. When called without args (e.g. manual refresh button),
+ * sets forceFreshAll = true.
  */
 export function markForceFresh(key?: string) {
   if (key) {
     forceFreshKeys.add(key);
+  } else {
+    forceFreshAll = true;
   }
 }
 
@@ -92,7 +96,8 @@ export async function cachedQueryFn<T>(
   fetcher: (options?: { forceFresh?: boolean }) => Promise<T>,
   forceFresh = false,
 ): Promise<T> {
-  const shouldForce = forceFresh || forceFreshKeys.has(cacheKey);
+  const shouldForce =
+    forceFresh || forceFreshAll || forceFreshKeys.has(cacheKey);
 
   if (forceFreshKeys.has(cacheKey)) {
     forceFreshKeys.delete(cacheKey);
