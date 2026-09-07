@@ -13,6 +13,7 @@ import {
   XCircle,
   Clock,
   X,
+  Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -26,6 +27,7 @@ import { useDeveloperMode } from '@/core/lib/developer-mode';
 import { Button } from '@/core/components/ui/button';
 import { HeadersViewer } from './headers-viewer';
 import { PayloadViewer } from './payload-viewer';
+import { DbStateExplorer } from './db-state-explorer';
 
 export interface DeveloperScreenProps {
   onClose?: () => void;
@@ -45,6 +47,9 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
     devTelemetry.getMetrics(),
   );
 
+  const [activeSection, setActiveSection] = useState<'telemetry' | 'storage'>(
+    'telemetry',
+  );
   const [activeTab, setActiveTab] = useState<'all' | 'api' | 'console'>('api');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<
@@ -196,228 +201,267 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
       </header>
 
       <div className="max-w-4xl mx-auto px-4 pt-4 space-y-4">
-        {/* Top Metrics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-              <span>Total API Calls</span>
-              <Activity className="w-3.5 h-3.5 text-blue-500" />
-            </div>
-            <div className="text-2xl font-extrabold text-foreground font-mono">
-              {metrics.totalApiCalls}
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-              <span>Active / In-Flight</span>
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  metrics.activeApiCalls > 0
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-muted'
-                }`}
-              />
-            </div>
-            <div className="text-2xl font-extrabold text-amber-500 font-mono">
-              {metrics.activeApiCalls}
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-              <span>Failed API Calls</span>
-              <XCircle className="w-3.5 h-3.5 text-red-500" />
-            </div>
-            <div
-              className={`text-2xl font-extrabold font-mono ${
-                metrics.failedApiCalls > 0 ? 'text-red-500' : 'text-foreground'
-              }`}
-            >
-              {metrics.failedApiCalls}
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-              <span>Console Errors</span>
-              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-            </div>
-            <div
-              className={`text-2xl font-extrabold font-mono ${
-                metrics.consoleErrors > 0 ? 'text-red-500' : 'text-foreground'
-              }`}
-            >
-              {metrics.consoleErrors}
-            </div>
-          </div>
+        {/* Top-level View Switcher */}
+        <div className="flex items-center gap-2 border-b border-border pb-3">
+          <button
+            type="button"
+            onClick={() => setActiveSection('telemetry')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSection === 'telemetry'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Telemetry</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('storage')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSection === 'storage'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>DB / State Explorer</span>
+          </button>
         </div>
 
-        {/* Action Controls & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-          {/* Tabs */}
-          <div className="flex rounded-xl bg-secondary/80 p-1 border border-border">
-            <button
-              type="button"
-              onClick={() => setActiveTab('api')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'api'
-                  ? 'bg-card text-foreground shadow-xs border border-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              API Calls ({metrics.totalApiCalls})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('console')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'console'
-                  ? 'bg-card text-foreground shadow-xs border border-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Console Logs ({items.filter((i) => i.type === 'console').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'all'
-                  ? 'bg-card text-foreground shadow-xs border border-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              All ({items.length})
-            </button>
-          </div>
+        {activeSection === 'storage' ? (
+          <DbStateExplorer />
+        ) : (
+          <>
+            {/* Top Metrics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
+                <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                  <span>Total API Calls</span>
+                  <Activity className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+                <div className="text-2xl font-extrabold text-foreground font-mono">
+                  {metrics.totalApiCalls}
+                </div>
+              </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleCopyAll}
-              className="text-xs h-8 gap-1.5"
-            >
-              {hasCopied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
+                <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                  <span>Active / In-Flight</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      metrics.activeApiCalls > 0
+                        ? 'bg-amber-500 animate-pulse'
+                        : 'bg-muted'
+                    }`}
+                  />
+                </div>
+                <div className="text-2xl font-extrabold text-amber-500 font-mono">
+                  {metrics.activeApiCalls}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
+                <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                  <span>Failed API Calls</span>
+                  <XCircle className="w-3.5 h-3.5 text-red-500" />
+                </div>
+                <div
+                  className={`text-2xl font-extrabold font-mono ${
+                    metrics.failedApiCalls > 0
+                      ? 'text-red-500'
+                      : 'text-foreground'
+                  }`}
+                >
+                  {metrics.failedApiCalls}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border p-3 shadow-xs">
+                <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                  <span>Console Errors</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                </div>
+                <div
+                  className={`text-2xl font-extrabold font-mono ${
+                    metrics.consoleErrors > 0
+                      ? 'text-red-500'
+                      : 'text-foreground'
+                  }`}
+                >
+                  {metrics.consoleErrors}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Controls & Filter Bar */}
+            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+              {/* Tabs */}
+              <div className="flex rounded-xl bg-secondary/80 p-1 border border-border">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('api')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    activeTab === 'api'
+                      ? 'bg-card text-foreground shadow-xs border border-border'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  API Calls ({metrics.totalApiCalls})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('console')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    activeTab === 'console'
+                      ? 'bg-card text-foreground shadow-xs border border-border'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Console Logs (
+                  {items.filter((i) => i.type === 'console').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    activeTab === 'all'
+                      ? 'bg-card text-foreground shadow-xs border border-border'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All ({items.length})
+                </button>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyAll}
+                  className="text-xs h-8 gap-1.5"
+                >
+                  {hasCopied ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{hasCopied ? 'Copied' : 'Copy JSON'}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClear}
+                  className="text-xs h-8 text-red-500 hover:text-red-600 hover:bg-red-500/10 gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Search & Severity Filters */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by URL, method, error, payload..."
+                  className="w-full pl-9 pr-4 py-1.5 rounded-xl border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setFilterLevel('all')}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
+                    filterLevel === 'all'
+                      ? 'bg-foreground text-background border-foreground font-semibold'
+                      : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLevel('error')}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
+                    filterLevel === 'error'
+                      ? 'bg-red-500 text-white border-red-500 font-semibold'
+                      : 'bg-card text-red-500 border-border hover:bg-red-500/10'
+                  }`}
+                >
+                  Errors
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLevel('warn')}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
+                    filterLevel === 'warn'
+                      ? 'bg-amber-500 text-black border-amber-500 font-semibold'
+                      : 'bg-card text-amber-500 border-border hover:bg-amber-500/10'
+                  }`}
+                >
+                  Warnings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLevel('success')}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
+                    filterLevel === 'success'
+                      ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
+                      : 'bg-card text-emerald-500 border-border hover:bg-emerald-500/10'
+                  }`}
+                >
+                  2xx Success
+                </button>
+              </div>
+            </div>
+
+            {/* Feed List */}
+            <div className="space-y-2">
+              {filteredItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card/40">
+                  <Terminal className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-sm font-semibold text-foreground">
+                    No telemetry entries recorded
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {searchQuery
+                      ? 'No matching calls or logs for your search query.'
+                      : 'Outgoing API calls and console output will appear here in real time.'}
+                  </p>
+                </div>
               ) : (
-                <Copy className="w-3.5 h-3.5" />
+                filteredItems.map((item) => {
+                  if (item.type === 'api') {
+                    return (
+                      <ApiCard
+                        key={item.id}
+                        item={item}
+                        isExpanded={!!expandedIds[item.id]}
+                        onToggle={() => toggleExpand(item.id)}
+                      />
+                    );
+                  } else {
+                    return (
+                      <ConsoleCard
+                        key={item.id}
+                        item={item}
+                        isExpanded={!!expandedIds[item.id]}
+                        onToggle={() => toggleExpand(item.id)}
+                      />
+                    );
+                  }
+                })
               )}
-              <span>{hasCopied ? 'Copied' : 'Copy JSON'}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClear}
-              className="text-xs h-8 text-red-500 hover:text-red-600 hover:bg-red-500/10 gap-1.5"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Search & Severity Filters */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by URL, method, error, payload..."
-              className="w-full pl-9 pr-4 py-1.5 rounded-xl border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => setFilterLevel('all')}
-              className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
-                filterLevel === 'all'
-                  ? 'bg-foreground text-background border-foreground font-semibold'
-                  : 'bg-card text-muted-foreground border-border hover:text-foreground'
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterLevel('error')}
-              className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
-                filterLevel === 'error'
-                  ? 'bg-red-500 text-white border-red-500 font-semibold'
-                  : 'bg-card text-red-500 border-border hover:bg-red-500/10'
-              }`}
-            >
-              Errors
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterLevel('warn')}
-              className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
-                filterLevel === 'warn'
-                  ? 'bg-amber-500 text-black border-amber-500 font-semibold'
-                  : 'bg-card text-amber-500 border-border hover:bg-amber-500/10'
-              }`}
-            >
-              Warnings
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterLevel('success')}
-              className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors ${
-                filterLevel === 'success'
-                  ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
-                  : 'bg-card text-emerald-500 border-border hover:bg-emerald-500/10'
-              }`}
-            >
-              2xx Success
-            </button>
-          </div>
-        </div>
-
-        {/* Feed List */}
-        <div className="space-y-2">
-          {filteredItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card/40">
-              <Terminal className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
-              <p className="text-sm font-semibold text-foreground">
-                No telemetry entries recorded
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {searchQuery
-                  ? 'No matching calls or logs for your search query.'
-                  : 'Outgoing API calls and console output will appear here in real time.'}
-              </p>
             </div>
-          ) : (
-            filteredItems.map((item) => {
-              if (item.type === 'api') {
-                return (
-                  <ApiCard
-                    key={item.id}
-                    item={item}
-                    isExpanded={!!expandedIds[item.id]}
-                    onToggle={() => toggleExpand(item.id)}
-                  />
-                );
-              } else {
-                return (
-                  <ConsoleCard
-                    key={item.id}
-                    item={item}
-                    isExpanded={!!expandedIds[item.id]}
-                    onToggle={() => toggleExpand(item.id)}
-                  />
-                );
-              }
-            })
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
