@@ -24,6 +24,8 @@ import {
 } from '@/core/lib/dev-telemetry';
 import { useDeveloperMode } from '@/core/lib/developer-mode';
 import { Button } from '@/core/components/ui/button';
+import { HeadersViewer } from './headers-viewer';
+import { PayloadViewer } from './payload-viewer';
 
 export interface DeveloperScreenProps {
   onClose?: () => void;
@@ -435,6 +437,16 @@ const ApiCard: React.FC<{
 
   const timeStr = new Date(item.timestamp).toLocaleTimeString();
 
+  const rpcMethod = useMemo(() => {
+    if (!item.requestBody) return null;
+    try {
+      const parsed = JSON.parse(item.requestBody);
+      return typeof parsed?.method === 'string' ? parsed.method : null;
+    } catch {
+      return null;
+    }
+  }, [item.requestBody]);
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden transition-all shadow-xs">
       <div
@@ -453,6 +465,14 @@ const ApiCard: React.FC<{
           >
             {item.method}
           </span>
+          {rpcMethod && (
+            <span
+              className="text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 max-w-[70px] truncate text-center"
+              title={rpcMethod}
+            >
+              {rpcMethod}
+            </span>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -511,36 +531,22 @@ const ApiCard: React.FC<{
 
           {item.requestHeaders &&
             Object.keys(item.requestHeaders).length > 0 && (
-              <div>
-                <span className="font-semibold text-muted-foreground block mb-1">
-                  Request Headers:
-                </span>
-                <pre className="p-2 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground">
-                  {JSON.stringify(item.requestHeaders, null, 2)}
-                </pre>
-              </div>
+              <HeadersViewer headers={item.requestHeaders} />
             )}
 
           {item.requestBody && (
-            <div>
-              <span className="font-semibold text-muted-foreground block mb-1">
-                Request Body:
-              </span>
-              <pre className="p-2 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-                {item.requestBody}
-              </pre>
-            </div>
+            <PayloadViewer
+              title="Request Body"
+              payload={item.requestBody}
+              isRequest
+            />
           )}
 
           {item.responsePreview && (
-            <div>
-              <span className="font-semibold text-muted-foreground block mb-1">
-                Response Preview:
-              </span>
-              <pre className="p-2 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-64 overflow-y-auto">
-                {item.responsePreview}
-              </pre>
-            </div>
+            <PayloadViewer
+              title="Response Body"
+              payload={item.responsePreview}
+            />
           )}
         </div>
       )}
