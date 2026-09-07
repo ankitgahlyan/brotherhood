@@ -98,13 +98,11 @@ export const PersonalJettonScreen: React.FC = () => {
   const [topUpTarget, setTopUpTarget] = useState('');
 
   // Explicit registration overrides
-  const [adminRegisterMinter, setAdminRegisterMinter] = useState('');
-  const [adminRegisterWallet, setAdminRegisterWallet] = useState('');
   const [addressesTabMinter, setAddressesTabMinter] = useState('');
   const [addressesTabWallet, setAddressesTabWallet] = useState('');
-  const [adminSubTab, setAdminSubTab] = useState<
-    'register' | 'transfer' | 'metadata'
-  >('register');
+  const [adminSubTab, setAdminSubTab] = useState<'metadata' | 'transfer'>(
+    'metadata',
+  );
 
   // Burn tab options
   const [isPayback, setIsPayback] = useState(true);
@@ -192,7 +190,6 @@ export const PersonalJettonScreen: React.FC = () => {
   // Effective addresses to register
   const targetRegisterMinter =
     addressesTabMinter ||
-    adminRegisterMinter ||
     deployer.deployedAddresses?.minterAddress ||
     activeMinter ||
     info.deterministicMinterAddress ||
@@ -200,7 +197,6 @@ export const PersonalJettonScreen: React.FC = () => {
 
   const targetRegisterWallet =
     addressesTabWallet ||
-    adminRegisterWallet ||
     deployer.deployedAddresses?.personalWalletAddress ||
     activePersonalWallet ||
     info.expectedPersonalWalletAddress ||
@@ -1120,15 +1116,15 @@ export const PersonalJettonScreen: React.FC = () => {
               <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
                 <button
                   type="button"
-                  onClick={() => setAdminSubTab('register')}
+                  onClick={() => setAdminSubTab('metadata')}
                   className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    adminSubTab === 'register'
+                    adminSubTab === 'metadata'
                       ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                   }`}
-                  data-testid="personal-admin-subtab-register"
+                  data-testid="personal-admin-subtab-metadata"
                 >
-                  Register
+                  Metadata
                 </button>
                 <button
                   type="button"
@@ -1142,59 +1138,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 >
                   Transfer Admin
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminSubTab('metadata')}
-                  className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    adminSubTab === 'metadata'
-                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                  }`}
-                  data-testid="personal-admin-subtab-metadata"
-                >
-                  Metadata
-                </button>
               </div>
-
-              {/* Register / Link Personal Jetton to FI Account */}
-              {adminSubTab === 'register' && (
-                <div className="space-y-2 pt-1">
-                  <h3 className="font-semibold text-base">
-                    Register Personal Jetton to Account
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Send a unified{' '}
-                    <code className="text-[11px] bg-secondary px-1 py-0.5 rounded">
-                      ActSetPersonalJetton
-                    </code>{' '}
-                    message to register both minter and wallet addresses in your
-                    FI Wallet contract.
-                  </p>
-                  <div className="space-y-2">
-                    <InputScan
-                      value={adminRegisterMinter}
-                      onChange={setAdminRegisterMinter}
-                      placeholder={`Personal Minter Address (Default: ${activeMinter || 'None'})`}
-                      data-testid="personal-admin-register-minter"
-                    />
-                    <InputScan
-                      value={adminRegisterWallet}
-                      onChange={setAdminRegisterWallet}
-                      placeholder="Personal Wallet Address (Leave blank to auto-calculate)"
-                      data-testid="personal-admin-register-wallet"
-                    />
-                    <Button
-                      onClick={() => registrar.register()}
-                      disabled={!canOperate || registrar.isDisabled}
-                      loading={registrar.isSending}
-                      fullWidth
-                      data-testid="personal-admin-register-submit"
-                    >
-                      Register to Account
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               {/* Transfer Minter Admin */}
               {adminSubTab === 'transfer' && (

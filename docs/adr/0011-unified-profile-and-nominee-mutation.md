@@ -38,7 +38,10 @@ This led to fragmented contract handlers, separate transaction flows, and sub-op
      - `h3Cell != null`: Assert `isNonEmptyString(msg.h3Cell)`, set `profile.h3Cell`, and send `InformMinterChangeLocation` carrying remaining message value.
    - **Excess Value Refund**:
      - When `h3Cell == null`, invoke `returnExcessesBack(msg.queryId, addrs.owner)` carrying all remaining message value back to the owner (`SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS`).
-3. **Frontend Unified Profile UX**:
-   - Replace the three sub-tabs with a single unified card displaying Telegram Username, H3 Spatial Cell, Country Code, and Succession Nominee.
-   - Compute dirty diffing against on-chain `account.data`, sending only non-null fields for values that actually changed.
+3. **Frontend Unified Profile UX & Tab Consolidation**:
+   - Retire the dedicated top-level `nominee` navigation tab in the Brotherhood screen and direct nominee editing into the unified `profile` tab.
+   - Do not autofill existing profile values into input fields; inputs start empty with current on-chain values displayed as placeholders. Only fields explicitly filled by the user are marked dirty and sent as non-null in `ChangeProfile`.
+   - Country code is presented as read-only by default with an explicit `[Edit]` / `[Cancel]` toggle to prevent accidental country changes (which are blocked if the user has active votes).
+   - In the Personal Jetton module, remove the duplicate `register` sub-tab under `admin` in favor of the dedicated `addresses` tab, setting `metadata` as the default admin sub-tab.
    - Submit button is disabled unless at least one field is modified and all modified fields are valid.
+

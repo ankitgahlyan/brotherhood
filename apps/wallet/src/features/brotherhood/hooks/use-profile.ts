@@ -23,7 +23,7 @@ export interface UseProfileParams {
   walletAddress: string | null;
   username: string;
   h3Cell: string;
-  country: number;
+  country: number | null;
   nominee?: string;
   network: Network;
   accountData?: FiAccountData | null;
@@ -60,55 +60,47 @@ export function useProfile({
   } = useBrotherhoodTransaction(wallet, walletKit);
 
   const cleanUsername = cleanTelegramUsername(username);
-  const currentUsername = accountData?.username ?? '';
-  const isUsernameDirty =
-    Boolean(cleanUsername) && cleanUsername !== currentUsername;
+  const isUsernameDirty = Boolean(username.trim());
 
   const trimmedH3Cell = h3Cell.trim();
-  const currentH3Cell = accountData?.h3Cell ?? '';
-  const isLocationDirty =
-    Boolean(trimmedH3Cell) && trimmedH3Cell !== currentH3Cell;
+  const isLocationDirty = Boolean(trimmedH3Cell);
 
   const currentCountry = accountData?.country ?? 0;
-  const isCountryDirty = country !== currentCountry;
+  const isCountryDirty = country !== null && country !== currentCountry;
 
   const trimmedNominee = nominee.trim();
-  const { parsedNominee, isNomineeDirty, nomineeValidationError } = useMemo<{
+  const isNomineeDirty = Boolean(trimmedNominee);
+
+  const { parsedNominee, nomineeValidationError } = useMemo<{
     parsedNominee: Address | null;
-    isNomineeDirty: boolean;
     nomineeValidationError: string | null;
   }>(() => {
-    if (!trimmedNominee) {
+    if (!isNomineeDirty) {
       return {
         parsedNominee: null,
-        isNomineeDirty: false,
         nomineeValidationError: null,
       };
     }
     try {
       const parsed = Address.parse(trimmedNominee);
-      const currentNom = accountData?.nominee;
-      const isDirty = !currentNom || !parsed.equals(currentNom);
       return {
         parsedNominee: parsed,
-        isNomineeDirty: isDirty,
         nomineeValidationError: null,
       };
     } catch {
       return {
         parsedNominee: null,
-        isNomineeDirty: true,
         nomineeValidationError: 'Invalid nominee TON address format',
       };
     }
-  }, [trimmedNominee, accountData?.nominee]);
+  }, [isNomineeDirty, trimmedNominee]);
 
   const usernameValidationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
     if (isUsernameDirty && !cleanUsername) {
-      return 'Enter a non-empty Telegram username';
+      return 'Enter a valid Telegram username';
     }
     return null;
   }, [wallet, walletAddress, accountData, isUsernameDirty, cleanUsername]);
@@ -149,7 +141,7 @@ export function useProfile({
         };
       }
     }
-    if (country < 0 || isNaN(country)) {
+    if (country !== null && (country < 0 || isNaN(country))) {
       return {
         countryValidationError: 'Select a valid country code',
         canChangeCountry: false,
@@ -162,10 +154,10 @@ export function useProfile({
     isUsernameDirty || isLocationDirty || isCountryDirty || isNomineeDirty;
 
   const hasValidationError =
-    Boolean(usernameValidationError) ||
-    Boolean(locationValidationError) ||
+    (isUsernameDirty && Boolean(usernameValidationError)) ||
+    (isLocationDirty && Boolean(locationValidationError)) ||
     (isCountryDirty && Boolean(countryValidationError)) ||
-    Boolean(nomineeValidationError);
+    (isNomineeDirty && Boolean(nomineeValidationError));
 
   const isDisabled =
     !wallet || !walletAddress || isSending || !isDirty || hasValidationError;
@@ -183,7 +175,7 @@ export function useProfile({
         queryId: 0n,
         username: isUsernameDirty ? cleanUsername : null,
         h3Cell: isLocationDirty ? trimmedH3Cell : null,
-        country: isCountryDirty ? BigInt(country) : null,
+        country: isCountryDirty ? BigInt(country!) : null,
         nominee: isNomineeDirty ? parsedNominee : null,
       }),
     );
