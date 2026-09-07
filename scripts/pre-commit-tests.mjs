@@ -131,8 +131,14 @@ async function main() {
     );
   }
 
-  // 2. Run TypeScript / JavaScript tests if affected
+  // 2. Run TypeScript typecheck & affected tests if affected
   if (tsJsFiles.length > 0) {
+    console.log(
+      '\x1b[34m[TypeScript / Typecheck] Checking types across workspaces...\x1b[0m',
+    );
+    run('bun run typecheck');
+    console.log('');
+
     console.log(
       '\x1b[34m[TypeScript / Bun] Running affected TS/JS tests...\x1b[0m',
     );
@@ -143,7 +149,7 @@ async function main() {
     console.log('');
   } else {
     console.log(
-      '\x1b[90m[TypeScript / Bun] No TS/JS files changed. Skipping Bun tests.\x1b[0m',
+      '\x1b[90m[TypeScript / Bun] No TS/JS files changed. Skipping Typecheck and Bun tests.\x1b[0m',
     );
   }
 
