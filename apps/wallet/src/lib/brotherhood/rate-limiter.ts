@@ -7,6 +7,7 @@
  */
 
 import { notifyRateLimit429 } from '@/core/lib/dev-telemetry';
+import { getCustomApiKey } from '@/core/lib/network-api-keys';
 import { testnetRpcManager } from './testnet-rpc-manager';
 
 export interface RateLimiterOptions {
@@ -70,6 +71,14 @@ export function detectApiKey(
     } catch {
       /* ignore URL parse error */
     }
+  }
+
+  // Check user-configured custom keys from localStorage
+  try {
+    const customTestnetKey = getCustomApiKey('toncenter', 'testnet');
+    if (customTestnetKey) return true;
+  } catch {
+    /* pass if not available */
   }
 
   // Check Vite environment variables if checkEnv is enabled (default true)

@@ -58,7 +58,16 @@ export class TestnetRpcManager {
     return [...this.candidateEndpoints];
   }
 
+  private customEndpointOverride: string | null = null;
+
+  public setCustomEndpoint(url: string | null): void {
+    this.customEndpointOverride = url;
+  }
+
   public getActiveEndpoint(): string {
+    if (this.customEndpointOverride) {
+      return this.customEndpointOverride;
+    }
     return this.candidateEndpoints[this.currentEndpointIndex]!;
   }
 

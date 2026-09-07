@@ -30,9 +30,21 @@ export const queryClient = new QueryClient({
   },
 });
 
+import {
+  getCustomApiKey,
+  getTestnetApiProvider,
+  getOrbsHttpEndpoint,
+  API_KEYS_UPDATED_EVENT,
+} from '@/core/lib/network-api-keys';
+
 const clients: Record<string, TonClient> = {};
 
-function toncenterApiKey(network: Network): string | undefined {
+export function toncenterApiKey(network: Network): string | undefined {
+  if (network === 'testnet') {
+    const customKey = getCustomApiKey('toncenter', 'testnet');
+    if (customKey) return customKey;
+  }
+
   const key =
     network === 'mainnet'
       ? import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
@@ -40,6 +52,36 @@ function toncenterApiKey(network: Network): string | undefined {
       : import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
         import.meta.env.TONCENTER_TESTNET_API_KEY;
   return key && typeof key === 'string' && key.trim() ? key.trim() : undefined;
+}
+
+export function resetTonClients(): void {
+  for (const k of Object.keys(clients)) {
+    delete clients[k];
+  }
+}
+
+async function syncActiveRpcEndpoint() {
+  const provider = getTestnetApiProvider();
+  if (provider === 'orbs') {
+    try {
+      const orbsEndpoint = await getOrbsHttpEndpoint('testnet');
+      testnetRpcManager.setCustomEndpoint(orbsEndpoint);
+    } catch {
+      testnetRpcManager.setCustomEndpoint(null);
+    }
+  } else {
+    testnetRpcManager.setCustomEndpoint(null);
+  }
+}
+
+// Initial sync
+if (typeof window !== 'undefined') {
+  syncActiveRpcEndpoint().catch(() => {});
+  window.addEventListener(API_KEYS_UPDATED_EVENT, () => {
+    syncActiveRpcEndpoint().finally(() => {
+      resetTonClients();
+    });
+  });
 }
 
 function toncenterApiHeaders(network: Network): HeadersInit | undefined {

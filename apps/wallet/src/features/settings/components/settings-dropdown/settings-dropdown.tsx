@@ -33,6 +33,7 @@ import type { ThemeMode } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
+import { NetworkApiKeys } from '../network-api-keys/network-api-keys';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -363,6 +364,8 @@ export const SettingsDropdown: React.FC = () => {
               {mnemonicError}
             </p>
           )}
+
+          <NetworkApiKeys />
 
           <div className="pt-2 pb-1 text-center">
             <button

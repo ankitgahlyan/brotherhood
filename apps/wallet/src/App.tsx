@@ -26,6 +26,12 @@ import {
   ENV_TON_API_PROVIDER,
 } from '@/core/lib/env';
 
+import {
+  getCustomApiKey,
+  getTestnetApiProvider,
+  API_KEYS_UPDATED_EVENT,
+} from '@/core/lib/network-api-keys';
+
 import './App.css';
 import './storePatch';
 
@@ -35,25 +41,51 @@ import './storePatch';
  */
 const createWebLedgerTransport = () => TransportWebHID.create();
 
-const walletKitConfig: WalletKitConfig = {
-  disableHttpBridge: DISABLE_HTTP_BRIDGE,
-  disableNetworkSend: DISABLE_NETWORK_SEND,
-  disableManifestDomainCheck: DISABLE_MANIFEST_DOMAIN_CHECK,
-  bridgeUrl: ENV_BRIDGE_URL,
-  tonApiProvider: ENV_TON_API_PROVIDER,
-  tonApiKeyMainnet: ENV_TON_API_KEY_MAINNET,
-  tonApiKeyTestnet: ENV_TON_API_KEY_TESTNET,
-  tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
-  createLedgerTransport: createWebLedgerTransport,
-  disableAutoEmulation: DISABLE_AUTO_EMULATION,
-};
+function getActiveWalletKitConfig(): WalletKitConfig {
+  const provider = getTestnetApiProvider();
+  const customToncenter = getCustomApiKey('toncenter', 'testnet');
+  const customTonApi = getCustomApiKey('tonapi', 'testnet');
+
+  const activeTestnetKey =
+    provider === 'tonapi'
+      ? customTonApi || ENV_TON_API_KEY_TESTNET
+      : customToncenter || ENV_TON_API_KEY_TESTNET;
+
+  return {
+    disableHttpBridge: DISABLE_HTTP_BRIDGE,
+    disableNetworkSend: DISABLE_NETWORK_SEND,
+    disableManifestDomainCheck: DISABLE_MANIFEST_DOMAIN_CHECK,
+    bridgeUrl: ENV_BRIDGE_URL,
+    tonApiProvider: provider === 'tonapi' ? 'tonapi' : ENV_TON_API_PROVIDER,
+    tonApiKeyMainnet: ENV_TON_API_KEY_MAINNET,
+    tonApiKeyTestnet: activeTestnetKey,
+    tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
+    createLedgerTransport: createWebLedgerTransport,
+    disableAutoEmulation: DISABLE_AUTO_EMULATION,
+  };
+}
 
 export function App() {
+  const [configKey, setConfigKey] = React.useState(0);
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      setConfigKey((k) => k + 1);
+    };
+    window.addEventListener(API_KEYS_UPDATED_EVENT, handleUpdate);
+    return () =>
+      window.removeEventListener(API_KEYS_UPDATED_EVENT, handleUpdate);
+  }, []);
+
+  // Re-read config whenever configKey updates
+  const config = getActiveWalletKitConfig();
+
   return (
     <QueryClientProvider client={queryClient}>
       <WalletProvider
+        key={configKey}
         storage={localStorage}
-        walletKitConfig={walletKitConfig}
+        walletKitConfig={config}
         enableDevtools={false}
       >
         <RouterProvider router={router} />
