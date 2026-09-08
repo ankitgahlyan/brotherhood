@@ -214,9 +214,9 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
                 reportInfo: ReportInfo { reports: [] }.toCell(),
             }.toCell(), // todo: learn how to set it default
             profile: ProfileInfo {}.toCell(),
-            timestamps: TimeStamps {}.toCell(),
+            timestamps: TimeStamps { accountInit: TEST_NOW_BASELINE }.toCell(),
         },
-        owner.address,
+        minter.address,
     );
 
     if (initialBalance != 0) {

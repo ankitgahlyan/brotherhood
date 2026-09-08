@@ -71,11 +71,15 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress = userAddress || s.walletManagement.address || address;
+        const targetAddress =
+          userAddress || s.walletManagement.address || address;
         s.nfts.nftsByAddress[targetAddress] = result.nfts;
 
         const currentActiveAddress = s.walletManagement.address;
-        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, targetAddress)
+        ) {
           s.nfts.userNfts = result.nfts;
           s.nfts.lastNftsUpdate = Date.now();
           s.nfts.hasMore = result.nfts.length === limit;
@@ -132,11 +136,15 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress = userAddress || s.walletManagement.address || address;
+        const targetAddress =
+          userAddress || s.walletManagement.address || address;
         s.nfts.nftsByAddress[targetAddress] = result.nfts;
 
         const currentActiveAddress = s.walletManagement.address;
-        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, targetAddress)
+        ) {
           s.nfts.userNfts = result.nfts;
           s.nfts.lastNftsUpdate = Date.now();
           s.nfts.hasMore = result.nfts.length === 20;
@@ -197,13 +205,17 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress = userAddress || s.walletManagement.address || address;
+        const targetAddress =
+          userAddress || s.walletManagement.address || address;
         const currentList = s.nfts.nftsByAddress[targetAddress] || [];
         const mergedList = [...currentList, ...result.nfts];
         s.nfts.nftsByAddress[targetAddress] = mergedList;
 
         const currentActiveAddress = s.walletManagement.address;
-        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, targetAddress)
+        ) {
           s.nfts.userNfts = [...s.nfts.userNfts, ...result.nfts];
           s.nfts.lastNftsUpdate = Date.now();
           s.nfts.hasMore = result.nfts.length === 20;

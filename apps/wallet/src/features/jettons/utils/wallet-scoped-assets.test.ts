@@ -94,12 +94,12 @@ describe('Wallet Scoped Assets Tracking', () => {
     // Stream balance update for active wallet
     store.getState().updateJettonBalanceFromStream('EQWalletJetton2', '6000');
     expect(store.getState().jettons.userJettons[0].balance).toBe('6000');
-    expect(
-      store.getState().jettons.jettonsByAddress[wallet2][0].balance,
-    ).toBe('6000');
+    expect(store.getState().jettons.jettonsByAddress[wallet2][0].balance).toBe(
+      '6000',
+    );
     // Wallet 1 balance unchanged
-    expect(
-      store.getState().jettons.jettonsByAddress[wallet1][0].balance,
-    ).toBe('1000');
+    expect(store.getState().jettons.jettonsByAddress[wallet1][0].balance).toBe(
+      '1000',
+    );
   });
 });

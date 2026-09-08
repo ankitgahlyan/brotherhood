@@ -360,7 +360,18 @@ struct (0x00001141) ActClaimWeeklyGrant {
     sendExcessesTo: address?
 }
 
-struct (0x00001142) TriggerDecay {
+struct (0x00001142) ActPayEmi {
+    queryId: uint64 = 0
+    sendExcessesTo: address? = null
+}
+
+struct (0x0000114d) TriggerDefaultEmi {
+    queryId: uint64 = 0
+    sender: address
+}
+
+// Deprecated: TriggerDecay kept for legacy compatibility
+struct (0x0000114e) TriggerDecay {
     sender: address
 }
 

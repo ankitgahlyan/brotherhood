@@ -784,6 +784,38 @@ fun FossFiWallet.sendTriggerDecay(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendActPayEmi(
+    self,
+    from: address,
+    queryId: uint64,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActPayEmi { queryId, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendTriggerDefaultEmi(
+    self,
+    from: address,
+    queryId: uint64,
+    sender: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: TriggerDefaultEmi { queryId, sender },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFiWallet.sendSetCreditNeed(
     self,
     from: address,

@@ -39,6 +39,7 @@ import {
 import { useSetCreditTerms } from '../hooks/use-set-credit-terms';
 import { useFiBurn } from '../hooks/use-fi-burn';
 import { useWeeklyClaim } from '../hooks/use-weekly-claim';
+import { usePayEmi } from '../hooks/use-pay-emi';
 import { useInviteMember } from '../hooks/use-invite-member';
 import { useVote } from '../hooks/use-vote';
 import { useBuyCredit } from '../hooks/use-buy-credit';
@@ -362,6 +363,14 @@ export const BrotherhoodScreen: React.FC = () => {
   });
 
   const claim = useWeeklyClaim({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    network,
+    accountData: account.data,
+  });
+
+  const emi = usePayEmi({
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
@@ -936,59 +945,177 @@ export const BrotherhoodScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Weekly Claim */}
+        {/* Weekly Claim & Monthly Due (EMI) */}
         {activeTab === 'claim' && (
-          <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            <div className="text-center space-y-1">
-              <h3 className="font-semibold text-base">
-                Claim Weekly Grant (UBI)
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Members are entitled to claim {claim.claimAmountFi} FI weekly
-                for up to 2 years from activation.
-              </p>
+          <div className="space-y-4">
+            <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <div className="text-center space-y-1">
+                <h3 className="font-semibold text-base">
+                  Weekly Grant & Reputation Patronage
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {claim.isPostTwoYears
+                    ? 'Initial 2-year window ended. You now receive a 500 FI lifetime baseline floor plus 10 FI per received vote weekly.'
+                    : 'Universal weekly grant (11,111 FI for first 2 years) plus lifetime patronage based on received community trust.'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Base Grant</span>
+                  <span className="font-medium text-foreground">
+                    {claim.baseGrantFi} FI{' '}
+                    <span className="text-[10px] text-muted-foreground">
+                      (
+                      {claim.isPostTwoYears
+                        ? 'Lifetime Floor'
+                        : 'Years 0–2 UBI'}
+                      )
+                    </span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">
+                    Reputation Grant
+                  </span>
+                  <span className="font-medium text-foreground">
+                    +{claim.reputationGrantFi} FI{' '}
+                    <span className="text-[10px] text-muted-foreground">
+                      ({account.data?.receivedVotes.toString() ?? '0'} votes ×
+                      10 FI)
+                    </span>
+                  </span>
+                </div>
+                <div className="border-t border-border/40 pt-2 flex justify-between items-center">
+                  <span className="text-muted-foreground font-semibold">
+                    Total Weekly Mint
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {claim.claimAmountFi} FI
+                  </span>
+                </div>
+
+                {claim.debtOffsetFi && (
+                  <div className="border-t border-amber-500/20 pt-2 space-y-1">
+                    <div className="flex justify-between items-center text-amber-600 dark:text-amber-400">
+                      <span>Debt Auto-Repayment</span>
+                      <span className="font-semibold">
+                        -{claim.debtOffsetFi} FI
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center font-bold text-foreground">
+                      <span>Net Credited to Balance</span>
+                      <span className="text-emerald-500">
+                        +{claim.netCreditedFi} FI
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-border/40 pt-2 flex justify-between items-center">
+                  <span className="text-muted-foreground">Last Claimed</span>
+                  <span className="text-foreground">
+                    {formatDate(account.data?.lastClaim)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">
+                    Claim Eligibility
+                  </span>
+                  <span
+                    className={`font-semibold ${
+                      claim.isEligible ? 'text-emerald-500' : 'text-amber-500'
+                    }`}
+                  >
+                    {claim.isEligible ? 'Claim Ready' : 'Cooldown Active'}
+                  </span>
+                </div>
+              </div>
+
+              {claim.validationError && !claim.isEligible && (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400 text-center font-medium">
+                  {claim.validationError}
+                </div>
+              )}
+
+              <Button
+                onClick={() => claim.send()}
+                disabled={claim.isDisabled}
+                loading={claim.isSending}
+                fullWidth
+                data-testid="brotherhood-claim-submit"
+              >
+                Claim Weekly Grant
+              </Button>
             </div>
 
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Grant Amount</span>
-                <span className="font-bold text-foreground">
-                  {claim.claimAmountFi} FI
-                </span>
+            {/* Monthly Due (EMI) Card */}
+            <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <div className="text-center space-y-1">
+                <h3 className="font-semibold text-base">Monthly Due (EMI)</h3>
+                <p className="text-xs text-muted-foreground">
+                  Recurring social commitment of {emi.emiAmountFi} FI every 30
+                  days to counter inflation and retain good standing. Failure to
+                  pay within 24h grace incurs debt and a 5% penalty.
+                </p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Last Claimed</span>
-                <span className="text-foreground">
-                  {formatDate(account.data?.lastClaim)}
-                </span>
+
+              <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Monthly Amount</span>
+                  <span className="font-bold text-foreground">
+                    {emi.emiAmountFi} FI
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Status</span>
+                  <span
+                    className={`font-semibold ${
+                      emi.isOverdue
+                        ? 'text-destructive'
+                        : emi.isInGrace
+                          ? 'text-amber-500'
+                          : emi.isDue
+                            ? 'text-primary'
+                            : 'text-emerald-500'
+                    }`}
+                  >
+                    {emi.isOverdue
+                      ? 'Overdue (Penalty Incurred)'
+                      : emi.isInGrace
+                        ? 'Due Now (24h Grace Active)'
+                        : emi.isDue
+                          ? 'Due Now'
+                          : 'Up to date'}
+                  </span>
+                </div>
+                {account.data?.debts && (
+                  <div className="flex justify-between items-center text-destructive font-medium border-t border-destructive/20 pt-2">
+                    <span>Outstanding Debt</span>
+                    <span>
+                      {(Number(account.data.debt) / 1e9).toLocaleString()} FI
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Claim Eligibility</span>
-                <span
-                  className={`font-semibold ${
-                    claim.isEligible ? 'text-emerald-500' : 'text-amber-500'
-                  }`}
-                >
-                  {claim.isEligible ? 'Claim Ready' : 'Cooldown Active'}
-                </span>
-              </div>
+
+              {emi.validationError && (
+                <div className="p-2.5 bg-secondary/70 border border-border/60 rounded-xl text-xs text-muted-foreground text-center font-medium">
+                  {emi.validationError}
+                </div>
+              )}
+
+              <Button
+                onClick={() => emi.send()}
+                disabled={emi.isDisabled}
+                loading={emi.isSending}
+                variant={emi.isDue ? 'default' : 'outline'}
+                fullWidth
+                data-testid="brotherhood-pay-emi-submit"
+              >
+                Pay Monthly Due ({emi.emiAmountFi} FI)
+              </Button>
             </div>
-
-            {claim.validationError && !claim.isEligible && (
-              <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400 text-center font-medium">
-                {claim.validationError}
-              </div>
-            )}
-
-            <Button
-              onClick={() => claim.send()}
-              disabled={claim.isDisabled}
-              loading={claim.isSending}
-              fullWidth
-              data-testid="brotherhood-claim-submit"
-            >
-              Claim Weekly Grant
-            </Button>
           </div>
         )}
 
@@ -1966,8 +2093,6 @@ export const BrotherhoodScreen: React.FC = () => {
           </div>
         )}
 
-
-
         {/* Buy Credit & Repay Debt */}
         {activeTab === 'credit' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
@@ -2709,7 +2834,9 @@ export const BrotherhoodScreen: React.FC = () => {
                     H3 Spatial Cell
                   </label>
                   <a
-                    href={getH3ViewerUrl(profileH3Cell || account.data?.h3Cell || '')}
+                    href={getH3ViewerUrl(
+                      profileH3Cell || account.data?.h3Cell || '',
+                    )}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
@@ -2721,9 +2848,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   type="text"
                   value={profileH3Cell}
                   onChange={(e) => setProfileH3Cell(e.target.value)}
-                  placeholder={
-                    account.data?.h3Cell || '882681a339fffff'
-                  }
+                  placeholder={account.data?.h3Cell || '882681a339fffff'}
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                   data-testid="brotherhood-profile-location"
                 />
@@ -2782,7 +2907,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 ) : (
                   <>
                     <CountrySelect
-                      value={profileCountry ?? (account.data?.country ?? 0)}
+                      value={profileCountry ?? account.data?.country ?? 0}
                       onChange={(code) => setProfileCountry(code)}
                       data-testid="brotherhood-profile-country"
                     />

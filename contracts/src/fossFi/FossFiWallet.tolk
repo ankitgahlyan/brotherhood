@@ -62,6 +62,8 @@ type AllowedMessageToWallet =
     | AskGoldCoinsTransfer
     | InternalGoldCoinsTransfer
     | TriggerDecay
+    | ActPayEmi
+    | TriggerDefaultEmi
     | SetCreditNeed
     | SetMultiplier
     | RepayDebt
@@ -295,22 +297,33 @@ fun onInternalMessage(in: InMessage): void {
 
         ActClaimWeeklyGrant => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-            // todo: maybe mint all on init?
             // claim weekly grant
             val now = blockchain.now();
             assert (
                 now > (time.accountInit + ACTIVATION_WAIT)
             ) throw Errors.WaitMore;                                                   // claim starts after 1 day
-            assert (
-                // for 2 years, weekly 11,111 tokens can be claimed
-                (now < MAX_CLAIM_PERIOD + time.accountInit) &&
-                (now > CLAIM_INTERVAL + time.lastClaim)
-            ) throw Errors.WaitMore;
+            assert (now > (CLAIM_INTERVAL + time.lastClaim)) throw Errors.WaitMore;
 
-            // todo: votingPower based mint continue after 2 years
-            val claimAmount = WEEKLY_CLAIM_AMOUNT;
+            // 11,111 FI for first 2 years, then 500 FI lifetime baseline floor; plus 10 FI per received vote uncapped
+            val baseGrant = (now < MAX_CLAIM_PERIOD + time.accountInit)
+                ? WEEKLY_CLAIM_AMOUNT
+                : POST_2YR_BASELINE_CLAIM;
+            val reputationGrant = store.receivedVotes * VOTE_GRANT_RATE;
+            val totalClaimAmount = baseGrant + reputationGrant;
 
-            store.jettonBalance += claimAmount;
+            // if account is in debt, auto-repay debt first
+            if (store.debt > 0) {
+                val debtReduction = min(store.debt, totalClaimAmount);
+                store.debt -= debtReduction;
+                if (store.debt == 0) {
+                    store.debts = false;
+                }
+                val netCredited = totalClaimAmount - debtReduction;
+                store.jettonBalance += netCredited;
+            } else {
+                store.jettonBalance += totalClaimAmount;
+            }
+
             time.lastClaim = now;
             // inform minter about new tokens mint
             val notifyMinterMsg = createMessage({
@@ -319,7 +332,7 @@ fun onInternalMessage(in: InMessage): void {
                 value: 0,
                 body: NotifyMinter {
                     queryId: msg.queryId != 0 ? msg.queryId : 1, // to inform about MINT
-                    jettonAmount: claimAmount,
+                    jettonAmount: totalClaimAmount,
                     burnInitiator: in.senderAddress,
                     sendExcessesTo: in.senderAddress,
                 },
@@ -1394,46 +1407,122 @@ fun onInternalMessage(in: InMessage): void {
             }
         }
 
-        TriggerDecay => {
-            // keeper-triggered, no sender auth: burning another's decayed balance is harmless
+        ActPayEmi => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             val now = blockchain.now();
-            if (time.lastDecay == 0) {
-                time.lastDecay = now;
+            val baseTime: int = time.lastDecay != 0
+                ? (time.lastDecay as int)
+                : (time.accountInit != 0 ? (time.accountInit as int) : now);
+            assert (now >= baseTime + DECAY_MONTH_SECONDS) throw Errors.WaitMore;
+
+            assert (store.jettonBalance >= EMI_AMOUNT) throw Errors.InsufficientBalance;
+
+            store.jettonBalance -= EMI_AMOUNT;
+            time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
+
+            val notifyMinterMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: NotifyMinter {
+                    queryId: 0, // to inform about BURN
+                    jettonAmount: EMI_AMOUNT,
+                    burnInitiator: in.senderAddress,
+                    sendExcessesTo: msg.sendExcessesTo != null
+                        ? msg.sendExcessesTo
+                        : in.senderAddress,
+                },
+            });
+            notifyMinterMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        TriggerDefaultEmi => {
+            // keeper-triggered or outsider-triggered when overdue > 24 hours
+            val now = blockchain.now();
+            val baseTime: int = time.lastDecay != 0
+                ? (time.lastDecay as int)
+                : (time.accountInit != 0 ? (time.accountInit as int) : now);
+            assert (now > baseTime + DECAY_MONTH_SECONDS + EMI_GRACE_PERIOD) throw Errors.WaitMore;
+
+            val burnAmount = min(store.jettonBalance, EMI_AMOUNT);
+            if (burnAmount > 0) {
+                store.jettonBalance -= burnAmount;
+                val notifyMinterMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: NotifyMinter {
+                        queryId: 0, // to inform about BURN
+                        jettonAmount: burnAmount,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: in.senderAddress,
+                    },
+                });
+                notifyMinterMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
             } else {
-                val elapsed = now - time.lastDecay;
-                val months = elapsed / DECAY_MONTH_SECONDS;
-                if (months > 0) {
-                    // burn proportional to elapsed time: multiply elapsed seconds by the
-                    // total claimed, then divide by the combined period, keeping precision
-                    val burnAmount = min(
-                        store.jettonBalance,
-                        max(
-                            months,
-                            elapsed * ton("1158718") / (DECAY_MONTH_SECONDS * DECAY_MONTHS_TOTAL),
-                        ),
-                    ); // total claimed 1158718 ton approx.
-                    // todo: if balance is less than burnAmount, then burn whatever available and increase debt to be paid later. This is to avoid negative balance and allow for future minting/transfers to cover the debt.
-                    if (burnAmount > 0) {
-                        store.jettonBalance -= burnAmount;
-                        val notifyMinterMsg = createMessage({
-                            bounce: BounceMode.NoBounce,
-                            dest: trustedAddrs.minterAddr,
-                            value: 0,
-                            body: NotifyMinter {
-                                queryId: 0, // to inform about BURN
-                                jettonAmount: burnAmount,
-                                burnInitiator: addrs.owner,
-                                sendExcessesTo: null,
-                            },
-                        });
-                        notifyMinterMsg.send(
-                            SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                            SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                        );
-                    }
-                    time.lastDecay = now - elapsed % DECAY_MONTH_SECONDS;
-                }
+                returnExcessesBack(msg.queryId, in.senderAddress);
             }
+
+            val unpaid = EMI_AMOUNT - burnAmount;
+            if (unpaid > 0) {
+                store.debt += unpaid;
+                store.debts = true;
+            }
+
+            // apply 5% penalty of all debt
+            if (store.debt > 0) {
+                val penalty = store.debt * EMI_PENALTY_PERCENT / 100;
+                store.debt += penalty;
+                store.debts = true;
+            }
+
+            time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
+        }
+
+        TriggerDecay => {
+            // Legacy keeper trigger: processes default EMI logic
+            val now = blockchain.now();
+            val baseTime: int = time.lastDecay != 0
+                ? (time.lastDecay as int)
+                : (time.accountInit != 0 ? (time.accountInit as int) : now);
+            assert (now >= baseTime + DECAY_MONTH_SECONDS) throw Errors.WaitMore;
+
+            val burnAmount = min(store.jettonBalance, EMI_AMOUNT);
+            if (burnAmount > 0) {
+                store.jettonBalance -= burnAmount;
+                val notifyMinterMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: 0,
+                    body: NotifyMinter {
+                        queryId: 0,
+                        jettonAmount: burnAmount,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: in.senderAddress,
+                    },
+                });
+                notifyMinterMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            } else {
+                returnExcessesBack(0, in.senderAddress);
+            }
+
+            val unpaid = EMI_AMOUNT - burnAmount;
+            if (unpaid > 0) {
+                store.debt += unpaid;
+                store.debts = true;
+            }
+            if (now > baseTime + DECAY_MONTH_SECONDS + EMI_GRACE_PERIOD && store.debt > 0) {
+                val penalty = store.debt * EMI_PENALTY_PERCENT / 100;
+                store.debt += penalty;
+                store.debts = true;
+            }
+            time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
         }
 
         // for migration to other network states

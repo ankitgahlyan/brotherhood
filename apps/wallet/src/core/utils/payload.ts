@@ -80,7 +80,7 @@ export const KNOWN_OPCODES: Record<number, string> = {
 
   // Brotherhood Group 5: Economy, Allowances, & Credit
   0x00001141: 'Claim Weekly Grant',
-  0x00001142: 'Trigger Balance Decay',
+  0x00001142: 'Pay Monthly Due (EMI)',
   0x00001143: 'Grant Allowance',
   0x00001144: 'Spend Allowance',
   0x00001145: 'Transfer Gold Coins',
@@ -91,6 +91,8 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x0000114a: 'Set Credit Need',
   0x0000114b: 'Repay Debt',
   0x0000114c: 'Set Credit Multiplier',
+  0x0000114d: 'Trigger Default EMI',
+  0x0000114e: 'Trigger Legacy Decay',
 
   // Brotherhood Group 6: Mini-Apps, Lottery & Follow
   0x00001191: 'Join Lottery',

@@ -85,11 +85,15 @@ export const createJettonsSlice: JettonsSliceCreator = (
       }
 
       set((s) => {
-        const targetAddress = userAddress || s.walletManagement.address || address;
+        const targetAddress =
+          userAddress || s.walletManagement.address || address;
         s.jettons.jettonsByAddress[targetAddress] = jettonsResponse.jettons;
 
         const currentActiveAddress = s.walletManagement.address;
-        if (!currentActiveAddress || compareAddress(currentActiveAddress, targetAddress)) {
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, targetAddress)
+        ) {
           s.jettons.userJettons = jettonsResponse.jettons;
           s.jettons.lastJettonsUpdate = Date.now();
         }

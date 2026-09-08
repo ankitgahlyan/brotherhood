@@ -33,7 +33,7 @@ _Avoid_: Admin, moderator, validator
 
 ### Economy
 
-**FI** — the BrotherHood jetton. Minted to reward social growth (an accepted invite, a follow) and recurring claims (weekly); burned through lifetime decay, unfollows, and closure. Its supply is a measure of human trust, not a fixed issuance.
+**FI** — the BrotherHood jetton. Minted to reward social growth (an accepted invite, a follow) and recurring claims (weekly); burned through monthly dues (EMI), unfollows, and closure. Its supply is a measure of human trust, not a fixed issuance.
 _Avoid_: Token (when the distinction matters), the coin
 
 **Invite** — the act of bringing a new Member into BrotherHood. Only Members can invite; an accepted invite mints FI to reward the network growth it causes.
@@ -48,10 +48,10 @@ _Avoid_: Unfriend, remove
 **Settlement** — the required burning of minted FI when either party of an active Following dies/closes. Under the survivor-pays invariant, the surviving counterparty burns 1,000 FI to settle the trust supply (if Follower dies, Followee burns; if Followee dies, Follower burns). Unpaid shortfalls become Debt on the surviving Account and cascade up its Invite Lineage.
 _Avoid_: Liquidation, default, clearing
 
-**Lifetime Decay** — a small monthly burn of an Account's FI spread over the expected human lifespan, so minted value converges to zero as a Member ages out. One of the economic counterweights to minting; weekly claims still continue alongside it.
-_Avoid_: Inflation, demurrage (too broad), fees
+**Monthly Due (EMI)** — a recurring monthly burn of 2,500 FI an Account pays to remain in good standing. Bounded by a 30-day cycle and a 24-hour grace period; failure to pay within grace adds the unpaid balance to Debt and triggers a 5% penalty across all Debt.
+_Avoid_: Inflation, demurrage (too broad), fees, loan repayment (reserved for Personal Token loans)
 
-**Weekly Claim** — a recurring mint of FI a Member may claim, subject to claim windows and totals (today: 11111/week for two years). A steady mint stream alongside invites and follows.
+**Weekly Claim** — a recurring mint of FI a Member may claim every 7 days after an initial 1-day activation wait. Composed of a 2-year Fixed Grant (11,111 FI/week) followed by a lifetime baseline floor (500 FI/week), combined with a lifetime Reputation Grant (10 FI per received vote per week). Automatically offsets any outstanding Debt before crediting net balance.
 _Avoid_: Stipend, allowance (allowance is reserved for friend spending)
 
 **Gold Coin** — a transferrable store-of-value unit held by an Account, used for token-like transfers alongside FI.
@@ -78,7 +78,7 @@ _Avoid_: Credit token, IOU, social token
 **Loan** — FI owed between Members, collateralized by a borrower's Personal Token.
 _Avoid_: Debt (reserved for the Account-level liability below)
 
-**Debt** — an Account's outstanding liability. Arises especially when a followed Account closes on death and the follower lacks enough tokens to burn, leaving a shortfall that must be repaid.
+**Debt** — an Account's outstanding liability. Arises when a followed Account closes on death and the follower lacks enough tokens to burn, or when an Account defaults on its Monthly Due (EMI) past the 24-hour grace period (which applies an additional 5% penalty on total debt). Debt blocks transfers, invites, and following, and is automatically garnished by incoming Weekly Claims.
 _Avoid_: Loan, balance owed
 
 **Lottery** — a side game within BrotherHood: Accounts pay an entry amount to join a pool; a winner is selected cryptographically (commit-reveal) and receives the pool. A source of fun, not an economic mechanism.
