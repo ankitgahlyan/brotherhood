@@ -105,9 +105,6 @@ export function useTrackedPersonalTokens() {
               parsedOwnerAddress,
             );
 
-            // Per user rule: only show tokens in asset list if balance > 0
-            if (balance <= 0n) return;
-
             const walletAddr = await getPersonalWalletAddress(
               minterAddr,
               parsedOwnerAddress,
@@ -295,13 +292,26 @@ export function useTrackedPersonalTokens() {
       }
 
       const minterStr = inspection.token.minterAddress;
-      if (!trackedMinters.includes(minterStr)) {
+      const alreadyTracked = trackedMinters.some(
+        (m) => {
+          try {
+            return Address.parse(m).equals(Address.parse(minterStr));
+          } catch {
+            return m === minterStr;
+          }
+        },
+      );
+
+      if (!alreadyTracked) {
         const nextList = [...trackedMinters, minterStr];
         persistMinters(nextList);
       }
 
       await queryClient.invalidateQueries({
         queryKey: ['tracked-personal-tokens', walletAddress],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['verified-personal-minters'],
       });
 
       return {
@@ -320,11 +330,42 @@ export function useTrackedPersonalTokens() {
     ],
   );
 
+  // Untrack / remove token from tracked list
+  const untrackToken = useCallback(
+    async (minterAddress: string) => {
+      let targetAddr: Address | null = null;
+      try {
+        targetAddr = Address.parse(minterAddress.trim());
+      } catch {
+        // pass
+      }
+
+      const nextList = trackedMinters.filter((m) => {
+        if (targetAddr) {
+          try {
+            return !Address.parse(m).equals(targetAddr);
+          } catch {
+            return m !== minterAddress;
+          }
+        }
+        return m !== minterAddress;
+      });
+
+      persistMinters(nextList);
+
+      await queryClient.invalidateQueries({
+        queryKey: ['tracked-personal-tokens', walletAddress],
+      });
+    },
+    [trackedMinters, persistMinters, queryClient, walletAddress],
+  );
+
   return {
     personalTokens,
     trackedMinters,
     discoverTokens,
     addTokenManually,
+    untrackToken,
     isDiscovering,
     isLoading,
     refetch,

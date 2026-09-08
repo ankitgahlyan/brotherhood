@@ -18,6 +18,7 @@ import {
   Shield,
   User,
   Hash,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
@@ -36,6 +37,7 @@ import {
   usePersonalMinterDetails,
 } from '@/lib/brotherhood/queries';
 import { isZeroAddress } from '@/lib/brotherhood/ton';
+import { useTrackedPersonalTokens } from '../../hooks/use-tracked-personal-tokens';
 
 interface AssetDetailsModalProps {
   asset: AssetRowData | null;
@@ -53,12 +55,30 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   const network = getActiveWallet()?.network ?? 'testnet';
   const { explorer } = useExplorer();
 
+  const { trackedMinters, untrackToken } = useTrackedPersonalTokens();
+
   const isGram = asset?.id === 'TON' || asset?.symbol === 'GRAM';
   const isFi = useMemo(() => {
     if (!asset) return false;
     return isFiJetton({ address: asset.id, symbol: asset.symbol });
   }, [asset]);
   const isPersonal = Boolean(asset && !isGram && !isFi);
+
+  const isTracked = useMemo(() => {
+    if (!asset || !isPersonal) return false;
+    try {
+      const assetAddr = Address.parse(asset.id);
+      return trackedMinters.some((m) => {
+        try {
+          return Address.parse(m).equals(assetAddr);
+        } catch {
+          return m === asset.id;
+        }
+      });
+    } catch {
+      return trackedMinters.includes(asset.id);
+    }
+  }, [asset, isPersonal, trackedMinters]);
 
   // FI contract queries
   const fiStateQuery = useFiMinterState(isOpen && isFi);
@@ -583,6 +603,22 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
               >
                 <span>Manage Your Personal Token</span>
                 <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+            )}
+
+            {/* Untrack Personal Token Button if explicitly tracked */}
+            {isTracked && (
+              <button
+                type="button"
+                onClick={() => {
+                  void untrackToken(asset.id);
+                  toast.success('Token removed from tracked assets');
+                  onClose();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Untrack Token</span>
               </button>
             )}
           </div>

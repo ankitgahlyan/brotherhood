@@ -173,15 +173,13 @@ export const useAssetRows = (): AssetRows => {
       });
     }
 
-    // 2. Process personalTokens (discovered on-chain and manually tracked where balance > 0)
+    // 2. Process personalTokens (discovered on-chain and manually tracked)
     for (const pt of personalTokens) {
       const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
       if (seenAddresses.has(normAddr)) continue;
       seenAddresses.add(normAddr);
 
       const amount = toDecimal(pt.balance, 9);
-      if (amount <= 0) continue;
-
       const symbol = pt.symbol || 'PT';
       rows.push({
         id: pt.minterAddress,

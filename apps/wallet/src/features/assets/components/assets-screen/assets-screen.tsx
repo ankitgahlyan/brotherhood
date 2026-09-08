@@ -7,7 +7,7 @@
  */
 
 import { useState, type FC } from 'react';
-import { Compass, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 
 import { AssetRow, AssetRowSkeleton } from '../asset-row';
@@ -15,7 +15,6 @@ import { AssetDetailsModal } from '../asset-details-modal';
 import { AddTokenModal } from '../add-token-modal';
 import type { AssetRowData } from '../asset-row';
 import { useAssetRows } from '../../hooks/use-asset-rows';
-import { useTrackedPersonalTokens } from '../../hooks/use-tracked-personal-tokens';
 
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
@@ -24,7 +23,6 @@ import { ScreenHeader } from '@/core/components/shared/screen-header';
 export const AssetsScreen: FC = () => {
   const navigate = useNavigate();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
-  const { discoverTokens, isDiscovering } = useTrackedPersonalTokens();
 
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,18 +41,6 @@ export const AssetsScreen: FC = () => {
           onBack={() => navigate('/wallet')}
           rightElement={
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => void discoverTokens()}
-                disabled={isDiscovering}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
-                title="Discover personal tokens from network & transactions"
-              >
-                <Compass
-                  className={`w-3.5 h-3.5 ${isDiscovering ? 'animate-spin' : ''}`}
-                />
-                <span>{isDiscovering ? 'Discovering...' : 'Discover'}</span>
-              </button>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
