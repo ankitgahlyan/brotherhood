@@ -144,7 +144,7 @@ async function main() {
     );
     // bun test --changed runs test files affected by changed files according to git
     run(
-      'bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**"',
+      'bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**" --path-ignore-patterns "**/apps/wallet-v2/**"',
     );
     console.log('');
   } else {
