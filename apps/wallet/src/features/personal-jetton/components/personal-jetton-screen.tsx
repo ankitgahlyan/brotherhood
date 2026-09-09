@@ -149,11 +149,15 @@ export const PersonalJettonScreen: React.FC = () => {
     activeMinter,
   ]);
 
+  // Deploy tab initial mint amount
+  const [initialMintAmount, setInitialMintAmount] = useState('1000');
+
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
     network,
+    initialMintAmount,
     onDeploySuccess: () => {
       info.refetch();
     },
@@ -620,8 +624,11 @@ export const PersonalJettonScreen: React.FC = () => {
 
                   <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                     <Button
-                      onClick={() => setActiveTab('admin')}
-                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                      onClick={() => {
+                        setAdminSubTab('metadata');
+                        setActiveTab('admin');
+                      }}
+                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium cursor-pointer"
                       data-testid="personal-deploy-goto-metadata-btn"
                     >
                       <Sparkles className="w-4 h-4 mr-1.5" />
@@ -631,7 +638,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setActiveTab('info')}
-                      className="w-full sm:w-auto text-xs"
+                      className="w-full sm:w-auto text-xs cursor-pointer"
                     >
                       View Token Overview{' '}
                       <ArrowRight className="w-3 h-3 ml-1" />
@@ -704,6 +711,26 @@ export const PersonalJettonScreen: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Initial Mint Amount Input */}
+                  <div className="space-y-1.5 bg-card p-3 rounded-xl border border-border">
+                    <label className="text-xs font-medium text-foreground block">
+                      Initial Mint Amount (Tokens to Self)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      value={initialMintAmount}
+                      onChange={(e) => setInitialMintAmount(e.target.value)}
+                      placeholder="e.g. 1000"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="personal-deploy-initial-mint"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Tokens will be minted directly to your connected wallet upon deployment in the same transaction.
+                    </p>
+                  </div>
+
                   <Button
                     onClick={() => deployer.deploy()}
                     disabled={
@@ -717,7 +744,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     data-testid="personal-deploy-submit"
                   >
                     <Rocket className="w-4 h-4 mr-2" />
-                    Deploy & Register Personal Token
+                    Deploy, Mint & Register Personal Token
                   </Button>
                 </div>
               )}

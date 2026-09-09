@@ -34,6 +34,7 @@ export interface UseDeployPersonalJettonParams {
   walletKit: ITonWalletKit | null;
   walletAddress: string | null;
   network: Network;
+  initialMintAmount: string;
   onDeploySuccess?: (addresses: DeployedPersonalAddresses) => void;
 }
 
@@ -51,6 +52,7 @@ export function useDeployPersonalJetton({
   walletKit,
   walletAddress,
   network,
+  initialMintAmount,
   onDeploySuccess,
 }: UseDeployPersonalJettonParams): UseDeployPersonalJettonResult {
   const {
@@ -73,6 +75,12 @@ export function useDeployPersonalJetton({
       throw new Error('No wallet address');
     }
 
+    const mintAmountNum = parseFloat(initialMintAmount);
+    if (!initialMintAmount || isNaN(mintAmountNum) || mintAmountNum <= 0) {
+      toast.error('Please specify a valid initial mint amount (> 0)');
+      throw new Error('Invalid initial mint amount');
+    }
+
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
@@ -91,11 +99,20 @@ export function useDeployPersonalJetton({
       .store(storeStateInit(stateInit))
       .endCell();
 
-    // Message 1: Deploy Personal Minter contract with stateInit
+    // Prepare initial MintNewJettons payload to mint directly to the deployer
+    const mintAmountNano = parseUnits(initialMintAmount, 9);
+    const mintPayload = buildMintBody({
+      toAddress: ownerAddr,
+      jettonAmount: mintAmountNano,
+      forwardTonAmount: 20000000n,
+      totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
+    });
+
+    // Message 1: Deploy Personal Minter contract with stateInit and initial mint payload
     const deployMsg = {
       toAddress: contractAddress.toString(),
-      amount: GAS.DEPLOY,
-      payload: beginCell().endCell(),
+      amount: GAS.DEPLOY + GAS.MINT,
+      payload: mintPayload,
       stateInit: stateInitCell,
     };
 
@@ -124,12 +141,14 @@ export function useDeployPersonalJetton({
     };
 
     setDeployedAddresses(result);
-    toast.success('Personal Token deployed and registered to Account!');
+    toast.success('Personal Token deployed, minted, and registered to Account!');
     onDeploySuccess?.(result);
     return result;
-  }, [walletAddress, network, sendTx, refreshQueries, onDeploySuccess]);
+  }, [walletAddress, initialMintAmount, network, sendTx, refreshQueries, onDeploySuccess]);
 
-  const isDisabled = !wallet || !walletAddress || isSending;
+  const parsedMint = parseFloat(initialMintAmount);
+  const isMintInvalid = !initialMintAmount || isNaN(parsedMint) || parsedMint <= 0;
+  const isDisabled = !wallet || !walletAddress || isMintInvalid || isSending;
 
   return {
     deploy,
