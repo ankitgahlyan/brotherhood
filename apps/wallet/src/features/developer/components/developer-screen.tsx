@@ -14,6 +14,8 @@ import {
   Clock,
   X,
   Database,
+  BarChart3,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -28,6 +30,7 @@ import { Button } from '@/core/components/ui/button';
 import { HeadersViewer } from './headers-viewer';
 import { PayloadViewer } from './payload-viewer';
 import { DbStateExplorer } from './db-state-explorer';
+import { ComponentAnalyticsView } from './component-analytics-view';
 
 export interface DeveloperScreenProps {
   onClose?: () => void;
@@ -47,16 +50,44 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
     devTelemetry.getMetrics(),
   );
 
-  const [activeSection, setActiveSection] = useState<'telemetry' | 'storage'>(
-    'telemetry',
-  );
+  const [activeSection, setActiveSection] = useState<
+    'telemetry' | 'analytics' | 'storage'
+  >('telemetry');
   const [activeTab, setActiveTab] = useState<'all' | 'api' | 'console'>('api');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<
     'all' | 'error' | 'warn' | 'success'
   >('all');
+  const [groupDuplicates, setGroupDuplicates] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [hasCopied, setHasCopied] = useState(false);
+
+  const displayedItems = useMemo(() => {
+    if (groupDuplicates) return items;
+    const flat: TelemetryItem[] = [];
+    for (const item of items) {
+      if (item.type === 'console') {
+        flat.push(item);
+      } else if (item.invocations && item.invocations.length > 1) {
+        for (const inv of item.invocations) {
+          flat.push({
+            ...item,
+            id: inv.id,
+            timestamp: inv.timestamp,
+            status: inv.status,
+            statusText: inv.statusText,
+            durationMs: inv.durationMs,
+            error: inv.error ?? item.error,
+            count: 1,
+            invocations: [inv],
+          });
+        }
+      } else {
+        flat.push(item);
+      }
+    }
+    return flat.sort((a, b) => b.timestamp - a.timestamp);
+  }, [items, groupDuplicates]);
 
   useEffect(() => {
     const unsubscribe = devTelemetry.subscribe(() => {
@@ -89,7 +120,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
   };
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    return displayedItems.filter((item) => {
       // Tab filter
       if (activeTab === 'api' && item.type !== 'api') return false;
       if (activeTab === 'console' && item.type !== 'console') return false;
@@ -129,6 +160,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
           item.url.toLowerCase().includes(q) ||
           item.method.toLowerCase().includes(q) ||
           String(item.status).toLowerCase().includes(q) ||
+          (item.callerName && item.callerName.toLowerCase().includes(q)) ||
           (item.responsePreview &&
             item.responsePreview.toLowerCase().includes(q)) ||
           (item.requestBody && item.requestBody.toLowerCase().includes(q)) ||
@@ -141,7 +173,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
         );
       }
     });
-  }, [items, activeTab, filterLevel, searchQuery]);
+  }, [displayedItems, activeTab, filterLevel, searchQuery]);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-12">
@@ -202,11 +234,11 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
 
       <div className="max-w-4xl mx-auto px-4 pt-4 space-y-4">
         {/* Top-level View Switcher */}
-        <div className="flex items-center gap-2 border-b border-border pb-3">
+        <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveSection('telemetry')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeSection === 'telemetry'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
@@ -217,8 +249,20 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setActiveSection('analytics')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeSection === 'analytics'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Component Analytics</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveSection('storage')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeSection === 'storage'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
@@ -231,6 +275,8 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
 
         {activeSection === 'storage' ? (
           <DbStateExplorer />
+        ) : activeSection === 'analytics' ? (
+          <ComponentAnalyticsView />
         ) : (
           <>
             {/* Top Metrics Cards */}
@@ -375,6 +421,22 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setGroupDuplicates((prev) => !prev)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                    groupDuplicates
+                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 font-semibold'
+                      : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                  title="Collapse duplicate API calls into a single entry with call count and timestamps"
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>Group Duplicates</span>
+                </button>
+
+                <div className="w-px h-4 bg-border mx-0.5" />
+
                 <button
                   type="button"
                   onClick={() => setFilterLevel('all')}
@@ -535,6 +597,27 @@ const ApiCard: React.FC<{
               {item.status} {item.statusText || ''}
             </span>
 
+            {item.count > 1 && (
+              <span
+                className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center gap-1"
+                title={`${item.count} total invocations of this call`}
+              >
+                <span>×{item.count}</span>
+                <span className="text-[9px] font-medium hidden sm:inline">
+                  calls
+                </span>
+              </span>
+            )}
+
+            {item.callerName && (
+              <span
+                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border"
+                title={`Caller: ${item.callerName}`}
+              >
+                {item.callerName}
+              </span>
+            )}
+
             {item.durationMs !== undefined && (
               <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -567,6 +650,68 @@ const ApiCard: React.FC<{
 
       {isExpanded && (
         <div className="border-t border-border bg-secondary/30 p-3 space-y-3 text-xs">
+          {item.invocations && item.invocations.length > 1 && (
+            <div className="space-y-1.5 p-2.5 rounded-lg bg-background/80 border border-border">
+              <div className="flex items-center justify-between text-[11px] font-bold text-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Call History ({item.invocations.length} calls)</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  Most recent first
+                </span>
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                {item.invocations.map((inv, idx) => {
+                  const invTime = new Date(inv.timestamp).toLocaleTimeString();
+                  const invSuccess =
+                    typeof inv.status === 'number' &&
+                    inv.status >= 200 &&
+                    inv.status < 300;
+                  const invFailed =
+                    inv.status === 'failed' ||
+                    (typeof inv.status === 'number' && inv.status >= 400);
+
+                  return (
+                    <div
+                      key={inv.id || idx}
+                      className="flex items-center justify-between text-[11px] font-mono p-1.5 rounded-md bg-secondary/50 border border-border/60"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-[10px]">
+                          #{item.invocations.length - idx}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                            inv.status === 'pending'
+                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                              : invSuccess
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                                : invFailed
+                                  ? 'bg-red-500/10 text-red-500 border-red-500/30'
+                                  : 'bg-muted text-muted-foreground border-border'
+                          }`}
+                        >
+                          {inv.status} {inv.statusText || ''}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        {inv.durationMs !== undefined && (
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            {inv.durationMs}ms
+                          </span>
+                        )}
+                        <span>{invTime}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {item.error && (
             <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 font-mono text-[11px] break-all">
               <strong>Error:</strong> {item.error}

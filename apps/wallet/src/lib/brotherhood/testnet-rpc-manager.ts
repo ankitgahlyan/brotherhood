@@ -18,6 +18,8 @@ export class TestnetRpcManager {
   private candidateEndpoints: string[];
   private currentEndpointIndex = 0;
   private hasProbed = false;
+  private lastProbeTimestamp = 0;
+  public static readonly PROBE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   private probePromise: Promise<string> | null = null;
 
   private constructor() {
@@ -43,8 +45,31 @@ export class TestnetRpcManager {
       PUBLIC_TESTNET_TONCENTER_RPC,
     ];
 
-    // Start background probe immediately on module import
-    this.probeBestEndpoint().catch(() => {});
+    // Restore cached healthy endpoint from session if within TTL
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        const savedIndex = sessionStorage.getItem('ton_testnet_rpc_index');
+        const savedTime = sessionStorage.getItem('ton_testnet_rpc_time');
+        if (savedIndex !== null && savedTime !== null) {
+          const parsedTime = Number(savedTime);
+          if (Date.now() - parsedTime < TestnetRpcManager.PROBE_TTL_MS) {
+            const idx = Number(savedIndex);
+            if (idx >= 0 && idx < this.candidateEndpoints.length) {
+              this.currentEndpointIndex = idx;
+              this.lastProbeTimestamp = parsedTime;
+              this.hasProbed = true;
+            }
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    // Start background probe immediately on module import if not recently probed
+    if (!this.hasProbed) {
+      this.probeBestEndpoint().catch(() => {});
+    }
   }
 
   public static getInstance(): TestnetRpcManager {
@@ -116,7 +141,15 @@ export class TestnetRpcManager {
   /**
    * Probe candidate endpoints in priority order and select the fastest healthy one.
    */
-  public async probeBestEndpoint(): Promise<string> {
+  public async probeBestEndpoint(forceFresh = false): Promise<string> {
+    if (
+      !forceFresh &&
+      this.hasProbed &&
+      Date.now() - this.lastProbeTimestamp < TestnetRpcManager.PROBE_TTL_MS
+    ) {
+      return this.getActiveEndpoint();
+    }
+
     if (this.probePromise) return this.probePromise;
 
     this.probePromise = (async () => {
@@ -140,6 +173,22 @@ export class TestnetRpcManager {
       }
 
       this.hasProbed = true;
+      this.lastProbeTimestamp = Date.now();
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          sessionStorage.setItem(
+            'ton_testnet_rpc_index',
+            String(this.currentEndpointIndex),
+          );
+          sessionStorage.setItem(
+            'ton_testnet_rpc_time',
+            String(this.lastProbeTimestamp),
+          );
+        } catch {
+          // ignore
+        }
+      }
+      this.probePromise = null;
       return this.getActiveEndpoint();
     })();
 
@@ -158,6 +207,14 @@ export class TestnetRpcManager {
     ) {
       if (this.currentEndpointIndex < this.candidateEndpoints.length - 1) {
         this.currentEndpointIndex++;
+        this.lastProbeTimestamp = 0;
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            sessionStorage.removeItem('ton_testnet_rpc_time');
+          } catch {
+            // ignore
+          }
+        }
         const nextEndpoint = this.getActiveEndpoint();
         console.warn(
           `[TON Testnet RPC] Primary endpoint failed (${active}). Failing over to: ${nextEndpoint}`,

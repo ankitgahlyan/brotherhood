@@ -288,6 +288,25 @@ export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
 
 export async function fetchWalletBalance(ownerAddress: Address) {
   const walletAddr = await getWalletAddress(ownerAddress);
+  const normalizedKey = getNormalizedContractCacheKey(network, walletAddr);
+
+  // 1. Check if normalized contract cache already has FiWalletStateData
+  const cached = await getContractCache<FiWalletStateData>(normalizedKey);
+  if (cached && cached.data && typeof cached.data.jettonBalance === 'bigint') {
+    return cached.data.jettonBalance;
+  }
+
+  // 2. Try fetching unified FiWallet state to populate contract cache
+  try {
+    const state = await getUnifiedFiWalletState(ownerAddress);
+    if (state && typeof state.jettonBalance === 'bigint') {
+      return state.jettonBalance;
+    }
+  } catch {
+    // Contract call failed or not deployed; fallback to Toncenter v3 HTTP
+  }
+
+  // 3. Fallback: Toncenter v3 HTTP
   const base = toncenterV3[network === 'mainnet' ? 'mainnet' : 'testnet'];
   const res = await fetchWithRetry(
     `${base}/jetton/wallets?address=${encodeURIComponent(walletAddr.toString())}&limit=1&offset=0`,
