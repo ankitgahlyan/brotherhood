@@ -223,6 +223,9 @@ export enum AppState {
   Ledger,
   Inactive,
   Empty,
+  BrotherhoodFi,
+  PersonalJetton,
+  CityNetwork,
 }
 
 export enum AuthState {
@@ -1175,6 +1178,9 @@ export type GlobalState = {
   agentHints?: AgentHint[];
   isExploreOpen?: boolean;
   isMarketOpen?: boolean;
+  isBrotherhoodFiOpen?: boolean;
+  isPersonalJettonOpen?: boolean;
+  isCityNetworkOpen?: boolean;
   isPortfolioOpen?: boolean;
   portfolioReturnTo?: 'settings';
   portfolio?: PortfolioState;
@@ -1515,6 +1521,9 @@ export interface ActionPayloads {
   switchToAgent: undefined;
   switchToExplore: undefined;
   switchToMarket: undefined;
+  switchToBrotherhoodFi: undefined;
+  switchToPersonalJetton: undefined;
+  switchToCityNetwork: undefined;
   switchToSettings: undefined;
   switchToPortfolio: undefined;
 

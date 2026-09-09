@@ -841,6 +841,18 @@ addActionHandler('switchToMarket', (global: GlobalState, actions) => {
   actions.openMarket(undefined, { forceOnHeavyAnimation: true });
 });
 
+addActionHandler('switchToBrotherhoodFi', (global: GlobalState) => {
+  return openSection(global, 'brotherhoodFi');
+});
+
+addActionHandler('switchToPersonalJetton', (global: GlobalState) => {
+  return openSection(global, 'personalJetton');
+});
+
+addActionHandler('switchToCityNetwork', (global: GlobalState) => {
+  return openSection(global, 'cityNetwork');
+});
+
 addActionHandler('switchToSettings', (global: GlobalState, actions) => {
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });

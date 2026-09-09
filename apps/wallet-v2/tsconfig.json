@@ -14,7 +14,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react"
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@wrappers/*": ["../../wrappers-ts/*"]
+    }
   },
   "include": [
     "src", "tests", "plugins", "webpack.config.ts", "webpack-electron.config.ts",

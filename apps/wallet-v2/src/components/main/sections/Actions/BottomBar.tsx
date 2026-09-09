@@ -32,10 +32,11 @@ interface StateProps {
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
   isMarketOpen?: boolean;
+  isBrotherhoodFiOpen?: boolean;
   accentColorIndex?: number;
 }
 
-type IconKey = 'iconWallet' | 'iconMarket' | 'iconAgent' | 'iconExplore' | 'iconSettings';
+type IconKey = 'iconWallet' | 'iconMarket' | 'iconAgent' | 'iconExplore' | 'iconSettings' | 'iconEarn';
 
 interface TabConfig {
   index: number;
@@ -49,9 +50,16 @@ const ICON_SIZE_PX = 38;
 const ANIMATED_STICKER_SPEED = 2;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, accentColorIndex,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen, accentColorIndex,
 }: StateProps) {
-  const { switchToWallet, switchToAgent, switchToExplore, switchToMarket, switchToSettings } = getActions();
+  const {
+    switchToWallet,
+    switchToAgent,
+    switchToExplore,
+    switchToMarket,
+    switchToSettings,
+    switchToBrotherhoodFi,
+  } = getActions();
 
   const lang = useLang();
   const [isHidden, setIsHidden] = useState(getIsBottomBarHidden());
@@ -66,13 +74,19 @@ function BottomBar({
   });
 
   const tabs: TabConfig[] = useMemo(() => {
-    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen;
+    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen && !isBrotherhoodFiOpen;
     const rawTabs = [
       {
         label: 'Wallet',
         iconKey: 'iconWallet' as const,
         onClick: switchToWallet,
         isActive: isWalletActive,
+      },
+      {
+        label: 'Fi',
+        iconKey: 'iconEarn' as const,
+        onClick: switchToBrotherhoodFi,
+        isActive: Boolean(isBrotherhoodFiOpen),
       },
       ...(IS_MARKET_ENABLED ? [{
         label: 'Market',
@@ -174,7 +188,7 @@ function BottomBar({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen } = global;
+  const { areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen } = global;
 
   return {
     theme: global.settings.theme,
@@ -182,6 +196,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen,
     isExploreOpen,
     isMarketOpen,
+    isBrotherhoodFiOpen,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
