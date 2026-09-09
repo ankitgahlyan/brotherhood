@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { Address } from '@ton/core';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
@@ -52,10 +53,12 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
     return formatContractAddress(addr, true, 4);
   };
 
-  const { invitees, isLoading, error, refetch } = useRingInvitees(
-    circleMember.addressString,
-    isExpanded,
-  );
+  const {
+    invitees,
+    isLoading: isInviteesLoading,
+    error: inviteesError,
+    refetch: refetchInvitees,
+  } = useRingInvitees(circleMember.addressString, isExpanded);
 
   const safeInvitees = Array.isArray(invitees) ? invitees : [];
   const inviteeAddresses = safeInvitees.map((i) => i.addressString);
@@ -64,16 +67,31 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
     network === 'mainnet' ? 'mainnet' : 'testnet',
   );
 
+  const isProfilesLoading =
+    resolvedRingProfiles.isLoading && safeInvitees.length > 0;
+  const isLoading = isInviteesLoading || isProfilesLoading;
+  const isRefreshing =
+    resolvedRingProfiles.isFetching || isInviteesLoading;
+  const error = inviteesError || resolvedRingProfiles.error;
+
+  const handleRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    refetchInvitees();
+    if (resolvedRingProfiles.refetch) {
+      resolvedRingProfiles.refetch();
+    }
+  };
+
   return (
     <div className="border border-border/60 rounded-xl overflow-hidden bg-secondary/30">
       {/* Accordion Header */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full p-3 flex justify-between items-center text-left hover:bg-secondary/60 transition-colors cursor-pointer"
-      >
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
+      <div className="w-full p-3 flex justify-between items-center bg-secondary/30 hover:bg-secondary/60 transition-colors">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex-1 text-left cursor-pointer space-y-0.5 min-w-0 pr-2"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
             <span
               role="button"
               tabIndex={0}
@@ -134,28 +152,52 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
             {isExpanded
               ? isLoading
                 ? 'Loading 2nd-degree invitees…'
-                : `${invitees.length} 2nd-degree ${invitees.length === 1 ? 'member' : 'members'}`
+                : `${safeInvitees.length} 2nd-degree ${safeInvitees.length === 1 ? 'member' : 'members'}`
               : 'Click to expand 2nd-degree invitees'}
           </span>
+        </button>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isExpanded && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+              title={`Refresh 2nd-degree invitees for ${inviterUsername}`}
+              aria-label={`Refresh 2nd-degree invitees for ${inviterUsername}`}
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+              />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            className="p-1 cursor-pointer"
+            aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
+          >
+            <span
+              className={`inline-block text-xs text-muted-foreground font-semibold px-2 py-1 rounded-lg bg-secondary/60 transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            >
+              ▼
+            </span>
+          </button>
         </div>
-        <span
-          className={`text-xs text-muted-foreground font-semibold px-2 py-1 rounded-lg bg-secondary/60 transition-transform duration-200 ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-        >
-          ▼
-        </span>
-      </button>
+      </div>
 
       {/* Accordion Body (Lazy loaded on expand) */}
       {isExpanded && (
         <div className="p-2.5 pt-0 space-y-1.5 border-t border-border/40 bg-background/50">
-          {isLoading ? (
+          {isLoading && safeInvitees.length === 0 ? (
             <div className="space-y-1.5 py-2">
               <div className="h-12 bg-secondary/40 rounded-lg animate-pulse" />
               <div className="h-12 bg-secondary/40 rounded-lg animate-pulse" />
             </div>
-          ) : error ? (
+          ) : error && safeInvitees.length === 0 ? (
             <div className="py-3 px-2 text-center space-y-1">
               <p className="text-xs text-destructive">
                 Failed to load 2nd-degree invitees
@@ -163,7 +205,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => refetch()}
+                onClick={handleRefresh}
                 className="text-xs h-7"
               >
                 Retry
@@ -179,9 +221,12 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
             <div className="space-y-1.5 pt-1.5 max-h-64 overflow-y-auto">
               {safeInvitees.map((entry) => {
                 const prof = resolvedRingProfiles.data?.[entry.addressString];
+                const isProfLoading = !prof && resolvedRingProfiles.isLoading;
                 const username = prof?.username
                   ? `@${prof.username}`
-                  : '@member';
+                  : isProfLoading
+                    ? 'Loading...'
+                    : '@member';
                 const isActive = prof?.active ?? false;
 
                 return (
@@ -253,12 +298,14 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
-                          isActive
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-secondary text-muted-foreground border border-border'
+                          isProfLoading
+                            ? 'bg-secondary text-muted-foreground animate-pulse'
+                            : isActive
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : 'bg-secondary text-muted-foreground border border-border'
                         }`}
                       >
-                        {isActive ? 'Active' : 'Pending'}
+                        {isProfLoading ? '...' : isActive ? 'Active' : 'Pending'}
                       </span>
                       <span className="text-muted-foreground text-xs group-hover:translate-x-0.5 transition-transform">
                         →

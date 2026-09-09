@@ -2731,68 +2731,8 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Profile */}
         {activeTab === 'profile' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            {/* Current Profile Card */}
-            <div className="p-3.5 rounded-xl border border-border/60 bg-secondary/40 space-y-2 text-xs">
-              <span className="font-semibold text-foreground text-sm block">
-                Current Member Profile
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
-                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">
-                    Telegram Handle
-                  </span>
-                  <span className="font-medium text-foreground text-xs">
-                    {account.data?.username
-                      ? `@${account.data.username}`
-                      : 'Not registered'}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">
-                    Location (H3 Cell)
-                  </span>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-mono font-medium text-foreground text-xs truncate">
-                      {account.data?.h3Cell || 'Not registered'}
-                    </span>
-                    {account.data?.h3Cell && (
-                      <a
-                        href={getH3ViewerUrl(account.data.h3Cell)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-500 hover:underline shrink-0 text-xs font-semibold"
-                        title="View cell on map"
-                      >
-                        ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">
-                    Country
-                  </span>
-                  <span className="font-medium text-foreground text-xs">
-                    {account.data?.country
-                      ? `${getCountryByCode(account.data.country)?.name || 'Country'} (${account.data.country})`
-                      : 'Global (0)'}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-background/60 rounded-lg border border-border/40 space-y-0.5">
-                  <span className="text-muted-foreground block text-[11px]">
-                    Nominee (Succession)
-                  </span>
-                  <span className="font-medium text-foreground text-xs truncate block font-mono">
-                    {account.data?.nominee
-                      ? formatShortWallet(account.data.nominee.toString())
-                      : 'Not designated'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Unified Edit Form */}
-            <div className="space-y-4 pt-1">
+            <div className="space-y-4">
               <div>
                 <h4 className="font-semibold text-foreground text-sm">
                   Update Profile & Nominee

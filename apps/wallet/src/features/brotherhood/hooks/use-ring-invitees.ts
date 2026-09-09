@@ -49,13 +49,14 @@ export function useRingInvitees(
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['ring-invitees', network, key],
-    queryFn: () =>
+    queryFn: (options) =>
       cachedQueryFn(cacheKey, async () => {
         if (!parsedAddress) return [];
         const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const store = await getFiWalletStateByContractAddress(
           parsedAddress,
           net,
+          { forceFresh: options?.forceFresh },
         );
         const invitedMap = store.maps?.ref?.invited;
         if (!invitedMap) return [];
