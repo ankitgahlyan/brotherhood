@@ -53,7 +53,7 @@ interface AssetRows {
 export const useAssetRows = (): AssetRows => {
   const { balance, currentWallet, address, getActiveWallet } = useWallet();
   const walletAddress =
-    address || currentWallet?.address || getActiveWallet()?.address;
+    address || currentWallet?.getAddress() || getActiveWallet()?.address;
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const { isMember } = useIsNetworkMember();

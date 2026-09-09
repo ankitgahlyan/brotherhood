@@ -27,7 +27,7 @@ export function useTrackedPersonalTokens() {
   const queryClient = useQueryClient();
   const { currentWallet, address, getActiveWallet } = useWallet();
   const walletAddress =
-    address || currentWallet?.address || getActiveWallet()?.address;
+    address || currentWallet?.getAddress() || getActiveWallet()?.address;
 
   const storageKey = walletAddress
     ? `${STORAGE_KEY_PREFIX}${walletAddress}`
@@ -292,15 +292,13 @@ export function useTrackedPersonalTokens() {
       }
 
       const minterStr = inspection.token.minterAddress;
-      const alreadyTracked = trackedMinters.some(
-        (m) => {
-          try {
-            return Address.parse(m).equals(Address.parse(minterStr));
-          } catch {
-            return m === minterStr;
-          }
-        },
-      );
+      const alreadyTracked = trackedMinters.some((m) => {
+        try {
+          return Address.parse(m).equals(Address.parse(minterStr));
+        } catch {
+          return m === minterStr;
+        }
+      });
 
       if (!alreadyTracked) {
         const nextList = [...trackedMinters, minterStr];

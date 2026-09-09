@@ -371,7 +371,7 @@ export const DbStateExplorer: React.FC = () => {
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
           </div>
           <Button
-            variant="destructive"
+            variant="danger"
             size="sm"
             onClick={handleNuclearReset}
             className="w-full text-[11px] h-7 mt-2 bg-rose-600 hover:bg-rose-700 font-semibold"
@@ -424,7 +424,7 @@ export const DbStateExplorer: React.FC = () => {
           {subTab === 'localstorage' && (
             <>
               <Button
-                variant="outline"
+                variant="gray"
                 size="sm"
                 onClick={() =>
                   setEditingItem({ key: '', value: '', isNew: true })
@@ -449,7 +449,7 @@ export const DbStateExplorer: React.FC = () => {
 
           {subTab === 'indexeddb' && (
             <Button
-              variant="outline"
+              variant="gray"
               size="sm"
               onClick={loadIndexedDb}
               disabled={loadingIdb}
@@ -465,7 +465,7 @@ export const DbStateExplorer: React.FC = () => {
           {subTab === 'querycache' && (
             <>
               <Button
-                variant="outline"
+                variant="gray"
                 size="sm"
                 onClick={loadQueryCache}
                 className="text-xs h-8 gap-1.5"

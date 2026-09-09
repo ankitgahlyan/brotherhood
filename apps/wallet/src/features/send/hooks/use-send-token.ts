@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateContractState } from '@/lib/brotherhood/queries';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
+import { Address } from '@ton/core';
 import { toast } from 'sonner';
 import type {
   ITonWalletKit,
@@ -110,7 +111,7 @@ export const useSendToken = ({
       await walletKit.handleNewTransaction(wallet, tx);
     }
 
-    const senderAddress = wallet.account?.address;
+    const senderAddress = wallet.getAddress();
     const recipientAddress = recipient;
 
     setTimeout(async () => {
@@ -120,7 +121,9 @@ export const useSendToken = ({
         if (senderAddress) {
           targets.push(senderAddress.toString());
           try {
-            const userFiWallet = await getFiWalletAddress(senderAddress);
+            const userFiWallet = await getFiWalletAddress(
+              Address.parse(senderAddress),
+            );
             targets.push(userFiWallet.toString());
           } catch {
             /* pass */

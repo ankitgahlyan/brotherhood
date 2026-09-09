@@ -11,7 +11,6 @@ import { AlertTriangle, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '@/core/components/ui/modal';
-import { Input } from '@/core/components/ui/input';
 import { Button } from '@/core/components/ui/button';
 import { formatLargeValue, toDecimal } from '@/core/utils';
 import { useTrackedPersonalTokens } from '../../hooks/use-tracked-personal-tokens';
@@ -106,7 +105,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
             >
               Minter Contract Address
             </label>
-            <Input
+            <input
               id="minter-address-input"
               value={inputAddress}
               onChange={(e) => {
@@ -116,7 +115,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
                 if (verifiedToken) setVerifiedToken(null);
               }}
               placeholder="e.g. kQ... or 0:..."
-              className="font-mono text-xs"
+              className="w-full bg-secondary/50 border border-border/70 rounded-xl px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
               autoFocus
             />
           </div>

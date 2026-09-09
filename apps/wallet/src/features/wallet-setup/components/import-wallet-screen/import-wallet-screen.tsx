@@ -143,7 +143,7 @@ export const ImportWalletScreen: React.FC = () => {
         return;
       case 'Enter':
         event.preventDefault();
-        if (isLast) void handleScanAndDiscover();
+        if (isLast) void handleImport();
         else inputRefs.current[index + 1]?.focus();
         return;
       case 'ArrowLeft':

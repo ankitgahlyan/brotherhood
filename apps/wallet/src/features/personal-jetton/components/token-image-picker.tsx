@@ -122,8 +122,8 @@ export const TokenImagePicker: React.FC<TokenImagePickerProps> = ({
           <DialogTrigger asChild>
             <Button
               type="button"
-              variant="outline"
-              size="xs"
+              variant="gray"
+              size="sm"
               disabled={disabled}
               className="shrink-0 text-xs px-2.5 h-7"
               data-testid="token-image-browse-btn"
@@ -244,7 +244,7 @@ export const TokenImagePicker: React.FC<TokenImagePickerProps> = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
@@ -262,7 +262,7 @@ export const TokenImagePicker: React.FC<TokenImagePickerProps> = ({
               <Button
                 type="button"
                 variant="secondary"
-                size="xs"
+                size="sm"
                 onClick={() => setIsOpen(false)}
               >
                 Close

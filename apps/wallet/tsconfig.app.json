@@ -29,10 +29,16 @@
       "@wrappers": ["../../wrappers-ts/index.ts"],
       "@demo/v4ledger-adapter": [
         "../../packages/v4ledger-adapter/src/index.ts"
-      ],
-      "@demo/wallet-core": ["../../packages/wallet-core/src/index.ts"],
-      "@ton/walletkit": ["../../packages/walletkit/src/index.ts"]
+      ]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/core/lib/extension*.ts",
+    "src/core/routing/app-router.tsx"
+  ]
 }

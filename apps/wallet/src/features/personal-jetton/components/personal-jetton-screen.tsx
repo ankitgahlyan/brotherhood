@@ -635,7 +635,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       Set Token Metadata Now
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="gray"
                       size="sm"
                       onClick={() => setActiveTab('info')}
                       className="w-full sm:w-auto text-xs cursor-pointer"
@@ -727,7 +727,8 @@ export const PersonalJettonScreen: React.FC = () => {
                       data-testid="personal-deploy-initial-mint"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Tokens will be minted directly to your connected wallet upon deployment in the same transaction.
+                      Tokens will be minted directly to your connected wallet
+                      upon deployment in the same transaction.
                     </p>
                   </div>
 
@@ -1212,10 +1213,7 @@ export const PersonalJettonScreen: React.FC = () => {
                         type="text"
                         value={adminTokenName}
                         onChange={(e) => setAdminTokenName(e.target.value)}
-                        placeholder={
-                          info.minterDetails?.name ||
-                          'Token Name (e.g. Alice Credit)'
-                        }
+                        placeholder="Token Name (e.g. Alice Credit)"
                         className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                         data-testid="personal-meta-name"
                       />
@@ -1228,9 +1226,7 @@ export const PersonalJettonScreen: React.FC = () => {
                         type="text"
                         value={adminTokenSymbol}
                         onChange={(e) => setAdminTokenSymbol(e.target.value)}
-                        placeholder={
-                          info.minterDetails?.symbol || 'Symbol (e.g. ALICE)'
-                        }
+                        placeholder="Symbol (e.g. ALICE)"
                         className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                         data-testid="personal-meta-symbol"
                       />
@@ -1245,10 +1241,7 @@ export const PersonalJettonScreen: React.FC = () => {
                       <textarea
                         value={adminTokenDesc}
                         onChange={(e) => setAdminTokenDesc(e.target.value)}
-                        placeholder={
-                          info.minterDetails?.description ||
-                          DEFAULT_TOKEN_DESCRIPTION
-                        }
+                        placeholder={DEFAULT_TOKEN_DESCRIPTION}
                         className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                         rows={2}
                         data-testid="personal-meta-desc"

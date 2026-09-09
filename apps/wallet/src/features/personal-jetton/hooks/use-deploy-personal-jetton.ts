@@ -11,9 +11,11 @@ import { Address, beginCell, storeStateInit } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import {
+  buildMintBody,
   buildPersonalMinterDeploy,
   buildSetPersonalJettonBody,
   getExpectedPersonalWalletAddress,
+  parseUnits,
 } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
@@ -141,13 +143,23 @@ export function useDeployPersonalJetton({
     };
 
     setDeployedAddresses(result);
-    toast.success('Personal Token deployed, minted, and registered to Account!');
+    toast.success(
+      'Personal Token deployed, minted, and registered to Account!',
+    );
     onDeploySuccess?.(result);
     return result;
-  }, [walletAddress, initialMintAmount, network, sendTx, refreshQueries, onDeploySuccess]);
+  }, [
+    walletAddress,
+    initialMintAmount,
+    network,
+    sendTx,
+    refreshQueries,
+    onDeploySuccess,
+  ]);
 
   const parsedMint = parseFloat(initialMintAmount);
-  const isMintInvalid = !initialMintAmount || isNaN(parsedMint) || parsedMint <= 0;
+  const isMintInvalid =
+    !initialMintAmount || isNaN(parsedMint) || parsedMint <= 0;
   const isDisabled = !wallet || !walletAddress || isMintInvalid || isSending;
 
   return {
