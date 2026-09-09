@@ -279,6 +279,9 @@ fun onInternalMessage(in: InMessage): void {
                 newUpgrade: msg,
                 timestamp: blockchain.now(),
             }.toCell();
+
+            // todo: refactor when dao is sender
+            returnExcessesBack(0, in.senderAddress);
         }
 
         RejectUpgrade => {
@@ -286,6 +289,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (others.currentRequest != null) throw Errors.WaitMore; // todo: better error code
 
             others.currentRequest = null;
+            // returnExcessesBack(0, in.senderAddress);
         }
 
         ApproveUpgrade => {
@@ -359,8 +363,9 @@ fun onInternalMessage(in: InMessage): void {
 
         TopUpTons => {
             // deploy + accept tons + deploy jettonWallet
-            if (in.senderAddress == store.adminAddress) {
-                store.totalSupply += ton("1");
+            if ((in.senderAddress == store.adminAddress) & (store.totalSupply == 0)) {
+                store.totalSupply = grams("1");
+                others.totalAccounts = 1;
                 val deployTopUpMsg = createMessage({
                     // bounce for collecting fees back
                     bounce: BounceMode.Only256BitsOfBody,

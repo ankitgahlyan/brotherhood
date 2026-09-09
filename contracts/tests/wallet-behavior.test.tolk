@@ -1,5 +1,4 @@
 import "@acton/build"
-import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -119,7 +118,7 @@ get fun `test : hotUpgrade`() {
     );
     sendHotUpgrade.giveName("HotUpgrade");
 
-    println(sendHotUpgrade);
+    // println(sendHotUpgrade);
     val minterData = minter.getJettonData();
     expect(minterData.totalSupply).toEqual(ton("11112"));
 }
@@ -648,7 +647,6 @@ get fun `test wallet: change country fails when active votes exist`() {
     });
 }
 
-// @test.skip
 get fun `test wallet: granular voting, additive endorsements, and partial unvoting`() {
     val (minter, deployer, _) = setupTest();
     val rootWallet = userWallet(minter, deployer.address);
@@ -710,7 +708,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         3,
         { value: ton("0.2") },
     );
-    println(voteA1);
+    // println(voteA1);
     expect(voteA1).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
         to: candAWallet.address,
@@ -726,7 +724,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         4,
         { value: ton("0.2") },
     );
-    println(voteB1);
+    // println(voteB1);
     expect(voteB1).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
         to: candBWallet.address,

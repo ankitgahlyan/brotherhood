@@ -98,7 +98,7 @@ unused-variable = "deny"
 mutable-variable-can-be-immutable = "warn"
 
 [scripts]
-loop = "acton build && acton wrapper --all && acton check --fix && acton fmt && acton build && acton wrapper --all"
+loop = "acton check --fix && acton fmt && acton build && acton wrapper --all && acton test"
 deploy-libs = "acton library publish FossFiWallet --duration 99d --wallet teleg --net testnet --local && acton library publish Voter --wallet teleg -y && acton library publish Poll --duration 99d -y && acton library publish Location --wallet teleg -y && acton library publish PersonalMinter --wallet teleg -y && acton library publish PersonalWallet --wallet teleg -y && acton library publish Following --wallet teleg -y"
 deploy-emulation = "acton script contracts/scripts/deploy-fi.tolk"
 deploy-testnet = "acton script contracts/scripts/deploy-fi.tolk --net testnet"

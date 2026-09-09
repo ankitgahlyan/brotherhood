@@ -167,8 +167,8 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     ).calculateAddress();
     val poll = Poll.fromAddress(pollAddr);
 
-    // Poll receives total accounts (3) from minter
-    expect(poll.getPollData().totalAccounts).toEqual(3);
+    // Poll receives total accounts (4: deployer + 3 members) from minter
+    expect(poll.getPollData().totalAccounts).toEqual(4);
 
     // Member 1 votes YES on proposal
     val vote1Res = wallet1.sendActVoteProposal(
@@ -202,6 +202,22 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     expect(pData.yesVotes).toEqual(0);
     expect(pData.noVotes).toEqual(1);
 
+    // Member 1 switches vote back to YES
+    val voteSwitchBackRes = wallet1.sendActVoteProposal(
+        member1.address,
+        305,
+        poll.address,
+        200,
+        true,
+        false,
+        { value: ton("0.2") },
+    );
+    expect(voteSwitchBackRes).toHaveAllSuccessfulTxs();
+
+    pData = poll.getPollData();
+    expect(pData.yesVotes).toEqual(1);
+    expect(pData.noVotes).toEqual(0);
+
     // Member 2 votes YES
     val vote2Res = wallet2.sendActVoteProposal(
         member2.address,
@@ -215,9 +231,9 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     expect(vote2Res).toHaveAllSuccessfulTxs();
 
     pData = poll.getPollData();
-    expect(pData.yesVotes).toEqual(1);
+    expect(pData.yesVotes).toEqual(2);
 
-    // Member 3 votes YES -> 2 YES votes >= threshold (2 for 3 totalAccounts) -> executes via DaoProxy!
+    // Member 3 votes YES -> 3 YES votes >= threshold (3 for 4 totalAccounts) -> executes via DaoProxy!
     val vote3Res = wallet3.sendActVoteProposal(
         member3.address,
         304,

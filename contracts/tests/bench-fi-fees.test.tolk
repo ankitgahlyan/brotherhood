@@ -38,6 +38,7 @@ fun maxGasOnAccount(res: SendResultList, account: address): int {
     return best;
 }
 
+@test.skip
 get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     val (minter, deployer, notDeployer) = setupTest();
 

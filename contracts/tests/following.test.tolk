@@ -177,7 +177,11 @@ get fun `test follow: following inactive account bounces and rolls back followin
     val (minter, deployer, notDeployer, followerWallet, inactiveFollowee) = setupFollowingTest();
 
     // Deactivate followee
-    followerWallet.sendActDeactivate(deployer.address, notDeployer.address, { value: ton("0.1") });
+    followerWallet.sendDeActivateCircleRing(
+        deployer.address,
+        notDeployer.address,
+        { value: ton("0.1") },
+    );
 
     val followerBalanceBefore = followerWallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
@@ -198,7 +202,11 @@ get fun `test follow: unfollowing inactive account bounces and rolls back follow
     expect(followeeWallet.getFollowersCount()).toEqual(1);
 
     // Followee becomes inactive
-    followerWallet.sendActDeactivate(deployer.address, notDeployer.address, { value: ton("0.1") });
+    followerWallet.sendDeActivateCircleRing(
+        deployer.address,
+        notDeployer.address,
+        { value: ton("0.1") },
+    );
 
     // Unfollow request bounces from inactive followee
     sendUnfollow(followerWallet, deployer.address, deployer.address, followeeWallet.address);

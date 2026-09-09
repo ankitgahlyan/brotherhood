@@ -58,6 +58,7 @@ fun checkCorrectSenderInternal(sender: address, owner: address) {
 fun checkOwnerAction(senderAddress: address, valueCoins: coins, owner: address) {
     assert (senderAddress == owner) throw Errors.NotOwner;
     assert (valueCoins >= ton("0.05")) throw Errors.NotEnoughGas;
+    // todo: assert (store.Active) throw Errors.AccountInactive;
 }
 
 fun checkActionRecipient(recipient: address) {
@@ -80,19 +81,6 @@ fun idActionChecks(store: FiWalletStore) {
 fun checkDebts(store: FiWalletStore) {
     assert (!store.debts) throw Errors.AccountInDebt;
     assert (store.debt == 0) throw Errors.AccountInDebt;
-}
-
-fun address.deActivate(self, _commandAmount: coins, store: FiWalletStore) {
-    assert (store.active) throw Errors.AccountInactive;
-    val internalDeActivate = createMessage({
-        bounce: BounceMode.Only256BitsOfBody,
-        dest: self.getAddrFiWallet(),
-        value: 0,
-        body: InternalDeActivate {}, // emptybody as jettonAddrs are stored
-    });
-    internalDeActivate.send(
-        SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
-    );
 }
 
 @inline

@@ -24,7 +24,8 @@ type AllowedMessageToWallet =
     | ActInvite
     | ActVote
     | ActUnvote
-    | ActDeactivate
+    | DeActivateCircleRing
+    | DeActivateCircleRingInternal
     | ActDispatchAuthorityAction
     | ActJoinLottery
     | ActSetPersonalJetton
@@ -38,7 +39,6 @@ type AllowedMessageToWallet =
     | ChangeProfile
     | InternalTransferStep
     | InternalInvite
-    | InternalDeActivate
     | Payback
     | RequestState
     | RequestUpgradeCode
@@ -245,6 +245,10 @@ fun onInternalMessage(in: InMessage): void {
     // val forceDestroy = false;
     // forceDestroy ? destroyContract(in.senderAddress) :
 
+    // if ((msg != TopUpTons) | (msg != ActInvite)) {
+    //     assert (store.active) throw Errors.AccountInactive;
+    // }
+
     match (msg) {
         ChangeProfile => {
             if (in.senderAddress != addrs.owner) {
@@ -296,7 +300,9 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         ActClaimWeeklyGrant => {
-            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            // can be claimed for others no owner checks required
+            assert (in.valueCoins >= grams("0.05")) throw Errors.NotEnoughGas;
+            assert (store.active) throw Errors.AccountInactive;
             // claim weekly grant
             val now = blockchain.now();
             assert (
@@ -459,22 +465,36 @@ fun onInternalMessage(in: InMessage): void {
             );
         }
 
-        ActDeactivate => {
+        // For control of circle and ring
+        DeActivateCircleRing => {
             checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
             checkActionRecipient(msg.transferRecipient);
             // just use single for both txn
-            // todo fixme when implementing native ui then use jettonAddrs directly
-            msg.transferRecipient.deActivate(0, store);
+            // todo fixme use jettonAddrs directly to save gas on calculations
+
+            assert (store.active) throw Errors.AccountInactive;
+            val internalDeActivate = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.transferRecipient.getAddrFiWallet(),
+                value: 0,
+                body: DeActivateCircleRingInternal {}, // emptybody as jettonAddrs are stored
+            });
+            // todo: instead of send bounce, why not keep fees of attackers when possible
+            internalDeActivate.send(
+                SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE,
+            );
         }
 
+        // deactivate and funds all confiscate
         ActDispatchAuthorityAction => {
-            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-            checkActionRecipient(msg.transferRecipient);
-            // send AuthorityAction
+            // checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            // checkActionRecipient(msg.transferRecipient);
+            assert (in.senderAddress == addrs.owner) throw Errors.IncorrectSender;
             assert (
                 store.isAuthorityAccount || store.isPrevilegedAccount
             ) throw Errors.IncorrectSender;
 
+            // send AuthorityAction
             val authorityMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(),
@@ -695,34 +715,23 @@ fun onInternalMessage(in: InMessage): void {
 
         InternalInvite => {
             // assert (store.jettonBalance == ton("1")) throw Errors.AlreadyInvited;
-            assert (!store.active) throw Errors.AlreadyInvited; // cheap calc first/failFast
+            // assert (!store.active) throw Errors.AlreadyInvited; // cheap calc first/failFast
+            assert (time.accountInit == 0) throw Errors.AlreadyInvited;
             assert (in.senderAddress == msg.sender.getAddrFiWallet()) throw Errors.IncorrectSender;
 
             store.active = true;
             store.jettonBalance = ton("1");
-            if (time.accountInit == 0) {
-                time.accountInit = blockchain.now();
-                nomins.nominee = msg.sender; // must be null at init
-                profile.username = msg.username;
-                profile.h3Cell = msg.h3Cell;
-                profile.country = msg.country;
-
-                if (msg.version > store.version) {
-                    store.version = msg.version;
-                    contract.setCodePostponed(msg.currentWalletCode);
-                    setTvmRegisterC3(
-                        // safety
-                        transformSliceToContinuation(msg.currentWalletCode.beginParse()),
-                    );
-                    hotUpgradeFiWalletData(msg.currentStorage);
-                    // if (msg.currentStorage != null) {
-                    // return; // todo: fixme: if currentStorage is null, then continue with default storage    
-                    // }
-                }
-            }
-
+            time.accountInit = blockchain.now();
+            nomins.nominee = msg.sender;       // must be null at init
+            profile.username = msg.username;
+            profile.h3Cell = msg.h3Cell;
+            profile.country = msg.country;
             nomins.invitor = in.senderAddress; // contract addr
             nomins.invitor0 = msg.invitor;     // todo: null, can deactivate acc
+
+            store.version = msg.version;
+            contract.setCodePostponed(msg.currentWalletCode);
+            // todo: storage migration can be tricky here
 
             // notifyOwner(msg.queryId, msg.sender, msg.invitor, ton("0.1"), msg.forwardPayload);
 
@@ -747,7 +756,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         // both invitor & invitor0 can deactivate
-        InternalDeActivate => {
+        DeActivateCircleRingInternal => {
             // need to check correctInternalSender() for STORED jettonAddrs
             assert (
                 (in.senderAddress == nomins.invitor0!) | (in.senderAddress == nomins.invitor!)
@@ -756,10 +765,10 @@ fun onInternalMessage(in: InMessage): void {
             store.active = !store.active;
         }
 
-        // DeActivate accounts
+        // todo: DeActivate accounts by authority and confiscate funds
         AuthorityAction => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
-            // not allowed to block authority
+            // not allowed to block authority, but previledged can be deactivated
             assert (!store.isAuthorityAccount) throw Errors.IncorrectReceiver;
             store.active = !store.active; // todo fixme: action override by others(invitor0 etc)
             if (store.jettonBalance != 0) {
@@ -771,7 +780,7 @@ fun onInternalMessage(in: InMessage): void {
                         0,
                         store.jettonBalance,            // all coins
                         addrs.owner,
-                        addrs.owner,                    // sendExcessesTo
+                        msg.sender,                     // sendExcessesTo
                         0,
                         "authorityFreeze".beginParse(), // todo
                         store.version,
@@ -1203,6 +1212,7 @@ fun onInternalMessage(in: InMessage): void {
 
         SetAllowance => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
+            // todo: don't allow to revoke existing allowance
             if (msg.amount == 0) {
                 maps.allowances.delete(msg.grantee);
             } else {

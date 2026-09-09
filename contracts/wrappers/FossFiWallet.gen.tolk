@@ -122,7 +122,7 @@ fun FossFiWallet.sendActUnvote(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendActDeactivate(
+fun FossFiWallet.sendDeActivateCircleRing(
     self,
     from: address,
     transferRecipient: address,
@@ -132,7 +132,21 @@ fun FossFiWallet.sendActDeactivate(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActDeactivate { transferRecipient },
+        body: DeActivateCircleRing { transferRecipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendDeActivateCircleRingInternal(
+    self,
+    from: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DeActivateCircleRingInternal {},
     });
     return net.send(from, genericMsg);
 }
@@ -392,20 +406,6 @@ fun FossFiWallet.sendInternalInvite(
             h3Cell,
             country,
         },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendInternalDeActivate(
-    self,
-    from: address,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: InternalDeActivate {},
     });
     return net.send(from, genericMsg);
 }

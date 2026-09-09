@@ -227,11 +227,11 @@ struct (0x00001054) InformMinterInviteInternal {
     country: uint16 = 0
 }
 
-struct (0x00001055) ActDeactivate {
+struct (0x00001055) DeActivateCircleRing {
     transferRecipient: address
 }
 
-struct (0x00001056) InternalDeActivate {}
+struct (0x00001056) DeActivateCircleRingInternal {}
 
 struct (0x00001058) ActDestroyAccount {}
 
