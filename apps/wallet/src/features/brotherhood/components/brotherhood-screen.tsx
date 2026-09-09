@@ -189,9 +189,9 @@ export const BrotherhoodScreen: React.FC = () => {
   >('buy');
   const [authTarget, setAuthTarget] = useState('');
   const [authStatus, setAuthStatus] = useState(0);
-  const [authoritySubTab, setAuthoritySubTab] = useState<'status' | 'close'>(
-    'status',
-  );
+  const [authoritySubTab, setAuthoritySubTab] = useState<
+    'status' | 'close' | 'sanction'
+  >('status');
 
   // FiAccount hook
   const account = useFiAccount(address ?? null);
@@ -1109,7 +1109,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 onClick={() => emi.send()}
                 disabled={emi.isDisabled}
                 loading={emi.isSending}
-                variant={emi.isDue ? 'default' : 'outline'}
+                variant={emi.isDue ? 'primary' : 'ghost'}
                 fullWidth
                 data-testid="brotherhood-pay-emi-submit"
               >
@@ -2970,7 +2970,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 }`}
                 data-testid="brotherhood-authority-subtab-status"
               >
-                Set Account Status
+                Set Status
               </button>
               <button
                 type="button"
@@ -2982,7 +2982,19 @@ export const BrotherhoodScreen: React.FC = () => {
                 }`}
                 data-testid="brotherhood-authority-subtab-close"
               >
-                Close Member Account
+                Close Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthoritySubTab('sanction')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  authoritySubTab === 'sanction'
+                    ? 'bg-destructive shadow-sm text-destructive-foreground font-semibold'
+                    : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                }`}
+                data-testid="brotherhood-authority-subtab-sanction"
+              >
+                Sanction & Confiscate
               </button>
             </div>
 
@@ -3014,8 +3026,12 @@ export const BrotherhoodScreen: React.FC = () => {
             {authoritySubTab === 'close' && (
               <div className="space-y-2 pt-1">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Close Member Account
+                  Close Member Account (Nominee Succession)
                 </label>
+                <p className="text-[11px] text-muted-foreground">
+                  Closes deceased member account and transfers remaining assets
+                  to designated nominee.
+                </p>
                 <InputScan
                   value={authTarget}
                   onChange={setAuthTarget}
@@ -3031,6 +3047,47 @@ export const BrotherhoodScreen: React.FC = () => {
                   data-testid="brotherhood-authority-close-submit"
                 >
                   Close Account (Authority)
+                </Button>
+              </div>
+            )}
+
+            {authoritySubTab === 'sanction' && (
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="text-xs font-medium text-destructive">
+                    Sanction Malicious Account & Confiscate Funds
+                  </label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Deactivates the target member account immediately and
+                    confiscates 100% of their FI token balance back to your
+                    Authority account.
+                  </p>
+                </div>
+                <InputScan
+                  value={authTarget}
+                  onChange={setAuthTarget}
+                  placeholder={`Malicious Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                  data-testid="brotherhood-authority-sanction-target"
+                />
+                <div className="p-2.5 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive space-y-1">
+                  <p className="font-semibold">
+                    ⚠️ High-impact disciplinary action
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    This action will toggle the member's active status and seize
+                    all held FI tokens. Ensure address correctness before
+                    executing.
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  onClick={() => authority.dispatchAuthorityAction()}
+                  disabled={authority.isDisabled || !authTarget}
+                  loading={authority.isSending}
+                  fullWidth
+                  data-testid="brotherhood-authority-sanction-submit"
+                >
+                  Sanction & Confiscate All Funds
                 </Button>
               </div>
             )}

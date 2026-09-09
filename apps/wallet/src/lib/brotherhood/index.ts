@@ -4,3 +4,4 @@ export * from './deploy';
 export * from './jettonContent';
 export * from './queries';
 export * from './ton';
+export { ZERO_ADDRESS } from './config';

@@ -98,8 +98,10 @@ export function getTonClient(network: Network): TonClient {
     const apiKey = toncenterApiKey(network);
     clients[network] = new TonClient({
       endpoint,
-      apiKey,
-      httpAdapter: createTonClientAxiosAdapter({ apiKey, network }) as any,
+      httpAdapter: createTonClientAxiosAdapter({
+        apiKey,
+        network: network === 'mainnet' ? 'mainnet' : 'testnet',
+      }) as any,
     });
   }
   return clients[network]!;

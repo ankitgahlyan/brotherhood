@@ -70,7 +70,7 @@ export function useSetCreditTerms({
         SetCreditNeed.create({
           queryId: 0n,
           amount: amountNano,
-          maturityDate: maturityDateSec,
+          maturityDate: BigInt(maturityDateSec),
         }),
       );
 
@@ -108,7 +108,7 @@ export function useSetCreditTerms({
       const body = SetMultiplier.toCell(
         SetMultiplier.create({
           queryId: 0n,
-          multiplier,
+          multiplier: BigInt(multiplier),
         }),
       );
 

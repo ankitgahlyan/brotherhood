@@ -70,8 +70,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
   const isProfilesLoading =
     resolvedRingProfiles.isLoading && safeInvitees.length > 0;
   const isLoading = isInviteesLoading || isProfilesLoading;
-  const isRefreshing =
-    resolvedRingProfiles.isFetching || isInviteesLoading;
+  const isRefreshing = resolvedRingProfiles.isFetching || isInviteesLoading;
   const error = inviteesError || resolvedRingProfiles.error;
 
   const handleRefresh = (e: React.MouseEvent) => {
@@ -302,10 +301,14 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                             ? 'bg-secondary text-muted-foreground animate-pulse'
                             : isActive
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-secondary text-muted-foreground border border-border'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                         }`}
                       >
-                        {isProfLoading ? '...' : isActive ? 'Active' : 'Pending'}
+                        {isProfLoading
+                          ? '...'
+                          : isActive
+                            ? 'Active'
+                            : 'Inactive'}
                       </span>
                       <span className="text-muted-foreground text-xs group-hover:translate-x-0.5 transition-transform">
                         →

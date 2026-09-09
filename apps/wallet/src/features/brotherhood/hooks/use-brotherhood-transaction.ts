@@ -11,9 +11,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { invalidateContractState } from '@/lib/brotherhood/queries';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { toast } from 'sonner';
-import type { Cell, Address } from '@ton/core';
+import { Address, toNano, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { toNano } from '@ton/core';
 
 export interface BrotherhoodMessage {
   toAddress: string;
@@ -99,9 +98,10 @@ export function useBrotherhoodTransaction(
           messages.forEach((m) => targets.add(m.toAddress));
           // Plus user's own FiWallet address
           try {
-            if (wallet.account?.address) {
+            const userAddr = wallet.getAddress();
+            if (userAddr) {
               const userFiWallet = await getFiWalletAddress(
-                wallet.account.address,
+                Address.parse(userAddr),
               );
               targets.add(userFiWallet.toString());
             }

@@ -9,7 +9,11 @@
 import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { SetStatus, AuthorityCloseAccount } from '@wrappers/FossFiWallet.gen';
+import {
+  SetStatus,
+  AuthorityCloseAccount,
+  ActDispatchAuthorityAction,
+} from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
@@ -18,7 +22,7 @@ import type { FiAccountData } from './use-fi-account';
 export interface UseAuthorityActionsParams {
   wallet: Wallet | null | undefined;
   walletKit: ITonWalletKit | null;
-  walletAddress: string | null;
+  walletAddress: string | null | undefined;
   targetAddress: string;
   newStatus: number;
   network: Network;
@@ -28,6 +32,7 @@ export interface UseAuthorityActionsParams {
 export interface UseAuthorityActionsResult {
   setStatus: () => Promise<void>;
   closeAccount: () => Promise<void>;
+  dispatchAuthorityAction: () => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
@@ -90,6 +95,12 @@ export function useAuthorityActions({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const target = Address.parse(targetAddress.trim());
+    let targetFiWallet: Address | null = null;
+    try {
+      targetFiWallet = await getFiWalletAddress(target, network);
+    } catch {
+      // ignore
+    }
 
     const payload = AuthorityCloseAccount.toCell(
       AuthorityCloseAccount.create({
@@ -98,9 +109,44 @@ export function useAuthorityActions({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.AUTHORITY, payload },
-    ]);
+    const affected = [fiWalletAddr];
+    if (targetFiWallet) {
+      affected.push(targetFiWallet);
+    }
+
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.AUTHORITY, payload }],
+      { affectedContracts: affected },
+    );
+  }, [walletAddress, targetAddress, network, sendTx]);
+
+  const dispatchAuthorityAction = useCallback(async () => {
+    if (!walletAddress) throw new Error('No wallet address');
+    const ownerAddr = Address.parse(walletAddress);
+    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+    const target = Address.parse(targetAddress.trim());
+    let targetFiWallet: Address | null = null;
+    try {
+      targetFiWallet = await getFiWalletAddress(target, network);
+    } catch {
+      // ignore
+    }
+
+    const payload = ActDispatchAuthorityAction.toCell(
+      ActDispatchAuthorityAction.create({
+        transferRecipient: target,
+      }),
+    );
+
+    const affected = [fiWalletAddr];
+    if (targetFiWallet) {
+      affected.push(targetFiWallet);
+    }
+
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.AUTHORITY, payload }],
+      { affectedContracts: affected },
+    );
   }, [walletAddress, targetAddress, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
@@ -108,6 +154,7 @@ export function useAuthorityActions({
   return {
     setStatus,
     closeAccount,
+    dispatchAuthorityAction,
     isDisabled,
     isSending,
     error,

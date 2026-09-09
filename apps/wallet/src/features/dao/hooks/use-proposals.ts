@@ -75,7 +75,7 @@ export function useProposals(addressString: string | null): UseProposalsResult {
           const daoStore = await daoProxyContract.getDaoProxyData();
           return {
             totalAccounts: null,
-            proposalCount: daoStore.pollCount,
+            proposalCount: null,
             daoProxy: daoStore,
             proposals: [],
           };

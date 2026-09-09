@@ -6,16 +6,22 @@
  *
  */
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Address } from '@ton/core';
+import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
 import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { toast } from 'sonner';
 import { useMemberDetail } from '../../hooks/use-member-detail';
+import { useFiAccount } from '../../hooks/use-fi-account';
+import { useDeactivateMember } from '../../hooks/use-deactivate-member';
+import { useAuthorityActions } from '../../hooks/use-authority-actions';
 
 export interface MemberDetailViewProps {
   memberAddress: Address | string;
@@ -50,8 +56,115 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
   onBack,
   onQuickAction,
 }) => {
-  const { formatWalletAddress, formatContractAddress } = useFormatAddress();
+  const { currentWallet, address } = useWallet();
+  const walletKit = useWalletKit();
+  const { formatWalletAddress, formatContractAddress, network } =
+    useFormatAddress();
   const { data, isLoading, error, refetch } = useMemberDetail(memberAddress);
+  const { data: viewerAccount } = useFiAccount(address ?? null);
+
+  const [viewerFiWallet, setViewerFiWallet] = useState<Address | null>(null);
+
+  useEffect(() => {
+    if (!address) {
+      setViewerFiWallet(null);
+      return;
+    }
+    let active = true;
+    try {
+      const ownerAddr = Address.parse(address);
+      getFiWalletAddress(ownerAddr, network)
+        .then((fiAddr) => {
+          if (active) setViewerFiWallet(fiAddr);
+        })
+        .catch(() => {
+          if (active) setViewerFiWallet(null);
+        });
+    } catch {
+      setViewerFiWallet(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [address, network]);
+
+  const isDirectInviter = useMemo(() => {
+    if (!viewerFiWallet || !data?.invitor) return false;
+    return viewerFiWallet.equals(data.invitor);
+  }, [viewerFiWallet, data?.invitor]);
+
+  const isUpstreamInviter = useMemo(() => {
+    if (!viewerFiWallet || !data?.invitor0) return false;
+    return viewerFiWallet.equals(data.invitor0);
+  }, [viewerFiWallet, data?.invitor0]);
+
+  const canManageMember = isDirectInviter || isUpstreamInviter;
+
+  const isAuthority = useMemo(() => {
+    return Boolean(
+      viewerAccount?.isAuthorityAccount || viewerAccount?.isPrevilegedAccount,
+    );
+  }, [viewerAccount]);
+
+  const targetOwnerAddress = data?.ownerAddressString ?? '';
+
+  const deactivate = useDeactivateMember({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address,
+    targetAddress: targetOwnerAddress,
+    network,
+    accountData: viewerAccount,
+  });
+
+  const authority = useAuthorityActions({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address,
+    targetAddress: targetOwnerAddress,
+    newStatus: 1,
+    network,
+    accountData: viewerAccount,
+  });
+
+  const handleToggleActive = async () => {
+    if (!data) return;
+    const isCurrentlyActive = data.active;
+    const memberName = data.username ? `@${data.username}` : 'this member';
+    const confirmMsg = isCurrentlyActive
+      ? `Are you sure you want to suspend ${memberName}? This will toggle their active state to inactive and pause member operations.`
+      : `Are you sure you want to reactivate ${memberName}? This will restore their active state.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await deactivate.toggleActive();
+      toast.success(
+        isCurrentlyActive
+          ? 'Member suspension broadcasted'
+          : 'Member reactivation broadcasted',
+      );
+      setTimeout(() => refetch(), 4000);
+    } catch {
+      // Handled in useBrotherhoodTransaction
+    }
+  };
+
+  const handleAuthoritySanction = async () => {
+    if (!data) return;
+    const memberName = data.username ? `@${data.username}` : 'this member';
+    const confirmMsg = `CRITICAL ACTION: Are you sure you want to sanction ${memberName}? This will toggle their active state and CONFISCATE ${formatFi(data.jettonBalance)} FI back to your Authority account.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await authority.dispatchAuthorityAction();
+      toast.success('Authority sanction and fund confiscation broadcasted');
+      setTimeout(() => refetch(), 4000);
+    } catch {
+      // Handled in useBrotherhoodTransaction
+    }
+  };
 
   const country = getCountryByCode(data?.country || 0);
 
@@ -130,7 +243,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                   data-testid="brotherhood-member-telegram-link"
                 >
                   <span>@{data.username}</span>
-                  <span className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+                  <span className="min-w-8 min-h-8 p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
                     <TelegramIcon className="w-4.5 h-4.5 text-primary" />
                   </span>
                 </button>
@@ -151,7 +264,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                 {data.status === 0 && data.active
                   ? '● Fully Active'
                   : data.status === 0 && !data.active
-                    ? '⏳ Pending Activation'
+                    ? '⚠️ Inactive / Suspended'
                     : data.status === 1
                       ? '🚫 Suspended'
                       : '⚠️ Under Review'}
@@ -213,6 +326,73 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
               >
                 Set Allowance
               </Button>
+            </div>
+          )}
+
+          {/* Circle / Ring Member Suspension / Reactivation */}
+          {canManageMember && (
+            <div className="p-3 bg-secondary/50 border border-border/70 rounded-xl space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-semibold text-foreground block">
+                    Circle / Ring Management
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {isDirectInviter
+                      ? 'You are this member’s direct inviter (Circle)'
+                      : 'You are this member’s upstream inviter (Ring)'}
+                  </span>
+                </div>
+                <Button
+                  variant={data.active ? 'danger' : 'primary'}
+                  size="sm"
+                  disabled={deactivate.isDisabled || !targetOwnerAddress}
+                  onClick={handleToggleActive}
+                  className="text-xs shrink-0"
+                >
+                  {deactivate.isSending
+                    ? 'Broadcasting...'
+                    : data.active
+                      ? 'Suspend Member'
+                      : 'Reactivate Member'}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {data.active
+                  ? 'Suspending will toggle this account inactive, temporarily pausing their ability to perform member operations until reactivated.'
+                  : 'Reactivating will restore this member’s active status in your trust network.'}
+              </p>
+            </div>
+          )}
+
+          {/* Authority Enforcement Action */}
+          {isAuthority && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-semibold text-destructive block">
+                    Authority Sanction
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Confiscate 100% of malicious member’s FI tokens
+                  </span>
+                </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={authority.isDisabled || !targetOwnerAddress}
+                  onClick={handleAuthoritySanction}
+                  className="text-xs shrink-0"
+                >
+                  {authority.isSending
+                    ? 'Sanctioning...'
+                    : 'Sanction & Confiscate'}
+                </Button>
+              </div>
+              <p className="text-[11px] text-destructive/80 leading-relaxed">
+                Toggles active state and confiscates{' '}
+                {formatFi(data.jettonBalance)} FI to your Authority wallet.
+              </p>
             </div>
           )}
 
@@ -331,24 +511,34 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Invited By</span>
+              <span className="text-muted-foreground">Invited By (Circle)</span>
               <div className="flex items-center gap-1">
                 <span className="font-mono text-[11px] text-foreground">
-                  {formatShortWallet(data.invitor)}
+                  {formatShortContract(data.invitor)}
                 </span>
                 {data.invitor && (
-                  <CopyButton address={data.invitor} type="wallet" size="xs" />
+                  <CopyButton
+                    address={data.invitor}
+                    type="contract"
+                    size="xs"
+                  />
                 )}
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Upstream Invitor</span>
+              <span className="text-muted-foreground">
+                Upstream Invitor (Ring)
+              </span>
               <div className="flex items-center gap-1">
                 <span className="font-mono text-[11px] text-foreground">
-                  {formatShortWallet(data.invitor0)}
+                  {formatShortContract(data.invitor0)}
                 </span>
                 {data.invitor0 && (
-                  <CopyButton address={data.invitor0} type="wallet" size="xs" />
+                  <CopyButton
+                    address={data.invitor0}
+                    type="contract"
+                    size="xs"
+                  />
                 )}
               </div>
             </div>
