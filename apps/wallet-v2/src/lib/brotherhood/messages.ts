@@ -122,3 +122,95 @@ export function buildInviteMemberMessage(
     payload,
   };
 }
+
+export function buildDeployPersonalMinterMessage(params: {
+  minterAddress: Address;
+  stateInit: any;
+  ownerAddress: Address;
+  mintAmount: bigint;
+  gasAmount?: bigint;
+}): FiMessage {
+  const {
+    minterAddress,
+    stateInit,
+    ownerAddress,
+    mintAmount,
+    gasAmount = toNano('0.1'),
+  } = params;
+
+  const { buildMintBody } = require('./deploy');
+  const { storeStateInit, beginCell } = require('@ton/core');
+
+  const mintPayload = buildMintBody({
+    toAddress: ownerAddress,
+    jettonAmount: mintAmount,
+    forwardTonAmount: toNano('0.02'),
+    totalTonAmount: toNano('0.05'),
+  });
+
+  const stateInitCell = beginCell()
+    .store(storeStateInit(stateInit))
+    .endCell();
+
+  return {
+    toAddress: minterAddress.toString(),
+    amount: gasAmount,
+    payload: mintPayload,
+    stateInit: stateInitCell,
+  };
+}
+
+export function buildRegisterPersonalJettonMessage(params: {
+  fiWalletAddress: Address;
+  personalMinter: Address;
+  personalWallet: Address;
+  gasAmount?: bigint;
+}): FiMessage {
+  const {
+    fiWalletAddress,
+    personalMinter,
+    personalWallet,
+    gasAmount = toNano('0.05'),
+  } = params;
+  const { buildSetPersonalJettonBody } = require('./deploy');
+
+  const setBody = buildSetPersonalJettonBody({
+    personalMinter,
+    personalWallet,
+  });
+
+  return {
+    toAddress: fiWalletAddress.toString(),
+    amount: gasAmount,
+    payload: setBody,
+  };
+}
+
+export function buildMintPersonalMessage(params: {
+  minterAddress: Address;
+  recipientAddress: Address;
+  jettonAmount: bigint;
+  gasAmount?: bigint;
+}): FiMessage {
+  const {
+    minterAddress,
+    recipientAddress,
+    jettonAmount,
+    gasAmount = toNano('0.05'),
+  } = params;
+  const { buildMintBody } = require('./deploy');
+
+  const payload = buildMintBody({
+    toAddress: recipientAddress,
+    jettonAmount,
+    forwardTonAmount: toNano('0.02'),
+    totalTonAmount: toNano('0.05'),
+  });
+
+  return {
+    toAddress: minterAddress.toString(),
+    amount: gasAmount,
+    payload,
+  };
+}
+

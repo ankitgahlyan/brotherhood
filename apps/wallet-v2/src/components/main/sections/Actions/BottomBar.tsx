@@ -33,6 +33,7 @@ interface StateProps {
   isExploreOpen?: boolean;
   isMarketOpen?: boolean;
   isBrotherhoodFiOpen?: boolean;
+  isPersonalJettonOpen?: boolean;
   accentColorIndex?: number;
 }
 
@@ -50,7 +51,7 @@ const ICON_SIZE_PX = 38;
 const ANIMATED_STICKER_SPEED = 2;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen, accentColorIndex,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen, isPersonalJettonOpen, accentColorIndex,
 }: StateProps) {
   const {
     switchToWallet,
@@ -59,6 +60,7 @@ function BottomBar({
     switchToMarket,
     switchToSettings,
     switchToBrotherhoodFi,
+    switchToPersonalJetton,
   } = getActions();
 
   const lang = useLang();
@@ -74,13 +76,19 @@ function BottomBar({
   });
 
   const tabs: TabConfig[] = useMemo(() => {
-    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen && !isBrotherhoodFiOpen;
+    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen && !isBrotherhoodFiOpen && !isPersonalJettonOpen;
     const rawTabs = [
       {
         label: 'Wallet',
         iconKey: 'iconWallet' as const,
         onClick: switchToWallet,
         isActive: isWalletActive,
+      },
+      {
+        label: 'Personal',
+        iconKey: 'iconMarket' as const,
+        onClick: switchToPersonalJetton,
+        isActive: Boolean(isPersonalJettonOpen),
       },
       {
         label: 'Fi',
@@ -188,7 +196,14 @@ function BottomBar({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen } = global;
+  const {
+    areSettingsOpen,
+    isAgentOpen,
+    isExploreOpen,
+    isMarketOpen,
+    isBrotherhoodFiOpen,
+    isPersonalJettonOpen,
+  } = global;
 
   return {
     theme: global.settings.theme,
@@ -197,6 +212,7 @@ export default memo(withGlobal((global): StateProps => {
     isExploreOpen,
     isMarketOpen,
     isBrotherhoodFiOpen,
+    isPersonalJettonOpen,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
