@@ -40,9 +40,12 @@ export function useHistoryBack({
       return;
     }
 
-    idRef.current = registerBackCallback(() => {
-      onBackRef.current?.();
-    }, { syncHistory });
+    idRef.current = registerBackCallback(
+      () => {
+        onBackRef.current?.();
+      },
+      { syncHistory },
+    );
 
     return () => {
       if (idRef.current !== undefined) {

@@ -21,4 +21,3 @@ export const NewLayout: React.FC<NewLayoutProps> = ({ header, children }) => (
     </div>
   </div>
 );
-

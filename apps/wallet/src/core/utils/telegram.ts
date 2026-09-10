@@ -39,7 +39,11 @@ export function openTelegramLink(url: string): void {
     // fallback
   }
 
-  const rawApp = (window as unknown as { Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void } } }).Telegram?.WebApp;
+  const rawApp = (
+    window as unknown as {
+      Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void } };
+    }
+  ).Telegram?.WebApp;
   if (rawApp?.openTelegramLink) {
     try {
       rawApp.openTelegramLink(url);

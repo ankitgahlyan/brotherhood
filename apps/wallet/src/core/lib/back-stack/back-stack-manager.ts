@@ -100,7 +100,10 @@ function initPopstateListener(): void {
           try {
             entry.callback();
           } catch (err) {
-            console.error('[BackStack] Error executing popstate callback:', err);
+            console.error(
+              '[BackStack] Error executing popstate callback:',
+              err,
+            );
           }
           break;
         }
@@ -136,7 +139,11 @@ export function registerBackCallback(
   const id = nextId++;
   const syncHistory = options?.syncHistory ?? true;
 
-  if (syncHistory && typeof window !== 'undefined' && !isTelegramEnvironment()) {
+  if (
+    syncHistory &&
+    typeof window !== 'undefined' &&
+    !isTelegramEnvironment()
+  ) {
     try {
       window.history.pushState({ modalId: id }, '');
     } catch {
@@ -165,7 +172,12 @@ export function unregisterBackCallback(id: number): void {
     const wasOpen = !entry.isClosed;
     stack.splice(index, 1);
 
-    if (wasOpen && entry.syncHistory && typeof window !== 'undefined' && !isTelegramEnvironment()) {
+    if (
+      wasOpen &&
+      entry.syncHistory &&
+      typeof window !== 'undefined' &&
+      !isTelegramEnvironment()
+    ) {
       try {
         if (window.history.state?.modalId === id) {
           isAlteringHistory = true;

@@ -130,7 +130,10 @@ function parseCallerFromStack(
         line.includes('probeEndpoint') ||
         line.includes('probeBestEndpoint')
       ) {
-        return { callerName: 'testnetRpcManager (Probe)', callerCategory: 'rpc' };
+        return {
+          callerName: 'testnetRpcManager (Probe)',
+          callerCategory: 'rpc',
+        };
       }
 
       const hookMatch = line.match(/\b(use[A-Z][a-zA-Z0-9]+)\b/);
@@ -158,7 +161,10 @@ function parseCallerFromStack(
     try {
       const parsed = JSON.parse(requestBody);
       if (parsed?.method === 'getMasterchainInfo' && parsed?.id === 'probe') {
-        return { callerName: 'testnetRpcManager (Probe)', callerCategory: 'rpc' };
+        return {
+          callerName: 'testnetRpcManager (Probe)',
+          callerCategory: 'rpc',
+        };
       }
       if (parsed?.method) {
         return { callerName: `RPC: ${parsed.method}`, callerCategory: 'rpc' };

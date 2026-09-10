@@ -8,10 +8,10 @@ import {
 
 describe('getter-decoder', () => {
   const testOwner = Address.parse(
-    '0:0000000000000000000000000000000000000000000000000000000000000000'
+    '0:0000000000000000000000000000000000000000000000000000000000000000',
   );
   const testMinter = Address.parse(
-    '0:1111111111111111111111111111111111111111111111111111111111111111'
+    '0:1111111111111111111111111111111111111111111111111111111111111111',
   );
 
   describe('parseRawStack', () => {
@@ -54,10 +54,10 @@ describe('getter-decoder', () => {
       expect(decoded).not.toBeNull();
       expect(decoded?.structName).toBe('PersonalStore');
       expect((decoded?.data as Record<string, unknown>).totalSupply).toBe(
-        '5000'
+        '5000',
       );
       expect((decoded?.data as Record<string, unknown>).adminAddress).toBe(
-        testOwner.toString()
+        testOwner.toString(),
       );
     });
 
@@ -78,14 +78,11 @@ describe('getter-decoder', () => {
         },
       ];
 
-      const decoded = decodeContractGetter(
-        'get_personal_wallet_state',
-        tuple
-      );
+      const decoded = decodeContractGetter('get_personal_wallet_state', tuple);
       expect(decoded).not.toBeNull();
       expect(decoded?.structName).toBe('PersonalWalletStore');
       expect((decoded?.data as Record<string, unknown>).jettonBalance).toBe(
-        '2500'
+        '2500',
       );
     });
 
@@ -109,7 +106,7 @@ describe('getter-decoder', () => {
       expect(decoded).not.toBeNull();
       expect(decoded?.structName).toBe('JettonWalletDataReply');
       expect((decoded?.data as Record<string, unknown>).jettonBalance).toBe(
-        '9999'
+        '9999',
       );
     });
   });

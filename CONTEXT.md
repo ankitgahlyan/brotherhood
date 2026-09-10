@@ -163,4 +163,3 @@ _Avoid_: Telegram Bot, Telegram Web
 
 **Back Stack** — the unified 3-tier client coordinator that handles back-press interactions (Telegram BackButton, mobile browser popstate, and Android hardware back), prioritizing active modal/sheet dismissals before router navigation.
 _Avoid_: History manager, navigation controller
-

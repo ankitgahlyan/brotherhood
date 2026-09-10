@@ -1,5 +1,10 @@
 import React from 'react';
-import { createRootRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  Outlet,
+  useRouter,
+  useRouterState,
+} from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Toaster } from '@/core/components/ui/sonner';
 import { useWalletDataUpdater } from '@/core/hooks/use-wallet-data-updater';
@@ -125,4 +130,3 @@ export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFound,
 });
-

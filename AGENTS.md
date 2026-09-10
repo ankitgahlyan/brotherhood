@@ -73,5 +73,3 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Fullscreen & Safe Area Insets:** In Bot API 8.0+ fullscreen mode, total top safe area is `safeAreaInset.top + contentSafeAreaInset.top`. Always listen to `safeAreaChanged`, `contentSafeAreaChanged`, `fullscreenChanged`, `fullscreenFailed`, and `viewportChanged` events to update `--tg-safe-area-top` and `--tg-safe-area-bottom` so top headers and action buttons are never obscured by the phone status bar.
 - **Eager BackButton Binding & Basepath:** Always attach Telegram BackButton listeners eagerly on application bootstrap (never lazily on first modal opening). Always normalize router paths against `VITE_BASE` / `BASE_URL` (`/brotherhood/`) when evaluating root route vs sub-routes to avoid unintentional TMA minimization.
 - **Test Runner Isolation:** When running tests with Bun from the workspace root, always exclude `apps/wallet-v2` (`bun test --path-ignore-patterns "**/apps/wallet-v2/**"` or `bun test apps/wallet/src`) because `apps/wallet-v2` uses Jest with fake timer mocks (`jest.advanceTimersByTimeAsync`) that block under Bun.
-
-
