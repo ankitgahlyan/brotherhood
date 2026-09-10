@@ -105,15 +105,44 @@ export function buildSpendAllowanceMessage(
 
 export function buildInviteMemberMessage(
   fiWalletAddress: Address,
-  ownerAddress: Address,
-  inviteeAddress: Address,
-  gasAmount = toNano('0.05'),
+  params: {
+    transferRecipient: Address;
+    username: string;
+    h3Cell: string;
+    country?: bigint;
+    gasAmount?: bigint;
+  },
 ): FiMessage {
+  const { transferRecipient, username, h3Cell, country = 0n, gasAmount = toNano('0.05') } = params;
   const payload = ActInvite.toCell(
     ActInvite.create({
       queryId: 0n,
-      invitee: inviteeAddress,
-      sendExcessesTo: ownerAddress,
+      transferRecipient,
+      username,
+      h3Cell,
+      country,
+    }),
+  );
+  return {
+    toAddress: fiWalletAddress.toString(),
+    amount: gasAmount,
+    payload,
+  };
+}
+
+export function buildChangeLocationMessage(
+  fiWalletAddress: Address,
+  params: {
+    h3Cell: string;
+    gasAmount?: bigint;
+  },
+): FiMessage {
+  const { ChangeProfile } = require('@wrappers/FossFiWallet.gen');
+  const { h3Cell, gasAmount = toNano('0.08') } = params;
+  const payload = ChangeProfile.toCell(
+    ChangeProfile.create({
+      queryId: 0n,
+      h3Cell,
     }),
   );
   return {

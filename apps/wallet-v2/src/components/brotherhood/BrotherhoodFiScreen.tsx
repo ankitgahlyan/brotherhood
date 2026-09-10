@@ -122,15 +122,19 @@ function BrotherhoodFiScreen({ currentAddress }: StateProps) {
   const handleInviteMember = useCallback(() => {
     if (!fiWalletAddress || !currentAddress || !inviteeAddress) return;
     try {
-      const ownerAddr = Address.parse(currentAddress);
       const invitee = Address.parse(inviteeAddress);
-      const msg = buildInviteMemberMessage(fiWalletAddress, ownerAddr, invitee);
+      const myH3 = walletData?.profile?.ref?.h3Cell || '8828308281fffff';
+      const msg = buildInviteMemberMessage(fiWalletAddress, {
+        transferRecipient: invitee,
+        username: 'member',
+        h3Cell: myH3,
+      });
       openFiTransactionModal(msg);
       setInviteeAddress('');
     } catch {
       /* invalid address */
     }
-  }, [fiWalletAddress, currentAddress, inviteeAddress]);
+  }, [fiWalletAddress, currentAddress, inviteeAddress, walletData]);
 
   return (
     <div className={styles.container}>

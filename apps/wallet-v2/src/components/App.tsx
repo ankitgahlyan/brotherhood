@@ -82,6 +82,7 @@ import WalletConnectPayModal from './walletConnectPay/WalletConnectPayModal';
 import WalletConnectPayOptionSelectionModal from './walletConnectPay/WalletConnectPayOptionSelectionModal';
 import BrotherhoodFiScreen from './brotherhood/BrotherhoodFiScreen';
 import PersonalJettonScreen from './personal/PersonalJettonScreen';
+import CityNetworkScreen from './city/CityNetworkScreen';
 
 // import Test from './components/test/TestNoRedundancy';
 import styles from './App.module.scss';
@@ -97,6 +98,7 @@ interface StateProps {
   isMarketOpen?: boolean;
   isBrotherhoodFiOpen?: boolean;
   isPersonalJettonOpen?: boolean;
+  isCityNetworkOpen?: boolean;
   isPortfolioOpen?: boolean;
   currentTokenSlug?: string;
   marketTokenSlug?: string;
@@ -108,7 +110,7 @@ interface StateProps {
 }
 
 const APP_STATES_WITH_BOTTOM_BAR = new Set([
-  AppState.Main, AppState.Agent, AppState.Settings, AppState.Explore, AppState.Market, AppState.TokenInfo, AppState.BrotherhoodFi, AppState.PersonalJetton,
+  AppState.Main, AppState.Agent, AppState.Settings, AppState.Explore, AppState.Market, AppState.TokenInfo, AppState.BrotherhoodFi, AppState.PersonalJetton, AppState.CityNetwork,
 ]);
 const APP_UPDATE_INTERVAL = (IS_ELECTRON && !IS_LINUX) || IS_ANDROID_DIRECT
   ? 5 * MINUTE
@@ -258,6 +260,8 @@ function App({
         return <BrotherhoodFiScreen />;
       case AppState.PersonalJetton:
         return <PersonalJettonScreen />;
+      case AppState.CityNetwork:
+        return <CityNetworkScreen />;
       case AppState.Ledger:
         return <LedgerModal isOpen noBackdropClose onClose={closeThisTab} />;
       case AppState.Inactive:
@@ -339,6 +343,7 @@ export default memo(withGlobal((global): StateProps => {
     isMarketOpen: global.isMarketOpen,
     isBrotherhoodFiOpen: global.isBrotherhoodFiOpen,
     isPersonalJettonOpen: global.isPersonalJettonOpen,
+    isCityNetworkOpen: global.isCityNetworkOpen,
     isPortfolioOpen: global.isPortfolioOpen,
     currentTokenSlug: selectCurrentAccountState(global)?.currentTokenSlug,
     marketTokenSlug: global.marketTokenSlug,
@@ -358,6 +363,7 @@ function resolveRenderingKey({
   isMarketOpen,
   isBrotherhoodFiOpen,
   isPersonalJettonOpen,
+  isCityNetworkOpen,
   isPortfolioOpen,
   currentTokenSlug,
   marketTokenSlug,
@@ -371,6 +377,7 @@ function resolveRenderingKey({
   isMarketOpen?: boolean;
   isBrotherhoodFiOpen?: boolean;
   isPersonalJettonOpen?: boolean;
+  isCityNetworkOpen?: boolean;
   isPortfolioOpen?: boolean;
   currentTokenSlug?: string;
   marketTokenSlug?: string;
@@ -380,6 +387,7 @@ function resolveRenderingKey({
   if (isInactive) return AppState.Inactive;
   if (areSettingsOpen && isPortrait) return AppState.Settings;
   if (isPersonalJettonOpen && isPortrait) return AppState.PersonalJetton;
+  if (isCityNetworkOpen && isPortrait) return AppState.CityNetwork;
   if (isBrotherhoodFiOpen && isPortrait) return AppState.BrotherhoodFi;
   if (isAgentOpen && isPortrait && IS_AGENT_ENABLED) return AppState.Agent;
   if (isExploreOpen && isPortrait && IS_EXPLORE_ENABLED) return AppState.Explore;

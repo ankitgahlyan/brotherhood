@@ -34,6 +34,7 @@ interface StateProps {
   isMarketOpen?: boolean;
   isBrotherhoodFiOpen?: boolean;
   isPersonalJettonOpen?: boolean;
+  isCityNetworkOpen?: boolean;
   accentColorIndex?: number;
 }
 
@@ -51,7 +52,7 @@ const ICON_SIZE_PX = 38;
 const ANIMATED_STICKER_SPEED = 2;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen, isPersonalJettonOpen, accentColorIndex,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, isBrotherhoodFiOpen, isPersonalJettonOpen, isCityNetworkOpen, accentColorIndex,
 }: StateProps) {
   const {
     switchToWallet,
@@ -61,6 +62,7 @@ function BottomBar({
     switchToSettings,
     switchToBrotherhoodFi,
     switchToPersonalJetton,
+    switchToCityNetwork,
   } = getActions();
 
   const lang = useLang();
@@ -76,7 +78,7 @@ function BottomBar({
   });
 
   const tabs: TabConfig[] = useMemo(() => {
-    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen && !isBrotherhoodFiOpen && !isPersonalJettonOpen;
+    const isWalletActive = !isAgentOpen && !isExploreOpen && !isMarketOpen && !areSettingsOpen && !isBrotherhoodFiOpen && !isPersonalJettonOpen && !isCityNetworkOpen;
     const rawTabs = [
       {
         label: 'Wallet',
@@ -89,6 +91,12 @@ function BottomBar({
         iconKey: 'iconMarket' as const,
         onClick: switchToPersonalJetton,
         isActive: Boolean(isPersonalJettonOpen),
+      },
+      {
+        label: 'City',
+        iconKey: 'iconExplore' as const,
+        onClick: switchToCityNetwork,
+        isActive: Boolean(isCityNetworkOpen),
       },
       {
         label: 'Fi',
@@ -128,10 +136,16 @@ function BottomBar({
     }));
   }, [
     switchToWallet,
+    switchToPersonalJetton,
+    switchToCityNetwork,
+    switchToBrotherhoodFi,
     switchToMarket,
     switchToAgent,
     switchToExplore,
     switchToSettings,
+    isPersonalJettonOpen,
+    isCityNetworkOpen,
+    isBrotherhoodFiOpen,
     isAgentOpen,
     isExploreOpen,
     isMarketOpen,
@@ -203,6 +217,7 @@ export default memo(withGlobal((global): StateProps => {
     isMarketOpen,
     isBrotherhoodFiOpen,
     isPersonalJettonOpen,
+    isCityNetworkOpen,
   } = global;
 
   return {
@@ -213,6 +228,7 @@ export default memo(withGlobal((global): StateProps => {
     isMarketOpen,
     isBrotherhoodFiOpen,
     isPersonalJettonOpen,
+    isCityNetworkOpen,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
