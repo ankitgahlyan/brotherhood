@@ -416,7 +416,7 @@ class DevTelemetryManager {
   private interceptFetch(): void {
     const originalFetch = window.fetch;
 
-    window.fetch = async (
+    window.fetch = (async (
       input: RequestInfo | URL,
       init?: RequestInit,
     ): Promise<Response> => {
@@ -618,7 +618,7 @@ class DevTelemetryManager {
 
         throw err;
       }
-    };
+    }) as any;
   }
 }
 

@@ -146,8 +146,8 @@ describe('getter-decoder', () => {
       const decoded = decodeGetterResponse(requestJson, responseJson);
       expect(decoded).not.toBeNull();
       expect(decoded?.structName).toBe('JettonWalletDataReply');
-      expect(decoded?.data.jettonBalance).toBe('42000');
-      expect(decoded?.data._meta).toEqual({
+      expect((decoded?.data as any).jettonBalance).toBe('42000');
+      expect((decoded?.data as any)._meta).toEqual({
         method: 'get_wallet_data',
         exitCode: 0,
         gasUsed: 1250,
@@ -167,7 +167,7 @@ describe('getter-decoder', () => {
       const decoded = decodeGetterResponse(null, responseJson);
       expect(decoded).not.toBeNull();
       expect(decoded?.structName).toBe('GenericTvmStack');
-      expect(decoded?.data.stack).toEqual(['123', '456']);
+      expect((decoded?.data as any).stack).toEqual(['123', '456']);
     });
 
     it('returns null for non-stack JSON responses', () => {

@@ -1,10 +1,10 @@
 {
-  "include": ["wrappers-ts", "scripts"],
+  "include": ["scripts"],
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "allowJs": false,
+    "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

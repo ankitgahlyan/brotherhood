@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { createWalletStore } from '@demo/wallet-core';
-import type { Jetton, NFT } from '@ton/walletkit';
+import type { NFT } from '@ton/walletkit';
 
 describe('Wallet Scoped Assets Tracking', () => {
   let store: ReturnType<typeof createWalletStore>;
@@ -15,7 +15,7 @@ describe('Wallet Scoped Assets Tracking', () => {
     const wallet1 = '0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC9q';
     const wallet2 = '0QBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBAC9q';
 
-    const jetton1: Jetton = {
+    const jetton1: any = {
       address: 'EQTestJetton1',
       name: 'Test 1',
       symbol: 'T1',
@@ -25,7 +25,7 @@ describe('Wallet Scoped Assets Tracking', () => {
       walletAddress: 'EQWalletJetton1',
     };
 
-    const jetton2: Jetton = {
+    const jetton2: any = {
       address: 'EQTestJetton2',
       name: 'Test 2',
       symbol: 'T2',
@@ -43,7 +43,7 @@ describe('Wallet Scoped Assets Tracking', () => {
     } as any;
 
     // Simulate store state for wallet 1 active
-    store.setState((state) => {
+    (store.setState as any)((state: any) => {
       state.walletManagement.address = wallet1;
       state.walletManagement.activeWalletId = 'w1';
       state.walletManagement.savedWallets = [
@@ -56,24 +56,24 @@ describe('Wallet Scoped Assets Tracking', () => {
       state.nfts.userNfts = [nft1];
     });
 
+    expect((store.getState().jettons.userJettons as any)[0].symbol).toBe('T1');
     expect(store.getState().jettons.userJettons).toHaveLength(1);
-    expect(store.getState().jettons.userJettons[0].symbol).toBe('T1');
     expect(store.getState().nfts.userNfts).toHaveLength(1);
 
     // Now populate wallet 2 data into jettonsByAddress
-    store.setState((state) => {
+    (store.setState as any)((state: any) => {
       state.jettons.jettonsByAddress[wallet2] = [jetton2];
       state.nfts.nftsByAddress[wallet2] = [];
     });
 
     // Active view should still show wallet 1 assets
-    expect(store.getState().jettons.userJettons[0].symbol).toBe('T1');
+    expect((store.getState().jettons.userJettons as any)[0].symbol).toBe('T1');
 
     // Simulate switching to wallet 2 in state
     const savedWallet2 = store
       .getState()
       .walletManagement.savedWallets.find((w) => w.id === 'w2')!;
-    store.setState((state) => {
+    (store.setState as any)((state: any) => {
       state.walletManagement.activeWalletId = 'w2';
       state.walletManagement.address = savedWallet2.address;
       state.jettons.userJettons =
@@ -84,7 +84,7 @@ describe('Wallet Scoped Assets Tracking', () => {
 
     // Active view must now switch to wallet 2's assets
     expect(store.getState().jettons.userJettons).toHaveLength(1);
-    expect(store.getState().jettons.userJettons[0].symbol).toBe('T2');
+    expect((store.getState().jettons.userJettons as any)[0].symbol).toBe('T2');
     expect(store.getState().nfts.userNfts).toHaveLength(0);
 
     // Both wallets' data is still preserved in jettonsByAddress

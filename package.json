@@ -24,7 +24,7 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "check": "prettier --check .",
-    "typecheck": "bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
+    "typecheck": "tsc --noEmit && bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
     "test": "acton test",
     "test:affected": "node scripts/pre-commit-tests.mjs",
     "test:changed": "node scripts/pre-commit-tests.mjs",

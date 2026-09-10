@@ -67,7 +67,7 @@ describe('detectApiKey', () => {
 
 describe('ToncenterQueue', () => {
   it('queues and dispatches requests with ~100ms spacing when API key is present', async () => {
-    const queue = new ToncenterQueue();
+    const queue = new ToncenterQueue('toncenter-test');
     const timestamps: number[] = [];
 
     const p1 = queue.enqueue(async () => {
@@ -90,7 +90,7 @@ describe('ToncenterQueue', () => {
   });
 
   it('queues and dispatches requests with ~1000ms spacing when NO API key is present', async () => {
-    const queue = new ToncenterQueue();
+    const queue = new ToncenterQueue('toncenter-test');
     const timestamps: number[] = [];
 
     const p1 = queue.enqueue(async () => {
@@ -113,7 +113,7 @@ describe('ToncenterQueue', () => {
   });
 
   it('pauses and respects backoff when 429 is recorded', async () => {
-    const queue = new ToncenterQueue();
+    const queue = new ToncenterQueue('toncenter-test');
     const timestamps: number[] = [];
 
     const p1 = queue.enqueue(async () => {

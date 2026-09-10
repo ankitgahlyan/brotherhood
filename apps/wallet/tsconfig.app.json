@@ -22,6 +22,7 @@
     "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "types": ["bun", "node"],
 
     "paths": {
       "@/*": ["./src/*"],
@@ -30,13 +31,6 @@
       "@demo/v4ledger-adapter": ["../../packages/v4ledger-adapter/src/index.ts"]
     }
   },
-  "include": ["src"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
-    "src/core/lib/extension*.ts",
-    "src/core/routing/app-router.tsx"
-  ]
+  "include": ["src", "e2e"],
+  "exclude": ["src/core/lib/extension*.ts", "src/core/routing/app-router.tsx"]
 }
