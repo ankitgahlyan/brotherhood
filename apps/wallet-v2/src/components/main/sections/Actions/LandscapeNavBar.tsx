@@ -29,16 +29,36 @@ interface StateProps {
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
   isMarketOpen?: boolean;
+  isBrotherhoodFiOpen?: boolean;
+  isPersonalJettonOpen?: boolean;
+  isCityNetworkOpen?: boolean;
   theme: Theme;
   accentColorIndex?: number;
 }
 
 function LandscapeNavBar({
-  areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen, theme, accentColorIndex,
+  areSettingsOpen,
+  isAgentOpen,
+  isExploreOpen,
+  isMarketOpen,
+  isBrotherhoodFiOpen,
+  isPersonalJettonOpen,
+  isCityNetworkOpen,
+  theme,
+  accentColorIndex,
 }: StateProps) {
   const {
-    switchToWallet, switchToAgent, switchToExplore, switchToMarket, switchToSettings,
-    closeNftCollection, selectToken, setActiveContentTab,
+    switchToWallet,
+    switchToPersonalJetton,
+    switchToCityNetwork,
+    switchToBrotherhoodFi,
+    switchToAgent,
+    switchToExplore,
+    switchToMarket,
+    switchToSettings,
+    closeNftCollection,
+    selectToken,
+    setActiveContentTab,
   } = getActions();
 
   const lang = useLang();
@@ -46,7 +66,8 @@ function LandscapeNavBar({
   const stickerPaths = ANIMATED_STICKERS_PATHS[appTheme];
   const accentColor = accentColorIndex !== undefined ? ACCENT_COLORS[appTheme][accentColorIndex] : undefined;
 
-  const isWalletActive = !areSettingsOpen && !isAgentOpen && !isExploreOpen && !isMarketOpen;
+  const isWalletActive = !areSettingsOpen && !isAgentOpen && !isExploreOpen && !isMarketOpen
+    && !isBrotherhoodFiOpen && !isPersonalJettonOpen && !isCityNetworkOpen;
 
   const handleWalletClick = useLastCallback(() => {
     switchToWallet();
@@ -64,6 +85,30 @@ function LandscapeNavBar({
         previewUrl={isWalletActive ? stickerPaths.preview.iconWalletSolid : stickerPaths.preview.iconWallet}
         accentColor={accentColor}
         onClick={handleWalletClick}
+      />
+      <NavButton
+        isActive={Boolean(isPersonalJettonOpen)}
+        label={lang('Personal')}
+        tgsUrl={isPersonalJettonOpen ? stickerPaths.iconMarketSolid : stickerPaths.iconMarket}
+        previewUrl={isPersonalJettonOpen ? stickerPaths.preview.iconMarketSolid : stickerPaths.preview.iconMarket}
+        accentColor={accentColor}
+        onClick={switchToPersonalJetton}
+      />
+      <NavButton
+        isActive={Boolean(isCityNetworkOpen)}
+        label={lang('City')}
+        tgsUrl={isCityNetworkOpen ? stickerPaths.iconExploreSolid : stickerPaths.iconExplore}
+        previewUrl={isCityNetworkOpen ? stickerPaths.preview.iconExploreSolid : stickerPaths.preview.iconExplore}
+        accentColor={accentColor}
+        onClick={switchToCityNetwork}
+      />
+      <NavButton
+        isActive={Boolean(isBrotherhoodFiOpen)}
+        label={lang('Fi')}
+        tgsUrl={isBrotherhoodFiOpen ? stickerPaths.iconEarnPurple : stickerPaths.iconEarn}
+        previewUrl={isBrotherhoodFiOpen ? stickerPaths.preview.iconEarnPurple : stickerPaths.preview.iconEarn}
+        accentColor={accentColor}
+        onClick={switchToBrotherhoodFi}
       />
       {IS_MARKET_ENABLED && (
         <NavButton
@@ -109,13 +154,24 @@ function LandscapeNavBar({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { areSettingsOpen, isAgentOpen, isExploreOpen, isMarketOpen } = global;
+  const {
+    areSettingsOpen,
+    isAgentOpen,
+    isExploreOpen,
+    isMarketOpen,
+    isBrotherhoodFiOpen,
+    isPersonalJettonOpen,
+    isCityNetworkOpen,
+  } = global;
 
   return {
     areSettingsOpen,
     isAgentOpen,
     isExploreOpen,
     isMarketOpen,
+    isBrotherhoodFiOpen,
+    isPersonalJettonOpen,
+    isCityNetworkOpen,
     theme: global.settings.theme,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };

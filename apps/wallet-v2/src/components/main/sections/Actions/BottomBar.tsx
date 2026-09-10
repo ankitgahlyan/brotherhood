@@ -190,7 +190,9 @@ function BottomBar({
         <Pill isDragging={isDragging} squeeze={squeeze} />
         {tabs.map(({ index, label, iconKey, onClick }) => {
           const isActive = renderedActiveIndex === index;
-          const variant = isActive ? `${iconKey}Solid` as const : iconKey;
+          const variant = (iconKey === 'iconEarn'
+            ? (isActive ? 'iconEarnPurple' : 'iconEarn')
+            : (isActive ? `${iconKey}Solid` : iconKey)) as keyof typeof stickerPaths;
 
           return (
             <TabButton

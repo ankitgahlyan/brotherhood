@@ -468,6 +468,9 @@ export enum ContentTab {
   Settings,
   Portfolio,
   Market,
+  BrotherhoodFi,
+  PersonalJetton,
+  CityNetwork,
 }
 
 export enum MediaType {
