@@ -248,6 +248,10 @@ async function loadPendingActivities(network: ApiNetwork, address: string) {
   try {
     return await fetchPendingActions(network, address);
   } catch (err) {
+    if (err instanceof CircuitOpenError || err instanceof ApiServerError) {
+      logDebug('loadPendingActivities suppressed due to open circuit / server error:', (err as Error).message);
+      return undefined;
+    }
     logDebugError('loadPendingActivities', err);
     return undefined;
   }

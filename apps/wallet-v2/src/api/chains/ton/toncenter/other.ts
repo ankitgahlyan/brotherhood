@@ -143,11 +143,13 @@ export function callToncenterV3<T = any>(
 
 export function getToncenterHeaders(network: ApiNetwork) {
   const { apiHeaders, byNetwork } = getEnvironment();
-  const apiKey = byNetwork[network].toncenterKey;
+  const apiKey = byNetwork[network]?.toncenterKey;
+  const baseUrl = NETWORK_CONFIG[network].toncenterUrl;
+  const isDirect = !baseUrl.startsWith('/') && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1');
 
   return {
-    ...apiHeaders,
+    ...(!isDirect && apiHeaders),
     ...(apiKey && { 'X-Api-Key': apiKey }),
-    'X-Actions-Version': TONCENTER_ACTIONS_VERSION,
+    ...(!isDirect && { 'X-Actions-Version': TONCENTER_ACTIONS_VERSION }),
   };
 }

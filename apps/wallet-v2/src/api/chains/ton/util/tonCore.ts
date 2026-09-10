@@ -70,15 +70,30 @@ export const walletClassMap: Record<ApiTonWalletVersion, TonWalletType> = {
   W5: WalletContractV5R1,
 };
 
-export const getTonClient = withCache((network: ApiNetwork) => {
-  const { apiHeaders, byNetwork } = getEnvironment();
+let tonClientCache: Partial<Record<string, TonClient>> = {};
 
-  return new TonClient({
-    endpoint: `${NETWORK_CONFIG[network].toncenterUrl}/api/v2/jsonRPC`,
-    apiKey: byNetwork[network].toncenterKey,
-    headers: apiHeaders,
-  });
-});
+export function resetTonCoreClients() {
+  tonClientCache = {};
+}
+
+export function getTonClient(network: ApiNetwork) {
+  const { apiHeaders, byNetwork } = getEnvironment();
+  const baseUrl = NETWORK_CONFIG[network].toncenterUrl;
+  const isDirect = !baseUrl.startsWith('/') && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1');
+  const endpoint = `${baseUrl}/api/v2/jsonRPC`;
+  const apiKey = byNetwork[network]?.toncenterKey;
+  const cacheKey = `${network}_${endpoint}_${apiKey || ''}`;
+
+  if (!tonClientCache[cacheKey]) {
+    tonClientCache[cacheKey] = new TonClient({
+      endpoint,
+      apiKey,
+      headers: isDirect ? undefined : apiHeaders,
+    });
+  }
+
+  return tonClientCache[cacheKey]!;
+}
 
 export const resolveTokenWalletAddress = withCacheAsync(fetchTokenWalletAddress);
 

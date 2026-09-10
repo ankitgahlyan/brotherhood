@@ -6,6 +6,7 @@ import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { getContractCache, setContractCache, getNormalizedContractCacheKey } from './contract-cache';
 import { TONCENTER_MAINNET_URL, TONCENTER_TESTNET_URL } from '../../config';
 import { getGlobal } from '../../global';
+import { resetTonCoreClients } from '../../api/chains/ton/util/tonCore';
 
 const clients: Record<string, TonClient> = {};
 
@@ -13,6 +14,7 @@ export function getTonClient(network: Network = DEFAULT_NETWORK): TonClient {
   const global = getGlobal();
   const isDirect = Boolean(global?.settings?.isDirectTestnetApi);
   const customUrl = network === 'testnet' ? global?.settings?.customToncenterTestnetUrl?.trim() : undefined;
+  const customKey = network === 'testnet' ? global?.settings?.customToncenterTestnetKey?.trim() : undefined;
   // Only route directly if direct mode is enabled AND a key or custom URL is configured
   const hasDirectConfig = Boolean(customKey) || Boolean(customUrl);
   const shouldUseDirect = isDirect && hasDirectConfig;
@@ -44,6 +46,7 @@ export function resetTonClients(): void {
   for (const k of Object.keys(clients)) {
     delete clients[k];
   }
+  resetTonCoreClients();
 }
 
 export async function getFiWalletAddress(
