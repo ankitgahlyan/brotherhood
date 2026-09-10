@@ -34,6 +34,11 @@ type FetchOptions = {
 const breaker = new CircuitBreaker();
 const negativeVerdictCache = new NegativeVerdictCache();
 
+export function resetCircuitBreakers() {
+  breaker.reset();
+  negativeVerdictCache.reset();
+}
+
 export type QueryParams = Record<string, string | number | boolean | string[] | undefined>;
 
 const MAX_TIMEOUT = 30000; // 30 sec

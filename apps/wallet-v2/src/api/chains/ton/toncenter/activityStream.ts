@@ -5,12 +5,14 @@ import type { ApiActivity, ApiNetwork } from '../../../types';
 
 import { mergeSortedActivities, sortActivities } from '../../../../util/activities/order';
 import { createCallbackManager } from '../../../../util/callbacks';
+import { CircuitOpenError } from '../../../../util/circuit-breaker';
 import { focusAwareDelay } from '../../../../util/focusAwareDelay';
 import { extractKey } from '../../../../util/iteratees';
-import { logDebugError } from '../../../../util/logs';
+import { logDebug, logDebugError } from '../../../../util/logs';
 import { FallbackPollingScheduler } from '../../../common/polling/fallbackPollingScheduler';
 import { periodToMs } from '../../../common/polling/utils';
 import { FIRST_TRANSACTIONS_LIMIT } from '../../../constants';
+import { ApiServerError } from '../../../errors';
 import { fetchActions, fetchPendingActions } from './actions';
 import { getToncenterSocket } from './socket';
 import { throttleToncenterSocketActions } from './throttleSocketActions';
@@ -203,6 +205,11 @@ export class ActivityStream {
           limit: FIRST_TRANSACTIONS_LIMIT,
         });
       } catch (err) {
+        if (err instanceof CircuitOpenError || err instanceof ApiServerError) {
+          logDebug('loadNewFinalizedActivities suppressed due to open circuit / server error:', err.message);
+          break;
+        }
+
         logDebugError('loadNewFinalizedActivities', err);
 
         // Retrying is pointless once a newer connect has taken over: this poll's result is discarded either way.

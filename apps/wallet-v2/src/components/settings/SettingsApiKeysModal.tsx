@@ -7,6 +7,7 @@ import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 import { resetTonClients } from '../../lib/brotherhood/ton';
 import buildClassName from '../../util/buildClassName';
+import { resetCircuitBreakers } from '../../util/fetch';
 import { resetThrottledProviderFetchers } from '../../util/ThrottledFetcher';
 
 import Button from '../ui/Button';
@@ -212,6 +213,7 @@ function SettingsApiKeysModal({
     });
     resetTonClients();
     resetThrottledProviderFetchers();
+    resetCircuitBreakers();
     showToast({ message: lang('Settings saved') || 'Settings saved' });
     onClose();
   });
