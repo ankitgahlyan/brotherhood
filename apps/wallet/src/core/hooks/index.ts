@@ -12,3 +12,6 @@ export * from './use-paste-handler';
 export * from './use-ton-wallet';
 export * from './use-wallet-data-updater';
 export * from './use-pwa-install';
+export * from './use-history-back';
+export * from './use-twa';
+

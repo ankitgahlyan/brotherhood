@@ -735,6 +735,7 @@ const ApiCard: React.FC<{
             <PayloadViewer
               title="Response Body"
               payload={item.responsePreview}
+              requestPayload={item.requestBody}
             />
           )}
         </div>

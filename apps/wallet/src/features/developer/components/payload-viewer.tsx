@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Copy, Check, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { decodeGetterResponse } from '../../../core/lib/getter-decoder';
 
 interface PayloadViewerProps {
   title: string;
   payload: string | null | undefined;
+  requestPayload?: string | null | undefined;
   isRequest?: boolean;
 }
 
@@ -178,9 +180,11 @@ const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
             <div key={k} className="flex flex-wrap items-start gap-1">
               <span
                 className={`font-semibold select-all ${
-                  k === '_rpcMethod'
+                  k === '_rpcMethod' || k === '$'
                     ? 'text-amber-500 font-bold'
-                    : 'text-blue-600 dark:text-blue-400'
+                    : k.startsWith('_')
+                      ? 'text-purple-500 font-medium'
+                      : 'text-blue-600 dark:text-blue-400'
                 }`}
               >
                 &quot;{k}&quot;
@@ -207,11 +211,9 @@ const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
 export const PayloadViewer: React.FC<PayloadViewerProps> = ({
   title,
   payload,
+  requestPayload,
   isRequest = false,
 }) => {
-  const [mode, setMode] = useState<'clean' | 'raw'>('clean');
-  const [hasCopied, setHasCopied] = useState(false);
-
   // Parse JSON if possible
   const { parsedJson } = useMemo(() => {
     if (!payload) return { parsedJson: null };
@@ -223,6 +225,18 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
     }
   }, [payload]);
 
+  // Try decoding contract getter responses
+  const decodedGetter = useMemo(() => {
+    if (isRequest) return null;
+    return decodeGetterResponse(requestPayload, payload);
+  }, [requestPayload, payload, isRequest]);
+
+  // Set default view mode: 'decoded' if getter decoded, else 'clean'
+  const [selectedMode, setSelectedMode] = useState<
+    'decoded' | 'clean' | 'raw' | null
+  >(null);
+  const [hasCopied, setHasCopied] = useState(false);
+
   // Prepared clean payload
   const cleanPayload = useMemo(() => {
     if (!parsedJson) return null;
@@ -231,12 +245,20 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
 
   if (!payload) return null;
 
+  // Active mode resolution
+  const activeMode: 'decoded' | 'clean' | 'raw' =
+    selectedMode ?? (decodedGetter ? 'decoded' : 'clean');
+
   const handleCopy = async () => {
     try {
-      const textToCopy =
-        mode === 'clean' && cleanPayload
-          ? JSON.stringify(cleanPayload, null, 2)
-          : payload;
+      let textToCopy: string;
+      if (activeMode === 'decoded' && decodedGetter) {
+        textToCopy = JSON.stringify(decodedGetter.data, null, 2);
+      } else if (activeMode === 'clean' && cleanPayload) {
+        textToCopy = JSON.stringify(cleanPayload, null, 2);
+      } else {
+        textToCopy = payload;
+      }
       await navigator.clipboard.writeText(textToCopy);
       setHasCopied(true);
       toast.success(`${title} copied to clipboard`);
@@ -251,17 +273,37 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-muted-foreground text-[11px]">
-          {title}:
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold text-muted-foreground text-[11px]">
+            {title}:
+          </span>
+          {decodedGetter && activeMode === 'decoded' && (
+            <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              {decodedGetter.structName}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5">
           {isJson && (
             <div className="inline-flex rounded-md bg-muted/60 p-0.5 border border-border text-[10px]">
+              {decodedGetter && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMode('decoded')}
+                  className={`px-1.5 py-0.5 rounded font-medium transition-colors cursor-pointer ${
+                    activeMode === 'decoded'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Decoded
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setMode('clean')}
+                onClick={() => setSelectedMode('clean')}
                 className={`px-1.5 py-0.5 rounded font-medium transition-colors cursor-pointer ${
-                  mode === 'clean'
+                  activeMode === 'clean'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -270,9 +312,9 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setMode('raw')}
+                onClick={() => setSelectedMode('raw')}
                 className={`px-1.5 py-0.5 rounded font-medium transition-colors cursor-pointer ${
-                  mode === 'raw'
+                  activeMode === 'raw'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -298,7 +340,9 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
       </div>
 
       <div className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground max-h-80 overflow-y-auto">
-        {mode === 'clean' && cleanPayload ? (
+        {activeMode === 'decoded' && decodedGetter ? (
+          <FormattedValue value={decodedGetter.data} />
+        ) : activeMode === 'clean' && cleanPayload ? (
           <FormattedValue value={cleanPayload} />
         ) : (
           <pre className="whitespace-pre-wrap break-all text-foreground font-mono">

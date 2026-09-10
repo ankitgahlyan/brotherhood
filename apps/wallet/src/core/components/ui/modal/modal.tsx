@@ -15,6 +15,11 @@ import { Drawer, DrawerContent, DrawerTitle } from '../drawer';
 
 import { cn } from '@/core/lib/utils';
 import { useIsMobile } from '@/core/hooks/use-media-query';
+import { useHistoryBack } from '@/core/hooks/use-history-back';
+import {
+  disableTelegramSwipeToClose,
+  enableTelegramSwipeToClose,
+} from '@/core/lib/telegram';
 
 export interface ModalContainerProps extends ComponentProps<'div'> {
   isOpened: boolean;
@@ -32,6 +37,26 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   ...props
 }) => {
   const isMobile = useIsMobile();
+
+  // Register with Unified Back Stack (Tier 1 modal dismiss)
+  useHistoryBack({
+    isActive: isOpened,
+    onBack: () => {
+      if (dismissible) {
+        onOpenChange(false);
+      }
+    },
+  });
+
+  // Lock Telegram vertical swipe-to-close while modal is open
+  React.useEffect(() => {
+    if (!isOpened) return undefined;
+
+    disableTelegramSwipeToClose();
+    return () => {
+      enableTelegramSwipeToClose();
+    };
+  }, [isOpened]);
 
   if (isMobile) {
     return (

@@ -157,3 +157,10 @@ _Avoid_: ID, username, handle
 
 **Developer Mode** — a device-local diagnostic state unlocked on the client via Easter egg (tapping "Brotherhood" 7 times in Settings), exposing real-time API telemetry and console logs without altering on-chain Account permissions.
 _Avoid_: Developer user, debug account, admin user
+
+**Telegram Mini App (TMA / TWA)** — the runtime container when BrotherHood Wallet executes embedded inside a Telegram client, leveraging Telegram WebApp SDK APIs for native header BackButton, safe area insets, swipe control, and haptic feedback.
+_Avoid_: Telegram Bot, Telegram Web
+
+**Back Stack** — the unified 3-tier client coordinator that handles back-press interactions (Telegram BackButton, mobile browser popstate, and Android hardware back), prioritizing active modal/sheet dismissals before router navigation.
+_Avoid_: History manager, navigation controller
+

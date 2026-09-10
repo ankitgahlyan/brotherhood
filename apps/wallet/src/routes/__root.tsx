@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRootRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Toaster } from '@/core/components/ui/sonner';
 import { useWalletDataUpdater } from '@/core/hooks/use-wallet-data-updater';
@@ -11,6 +11,8 @@ import { GlobalRequestModals } from '@/features/ton-connect';
 import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
 import { FloatingDevButton } from '@/features/developer';
+import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
+import { registerRouterBack } from '@/core/lib/back-stack';
 
 function RootComponent() {
   const isWalletKitInitialized = useWalletStore(
@@ -20,8 +22,35 @@ function RootComponent() {
     (state) => state.walletCore.initializationError,
   );
 
+  const router = useRouter();
+  const currentPath = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  // Initialize Telegram Mini App SDK
+  React.useEffect(() => {
+    initTelegramSdk();
+  }, []);
+
+  // Sync Router back navigation with Unified Back Stack (Tier 2/3)
+  React.useEffect(() => {
+    const cleanPath = currentPath.replace(/\/+$/, '') || '/';
+    const isRoot =
+      cleanPath === '' ||
+      cleanPath === '/' ||
+      cleanPath === '/wallet' ||
+      cleanPath === '/welcome' ||
+      cleanPath === '/unlock';
+
+    registerRouterBack(() => {
+      router.history.back();
+    }, isRoot);
+  }, [currentPath, router]);
+
   useWalletDataUpdater();
   useReceivedToasts();
+
+  const isTma = isTelegramEnvironment();
 
   if (initializationError) {
     return (
@@ -69,7 +98,7 @@ function RootComponent() {
     <>
       <Outlet />
       <GlobalRequestModals />
-      <PwaInstallBanner />
+      {!isTma && <PwaInstallBanner />}
       <FloatingDevButton />
       <Toaster />
       {process.env.NODE_ENV === 'development' && (
@@ -83,3 +112,4 @@ export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFound,
 });
+

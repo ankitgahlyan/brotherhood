@@ -30,10 +30,25 @@ export function getTelegramId(): number | undefined {
 
 /** Open a t.me link inside Telegram, falling back to a new browser tab. */
 export function openTelegramLink(url: string): void {
-  if (openTgLink.isAvailable()) {
-    openTgLink(url);
-    return;
+  try {
+    if (openTgLink.isAvailable()) {
+      openTgLink(url);
+      return;
+    }
+  } catch {
+    // fallback
   }
+
+  const rawApp = (window as unknown as { Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void } } }).Telegram?.WebApp;
+  if (rawApp?.openTelegramLink) {
+    try {
+      rawApp.openTelegramLink(url);
+      return;
+    } catch {
+      // fallback
+    }
+  }
+
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
