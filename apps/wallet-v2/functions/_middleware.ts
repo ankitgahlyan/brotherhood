@@ -6,8 +6,8 @@ const TARGETS: Record<string, string> = {
   'api-backend': 'https://api.mywallet.io',
   'toncenter-proxy': 'https://toncenter.mytonwallet.org',
   'tonapiio-proxy': 'https://tonapiio.mytonwallet.org',
-  'toncenter-testnet-proxy': 'https://testnet.toncenter.com',
-  'tonapiio-testnet-proxy': 'https://testnet.tonapi.io',
+  'toncenter-testnet-proxy': 'https://toncenter-testnet.mytonwallet.org',
+  'tonapiio-testnet-proxy': 'https://tonapiio-testnet.mytonwallet.org',
 };
 
 const SPOOFED_ORIGIN = 'https://mytonwallet.app';
