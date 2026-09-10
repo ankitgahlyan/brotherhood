@@ -7,7 +7,7 @@ import { selectCurrentAccountId } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 
 import Agent from '../../../agent/AgentRuntime';
-import BrotherhoodFiScreen from '../../../brotherhood/BrotherhoodFiScreen';
+import BrotherhoodHubScreen from '../../../brotherhood/BrotherhoodHubScreen';
 import CityNetworkScreen from '../../../city/CityNetworkScreen';
 import Explore from '../../../explore/Explore';
 import Market from '../../../market/Market';
@@ -62,7 +62,7 @@ function LandscapeLayout({
       case ContentTab.BrotherhoodFi:
         return (
           <div className={styles.standaloneWrapper}>
-            <BrotherhoodFiScreen />
+            <BrotherhoodHubScreen />
           </div>
         );
       case ContentTab.Agent:

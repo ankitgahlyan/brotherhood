@@ -243,3 +243,82 @@ export function buildMintPersonalMessage(params: {
   };
 }
 
+export function buildVoteProposalMessage(params: {
+  pollAddress: Address;
+  voterOwner: Address;
+  proposalId: bigint;
+  vote: boolean;
+  oldVote?: boolean | null;
+  gasAmount?: bigint;
+}): FiMessage {
+  const { VoteProposal } = require('@wrappers/Poll.gen');
+  const {
+    pollAddress,
+    voterOwner,
+    proposalId,
+    vote,
+    oldVote = null,
+    gasAmount = toNano('0.05'),
+  } = params;
+
+  const payload = VoteProposal.toCell(
+    VoteProposal.create({
+      queryId: 0n,
+      proposalId,
+      voterOwner,
+      oldVote,
+      newVote: vote,
+    }),
+  );
+
+  return {
+    toAddress: pollAddress.toString(),
+    amount: gasAmount,
+    payload,
+  };
+}
+
+export function buildEnterLotteryMessage(params: {
+  lotteryAddress: Address;
+  senderAddress: Address;
+  ticketPriceTon?: string;
+}): FiMessage {
+  const { EnterLottery } = require('@wrappers/Lottery.gen');
+  const { lotteryAddress, senderAddress, ticketPriceTon = '1.0' } = params;
+  const totalAmount = toNano(ticketPriceTon) + toNano('0.05');
+
+  const payload = EnterLottery.toCell(
+    EnterLottery.create({
+      sender: senderAddress,
+      amount: toNano(ticketPriceTon),
+    }),
+  );
+
+  return {
+    toAddress: lotteryAddress.toString(),
+    amount: totalAmount,
+    payload,
+  };
+}
+
+export function buildDrawLotteryWinnerMessage(params: {
+  lotteryAddress: Address;
+  gasAmount?: bigint;
+}): FiMessage {
+  const { DrawWinner } = require('@wrappers/Lottery.gen');
+  const { lotteryAddress, gasAmount = toNano('0.05') } = params;
+
+  const payload = DrawWinner.toCell(
+    DrawWinner.create({
+      queryId: 0n,
+    }),
+  );
+
+  return {
+    toAddress: lotteryAddress.toString(),
+    amount: gasAmount,
+    payload,
+  };
+}
+
+

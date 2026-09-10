@@ -81,6 +81,7 @@ import WalletConnectPayDataCollectionModal from './walletConnectPay/WalletConnec
 import WalletConnectPayModal from './walletConnectPay/WalletConnectPayModal';
 import WalletConnectPayOptionSelectionModal from './walletConnectPay/WalletConnectPayOptionSelectionModal';
 import BrotherhoodFiScreen from './brotherhood/BrotherhoodFiScreen';
+import BrotherhoodHubScreen from './brotherhood/BrotherhoodHubScreen';
 import PersonalJettonScreen from './personal/PersonalJettonScreen';
 import CityNetworkScreen from './city/CityNetworkScreen';
 
@@ -263,7 +264,7 @@ function App({
       case AppState.TokenInfo:
         return <TokenInfo isActive={isActive} />;
       case AppState.BrotherhoodFi:
-        return <BrotherhoodFiScreen />;
+        return <BrotherhoodHubScreen />;
       case AppState.PersonalJetton:
         return <PersonalJettonScreen />;
       case AppState.CityNetwork:
