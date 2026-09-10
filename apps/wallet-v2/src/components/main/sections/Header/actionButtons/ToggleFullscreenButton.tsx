@@ -17,10 +17,20 @@ function ToggleFullscreenButton({ isFullscreen }: OwnProps) {
   const lang = useLang();
 
   const handleFullscreenToggle = useLastCallback(() => {
+    const app = getTelegramApp();
+    if (!app || !app.isVersionAtLeast?.('8.0')) return;
     if (isFullscreen) {
-      getTelegramApp()?.exitFullscreen();
+      try {
+        app.exitFullscreen?.();
+      } catch {
+        // Ignored
+      }
     } else {
-      getTelegramApp()?.requestFullscreen();
+      try {
+        app.requestFullscreen?.();
+      } catch {
+        // Ignored
+      }
     }
   });
 

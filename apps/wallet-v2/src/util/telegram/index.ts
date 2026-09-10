@@ -53,12 +53,16 @@ export function initTelegramApp(onBeforeReady?: NoneToVoidFunction) {
 }
 
 export function initTelegramWithGlobal(global: GlobalState) {
-  if (global.isFullscreen) {
-    webApp!.requestFullscreen();
+  if (global.isFullscreen && webApp?.isVersionAtLeast?.('8.0')) {
+    try {
+      webApp.requestFullscreen();
+    } catch {
+      // Ignored in unsupported environments
+    }
   }
 
-  webApp!.onEvent('fullscreenChanged', updateFullscreenState);
-  webApp!.onEvent('fullscreenFailed', onFullscreenFailed);
+  webApp?.onEvent?.('fullscreenChanged', updateFullscreenState);
+  webApp?.onEvent?.('fullscreenFailed', onFullscreenFailed);
 }
 
 export function initTelegramAppBiometric() {

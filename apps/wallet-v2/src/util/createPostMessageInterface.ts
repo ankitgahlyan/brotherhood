@@ -322,7 +322,10 @@ function bindGlobalErrorListeners() {
   areGlobalErrorListenersBound = true;
 
   self.addEventListener('error', (e) => {
-    const error = e.error || { name: 'Error', message: 'Uncaught exception in worker' };
+    const error = e.error || { name: 'Error', message: e.message || 'Uncaught exception in worker' };
+    if (error.message?.includes('Failed to import rlottie-wasm.js') || error.message === 'Script error.') {
+      return;
+    }
     logDebugError(error.message, e.error);
 
     errorSenders.forEach((sendToOrigin) => {

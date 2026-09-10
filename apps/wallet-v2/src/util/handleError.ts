@@ -36,7 +36,7 @@ export function handleError(err: Error | string) {
   const message = typeof err === 'string' ? err : err.message;
   const stack = typeof err === 'object' ? err.stack : undefined;
 
-  if (message.endsWith('Failed to import rlottie-wasm.js')) {
+  if (message.endsWith('Failed to import rlottie-wasm.js') || message === 'Script error.') {
     return;
   }
 
