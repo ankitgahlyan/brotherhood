@@ -26,6 +26,7 @@ import {
   type TelemetryMetrics,
 } from '@/core/lib/dev-telemetry';
 import { useDeveloperMode } from '@/core/lib/developer-mode';
+import { cn } from '@/core/lib/utils';
 import { Button } from '@/core/components/ui/button';
 import { HeadersViewer } from './headers-viewer';
 import { PayloadViewer } from './payload-viewer';
@@ -35,11 +36,13 @@ import { ComponentAnalyticsView } from './component-analytics-view';
 export interface DeveloperScreenProps {
   onClose?: () => void;
   isModal?: boolean;
+  onDragStart?: (event: React.PointerEvent) => void;
 }
 
 export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
   onClose,
-  isModal: _isModal = false,
+  isModal = false,
+  onDragStart,
 }) => {
   const navigate = useNavigate();
   const [developerMode, setDeveloperMode] = useDeveloperMode();
@@ -176,9 +179,32 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
   }, [displayedItems, activeTab, filterLevel, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-12">
+    <div
+      className={cn(
+        'bg-background text-foreground pb-12',
+        isModal ? 'flex-1 overflow-y-auto min-h-0' : 'min-h-screen',
+      )}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
+      <header
+        onPointerDown={(e) => {
+          const target = e.target as HTMLElement;
+          if (
+            target.closest('button') ||
+            target.closest('input') ||
+            target.closest('select') ||
+            target.closest('[role="button"]') ||
+            target.closest('[data-no-drag]')
+          ) {
+            return;
+          }
+          onDragStart?.(e);
+        }}
+        className={cn(
+          'sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3 pt-[calc(0.75rem+var(--tg-safe-area-top,0px))]',
+          isModal && 'cursor-grab active:cursor-grabbing select-none',
+        )}
+      >
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button

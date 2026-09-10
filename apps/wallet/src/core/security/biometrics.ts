@@ -11,6 +11,9 @@ import {
   isTelegramBiometricsAvailable,
   isTelegramBiometricsRegistered,
   initTelegramBiometrics,
+  saveTelegramBiometricsPassword,
+  authenticateTelegramBiometrics,
+  clearTelegramBiometrics,
 } from '../lib/telegram';
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
@@ -123,7 +126,7 @@ async function deriveVaultKey(
 }
 
 /**
- * Register a platform biometric credential (WebAuthn) and store the password in the encrypted vault.
+ * Register a platform biometric credential (WebAuthn or Telegram BiometricManager) and store the password.
  */
 export async function registerBiometrics(
   password: string,
@@ -133,6 +136,10 @@ export async function registerBiometrics(
   const supported = await isBiometricsSupported();
   if (!supported) {
     throw new Error('Biometrics not supported on this device');
+  }
+
+  if (isTelegramEnvironment()) {
+    return await saveTelegramBiometricsPassword(password, 'BrotherHood Wallet');
   }
 
   try {
@@ -204,6 +211,10 @@ export async function registerBiometrics(
  * Authenticate with platform biometrics (Fingerprint / Face ID / Touch ID) and return the decrypted password.
  */
 export async function authenticateBiometrics(): Promise<string | null> {
+  if (isTelegramEnvironment()) {
+    return await authenticateTelegramBiometrics('Unlock BrotherHood Wallet');
+  }
+
   if (!isBiometricsRegistered()) {
     return null;
   }
@@ -265,5 +276,8 @@ export async function authenticateBiometrics(): Promise<string | null> {
  */
 export function clearBiometrics(): void {
   if (typeof window === 'undefined') return;
+  if (isTelegramEnvironment()) {
+    void clearTelegramBiometrics();
+  }
   localStorage.removeItem(BIOMETRIC_VAULT_KEY);
 }

@@ -116,6 +116,8 @@ function initPopstateListener(): void {
  * Register router navigation handler and root route status for Tier 2/3 back handling.
  */
 export function registerRouterBack(handler: () => void, isRoot: boolean): void {
+  initTelegramBackButtonListener();
+  initPopstateListener();
   routerBackHandler = handler;
   isAtRootRoute = isRoot;
   updateNativeBackButtonState();

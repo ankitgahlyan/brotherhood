@@ -26,7 +26,7 @@ export const CenteredScreen: React.FC<CenteredScreenProps> = ({
   footer,
   children,
 }) => (
-  <div className="h-dvh bg-background text-foreground select-none flex flex-col">
+  <div className="h-dvh bg-background text-foreground select-none flex flex-col pt-[var(--tg-safe-area-top,0px)] pb-[var(--tg-safe-area-bottom,0px)]">
     <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-0">
       {onBack && (
         <div className="flex-shrink-0 px-4 pt-3">

@@ -67,3 +67,11 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Circuit Breaker Hygiene:** Always call `resetCircuitBreakers()` and `resetThrottledProviderFetchers()` whenever network settings or API keys are updated or saved.
 - **Resilient Polling & Activity Streams:** Always catch and suppress `CircuitOpenError` and `ApiServerError` in background catch-up/polling loops (`activityStream.ts`, `fallbackPollingScheduler.ts`) to avoid spamming debug logs or entering tight retry loops during breaker cooldown windows.
 
+### Telegram Mini App (TWA) & Mobile Rules
+
+- **Biometric Authentication in TWA:** Never use `window.PublicKeyCredential` (WebAuthn) inside Telegram WebViews as it is blocked by default. Always use Telegram's native `BiometricManager` (`init`, `requestAccess`, `updateBiometricToken`, `authenticate`) inside TWA, falling back to WebAuthn only on standard Web/PWA.
+- **Fullscreen & Safe Area Insets:** In Bot API 8.0+ fullscreen mode, total top safe area is `safeAreaInset.top + contentSafeAreaInset.top`. Always listen to `safeAreaChanged`, `contentSafeAreaChanged`, `fullscreenChanged`, `fullscreenFailed`, and `viewportChanged` events to update `--tg-safe-area-top` and `--tg-safe-area-bottom` so top headers and action buttons are never obscured by the phone status bar.
+- **Eager BackButton Binding & Basepath:** Always attach Telegram BackButton listeners eagerly on application bootstrap (never lazily on first modal opening). Always normalize router paths against `VITE_BASE` / `BASE_URL` (`/brotherhood/`) when evaluating root route vs sub-routes to avoid unintentional TMA minimization.
+- **Test Runner Isolation:** When running tests with Bun from the workspace root, always exclude `apps/wallet-v2` (`bun test --path-ignore-patterns "**/apps/wallet-v2/**"` or `bun test apps/wallet/src`) because `apps/wallet-v2` uses Jest with fake timer mocks (`jest.advanceTimersByTimeAsync`) that block under Bun.
+
+

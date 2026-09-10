@@ -34,16 +34,29 @@ function RootComponent() {
 
   // Sync Router back navigation with Unified Back Stack (Tier 2/3)
   React.useEffect(() => {
-    const cleanPath = currentPath.replace(/\/+$/, '') || '/';
+    let clean = currentPath.replace(/\/+$/, '') || '/';
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+    if (base && base !== '/' && clean.startsWith(base)) {
+      clean = clean.slice(base.length) || '/';
+    }
+
     const isRoot =
-      cleanPath === '' ||
-      cleanPath === '/' ||
-      cleanPath === '/wallet' ||
-      cleanPath === '/welcome' ||
-      cleanPath === '/unlock';
+      clean === '' ||
+      clean === '/' ||
+      clean === '/wallet' ||
+      clean === '/welcome' ||
+      clean === '/unlock';
 
     registerRouterBack(() => {
-      router.history.back();
+      try {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          router.history.back();
+        } else {
+          router.navigate({ to: '/wallet' as any });
+        }
+      } catch {
+        router.navigate({ to: '/wallet' as any });
+      }
     }, isRoot);
   }, [currentPath, router]);
 
