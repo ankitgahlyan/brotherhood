@@ -237,10 +237,17 @@ export function fetchWithTimeout(url: string | URL, init?: RequestInit, timeout 
 
 export async function handleFetchErrors(response: Response, ignoreHttpCodes?: number[]) {
   if (!response.ok && (!ignoreHttpCodes?.includes(response.status))) {
-    // eslint-disable-next-line prefer-const
-    let { error, errors } = await response.json().catch(() => undefined);
-    if (!error && errors && errors.length) {
-      error = errors[0]?.msg;
+    let error: string | undefined;
+    try {
+      const data = await response.json();
+      if (data && typeof data === 'object') {
+        error = data.error;
+        if (!error && Array.isArray(data.errors) && data.errors.length) {
+          error = data.errors[0]?.msg;
+        }
+      }
+    } catch {
+      // Ignore non-JSON bodies (like HTML 502/504 errors)
     }
 
     throw new ApiServerError(error ?? `HTTP Error ${response.status}`, response.status);

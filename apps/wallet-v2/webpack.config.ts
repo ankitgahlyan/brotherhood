@@ -308,15 +308,12 @@ export default function createConfig(
         },
         {
           context: ['/toncenter-testnet-proxy'],
-          target: 'https://toncenter-testnet.mytonwallet.org',
+          target: 'https://testnet.toncenter.com',
           pathRewrite: { '^/toncenter-testnet-proxy': '' },
           changeOrigin: true,
           ws: true,
           proxyTimeout: 60000,
           timeout: 60000,
-          headers: {
-            Origin: 'https://mytonwallet.app',
-          },
         },
         {
           context: ['/tonapiio-proxy'],
@@ -331,14 +328,11 @@ export default function createConfig(
         },
         {
           context: ['/tonapiio-testnet-proxy'],
-          target: 'https://tonapiio-testnet.mytonwallet.org',
+          target: 'https://testnet.tonapi.io',
           pathRewrite: { '^/tonapiio-testnet-proxy': '' },
           changeOrigin: true,
           proxyTimeout: 60000,
           timeout: 60000,
-          headers: {
-            Origin: 'https://mytonwallet.app',
-          },
         },
         {
           context: ['/tron-proxy', '/wallet', '/walletsolidity', '/walletextension'],

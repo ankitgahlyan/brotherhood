@@ -21,7 +21,7 @@ type OwnProps = {
   menuClassName?: string;
   menuPositionX?: 'left' | 'right';
   className?: string;
-  onClick: (arg: number) => void;
+  onClick?: (arg: number) => void;
   clickArg: number;
   onMenuItemClick?: (value: string) => void;
   onActiveClick?: NoneToVoidFunction;
@@ -63,7 +63,7 @@ function Tab({
     }
 
     if (!isActive) {
-      onClick(clickArg);
+      onClick?.(clickArg);
       return;
     }
 
