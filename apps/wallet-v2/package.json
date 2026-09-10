@@ -41,6 +41,7 @@
     "telegram:build:dev": "cross-env APP_ENV=development npm run telegram:build",
     "telegram:build:staging": "cross-env APP_ENV=staging npm run telegram:build",
     "telegram:build:production": "npm run telegram:build",
+    "telegram:dev:ton": "cross-env IS_TELEGRAM_APP=1 IS_GRAM_WALLET=1 NO_EVM=1 NO_SOLANA=1 NO_TRON=1 USE_API_PROXY=0 npm run dev",
     "telegram:build:ton": "cross-env APP_ENV=production IS_TELEGRAM_APP=1 IS_GRAM_WALLET=1 NO_EVM=1 NO_SOLANA=1 NO_TRON=1 USE_API_PROXY=1 webpack && bash ./deploy/copy_to_dist.sh",
     "telegram:deploy:ton": "npm run telegram:build:ton && npm run deploy:pages -- gram-tma",
     "explorer:dev": "cross-env IS_EXPLORER=1 npm run dev",

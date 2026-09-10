@@ -251,11 +251,16 @@ addActionHandler('createPin', (global, actions, { pin, isImporting }) => {
 
 addActionHandler('confirmPin', async (global, actions, { isImporting }) => {
   const pin = global.auth.pin!;
-  global = updateAuth(global, { pin: undefined });
+  global = updateAuth(global, { pin: undefined, isLoading: true });
   setGlobal(global);
 
   try {
-    const enclaveSession = await enclave.setupAuth('passcode', pin);
+    await clearAuthGuardingNothing();
+
+    const isProvisioned = await enclave.isAuthProvisioned('passcode');
+    const enclaveSession = isProvisioned
+      ? await enclave.authorize('passcode', false, pin)
+      : await enclave.setupAuth('passcode', pin);
     if (!enclaveSession) throw new Error('Failed to setup auth');
 
     global = getGlobal();

@@ -177,7 +177,12 @@ function setupMutationObserver() {
           return;
         }
 
-        if (attributeName?.startsWith('data-')) {
+        if (
+          attributeName?.startsWith('data-')
+          || attributeName?.startsWith('aria-')
+          || attributeName === 'autocomplete'
+          || attributeName === 'autocapitalize'
+        ) {
           return;
         }
 
