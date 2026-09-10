@@ -1,76 +1,24 @@
 /**
- * Testnet RPC Endpoint Manager with proactive probing & reactive failover.
- * Priority:
- * 1. Localhost (0ms local development node)
- * 2. Ngrok Tunnel (Permanent custom server URL)
- * 3. Public Toncenter (Official cloud fallback)
+ * Testnet RPC Endpoint Manager.
+ * Default is official Toncenter Testnet RPC.
+ * If user configures a custom RPC URL in Settings, it is prioritized with failover
+ * to official Toncenter if unreachable.
  */
 
-export const PUBLIC_TESTNET_TONCENTER_RPC =
-  'https://testnet.toncenter.com/api/v2/jsonRPC';
-export const LOCAL_TESTNET_RPC = 'http://localhost:8081/api/v2/jsonRPC';
-export const DEFAULT_NGROK_TESTNET_RPC =
-  'https://noncohesively-unenervated-tereasa.ngrok-free.app/api/v2/jsonRPC';
+import {
+  DEFAULT_TONCENTER_TESTNET_RPC,
+  getCustomApiUrl,
+} from '@/core/lib/network-api-keys';
+
+export const PUBLIC_TESTNET_TONCENTER_RPC = DEFAULT_TONCENTER_TESTNET_RPC;
 
 export class TestnetRpcManager {
   private static instance: TestnetRpcManager;
 
-  private candidateEndpoints: string[];
   private currentEndpointIndex = 0;
-  private hasProbed = false;
-  private lastProbeTimestamp = 0;
-  public static readonly PROBE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-  private probePromise: Promise<string> | null = null;
+  private explicitCustomEndpoint: string | null = null;
 
-  private constructor() {
-    const customConfigured =
-      typeof import.meta !== 'undefined' && import.meta.env
-        ? import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC
-        : undefined;
-
-    const ngrokRpc = (
-      customConfigured && customConfigured.trim()
-        ? customConfigured.trim()
-        : DEFAULT_NGROK_TESTNET_RPC
-    ).replace(/\/+$/, '');
-
-    // Normalize so it includes /api/v2/jsonRPC if only base domain was provided
-    const normalizedNgrok = ngrokRpc.endsWith('/jsonRPC')
-      ? ngrokRpc
-      : `${ngrokRpc}/api/v2/jsonRPC`;
-
-    this.candidateEndpoints = [
-      LOCAL_TESTNET_RPC,
-      normalizedNgrok,
-      PUBLIC_TESTNET_TONCENTER_RPC,
-    ];
-
-    // Restore cached healthy endpoint from session if within TTL
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      try {
-        const savedIndex = sessionStorage.getItem('ton_testnet_rpc_index');
-        const savedTime = sessionStorage.getItem('ton_testnet_rpc_time');
-        if (savedIndex !== null && savedTime !== null) {
-          const parsedTime = Number(savedTime);
-          if (Date.now() - parsedTime < TestnetRpcManager.PROBE_TTL_MS) {
-            const idx = Number(savedIndex);
-            if (idx >= 0 && idx < this.candidateEndpoints.length) {
-              this.currentEndpointIndex = idx;
-              this.lastProbeTimestamp = parsedTime;
-              this.hasProbed = true;
-            }
-          }
-        }
-      } catch {
-        // ignore storage errors
-      }
-    }
-
-    // Start background probe immediately on module import if not recently probed
-    if (!this.hasProbed) {
-      this.probeBestEndpoint().catch(() => {});
-    }
-  }
+  private constructor() {}
 
   public static getInstance(): TestnetRpcManager {
     if (!TestnetRpcManager.instance) {
@@ -79,143 +27,66 @@ export class TestnetRpcManager {
     return TestnetRpcManager.instance;
   }
 
-  public getCandidates(): string[] {
-    return [...this.candidateEndpoints];
+  public setCustomEndpoint(url: string | null): void {
+    this.explicitCustomEndpoint = url;
+    this.currentEndpointIndex = 0;
   }
 
-  private customEndpointOverride: string | null = null;
+  public getCandidates(): string[] {
+    if (this.explicitCustomEndpoint && this.explicitCustomEndpoint.trim()) {
+      return [this.explicitCustomEndpoint.trim(), PUBLIC_TESTNET_TONCENTER_RPC];
+    }
 
-  public setCustomEndpoint(url: string | null): void {
-    this.customEndpointOverride = url;
+    const customUrl = getCustomApiUrl('toncenter');
+    const customConfigured =
+      customUrl ||
+      (typeof import.meta !== 'undefined' && import.meta.env
+        ? import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC
+        : undefined);
+
+    if (customConfigured && customConfigured.trim()) {
+      const normalized = customConfigured.trim().replace(/\/+$/, '');
+      const fullUrl = normalized.endsWith('/jsonRPC')
+        ? normalized
+        : `${normalized}/api/v2/jsonRPC`;
+      return [fullUrl, PUBLIC_TESTNET_TONCENTER_RPC];
+    }
+
+    return [PUBLIC_TESTNET_TONCENTER_RPC];
   }
 
   public getActiveEndpoint(): string {
-    if (this.customEndpointOverride) {
-      return this.customEndpointOverride;
+    const candidates = this.getCandidates();
+    if (this.currentEndpointIndex >= candidates.length) {
+      this.currentEndpointIndex = 0;
     }
-    return this.candidateEndpoints[this.currentEndpointIndex]!;
+    return candidates[this.currentEndpointIndex]!;
   }
 
   public isCustomEndpoint(url: string = this.getActiveEndpoint()): boolean {
     return (
-      url.includes('localhost') ||
-      url.includes('127.0.0.1') ||
-      url.includes('ngrok') ||
-      url.includes('trycloudflare')
+      !url.includes('testnet.toncenter.com') && !url.includes('toncenter.com')
     );
   }
 
-  /**
-   * Probe a single endpoint with a lightweight getMasterchainInfo JSON-RPC request.
-   */
-  public async probeEndpoint(url: string, timeoutMs = 1500): Promise<boolean> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          id: 'probe',
-          jsonrpc: '2.0',
-          method: 'getMasterchainInfo',
-          params: {},
-        }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok) return false;
-      const data = await res.json();
-      return Boolean(data && data.ok);
-    } catch {
-      return false;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+  public resetToPrimary(): void {
+    this.currentEndpointIndex = 0;
   }
 
   /**
-   * Probe candidate endpoints in priority order and select the fastest healthy one.
-   */
-  public async probeBestEndpoint(forceFresh = false): Promise<string> {
-    if (
-      !forceFresh &&
-      this.hasProbed &&
-      Date.now() - this.lastProbeTimestamp < TestnetRpcManager.PROBE_TTL_MS
-    ) {
-      return this.getActiveEndpoint();
-    }
-
-    if (this.probePromise) return this.probePromise;
-
-    this.probePromise = (async () => {
-      for (let i = 0; i < this.candidateEndpoints.length; i++) {
-        const endpoint = this.candidateEndpoints[i]!;
-
-        // Fallback endpoint is assumed available if earlier ones fail
-        if (i === this.candidateEndpoints.length - 1) {
-          this.currentEndpointIndex = i;
-          break;
-        }
-
-        const isHealthy = await this.probeEndpoint(endpoint);
-        if (isHealthy) {
-          this.currentEndpointIndex = i;
-          console.info(
-            `[TON Testnet RPC] Connected to active endpoint [${i + 1}/${this.candidateEndpoints.length}]: ${endpoint}`,
-          );
-          break;
-        }
-      }
-
-      this.hasProbed = true;
-      this.lastProbeTimestamp = Date.now();
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        try {
-          sessionStorage.setItem(
-            'ton_testnet_rpc_index',
-            String(this.currentEndpointIndex),
-          );
-          sessionStorage.setItem(
-            'ton_testnet_rpc_time',
-            String(this.lastProbeTimestamp),
-          );
-        } catch {
-          // ignore
-        }
-      }
-      this.probePromise = null;
-      return this.getActiveEndpoint();
-    })();
-
-    return this.probePromise;
-  }
-
-  /**
-   * Reactively failover when the currently active endpoint experiences an error.
+   * Reactively failover when the currently active custom endpoint experiences an error.
    */
   public markEndpointFailed(failedUrl?: string): string {
+    const candidates = this.getCandidates();
     const active = this.getActiveEndpoint();
     if (
       !failedUrl ||
       failedUrl.includes(active) ||
       active.includes(failedUrl)
     ) {
-      if (this.currentEndpointIndex < this.candidateEndpoints.length - 1) {
+      if (this.currentEndpointIndex < candidates.length - 1) {
         this.currentEndpointIndex++;
-        this.lastProbeTimestamp = 0;
-        if (typeof window !== 'undefined' && window.sessionStorage) {
-          try {
-            sessionStorage.removeItem('ton_testnet_rpc_time');
-          } catch {
-            // ignore
-          }
-        }
-        const nextEndpoint = this.getActiveEndpoint();
+        const nextEndpoint = candidates[this.currentEndpointIndex]!;
         console.warn(
           `[TON Testnet RPC] Primary endpoint failed (${active}). Failing over to: ${nextEndpoint}`,
         );

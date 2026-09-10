@@ -6,7 +6,11 @@ import { FossFi } from '@wrappers/FossFi.gen';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
-import { rateLimitedFetch, createTonClientAxiosAdapter } from './rate-limiter';
+import {
+  rateLimitedFetch,
+  createTonClientAxiosAdapter,
+  resetRateLimiterQueues,
+} from './rate-limiter';
 import { testnetRpcManager } from './testnet-rpc-manager';
 import {
   getContractCache,
@@ -80,6 +84,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener(API_KEYS_UPDATED_EVENT, () => {
     syncActiveRpcEndpoint().finally(() => {
       resetTonClients();
+      resetRateLimiterQueues();
     });
   });
 }

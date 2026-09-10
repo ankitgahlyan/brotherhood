@@ -7,7 +7,7 @@
  */
 
 import { notifyRateLimit429 } from '@/core/lib/dev-telemetry';
-import { getCustomApiKey } from '@/core/lib/network-api-keys';
+import { getCustomApiKey, type ApiKeyType } from '@/core/lib/network-api-keys';
 import { testnetRpcManager } from './testnet-rpc-manager';
 
 export interface RateLimiterOptions {
@@ -31,7 +31,7 @@ export function detectApiKey(
   url?: string,
   headers?: HeadersInit | Record<string, string>,
   explicitApiKey?: string,
-  options?: { checkEnv?: boolean },
+  options?: { checkEnv?: boolean; provider?: ApiKeyType },
 ): boolean {
   if (explicitApiKey !== undefined) {
     return Boolean(explicitApiKey && explicitApiKey.trim());
@@ -43,18 +43,23 @@ export function detectApiKey(
       if (
         headers.get('x-api-key') ||
         headers.get('X-API-Key') ||
-        headers.get('api-key')
+        headers.get('api-key') ||
+        headers.get('authorization') ||
+        headers.get('Authorization')
       ) {
         return true;
       }
     } else if (Array.isArray(headers)) {
       for (const [k, v] of headers) {
-        if (k.toLowerCase() === 'x-api-key' && v) return true;
+        const lower = k.toLowerCase();
+        if ((lower === 'x-api-key' || lower === 'authorization') && v)
+          return true;
       }
     } else if (typeof headers === 'object') {
       for (const key of Object.keys(headers)) {
+        const lower = key.toLowerCase();
         if (
-          key.toLowerCase() === 'x-api-key' &&
+          (lower === 'x-api-key' || lower === 'authorization') &&
           (headers as Record<string, string>)[key]
         ) {
           return true;
@@ -73,12 +78,10 @@ export function detectApiKey(
     }
   }
 
-  // Check user-configured custom keys from localStorage
-  try {
-    const customTestnetKey = getCustomApiKey('toncenter', 'testnet');
-    if (customTestnetKey) return true;
-  } catch {
-    /* pass if not available */
+  // Check custom key stored in localStorage for this provider
+  if (options?.provider) {
+    const custom = getCustomApiKey(options.provider);
+    if (custom) return true;
   }
 
   // Check Vite environment variables if checkEnv is enabled (default true)
@@ -103,17 +106,19 @@ export function detectApiKey(
 }
 
 /**
- * Global FIFO Queue & Rate Limiter for Toncenter API calls:
- * - With API Key: max 10 req/s (100ms interval spacing)
+ * Isolated FIFO Queue & Rate Limiter per provider:
+ * - With API Key or custom endpoint: max 10 req/s (100ms interval spacing)
  * - Without API Key: max 1 req/s (1000ms interval spacing)
- * - Exponential backoff retry on HTTP 429
+ * - Independent backoff and rate management per provider
  */
-export class ToncenterQueue {
+export class ProviderRateLimitQueue {
   private queue: QueueItem<unknown>[] = [];
   private isProcessing = false;
   private lastDispatchTime = 0;
   private backoffUntil = 0;
   private consecutive429s = 0;
+
+  constructor(public readonly name: string) {}
 
   enqueue<T>(task: () => Promise<T>, hasApiKey: boolean): Promise<T> {
     return new Promise<T>((resolve, reject) => {
@@ -135,9 +140,15 @@ export class ToncenterQueue {
     );
     this.backoffUntil = Date.now() + delay;
     console.warn(
-      `[ToncenterRateLimiter] Hit rate limit (429). Backing off queue for ${delay}ms (attempt #${this.consecutive429s})...`,
+      `[RateLimiter:${this.name}] Hit rate limit (429). Backing off queue for ${delay}ms (attempt #${this.consecutive429s})...`,
     );
     notifyRateLimit429();
+  }
+
+  reset() {
+    this.backoffUntil = 0;
+    this.consecutive429s = 0;
+    this.lastDispatchTime = 0;
   }
 
   private async process() {
@@ -182,13 +193,32 @@ export class ToncenterQueue {
   }
 }
 
-export const globalToncenterQueue = new ToncenterQueue();
+const providerQueues = new Map<string, ProviderRateLimitQueue>();
+
+export function getProviderQueue(providerName: string): ProviderRateLimitQueue {
+  const key = providerName.toLowerCase();
+  if (!providerQueues.has(key)) {
+    providerQueues.set(key, new ProviderRateLimitQueue(key));
+  }
+  return providerQueues.get(key)!;
+}
+
+export function resetRateLimiterQueues(): void {
+  for (const queue of providerQueues.values()) {
+    queue.reset();
+  }
+}
+
+// Backwards-compatibility alias
+export const globalToncenterQueue = getProviderQueue('toncenter');
+export { ProviderRateLimitQueue as ToncenterQueue };
 
 /**
- * Executes a fetch request throttled by the global Toncenter rate limiter with retry on 429.
+ * Drop-in wrapper around fetch() that queues requests through the appropriate
+ * provider rate limiter queue and retries with exponential backoff on 429.
  */
 export async function rateLimitedFetch(
-  input: string | URL | Request,
+  input: RequestInfo | URL,
   init?: RequestInit,
   options?: RateLimiterOptions,
 ): Promise<Response> {
@@ -198,18 +228,36 @@ export async function rateLimitedFetch(
       : input instanceof URL
         ? input.toString()
         : input.url;
-  const hasKey = detectApiKey(urlStr, init?.headers, options?.apiKey);
+
+  const providerType: ApiKeyType = urlStr.includes('tonapi')
+    ? 'tonapi'
+    : 'toncenter';
+  const queue = getProviderQueue(providerType);
+
+  const customKey = getCustomApiKey(providerType);
+  const isCustomUrl = testnetRpcManager.isCustomEndpoint(urlStr);
+  const hasKey =
+    isCustomUrl ||
+    detectApiKey(
+      urlStr,
+      init?.headers,
+      options?.apiKey || customKey || undefined,
+      {
+        provider: providerType,
+      },
+    );
+
   const maxRetries = options?.maxRetries ?? 4;
 
   let attempt = 0;
   while (true) {
     try {
-      const res = await globalToncenterQueue.enqueue(async () => {
+      const res = await queue.enqueue(async () => {
         return await fetch(input, init);
       }, hasKey);
 
       if (res.status === 429) {
-        globalToncenterQueue.record429(options?.baseBackoffMs ?? 1500);
+        queue.record429(options?.baseBackoffMs ?? 1500);
         if (attempt < maxRetries) {
           attempt++;
           continue;
@@ -230,7 +278,7 @@ export async function rateLimitedFetch(
 
 /**
  * Creates an Axios adapter for @ton/ton TonClient to channel all JSON-RPC calls
- * through the global Toncenter rate limiter queue.
+ * through the provider's rate limiter queue.
  */
 export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
   return async function tonClientAdapter(config: {
@@ -265,6 +313,11 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
       ? testnetRpcManager.getActiveEndpoint()
       : initialUrl;
 
+    const providerType: ApiKeyType = activeUrl.includes('tonapi')
+      ? 'tonapi'
+      : 'toncenter';
+    const queue = getProviderQueue(providerType);
+
     // Extract headers safely from Axios AxiosRequestHeaders / raw object
     const headers: Record<string, string> = {};
     if (config.headers) {
@@ -295,17 +348,29 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
       }
     }
 
-    const hasKey = detectApiKey(activeUrl, headers, options?.apiKey);
+    const customKey = getCustomApiKey(providerType);
+    const isCustomUrl = testnetRpcManager.isCustomEndpoint(activeUrl);
+    const hasKey =
+      isCustomUrl ||
+      detectApiKey(
+        activeUrl,
+        headers,
+        options?.apiKey || customKey || undefined,
+        {
+          provider: providerType,
+        },
+      );
+
     const maxRetries = options?.maxRetries ?? 4;
 
     let attempt = 0;
     while (true) {
       try {
-        if (isTestnet && testnetRpcManager.isCustomEndpoint(activeUrl)) {
+        if (isTestnet && isCustomUrl) {
           headers['ngrok-skip-browser-warning'] = 'true';
         }
 
-        const response = await globalToncenterQueue.enqueue(async () => {
+        const response = await queue.enqueue(async () => {
           const body =
             typeof config.data === 'string'
               ? config.data
@@ -331,7 +396,7 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
         }
 
         if (response.status === 429) {
-          globalToncenterQueue.record429(options?.baseBackoffMs ?? 1500);
+          queue.record429(options?.baseBackoffMs ?? 1500);
           if (attempt < maxRetries) {
             attempt++;
             continue;
