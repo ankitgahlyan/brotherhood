@@ -12,18 +12,18 @@ const clients: Record<string, TonClient> = {};
 export function getTonClient(network: Network = DEFAULT_NETWORK): TonClient {
   const global = getGlobal();
   const isDirect = Boolean(global?.settings?.isDirectTestnetApi);
-  const customKey = network === 'mainnet'
-    ? global?.settings?.customToncenterMainnetKey
-    : (global?.settings?.customToncenterTestnetKey || global?.settings?.toncenterApiKey);
-
   const customUrl = network === 'testnet' ? global?.settings?.customToncenterTestnetUrl?.trim() : undefined;
-  const clientKey = `${network}:${isDirect ? 'direct' : 'proxy'}:${customUrl || ''}:${customKey || ''}`;
+  // Only route directly if direct mode is enabled AND a key or custom URL is configured
+  const hasDirectConfig = Boolean(customKey) || Boolean(customUrl);
+  const shouldUseDirect = isDirect && hasDirectConfig;
+
+  const clientKey = `${network}:${shouldUseDirect ? 'direct' : 'proxy'}:${customUrl || ''}:${customKey || ''}`;
 
   if (!clients[clientKey]) {
     let endpoint: string;
     if (customUrl) {
       endpoint = `${customUrl.replace(/\/+$/, '')}/api/v2/jsonRPC`;
-    } else if (isDirect) {
+    } else if (shouldUseDirect) {
       endpoint = network === 'mainnet'
         ? 'https://toncenter.com/api/v2/jsonRPC'
         : 'https://testnet.toncenter.com/api/v2/jsonRPC';

@@ -29,14 +29,22 @@ export const NETWORK_CONFIG = {
       if (env?.customToncenterTestnetUrl?.trim()) {
         return env.customToncenterTestnetUrl.trim();
       }
-      return env?.isDirectTestnetApi ? TONCENTER_DIRECT_TESTNET_URL : TONCENTER_TESTNET_URL;
+      // Only route directly if direct mode is enabled AND a key is configured; otherwise fallback to proxy
+      const hasKey = Boolean(env?.customToncenterTestnetKey?.trim());
+      return (env?.isDirectTestnetApi && hasKey)
+        ? TONCENTER_DIRECT_TESTNET_URL
+        : TONCENTER_TESTNET_URL;
     },
     get tonApiIoUrl() {
       const env = getEnvironment?.();
       if (env?.customTonapiTestnetUrl?.trim()) {
         return env.customTonapiTestnetUrl.trim();
       }
-      return env?.isDirectTestnetApi ? TONAPIIO_DIRECT_TESTNET_URL : TONAPIIO_TESTNET_URL;
+      // Only route directly if direct mode is enabled AND a key is configured; otherwise fallback to proxy
+      const hasKey = Boolean(env?.customTonapiTestnetKey?.trim());
+      return (env?.isDirectTestnetApi && hasKey)
+        ? TONAPIIO_DIRECT_TESTNET_URL
+        : TONAPIIO_TESTNET_URL;
     },
     // W5 wallet chain IDs for different subwallet variants
     chainId: -3,

@@ -6,6 +6,7 @@ import type { GlobalState } from '../../global/types';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 import { resetTonClients } from '../../lib/brotherhood/ton';
+import buildClassName from '../../util/buildClassName';
 import { resetThrottledProviderFetchers } from '../../util/ThrottledFetcher';
 
 import Button from '../ui/Button';
@@ -68,6 +69,18 @@ function SettingsApiKeysModal({
     ? 'https://testnet.tonapi.io'
     : '/tonapiio-testnet-proxy';
 
+  const isToncenterVerified = Boolean(
+    toncenterResult?.ok
+    || (Boolean(toncenterKey.trim() || toncenterUrl.trim()) && toncenterResult === undefined && Boolean(initialToncenterKey.trim() || initialToncenterUrl.trim())),
+  );
+
+  const isTonapiVerified = Boolean(
+    tonapiResult?.ok
+    || (Boolean(tonapiKey.trim() || tonapiUrl.trim()) && tonapiResult === undefined && Boolean(initialTonapiKey.trim() || initialTonapiUrl.trim())),
+  );
+
+  const canEnableDirect = isToncenterVerified || isTonapiVerified;
+
   useEffect(() => {
     if (isOpen) {
       setIsDirect(Boolean(initialIsDirect));
@@ -81,6 +94,13 @@ function SettingsApiKeysModal({
   }, [isOpen, initialIsDirect, initialToncenterKey, initialTonapiKey, initialToncenterUrl, initialTonapiUrl]);
 
   const handleToggleDirect = useLastCallback((checked: boolean) => {
+    if (checked && !canEnableDirect) {
+      showToast({
+        message: lang('Please test and verify at least one API key/URL successfully before enabling direct calls.')
+          || 'Please test and verify at least one API key/URL successfully before enabling direct calls.',
+      });
+      return;
+    }
     setIsDirect(checked);
   });
 
@@ -184,7 +204,7 @@ function SettingsApiKeysModal({
 
   const handleSave = useLastCallback(() => {
     setTestnetApiSettings({
-      isDirectTestnetApi: isDirect,
+      isDirectTestnetApi: isDirect && canEnableDirect,
       customToncenterTestnetUrl: toncenterUrl.trim() || undefined,
       customToncenterTestnetKey: toncenterKey.trim() || undefined,
       customTonapiTestnetUrl: tonapiUrl.trim() || undefined,
@@ -214,8 +234,8 @@ function SettingsApiKeysModal({
             <span className={styles.switchTitle}>{lang('Direct Testnet Calls') || 'Direct Testnet Calls'}</span>
             <span className={styles.switchSubtitle}>
               {isDirect
-                ? (lang('Calls go directly to providers (1 req/sec without API key)')
-                  || 'Calls go directly to providers (1 req/sec without API key)')
+                ? (lang('Calls go directly for verified providers (1 req/sec without API key)')
+                  || 'Calls go directly for verified providers (1 req/sec without API key)')
                 : (lang('Calls go through proxy middleware with MyTonWallet spoof')
                   || 'Calls go through proxy middleware with MyTonWallet spoof')}
             </span>
@@ -231,7 +251,18 @@ function SettingsApiKeysModal({
           {/* Toncenter Provider Card */}
           <div className={styles.providerSection}>
             <div className={styles.providerHeader}>
-              <span className={styles.providerTitle}>Toncenter RPC Provider</span>
+              <div className={styles.providerTitleGroup}>
+                <span className={styles.providerTitle}>Toncenter RPC</span>
+                {isDirect ? (
+                  isToncenterVerified ? (
+                    <span className={buildClassName(styles.routeBadge, styles.routeBadgeDirect)}>Direct</span>
+                  ) : (
+                    <span className={buildClassName(styles.routeBadge, styles.routeBadgeProxy)}>Proxy Fallback</span>
+                  )
+                ) : (
+                  <span className={styles.routeBadge}>Proxy</span>
+                )}
+              </div>
               {Boolean(toncenterUrl) && (
                 <button
                   type="button"
@@ -285,7 +316,18 @@ function SettingsApiKeysModal({
           {/* TonAPI Provider Card */}
           <div className={styles.providerSection}>
             <div className={styles.providerHeader}>
-              <span className={styles.providerTitle}>TonAPI Indexer Provider</span>
+              <div className={styles.providerTitleGroup}>
+                <span className={styles.providerTitle}>TonAPI Indexer</span>
+                {isDirect ? (
+                  isTonapiVerified ? (
+                    <span className={buildClassName(styles.routeBadge, styles.routeBadgeDirect)}>Direct</span>
+                  ) : (
+                    <span className={buildClassName(styles.routeBadge, styles.routeBadgeProxy)}>Proxy Fallback</span>
+                  )
+                ) : (
+                  <span className={styles.routeBadge}>Proxy</span>
+                )}
+              </div>
               {Boolean(tonapiUrl) && (
                 <button
                   type="button"

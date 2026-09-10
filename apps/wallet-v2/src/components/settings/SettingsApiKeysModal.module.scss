@@ -66,10 +66,35 @@
   justify-content: space-between;
 }
 
+.providerTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .providerTitle {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--color-text-primary);
+}
+
+.routeBadge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  background-color: var(--color-background-compact-element, rgba(0, 0, 0, 0.06));
+  color: var(--color-text-secondary);
+}
+
+.routeBadgeDirect {
+  background-color: rgba(49, 181, 69, 0.15);
+  color: var(--color-green, #31B545);
+}
+
+.routeBadgeProxy {
+  background-color: rgba(51, 144, 236, 0.15);
+  color: var(--color-accent-primary, #3390EC);
 }
 
 .resetBtn {
