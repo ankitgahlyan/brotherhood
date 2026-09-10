@@ -265,15 +265,24 @@ function SettingsApiKeysModal({
                   <span className={styles.routeBadge}>Proxy</span>
                 )}
               </div>
-              {Boolean(toncenterUrl) && (
+              <div className={styles.providerHeaderActions}>
                 <button
                   type="button"
-                  className={styles.resetBtn}
-                  onClick={() => setToncenterUrl('')}
+                  className={styles.actionBtn}
+                  onClick={() => setToncenterUrl('https://testnet.toncenter.com')}
                 >
-                  Reset URL
+                  {lang('Use Default') || 'Use Default'}
                 </button>
-              )}
+                {Boolean(toncenterUrl) && (
+                  <button
+                    type="button"
+                    className={styles.resetBtn}
+                    onClick={() => setToncenterUrl('')}
+                  >
+                    {lang('Reset') || 'Reset'}
+                  </button>
+                )}
+              </div>
             </div>
             <Input
               label="Toncenter Base URL"
@@ -330,15 +339,24 @@ function SettingsApiKeysModal({
                   <span className={styles.routeBadge}>Proxy</span>
                 )}
               </div>
-              {Boolean(tonapiUrl) && (
+              <div className={styles.providerHeaderActions}>
                 <button
                   type="button"
-                  className={styles.resetBtn}
-                  onClick={() => setTonapiUrl('')}
+                  className={styles.actionBtn}
+                  onClick={() => setTonapiUrl('https://testnet.tonapi.io')}
                 >
-                  Reset URL
+                  {lang('Use Default') || 'Use Default'}
                 </button>
-              )}
+                {Boolean(tonapiUrl) && (
+                  <button
+                    type="button"
+                    className={styles.resetBtn}
+                    onClick={() => setTonapiUrl('')}
+                  >
+                    {lang('Reset') || 'Reset'}
+                  </button>
+                )}
+              </div>
             </div>
             <Input
               label="TonAPI Base URL"
