@@ -155,7 +155,9 @@ export async function updateTokens(
     }
   }
 
-  await tokenRepository.bulkPut(tokensForDb);
+  // Deduplicate by slug to prevent ConstraintError in Dexie unique index
+  const uniqueTokensForDb = Object.values(buildCollectionByKey(tokensForDb, 'slug'));
+  await tokenRepository.bulkPut(uniqueTokensForDb);
 
   if (shouldSendUpdate && sendUpdate) {
     sendUpdate();

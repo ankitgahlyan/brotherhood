@@ -171,6 +171,9 @@ addActionHandler('startCreatingWallet', async (global, actions, payload) => {
 
   const accounts = selectAccounts(global) ?? {};
   const isFirstAccount = isEmptyObject(accounts);
+  if (isFirstAccount) {
+    await clearAuthGuardingNothing();
+  }
   const hasPassword = selectHasPassword(global);
   const nextAuthState = hasPassword
     ? AuthState.safetyRules
@@ -657,8 +660,13 @@ addActionHandler('skipCheckMnemonic', (global, actions) => {
   }
 });
 
-addActionHandler('startImportingWallet', (global, actions, payload) => {
+addActionHandler('startImportingWallet', async (global, actions, payload) => {
   if (IS_EXPLORER) return;
+
+  const accounts = selectAccounts(global) ?? {};
+  if (isEmptyObject(accounts)) {
+    await clearAuthGuardingNothing();
+  }
 
   const { enclaveToken } = payload ?? {};
   const hasPassword = selectHasPassword(global);
