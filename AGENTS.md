@@ -59,3 +59,11 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - `.dev.vars` is copied into `dist/server` at build (dev keys only; never commit real secrets).
 - On Cloudflare Workers, module-scope `process.env` is undefined — read env vars inside the handler.
 - Client chunks are split via `build` `environments.client.rolldownOptions.output.codeSplitting` groups (react, react-router, tanstack-query, tanstack-store, ton-sdk, tonconnect, radix-ui, floating-ui, lucide-react, zod). SSR build stays monolithic.
+
+### Wallet & RPC Routing Rules (Wallet V2)
+
+- **Direct Mode Guard:** Never allow enabling "Direct Testnet Calls" without at least one tested and verified API key or custom self-hosted endpoint.
+- **Per-Provider Proxy Fallback:** When Direct Mode is active, each provider must independently check for a configured key/custom URL. Any unkeyed provider must continue routing through the local proxy with origin spoofing to avoid public endpoint 429 rate limit errors.
+- **Circuit Breaker Hygiene:** Always call `resetCircuitBreakers()` and `resetThrottledProviderFetchers()` whenever network settings or API keys are updated or saved.
+- **Resilient Polling & Activity Streams:** Always catch and suppress `CircuitOpenError` and `ApiServerError` in background catch-up/polling loops (`activityStream.ts`, `fallbackPollingScheduler.ts`) to avoid spamming debug logs or entering tight retry loops during breaker cooldown windows.
+
