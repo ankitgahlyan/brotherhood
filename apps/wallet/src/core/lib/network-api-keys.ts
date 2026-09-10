@@ -233,7 +233,7 @@ export async function testToncenterConnection(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
+    // 'ngrok-skip-browser-warning': 'true',
   };
   if (apiKey && apiKey.trim()) {
     headers['X-API-Key'] = apiKey.trim();
@@ -326,7 +326,7 @@ export async function testTonapiConnection(
   const url = `${base}/v2/blockchain/masterchain-head`;
 
   const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': 'true',
+    // 'ngrok-skip-browser-warning': 'true',
   };
   if (apiKey && apiKey.trim()) {
     headers['Authorization'] = `Bearer ${apiKey.trim()}`;

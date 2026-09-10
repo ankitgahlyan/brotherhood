@@ -367,7 +367,7 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
     while (true) {
       try {
         if (isTestnet && isCustomUrl) {
-          headers['ngrok-skip-browser-warning'] = 'true';
+          // headers['ngrok-skip-browser-warning'] = 'true';
         }
 
         const response = await queue.enqueue(async () => {
