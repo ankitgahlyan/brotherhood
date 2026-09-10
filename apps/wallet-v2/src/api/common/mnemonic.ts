@@ -1,6 +1,6 @@
 import * as bip39 from 'bip39';
 
-import { logDebugError } from '../../util/logs';
+import { logDebug, logDebugError } from '../../util/logs';
 import { callWindow } from '../../util/windowProvider/connector';
 
 export function generateBip39Mnemonic() {
@@ -23,7 +23,11 @@ export async function getMnemonic(accountId: string, enclaveToken: string): Prom
     const mnemonicString = await callWindow('exportSecret', accountId, enclaveToken);
 
     return mnemonicString.split(' ');
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.includes('no secret for') || err?.message?.includes('secret_missing')) {
+      logDebug('getMnemonic: no secret for account in enclave, skipping', accountId);
+      return undefined;
+    }
     logDebugError('getMnemonic', err);
     return undefined;
   }

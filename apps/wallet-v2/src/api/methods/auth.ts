@@ -507,7 +507,8 @@ export async function upgradeMultichainAccounts(enclaveToken: string) {
     const mnemonic = await getMnemonic(accountId, enclaveToken);
 
     if (!mnemonic) {
-      return { error: ApiCommonError.InvalidPassword };
+      logDebug('upgradeMultichainAccounts: skipping account without secret', accountId);
+      continue;
     }
 
     // The mnemonic is already decrypted here, so creating the missing auth token costs no extra Enclave export
