@@ -140,16 +140,26 @@ addActionHandler('changePasscode', async (global, actions, { passcode, onSuccess
 });
 
 addActionHandler('setTestnetApiSettings', (global, actions, payload) => {
-  const { isDirectTestnetApi, customToncenterTestnetKey, customTonapiTestnetKey } = payload;
+  const {
+    isDirectTestnetApi,
+    customToncenterTestnetKey,
+    customTonapiTestnetKey,
+    customToncenterTestnetUrl,
+    customTonapiTestnetUrl,
+  } = payload;
   void callApi('updateTestnetApiSettings', {
     isDirectTestnetApi,
     customToncenterTestnetKey,
     customTonapiTestnetKey,
+    customToncenterTestnetUrl,
+    customTonapiTestnetUrl,
   });
 
   return updateSettings(global, {
     isDirectTestnetApi,
     customToncenterTestnetKey,
     customTonapiTestnetKey,
+    customToncenterTestnetUrl,
+    customTonapiTestnetUrl,
   });
 });

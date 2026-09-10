@@ -30,7 +30,7 @@ export function openFiTransactionModal(message: FiMessage) {
     tokenSlug: DEFAULT_TRANSFER_TOKEN_SLUG,
     toAddress: message.toAddress,
     amount: message.amount,
-    binPayload: message.payload.toBoc(),
+    binPayload: message.payload.toBoc().toString('base64'),
     stateInit: base64StateInit,
   });
 }

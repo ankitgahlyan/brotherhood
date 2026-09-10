@@ -27,6 +27,8 @@ addActionHandler('initApi', async (global, actions) => {
     isDirectTestnetApi: global.settings.isDirectTestnetApi,
     customToncenterTestnetKey: global.settings.customToncenterTestnetKey,
     customTonapiTestnetKey: global.settings.customTonapiTestnetKey,
+    customToncenterTestnetUrl: global.settings.customToncenterTestnetUrl,
+    customTonapiTestnetUrl: global.settings.customTonapiTestnetUrl,
   });
 
   await callApi('waitDataPreload');

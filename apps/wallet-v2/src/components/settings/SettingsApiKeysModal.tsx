@@ -5,6 +5,8 @@ import type { GlobalState } from '../../global/types';
 
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
+import { resetTonClients } from '../../lib/brotherhood/ton';
+import { resetThrottledProviderFetchers } from '../../util/ThrottledFetcher';
 
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -22,10 +24,18 @@ type StateProps = {
   isDirectTestnetApi?: boolean;
   customToncenterTestnetKey?: string;
   customTonapiTestnetKey?: string;
+  customToncenterTestnetUrl?: string;
+  customTonapiTestnetUrl?: string;
 };
 
-type TestStatus = 'idle' | 'testing' | 'done';
-type PingResult = { ok: boolean; latencyMs?: number; error?: string };
+type PingResult = {
+  ok: boolean;
+  latencyMs?: number;
+  statusText?: string;
+  error?: string;
+  isRateLimited?: boolean;
+  isAuthError?: boolean;
+};
 
 function SettingsApiKeysModal({
   isOpen,
@@ -33,89 +43,155 @@ function SettingsApiKeysModal({
   isDirectTestnetApi: initialIsDirect,
   customToncenterTestnetKey: initialToncenterKey = '',
   customTonapiTestnetKey: initialTonapiKey = '',
+  customToncenterTestnetUrl: initialToncenterUrl = '',
+  customTonapiTestnetUrl: initialTonapiUrl = '',
 }: OwnProps & StateProps) {
   const lang = useLang();
   const { setTestnetApiSettings, showToast } = getActions();
 
   const [isDirect, setIsDirect] = useState(Boolean(initialIsDirect));
+  const [toncenterUrl, setToncenterUrl] = useState(initialToncenterUrl || '');
   const [toncenterKey, setToncenterKey] = useState(initialToncenterKey || '');
+  const [tonapiUrl, setTonapiUrl] = useState(initialTonapiUrl || '');
   const [tonapiKey, setTonapiKey] = useState(initialTonapiKey || '');
 
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
+  const [isTestingToncenter, setIsTestingToncenter] = useState(false);
+  const [isTestingTonapi, setIsTestingTonapi] = useState(false);
   const [toncenterResult, setToncenterResult] = useState<PingResult | undefined>();
   const [tonapiResult, setTonapiResult] = useState<PingResult | undefined>();
+
+  const defaultToncenterUrl = isDirect
+    ? 'https://testnet.toncenter.com'
+    : '/toncenter-testnet-proxy';
+
+  const defaultTonapiUrl = isDirect
+    ? 'https://testnet.tonapi.io'
+    : '/tonapiio-testnet-proxy';
 
   useEffect(() => {
     if (isOpen) {
       setIsDirect(Boolean(initialIsDirect));
+      setToncenterUrl(initialToncenterUrl || '');
       setToncenterKey(initialToncenterKey || '');
+      setTonapiUrl(initialTonapiUrl || '');
       setTonapiKey(initialTonapiKey || '');
-      setTestStatus('idle');
       setToncenterResult(undefined);
       setTonapiResult(undefined);
     }
-  }, [isOpen, initialIsDirect, initialToncenterKey, initialTonapiKey]);
+  }, [isOpen, initialIsDirect, initialToncenterKey, initialTonapiKey, initialToncenterUrl, initialTonapiUrl]);
 
   const handleToggleDirect = useLastCallback((checked: boolean) => {
     setIsDirect(checked);
   });
 
-  const handleTestConnection = useLastCallback(async () => {
-    setTestStatus('testing');
+  const testToncenterKey = useLastCallback(async () => {
+    setIsTestingToncenter(true);
     setToncenterResult(undefined);
-    setTonapiResult(undefined);
 
-    // Test Toncenter Testnet
-    const toncenterStart = Date.now();
+    const baseUrl = toncenterUrl.trim() || defaultToncenterUrl;
+    const key = toncenterKey.trim();
+    const startTime = Date.now();
+
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (toncenterKey.trim()) {
-        headers['X-Api-Key'] = toncenterKey.trim();
+      if (key) {
+        headers['X-Api-Key'] = key;
       }
-      const res = await fetch('https://testnet.toncenter.com/api/v3/transactions?limit=1', {
+
+      const url = `${baseUrl.replace(/\/+$/, '')}/api/v2/getMasterchainInfo`;
+
+      const res = await fetch(url, {
         method: 'GET',
         headers,
       });
-      const latency = Date.now() - toncenterStart;
+
+      const latencyMs = Date.now() - startTime;
+
       if (res.ok) {
-        setToncenterResult({ ok: true, latencyMs: latency });
+        setToncenterResult({ ok: true, latencyMs, statusText: 'Connected' });
+      } else if (res.status === 401 || res.status === 403) {
+        setToncenterResult({
+          ok: false,
+          isAuthError: true,
+          error: `Invalid API Key (HTTP ${res.status})`,
+        });
+      } else if (res.status === 429) {
+        setToncenterResult({
+          ok: false,
+          isRateLimited: true,
+          error: 'Rate Limited (HTTP 429) - 1 req/sec limit',
+        });
       } else {
-        setToncenterResult({ ok: false, error: `HTTP ${res.status}` });
+        setToncenterResult({ ok: false, error: `HTTP ${res.status}: ${res.statusText || 'Error'}` });
       }
     } catch (e: any) {
       setToncenterResult({ ok: false, error: e?.message || 'Connection failed' });
+    } finally {
+      setIsTestingToncenter(false);
     }
+  });
 
-    // Test TonAPI Testnet
-    const tonapiStart = Date.now();
+  const testTonapiKey = useLastCallback(async () => {
+    setIsTestingTonapi(true);
+    setTonapiResult(undefined);
+
+    const baseUrl = tonapiUrl.trim() || defaultTonapiUrl;
+    const key = tonapiKey.trim();
+    const startTime = Date.now();
+
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (tonapiKey.trim()) {
-        headers['Authorization'] = `Bearer ${tonapiKey.trim()}`;
+      if (key) {
+        headers['Authorization'] = `Bearer ${key}`;
       }
-      const res = await fetch('https://testnet.tonapi.io/v2/rates?tokens=ton&currencies=usd', {
+
+      const url = `${baseUrl.replace(/\/+$/, '')}/v2/rates?tokens=ton&currencies=usd`;
+
+      const res = await fetch(url, {
         method: 'GET',
         headers,
       });
-      const latency = Date.now() - tonapiStart;
+
+      const latencyMs = Date.now() - startTime;
+
       if (res.ok) {
-        setTonapiResult({ ok: true, latencyMs: latency });
+        setTonapiResult({ ok: true, latencyMs, statusText: 'Connected' });
+      } else if (res.status === 401 || res.status === 403) {
+        setTonapiResult({
+          ok: false,
+          isAuthError: true,
+          error: `Invalid Bearer Token (HTTP ${res.status})`,
+        });
+      } else if (res.status === 429) {
+        setTonapiResult({
+          ok: false,
+          isRateLimited: true,
+          error: 'Rate Limited (HTTP 429)',
+        });
       } else {
-        setTonapiResult({ ok: false, error: `HTTP ${res.status}` });
+        setTonapiResult({ ok: false, error: `HTTP ${res.status}: ${res.statusText || 'Error'}` });
       }
     } catch (e: any) {
       setTonapiResult({ ok: false, error: e?.message || 'Connection failed' });
+    } finally {
+      setIsTestingTonapi(false);
     }
+  });
 
-    setTestStatus('done');
+  const handleTestAll = useLastCallback(async () => {
+    await Promise.all([testToncenterKey(), testTonapiKey()]);
   });
 
   const handleSave = useLastCallback(() => {
     setTestnetApiSettings({
       isDirectTestnetApi: isDirect,
+      customToncenterTestnetUrl: toncenterUrl.trim() || undefined,
       customToncenterTestnetKey: toncenterKey.trim() || undefined,
+      customTonapiTestnetUrl: tonapiUrl.trim() || undefined,
       customTonapiTestnetKey: tonapiKey.trim() || undefined,
     });
+    resetTonClients();
+    resetThrottledProviderFetchers();
     showToast({ message: lang('Settings saved') || 'Settings saved' });
     onClose();
   });
@@ -125,12 +201,12 @@ function SettingsApiKeysModal({
       isOpen={isOpen}
       onClose={onClose}
       isCompact
-      title={lang('Network & API Keys') || 'Network & API Keys'}
+      title={lang('Network & API Providers') || 'Network & API Providers'}
     >
       <div className={styles.container}>
         <p className={styles.description}>
-          {lang('Configure direct connection to TON testnet APIs and provide optional personal API keys.')
-            || 'Configure direct connection to TON testnet APIs and provide optional personal API keys.'}
+          {lang('Configure custom self-hosted RPC endpoints, direct connections, and API keys for TON testnet.')
+            || 'Configure custom self-hosted RPC endpoints, direct connections, and API keys for TON testnet.'}
         </p>
 
         <div className={styles.switchRow} onClick={() => handleToggleDirect(!isDirect)}>
@@ -138,10 +214,10 @@ function SettingsApiKeysModal({
             <span className={styles.switchTitle}>{lang('Direct Testnet Calls') || 'Direct Testnet Calls'}</span>
             <span className={styles.switchSubtitle}>
               {isDirect
-                ? (lang('Calls go directly to toncenter.com & tonapi.io (1 req/sec without API key)')
-                  || 'Calls go directly to toncenter.com & tonapi.io (1 req/sec without API key)')
-                : (lang('Calls go through MyTonWallet proxy')
-                  || 'Calls go through MyTonWallet proxy')}
+                ? (lang('Calls go directly to providers (1 req/sec without API key)')
+                  || 'Calls go directly to providers (1 req/sec without API key)')
+                : (lang('Calls go through proxy middleware with MyTonWallet spoof')
+                  || 'Calls go through proxy middleware with MyTonWallet spoof')}
             </span>
           </div>
           <Switcher
@@ -152,58 +228,124 @@ function SettingsApiKeysModal({
         </div>
 
         <div className={styles.inputsGroup}>
-          <Input
-            label="Toncenter Testnet API Key (Optional)"
-            placeholder="Enter Toncenter API Key"
-            value={toncenterKey}
-            onInput={setToncenterKey}
-          />
-          <Input
-            label="TonAPI Testnet API Key (Optional)"
-            placeholder="Enter TonAPI Bearer Key"
-            value={tonapiKey}
-            onInput={setTonapiKey}
-          />
+          {/* Toncenter Provider Card */}
+          <div className={styles.providerSection}>
+            <div className={styles.providerHeader}>
+              <span className={styles.providerTitle}>Toncenter RPC Provider</span>
+              {Boolean(toncenterUrl) && (
+                <button
+                  type="button"
+                  className={styles.resetBtn}
+                  onClick={() => setToncenterUrl('')}
+                >
+                  Reset URL
+                </button>
+              )}
+            </div>
+            <Input
+              label="Toncenter Base URL"
+              placeholder={defaultToncenterUrl}
+              value={toncenterUrl}
+              onInput={setToncenterUrl}
+            />
+            <Input
+              label="Toncenter API Key (Optional)"
+              placeholder="Enter Toncenter API Key"
+              value={toncenterKey}
+              onInput={setToncenterKey}
+            />
+            <Button
+              isSecondary
+              className={styles.testBtn}
+              isLoading={isTestingToncenter}
+              onClick={testToncenterKey}
+            >
+              {lang('Test Toncenter') || 'Test Toncenter'}
+            </Button>
+            {toncenterResult && (
+              <div className={styles.fieldStatus}>
+                <span>Status:</span>
+                {toncenterResult.ok ? (
+                  <span className={styles.testSuccess}>
+                    ✓ {toncenterResult.statusText} ({toncenterResult.latencyMs}ms)
+                  </span>
+                ) : toncenterResult.isRateLimited ? (
+                  <span className={styles.testWarn}>
+                    ⚠ {toncenterResult.error}
+                  </span>
+                ) : (
+                  <span className={styles.testFail}>
+                    ✗ {toncenterResult.error}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* TonAPI Provider Card */}
+          <div className={styles.providerSection}>
+            <div className={styles.providerHeader}>
+              <span className={styles.providerTitle}>TonAPI Indexer Provider</span>
+              {Boolean(tonapiUrl) && (
+                <button
+                  type="button"
+                  className={styles.resetBtn}
+                  onClick={() => setTonapiUrl('')}
+                >
+                  Reset URL
+                </button>
+              )}
+            </div>
+            <Input
+              label="TonAPI Base URL"
+              placeholder={defaultTonapiUrl}
+              value={tonapiUrl}
+              onInput={setTonapiUrl}
+            />
+            <Input
+              label="TonAPI Bearer Key (Optional)"
+              placeholder="Enter TonAPI Bearer Key"
+              value={tonapiKey}
+              onInput={setTonapiKey}
+            />
+            <Button
+              isSecondary
+              className={styles.testBtn}
+              isLoading={isTestingTonapi}
+              onClick={testTonapiKey}
+            >
+              {lang('Test TonAPI') || 'Test TonAPI'}
+            </Button>
+            {tonapiResult && (
+              <div className={styles.fieldStatus}>
+                <span>Status:</span>
+                {tonapiResult.ok ? (
+                  <span className={styles.testSuccess}>
+                    ✓ {tonapiResult.statusText} ({tonapiResult.latencyMs}ms)
+                  </span>
+                ) : tonapiResult.isRateLimited ? (
+                  <span className={styles.testWarn}>
+                    ⚠ {tonapiResult.error}
+                  </span>
+                ) : (
+                  <span className={styles.testFail}>
+                    ✗ {tonapiResult.error}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={styles.testSection}>
           <Button
             isSecondary
             isSmall
-            isLoading={testStatus === 'testing'}
-            onClick={handleTestConnection}
+            isLoading={isTestingToncenter || isTestingTonapi}
+            onClick={handleTestAll}
           >
-            {lang('Test Connection') || 'Test Connection'}
+            {lang('Test All Connections') || 'Test All Connections'}
           </Button>
-
-          {testStatus === 'done' && (
-            <div className={styles.testResults}>
-              <div className={styles.testItem}>
-                <span>Toncenter Testnet:</span>
-                {toncenterResult?.ok ? (
-                  <span className={styles.testSuccess}>
-                    {lang('Connected')} ({toncenterResult.latencyMs}ms)
-                  </span>
-                ) : (
-                  <span className={styles.testFail}>
-                    {toncenterResult?.error || lang('Failed')}
-                  </span>
-                )}
-              </div>
-              <div className={styles.testItem}>
-                <span>TonAPI Testnet:</span>
-                {tonapiResult?.ok ? (
-                  <span className={styles.testSuccess}>
-                    {lang('Connected')} ({tonapiResult.latencyMs}ms)
-                  </span>
-                ) : (
-                  <span className={styles.testFail}>
-                    {tonapiResult?.error || lang('Failed')}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className={styles.actions}>
@@ -222,6 +364,8 @@ export default memo(
       isDirectTestnetApi: global.settings.isDirectTestnetApi,
       customToncenterTestnetKey: global.settings.customToncenterTestnetKey,
       customTonapiTestnetKey: global.settings.customTonapiTestnetKey,
+      customToncenterTestnetUrl: global.settings.customToncenterTestnetUrl,
+      customTonapiTestnetUrl: global.settings.customTonapiTestnetUrl,
     };
   })(SettingsApiKeysModal),
 );

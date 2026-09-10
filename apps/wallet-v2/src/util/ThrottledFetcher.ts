@@ -29,6 +29,8 @@ const THROTTLED_PROVIDER_ORIGINS = new Set([
   new URL(TONAPIIO_TESTNET_URL).origin,
   'https://testnet.toncenter.com',
   'https://testnet.tonapi.io',
+  'https://toncenter.com',
+  'https://tonapi.io',
 ]);
 const throttledFetchers = new Map<string, ThrottledFetcher>();
 

@@ -335,6 +335,8 @@ export function updateTestnetApiSettings(config: {
   isDirectTestnetApi?: boolean;
   customToncenterTestnetKey?: string;
   customTonapiTestnetKey?: string;
+  customToncenterTestnetUrl?: string;
+  customTonapiTestnetUrl?: string;
 }) {
   updateTestnetApiConfig(config);
 }

@@ -123,6 +123,8 @@ export const INITIAL_STATE: GlobalState = {
     isDirectTestnetApi: false,
     customToncenterTestnetKey: undefined,
     customTonapiTestnetKey: undefined,
+    customToncenterTestnetUrl: undefined,
+    customTonapiTestnetUrl: undefined,
   },
 
   byAccountId: {},

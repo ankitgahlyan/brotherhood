@@ -50,6 +50,8 @@ export interface ApiInitArgs {
   isDirectTestnetApi?: boolean;
   customToncenterTestnetKey?: string;
   customTonapiTestnetKey?: string;
+  customToncenterTestnetUrl?: string;
+  customTonapiTestnetUrl?: string;
 }
 
 export interface ApiToken {

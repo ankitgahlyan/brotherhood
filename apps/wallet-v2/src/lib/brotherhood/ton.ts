@@ -4,30 +4,40 @@ import { FI_ADDRESS, DEFAULT_NETWORK, type Network } from './config';
 import { FossFi } from '@wrappers/FossFi.gen';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
 import { getContractCache, setContractCache, getNormalizedContractCacheKey } from './contract-cache';
-import { TONCENTER_DIRECT_TESTNET_URL } from '../../api/chains/ton/constants';
+import { TONCENTER_MAINNET_URL, TONCENTER_TESTNET_URL } from '../../config';
 import { getGlobal } from '../../global';
 
 const clients: Record<string, TonClient> = {};
 
 export function getTonClient(network: Network = DEFAULT_NETWORK): TonClient {
-  if (!clients[network]) {
-    const global = getGlobal();
-    const isDirect = Boolean(global?.settings?.isDirectTestnetApi);
-    const customKey = global?.settings?.toncenterApiKey;
+  const global = getGlobal();
+  const isDirect = Boolean(global?.settings?.isDirectTestnetApi);
+  const customKey = network === 'mainnet'
+    ? global?.settings?.customToncenterMainnetKey
+    : (global?.settings?.customToncenterTestnetKey || global?.settings?.toncenterApiKey);
 
-    let endpoint = 'https://testnet.toncenter.com/api/v2/jsonRPC';
-    if (network === 'mainnet') {
-      endpoint = 'https://toncenter.com/api/v2/jsonRPC';
-    } else if (!isDirect) {
-      endpoint = 'https://testnet.toncenter.com/api/v2/jsonRPC';
+  const customUrl = network === 'testnet' ? global?.settings?.customToncenterTestnetUrl?.trim() : undefined;
+  const clientKey = `${network}:${isDirect ? 'direct' : 'proxy'}:${customUrl || ''}:${customKey || ''}`;
+
+  if (!clients[clientKey]) {
+    let endpoint: string;
+    if (customUrl) {
+      endpoint = `${customUrl.replace(/\/+$/, '')}/api/v2/jsonRPC`;
+    } else if (isDirect) {
+      endpoint = network === 'mainnet'
+        ? 'https://toncenter.com/api/v2/jsonRPC'
+        : 'https://testnet.toncenter.com/api/v2/jsonRPC';
+    } else {
+      const base = network === 'mainnet' ? TONCENTER_MAINNET_URL : TONCENTER_TESTNET_URL;
+      endpoint = `${base.replace(/\/+$/, '')}/api/v2/jsonRPC`;
     }
 
-    clients[network] = new TonClient({
+    clients[clientKey] = new TonClient({
       endpoint,
       apiKey: customKey || undefined,
     });
   }
-  return clients[network];
+  return clients[clientKey];
 }
 
 export function resetTonClients(): void {

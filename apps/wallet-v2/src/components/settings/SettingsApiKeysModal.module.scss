@@ -48,13 +48,80 @@
 .inputsGroup {
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+
+.providerSection {
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--border-radius-default);
+  background-color: var(--color-background-second);
+}
+
+.providerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.providerTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.resetBtn {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--color-accent-primary, #3390EC);
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.inputFieldWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.inputWithAction {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+
+  > :first-child {
+    flex: 1;
+  }
+}
+
+.testBtn {
+  min-width: 5rem;
+  height: 2.75rem;
+  padding: 0 0.875rem !important;
+  font-size: 0.8125rem !important;
+}
+
+.fieldStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: var(--border-radius-small, 6px);
+  background-color: var(--color-background-second);
 }
 
 .testSection {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .testResults {
@@ -84,6 +151,11 @@
 .testFail {
   font-weight: 500;
   color: var(--color-red, #FF4C4C);
+}
+
+.testWarn {
+  font-weight: 500;
+  color: var(--color-orange, #FFA500);
 }
 
 .actions {

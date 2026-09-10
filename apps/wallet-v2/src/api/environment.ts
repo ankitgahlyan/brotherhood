@@ -78,6 +78,8 @@ export function updateTestnetApiConfig(config: {
   isDirectTestnetApi?: boolean;
   customToncenterTestnetKey?: string;
   customTonapiTestnetKey?: string;
+  customToncenterTestnetUrl?: string;
+  customTonapiTestnetUrl?: string;
 }) {
   if (!environment) return;
   if (config.isDirectTestnetApi !== undefined) {
@@ -90,6 +92,12 @@ export function updateTestnetApiConfig(config: {
   }
   if (config.customTonapiTestnetKey !== undefined) {
     environment.customTonapiTestnetKey = config.customTonapiTestnetKey;
+  }
+  if (config.customToncenterTestnetUrl !== undefined) {
+    environment.customToncenterTestnetUrl = config.customToncenterTestnetUrl;
+  }
+  if (config.customTonapiTestnetUrl !== undefined) {
+    environment.customTonapiTestnetUrl = config.customTonapiTestnetUrl;
   }
 }
 

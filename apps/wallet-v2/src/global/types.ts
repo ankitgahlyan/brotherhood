@@ -1130,6 +1130,8 @@ export type GlobalState = {
     isDirectTestnetApi?: boolean;
     customToncenterTestnetKey?: string;
     customTonapiTestnetKey?: string;
+    customToncenterTestnetUrl?: string;
+    customTonapiTestnetUrl?: string;
     isSecurityWarningHidden?: boolean;
     areTokensWithNoCostHidden: boolean;
     areUnverifiedNftsHidden?: boolean;
@@ -1584,6 +1586,8 @@ export interface ActionPayloads {
     isDirectTestnetApi: boolean;
     customToncenterTestnetKey?: string;
     customTonapiTestnetKey?: string;
+    customToncenterTestnetUrl?: string;
+    customTonapiTestnetUrl?: string;
   };
   changeLanguage: { langCode: LangCode };
   setSelectedExplorerId: { chain: ApiChain; explorerId: string };

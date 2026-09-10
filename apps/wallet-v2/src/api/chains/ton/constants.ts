@@ -26,10 +26,16 @@ export const NETWORK_CONFIG = {
   testnet: {
     get toncenterUrl() {
       const env = getEnvironment?.();
+      if (env?.customToncenterTestnetUrl?.trim()) {
+        return env.customToncenterTestnetUrl.trim();
+      }
       return env?.isDirectTestnetApi ? TONCENTER_DIRECT_TESTNET_URL : TONCENTER_TESTNET_URL;
     },
     get tonApiIoUrl() {
       const env = getEnvironment?.();
+      if (env?.customTonapiTestnetUrl?.trim()) {
+        return env.customTonapiTestnetUrl.trim();
+      }
       return env?.isDirectTestnetApi ? TONAPIIO_DIRECT_TESTNET_URL : TONAPIIO_TESTNET_URL;
     },
     // W5 wallet chain IDs for different subwallet variants
