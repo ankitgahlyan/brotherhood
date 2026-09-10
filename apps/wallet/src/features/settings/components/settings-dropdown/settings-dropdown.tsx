@@ -20,6 +20,7 @@ import {
   Sparkles,
   Trash2,
   Check,
+  Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -31,9 +32,13 @@ import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
+import {
+  getTestnetRpcRouting,
+  isCustomEndpointActive,
+} from '@/core/lib/network-api-keys';
 
 import { ToggleRow } from '../toggle-row';
-import { NetworkApiKeys } from '../network-api-keys/network-api-keys';
+import { SettingsApiKeysModal } from '../network-api-keys';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -48,6 +53,7 @@ const log = createComponentLogger('SettingsDropdown');
 interface ActionRowProps {
   icon: React.ReactNode;
   label: string;
+  subtitle?: string;
   onClick: () => void;
   danger?: boolean;
   disabled?: boolean;
@@ -56,6 +62,7 @@ interface ActionRowProps {
 const ActionRow: React.FC<ActionRowProps> = ({
   icon,
   label,
+  subtitle,
   onClick,
   danger = false,
   disabled = false,
@@ -71,7 +78,12 @@ const ActionRow: React.FC<ActionRowProps> = ({
     }`}
   >
     <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
-    <span className="flex-1 text-sm font-semibold">{label}</span>
+    <div className="flex-1 min-w-0">
+      <div className="text-sm font-semibold truncate">{label}</div>
+      {subtitle && (
+        <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
+      )}
+    </div>
     <ChevronRight
       className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`}
     />
@@ -124,6 +136,17 @@ export const SettingsDropdown: React.FC = () => {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
+  const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
+
+  const rpcRouting = getTestnetRpcRouting();
+  const hasCustom =
+    isCustomEndpointActive('toncenter') || isCustomEndpointActive('tonapi');
+  const networkSubtitle =
+    rpcRouting === 'orbs'
+      ? 'Orbs Network'
+      : hasCustom
+        ? 'Custom RPC Active'
+        : 'Direct (Official)';
 
   const [, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
@@ -328,6 +351,12 @@ export const SettingsDropdown: React.FC = () => {
 
           <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
             <ActionRow
+              icon={<Globe className="w-5 h-5" />}
+              label="Network & API Keys"
+              subtitle={networkSubtitle}
+              onClick={() => setIsApiKeysModalOpen(true)}
+            />
+            <ActionRow
               icon={<Download className="w-5 h-5" />}
               label="Install App / Add Shortcut"
               onClick={() => {
@@ -364,8 +393,6 @@ export const SettingsDropdown: React.FC = () => {
               {mnemonicError}
             </p>
           )}
-
-          <NetworkApiKeys />
 
           <div className="pt-2 pb-1 text-center">
             <button
@@ -469,6 +496,11 @@ export const SettingsDropdown: React.FC = () => {
       <InstallPromptDialog
         open={isInstallOpen}
         onOpenChange={setIsInstallOpen}
+      />
+
+      <SettingsApiKeysModal
+        isOpen={isApiKeysModalOpen}
+        onClose={() => setIsApiKeysModalOpen(false)}
       />
     </>
   );

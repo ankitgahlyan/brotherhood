@@ -8,6 +8,7 @@
 import {
   DEFAULT_TONCENTER_TESTNET_RPC,
   getCustomApiUrl,
+  isCustomEndpointActive,
 } from '@/core/lib/network-api-keys';
 
 export const PUBLIC_TESTNET_TONCENTER_RPC = DEFAULT_TONCENTER_TESTNET_RPC;
@@ -37,19 +38,22 @@ export class TestnetRpcManager {
       return [this.explicitCustomEndpoint.trim(), PUBLIC_TESTNET_TONCENTER_RPC];
     }
 
-    const customUrl = getCustomApiUrl('toncenter');
-    const customConfigured =
-      customUrl ||
-      (typeof import.meta !== 'undefined' && import.meta.env
-        ? import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC
-        : undefined);
+    const isCustomActive = isCustomEndpointActive('toncenter');
+    if (isCustomActive) {
+      const customUrl = getCustomApiUrl('toncenter');
+      const customConfigured =
+        customUrl ||
+        (typeof import.meta !== 'undefined' && import.meta.env
+          ? import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC
+          : undefined);
 
-    if (customConfigured && customConfigured.trim()) {
-      const normalized = customConfigured.trim().replace(/\/+$/, '');
-      const fullUrl = normalized.endsWith('/jsonRPC')
-        ? normalized
-        : `${normalized}/api/v2/jsonRPC`;
-      return [fullUrl, PUBLIC_TESTNET_TONCENTER_RPC];
+      if (customConfigured && customConfigured.trim()) {
+        const normalized = customConfigured.trim().replace(/\/+$/, '');
+        const fullUrl = normalized.endsWith('/jsonRPC')
+          ? normalized
+          : `${normalized}/api/v2/jsonRPC`;
+        return [fullUrl, PUBLIC_TESTNET_TONCENTER_RPC];
+      }
     }
 
     return [PUBLIC_TESTNET_TONCENTER_RPC];

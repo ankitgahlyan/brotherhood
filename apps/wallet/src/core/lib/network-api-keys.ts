@@ -15,11 +15,18 @@ export const STORAGE_KEY_TESTNET_TONAPI_KEY =
 export const STORAGE_KEY_TESTNET_TONAPI_URL =
   'brotherhood_api_url_testnet_tonapi';
 export const STORAGE_KEY_TESTNET_PROVIDER = 'brotherhood_api_provider_testnet';
+export const STORAGE_KEY_TESTNET_RPC_ROUTING =
+  'brotherhood_rpc_routing_testnet';
+export const STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE =
+  'brotherhood_custom_active_toncenter';
+export const STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE =
+  'brotherhood_custom_active_tonapi';
 
 export const API_KEYS_UPDATED_EVENT = 'brotherhood:api-keys-updated';
 
 export type ApiKeyType = 'toncenter' | 'tonapi';
 export type TestnetProvider = 'toncenter' | 'tonapi' | 'orbs';
+export type RpcRoutingMode = 'direct' | 'orbs';
 
 export const DEFAULT_TONCENTER_TESTNET_BASE = 'https://testnet.toncenter.com';
 export const DEFAULT_TONCENTER_TESTNET_RPC =
@@ -131,33 +138,87 @@ export function setCustomApiUrl(
   notifyApiKeysUpdated();
 }
 
+export function getTestnetRpcRouting(): RpcRoutingMode {
+  if (typeof window === 'undefined' || !window.localStorage) return 'direct';
+  const val = localStorage.getItem(STORAGE_KEY_TESTNET_RPC_ROUTING);
+  if (val === 'orbs') return 'orbs';
+  return 'direct';
+}
+
+export function setTestnetRpcRouting(mode: RpcRoutingMode): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  localStorage.setItem(STORAGE_KEY_TESTNET_RPC_ROUTING, mode);
+  notifyApiKeysUpdated();
+}
+
+export function isCustomEndpointActive(type: ApiKeyType): boolean {
+  if (typeof window === 'undefined' || !window.localStorage) return false;
+  const key =
+    type === 'toncenter'
+      ? STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE
+      : STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE;
+  return localStorage.getItem(key) === 'true';
+}
+
+export function setCustomEndpointActive(
+  type: ApiKeyType,
+  active: boolean,
+): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  const key =
+    type === 'toncenter'
+      ? STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE
+      : STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE;
+  if (active) {
+    localStorage.setItem(key, 'true');
+  } else {
+    localStorage.removeItem(key);
+  }
+  notifyApiKeysUpdated();
+}
+
 export function getActiveToncenterEndpoint(): string {
-  const custom = getCustomApiUrl('toncenter');
-  if (custom) {
-    if (custom.endsWith('/jsonRPC')) return custom;
-    return `${custom}/api/v2/jsonRPC`;
+  if (getTestnetRpcRouting() === 'orbs') {
+    if (cachedOrbsEndpoint) return cachedOrbsEndpoint;
+  }
+
+  if (isCustomEndpointActive('toncenter')) {
+    const custom = getCustomApiUrl('toncenter');
+    if (custom) {
+      if (custom.endsWith('/jsonRPC')) return custom;
+      return `${custom}/api/v2/jsonRPC`;
+    }
   }
   return DEFAULT_TONCENTER_TESTNET_RPC;
 }
 
 export function getActiveTonapiEndpoint(): string {
-  const custom = getCustomApiUrl('tonapi');
-  if (custom) {
-    return custom;
+  if (isCustomEndpointActive('tonapi')) {
+    const custom = getCustomApiUrl('tonapi');
+    if (custom) {
+      return custom;
+    }
   }
   return DEFAULT_TONAPI_TESTNET_BASE;
 }
 
 export function getTestnetApiProvider(): TestnetProvider {
   if (typeof window === 'undefined' || !window.localStorage) return 'toncenter';
+  const routing = getTestnetRpcRouting();
+  if (routing === 'orbs') return 'orbs';
   const val = localStorage.getItem(STORAGE_KEY_TESTNET_PROVIDER);
-  if (val === 'tonapi' || val === 'orbs') return val;
+  if (val === 'tonapi') return val;
   return 'toncenter';
 }
 
 export function setTestnetApiProvider(provider: TestnetProvider): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
-  localStorage.setItem(STORAGE_KEY_TESTNET_PROVIDER, provider);
+  if (provider === 'orbs') {
+    setTestnetRpcRouting('orbs');
+  } else {
+    setTestnetRpcRouting('direct');
+    localStorage.setItem(STORAGE_KEY_TESTNET_PROVIDER, provider);
+  }
   notifyApiKeysUpdated();
 }
 

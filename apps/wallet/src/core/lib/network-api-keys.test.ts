@@ -4,6 +4,10 @@ import {
   setCustomApiKey,
   getTestnetApiProvider,
   setTestnetApiProvider,
+  getTestnetRpcRouting,
+  setTestnetRpcRouting,
+  isCustomEndpointActive,
+  setCustomEndpointActive,
 } from './network-api-keys';
 import { toncenterApiKey, resetTonClients } from '@/lib/brotherhood/ton';
 
@@ -67,5 +71,29 @@ describe('Network API Keys Manager', () => {
     setCustomApiKey('toncenter', 'testnet', 'my_secret_user_key');
     const key = toncenterApiKey('testnet');
     expect(key).toBe('my_secret_user_key');
+  });
+
+  it('manages RPC routing mode between direct and orbs', () => {
+    expect(getTestnetRpcRouting()).toBe('direct');
+
+    setTestnetRpcRouting('orbs');
+    expect(getTestnetRpcRouting()).toBe('orbs');
+
+    setTestnetRpcRouting('direct');
+    expect(getTestnetRpcRouting()).toBe('direct');
+  });
+
+  it('manages custom endpoint active flags for toncenter and tonapi', () => {
+    expect(isCustomEndpointActive('toncenter')).toBe(false);
+    expect(isCustomEndpointActive('tonapi')).toBe(false);
+
+    setCustomEndpointActive('toncenter', true);
+    expect(isCustomEndpointActive('toncenter')).toBe(true);
+
+    setCustomEndpointActive('tonapi', true);
+    expect(isCustomEndpointActive('tonapi')).toBe(true);
+
+    setCustomEndpointActive('toncenter', false);
+    expect(isCustomEndpointActive('toncenter')).toBe(false);
   });
 });

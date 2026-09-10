@@ -6,6 +6,13 @@
  *
  */
 
+import {
+  isTelegramEnvironment,
+  isTelegramBiometricsAvailable,
+  isTelegramBiometricsRegistered,
+  initTelegramBiometrics,
+} from '../lib/telegram';
+
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
 
 interface BiometricVaultData {
@@ -35,10 +42,17 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 }
 
 /**
- * Check if the current browser/device supports WebAuthn platform authenticators (Fingerprint, TouchID, FaceID, Windows Hello).
+ * Check if the current browser/device supports WebAuthn platform authenticators or Telegram BiometricManager.
  */
 export async function isBiometricsSupported(): Promise<boolean> {
-  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+  if (typeof window === 'undefined') return false;
+
+  if (isTelegramEnvironment()) {
+    await initTelegramBiometrics();
+    return isTelegramBiometricsAvailable();
+  }
+
+  if (!window.PublicKeyCredential) {
     return false;
   }
   try {
@@ -61,6 +75,11 @@ export async function isBiometricsSupported(): Promise<boolean> {
  */
 export function isBiometricsRegistered(): boolean {
   if (typeof window === 'undefined') return false;
+
+  if (isTelegramEnvironment()) {
+    return isTelegramBiometricsRegistered();
+  }
+
   try {
     const raw = localStorage.getItem(BIOMETRIC_VAULT_KEY);
     if (!raw) return false;

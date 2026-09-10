@@ -34,6 +34,30 @@ export interface TelegramSafeAreaInset {
   right?: number;
 }
 
+export interface TelegramBiometricManager {
+  isInited?: boolean;
+  isBiometricAvailable?: boolean;
+  biometricType?: 'finger' | 'face' | 'unknown';
+  isAccessGranted?: boolean;
+  isAccessRequested?: boolean;
+  isBiometricTokenSaved?: boolean;
+  deviceId?: string;
+  init: (callback?: () => void) => void;
+  requestAccess: (
+    params: { reason?: string },
+    callback: (isAccessGranted: boolean) => void,
+  ) => void;
+  authenticate: (
+    params: { reason?: string },
+    callback: (isSuccess: boolean, token?: string) => void,
+  ) => void;
+  updateBiometricToken: (
+    token: string,
+    callback?: (isSuccess: boolean) => void,
+  ) => void;
+  openSettings: () => void;
+}
+
 export interface TelegramWebApp {
   initData?: string;
   initDataUnsafe?: {
@@ -52,12 +76,14 @@ export interface TelegramWebApp {
   themeParams?: Record<string, string>;
   platform?: string;
   isExpanded?: boolean;
+  isFullscreen?: boolean;
   viewportHeight?: number;
   viewportStableHeight?: number;
   headerColor?: string;
   backgroundColor?: string;
   safeAreaInset?: TelegramSafeAreaInset;
   contentSafeAreaInset?: TelegramSafeAreaInset;
+  BiometricManager?: TelegramBiometricManager;
   BackButton?: {
     isVisible?: boolean;
     show: () => void;
@@ -66,22 +92,30 @@ export interface TelegramWebApp {
     offClick: (cb: () => void) => void;
   };
   HapticFeedback?: {
-    impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
+    impactOccurred: (
+      style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft',
+    ) => void;
     notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
     selectionChanged: () => void;
   };
   expand?: () => void;
   ready?: () => void;
   close?: () => void;
+  requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
   disableVerticalSwipes?: () => void;
   enableVerticalSwipes?: () => void;
   openTelegramLink?: (url: string) => void;
   onEvent?: (eventType: string, eventHandler: (...args: any[]) => void) => void;
-  offEvent?: (eventType: string, eventHandler: (...args: any[]) => void) => void;
+  offEvent?: (
+    eventType: string,
+    eventHandler: (...args: any[]) => void,
+  ) => void;
 }
 
 let isInitialized = false;
 let isInsideTma = false;
+let isBiometricInited = false;
 let swipeDisableCount = 0;
 
 export interface TelegramUser {
@@ -96,7 +130,8 @@ export interface TelegramUser {
 
 export function getRawTelegramWebApp(): TelegramWebApp | undefined {
   if (typeof window === 'undefined') return undefined;
-  return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp;
+  return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } })
+    .Telegram?.WebApp;
 }
 
 export function isTelegramEnvironment(): boolean {
@@ -137,13 +172,148 @@ export function updateSafeAreaProperties(): void {
     contentBottom = rawApp.contentSafeAreaInset.bottom || 0;
   }
 
+  // In fullscreen mode, ensure there's at least enough top space for status bar
+  const totalTop = top + contentTop;
+
   const root = document.documentElement;
-  root.style.setProperty('--tg-safe-area-top', `${top + contentTop}px`);
-  root.style.setProperty('--tg-safe-area-bottom', `${bottom + contentBottom}px`);
+  root.style.setProperty('--tg-safe-area-top', `${totalTop}px`);
+  root.style.setProperty(
+    '--tg-safe-area-bottom',
+    `${bottom + contentBottom}px`,
+  );
   root.style.setProperty('--tg-safe-area-left', `${left}px`);
   root.style.setProperty('--tg-safe-area-right', `${right}px`);
   root.style.setProperty('--tg-content-safe-area-top', `${contentTop}px`);
   root.style.setProperty('--tg-content-safe-area-bottom', `${contentBottom}px`);
+}
+
+/**
+ * Initialize Telegram BiometricManager if available.
+ */
+export function initTelegramBiometrics(): Promise<boolean> {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  if (!bm) return Promise.resolve(false);
+  if (isBiometricInited)
+    return Promise.resolve(Boolean(bm.isBiometricAvailable));
+
+  return new Promise((resolve) => {
+    try {
+      bm.init(() => {
+        isBiometricInited = true;
+        resolve(Boolean(bm.isBiometricAvailable));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+export function isTelegramBiometricsAvailable(): boolean {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  return Boolean(bm && (bm.isBiometricAvailable || !bm.isInited));
+}
+
+export function isTelegramBiometricsRegistered(): boolean {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  return Boolean(
+    bm &&
+    bm.isBiometricAvailable &&
+    bm.isAccessGranted &&
+    bm.isBiometricTokenSaved,
+  );
+}
+
+export function requestTelegramBiometricsAccess(
+  reason = 'BrotherHood Wallet',
+): Promise<boolean> {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  if (!bm) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    try {
+      bm.requestAccess({ reason }, (granted) => {
+        resolve(Boolean(granted));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+export async function saveTelegramBiometricsPassword(
+  password: string,
+  reason = 'BrotherHood Wallet',
+): Promise<boolean> {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  if (!bm) return false;
+
+  if (!bm.isAccessGranted) {
+    const granted = await requestTelegramBiometricsAccess(reason);
+    if (!granted) {
+      return false;
+    }
+  }
+
+  return new Promise((resolve) => {
+    bm.updateBiometricToken(password, (success) => {
+      resolve(Boolean(success));
+    });
+  });
+}
+
+export async function authenticateTelegramBiometrics(
+  reason = 'Unlock BrotherHood Wallet',
+): Promise<string | null> {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  if (!bm) return null;
+
+  try {
+    if (!bm.isAccessGranted) {
+      const granted = await requestTelegramBiometricsAccess(reason);
+      if (!granted) {
+        return null;
+      }
+    }
+
+    return await new Promise((resolve) => {
+      bm.authenticate({ reason }, (success, token) => {
+        if (success && token) {
+          resolve(token);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function clearTelegramBiometrics(): Promise<boolean> {
+  const rawApp = getRawTelegramWebApp();
+  const bm = rawApp?.BiometricManager;
+  if (!bm) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    try {
+      bm.updateBiometricToken('', (success) => {
+        resolve(Boolean(success));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+export function openTelegramBiometricsSettings(): void {
+  const rawApp = getRawTelegramWebApp();
+  rawApp?.BiometricManager?.openSettings();
 }
 
 /**
@@ -183,14 +353,16 @@ export function initTelegramSdk(): boolean {
 
   try {
     if (mountViewport.isAvailable()) {
-      mountViewport().then(() => {
-        if (expandViewport.isAvailable()) {
-          expandViewport();
-        }
-        updateSafeAreaProperties();
-      }).catch(() => {
-        // ignore
-      });
+      mountViewport()
+        .then(() => {
+          if (expandViewport.isAvailable()) {
+            expandViewport();
+          }
+          updateSafeAreaProperties();
+        })
+        .catch(() => {
+          // ignore
+        });
     } else if (rawApp?.expand) {
       rawApp.expand();
     }
@@ -221,7 +393,10 @@ export function initTelegramSdk(): boolean {
       rawApp.ready?.();
       rawApp.onEvent?.('safeAreaChanged', updateSafeAreaProperties);
       rawApp.onEvent?.('contentSafeAreaChanged', updateSafeAreaProperties);
+      rawApp.onEvent?.('fullscreenChanged', updateSafeAreaProperties);
+      rawApp.onEvent?.('fullscreenFailed', updateSafeAreaProperties);
       rawApp.onEvent?.('viewportChanged', updateSafeAreaProperties);
+      initTelegramBiometrics();
     } catch {
       // ignore
     }
@@ -299,7 +474,9 @@ export function enableTelegramSwipeToClose(): void {
  * Telegram native Haptic Feedback helpers
  */
 export const telegramHaptics = {
-  impact(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light'): void {
+  impact(
+    style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light',
+  ): void {
     if (!isInsideTma) return;
     try {
       if (isHapticFeedbackSupported()) {
