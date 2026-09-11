@@ -24,6 +24,7 @@ import { network } from '@/lib/brotherhood/config';
 import {
   batchHydrateUniversal,
   computePersonalWalletAddress,
+  computeFiWalletAddress,
 } from '@/lib/brotherhood/account-state-hydrator';
 import {
   getNormalizedContractCacheKey,
@@ -99,9 +100,19 @@ export function useTrackedPersonalTokens() {
     queryFn: async () => {
       if (!parsedOwnerAddress || trackedMinters.length === 0) return [];
 
-      // 1. First batch-hydrate all Personal Minters to get adminAddress
+      // 1. Off-chain compute FI wallet address and Personal Wallet addresses if cached
+      const fiWalletAddr = computeFiWalletAddress(parsedOwnerAddress);
       const minterAddrs = trackedMinters.map((m) => Address.parse(m));
-      await batchHydrateUniversal(minterAddrs);
+
+      // Batch 1: FI wallet + all tracked personal minters in 1 call
+      await batchHydrateUniversal([fiWalletAddr, ...minterAddrs], network, {
+        knownTypes: {
+          [fiWalletAddr.toString()]: 'fiWallet',
+          ...Object.fromEntries(
+            minterAddrs.map((m) => [m.toString(), 'personalMinter']),
+          ),
+        },
+      });
 
       // 2. Off-chain compute Personal Wallet addresses using cached minter states
       const minterWalletPairs: { minterAddr: Address; walletAddr: Address }[] =
@@ -120,7 +131,7 @@ export function useTrackedPersonalTokens() {
         }
       }
 
-      // 3. Batch-hydrate Personal Wallets in a second batch
+      // 3. Batch-hydrate Personal Wallets if any
       if (minterWalletPairs.length > 0) {
         await batchHydrateUniversal(minterWalletPairs.map((p) => p.walletAddr));
       }

@@ -17,6 +17,10 @@ import {
   setContractCache,
   getNormalizedContractCacheKey,
 } from './contract-cache';
+import {
+  computeFiWalletAddress,
+  computePersonalWalletAddress,
+} from './account-state-hydrator';
 import { sha256 } from './jettonContent';
 
 export type { Network } from './config';
@@ -170,9 +174,7 @@ export function setCachedDeterministicWalletAddress(
   localStorage.setItem(key, addrStr);
 }
 
-export async function getWalletAddress( // todo: calc offchain
-  // client: TonClient,
-  // minterAddress: Address,
+export async function getWalletAddress(
   ownerAddress: Address,
   net: Network = network,
 ): Promise<Address> {
@@ -184,6 +186,22 @@ export async function getWalletAddress( // todo: calc offchain
   );
   if (cached) {
     return cached;
+  }
+
+  try {
+    const offchainAddr = computeFiWalletAddress(ownerAddress, minterAddress);
+    setCachedDeterministicWalletAddress(
+      net,
+      minterAddress,
+      ownerAddress,
+      offchainAddr,
+    );
+    return offchainAddr;
+  } catch (err) {
+    console.warn(
+      '[getWalletAddress] Off-chain derivation failed, falling back to RPC:',
+      err,
+    );
   }
 
   const client = getTonClient(net);
@@ -534,6 +552,29 @@ export async function getPersonalWalletAddress(
     return cached;
   }
 
+  // Fast off-chain derivation if minter store is in cache
+  const normalizedKey = getNormalizedContractCacheKey(net, personalMinter);
+  const minterCache = await getContractCache<any>(normalizedKey);
+  const adminAddress = minterCache?.data?.adminAddress;
+  if (adminAddress) {
+    try {
+      const offchainAddr = computePersonalWalletAddress(
+        personalMinter,
+        owner,
+        adminAddress,
+      );
+      setCachedDeterministicWalletAddress(
+        net,
+        personalMinter,
+        owner,
+        offchainAddr,
+      );
+      return offchainAddr;
+    } catch {
+      /* fallback to RPC */
+    }
+  }
+
   const addr = await getTonClient(net)
     .open(PersonalMinter.fromAddress(personalMinter))
     .getWalletAddress(owner);
@@ -628,6 +669,23 @@ export async function isPersonalMinterContract(
   const cached = await getContractCache<any>(normalizedKey);
   if (cached?.data?.fiJettonAddress && cached?.data?.adminAddress) {
     return true;
+  }
+
+  // Fast In-Memory Deserialization via Toncenter v3 /accountStates
+  try {
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    await batchHydrateUniversal([address], network, {
+      knownTypes: { [address.toString()]: 'personalMinter' },
+    });
+    const hydrated = await getContractCache<any>(normalizedKey);
+    if (hydrated?.data?.fiJettonAddress && hydrated?.data?.adminAddress) {
+      return true;
+    }
+  } catch (err) {
+    console.debug(
+      '[isPersonalMinterContract] in-memory batch hydration skipped:',
+      err,
+    );
   }
 
   try {

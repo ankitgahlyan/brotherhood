@@ -1,5 +1,16 @@
-import { Address, Cell } from '@ton/core';
-import { FossFiWallet, FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import { Address, Cell, Dictionary } from '@ton/core';
+import {
+  FossFiWallet,
+  FiWalletStore,
+  Addresses,
+  NomInAddrs,
+  TrustedAddrs,
+  Maps,
+  SocialMaps,
+  ReportInfo,
+  ProfileInfo,
+  TimeStamps,
+} from '@wrappers/FossFiWallet.gen';
 import { FossFi, FiStore } from '@wrappers/FossFi.gen';
 import { PersonalMinter, PersonalStore } from '@wrappers/Personal.gen';
 import {
@@ -15,7 +26,8 @@ import {
 } from './contract-cache';
 import { rateLimitedFetch } from './rate-limiter';
 import { toncenterApiKey, type Network } from './ton';
-import { network as defaultNetwork } from './config';
+import { network as defaultNetwork, FI_ADDRESS } from './config';
+import { baseFiWalletCodeCell } from './base-fi-wallet-code';
 
 export const CONTRACT_CODE_HASHES = {
   fiWallet: FossFiWallet.CodeCell.hash().toString('base64'),
@@ -211,6 +223,46 @@ export function computePersonalWalletAddress(
       toShard: { fixedPrefixLength: 8, closeTo: owner },
     },
   );
+  return wallet.address;
+}
+
+/**
+ * Computes Brotherhood FI wallet address deterministically off-chain
+ * using baseFiWalletCodeCell and initial empty storage schema.
+ */
+export function computeFiWalletAddress(
+  owner: Address,
+  minterAddress: Address = Address.parse(FI_ADDRESS),
+): Address {
+  const emptyFiWalletStore = {
+    profile: { ref: ProfileInfo.create({}) },
+    timestamps: { ref: TimeStamps.create({}) },
+    addresses: {
+      ref: Addresses.create({
+        owner,
+        nomInAddrs: { ref: NomInAddrs.create({}) },
+        trustedJettonAddrs: {
+          ref: TrustedAddrs.create({
+            minterAddr: minterAddress,
+            authorisedAccs: Dictionary.empty(),
+          }),
+        },
+      }),
+    },
+    maps: {
+      ref: Maps.create({
+        invited: Dictionary.empty(),
+        allowances: Dictionary.empty(),
+        social: { ref: SocialMaps.create({ votedFor: Dictionary.empty() }) },
+        reportInfo: { ref: ReportInfo.create({ reports: Dictionary.empty() }) },
+      }),
+    },
+  };
+
+  const wallet = FossFiWallet.fromStorage(emptyFiWalletStore, {
+    overrideContractCode: baseFiWalletCodeCell,
+    toShard: { fixedPrefixLength: 8, closeTo: owner },
+  });
   return wallet.address;
 }
 
