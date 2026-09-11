@@ -581,7 +581,10 @@ export const PersonalJettonScreen: React.FC = () => {
                           Minter Address:
                         </span>
                         <span className="font-mono text-foreground font-medium text-xs break-all">
-                          {deployer.deployedAddresses.minterAddress}
+                          {formatContractAddress(
+                            deployer.deployedAddresses.minterAddress,
+                            false,
+                          )}
                         </span>
                       </div>
                       <CopyButton
@@ -596,7 +599,10 @@ export const PersonalJettonScreen: React.FC = () => {
                           Personal Wallet Address:
                         </span>
                         <span className="font-mono text-foreground font-medium text-xs break-all">
-                          {deployer.deployedAddresses.personalWalletAddress}
+                          {formatContractAddress(
+                            deployer.deployedAddresses.personalWalletAddress,
+                            false,
+                          )}
                         </span>
                       </div>
                       <CopyButton
@@ -677,8 +683,12 @@ export const PersonalJettonScreen: React.FC = () => {
                             Deterministic Minter Address
                           </span>
                           <span className="font-mono text-foreground font-medium text-xs break-all">
-                            {info.deterministicMinterAddress ||
-                              'Calculating...'}
+                            {info.deterministicMinterAddress
+                              ? formatContractAddress(
+                                  info.deterministicMinterAddress,
+                                  false,
+                                )
+                              : 'Calculating...'}
                           </span>
                         </div>
                         {info.deterministicMinterAddress && (
@@ -696,8 +706,12 @@ export const PersonalJettonScreen: React.FC = () => {
                             Expected Personal Wallet Address
                           </span>
                           <span className="font-mono text-foreground font-medium text-xs break-all">
-                            {info.expectedPersonalWalletAddress ||
-                              'Calculating...'}
+                            {info.expectedPersonalWalletAddress
+                              ? formatContractAddress(
+                                  info.expectedPersonalWalletAddress,
+                                  false,
+                                )
+                              : 'Calculating...'}
                           </span>
                         </div>
                         {info.expectedPersonalWalletAddress && (
