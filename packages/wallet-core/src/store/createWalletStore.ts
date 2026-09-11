@@ -191,6 +191,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 hasWallet: state.walletManagement.hasWallet,
                 savedWallets: state.walletManagement.savedWallets,
                 activeWalletId: state.walletManagement.activeWalletId,
+                address: state.walletManagement.address,
+                balance: state.walletManagement.balance,
               },
               tonConnect: {
                 requestQueue: {
@@ -210,6 +212,13 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
             merge: (persistedState, currentState) => {
               const persisted = persistedState as any;
 
+              const activeWallet = (
+                persisted?.walletManagement?.savedWallets || []
+              ).find(
+                (w: any) =>
+                  w.id === persisted?.walletManagement?.activeWalletId,
+              );
+
               const merged = {
                 ...currentState,
                 auth: {
@@ -224,6 +233,10 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   ...currentState.walletManagement,
                   savedWallets: persisted?.walletManagement?.savedWallets || [],
                   activeWalletId: persisted?.walletManagement?.activeWalletId,
+                  address:
+                    persisted?.walletManagement?.address ||
+                    activeWallet?.address,
+                  balance: persisted?.walletManagement?.balance,
                   hasWallet:
                     (persisted?.walletManagement?.savedWallets?.length || 0) >
                     0,

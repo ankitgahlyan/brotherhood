@@ -7,8 +7,7 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useWalletStore } from '@demo/wallet-core';
+import { useWalletStore, useShallow } from '@demo/wallet-core';
 import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
 import { useExplorer } from '@/core/explorer';

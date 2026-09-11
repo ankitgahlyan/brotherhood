@@ -1,26 +1,23 @@
-/**
- * Copyright (c) TonTech.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
+import {
+  settingsStorage,
+  SettingsKeys,
+  ProviderSchema,
+  RpcRoutingSchema,
+  BooleanStringSchema,
+} from '@/core/storage';
 
 export const STORAGE_KEY_TESTNET_TONCENTER_KEY =
-  'brotherhood_api_key_testnet_toncenter';
+  SettingsKeys.TESTNET_TONCENTER_KEY;
 export const STORAGE_KEY_TESTNET_TONCENTER_URL =
-  'brotherhood_api_url_testnet_toncenter';
-export const STORAGE_KEY_TESTNET_TONAPI_KEY =
-  'brotherhood_api_key_testnet_tonapi';
-export const STORAGE_KEY_TESTNET_TONAPI_URL =
-  'brotherhood_api_url_testnet_tonapi';
-export const STORAGE_KEY_TESTNET_PROVIDER = 'brotherhood_api_provider_testnet';
-export const STORAGE_KEY_TESTNET_RPC_ROUTING =
-  'brotherhood_rpc_routing_testnet';
+  SettingsKeys.TESTNET_TONCENTER_URL;
+export const STORAGE_KEY_TESTNET_TONAPI_KEY = SettingsKeys.TESTNET_TONAPI_KEY;
+export const STORAGE_KEY_TESTNET_TONAPI_URL = SettingsKeys.TESTNET_TONAPI_URL;
+export const STORAGE_KEY_TESTNET_PROVIDER = SettingsKeys.TESTNET_PROVIDER;
+export const STORAGE_KEY_TESTNET_RPC_ROUTING = SettingsKeys.TESTNET_RPC_ROUTING;
 export const STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE =
-  'brotherhood_custom_active_toncenter';
+  SettingsKeys.TESTNET_TONCENTER_CUSTOM_ACTIVE;
 export const STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE =
-  'brotherhood_custom_active_tonapi';
+  SettingsKeys.TESTNET_TONAPI_CUSTOM_ACTIVE;
 
 export const API_KEYS_UPDATED_EVENT = 'brotherhood:api-keys-updated';
 
@@ -76,12 +73,11 @@ export function getCustomApiKey(
   type: ApiKeyType,
   _network: 'testnet' = 'testnet',
 ): string | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_KEY
       : STORAGE_KEY_TESTNET_TONAPI_KEY;
-  const val = localStorage.getItem(key);
+  const val = settingsStorage.getRaw(key);
   return val && val.trim() ? val.trim() : null;
 }
 
@@ -90,16 +86,15 @@ export function setCustomApiKey(
   _network: 'testnet' = 'testnet',
   val: string | null,
 ): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_KEY
       : STORAGE_KEY_TESTNET_TONAPI_KEY;
 
   if (val && val.trim()) {
-    localStorage.setItem(key, val.trim());
+    settingsStorage.set(key, val.trim());
   } else {
-    localStorage.removeItem(key);
+    settingsStorage.remove(key);
   }
 
   notifyApiKeysUpdated();
@@ -109,12 +104,11 @@ export function getCustomApiUrl(
   type: ApiKeyType,
   _network: 'testnet' = 'testnet',
 ): string | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_URL
       : STORAGE_KEY_TESTNET_TONAPI_URL;
-  const val = localStorage.getItem(key);
+  const val = settingsStorage.getRaw(key);
   return val && val.trim() ? val.trim().replace(/\/+$/, '') : null;
 }
 
@@ -123,56 +117,53 @@ export function setCustomApiUrl(
   _network: 'testnet' = 'testnet',
   val: string | null,
 ): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_URL
       : STORAGE_KEY_TESTNET_TONAPI_URL;
 
   if (val && val.trim()) {
-    localStorage.setItem(key, val.trim().replace(/\/+$/, ''));
+    settingsStorage.set(key, val.trim().replace(/\/+$/, ''));
   } else {
-    localStorage.removeItem(key);
+    settingsStorage.remove(key);
   }
 
   notifyApiKeysUpdated();
 }
 
 export function getTestnetRpcRouting(): RpcRoutingMode {
-  if (typeof window === 'undefined' || !window.localStorage) return 'direct';
-  const val = localStorage.getItem(STORAGE_KEY_TESTNET_RPC_ROUTING);
-  if (val === 'orbs') return 'orbs';
-  return 'direct';
+  return settingsStorage.get(
+    STORAGE_KEY_TESTNET_RPC_ROUTING,
+    RpcRoutingSchema,
+    'direct',
+  );
 }
 
 export function setTestnetRpcRouting(mode: RpcRoutingMode): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  localStorage.setItem(STORAGE_KEY_TESTNET_RPC_ROUTING, mode);
+  settingsStorage.set(STORAGE_KEY_TESTNET_RPC_ROUTING, mode);
   notifyApiKeysUpdated();
 }
 
 export function isCustomEndpointActive(type: ApiKeyType): boolean {
-  if (typeof window === 'undefined' || !window.localStorage) return false;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE
       : STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE;
-  return localStorage.getItem(key) === 'true';
+  return settingsStorage.get(key, BooleanStringSchema, false);
 }
 
 export function setCustomEndpointActive(
   type: ApiKeyType,
   active: boolean,
 ): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
   const key =
     type === 'toncenter'
       ? STORAGE_KEY_TESTNET_TONCENTER_CUSTOM_ACTIVE
       : STORAGE_KEY_TESTNET_TONAPI_CUSTOM_ACTIVE;
   if (active) {
-    localStorage.setItem(key, 'true');
+    settingsStorage.set(key, 'true');
   } else {
-    localStorage.removeItem(key);
+    settingsStorage.remove(key);
   }
   notifyApiKeysUpdated();
 }
@@ -203,21 +194,21 @@ export function getActiveTonapiEndpoint(): string {
 }
 
 export function getTestnetApiProvider(): TestnetProvider {
-  if (typeof window === 'undefined' || !window.localStorage) return 'toncenter';
   const routing = getTestnetRpcRouting();
   if (routing === 'orbs') return 'orbs';
-  const val = localStorage.getItem(STORAGE_KEY_TESTNET_PROVIDER);
-  if (val === 'tonapi') return val;
-  return 'toncenter';
+  return settingsStorage.get(
+    STORAGE_KEY_TESTNET_PROVIDER,
+    ProviderSchema,
+    'toncenter',
+  );
 }
 
 export function setTestnetApiProvider(provider: TestnetProvider): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
   if (provider === 'orbs') {
     setTestnetRpcRouting('orbs');
   } else {
     setTestnetRpcRouting('direct');
-    localStorage.setItem(STORAGE_KEY_TESTNET_PROVIDER, provider);
+    settingsStorage.set(STORAGE_KEY_TESTNET_PROVIDER, provider);
   }
   notifyApiKeysUpdated();
 }

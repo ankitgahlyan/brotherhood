@@ -1,60 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import {
+  settingsStorage,
+  SettingsKeys,
+  BooleanStringSchema,
+} from '@/core/storage';
 
-const STORAGE_KEY = 'brotherhood_developer_mode_enabled';
-const EVENT_NAME = 'brotherhood:devmode-change';
+const STORAGE_KEY = SettingsKeys.DEVELOPER_MODE;
 
 export function isDeveloperModeEnabled(): boolean {
-  try {
-    if (typeof localStorage === 'undefined') return false;
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return settingsStorage.get(STORAGE_KEY, BooleanStringSchema, false);
 }
 
 export function setDeveloperModeEnabled(enabled: boolean): void {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      if (enabled) {
-        localStorage.setItem(STORAGE_KEY, 'true');
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-  } catch {
-    // Ignore storage errors
-  }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { enabled } }));
+  if (enabled) {
+    settingsStorage.set(STORAGE_KEY, 'true');
+  } else {
+    settingsStorage.remove(STORAGE_KEY);
   }
 }
 
+function subscribeDevMode(callback: () => void): () => void {
+  return settingsStorage.subscribe(STORAGE_KEY, callback);
+}
+
+function getDevModeSnapshot(): boolean {
+  return isDeveloperModeEnabled();
+}
+
+function getDevModeServerSnapshot(): boolean {
+  return false;
+}
+
 export function useDeveloperMode(): [boolean, (enabled: boolean) => void] {
-  const [enabled, setEnabledState] = useState<boolean>(() =>
-    isDeveloperModeEnabled(),
+  const enabled = useSyncExternalStore(
+    subscribeDevMode,
+    getDevModeSnapshot,
+    getDevModeServerSnapshot,
   );
-
-  useEffect(() => {
-    const handleCustomChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ enabled: boolean }>;
-      setEnabledState(customEvent.detail.enabled);
-    };
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        setEnabledState(e.newValue === 'true');
-      }
-    };
-
-    window.addEventListener(EVENT_NAME, handleCustomChange);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener(EVENT_NAME, handleCustomChange);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
 
   const toggle = useCallback((nextEnabled: boolean) => {
     setDeveloperModeEnabled(nextEnabled);
@@ -63,8 +45,14 @@ export function useDeveloperMode(): [boolean, (enabled: boolean) => void] {
   return [enabled, toggle];
 }
 
-const MODAL_EVENT_NAME = 'brotherhood:devmodal-change';
 let isModalOpenGlobal = false;
+const modalSubscribers = new Set<() => void>();
+
+function notifyModalChange(): void {
+  for (const sub of modalSubscribers) {
+    sub();
+  }
+}
 
 export function isDeveloperModalOpen(): boolean {
   return isModalOpenGlobal;
@@ -72,26 +60,30 @@ export function isDeveloperModalOpen(): boolean {
 
 export function setDeveloperModalOpen(open: boolean): void {
   isModalOpenGlobal = open;
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent(MODAL_EVENT_NAME, { detail: { open } }),
-    );
-  }
+  notifyModalChange();
+}
+
+function subscribeModal(callback: () => void): () => void {
+  modalSubscribers.add(callback);
+  return () => {
+    modalSubscribers.delete(callback);
+  };
+}
+
+function getModalSnapshot(): boolean {
+  return isModalOpenGlobal;
+}
+
+function getModalServerSnapshot(): boolean {
+  return false;
 }
 
 export function useDeveloperModal(): [boolean, (open: boolean) => void] {
-  const [isOpen, setIsOpen] = useState(isModalOpenGlobal);
-
-  useEffect(() => {
-    const handleModalChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ open: boolean }>;
-      setIsOpen(customEvent.detail.open);
-    };
-    window.addEventListener(MODAL_EVENT_NAME, handleModalChange);
-    return () => {
-      window.removeEventListener(MODAL_EVENT_NAME, handleModalChange);
-    };
-  }, []);
+  const isOpen = useSyncExternalStore(
+    subscribeModal,
+    getModalSnapshot,
+    getModalServerSnapshot,
+  );
 
   const toggle = useCallback((nextOpen: boolean) => {
     setDeveloperModalOpen(nextOpen);

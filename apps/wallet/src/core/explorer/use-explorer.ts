@@ -6,47 +6,89 @@
  *
  */
 
-import { create } from 'zustand';
+import { useCallback, useSyncExternalStore } from 'react';
 import { Base64ToHex } from '@ton/walletkit';
 import type { NetworkType } from '@demo/wallet-core';
+import {
+  settingsStorage,
+  SettingsKeys,
+  ExplorerSchema,
+  type ExplorerSetting,
+} from '@/core/storage';
 
-export type ExplorerChoice = 'tonscan' | 'tonviewer' | 'actonscan';
+export type ExplorerChoice = ExplorerSetting;
 
-export const EXPLORER_STORAGE_KEY = 'brotherhood-explorer';
+export const EXPLORER_STORAGE_KEY = SettingsKeys.EXPLORER;
 
 export interface ExplorerState {
   explorer: ExplorerChoice;
   setExplorer: (explorer: ExplorerChoice) => void;
 }
 
-const getInitialExplorer = (): ExplorerChoice => {
-  if (typeof window === 'undefined') return 'tonscan';
-  try {
-    const stored = localStorage.getItem(EXPLORER_STORAGE_KEY);
-    if (
-      stored === 'tonscan' ||
-      stored === 'tonviewer' ||
-      stored === 'actonscan'
-    ) {
-      return stored;
-    }
-  } catch {
-    // Ignore localStorage access errors
-  }
-  return 'tonscan'; // Default to tonscan
-};
+let currentExplorer: ExplorerChoice = settingsStorage.get(
+  EXPLORER_STORAGE_KEY,
+  ExplorerSchema,
+  'tonscan',
+);
 
-export const useExplorer = create<ExplorerState>((set) => ({
-  explorer: getInitialExplorer(),
-  setExplorer: (explorer: ExplorerChoice) => {
-    try {
-      localStorage.setItem(EXPLORER_STORAGE_KEY, explorer);
-    } catch {
-      // Ignore localStorage access errors
-    }
-    set({ explorer });
-  },
-}));
+const explorerSubscribers = new Set<() => void>();
+
+function notifyExplorerChange(): void {
+  for (const sub of explorerSubscribers) {
+    sub();
+  }
+}
+
+function updateExplorer(explorer: ExplorerChoice): void {
+  currentExplorer = explorer;
+  settingsStorage.set(EXPLORER_STORAGE_KEY, explorer);
+  notifyExplorerChange();
+}
+
+// Cross-tab storage change sync
+settingsStorage.subscribe(EXPLORER_STORAGE_KEY, () => {
+  const next = settingsStorage.get(
+    EXPLORER_STORAGE_KEY,
+    ExplorerSchema,
+    'tonscan',
+  );
+  if (next !== currentExplorer) {
+    currentExplorer = next;
+    notifyExplorerChange();
+  }
+});
+
+function subscribe(callback: () => void): () => void {
+  explorerSubscribers.add(callback);
+  return () => {
+    explorerSubscribers.delete(callback);
+  };
+}
+
+function getSnapshot(): ExplorerChoice {
+  return currentExplorer;
+}
+
+function getServerSnapshot(): ExplorerChoice {
+  return 'tonscan';
+}
+
+export function useExplorer(): ExplorerState {
+  const explorer = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
+  const setExplorer = useCallback((nextExplorer: ExplorerChoice) => {
+    updateExplorer(nextExplorer);
+  }, []);
+
+  return {
+    explorer,
+    setExplorer,
+  };
+}
 
 function toHexHash(hash: string): string {
   if (/^(0x)?[0-9a-fA-F]+$/.test(hash)) {

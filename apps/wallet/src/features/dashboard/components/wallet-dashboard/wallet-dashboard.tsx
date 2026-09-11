@@ -12,7 +12,6 @@ import { BalanceTotal } from '../balance-total';
 import { DashboardActions } from '../dashboard-actions';
 import { DashboardAssets } from '../dashboard-assets';
 import { NewLayout } from '@/core/components/shared/new-layout';
-import { NftsCard } from '@/features/nft';
 import { TransactionHistory } from '@/features/transactions';
 import { useTonWallet } from '@/core/hooks';
 
@@ -29,7 +28,7 @@ export const WalletDashboard: React.FC = () => {
         <BalanceTotal />
         <DashboardActions />
         <DashboardAssets />
-        <NftsCard />
+        {/* /<NftsCard /> */}
         <TransactionHistory />
       </div>
     </NewLayout>

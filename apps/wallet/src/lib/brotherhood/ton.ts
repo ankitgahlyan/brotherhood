@@ -4,7 +4,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
 import { FossFi } from '@wrappers/FossFi.gen';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
-import { PersonalMinter } from '@wrappers/Personal.gen';
+import { PersonalMinter, OnchainMetadataReply } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   rateLimitedFetch,
@@ -383,6 +383,23 @@ export async function getFiWalletStateByContractAddress(
     }
   }
 
+  // Fast In-Memory Deserialization via Toncenter v3 /accountStates
+  try {
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    await batchHydrateUniversal([contractAddress], net, {
+      knownTypes: { [contractAddress.toString()]: 'fiWallet' },
+    });
+    const hydrated = await getContractCache<FiWalletStateData>(normalizedKey);
+    if (hydrated && hydrated.data) {
+      return hydrated.data;
+    }
+  } catch (err) {
+    console.debug(
+      '[getFiWalletStateByContractAddress] in-memory batch hydration skipped:',
+      err,
+    );
+  }
+
   const fresh = await getTonClient(net)
     .open(FossFiWallet.fromAddress(contractAddress))
     .getWalletDataAll();
@@ -392,9 +409,35 @@ export async function getFiWalletStateByContractAddress(
 }
 
 export async function getFiMinterState() {
-  return getTonClient(network)
-    .open(FossFi.fromAddress(Address.parse(FI_ADDRESS)))
+  const minterAddr = Address.parse(FI_ADDRESS);
+  const normalizedKey = getNormalizedContractCacheKey(network, minterAddr);
+
+  // Check normalized cache first
+  const cached = await getContractCache<any>(normalizedKey);
+  if (cached && cached.data) {
+    return cached.data;
+  }
+
+  // Try fast in-memory batch hydration
+  try {
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    await batchHydrateUniversal([minterAddr], network, {
+      knownTypes: { [minterAddr.toString()]: 'fiMinter' },
+    });
+    const hydrated = await getContractCache<any>(normalizedKey);
+    if (hydrated && hydrated.data) {
+      return hydrated.data;
+    }
+  } catch (err) {
+    console.debug('[getFiMinterState] in-memory batch hydration skipped:', err);
+  }
+
+  const fresh = await getTonClient(network)
+    .open(FossFi.fromAddress(minterAddr))
     .getJettonDataAll();
+
+  await setContractCache(normalizedKey, fresh);
+  return fresh;
 }
 
 export interface AllowanceEntry {
@@ -534,6 +577,19 @@ export async function getPersonalMinterDetails(
   personalMinter: Address,
 ): Promise<PersonalMinterDetails | null> {
   if (isZeroAddress(personalMinter)) return null;
+
+  // 1. Check normalized in-memory / IndexedDB cache first
+  const normalizedKey = getNormalizedContractCacheKey(network, personalMinter);
+  const cached = await getContractCache<any>(normalizedKey);
+  if (cached?.data?.fiJettonAddress && cached?.data?.adminAddress) {
+    return {
+      totalSupply: cached.data.totalSupply ?? 0n,
+      fiJettonAddress: cached.data.fiJettonAddress,
+      adminAddress: cached.data.adminAddress,
+      mintable: true,
+    };
+  }
+
   try {
     const client = getTonClient(network);
     const isDeployed = await client.isContractDeployed(personalMinter);
@@ -566,6 +622,14 @@ export async function isPersonalMinterContract(
   address: Address,
 ): Promise<boolean> {
   if (isZeroAddress(address)) return false;
+
+  // Check normalized cache first
+  const normalizedKey = getNormalizedContractCacheKey(network, address);
+  const cached = await getContractCache<any>(normalizedKey);
+  if (cached?.data?.fiJettonAddress && cached?.data?.adminAddress) {
+    return true;
+  }
+
   try {
     const client = getTonClient(network);
     const isDeployed = await client.isContractDeployed(address);
@@ -600,10 +664,30 @@ export async function fetchPersonalTokenMetadata(
   minterAddress: Address,
 ): Promise<PersonalTokenMetadata> {
   try {
-    const client = getTonClient(network);
-    const minter = client.open(PersonalMinter.fromAddress(minterAddress));
-    const jettonData = await minter.getJettonData();
-    const dict = jettonData.jettonContent?.ref?.contentDict;
+    // 1. Check in-memory / IndexedDB cached PersonalStore first
+    const normalizedKey = getNormalizedContractCacheKey(network, minterAddress);
+    const cached = await getContractCache<any>(normalizedKey);
+    let dict: any = null;
+
+    if (cached?.data?.metadataUri) {
+      try {
+        const parsedReply = OnchainMetadataReply.fromSlice(
+          cached.data.metadataUri.beginParse(),
+        );
+        dict = parsedReply.contentDict;
+      } catch {
+        dict = null;
+      }
+    }
+
+    // 2. If not found in cache, fallback to on-chain getter
+    if (!dict) {
+      const client = getTonClient(network);
+      const minter = client.open(PersonalMinter.fromAddress(minterAddress));
+      const jettonData = await minter.getJettonData();
+      dict = jettonData.jettonContent?.ref?.contentDict;
+    }
+
     if (!dict) return {};
 
     const getVal = async (key: string): Promise<string | undefined> => {

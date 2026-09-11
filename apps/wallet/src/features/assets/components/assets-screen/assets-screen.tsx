@@ -18,6 +18,7 @@ import { useAssetRows } from '../../hooks/use-asset-rows';
 
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
+import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 /** Full assets page: every token on the active wallet's balance (TON + member jettons). */
 export const AssetsScreen: FC = () => {
@@ -41,6 +42,7 @@ export const AssetsScreen: FC = () => {
           onBack={() => navigate('/wallet')}
           rightElement={
             <div className="flex items-center gap-1.5">
+              <SyncStatusButton />
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
@@ -55,20 +57,21 @@ export const AssetsScreen: FC = () => {
       }
     >
       <div className="space-y-1">
-        {assetsReady && tonRow ? (
-          <>
-            <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
-            {jettonRows.map((row) => (
-              <AssetRow
-                key={row.id}
-                {...row}
-                onClick={() => handleAssetClick(row)}
-              />
-            ))}
-          </>
+        {tonRow ? (
+          <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
+        ) : (
+          <AssetRowSkeleton />
+        )}
+        {assetsReady || jettonRows.length > 0 ? (
+          jettonRows.map((row) => (
+            <AssetRow
+              key={row.id}
+              {...row}
+              onClick={() => handleAssetClick(row)}
+            />
+          ))
         ) : (
           <>
-            <AssetRowSkeleton />
             <AssetRowSkeleton />
             <AssetRowSkeleton />
           </>

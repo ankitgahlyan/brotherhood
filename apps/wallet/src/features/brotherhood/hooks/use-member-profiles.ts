@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import { getFiWalletStateByContractAddress } from '@/lib/brotherhood/ton';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 
 export interface MemberProfileInfo {
   address: string;
@@ -24,6 +25,7 @@ export interface MemberProfileInfo {
   creditNeed: bigint;
   creditMaturity: number;
   multiplier: number;
+  isOutdatedCode?: boolean;
 }
 
 export function useMemberProfiles(
@@ -53,6 +55,19 @@ export function useMemberProfiles(
         const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const results: Record<string, MemberProfileInfo> = {};
 
+        // 1. Batch hydrate all account states via Toncenter v3 /api/v3/accountStates
+        let outdatedSet = new Set<string>();
+        try {
+          const hydrateRes = await batchHydrateUniversal(addressStrings, net);
+          outdatedSet = new Set(hydrateRes.outdatedAccounts);
+        } catch (e) {
+          console.warn(
+            '[useMemberProfiles] Batch hydration failed, falling back to individual calls:',
+            e,
+          );
+        }
+
+        // 2. Read hydrated states from cache (or fall back gracefully)
         await Promise.all(
           addressStrings.map(async (addrStr) => {
             try {
@@ -64,6 +79,8 @@ export function useMemberProfiles(
               const ownerAddress = ownerAddr
                 ? formatTonAddress(ownerAddr, { isContract: false, network })
                 : '';
+              const isOutdated =
+                outdatedSet.has(addr.toString()) || outdatedSet.has(addrStr);
               results[addrStr] = {
                 address: addrStr,
                 ownerAddress,
@@ -78,6 +95,7 @@ export function useMemberProfiles(
                 creditNeed: store.creditNeed ?? 0n,
                 creditMaturity: Number(store.creditMaturity ?? 0),
                 multiplier: Number(store.multiplier ?? 1),
+                isOutdatedCode: isOutdated,
               };
             } catch (e) {
               console.warn(

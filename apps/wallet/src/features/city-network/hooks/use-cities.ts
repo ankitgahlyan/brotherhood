@@ -9,10 +9,14 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Address, Dictionary } from '@ton/core';
-import { getTonClient } from '@/lib/brotherhood/ton';
 import { Location } from '@wrappers/Location.gen';
 import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  getNormalizedContractCacheKey,
+  getContractCache,
+} from '@/lib/brotherhood/contract-cache';
 
 export interface LocationInfo {
   h3Cell: string | null;
@@ -97,47 +101,53 @@ export function useLocationByH3Cell(
       cachedQueryFn(cacheKey, async (): Promise<LocationCellDetails | null> => {
         if (!cleanH3Cell || !calculatedAddress) return null;
         const locAddr = Address.parse(calculatedAddress);
-        const client = getTonClient(network);
-        const locationContract = client.open(Location.fromAddress(locAddr));
 
         try {
-          const [
-            queriedH3Cell,
-            memberCount,
-            version,
-            minterAddress,
-            membersDict,
-          ] = await Promise.all([
-            locationContract.getH3Cell().catch(() => null),
-            locationContract.getMemberCount().catch(() => null),
-            locationContract.getVersion().catch(() => null),
-            locationContract.getMinterAddress().catch(() => null),
-            locationContract.getMembers().catch(() => null),
-          ]);
+          // 1. Batch hydrate Location contract state into IndexedDB
+          await batchHydrateUniversal([locAddr], network, {
+            knownTypes: { [locAddr.toString()]: 'location' },
+          });
 
-          const isDeployed = queriedH3Cell !== null || memberCount !== null;
-          const memberAddrs: string[] = [];
-          if (membersDict) {
-            try {
-              for (const k of membersDict.keys()) {
+          // 2. Read from normalized contract cache
+          const cacheKey = getNormalizedContractCacheKey(network, locAddr);
+          const cached = await getContractCache<any>(cacheKey);
+          const store = cached?.data;
+
+          if (store && store.$ === 'LocationStore') {
+            const memberAddrs: string[] = [];
+            if (store.members && typeof store.members.keys === 'function') {
+              for (const k of store.members.keys()) {
                 memberAddrs.push(k.toString());
               }
-            } catch {
-              /* ignore dict parse error */
             }
+
+            return {
+              h3Cell: store.h3Cell || cleanH3Cell,
+              contractAddress: calculatedAddress,
+              memberCount: Number(store.memberCount ?? memberAddrs.length),
+              version:
+                store.version !== null && store.version !== undefined
+                  ? Number(store.version)
+                  : null,
+              minterAddress: store.minterAddress
+                ? store.minterAddress.toString()
+                : null,
+              members: memberAddrs,
+              isDeployed: true,
+            };
           }
 
+          // Fallback: contract not yet deployed on-chain
           return {
-            h3Cell: queriedH3Cell ?? cleanH3Cell,
+            h3Cell: cleanH3Cell,
             contractAddress: calculatedAddress,
-            memberCount: memberCount !== null ? Number(memberCount) : 0,
-            version: version !== null ? Number(version) : null,
-            minterAddress: minterAddress ? minterAddress.toString() : null,
-            members: memberAddrs,
-            isDeployed,
+            memberCount: 0,
+            version: null,
+            minterAddress: null,
+            members: [],
+            isDeployed: false,
           };
         } catch {
-          // Contract not yet deployed on-chain or network error
           return {
             h3Cell: cleanH3Cell,
             contractAddress: calculatedAddress,
@@ -170,40 +180,42 @@ export function useLocation(
       cachedQueryFn(cacheKey, async () => {
         if (!locationAddressString) return null;
         const locAddr = Address.parse(locationAddressString);
-        const client = getTonClient(network);
-        const locationContract = client.open(Location.fromAddress(locAddr));
 
         try {
-          const [h3Cell, memberCount, version, minterAddress, dict] =
-            await Promise.all([
-              locationContract.getH3Cell().catch(() => null),
-              locationContract.getMemberCount().catch(() => null),
-              locationContract.getVersion().catch(() => null),
-              locationContract.getMinterAddress().catch(() => null),
-              locationContract.getMembers().catch(() => null),
-            ]);
+          // 1. Batch hydrate Location contract state into IndexedDB
+          await batchHydrateUniversal([locAddr], network, {
+            knownTypes: { [locAddr.toString()]: 'location' },
+          });
 
-          const memberAddrs: string[] = [];
-          if (dict) {
-            try {
-              for (const key of dict.keys()) {
-                memberAddrs.push(key.toString());
+          // 2. Read from normalized contract cache
+          const cacheKey = getNormalizedContractCacheKey(network, locAddr);
+          const cached = await getContractCache<any>(cacheKey);
+          const store = cached?.data;
+
+          if (store && store.$ === 'LocationStore') {
+            const memberAddrs: string[] = [];
+            if (store.members && typeof store.members.keys === 'function') {
+              for (const k of store.members.keys()) {
+                memberAddrs.push(k.toString());
               }
-            } catch {
-              /* ignore dict parse error */
             }
+
+            return {
+              h3Cell: store.h3Cell ?? null,
+              memberCount: Number(store.memberCount ?? memberAddrs.length),
+              version:
+                store.version !== null && store.version !== undefined
+                  ? Number(store.version)
+                  : null,
+              minterAddress: store.minterAddress
+                ? store.minterAddress.toString()
+                : null,
+              members: memberAddrs,
+              isDeployed: true,
+            };
           }
 
-          const isDeployed = h3Cell !== null || memberCount !== null;
-
-          return {
-            h3Cell,
-            memberCount: memberCount !== null ? Number(memberCount) : null,
-            version: version !== null ? Number(version) : null,
-            minterAddress: minterAddress ? minterAddress.toString() : null,
-            members: memberAddrs,
-            isDeployed,
-          };
+          return null;
         } catch {
           return null;
         }

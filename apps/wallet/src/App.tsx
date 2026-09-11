@@ -86,7 +86,7 @@ export function App() {
         key={configKey}
         storage={localStorage}
         walletKitConfig={config}
-        enableDevtools={false}
+        enableDevtools={true}
       >
         <RouterProvider router={router} />
       </WalletProvider>

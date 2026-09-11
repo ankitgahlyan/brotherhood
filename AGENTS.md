@@ -21,7 +21,7 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Treat all contracts as a coupled system. Keep storage, message formats, tests, wrappers, TypeScript wrappers, scripts, and frontend flows consistent across both sides.
 - Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them from the contract ABI instead of hand-editing them when the ABI changes.
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `src/` aligned with contract changes.
-- Prefer this validation loop when feasible: `acton check --fix`, `acton fmt`, `acton build`, `acton test`, `bun run typecheck`, `bun run build`.
+- Prefer this validation loop when feasible: `acton run loop` `bun typecheck`, `bun format`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
 - For the Personal Token issuer onboarding flow, verify with `acton run verify-personal` (emulates deploy + wallet pointer + buy credit) before proposing a real `acton run deploy-personal`.
 - When command syntax or flags are unclear, verify them with `acton --help`, `acton <command> --help`, `bun run`, or the existing project config.
@@ -59,6 +59,12 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - `.dev.vars` is copied into `dist/server` at build (dev keys only; never commit real secrets).
 - On Cloudflare Workers, module-scope `process.env` is undefined — read env vars inside the handler.
 - Client chunks are split via `build` `environments.client.rolldownOptions.output.codeSplitting` groups (react, react-router, tanstack-query, tanstack-store, ton-sdk, tonconnect, radix-ui, floating-ui, lucide-react, zod). SSR build stays monolithic.
+
+### In-Memory Contract State Ingestion & Batching Rules
+
+- **Universal Batch Account Ingestion:** Prefer batch querying `accountStates?include_boc=true` in chunks of 30 over dispatching individual `runGetMethod` calls. Deserialize contract storage in-memory using pure Tolk wrapper functions (`FiWalletStore.fromSlice`, `PersonalStore.fromSlice`, `LocationStore.fromSlice`, etc.).
+- **Zero Getter Fallback on Code Hash Mismatch:** When an account's `code_hash` does not match the latest release compiled hash and in-memory `fromSlice` fails, never fall back to on-chain `runGetMethod` calls (as updated wrapper tuple parsers will throw anyway). Instead, flag `isOutdatedCode: true`, serve cached state if available, and prompt the user/member with an upgrade banner.
+- **Off-Chain Address Derivation:** Derive child contract addresses deterministically off-chain using wrappers' `fromStorage` / `calculateDeployedAddress` (e.g. `PersonalWallet.fromStorage`) to allow querying parent and child contract states concurrently in the very first batch request.
 
 ### Wallet & RPC Routing Rules (Wallet V2)
 

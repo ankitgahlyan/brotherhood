@@ -6,10 +6,11 @@
  *
  */
 
-import { create } from 'zustand';
+import { useCallback, useSyncExternalStore } from 'react';
+import { settingsStorage, SettingsKeys, ThemeSchema } from '@/core/storage';
 import type { ResolvedTheme, ThemeMode, ThemeState } from './types';
 
-export const THEME_STORAGE_KEY = 'brotherhood-theme';
+export const THEME_STORAGE_KEY = SettingsKeys.THEME;
 
 export const getSystemTheme = (): ResolvedTheme => {
   if (typeof window === 'undefined') return 'light';
@@ -35,55 +36,87 @@ export const applyThemeToDom = (theme: ThemeMode): ResolvedTheme => {
   return resolved;
 };
 
-const getInitialTheme = (): ThemeMode => {
-  if (typeof window === 'undefined') return 'system';
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (
-      stored === 'light' ||
-      stored === 'dark' ||
-      stored === 'oled' ||
-      stored === 'system'
-    ) {
-      return stored;
-    }
-  } catch {
-    // Ignore localStorage access errors
+let currentTheme: ThemeMode = settingsStorage.get(
+  THEME_STORAGE_KEY,
+  ThemeSchema,
+  'system',
+);
+let currentResolved: ResolvedTheme =
+  typeof window !== 'undefined' ? applyThemeToDom(currentTheme) : 'light';
+
+const themeSubscribers = new Set<() => void>();
+
+function notifyThemeChange(): void {
+  for (const sub of themeSubscribers) {
+    sub();
   }
-  return 'system';
-};
+}
 
-const initialTheme = getInitialTheme();
-const initialResolved =
-  typeof window !== 'undefined' ? applyThemeToDom(initialTheme) : 'light';
+function updateTheme(theme: ThemeMode): void {
+  currentTheme = theme;
+  currentResolved = applyThemeToDom(theme);
+  settingsStorage.set(THEME_STORAGE_KEY, theme);
+  notifyThemeChange();
+}
 
-export const useTheme = create<ThemeState>((set, get) => ({
-  theme: initialTheme,
-  resolvedTheme: initialResolved,
-  setTheme: (theme: ThemeMode) => {
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // Ignore localStorage access errors
-    }
-    const resolved = applyThemeToDom(theme);
-    set({ theme, resolvedTheme: resolved });
-  },
-  toggleTheme: () => {
-    const current = get().resolvedTheme;
-    const next: ThemeMode =
-      current === 'light' ? 'dark' : current === 'dark' ? 'oled' : 'light';
-    get().setTheme(next);
-  },
-}));
+// Subscribe to storage changes (e.g. cross-tab)
+settingsStorage.subscribe(THEME_STORAGE_KEY, () => {
+  const next = settingsStorage.get(THEME_STORAGE_KEY, ThemeSchema, 'system');
+  if (next !== currentTheme) {
+    currentTheme = next;
+    currentResolved = applyThemeToDom(next);
+    notifyThemeChange();
+  }
+});
 
+// Subscribe to system prefers-color-scheme changes
 if (typeof window !== 'undefined') {
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   media.addEventListener('change', () => {
-    const state = useTheme.getState();
-    if (state.theme === 'system') {
-      const resolved = applyThemeToDom('system');
-      useTheme.setState({ resolvedTheme: resolved });
+    if (currentTheme === 'system') {
+      currentResolved = applyThemeToDom('system');
+      notifyThemeChange();
     }
   });
+}
+
+function subscribe(callback: () => void): () => void {
+  themeSubscribers.add(callback);
+  return () => {
+    themeSubscribers.delete(callback);
+  };
+}
+
+function getSnapshot(): ThemeMode {
+  return currentTheme;
+}
+
+function getServerSnapshot(): ThemeMode {
+  return 'system';
+}
+
+export function useTheme(): ThemeState {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const resolvedTheme = currentResolved;
+
+  const setTheme = useCallback((nextTheme: ThemeMode) => {
+    updateTheme(nextTheme);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    const next: ThemeMode =
+      currentResolved === 'light'
+        ? 'dark'
+        : currentResolved === 'dark'
+          ? 'oled'
+          : 'light';
+    updateTheme(next);
+  }, []);
+
+  return {
+    theme,
+    resolvedTheme,
+    setTheme,
+    toggleTheme,
+  };
 }

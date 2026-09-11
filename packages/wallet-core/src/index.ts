@@ -45,6 +45,7 @@ export {
 } from './hooks/useFormattedBalance';
 export { useWalletInitialization } from './hooks/useWalletInitialization';
 export type { WalletInitializationState } from './hooks/useWalletInitialization';
+export { useShallow } from 'zustand/react/shallow';
 
 // Types
 export type {

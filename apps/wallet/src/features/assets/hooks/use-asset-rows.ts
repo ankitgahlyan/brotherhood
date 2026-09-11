@@ -55,14 +55,15 @@ export const useAssetRows = (): AssetRows => {
   const walletAddress =
     address || currentWallet?.getAddress() || getActiveWallet()?.address;
   const { userJettons, lastJettonsUpdate } = useJettons();
-  const { entries: rates, lastUpdated: ratesUpdated } = useRates();
+  const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
 
   const assetsReady =
-    balance !== undefined && lastJettonsUpdate > 0 && ratesUpdated > 0;
+    Boolean(walletAddress) &&
+    (balance !== undefined || userJettons.length > 0 || lastJettonsUpdate > 0);
 
   // Other jetton addresses (not FI and not user's own personal minter)
   const candidatePersonalAddresses = useMemo(() => {

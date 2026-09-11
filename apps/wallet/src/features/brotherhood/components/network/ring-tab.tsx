@@ -295,6 +295,14 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {prof?.isOutdatedCode && (
+                        <span
+                          className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                          title="This member is using an older contract bytecode version."
+                        >
+                          Upgrade Needed
+                        </span>
+                      )}
                       <span
                         className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
                           isProfLoading
