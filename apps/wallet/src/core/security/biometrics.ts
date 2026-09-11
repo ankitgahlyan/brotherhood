@@ -7,14 +7,25 @@
  */
 
 import {
-  isTelegramEnvironment,
   isTelegramBiometricsAvailable,
   isTelegramBiometricsRegistered,
   initTelegramBiometrics,
   saveTelegramBiometricsPassword,
   authenticateTelegramBiometrics,
   clearTelegramBiometrics,
+  getRawTelegramWebApp,
 } from '../lib/telegram';
+
+/**
+ * Returns true if the Telegram BiometricManager API is actually present on
+ * window.Telegram.WebApp, regardless of isTelegramEnvironment() detection.
+ * This is the correct gate for choosing the TMA biometric path so that web
+ * browsers (Brave PWA) that happen to match isTelegramEnvironment() still use
+ * the WebAuthn path when there is no BiometricManager.
+ */
+function hasTelegramBiometricManager(): boolean {
+  return Boolean(getRawTelegramWebApp()?.BiometricManager);
+}
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
 
@@ -50,7 +61,7 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 export async function isBiometricsSupported(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  if (isTelegramEnvironment()) {
+  if (hasTelegramBiometricManager()) {
     await initTelegramBiometrics();
     return isTelegramBiometricsAvailable();
   }
@@ -79,7 +90,7 @@ export async function isBiometricsSupported(): Promise<boolean> {
 export function isBiometricsRegistered(): boolean {
   if (typeof window === 'undefined') return false;
 
-  if (isTelegramEnvironment()) {
+  if (hasTelegramBiometricManager()) {
     return isTelegramBiometricsRegistered();
   }
 
@@ -138,7 +149,7 @@ export async function registerBiometrics(
     throw new Error('Biometrics not supported on this device');
   }
 
-  if (isTelegramEnvironment()) {
+  if (hasTelegramBiometricManager()) {
     return await saveTelegramBiometricsPassword(password, 'BrotherHood Wallet');
   }
 
@@ -211,7 +222,7 @@ export async function registerBiometrics(
  * Authenticate with platform biometrics (Fingerprint / Face ID / Touch ID) and return the decrypted password.
  */
 export async function authenticateBiometrics(): Promise<string | null> {
-  if (isTelegramEnvironment()) {
+  if (hasTelegramBiometricManager()) {
     return await authenticateTelegramBiometrics('Unlock BrotherHood Wallet');
   }
 
@@ -276,7 +287,7 @@ export async function authenticateBiometrics(): Promise<string | null> {
  */
 export function clearBiometrics(): void {
   if (typeof window === 'undefined') return;
-  if (isTelegramEnvironment()) {
+  if (hasTelegramBiometricManager()) {
     void clearTelegramBiometrics();
   }
   localStorage.removeItem(BIOMETRIC_VAULT_KEY);

@@ -252,6 +252,11 @@ export async function saveTelegramBiometricsPassword(
   const bm = rawApp?.BiometricManager;
   if (!bm) return false;
 
+  // Ensure BiometricManager is fully initialised before requesting access.
+  if (!bm.isInited) {
+    await initTelegramBiometrics();
+  }
+
   if (!bm.isAccessGranted) {
     const granted = await requestTelegramBiometricsAccess(reason);
     if (!granted) {
@@ -272,6 +277,12 @@ export async function authenticateTelegramBiometrics(
   const rawApp = getRawTelegramWebApp();
   const bm = rawApp?.BiometricManager;
   if (!bm) return null;
+
+  // Ensure BiometricManager is fully initialised before calling authenticate.
+  // initTelegramBiometrics is idempotent — it resolves immediately if already done.
+  if (!bm.isInited) {
+    await initTelegramBiometrics();
+  }
 
   try {
     if (!bm.isAccessGranted) {
