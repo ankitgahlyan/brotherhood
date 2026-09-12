@@ -21,7 +21,14 @@ import {
   Trash2,
   Check,
   Globe,
+  RefreshCw,
 } from 'lucide-react';
+import {
+  checkForAppUpdates,
+  applyAppUpdate,
+  onSWUpdateAvailable,
+  isUpdateAvailable,
+} from '@/core/lib/service-worker';
 import { toast } from 'sonner';
 import {
   useDeveloperMode,
@@ -175,6 +182,51 @@ export const SettingsDropdown: React.FC = () => {
       toast.info(
         `You are ${remaining} ${remaining === 1 ? 'step' : 'steps'} away from Developer Mode`,
       );
+    }
+  };
+
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [hasPendingUpdate, setHasPendingUpdate] = useState(() =>
+    isUpdateAvailable(),
+  );
+
+  React.useEffect(() => {
+    return onSWUpdateAvailable((hasUpdate) => {
+      setHasPendingUpdate(hasUpdate);
+    });
+  }, []);
+
+  const handleCheckForUpdate = async () => {
+    if (isCheckingUpdate) return;
+    if (!navigator.onLine) {
+      toast.info('You are offline. Serving from browser cache.');
+      return;
+    }
+
+    if (hasPendingUpdate) {
+      toast('Applying update…');
+      await applyAppUpdate();
+      return;
+    }
+
+    setIsCheckingUpdate(true);
+    try {
+      const result = await checkForAppUpdates();
+      if (result.hasUpdate) {
+        toast.success('Update downloaded! Click to reload & apply.', {
+          duration: 10000,
+          action: {
+            label: 'Reload Now',
+            onClick: () => applyAppUpdate(),
+          },
+        });
+      } else {
+        toast.success('App is up to date. Serving from browser cache.');
+      }
+    } catch {
+      toast.error('Failed to check for updates.');
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
@@ -363,6 +415,23 @@ export const SettingsDropdown: React.FC = () => {
                 setPanel(null);
                 setIsInstallOpen(true);
               }}
+            />
+            <ActionRow
+              icon={
+                <RefreshCw
+                  className={`w-5 h-5 ${isCheckingUpdate ? 'animate-spin text-primary' : ''}`}
+                />
+              }
+              label="Check for App Updates"
+              subtitle={
+                hasPendingUpdate
+                  ? 'Update ready — click to reload & apply'
+                  : isCheckingUpdate
+                    ? 'Checking host for updates…'
+                    : 'Serving from browser cache'
+              }
+              onClick={handleCheckForUpdate}
+              disabled={isCheckingUpdate}
             />
             <ActionRow
               icon={<Plus className="w-5 h-5" />}

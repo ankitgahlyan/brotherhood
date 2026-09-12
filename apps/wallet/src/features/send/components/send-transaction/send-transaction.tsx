@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { isOnline } from '@/core/lib/network-status';
 
 import { useSendToken } from '../../hooks/use-send-token';
 import { useSendTokens } from '../../hooks/use-send-tokens';
@@ -124,6 +125,13 @@ export const SendTransaction: React.FC = () => {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!isOnline()) {
+      toast.error('Cannot send transactions while offline');
+      setError('Cannot send transactions while offline');
+      return;
+    }
+
     setIsLoading(true);
 
     try {

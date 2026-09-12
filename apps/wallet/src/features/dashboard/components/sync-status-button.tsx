@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useLastFetchTime } from '@/core/hooks/use-last-fetch-time';
 import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
+import { isOnline } from '@/core/lib/network-status';
 
 export interface SyncStatusButtonProps {
   className?: string;
@@ -25,7 +26,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({
   const refreshContractQueries = useRefreshContractQueries();
 
   const handleRefresh = async () => {
-    if (isRefreshing) return;
+    if (isRefreshing || !isOnline()) return;
     setIsRefreshing(true);
     try {
       // Trigger wallet-core sync

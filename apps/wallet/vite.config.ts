@@ -71,11 +71,72 @@ export default defineConfig({
     }),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: false,
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       manifest: pwaManifest,
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff,woff2,ttf,eot,webmanifest}',
+        ],
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        navigateFallback: `${base}index.html`,
+        navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) =>
+              request.destination === 'style' ||
+              request.destination === 'script' ||
+              request.destination === 'worker',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'brotherhood-static-resources',
+              expiration: {
+                maxEntries: 150,
+                maxAgeSeconds: 60 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'brotherhood-images',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'font',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'brotherhood-fonts',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 365 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'brotherhood-telegram-sdk',
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
     }),
   ],

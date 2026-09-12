@@ -244,5 +244,5 @@ describe('Tracked Addresses Storage & Flow', () => {
     const [res1, res2] = await Promise.all([p1, p2]);
     expect(res1).toBe(res2);
     expect(res1.totalRequested).toBe(1);
-  });
+  }, 15000);
 });

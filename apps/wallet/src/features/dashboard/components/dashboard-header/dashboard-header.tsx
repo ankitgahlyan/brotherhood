@@ -16,6 +16,7 @@ import { SettingsDropdown } from '@/features/settings';
 import { ConnectDappModal } from '@/features/ton-connect';
 import { ScanIcon } from '@/core/components/ui/icons';
 import { usePasteHandler } from '@/core/hooks';
+import { NetworkIndicator } from '@/core/components/shared/network-indicator';
 import { SyncStatusButton } from '../sync-status-button';
 
 export const DashboardHeader: React.FC = () => {
@@ -42,6 +43,7 @@ export const DashboardHeader: React.FC = () => {
       </button>
 
       <div className="flex items-center gap-2">
+        <NetworkIndicator />
         <button
           type="button"
           onClick={() => setIsWalletSelectorOpen(true)}

@@ -25,6 +25,7 @@ import {
   invalidateContractCache,
 } from './contract-cache';
 import { network } from './config';
+import { isOnline } from '@/core/lib/network-status';
 
 const forceFreshKeys = new Set<string>();
 let forceFreshAll = false;
@@ -97,6 +98,18 @@ export async function cachedQueryFn<T>(
   fetcher: (options?: { forceFresh?: boolean }) => Promise<T>,
   forceFresh = false,
 ): Promise<T> {
+  const online = isOnline();
+
+  // If offline, never hit network; read strictly from IndexedDB
+  if (!online) {
+    const cached = await getContractCache<T>(cacheKey);
+    if (cached && cached.data !== null && cached.data !== undefined) {
+      return cached.data;
+    }
+    // Graceful fallback for uncached data when offline
+    return null as unknown as T;
+  }
+
   const shouldForce =
     forceFresh || forceFreshAll || forceFreshKeys.has(cacheKey);
 
@@ -124,6 +137,9 @@ export async function cachedQueryFn<T>(
     if (cached && cached.data !== null && cached.data !== undefined) {
       console.log(`[ContractCache] Serving cached fallback for ${cacheKey}`);
       return cached.data;
+    }
+    if (!isOnline()) {
+      return null as unknown as T;
     }
     throw err;
   }
@@ -352,6 +368,9 @@ export function useIsContractDeployed(address: Address | null, enabled = true) {
 export function useRefreshContractQueries() {
   const queryClient = useQueryClient();
   return async (keys?: string[]) => {
+    if (!isOnline()) {
+      return;
+    }
     if (keys && keys.length > 0) {
       keys.forEach((k) => forceFreshKeys.add(k));
     } else {

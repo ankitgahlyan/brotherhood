@@ -14,6 +14,7 @@ import {
   normalizeAddressString,
 } from '@/lib/brotherhood/tracked-addresses-storage';
 import { useTrackedContractAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
+import { isOnline } from '@/core/lib/network-status';
 
 /**
  * Top-level hook to manage tracked contract addresses lifecycle:
@@ -43,14 +44,16 @@ export function useTrackedAddressesSync() {
     if (lastSyncedAddrRef.current !== normalizedAddr) {
       lastSyncedAddrRef.current = normalizedAddr;
 
-      // Non-blocking background fetch
-      refetchAll().catch((err) => {
-        console.error(
-          '[useTrackedAddressesSync] Background universal hydration error for wallet:',
-          normalizedAddr,
-          err,
-        );
-      });
+      // Non-blocking background fetch (only when online)
+      if (isOnline()) {
+        refetchAll().catch((err) => {
+          console.error(
+            '[useTrackedAddressesSync] Background universal hydration error for wallet:',
+            normalizedAddr,
+            err,
+          );
+        });
+      }
     }
   }, [normalizedAddr, activeWalletId, refetchAll]);
 }

@@ -12,11 +12,13 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { initDevTelemetry } from '@/core/lib/dev-telemetry';
+import { initServiceWorker } from '@/core/lib/service-worker';
 import '@fontsource-variable/inter';
 import './index.css';
 import App from './App.tsx';
 
 initDevTelemetry();
+initServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

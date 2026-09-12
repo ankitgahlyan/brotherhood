@@ -8,6 +8,7 @@
 
 import { notifyRateLimit429 } from '@/core/lib/dev-telemetry';
 import { getCustomApiKey, type ApiKeyType } from '@/core/lib/network-api-keys';
+import { isOnline, OfflineError } from '@/core/lib/network-status';
 import { testnetRpcManager } from './testnet-rpc-manager';
 
 export interface RateLimiterOptions {
@@ -222,6 +223,12 @@ export async function rateLimitedFetch(
   init?: RequestInit,
   options?: RateLimiterOptions,
 ): Promise<Response> {
+  if (!isOnline()) {
+    throw new OfflineError(
+      'Offline: Network calls disabled. Serving from local cache.',
+    );
+  }
+
   const urlStr =
     typeof input === 'string'
       ? input
@@ -300,6 +307,12 @@ export function createTonClientAxiosAdapter(options?: RateLimiterOptions) {
     config: unknown;
     request: Record<string, unknown>;
   }> {
+    if (!isOnline()) {
+      throw new OfflineError(
+        'Offline: Network calls disabled. Serving from local cache.',
+      );
+    }
+
     const initialUrl = config.baseURL
       ? new URL(config.url || '', config.baseURL).toString()
       : config.url || '';

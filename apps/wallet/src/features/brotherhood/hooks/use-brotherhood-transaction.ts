@@ -13,6 +13,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { toast } from 'sonner';
 import { Address, toNano, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
+import { isOnline } from '@/core/lib/network-status';
 
 export interface BrotherhoodMessage {
   toAddress: string;
@@ -55,6 +56,11 @@ export function useBrotherhoodTransaction(
       if (!walletKit) {
         toast.error('WalletKit not initialized');
         throw new Error('WalletKit not initialized');
+      }
+
+      if (!isOnline()) {
+        toast.error('Cannot send transactions while offline');
+        throw new Error('Cannot send transactions while offline');
       }
 
       setIsSending(true);

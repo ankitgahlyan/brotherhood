@@ -19,6 +19,7 @@ import {
   normalizeAddressString,
 } from '@/lib/brotherhood/tracked-addresses-storage';
 import { notifyCacheUpdated } from '@/lib/brotherhood/contract-cache';
+import { isOnline } from '@/core/lib/network-status';
 
 export const useWalletDataUpdater = () => {
   const {
@@ -42,7 +43,7 @@ export const useWalletDataUpdater = () => {
   }, [hasWallet, isUnlocked, currentWallet, loadAllWallets]);
 
   const executeWalletSync = useCallback(async () => {
-    if (!activeWalletId) return;
+    if (!activeWalletId || !isOnline()) return;
     try {
       await Promise.allSettled([
         updateBalance(),
@@ -62,7 +63,7 @@ export const useWalletDataUpdater = () => {
   // 1. If the wallet has never been synced in storage, perform one initial fetch.
   // 2. Even if synced before, if userJettons is empty on mount (Zustand store fresh start), fetch jettons.
   useEffect(() => {
-    if (!address || !activeWalletId) return;
+    if (!address || !activeWalletId || !isOnline()) return;
 
     const hasSyncedBefore = localStorage.getItem(
       `wallet_synced_${activeWalletId}`,
