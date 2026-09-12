@@ -23,7 +23,7 @@
     "format": "eslint --fix . && prettier --write .",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
-    "typecheck": "tsc --noEmit && bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
+    "typecheck": "bun run build:packages && tsc --noEmit && bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
     "test": "node scripts/pre-commit-tests.mjs",
     "test:changed": "node scripts/pre-commit-tests.mjs",
     "test:e2e": "bun run --cwd apps/wallet e2e",
