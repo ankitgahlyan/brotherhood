@@ -89,9 +89,6 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom', 'zustand'],
     alias: {
-      react: path.resolve(projectRoot, './node_modules/react'),
-      'react-dom': path.resolve(projectRoot, './node_modules/react-dom'),
-      zustand: path.resolve(projectRoot, './node_modules/zustand'),
       '@': path.resolve(projectRoot, './src'),
       '@wrappers': path.resolve(projectRoot, '../../wrappers-ts'),
       '@ton/core': path.resolve(projectRoot, './node_modules/@ton/core'),
