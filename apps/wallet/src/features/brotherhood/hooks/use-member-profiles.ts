@@ -8,10 +8,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
-import { getFiWalletStateByContractAddress } from '@/lib/brotherhood/ton';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 
 export interface MemberProfileInfo {
   address: string;
@@ -55,51 +58,81 @@ export function useMemberProfiles(
         const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const results: Record<string, MemberProfileInfo> = {};
 
-        // 1. Batch hydrate all account states via Toncenter v3 /api/v3/accountStates
-        let outdatedSet = new Set<string>();
-        try {
-          const hydrateRes = await batchHydrateUniversal(addressStrings, net);
-          outdatedSet = new Set(hydrateRes.outdatedAccounts);
-        } catch (e) {
-          console.warn(
-            '[useMemberProfiles] Batch hydration failed, falling back to individual calls:',
-            e,
-          );
+        // 1. Check local cache first to avoid redundant network calls
+        const missingAddresses: string[] = [];
+        const cachedStores: Record<string, any> = {};
+
+        for (const addrStr of addressStrings) {
+          if (!options?.forceFresh) {
+            const cacheKey = getNormalizedContractCacheKey(net, addrStr);
+            const cached = await getContractCache<any>(cacheKey);
+            if (
+              cached?.data &&
+              (cached.data.$ === 'FiWalletStore' ||
+                cached.data.addresses?.ref?.owner)
+            ) {
+              cachedStores[addrStr] = cached.data;
+              continue;
+            }
+          }
+          missingAddresses.push(addrStr);
         }
 
-        // 2. Read hydrated states from cache (or fall back gracefully)
+        // 2. Only batch hydrate addresses that are truly missing from cache
+        let outdatedSet = new Set<string>();
+        if (missingAddresses.length > 0) {
+          try {
+            const hydrateRes = await batchHydrateUniversal(
+              missingAddresses,
+              net,
+            );
+            outdatedSet = new Set(hydrateRes.outdatedAccounts);
+          } catch (e) {
+            console.warn(
+              '[useMemberProfiles] Batch hydration failed for missing addresses:',
+              e,
+            );
+          }
+        }
+
+        // 3. Populate results for all addresses from cached / freshly hydrated state
         await Promise.all(
           addressStrings.map(async (addrStr) => {
             try {
-              const addr = Address.parse(addrStr);
-              const store = await getFiWalletStateByContractAddress(addr, net, {
-                forceFresh: options?.forceFresh,
-              });
-              const ownerAddr = store.addresses?.ref?.owner ?? null;
+              let store = cachedStores[addrStr];
+              if (!store) {
+                const cacheKey = getNormalizedContractCacheKey(net, addrStr);
+                const cached = await getContractCache<any>(cacheKey);
+                store = cached?.data;
+              }
+
+              const ownerAddr = store?.addresses?.ref?.owner ?? null;
               const ownerAddress = ownerAddr
                 ? formatTonAddress(ownerAddr, { isContract: false, network })
                 : '';
               const isOutdated =
-                outdatedSet.has(addr.toString()) || outdatedSet.has(addrStr);
+                outdatedSet.has(addrStr) ||
+                (store && Boolean(store.isCodeHashOutdated));
+
               results[addrStr] = {
                 address: addrStr,
                 ownerAddress,
-                username: store.profile?.ref?.username ?? '',
-                h3Cell: store.profile?.ref?.h3Cell ?? '',
-                country: store.profile?.ref?.country
+                username: store?.profile?.ref?.username ?? '',
+                h3Cell: store?.profile?.ref?.h3Cell ?? '',
+                country: store?.profile?.ref?.country
                   ? Number(store.profile.ref.country)
                   : 0,
-                active: Boolean(store.active),
-                jettonBalance: store.jettonBalance ?? 0n,
-                status: store.status ? Number(store.status) : 0,
-                creditNeed: store.creditNeed ?? 0n,
-                creditMaturity: Number(store.creditMaturity ?? 0),
-                multiplier: Number(store.multiplier ?? 1),
+                active: Boolean(store?.active),
+                jettonBalance: store?.jettonBalance ?? 0n,
+                status: store?.status ? Number(store.status) : 0,
+                creditNeed: store?.creditNeed ?? 0n,
+                creditMaturity: Number(store?.creditMaturity ?? 0),
+                multiplier: Number(store?.multiplier ?? 1),
                 isOutdatedCode: isOutdated,
               };
             } catch (e) {
               console.warn(
-                `[useMemberProfiles] Could not fetch profile for ${addrStr}:`,
+                `[useMemberProfiles] Could not process profile for ${addrStr}:`,
                 e,
               );
               results[addrStr] = {

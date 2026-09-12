@@ -198,13 +198,29 @@ export function initTelegramBiometrics(): Promise<boolean> {
     return Promise.resolve(Boolean(bm.isBiometricAvailable));
 
   return new Promise((resolve) => {
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(Boolean(bm.isBiometricAvailable));
+      }
+    }, 1000);
+
     try {
       bm.init(() => {
-        isBiometricInited = true;
-        resolve(Boolean(bm.isBiometricAvailable));
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          isBiometricInited = true;
+          resolve(Boolean(bm.isBiometricAvailable));
+        }
       });
     } catch {
-      resolve(false);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(false);
+      }
     }
   });
 }

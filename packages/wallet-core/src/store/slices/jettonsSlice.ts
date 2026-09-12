@@ -64,6 +64,11 @@ export const createJettonsSlice: JettonsSliceCreator = (
       return;
     }
 
+    if (!state.walletManagement.currentWallet) {
+      log.warn('Current wallet not initialized');
+      return;
+    }
+
     set((state) => {
       state.jettons.isLoadingJettons = true;
       state.jettons.error = null;
@@ -73,7 +78,7 @@ export const createJettonsSlice: JettonsSliceCreator = (
       log.info('Loading user jettons', { address });
 
       const jettonsResponse =
-        await state.walletManagement.currentWallet?.getJettons({
+        await state.walletManagement.currentWallet.getJettons({
           pagination: {
             limit: 10,
             offset: 0,
@@ -81,7 +86,11 @@ export const createJettonsSlice: JettonsSliceCreator = (
         });
 
       if (!jettonsResponse) {
-        throw new Error('Failed to load user jettons');
+        log.warn('No jettons response received');
+        set((s) => {
+          s.jettons.isLoadingJettons = false;
+        });
+        return;
       }
 
       set((s) => {

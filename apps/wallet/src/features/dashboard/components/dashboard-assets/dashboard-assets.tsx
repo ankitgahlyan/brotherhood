@@ -7,8 +7,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
+import { useJettons } from '@demo/wallet-core';
+import { toast } from 'sonner';
 
 import {
   AddTokenModal,
@@ -19,25 +21,47 @@ import {
 } from '@/features/assets';
 import type { AssetRowData } from '@/features/assets';
 
-const JETTON_SLOTS = 3;
+const JETTON_SLOTS = 5;
 
 export const DashboardAssets: React.FC = () => {
   const navigate = useNavigate();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
+  const { loadUserJettons } = useJettons();
 
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleAssetClick = (asset: AssetRowData) => {
     setSelectedAsset(asset);
     setIsModalOpen(true);
   };
 
-  // Preview: up to JETTON_SLOTS held member jettons (FI + Personal Tokens)
-  const selected = useMemo<AssetRowData[]>(() => {
+  const handleRefreshTokens = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await loadUserJettons();
+      toast.success('Tokens refreshed successfully');
+    } catch (err) {
+      console.error('[DashboardAssets] Failed to refresh tokens:', err);
+      toast.error('Failed to refresh tokens');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Preview: up to JETTON_SLOTS held member jettons or all if showAll is true
+  const displayedJettons = useMemo<AssetRowData[]>(() => {
+    if (showAll) {
+      return jettonRows;
+    }
     return jettonRows.slice(0, JETTON_SLOTS);
-  }, [jettonRows]);
+  }, [jettonRows, showAll]);
+
+  const hasMoreJettons = jettonRows.length > JETTON_SLOTS;
 
   return (
     <section>
@@ -53,6 +77,17 @@ export const DashboardAssets: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleRefreshTokens}
+            disabled={isRefreshing}
+            className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+            title="Refresh and discover tokens"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
@@ -71,7 +106,7 @@ export const DashboardAssets: React.FC = () => {
           <AssetRowSkeleton />
         )}
         {assetsReady ? (
-          selected.map((row) => (
+          displayedJettons.map((row) => (
             <AssetRow
               key={row.id}
               {...row}
@@ -85,6 +120,18 @@ export const DashboardAssets: React.FC = () => {
           </>
         )}
       </div>
+
+      {hasMoreJettons && (
+        <div className="mt-2 text-center">
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer py-1 px-3 rounded-md hover:bg-secondary/50"
+          >
+            {showAll ? 'Show less' : `Show all (${jettonRows.length})`}
+          </button>
+        </div>
+      )}
 
       <AssetDetailsModal
         asset={selectedAsset}

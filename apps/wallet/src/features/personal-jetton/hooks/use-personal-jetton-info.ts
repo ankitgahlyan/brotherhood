@@ -165,8 +165,8 @@ export function usePersonalJettonInfo(
 
   const isDeployedOnChain = Boolean(
     (activeMinterObj &&
-      registeredMinterObj &&
-      activeMinterObj.equals(registeredMinterObj)
+    registeredMinterObj &&
+    activeMinterObj.equals(registeredMinterObj)
       ? isRegisteredMinterDeployed
       : deterministicDeployedQuery.data) || minterDetails,
   );
@@ -193,8 +193,8 @@ export function usePersonalJettonInfo(
 
   const resolvedWallet =
     (activeMinterObj &&
-      registeredMinterObj &&
-      activeMinterObj.equals(registeredMinterObj)
+    registeredMinterObj &&
+    activeMinterObj.equals(registeredMinterObj)
       ? registeredWalletObj
       : null) ||
     computedWalletAddrObj ||

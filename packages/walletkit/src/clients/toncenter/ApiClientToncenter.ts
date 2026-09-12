@@ -62,7 +62,11 @@ import type {
   UserNFTsRequest,
   MasterchainInfo,
 } from '../../api/models';
-import { asAddressFriendly, compareAddress } from '../../utils/address';
+import {
+  asAddressFriendly,
+  asMaybeAddressFriendly,
+  compareAddress,
+} from '../../utils/address';
 import { formatUnits } from '../../utils/units';
 import {
   mapAccountStatesEntry,
@@ -196,11 +200,17 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     address: UserFriendlyAddress,
     seqno?: number,
   ): Promise<AccountState> {
+    if (typeof seqno !== 'number') {
+      const friendly = asAddressFriendly(address);
+      const states = await this.getAccountStates([friendly]);
+      return states[friendly] ?? makeNonExistingAccountState(friendly);
+    }
+
     const query: Record<string, unknown> = {
       include_boc: true,
       address: [address],
+      seqno: seqno.toString(),
     };
-    if (typeof seqno === 'number') query.seqno = seqno.toString();
     const raw = await this.getJson<V2AddressInformation>(
       '/api/v3/addressInformation',
       query,
@@ -364,26 +374,25 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       throw new Error(`No traces found for ${field}`);
     };
 
-    const results = await Promise.allSettled([
-      tryGetTrace('tx_hash'),
-      tryGetTrace('trace_id'),
-      tryGetTrace('msg_hash'),
-    ]);
+    const fields: Array<'tx_hash' | 'trace_id' | 'msg_hash'> = [
+      'tx_hash',
+      'trace_id',
+      'msg_hash',
+    ];
 
-    const fulfilledResult = results.find(
-      (result) => result.status === 'fulfilled',
-    );
-
-    if (fulfilledResult) {
-      return fulfilledResult.value;
+    let lastError: unknown;
+    for (const field of fields) {
+      try {
+        const res = await tryGetTrace(field);
+        if (res?.traces?.length > 0) {
+          return res;
+        }
+      } catch (err) {
+        lastError = err;
+      }
     }
 
-    results.forEach((result) => {
-      if (result.status === 'rejected') {
-        log.error('Error fetching trace', { error: result.reason });
-      }
-    });
-
+    log.error('Error fetching trace across all fields', { error: lastError });
     throw new Error('Failed to fetch trace');
   }
 
@@ -492,38 +501,50 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       '0:B113A994B5024A16719F69139328EB759596C38A25F59028B146FECDC3621DFE',
     ]);
 
-    const userJettons: Jetton[] = rawResponse.jetton_wallets.map((wallet) => {
-      const jettonInfo = this.extractJettonInfoFromMetadata(
-        wallet.jetton,
-        rawResponse.metadata,
-      );
-      const jetton: Jetton = {
-        address: asAddressFriendly(wallet.jetton),
-        walletAddress: asAddressFriendly(wallet.address),
-        balance: wallet.balance,
-        info: {
-          name: jettonInfo.name,
-          description: jettonInfo.description,
-          image: {
-            url: jettonInfo.image,
-            data: jettonInfo.image_data,
-          },
-          symbol: jettonInfo.symbol,
-        },
-        decimalsNumber: jettonInfo.decimals,
-        // For future use, currently prices are not provided by toncenter
-        prices: [
-          {
-            value: '0',
-            currency: 'USD',
-          },
-        ],
-        isVerified: verifiedJettonsMasters.has(wallet.jetton),
-        // ????
-        // extra: rawResponse.metadata[wallet.jetton]?.token_info,
-      };
-      return jetton;
-    });
+    const wallets = Array.isArray(rawResponse?.jetton_wallets)
+      ? rawResponse.jetton_wallets
+      : [];
+
+    const userJettons: Jetton[] = wallets
+      .map((wallet) => {
+        try {
+          const jettonAddress =
+            asMaybeAddressFriendly(wallet.jetton) ?? (wallet.jetton as any);
+          const walletAddress =
+            asMaybeAddressFriendly(wallet.address) ?? (wallet.address as any);
+          const jettonInfo = this.extractJettonInfoFromMetadata(
+            wallet.jetton,
+            rawResponse.metadata ?? {},
+          );
+          const jetton: Jetton = {
+            address: jettonAddress,
+            walletAddress: walletAddress,
+            balance: wallet.balance ?? '0',
+            info: {
+              name: jettonInfo.name,
+              description: jettonInfo.description,
+              image: {
+                url: jettonInfo.image,
+                data: jettonInfo.image_data,
+              },
+              symbol: jettonInfo.symbol,
+            },
+            decimalsNumber: jettonInfo.decimals,
+            // For future use, currently prices are not provided by toncenter
+            prices: [
+              {
+                value: '0',
+                currency: 'USD',
+              },
+            ],
+            isVerified: verifiedJettonsMasters.has(wallet.jetton),
+          };
+          return jetton;
+        } catch {
+          return null;
+        }
+      })
+      .filter((j): j is Jetton => j !== null);
 
     return {
       jettons: userJettons,
@@ -533,22 +554,26 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
 
   private extractJettonInfoFromMetadata(
     jettonAddress: string,
-    metadata: Record<string, { is_indexed: boolean; token_info?: unknown[] }>,
+    metadata?: Record<string, { is_indexed: boolean; token_info?: unknown[] }>,
   ): JettonInfo {
-    const jettonMetadata = metadata[jettonAddress];
+    const jettonMetadata = metadata ? metadata[jettonAddress] : undefined;
     const metadataJettonInfo = jettonMetadata?.token_info?.find(
       (info: unknown) =>
         typeof info === 'object' &&
         info !== null &&
         'type' in info &&
         (info as { type: string }).type === 'jetton_masters',
-    ) as EmulationTokenInfoMasters | undefined;
+    ) as (EmulationTokenInfoMasters & { extra?: any }) | undefined;
 
     if (metadataJettonInfo) {
-      const decimals =
-        typeof metadataJettonInfo.extra.decimals === 'string'
-          ? parseInt(metadataJettonInfo.extra.decimals, 10)
-          : (metadataJettonInfo.extra.decimals as number | undefined);
+      const extra = metadataJettonInfo.extra;
+      const parsedDecimals =
+        typeof extra?.decimals === 'string'
+          ? parseInt(extra.decimals, 10)
+          : typeof extra?.decimals === 'number'
+            ? extra.decimals
+            : 9;
+      const decimals = Number.isFinite(parsedDecimals) ? parsedDecimals : 9;
 
       return {
         address: jettonAddress,
@@ -557,8 +582,8 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
         description: metadataJettonInfo.description ?? '',
         decimals,
         image: metadataJettonInfo.image,
-        image_data: metadataJettonInfo.extra.image_data,
-        uri: metadataJettonInfo.extra.uri,
+        image_data: extra?.image_data,
+        uri: extra?.uri,
       };
     }
 

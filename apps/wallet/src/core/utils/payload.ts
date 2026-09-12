@@ -6,6 +6,7 @@
  *
  */
 
+import { Buffer } from 'buffer';
 import { Cell } from '@ton/core';
 
 export const KNOWN_OPCODES: Record<number, string> = {

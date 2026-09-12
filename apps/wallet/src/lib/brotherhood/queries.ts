@@ -339,7 +339,9 @@ export function usePersonalMinterDetails(
 }
 
 export function useIsContractDeployed(address: Address | null, enabled = true) {
-  const key = address?.toString({testOnly: network == 'mainnet' ? false : true}) ?? 'none';
+  const key =
+    address?.toString({ testOnly: network == 'mainnet' ? false : true }) ??
+    'none';
   return useQuery<boolean>({
     queryKey: ['contract-deployed', key],
     queryFn: () => (address ? checkIsContractDeployed(address) : false),

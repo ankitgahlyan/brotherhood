@@ -3,6 +3,7 @@
  * Decodes raw Toncenter/TonAPI TVM stacks into named Tolk wrapper structs
  */
 
+import { Buffer } from 'buffer';
 import {
   Address,
   Cell,

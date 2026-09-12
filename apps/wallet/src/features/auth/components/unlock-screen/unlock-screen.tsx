@@ -43,8 +43,8 @@ export const UnlockScreen: React.FC = () => {
         setIsLoading(true);
         const success = await unlock(decryptedPassword);
         if (success) {
-          await loadAllWallets();
           navigate('/wallet');
+          void loadAllWallets();
           return;
         } else {
           setError('Biometric authentication failed to verify passcode.');
@@ -84,8 +84,8 @@ export const UnlockScreen: React.FC = () => {
       if (!success) {
         throw new Error('Incorrect password');
       }
-      await loadAllWallets();
       navigate('/wallet');
+      void loadAllWallets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to unlock wallet');
     } finally {

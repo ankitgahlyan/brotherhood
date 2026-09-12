@@ -60,6 +60,9 @@ export default defineConfig({
   root: projectRoot,
   envDir: path.resolve(projectRoot, '../../'),
   envPrefix: ['VITE_', 'TONCENTER_'],
+  define: {
+    global: 'globalThis',
+  },
   plugins: [
     react({
       babel: {

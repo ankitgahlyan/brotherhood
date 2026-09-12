@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
@@ -60,13 +60,16 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
     refetch: refetchInvitees,
   } = useRingInvitees(circleMember.addressString, isExpanded);
 
-  const safeInvitees = Array.isArray(invitees) ? invitees : [];
-  const inviteeAddresses = safeInvitees.map((i) => i.addressString);
+  const inviteeAddresses = useMemo(() => {
+    if (!isExpanded || !Array.isArray(invitees)) return [];
+    return invitees.map((i) => i.addressString);
+  }, [invitees, isExpanded]);
   const resolvedRingProfiles = useMemberProfiles(
     inviteeAddresses,
     network === 'mainnet' ? 'mainnet' : 'testnet',
   );
 
+  const safeInvitees = Array.isArray(invitees) ? invitees : [];
   const isProfilesLoading =
     resolvedRingProfiles.isLoading && safeInvitees.length > 0;
   const isLoading = isInviteesLoading || isProfilesLoading;
@@ -340,7 +343,7 @@ export const RingTab: React.FC<RingTabProps> = ({
   onSelectMember,
   onNavigateToInvite,
 }) => {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   if (isLoading) {
     return (

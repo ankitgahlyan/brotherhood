@@ -36,6 +36,9 @@ const log = createComponentLogger('WalletManagementSlice');
 
 let activeStreamingUnwatchers: Array<() => void> = [];
 
+let inFlightLoadEvents: Promise<void> | null = null;
+let lastLoadEventsKey = '';
+
 export const createWalletManagementSlice =
   (walletKitConfig?: WalletKitConfig): WalletManagementSliceCreator =>
   (set: SetState, get) => ({
@@ -391,7 +394,17 @@ export const createWalletManagementSlice =
         // Activate the wallet immediately, even if API calls fail
         let balance: string | undefined;
         try {
-          const balanceResult = await wallet.getBalance();
+          const balancePromise = wallet.getBalance();
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('getBalance timeout after 4000ms')),
+              4000,
+            ),
+          );
+          const balanceResult = await Promise.race([
+            balancePromise,
+            timeoutPromise,
+          ]);
           balance = balanceResult.toString();
         } catch (balanceError) {
           log.warn(
@@ -903,7 +916,8 @@ export const createWalletManagementSlice =
 
     loadEvents: async (limit = 10, offset = 0) => {
       const state = get();
-      if (!state.walletManagement.address) {
+      const address = state.walletManagement.address;
+      if (!address) {
         log.warn('No wallet address available to load events');
         return;
       }
@@ -912,62 +926,79 @@ export const createWalletManagementSlice =
         throw new Error('WalletKit not initialized');
       }
 
-      try {
-        log.info(
-          'Loading events for address:',
-          state.walletManagement.address,
-          'limit:',
-          limit,
-          'offset:',
-          offset,
-        );
+      const key = `${address}:${limit}:${offset}`;
+      if (inFlightLoadEvents && lastLoadEventsKey === key) {
+        return inFlightLoadEvents;
+      }
 
-        const activeWallet = state.walletManagement.savedWallets.find(
-          (w) => w.id === state.walletManagement.activeWalletId,
-        );
-        const walletNetwork = activeWallet?.network || 'testnet';
-
-        const response = await state.walletCore.walletKit
-          .getApiClient(getChainNetwork(walletNetwork))
-          .getEvents({
-            account: state.walletManagement.address,
+      const run = async () => {
+        try {
+          log.info(
+            'Loading events for address:',
+            address,
+            'limit:',
             limit,
+            'offset:',
             offset,
+          );
+
+          const activeWallet = state.walletManagement.savedWallets.find(
+            (w) => w.id === state.walletManagement.activeWalletId,
+          );
+          const walletNetwork = activeWallet?.network || 'testnet';
+
+          const response = await state.walletCore.walletKit
+            ?.getApiClient(getChainNetwork(walletNetwork))
+            .getEvents({
+              account: address,
+              limit,
+              offset,
+            });
+
+          if (!response) return;
+
+          set((state) => {
+            state.walletManagement.events = response.events;
+            state.walletManagement.hasNextEvents = response.hasNext;
+            const eventTraceIds = new Set<string>();
+            const eventExtHashes = new Set<string>();
+            for (const ev of response.events as Array<{
+              eventId?: string;
+              traceExternalHash?: string;
+            }>) {
+              if (ev.eventId) eventTraceIds.add(ev.eventId);
+              if (ev.traceExternalHash)
+                eventExtHashes.add(Base64ToHex(ev.traceExternalHash));
+            }
+            state.walletManagement.confirmedTraceIds = [
+              ...state.walletManagement.confirmedTraceIds,
+              ...eventTraceIds,
+            ].slice(-50);
+            state.walletManagement.confirmedExternalHashes = [
+              ...state.walletManagement.confirmedExternalHashes,
+              ...eventExtHashes,
+            ].slice(-50);
+            state.walletManagement.pendingTransactions =
+              state.walletManagement.pendingTransactions.filter(
+                (p) =>
+                  !(p.traceId && eventTraceIds.has(p.traceId)) &&
+                  !(p.externalHash && eventExtHashes.has(p.externalHash)),
+              );
           });
 
-        set((state) => {
-          state.walletManagement.events = response.events;
-          state.walletManagement.hasNextEvents = response.hasNext;
-          const eventTraceIds = new Set<string>();
-          const eventExtHashes = new Set<string>();
-          for (const ev of response.events as Array<{
-            eventId?: string;
-            traceExternalHash?: string;
-          }>) {
-            if (ev.eventId) eventTraceIds.add(ev.eventId);
-            if (ev.traceExternalHash)
-              eventExtHashes.add(Base64ToHex(ev.traceExternalHash));
+          log.info(`Loaded ${response.events.length} events`);
+        } catch (error) {
+          log.error('Error loading events:', error);
+        } finally {
+          if (lastLoadEventsKey === key) {
+            inFlightLoadEvents = null;
           }
-          state.walletManagement.confirmedTraceIds = [
-            ...state.walletManagement.confirmedTraceIds,
-            ...eventTraceIds,
-          ].slice(-50);
-          state.walletManagement.confirmedExternalHashes = [
-            ...state.walletManagement.confirmedExternalHashes,
-            ...eventExtHashes,
-          ].slice(-50);
-          state.walletManagement.pendingTransactions =
-            state.walletManagement.pendingTransactions.filter(
-              (p) =>
-                !(p.traceId && eventTraceIds.has(p.traceId)) &&
-                !(p.externalHash && eventExtHashes.has(p.externalHash)),
-            );
-        });
+        }
+      };
 
-        log.info(`Loaded ${response.events.length} events`);
-      } catch (error) {
-        log.error('Error loading events:', error);
-      }
+      lastLoadEventsKey = key;
+      inFlightLoadEvents = run();
+      return inFlightLoadEvents;
     },
 
     getAvailableWallets: (): Wallet[] => {

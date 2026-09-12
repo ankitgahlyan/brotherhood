@@ -60,10 +60,14 @@ export const useAssetRows = (): AssetRows => {
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
+  const { personalTokens } = useTrackedPersonalTokens();
 
   const assetsReady =
     Boolean(walletAddress) &&
-    (balance !== undefined || userJettons.length > 0 || lastJettonsUpdate > 0);
+    (balance !== undefined ||
+      userJettons.length > 0 ||
+      personalTokens.length > 0 ||
+      lastJettonsUpdate > 0);
 
   // Other jetton addresses (not FI and not user's own personal minter)
   const candidatePersonalAddresses = useMemo(() => {
@@ -122,8 +126,6 @@ export const useAssetRows = (): AssetRows => {
       fiat: rateEntry ? amount * rateEntry.rate : undefined,
     };
   }, [assetsReady, balance, rates]);
-
-  const { personalTokens } = useTrackedPersonalTokens();
 
   const jettonRows = useMemo<AssetRowData[]>(() => {
     if (!assetsReady) return [];

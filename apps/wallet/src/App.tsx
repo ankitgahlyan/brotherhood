@@ -31,9 +31,15 @@ import {
   getTestnetApiProvider,
   API_KEYS_UPDATED_EVENT,
 } from '@/core/lib/network-api-keys';
+import { useTrackedAddressesSync } from '@/core/hooks/use-tracked-addresses-sync';
 
 import './App.css';
 import './storePatch';
+
+function TrackedAddressesSyncMount() {
+  useTrackedAddressesSync();
+  return null;
+}
 
 /**
  * Creates a Ledger transport for web using WebHID API
@@ -88,6 +94,7 @@ export function App() {
         walletKitConfig={config}
         enableDevtools={true}
       >
+        <TrackedAddressesSyncMount />
         <RouterProvider router={router} />
       </WalletProvider>
     </QueryClientProvider>

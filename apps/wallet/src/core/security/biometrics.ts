@@ -14,17 +14,18 @@ import {
   authenticateTelegramBiometrics,
   clearTelegramBiometrics,
   getRawTelegramWebApp,
+  isTelegramEnvironment,
 } from '../lib/telegram';
 
 /**
- * Returns true if the Telegram BiometricManager API is actually present on
- * window.Telegram.WebApp, regardless of isTelegramEnvironment() detection.
- * This is the correct gate for choosing the TMA biometric path so that web
- * browsers (Brave PWA) that happen to match isTelegramEnvironment() still use
- * the WebAuthn path when there is no BiometricManager.
+ * Returns true if the app is actually running inside Telegram and the Telegram BiometricManager API
+ * is present on window.Telegram.WebApp. Outside Telegram (desktop Chrome, regular browsers),
+ * telegram-web-app.js exposes a version 6.0 stub with an inert BiometricManager that does not work.
  */
 function hasTelegramBiometricManager(): boolean {
-  return Boolean(getRawTelegramWebApp()?.BiometricManager);
+  return (
+    isTelegramEnvironment() && Boolean(getRawTelegramWebApp()?.BiometricManager)
+  );
 }
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
@@ -76,8 +77,12 @@ export async function isBiometricsSupported(): Promise<boolean> {
     ) {
       return false;
     }
-    const available =
-      await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    const checkPromise =
+      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    const timeoutPromise = new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), 1500),
+    );
+    const available = await Promise.race([checkPromise, timeoutPromise]);
     return Boolean(available);
   } catch {
     return false;

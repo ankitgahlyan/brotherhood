@@ -14,6 +14,10 @@ import {
   useRates,
   useWallet,
 } from '@demo/wallet-core';
+import {
+  addPersonalJettons,
+  normalizeAddressString,
+} from '@/lib/brotherhood/tracked-addresses-storage';
 import { notifyCacheUpdated } from '@/lib/brotherhood/contract-cache';
 
 export const useWalletDataUpdater = () => {
@@ -26,7 +30,7 @@ export const useWalletDataUpdater = () => {
     loadAllWallets,
   } = useWallet();
   const { isUnlocked } = useAuth();
-  const { loadUserJettons } = useJettons();
+  const { userJettons, loadUserJettons } = useJettons();
   const { loadUserNfts } = useNfts();
   const { loadRates } = useRates();
 
@@ -54,9 +58,9 @@ export const useWalletDataUpdater = () => {
     }
   }, [activeWalletId, updateBalance, loadUserJettons, loadUserNfts, loadRates]);
 
-  // Initial cold-cache population only:
-  // If the wallet has never been synced in storage, perform one initial fetch.
-  // Once synced, subsequent app reloads immediately show cached state without auto-fetching.
+  // Initial cold-cache population:
+  // 1. If the wallet has never been synced in storage, perform one initial fetch.
+  // 2. Even if synced before, if userJettons is empty on mount (Zustand store fresh start), fetch jettons.
   useEffect(() => {
     if (!address || !activeWalletId) return;
 
@@ -65,8 +69,27 @@ export const useWalletDataUpdater = () => {
     );
     if (!hasSyncedBefore) {
       void executeWalletSync();
+    } else if (userJettons.length === 0) {
+      void loadUserJettons();
     }
-  }, [activeWalletId, address, executeWalletSync]);
+  }, [
+    activeWalletId,
+    address,
+    executeWalletSync,
+    loadUserJettons,
+    userJettons.length,
+  ]);
+
+  // When userJettons are populated/updated, extract addresses and save to personalJettons
+  useEffect(() => {
+    if (!address || userJettons.length === 0) return;
+    const minterAddresses = userJettons
+      .map((j) => normalizeAddressString(j.address))
+      .filter(Boolean);
+    if (minterAddresses.length > 0) {
+      addPersonalJettons(address, minterAddresses);
+    }
+  }, [address, userJettons]);
 
   // Listen for global manual refresh requests from the dedicated refresh button
   useEffect(() => {

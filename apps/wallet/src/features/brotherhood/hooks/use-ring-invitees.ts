@@ -12,6 +12,10 @@ import { useQuery } from '@tanstack/react-query';
 import { getFiWalletStateByContractAddress } from '@/lib/brotherhood/ton';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import {
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 
 export interface RingInviteeEntry {
   address: Address;
@@ -53,11 +57,27 @@ export function useRingInvitees(
       cachedQueryFn(cacheKey, async (opts) => {
         if (!parsedAddress) return [];
         const net = network === 'mainnet' ? 'mainnet' : 'testnet';
-        const store = await getFiWalletStateByContractAddress(
-          parsedAddress,
-          net,
-          opts,
-        );
+        const normalizedKey = getNormalizedContractCacheKey(net, parsedAddress);
+        let store: any = null;
+
+        if (!opts?.forceFresh) {
+          const cached = await getContractCache<any>(normalizedKey);
+          if (
+            cached?.data &&
+            (cached.data.$ === 'FiWalletStore' ||
+              cached.data.addresses?.ref?.owner)
+          ) {
+            store = cached.data;
+          }
+        }
+
+        if (!store) {
+          store = await getFiWalletStateByContractAddress(
+            parsedAddress,
+            net,
+            opts,
+          );
+        }
         const invitedMap = store.maps?.ref?.invited;
         if (!invitedMap) return [];
 

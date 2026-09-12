@@ -29,12 +29,18 @@ import {
 import {
   getNormalizedContractCacheKey,
   getContractCache,
+  setContractCache,
 } from '@/lib/brotherhood/contract-cache';
 import {
   settingsStorage,
   SettingsKeys,
   StringArraySchema,
 } from '@/core/storage';
+
+import {
+  loadTrackedAddresses,
+  addPersonalJettons,
+} from '@/lib/brotherhood/tracked-addresses-storage';
 
 const STORAGE_KEY_PREFIX = SettingsKeys.TRACKED_PERSONAL_TOKENS_PREFIX;
 
@@ -50,22 +56,37 @@ export function useTrackedPersonalTokens() {
 
   // Local state for list of tracked minter addresses
   const [trackedMinters, setTrackedMinters] = useState<string[]>(() => {
-    if (!storageKey) return [];
-    return settingsStorage.get(storageKey, StringArraySchema, []);
+    if (!walletAddress) return [];
+    const trackedData = loadTrackedAddresses(walletAddress);
+    const fromTracked = trackedData?.personalJettons || [];
+    const fromSettings = storageKey
+      ? settingsStorage.get(storageKey, StringArraySchema, [])
+      : [];
+    return Array.from(new Set([...fromTracked, ...fromSettings]));
   });
 
-  // Re-sync with settingsStorage when active wallet changes
+  // Re-sync with settingsStorage and tracked_addresses when active wallet changes
   useEffect(() => {
-    if (!storageKey) {
+    if (!walletAddress) {
       setTrackedMinters([]);
       return;
     }
-    setTrackedMinters(settingsStorage.get(storageKey, StringArraySchema, []));
+    const trackedData = loadTrackedAddresses(walletAddress);
+    const fromTracked = trackedData?.personalJettons || [];
+    const fromSettings = storageKey
+      ? settingsStorage.get(storageKey, StringArraySchema, [])
+      : [];
+    setTrackedMinters(Array.from(new Set([...fromTracked, ...fromSettings])));
 
-    return settingsStorage.subscribe(storageKey, () => {
-      setTrackedMinters(settingsStorage.get(storageKey, StringArraySchema, []));
-    });
-  }, [storageKey]);
+    if (storageKey) {
+      return settingsStorage.subscribe(storageKey, () => {
+        const data = loadTrackedAddresses(walletAddress);
+        const pt = data?.personalJettons || [];
+        const setts = settingsStorage.get(storageKey, StringArraySchema, []);
+        setTrackedMinters(Array.from(new Set([...pt, ...setts])));
+      });
+    }
+  }, [storageKey, walletAddress]);
 
   const persistMinters = useCallback(
     (newMinters: string[]) => {
@@ -73,8 +94,11 @@ export function useTrackedPersonalTokens() {
       if (storageKey) {
         settingsStorage.set(storageKey, newMinters);
       }
+      if (walletAddress) {
+        addPersonalJettons(walletAddress, newMinters);
+      }
     },
-    [storageKey],
+    [storageKey, walletAddress],
   );
 
   const parsedOwnerAddress = useMemo(() => {
@@ -85,6 +109,32 @@ export function useTrackedPersonalTokens() {
       return null;
     }
   }, [walletAddress]);
+
+  const summaryCacheKey = walletAddress
+    ? `personal_tokens_summary:${network}:${walletAddress}`
+    : null;
+
+  const [cachedTokens, setCachedTokens] = useState<DiscoveredPersonalToken[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (!summaryCacheKey) {
+      setCachedTokens([]);
+      return;
+    }
+    let isCancelled = false;
+    getContractCache<DiscoveredPersonalToken[]>(summaryCacheKey).then(
+      (cached) => {
+        if (!isCancelled && cached?.data && Array.isArray(cached.data)) {
+          setCachedTokens(cached.data);
+        }
+      },
+    );
+    return () => {
+      isCancelled = true;
+    };
+  }, [summaryCacheKey]);
 
   // Query live balance and metadata for all tracked minters
   const {
@@ -164,6 +214,10 @@ export function useTrackedPersonalTokens() {
             err,
           );
         }
+      }
+
+      if (summaryCacheKey && results.length > 0) {
+        await setContractCache(summaryCacheKey, results).catch(() => {});
       }
 
       return results;
@@ -395,14 +449,17 @@ export function useTrackedPersonalTokens() {
     [trackedMinters, persistMinters, queryClient, walletAddress],
   );
 
+  const activePersonalTokens =
+    personalTokens.length > 0 ? personalTokens : cachedTokens;
+
   return {
-    personalTokens,
+    personalTokens: activePersonalTokens,
     trackedMinters,
     discoverTokens,
     addTokenManually,
     untrackToken,
     isDiscovering,
-    isLoading,
+    isLoading: isLoading && activePersonalTokens.length === 0,
     refetch,
   };
 }

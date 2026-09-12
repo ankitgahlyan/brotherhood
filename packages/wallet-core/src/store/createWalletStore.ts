@@ -208,6 +208,11 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 pendingConnectRequest:
                   state.tonConnect.pendingConnectRequestEvent,
               },
+              jettons: {
+                userJettons: state.jettons.userJettons,
+                jettonsByAddress: state.jettons.jettonsByAddress,
+                lastJettonsUpdate: state.jettons.lastJettonsUpdate,
+              },
             }),
             merge: (persistedState, currentState) => {
               const persisted = persistedState as any;
@@ -254,6 +259,13 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     isProcessing: false,
                   },
                 },
+                jettons: {
+                  ...currentState.jettons,
+                  ...persisted?.jettons,
+                  userJettons: persisted?.jettons?.userJettons || [],
+                  jettonsByAddress: persisted?.jettons?.jettonsByAddress || {},
+                  lastJettonsUpdate: persisted?.jettons?.lastJettonsUpdate || 0,
+                },
               };
 
               return merged as AppState;
@@ -297,19 +309,16 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
               //     state.processNextRequest();
               // }
 
-              const processTimeoutCallback = () => {
-                if (
-                  state.tonConnect.requestQueue.items.length > 0 &&
-                  !state.tonConnect.requestQueue.isProcessing &&
-                  state.processNextRequest
-                ) {
-                  log.info('Calling processNextRequest after timeout');
-                  state.processNextRequest();
-                }
-                setTimeout(() => processTimeoutCallback(), 1000);
-              };
-              processTimeoutCallback();
-              // setTimeout(() => {}, 1000);
+              if (
+                (state.tonConnect?.requestQueue?.items?.length ?? 0) > 0 &&
+                !state.tonConnect.requestQueue.isProcessing &&
+                state.processNextRequest
+              ) {
+                setTimeout(() => {
+                  log.info('Calling processNextRequest after rehydration');
+                  state.processNextRequest?.();
+                }, 500);
+              }
             },
           },
         ),

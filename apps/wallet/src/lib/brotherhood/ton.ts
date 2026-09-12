@@ -3,7 +3,17 @@ import { Address, Dictionary } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
 import { FossFi } from '@wrappers/FossFi.gen';
-import { Addresses, FossFiWallet, Maps, NomInAddrs, ProfileInfo, ReportInfo, SocialMaps, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
+import {
+  Addresses,
+  FossFiWallet,
+  Maps,
+  NomInAddrs,
+  ProfileInfo,
+  ReportInfo,
+  SocialMaps,
+  TimeStamps,
+  TrustedAddrs,
+} from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter, OnchainMetadataReply } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
@@ -17,9 +27,7 @@ import {
   setContractCache,
   getNormalizedContractCacheKey,
 } from './contract-cache';
-import {
-  computePersonalWalletAddress,
-} from './account-state-hydrator';
+import { computePersonalWalletAddress } from './account-state-hydrator';
 import { sha256 } from './jettonContent';
 
 export type { Network } from './config';
@@ -56,9 +64,9 @@ export function toncenterApiKey(network: Network): string | undefined {
   const key =
     network === 'mainnet'
       ? import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
-      import.meta.env.TONCENTER_MAINNET_API_KEY
+        import.meta.env.TONCENTER_MAINNET_API_KEY
       : import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
-      import.meta.env.TONCENTER_TESTNET_API_KEY;
+        import.meta.env.TONCENTER_TESTNET_API_KEY;
   return key && typeof key === 'string' && key.trim() ? key.trim() : undefined;
 }
 
@@ -84,7 +92,7 @@ async function syncActiveRpcEndpoint() {
 
 // Initial sync
 if (typeof window !== 'undefined') {
-  syncActiveRpcEndpoint().catch(() => { });
+  syncActiveRpcEndpoint().catch(() => {});
   window.addEventListener(API_KEYS_UPDATED_EVENT, () => {
     syncActiveRpcEndpoint().finally(() => {
       resetTonClients();
@@ -164,19 +172,15 @@ export function getFiWalletAddress(
   net: Network = network,
 ): Address {
   const minterAddress = Address.parse(FI_ADDRESS);
-  const cached = getCachedDeterministicWalletAddress(
-    net,
-    minterAddress,
-    owner,
-  );
+  const cached = getCachedDeterministicWalletAddress(net, minterAddress, owner);
   if (cached) {
     return cached;
   }
 
   /**
- * Computes Brotherhood FI wallet address deterministically off-chain
- * using baseFiWalletCodeCell and initial empty storage schema.
- */
+   * Computes Brotherhood FI wallet address deterministically off-chain
+   * using baseFiWalletCodeCell and initial empty storage schema.
+   */
   const emptyFiWalletStore = {
     profile: { ref: ProfileInfo.create({}) },
     timestamps: { ref: TimeStamps.create({}) },
@@ -208,17 +212,12 @@ export function getFiWalletAddress(
   });
   const offchainAddr = wallet.address;
 
-  setCachedDeterministicWalletAddress(
-    net,
-    minterAddress,
-    owner,
-    offchainAddr,
-  );
+  setCachedDeterministicWalletAddress(net, minterAddress, owner, offchainAddr);
   return offchainAddr;
 }
 
 export async function checkIsContractDeployed(
-  address: Address
+  address: Address,
 ): Promise<boolean> {
   try {
     // fixme: fetch from deserialized data
@@ -372,23 +371,58 @@ export async function getFiWalletStateByContractAddress(
   options: { forceFresh?: boolean } = {},
 ) {
   const normalizedKey = getNormalizedContractCacheKey(net, contractAddress);
-  
+
   if (!options.forceFresh) {
-    const cached = await getContractCache<FiWalletStateData>(normalizedKey);
+    const cached = await getContractCache<any>(normalizedKey);
     if (cached && cached.data) {
-      return cached.data;
+      // If cached data is a FiWallet, return it
+      if (
+        cached.data.$ === 'FiWalletStore' ||
+        cached.data.addresses?.ref?.owner
+      ) {
+        return cached.data as FiWalletStateData;
+      }
+      // If the address is an owner wallet (e.g. WalletV5R1), redirect to its off-chain computed FiWallet
+      if (
+        cached.data.signatureAllowed !== undefined ||
+        cached.data.walletId !== undefined
+      ) {
+        const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
+        return getFiWalletStateByContractAddress(
+          actualFiWalletAddr,
+          net,
+          options,
+        );
+      }
     }
   }
 
   // Fast In-Memory Deserialization via Toncenter v3 /accountStates
+  let hydrateResult: any = null;
   try {
     const { batchHydrateUniversal } = await import('./account-state-hydrator');
-    await batchHydrateUniversal([contractAddress], net, {
-      knownTypes: { [contractAddress.toString()]: 'fiWallet' },
-    });
-    const hydrated = await getContractCache<FiWalletStateData>(normalizedKey);
+    // Let batchHydrateUniversal auto-detect the true contract type by bytecode hash
+    hydrateResult = await batchHydrateUniversal([contractAddress], net);
+    const hydrated = await getContractCache<any>(normalizedKey);
     if (hydrated && hydrated.data) {
-      return hydrated.data;
+      if (
+        hydrated.data.$ === 'FiWalletStore' ||
+        hydrated.data.addresses?.ref?.owner
+      ) {
+        return hydrated.data as FiWalletStateData;
+      }
+      // If the address turned out to be an owner wallet, redirect to its FiWallet
+      if (
+        hydrated.data.signatureAllowed !== undefined ||
+        hydrated.data.walletId !== undefined
+      ) {
+        const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
+        return getFiWalletStateByContractAddress(
+          actualFiWalletAddr,
+          net,
+          options,
+        );
+      }
     }
   } catch (err) {
     console.debug(
@@ -397,12 +431,43 @@ export async function getFiWalletStateByContractAddress(
     );
   }
 
-  const fresh = await getTonClient(net)
-    .open(FossFiWallet.fromAddress(contractAddress))
-    .getWalletDataAll();
+  // Zero Getter Fallback Rule: If the account was detected as outdated or failed deserialization,
+  // do not run on-chain get-methods that will fail or throttle.
+  const addrString = contractAddress.toString();
+  if (
+    hydrateResult?.outdatedAccounts?.includes(addrString) ||
+    hydrateResult?.failedAddresses?.includes(addrString)
+  ) {
+    const cached = await getContractCache<any>(normalizedKey);
+    if (cached?.data) {
+      return cached.data as FiWalletStateData;
+    }
+    throw new Error(
+      `FiWallet ${addrString} is inactive or using outdated code`,
+    );
+  }
 
-  await setContractCache(normalizedKey, fresh);
-  return fresh;
+  try {
+    const freshPromise = getTonClient(net)
+      .open(FossFiWallet.fromAddress(contractAddress))
+      .getWalletDataAll();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('getWalletDataAll timeout after 4000ms')),
+        4000,
+      ),
+    );
+    const fresh = await Promise.race([freshPromise, timeoutPromise]);
+
+    await setContractCache(normalizedKey, fresh);
+    return fresh;
+  } catch (err) {
+    console.warn(
+      `[getFiWalletStateByContractAddress] Failed to fetch FiWallet data for ${contractAddress.toString()}:`,
+      err,
+    );
+    throw err;
+  }
 }
 
 export async function getFiMinterState() {
@@ -581,8 +646,15 @@ export async function getPersonalWalletBalance(
 }
 
 export async function getFiMinterTotalAccounts(): Promise<bigint> {
+  const minterAddr = Address.parse(FI_ADDRESS);
+  const normalizedKey = getNormalizedContractCacheKey(network, minterAddr);
+  const cached = await getContractCache<any>(normalizedKey);
+  if (cached?.data?.totalAccounts !== undefined) {
+    return BigInt(cached.data.totalAccounts);
+  }
+
   return getTonClient(network)
-    .open(FossFi.fromAddress(Address.parse(FI_ADDRESS)))
+    .open(FossFi.fromAddress(minterAddr))
     .getTotalAccounts();
 }
 

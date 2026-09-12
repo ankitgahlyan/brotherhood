@@ -385,12 +385,22 @@ class DevTelemetryManager {
           const stringified = args.map((arg) => {
             if (arg === null) return 'null';
             if (arg === undefined) return 'undefined';
+            if (typeof arg === 'bigint') return `${arg.toString()}n`;
             if (arg instanceof Error) {
               return `${arg.name}: ${arg.message}${arg.stack ? `\n${arg.stack}` : ''}`;
             }
             if (typeof arg === 'object') {
               try {
-                return JSON.stringify(arg, null, 2);
+                // Quick shallow / safe serialization to avoid locking main thread on large graphs
+                const str = JSON.stringify(
+                  arg,
+                  (_key, value) =>
+                    typeof value === 'bigint' ? `${value.toString()}n` : value,
+                  2,
+                );
+                return str.length > 2000
+                  ? str.slice(0, 2000) + '... [truncated]'
+                  : str;
               } catch {
                 return Object.prototype.toString.call(arg);
               }
