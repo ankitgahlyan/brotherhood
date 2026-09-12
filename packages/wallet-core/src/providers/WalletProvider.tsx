@@ -14,9 +14,11 @@ import { createWalletStore } from '../store/createWalletStore';
 import type { CreateWalletStoreOptions } from '../store/createWalletStore';
 import type { AppState } from '../types/store';
 
-export const WalletStoreContext = createContext<StoreApi<AppState> | null>(
-  null,
-);
+const CONTEXT_SYMBOL = Symbol.for('__DEMO_WALLET_STORE_CONTEXT__');
+
+export const WalletStoreContext: React.Context<StoreApi<AppState> | null> = ((
+  globalThis as any
+)[CONTEXT_SYMBOL] ||= createContext<StoreApi<AppState> | null>(null));
 
 export interface WalletProviderProps extends CreateWalletStoreOptions {
   children: ReactNode;

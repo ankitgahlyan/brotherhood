@@ -209,9 +209,9 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   state.tonConnect.pendingConnectRequestEvent,
               },
               jettons: {
-                userJettons: state.jettons.userJettons,
-                jettonsByAddress: state.jettons.jettonsByAddress,
-                lastJettonsUpdate: state.jettons.lastJettonsUpdate,
+                userJettons: state.jettons?.userJettons || [],
+                jettonsByAddress: state.jettons?.jettonsByAddress || {},
+                lastJettonsUpdate: state.jettons?.lastJettonsUpdate || 0,
               },
             }),
             merge: (persistedState, currentState) => {
