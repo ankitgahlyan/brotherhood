@@ -2,4 +2,4 @@
 set -e
 
 # Run tests and checks only on changed/affected (git diff) files
-node scripts/pre-commit-tests.mjs
+bun run test:changed

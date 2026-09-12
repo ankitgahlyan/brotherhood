@@ -70,22 +70,13 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
       setViewerFiWallet(null);
       return;
     }
-    let active = true;
     try {
       const ownerAddr = Address.parse(address);
-      getFiWalletAddress(ownerAddr, network)
-        .then((fiAddr) => {
-          if (active) setViewerFiWallet(fiAddr);
-        })
-        .catch(() => {
-          if (active) setViewerFiWallet(null);
-        });
+      const fiAddr = getFiWalletAddress(ownerAddr, network);
+      setViewerFiWallet(fiAddr);
     } catch {
       setViewerFiWallet(null);
     }
-    return () => {
-      active = false;
-    };
   }, [address, network]);
 
   const isDirectInviter = useMemo(() => {

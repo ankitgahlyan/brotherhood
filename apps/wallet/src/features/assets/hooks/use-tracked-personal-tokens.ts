@@ -15,6 +15,7 @@ import { useWallet } from '@demo/wallet-core';
 import {
   discoverPersonalTokensForWallet,
   fetchPersonalTokenMetadata,
+  getFiWalletAddress,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   isPersonalMinterContract,
@@ -24,7 +25,6 @@ import { network } from '@/lib/brotherhood/config';
 import {
   batchHydrateUniversal,
   computePersonalWalletAddress,
-  computeFiWalletAddress,
 } from '@/lib/brotherhood/account-state-hydrator';
 import {
   getNormalizedContractCacheKey,
@@ -101,7 +101,7 @@ export function useTrackedPersonalTokens() {
       if (!parsedOwnerAddress || trackedMinters.length === 0) return [];
 
       // 1. Off-chain compute FI wallet address and Personal Wallet addresses if cached
-      const fiWalletAddr = computeFiWalletAddress(parsedOwnerAddress);
+      const fiWalletAddr = getFiWalletAddress(parsedOwnerAddress);
       const minterAddrs = trackedMinters.map((m) => Address.parse(m));
 
       // Batch 1: FI wallet + all tracked personal minters in 1 call

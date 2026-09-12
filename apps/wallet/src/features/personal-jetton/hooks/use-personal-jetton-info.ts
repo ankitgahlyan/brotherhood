@@ -21,7 +21,7 @@ import {
   type PersonalMinterDetails,
 } from '@/lib/brotherhood/ton';
 import {
-  getDeterministicPersonalMinter,
+  getPersonalMinter,
   getExpectedPersonalWalletAddress,
 } from '@/lib/brotherhood/deploy';
 
@@ -61,13 +61,8 @@ export function usePersonalJettonInfo(
       return;
     }
     let cancelled = false;
-    getFiWalletAddress(ownerAddress)
-      .then((addr) => {
-        if (!cancelled) setFiWalletAddr(addr);
-      })
-      .catch(() => {
-        if (!cancelled) setFiWalletAddr(null);
-      });
+    const addr = getFiWalletAddress(ownerAddress);
+    if (!cancelled) setFiWalletAddr(addr);
     return () => {
       cancelled = true;
     };
@@ -76,7 +71,7 @@ export function usePersonalJettonInfo(
   const deterministicMinterAddrObj = useMemo(() => {
     if (!ownerAddress || !fiWalletAddr) return null;
     try {
-      const { contractAddress } = getDeterministicPersonalMinter({
+      const { contractAddress } = getPersonalMinter({
         issuerWallet: fiWalletAddr,
         adminAddress: ownerAddress,
       });
@@ -170,8 +165,8 @@ export function usePersonalJettonInfo(
 
   const isDeployedOnChain = Boolean(
     (activeMinterObj &&
-    registeredMinterObj &&
-    activeMinterObj.equals(registeredMinterObj)
+      registeredMinterObj &&
+      activeMinterObj.equals(registeredMinterObj)
       ? isRegisteredMinterDeployed
       : deterministicDeployedQuery.data) || minterDetails,
   );
@@ -198,8 +193,8 @@ export function usePersonalJettonInfo(
 
   const resolvedWallet =
     (activeMinterObj &&
-    registeredMinterObj &&
-    activeMinterObj.equals(registeredMinterObj)
+      registeredMinterObj &&
+      activeMinterObj.equals(registeredMinterObj)
       ? registeredWalletObj
       : null) ||
     computedWalletAddrObj ||

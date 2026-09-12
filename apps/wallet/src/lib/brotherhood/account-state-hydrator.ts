@@ -1,15 +1,7 @@
-import { Address, Cell, Dictionary } from '@ton/core';
+import { Address, Cell } from '@ton/core';
 import {
   FossFiWallet,
   FiWalletStore,
-  Addresses,
-  NomInAddrs,
-  TrustedAddrs,
-  Maps,
-  SocialMaps,
-  ReportInfo,
-  ProfileInfo,
-  TimeStamps,
 } from '@wrappers/FossFiWallet.gen';
 import { FossFi, FiStore } from '@wrappers/FossFi.gen';
 import { PersonalMinter, PersonalStore } from '@wrappers/Personal.gen';
@@ -26,8 +18,7 @@ import {
 } from './contract-cache';
 import { rateLimitedFetch } from './rate-limiter';
 import { toncenterApiKey, type Network } from './ton';
-import { network as defaultNetwork, FI_ADDRESS } from './config';
-import { baseFiWalletCodeCell } from './base-fi-wallet-code';
+import { network as defaultNetwork } from './config';
 
 export const CONTRACT_CODE_HASHES = {
   fiWallet: FossFiWallet.CodeCell.hash().toString('base64'),
@@ -41,6 +32,7 @@ export const CONTRACT_CODE_HASHES = {
 
 export const CURRENT_FI_WALLET_CODE_HASH = CONTRACT_CODE_HASHES.fiWallet;
 
+// todo: add all other fields from Toncenter v3 /accountStates response
 export interface RawAccountStateItem {
   address: string;
   account_state_hash?: string;
@@ -106,7 +98,7 @@ export async function batchFetchAccountStates(
     try {
       const res = await rateLimitedFetch(url, { headers });
       if (!res.ok) {
-        console.warn(
+        console.error(
           `[batchFetchAccountStates] HTTP ${res.status} for chunk of ${chunk.length} addresses`,
         );
         return [];
@@ -117,7 +109,7 @@ export async function batchFetchAccountStates(
       }
       return [];
     } catch (err) {
-      console.warn(
+      console.error(
         '[batchFetchAccountStates] Failed to fetch accountStates chunk:',
         err,
       );
@@ -227,46 +219,6 @@ export function computePersonalWalletAddress(
 }
 
 /**
- * Computes Brotherhood FI wallet address deterministically off-chain
- * using baseFiWalletCodeCell and initial empty storage schema.
- */
-export function computeFiWalletAddress(
-  owner: Address,
-  minterAddress: Address = Address.parse(FI_ADDRESS),
-): Address {
-  const emptyFiWalletStore = {
-    profile: { ref: ProfileInfo.create({}) },
-    timestamps: { ref: TimeStamps.create({}) },
-    addresses: {
-      ref: Addresses.create({
-        owner,
-        nomInAddrs: { ref: NomInAddrs.create({}) },
-        trustedJettonAddrs: {
-          ref: TrustedAddrs.create({
-            minterAddr: minterAddress,
-            authorisedAccs: Dictionary.empty(),
-          }),
-        },
-      }),
-    },
-    maps: {
-      ref: Maps.create({
-        invited: Dictionary.empty(),
-        allowances: Dictionary.empty(),
-        social: { ref: SocialMaps.create({ votedFor: Dictionary.empty() }) },
-        reportInfo: { ref: ReportInfo.create({ reports: Dictionary.empty() }) },
-      }),
-    },
-  };
-
-  const wallet = FossFiWallet.fromStorage(emptyFiWalletStore, {
-    overrideContractCode: baseFiWalletCodeCell,
-    toShard: { fixedPrefixLength: 8, closeTo: owner },
-  });
-  return wallet.address;
-}
-
-/**
  * Universal Contract Hydration
  * Hydrates contract states into IndexedDB in chunks of 30.
  * Automatically tries appropriate in-memory fromSlice parsers.
@@ -328,6 +280,7 @@ export async function batchHydrateUniversal(
       continue;
     }
 
+    // fixme: determine known type by hash compare
     const knownType = options?.knownTypes?.[standardAddrStr];
     const expectedHash = knownType ? CONTRACT_CODE_HASHES[knownType] : null;
     const isCodeHashOutdated =

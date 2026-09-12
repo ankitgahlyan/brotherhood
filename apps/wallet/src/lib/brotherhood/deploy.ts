@@ -133,7 +133,7 @@ export async function buildChangeContentBody(
 // Deploy a Personal Token minter backed by the issuer's FI wallet.
 // PersonalStore layout: totalSupply (coins), fiJettonAddress, adminAddress, metadataUri (null on initial deterministic deploy).
 // This guarantees deterministic address calculation independent of metadata.
-export function getDeterministicPersonalMinter(params: {
+export function getPersonalMinter(params: {
   issuerWallet: Address;
   adminAddress: Address;
 }) {
@@ -156,13 +156,6 @@ export function getDeterministicPersonalMinter(params: {
       splitDepth: 8,
     },
   };
-}
-
-export async function buildPersonalMinterDeploy(params: {
-  issuerWallet: Address;
-  adminAddress: Address;
-}) {
-  return getDeterministicPersonalMinter(params);
 }
 
 export async function buildChangeMetadataBody(

@@ -12,7 +12,7 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import {
   buildMintBody,
-  buildPersonalMinterDeploy,
+  getPersonalMinter,
   buildSetPersonalJettonBody,
   getExpectedPersonalWalletAddress,
   parseUnits,
@@ -87,7 +87,7 @@ export function useDeployPersonalJetton({
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
     // Pure deterministic deployment: null metadata ensures minter address calculation is strictly deterministic
-    const { contractAddress, stateInit } = await buildPersonalMinterDeploy({
+    const { contractAddress, stateInit } = await getPersonalMinter({
       issuerWallet: fiWalletAddr,
       adminAddress: ownerAddr,
     });

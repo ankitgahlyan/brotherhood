@@ -1,9 +1,9 @@
 import { TonClient } from '@ton/ton';
-import { Address, beginCell } from '@ton/core';
+import { Address, Dictionary } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
 import { FossFi } from '@wrappers/FossFi.gen';
-import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { Addresses, FossFiWallet, Maps, NomInAddrs, ProfileInfo, ReportInfo, SocialMaps, TimeStamps, TrustedAddrs } from '@wrappers/FossFiWallet.gen';
 import { PersonalMinter, OnchainMetadataReply } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
@@ -18,7 +18,6 @@ import {
   getNormalizedContractCacheKey,
 } from './contract-cache';
 import {
-  computeFiWalletAddress,
   computePersonalWalletAddress,
 } from './account-state-hydrator';
 import { sha256 } from './jettonContent';
@@ -44,6 +43,7 @@ import {
   getOrbsHttpEndpoint,
   API_KEYS_UPDATED_EVENT,
 } from '@/core/lib/network-api-keys';
+import { baseFiWalletCodeCell } from './base-fi-wallet-code';
 
 const clients: Record<string, TonClient> = {};
 
@@ -56,9 +56,9 @@ export function toncenterApiKey(network: Network): string | undefined {
   const key =
     network === 'mainnet'
       ? import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
-        import.meta.env.TONCENTER_MAINNET_API_KEY
+      import.meta.env.TONCENTER_MAINNET_API_KEY
       : import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
-        import.meta.env.TONCENTER_TESTNET_API_KEY;
+      import.meta.env.TONCENTER_TESTNET_API_KEY;
   return key && typeof key === 'string' && key.trim() ? key.trim() : undefined;
 }
 
@@ -84,7 +84,7 @@ async function syncActiveRpcEndpoint() {
 
 // Initial sync
 if (typeof window !== 'undefined') {
-  syncActiveRpcEndpoint().catch(() => {});
+  syncActiveRpcEndpoint().catch(() => { });
   window.addEventListener(API_KEYS_UPDATED_EVENT, () => {
     syncActiveRpcEndpoint().finally(() => {
       resetTonClients();
@@ -141,21 +141,6 @@ export function getCachedDeterministicWalletAddress(
       /* pass */
     }
   }
-  // Fallback for legacy key
-  const legacyKey =
-    'fiWalletAddress_' +
-    FI_ADDRESS +
-    (typeof owner === 'string' ? owner : owner.toString());
-  const legacyVal = localStorage.getItem(legacyKey);
-  if (legacyVal) {
-    try {
-      const parsed = Address.parse(legacyVal);
-      localStorage.setItem(key, parsed.toString());
-      return parsed;
-    } catch {
-      /* pass */
-    }
-  }
   return null;
 }
 
@@ -174,61 +159,70 @@ export function setCachedDeterministicWalletAddress(
   localStorage.setItem(key, addrStr);
 }
 
-export async function getWalletAddress(
-  ownerAddress: Address,
+export function getFiWalletAddress(
+  owner: Address,
   net: Network = network,
-): Promise<Address> {
+): Address {
   const minterAddress = Address.parse(FI_ADDRESS);
   const cached = getCachedDeterministicWalletAddress(
     net,
     minterAddress,
-    ownerAddress,
+    owner,
   );
   if (cached) {
     return cached;
   }
 
-  try {
-    const offchainAddr = computeFiWalletAddress(ownerAddress, minterAddress);
-    setCachedDeterministicWalletAddress(
-      net,
-      minterAddress,
-      ownerAddress,
-      offchainAddr,
-    );
-    return offchainAddr;
-  } catch (err) {
-    console.warn(
-      '[getWalletAddress] Off-chain derivation failed, falling back to RPC:',
-      err,
-    );
-  }
-
-  const client = getTonClient(net);
-  const result = await client.runMethod(minterAddress, 'get_wallet_address', [
-    {
-      type: 'slice',
-      cell: beginCell().storeAddress(ownerAddress).endCell(),
+  /**
+ * Computes Brotherhood FI wallet address deterministically off-chain
+ * using baseFiWalletCodeCell and initial empty storage schema.
+ */
+  const emptyFiWalletStore = {
+    profile: { ref: ProfileInfo.create({}) },
+    timestamps: { ref: TimeStamps.create({}) },
+    addresses: {
+      ref: Addresses.create({
+        owner,
+        nomInAddrs: { ref: NomInAddrs.create({}) },
+        trustedJettonAddrs: {
+          ref: TrustedAddrs.create({
+            minterAddr: Address.parse(FI_ADDRESS),
+            authorisedAccs: Dictionary.empty(),
+          }),
+        },
+      }),
     },
-  ]);
-  const addr = result.stack.readAddress();
-  setCachedDeterministicWalletAddress(net, minterAddress, ownerAddress, addr);
-  return addr;
-}
+    maps: {
+      ref: Maps.create({
+        invited: Dictionary.empty(),
+        allowances: Dictionary.empty(),
+        social: { ref: SocialMaps.create({ votedFor: Dictionary.empty() }) },
+        reportInfo: { ref: ReportInfo.create({ reports: Dictionary.empty() }) },
+      }),
+    },
+  };
 
-export async function getFiWalletAddress(
-  ownerAddress: Address,
-  _network?: Network,
-): Promise<Address> {
-  return getWalletAddress(ownerAddress, _network ?? network);
+  const wallet = FossFiWallet.fromStorage(emptyFiWalletStore, {
+    overrideContractCode: baseFiWalletCodeCell,
+    toShard: { fixedPrefixLength: 8, closeTo: owner },
+  });
+  const offchainAddr = wallet.address;
+
+  setCachedDeterministicWalletAddress(
+    net,
+    minterAddress,
+    owner,
+    offchainAddr,
+  );
+  return offchainAddr;
 }
 
 export async function checkIsContractDeployed(
-  address: Address,
-  targetNetwork: Network = network,
+  address: Address
 ): Promise<boolean> {
   try {
-    const client = getTonClient(targetNetwork);
+    // fixme: fetch from deserialized data
+    const client = getTonClient(network);
     return await client.isContractDeployed(address);
   } catch (err) {
     console.error('Failed to check if contract is deployed:', err);
@@ -310,7 +304,7 @@ export async function fetchJettonMaster(): Promise<JettonMasterInfo> {
 }
 
 export async function fetchWalletBalance(ownerAddress: Address) {
-  const walletAddr = await getWalletAddress(ownerAddress);
+  const walletAddr = await getFiWalletAddress(ownerAddress);
   const normalizedKey = getNormalizedContractCacheKey(network, walletAddr);
 
   // 1. Check if normalized contract cache already has FiWalletStateData
@@ -321,7 +315,7 @@ export async function fetchWalletBalance(ownerAddress: Address) {
 
   // 2. Try fetching unified FiWallet state to populate contract cache
   try {
-    const state = await getUnifiedFiWalletState(ownerAddress);
+    const state = await getFiWalletState(ownerAddress);
     if (state && typeof state.jettonBalance === 'bigint') {
       return state.jettonBalance;
     }
@@ -350,7 +344,7 @@ export async function getFiWalletStateRaw(
   owner: Address,
   net: Network = network,
 ) {
-  const walletAddr = await getWalletAddress(owner, net);
+  const walletAddr = await getFiWalletAddress(owner, net);
   return getTonClient(net)
     .open(FossFiWallet.fromAddress(walletAddr))
     .getWalletDataAll();
@@ -363,20 +357,13 @@ export type FiWalletStateData = Awaited<ReturnType<typeof getFiWalletStateRaw>>;
  * Resolves the deterministic contract address and normalizes storage
  * under `contract_state:${net}:${walletAddr}`.
  */
-export async function getUnifiedFiWalletState(
+export async function getFiWalletState(
   owner: Address,
   options: { forceFresh?: boolean; net?: Network } = {},
 ): Promise<FiWalletStateData> {
   const net = options.net ?? network;
-  const walletAddr = await getWalletAddress(owner, net);
+  const walletAddr = getFiWalletAddress(owner, net);
   return getFiWalletStateByContractAddress(walletAddr, net, options);
-}
-
-export async function getFiWalletState(
-  owner: Address,
-  options?: { forceFresh?: boolean; net?: Network },
-) {
-  return getUnifiedFiWalletState(owner, options);
 }
 
 export async function getFiWalletStateByContractAddress(
@@ -385,19 +372,11 @@ export async function getFiWalletStateByContractAddress(
   options: { forceFresh?: boolean } = {},
 ) {
   const normalizedKey = getNormalizedContractCacheKey(net, contractAddress);
-  // Also check legacy key for smooth migration
-  const legacyKey = `fi-wallet-state-by-contract:${net}:${contractAddress.toString()}`;
-
+  
   if (!options.forceFresh) {
     const cached = await getContractCache<FiWalletStateData>(normalizedKey);
     if (cached && cached.data) {
       return cached.data;
-    }
-    const legacyCached = await getContractCache<FiWalletStateData>(legacyKey);
-    if (legacyCached && legacyCached.data) {
-      // Migrate to normalized key in background
-      setContractCache(normalizedKey, legacyCached.data).catch(() => {});
-      return legacyCached.data;
     }
   }
 
@@ -515,7 +494,7 @@ export async function getPersonalMinterForIssuer(
   issuerOwner: Address,
   options?: { forceFresh?: boolean },
 ): Promise<Address | null> {
-  const state = await getUnifiedFiWalletState(issuerOwner, options);
+  const state = await getFiWalletState(issuerOwner, options);
   const minter =
     state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
   return minter && !isZeroAddress(minter) ? minter : null;
@@ -527,7 +506,7 @@ export async function getPersonalWalletForIssuer(
   issuerOwner: Address,
   options?: { forceFresh?: boolean },
 ): Promise<Address | null> {
-  const state = await getUnifiedFiWalletState(issuerOwner, options);
+  const state = await getFiWalletState(issuerOwner, options);
   const wallet =
     state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonWallet;
   return wallet && !isZeroAddress(wallet) ? wallet : null;
@@ -812,7 +791,7 @@ export async function discoverPersonalTokensForWallet(
 
   // 1. Check user's own registered personal minter from FI wallet & network members
   try {
-    const fiState = await getUnifiedFiWalletState(ownerAddress);
+    const fiState = await getFiWalletState(ownerAddress);
     const ownMinter =
       fiState?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
     if (ownMinter && !isZeroAddress(ownMinter)) {

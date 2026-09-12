@@ -7,7 +7,10 @@ on:
     branches:
       - main
       - master
-
+  pull_request:
+    branches:
+      - main
+      - master
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -26,8 +29,8 @@ concurrency:
 
 jobs:
   # Single deploy job since we're just deploying
-  deploy:
-    # name: Build and deploy to GitHub Pages
+  build-test-deploy:
+    name: Build and deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -45,10 +48,19 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build site
+      - name: Formatter
+        run: bun run fmt:check
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
         env:
           VITE_BASE: /brotherhood/
         run: bun run build:ghpages
+
+      - name: Test
+        run: bun run test
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
