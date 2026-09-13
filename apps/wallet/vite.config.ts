@@ -74,8 +74,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: false,
       devOptions: {
-        enabled: true,
-        type: 'module',
+        enabled: false,
       },
       manifest: pwaManifest,
       workbox: {
@@ -144,7 +143,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000,
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
+    hmr: {
+      clientPort: 3000,
+    },
     allowedHosts: ['localhost', '127.0.0.1', 'local.dev'],
   },
   resolve: {

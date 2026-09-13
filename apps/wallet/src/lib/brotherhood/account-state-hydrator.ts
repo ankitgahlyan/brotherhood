@@ -139,6 +139,22 @@ export interface BatchFetchAccountStatesResult {
  * Chunked into batches of up to 30 addresses per GET request, fetched in parallel.
  * Immediately strips and deletes code_boc to free up memory and prevent main-thread GC pressure.
  */
+export function toCanonicalAddressString(addr: Address | string): string {
+  try {
+    const parsed = typeof addr === 'string' ? Address.parse(addr.trim()) : addr;
+    return parsed.toString();
+  } catch {
+    return typeof addr === 'string' ? addr.trim() : String(addr);
+  }
+}
+
+/**
+ * Fetch raw account states from Toncenter v3 /api/v3/accountStates
+ * Chunked into batches of up to 30 addresses per GET request, fetched in parallel.
+ * Format-insensitively deduplicates all input addresses to ensure each on-chain contract
+ * is requested at most once per chunk with no repeated address query params.
+ * Immediately strips and deletes code_boc to free up memory and prevent main-thread GC pressure.
+ */
 export async function batchFetchAccountStates(
   addresses: (Address | string)[],
   net: Network = defaultNetwork,
@@ -151,20 +167,9 @@ export async function batchFetchAccountStates(
   };
   if (!addresses || addresses.length === 0) return result;
 
-  const rawAddresses = Array.from(
-    new Set(
-      addresses
-        .map((a) => {
-          try {
-            return typeof a === 'string'
-              ? Address.parse(a.trim()).toString()
-              : a.toString();
-          } catch {
-            return typeof a === 'string' ? a.trim() : String(a);
-          }
-        })
-        .filter(Boolean),
-    ),
+  // Format-insensitive deduplication using canonical string representation
+  const canonicalAddresses = Array.from(
+    new Set(addresses.map(toCanonicalAddressString).filter(Boolean)),
   );
 
   const base = toncenterV3[net === 'mainnet' ? 'mainnet' : 'testnet'];
@@ -175,13 +180,15 @@ export async function batchFetchAccountStates(
   }
 
   const chunks: string[][] = [];
-  for (let i = 0; i < rawAddresses.length; i += chunkSize) {
-    chunks.push(rawAddresses.slice(i, i + chunkSize));
+  for (let i = 0; i < canonicalAddresses.length; i += chunkSize) {
+    chunks.push(canonicalAddresses.slice(i, i + chunkSize));
   }
 
   const chunkPromises = chunks.map(async (chunk) => {
     const searchParams = new URLSearchParams();
-    for (const addr of chunk) {
+    // Guarantee no duplicate address params within each chunk
+    const uniqueChunk = Array.from(new Set(chunk));
+    for (const addr of uniqueChunk) {
       searchParams.append('address', addr);
     }
     searchParams.append('include_boc', 'true');
@@ -192,8 +199,8 @@ export async function batchFetchAccountStates(
       const res = await rateLimitedFetch(url, { headers });
       if (!res.ok) {
         console.error(
-          `[batchFetchAccountStates] HTTP ${res.status} ${res.statusText} for chunk of ${chunk.length} addresses:`,
-          chunk,
+          `[batchFetchAccountStates] HTTP ${res.status} ${res.statusText} for chunk of ${uniqueChunk.length} addresses:`,
+          uniqueChunk,
         );
         return null;
       }
@@ -208,7 +215,7 @@ export async function batchFetchAccountStates(
     } catch (err) {
       console.error(
         '[batchFetchAccountStates] Failed to fetch accountStates chunk:',
-        chunk,
+        uniqueChunk,
         err,
       );
       return null;
@@ -322,21 +329,22 @@ export function batchHydrateUniversal(
     knownTypes?: Record<string, KnownContractType>;
   },
 ): Promise<UniversalHydrateResult> {
-  const normalizedAddresses = Array.from(
-    new Set(
-      addresses
-        .map((a) => {
-          try {
-            return typeof a === 'string'
-              ? Address.parse(a.trim()).toString()
-              : a.toString();
-          } catch {
-            return typeof a === 'string' ? a.trim() : String(a);
-          }
-        })
-        .filter(Boolean),
-    ),
-  );
+  // Format-insensitive deduplication and alias mapping:
+  // Maps original caller inputs to their canonical standard string representation
+  const inputToCanonicalMap = new Map<string, string>();
+  const canonicalSet = new Set<string>();
+
+  for (const a of addresses) {
+    if (!a) continue;
+    const originalKey = typeof a === 'string' ? a.trim() : a.toString();
+    const canonical = toCanonicalAddressString(a);
+    if (canonical) {
+      inputToCanonicalMap.set(originalKey, canonical);
+      canonicalSet.add(canonical);
+    }
+  }
+
+  const normalizedAddresses = Array.from(canonicalSet);
 
   const result: UniversalHydrateResult = {
     totalRequested: normalizedAddresses.length,
@@ -364,8 +372,9 @@ export function batchHydrateUniversal(
 
     for (const acc of fetchResult.accounts) {
       try {
-        const parsedAddr = Address.parse(acc.address).toString();
-        accountMap.set(parsedAddr, acc);
+        const parsed = Address.parse(acc.address);
+        accountMap.set(parsed.toString(), acc);
+        accountMap.set(parsed.toRawString(), acc);
       } catch {
         accountMap.set(acc.address, acc);
       }
@@ -398,7 +407,9 @@ export function batchHydrateUniversal(
 
       validRequestedAddresses.push({ standardAddrStr, parsedAddress });
 
-      const rawAcc = accountMap.get(standardAddrStr);
+      const rawAcc =
+        accountMap.get(standardAddrStr) ||
+        accountMap.get(parsedAddress.toRawString());
       if (!rawAcc || rawAcc.status !== 'active' || !rawAcc.data_boc) {
         console.warn(
           `[batchHydrateUniversal] Account not active or missing data_boc for ${standardAddrStr}, status: ${rawAcc?.status}`,
@@ -526,6 +537,15 @@ export function batchHydrateUniversal(
         result.decodedStores[standardAddrStr] = decodedStore;
       }
       result.hydrated++;
+    }
+
+    // Mirror decoded stores to any original input alias keys requested by the caller
+    if (result.decodedStores) {
+      for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
+        if (origKey !== canonical && result.decodedStores[canonical]) {
+          result.decodedStores[origKey] = result.decodedStores[canonical];
+        }
+      }
     }
 
     return result;

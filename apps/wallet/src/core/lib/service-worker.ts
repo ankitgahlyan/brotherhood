@@ -45,6 +45,19 @@ export function initServiceWorker() {
     return;
   }
 
+  // In development mode, unregister any stale service workers to prevent HMR WebSocket collisions
+  if (import.meta.env.DEV) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      })
+      .catch(() => {});
+    return;
+  }
+
   updateSWFn = registerSW({
     immediate: true,
     onNeedRefresh() {

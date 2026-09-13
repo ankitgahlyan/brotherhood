@@ -193,7 +193,7 @@ export function useTrackedContractAddresses(
       const fiWalletStore = decodedStores[fiWalletStr];
 
       // 1. Check owner's FiWallet for new Circle invites and Location
-      let newlyDiscoveredCircle: string[] = [];
+      let updatedData = currentData;
       if (fiWalletStore) {
         const { invited, h3Cell } =
           extractInvitedAndLocationFromFiWallet(fiWalletStore);
@@ -204,67 +204,30 @@ export function useTrackedContractAddresses(
           freshInvites.length > 0 ||
           (h3Cell && !currentData.circle.location)
         ) {
-          const updated = addInvitedToCircle(ownerAddressStr, invited, h3Cell);
-          setTrackedData(updated);
-          newlyDiscoveredCircle = freshInvites;
+          updatedData = addInvitedToCircle(ownerAddressStr, invited, h3Cell);
+          setTrackedData(updatedData);
         }
       }
 
-      // If new circle addresses found, hydrate them in the background
-      const circleToHydrate =
-        newlyDiscoveredCircle.length > 0
-          ? newlyDiscoveredCircle
-          : currentData.circle.invited.filter((c) => {
-              const norm = normalizeAddressString(c);
-              return !decodedStores[c] && !decodedStores[norm];
-            });
-
-      if (circleToHydrate.length > 0) {
-        try {
-          const circleRes = await batchHydrateUniversal(circleToHydrate, net);
-          if (circleRes.decodedStores) {
-            // 2. From Circle FiWallets, extract Ring invites
-            const ringInvites: string[] = [];
-            for (const cAddr of circleToHydrate) {
-              const cStore = circleRes.decodedStores[cAddr];
-              if (cStore) {
-                const { invited } =
-                  extractInvitedAndLocationFromFiWallet(cStore);
-                ringInvites.push(...invited);
-              }
-            }
-
-            if (ringInvites.length > 0) {
-              const updatedWithRing = addInvitedToRing(
-                ownerAddressStr,
-                ringInvites,
-              );
-              setTrackedData(updatedWithRing);
-
-              // Background fetch for newly added Ring members
-              const ringToHydrate = updatedWithRing.ring.invited.filter((r) => {
-                const norm = normalizeAddressString(r);
-                return !decodedStores[r] && !decodedStores[norm];
-              });
-              if (ringToHydrate.length > 0) {
-                await batchHydrateUniversal(ringToHydrate, net).catch((err) => {
-                  console.error(
-                    '[useTrackedContractAddresses] Ring hydration error:',
-                    err,
-                  );
-                });
-              }
-            }
-          }
-        } catch (err) {
-          console.error(
-            '[useTrackedContractAddresses] Circle hydration error:',
-            err,
-          );
+      // 2. From any Circle FiWallets that are already decoded in decodedStores, extract Ring invites
+      const ringInvites: string[] = [];
+      for (const cAddr of updatedData.circle.invited) {
+        const norm = normalizeAddressString(cAddr);
+        const cStore = decodedStores[cAddr] || decodedStores[norm];
+        if (cStore) {
+          const { invited } = extractInvitedAndLocationFromFiWallet(cStore);
+          ringInvites.push(...invited);
         }
       }
+
+      if (ringInvites.length > 0) {
+        const updatedWithRing = addInvitedToRing(ownerAddressStr, ringInvites);
+        setTrackedData(updatedWithRing);
+      }
+      // Note: Newly discovered circle and ring addresses are intentionally NOT hydrated immediately.
+      // They are persisted to tracked storage and will be batch hydrated on reload or on explicit manual refresh.
     },
-    [net],
+    [],
   );
 
   const refetchAddresses = useCallback(

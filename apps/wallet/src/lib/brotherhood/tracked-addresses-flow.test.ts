@@ -245,4 +245,112 @@ describe('Tracked Addresses Storage & Flow', () => {
     expect(res1).toBe(res2);
     expect(res1.totalRequested).toBe(1);
   }, 15000);
+
+  it('format-insensitively deduplicates mixed address representations in batchHydrateUniversal', async () => {
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    const addr = Address.parse(
+      '0:8888888888888888888888888888888888888888888888888888888888888888',
+    );
+
+    const bounceable = addr.toString({ bounceable: true, urlSafe: true });
+    const nonBounceable = addr.toString({ bounceable: false, urlSafe: true });
+    const rawStr = addr.toRawString();
+
+    // Pass the exact same contract under 4 different formats (bounceable, non-bounceable, raw, Address instance)
+    const res = await batchHydrateUniversal(
+      [bounceable, nonBounceable, rawStr, addr, bounceable],
+      'testnet',
+    );
+
+    // Should collapse all 5 entries to exactly 1 requested contract
+    expect(res.totalRequested).toBe(1);
+
+    // In-flight batch keys must match when requesting with another format
+    const p1 = batchHydrateUniversal([bounceable], 'testnet');
+    const p2 = batchHydrateUniversal([nonBounceable], 'testnet');
+    expect(p1).toBe(p2);
+    await Promise.all([p1, p2]);
+  }, 15000);
+
+  it('enforces strict cross-group exclusion and deduplication across base, circle, ring, and personalJettons', () => {
+    const testOwner = Address.parse(
+      '0:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
+    const initial = initializeOrGetTrackedAddresses(testOwner);
+    const baseFi = initial.base.fi;
+    const baseFiWallet = initial.base.fiWallet;
+
+    // 1. Trying to add a base address to circle, ring, or personalJettons must be rejected
+    const afterCircle = addInvitedToCircle(testOwner, [baseFi, baseFiWallet]);
+    expect(afterCircle.circle.invited).not.toContain(baseFi);
+    expect(afterCircle.circle.invited).not.toContain(baseFiWallet);
+
+    const afterRing = addInvitedToRing(testOwner, [baseFi]);
+    expect(afterRing.ring.invited).not.toContain(baseFi);
+
+    const afterPersonal = addPersonalJettons(testOwner, [baseFiWallet]);
+    expect(afterPersonal.personalJettons).not.toContain(baseFiWallet);
+
+    // 2. Add a new address to circle
+    const circleMember = Address.parse(
+      '0:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    );
+    const withCircle = addInvitedToCircle(testOwner, [circleMember]);
+    expect(withCircle.circle.invited).toContain(circleMember.toString());
+
+    // 3. Trying to add that circle address to ring or personalJettons must be rejected
+    const ringAttempt = addInvitedToRing(testOwner, [circleMember]);
+    expect(ringAttempt.ring.invited).not.toContain(circleMember.toString());
+
+    const personalAttempt = addPersonalJettons(testOwner, [circleMember]);
+    expect(personalAttempt.personalJettons).not.toContain(
+      circleMember.toString(),
+    );
+
+    // 4. Add a new address to ring
+    const ringMember = Address.parse(
+      '0:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    );
+    const withRing = addInvitedToRing(testOwner, [ringMember]);
+    expect(withRing.ring.invited).toContain(ringMember.toString());
+
+    // 5. Trying to add ring address to circle or personalJettons must be rejected
+    const circleAttempt = addInvitedToCircle(testOwner, [ringMember]);
+    expect(circleAttempt.circle.invited).not.toContain(ringMember.toString());
+
+    const personalAttempt2 = addPersonalJettons(testOwner, [ringMember]);
+    expect(personalAttempt2.personalJettons).not.toContain(
+      ringMember.toString(),
+    );
+
+    // 6. Add a new address to personalJettons
+    const personalMinter = Address.parse(
+      '0:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    );
+    const withPersonal = addPersonalJettons(testOwner, [personalMinter]);
+    expect(withPersonal.personalJettons).toContain(personalMinter.toString());
+
+    // 7. Trying to add personal jetton address to circle or ring must be rejected
+    const circleAttempt2 = addInvitedToCircle(testOwner, [personalMinter]);
+    expect(circleAttempt2.circle.invited).not.toContain(
+      personalMinter.toString(),
+    );
+
+    const ringAttempt2 = addInvitedToRing(testOwner, [personalMinter]);
+    expect(ringAttempt2.ring.invited).not.toContain(personalMinter.toString());
+
+    // 8. Deduplicates repeated addresses in input array
+    const extra1 = Address.parse(
+      '0:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+    );
+    const withDedupe = addInvitedToRing(testOwner, [
+      extra1,
+      extra1,
+      extra1.toString(),
+    ]);
+    const matches = withDedupe.ring.invited.filter(
+      (a) => a === extra1.toString(),
+    );
+    expect(matches.length).toBe(1);
+  });
 });

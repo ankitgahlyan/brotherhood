@@ -11,7 +11,6 @@ import { useWallet } from '@demo/wallet-core';
 import {
   saveCurrentSelectedWallet,
   initializeOrGetTrackedAddresses,
-  normalizeAddressString,
 } from '@/lib/brotherhood/tracked-addresses-storage';
 import { useTrackedContractAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { isOnline } from '@/core/lib/network-status';

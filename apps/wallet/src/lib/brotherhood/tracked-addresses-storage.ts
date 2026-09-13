@@ -109,6 +109,79 @@ export function calculateBaseAddresses(
   };
 }
 
+export function sanitizeTrackedAddressesData(
+  data: TrackedAddressesData,
+): TrackedAddressesData {
+  const seen = new Set<string>();
+
+  // 1. Base addresses have highest priority
+  const base: BaseAddresses = {
+    owner: normalizeAddressString(data.base.owner),
+    fi: normalizeAddressString(data.base.fi),
+    fiWallet: normalizeAddressString(data.base.fiWallet),
+    personal: normalizeAddressString(data.base.personal),
+    personalWallet: normalizeAddressString(data.base.personalWallet),
+  };
+
+  for (const addr of Object.values(base)) {
+    if (addr) seen.add(addr);
+  }
+
+  // 2. Circle addresses (max 10 invited + location)
+  const circleInvited: string[] = [];
+  for (const inv of data.circle?.invited || []) {
+    const str = normalizeAddressString(inv);
+    if (str && !seen.has(str)) {
+      seen.add(str);
+      circleInvited.push(str);
+      if (circleInvited.length === 10) break;
+    }
+  }
+
+  const locationStr = data.circle?.location
+    ? normalizeAddressString(data.circle.location)
+    : undefined;
+  if (locationStr && seen.has(locationStr)) {
+    // If location address collides with base or circle invited, keep it if it's identical or let it pass
+    // but register it in seen
+    seen.add(locationStr);
+  } else if (locationStr) {
+    seen.add(locationStr);
+  }
+
+  // 3. Ring addresses
+  const ringInvited: string[] = [];
+  for (const inv of data.ring?.invited || []) {
+    const str = normalizeAddressString(inv);
+    if (str && !seen.has(str)) {
+      seen.add(str);
+      ringInvited.push(str);
+    }
+  }
+
+  // 4. Personal jetton minters
+  const personalJettons: string[] = [];
+  for (const jetton of data.personalJettons || []) {
+    const str = normalizeAddressString(jetton);
+    if (str && !seen.has(str)) {
+      seen.add(str);
+      personalJettons.push(str);
+    }
+  }
+
+  return {
+    base,
+    circle: {
+      invited: circleInvited,
+      location: locationStr,
+    },
+    ring: {
+      invited: ringInvited,
+    },
+    personalJettons,
+  };
+}
+
 export function loadTrackedAddresses(
   walletAddress: Address | string,
 ): TrackedAddressesData | null {
@@ -121,19 +194,7 @@ export function loadTrackedAddresses(
   try {
     const data = JSON.parse(raw) as TrackedAddressesData;
     if (!data.base) return null;
-    return {
-      base: data.base,
-      circle: {
-        invited: Array.isArray(data.circle?.invited) ? data.circle.invited : [],
-        location: data.circle?.location,
-      },
-      ring: {
-        invited: Array.isArray(data.ring?.invited) ? data.ring.invited : [],
-      },
-      personalJettons: Array.isArray(data.personalJettons)
-        ? data.personalJettons
-        : [],
-    };
+    return sanitizeTrackedAddressesData(data);
   } catch (err) {
     console.error(`[TrackedAddressesStorage] Failed to parse key ${key}:`, err);
     return null;
@@ -148,7 +209,8 @@ export function saveTrackedAddresses(
   if (!storage) return;
   const key = getTrackedAddressesKey(walletAddress);
   try {
-    storage.setItem(key, JSON.stringify(data));
+    const sanitized = sanitizeTrackedAddressesData(data);
+    storage.setItem(key, JSON.stringify(sanitized));
   } catch (err) {
     console.error(`[TrackedAddressesStorage] Failed to save key ${key}:`, err);
   }
@@ -180,19 +242,41 @@ export function addInvitedToCircle(
   h3Cell?: string | null,
 ): TrackedAddressesData {
   const current = initializeOrGetTrackedAddresses(walletAddress);
-  const invitedSet = new Set(current.circle.invited);
+
+  // Cross-group exclusion: cannot exist in base, ring, or personalJettons
+  const baseAddrs = new Set(Object.values(current.base));
+  const ringSet = new Set(current.ring.invited);
+  const personalSet = new Set(current.personalJettons || []);
+  const circleSet = new Set(current.circle.invited);
 
   for (const inv of newInvited) {
     const str = normalizeAddressString(inv);
-    if (str && !invitedSet.has(str)) {
-      invitedSet.add(str);
+    if (
+      str &&
+      !circleSet.has(str) &&
+      !baseAddrs.has(str) &&
+      !ringSet.has(str) &&
+      !personalSet.has(str)
+    ) {
+      circleSet.add(str);
     }
   }
 
   let locationAddress = current.circle.location;
   if (h3Cell && h3Cell.trim().length > 0) {
     try {
-      locationAddress = calculateLocationAddress(h3Cell.trim()).toString();
+      const calculated = calculateLocationAddress(h3Cell.trim()).toString();
+      const normLoc = normalizeAddressString(calculated);
+      if (
+        !baseAddrs.has(normLoc) &&
+        !circleSet.has(normLoc) &&
+        !ringSet.has(normLoc) &&
+        !personalSet.has(normLoc)
+      ) {
+        locationAddress = normLoc;
+      } else {
+        locationAddress = normLoc;
+      }
     } catch (err) {
       console.error(
         '[TrackedAddressesStorage] Failed to calculate location address from h3Cell:',
@@ -205,7 +289,7 @@ export function addInvitedToCircle(
   const updated: TrackedAddressesData = {
     ...current,
     circle: {
-      invited: Array.from(invitedSet).slice(0, 10),
+      invited: Array.from(circleSet).slice(0, 10),
       location: locationAddress,
     },
   };
@@ -221,7 +305,11 @@ export function addInvitedToRing(
   const current = initializeOrGetTrackedAddresses(walletAddress);
   const ringSet = new Set(current.ring.invited);
   const circleSet = new Set(current.circle.invited);
+  if (current.circle.location) {
+    circleSet.add(normalizeAddressString(current.circle.location));
+  }
   const baseAddrs = new Set(Object.values(current.base));
+  const personalSet = new Set(current.personalJettons || []);
 
   for (const inv of newInvited) {
     const str = normalizeAddressString(inv);
@@ -229,7 +317,8 @@ export function addInvitedToRing(
       str &&
       !ringSet.has(str) &&
       !circleSet.has(str) &&
-      !baseAddrs.has(str)
+      !baseAddrs.has(str) &&
+      !personalSet.has(str)
     ) {
       ringSet.add(str);
     }
@@ -252,10 +341,22 @@ export function addPersonalJettons(
 ): TrackedAddressesData {
   const current = initializeOrGetTrackedAddresses(walletAddress);
   const existingSet = new Set(current.personalJettons || []);
+  const baseAddrs = new Set(Object.values(current.base));
+  const circleSet = new Set(current.circle.invited);
+  if (current.circle.location) {
+    circleSet.add(normalizeAddressString(current.circle.location));
+  }
+  const ringSet = new Set(current.ring.invited);
 
   for (const minter of minterAddresses) {
     const str = normalizeAddressString(minter);
-    if (str && !existingSet.has(str)) {
+    if (
+      str &&
+      !existingSet.has(str) &&
+      !baseAddrs.has(str) &&
+      !circleSet.has(str) &&
+      !ringSet.has(str)
+    ) {
       existingSet.add(str);
     }
   }

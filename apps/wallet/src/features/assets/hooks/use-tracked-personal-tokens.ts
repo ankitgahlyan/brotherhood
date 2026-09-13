@@ -90,12 +90,14 @@ export function useTrackedPersonalTokens() {
 
   const persistMinters = useCallback(
     (newMinters: string[]) => {
-      setTrackedMinters(newMinters);
-      if (storageKey) {
-        settingsStorage.set(storageKey, newMinters);
-      }
+      let finalMinters = newMinters;
       if (walletAddress) {
-        addPersonalJettons(walletAddress, newMinters);
+        const updated = addPersonalJettons(walletAddress, newMinters);
+        finalMinters = updated.personalJettons || [];
+      }
+      setTrackedMinters(finalMinters);
+      if (storageKey) {
+        settingsStorage.set(storageKey, finalMinters);
       }
     },
     [storageKey, walletAddress],
