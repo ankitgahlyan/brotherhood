@@ -11,7 +11,11 @@ import { Address, Dictionary } from '@ton/core';
 import { Location, type LocationStore } from '@wrappers/Location.gen';
 import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
-import { useContractState } from '@/lib/brotherhood/contract-cache';
+import {
+  useContractState,
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 
 export interface LocationInfo {
   h3Cell: string | null;
@@ -89,17 +93,26 @@ export function useLocationByH3Cell(
     }
   }, [cleanH3Cell, minterAddressString]);
 
-  // Auto-hydrate newly calculated address
+  // Auto-hydrate newly calculated address only if not already cached
   useEffect(() => {
     if (!calculatedAddress) return;
-    try {
-      const locAddr = Address.parse(calculatedAddress);
-      batchHydrateUniversal([locAddr], network, {
-        knownTypes: { [calculatedAddress]: 'location' },
-      }).catch(() => {});
-    } catch {
-      /* ignore */
-    }
+    let isCancelled = false;
+    getContractCache(
+      getNormalizedContractCacheKey(network, calculatedAddress),
+    ).then((cached) => {
+      if (isCancelled || cached?.data) return;
+      try {
+        const locAddr = Address.parse(calculatedAddress);
+        batchHydrateUniversal([locAddr], network, {
+          knownTypes: { [calculatedAddress]: 'location' },
+        }).catch(() => {});
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
   }, [calculatedAddress]);
 
   const { data: store, isLoading } = useContractState<LocationStore>(

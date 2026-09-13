@@ -37,6 +37,7 @@ export interface TrackedAddressesData {
   circle: CircleAddresses;
   ring: RingAddresses;
   personalJettons: string[];
+  personalWallets?: string[];
 }
 
 export function normalizeAddressString(addr: Address | string): string {
@@ -169,6 +170,16 @@ export function sanitizeTrackedAddressesData(
     }
   }
 
+  // 5. Personal jetton wallets
+  const personalWallets: string[] = [];
+  for (const wallet of data.personalWallets || []) {
+    const str = normalizeAddressString(wallet);
+    if (str && !seen.has(str)) {
+      seen.add(str);
+      personalWallets.push(str);
+    }
+  }
+
   return {
     base,
     circle: {
@@ -179,6 +190,7 @@ export function sanitizeTrackedAddressesData(
       invited: ringInvited,
     },
     personalJettons,
+    personalWallets,
   };
 }
 
@@ -231,6 +243,7 @@ export function initializeOrGetTrackedAddresses(
     circle: { invited: [] },
     ring: { invited: [] },
     personalJettons: [],
+    personalWallets: [],
   };
   saveTrackedAddresses(walletAddress, initialData);
   return initialData;
@@ -370,6 +383,43 @@ export function addPersonalJettons(
   return updated;
 }
 
+export function addPersonalWallets(
+  walletAddress: Address | string,
+  walletAddresses: (Address | string)[],
+): TrackedAddressesData {
+  const current = initializeOrGetTrackedAddresses(walletAddress);
+  const existingSet = new Set(current.personalWallets || []);
+  const baseAddrs = new Set(Object.values(current.base));
+  const circleSet = new Set(current.circle.invited);
+  if (current.circle.location) {
+    circleSet.add(normalizeAddressString(current.circle.location));
+  }
+  const ringSet = new Set(current.ring.invited);
+  const jettonSet = new Set(current.personalJettons || []);
+
+  for (const w of walletAddresses) {
+    const str = normalizeAddressString(w);
+    if (
+      str &&
+      !existingSet.has(str) &&
+      !baseAddrs.has(str) &&
+      !circleSet.has(str) &&
+      !ringSet.has(str) &&
+      !jettonSet.has(str)
+    ) {
+      existingSet.add(str);
+    }
+  }
+
+  const updated: TrackedAddressesData = {
+    ...current,
+    personalWallets: Array.from(existingSet),
+  };
+
+  saveTrackedAddresses(walletAddress, updated);
+  return updated;
+}
+
 export function getAllTrackedAddressesList(
   data: TrackedAddressesData,
 ): string[] {
@@ -387,8 +437,9 @@ export function getAllTrackedAddressesList(
   add(data.base.personal);
   add(data.base.personalWallet);
 
-  // Personal Jettons
+  // Personal Jettons & Wallets
   (data.personalJettons || []).forEach(add);
+  (data.personalWallets || []).forEach(add);
 
   // Circle
   data.circle.invited.forEach(add);

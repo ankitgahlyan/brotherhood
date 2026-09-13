@@ -3,14 +3,15 @@ import { Address } from '@ton/core';
 import { FI_ADDRESS, network as defaultNetwork, type Network } from './config';
 import {
   batchHydrateUniversal,
+  computePersonalWalletAddress,
   type UniversalHydrateResult,
 } from './account-state-hydrator';
-import { queryClient } from './ton';
 import {
   initializeOrGetTrackedAddresses,
   loadTrackedAddresses,
   addInvitedToCircle,
   addInvitedToRing,
+  addPersonalWallets,
   getAllTrackedAddressesList,
   getTrackedAddressesByCategory,
   normalizeAddressString,
@@ -223,9 +224,48 @@ export function useTrackedContractAddresses(
       if (ringInvites.length > 0) {
         const updatedWithRing = addInvitedToRing(ownerAddressStr, ringInvites);
         setTrackedData(updatedWithRing);
+        updatedData = updatedWithRing;
       }
-      // Note: Newly discovered circle and ring addresses are intentionally NOT hydrated immediately.
-      // They are persisted to tracked storage and will be batch hydrated on reload or on explicit manual refresh.
+
+      // 3. For any personal minters in decodedStores, compute owner's personal wallet and track it
+      const newWallets: string[] = [];
+      let parsedOwner: Address | null = null;
+      try {
+        parsedOwner = Address.parse(ownerAddressStr);
+      } catch {
+        parsedOwner = null;
+      }
+
+      if (parsedOwner) {
+        for (const minterStr of updatedData.personalJettons || []) {
+          const normMinter = normalizeAddressString(minterStr);
+          const minterStore =
+            decodedStores[minterStr] || decodedStores[normMinter];
+          const admin = minterStore?.adminAddress;
+          if (admin) {
+            try {
+              const wallet = computePersonalWalletAddress(
+                Address.parse(minterStr),
+                parsedOwner,
+                admin,
+              );
+              newWallets.push(wallet.toString());
+            } catch {
+              /* ignore derivation error */
+            }
+          }
+        }
+      }
+
+      if (newWallets.length > 0) {
+        const updatedWithWallets = addPersonalWallets(
+          ownerAddressStr,
+          newWallets,
+        );
+        setTrackedData(updatedWithWallets);
+      }
+      // Note: Newly discovered addresses are intentionally persisted to tracked storage
+      // and will be batch hydrated on reload or on explicit manual refresh.
     },
     [],
   );

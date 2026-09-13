@@ -10,7 +10,11 @@ import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
 import type { DaoProxyStore } from '@wrappers/DaoProxy.gen';
 import { network } from '@/lib/brotherhood/config';
-import { useContractState } from '@/lib/brotherhood/contract-cache';
+import {
+  useContractState,
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 
 export interface ProposalItem {
@@ -37,19 +41,28 @@ export interface UseProposalsResult {
 export function useProposals(addressString: string | null): UseProposalsResult {
   const cleanAddr = addressString?.trim() || null;
 
-  // Auto-hydrate valid address input
+  // Auto-hydrate valid address input only if not yet cached
   useEffect(() => {
     if (!cleanAddr) return;
-    try {
-      const targetAddr = Address.parse(cleanAddr);
-      batchHydrateUniversal([targetAddr], network, {
-        knownTypes: { [targetAddr.toString()]: 'poll' },
-      }).catch((err) => {
-        console.warn('[useProposals] Auto-hydration error:', err);
-      });
-    } catch {
-      /* ignore */
-    }
+    let isCancelled = false;
+    getContractCache(getNormalizedContractCacheKey(network, cleanAddr)).then(
+      (cached) => {
+        if (isCancelled || cached?.data) return;
+        try {
+          const targetAddr = Address.parse(cleanAddr);
+          batchHydrateUniversal([targetAddr], network, {
+            knownTypes: { [targetAddr.toString()]: 'poll' },
+          }).catch((err) => {
+            console.warn('[useProposals] Auto-hydration error:', err);
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+    );
+    return () => {
+      isCancelled = true;
+    };
   }, [cleanAddr]);
 
   const { data: store, isLoading } = useContractState<any>(cleanAddr, network);

@@ -6,19 +6,21 @@
  *
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import {
   useAuth,
   useJettons,
-  useNfts,
   useRates,
   useWallet,
+  useWalletStore,
 } from '@demo/wallet-core';
 import {
   addPersonalJettons,
   normalizeAddressString,
+  loadTrackedAddresses,
 } from '@/lib/brotherhood/tracked-addresses-storage';
 import { notifyCacheUpdated } from '@/lib/brotherhood/contract-cache';
+import { refetchAffectedAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { isOnline } from '@/core/lib/network-status';
 
 export const useWalletDataUpdater = () => {
@@ -31,8 +33,7 @@ export const useWalletDataUpdater = () => {
     loadAllWallets,
   } = useWallet();
   const { isUnlocked } = useAuth();
-  const { userJettons, loadUserJettons } = useJettons();
-  const { loadUserNfts } = useNfts();
+  const { userJettons } = useJettons();
   const { loadRates } = useRates();
 
   // Load wallets when hasWallet but currentWallet missing (e.g. refresh on /send before rehydration)
@@ -77,6 +78,33 @@ export const useWalletDataUpdater = () => {
       addPersonalJettons(address, minterAddresses);
     }
   }, [address, userJettons]);
+
+  // When WebSocket streaming confirms a transaction or updates trace finality,
+  // trigger targeted refetch of the affected tracked contracts (FI wallet, personal wallet)
+  const confirmedTraceIds = useWalletStore(
+    (s) => s.walletManagement.confirmedTraceIds,
+  );
+  const lastConfirmedCountRef = useRef(confirmedTraceIds?.length ?? 0);
+
+  useEffect(() => {
+    const currentCount = confirmedTraceIds?.length ?? 0;
+    if (currentCount > lastConfirmedCountRef.current && address && isOnline()) {
+      lastConfirmedCountRef.current = currentCount;
+      const tracked = loadTrackedAddresses(address);
+      if (tracked) {
+        const targetAddrs = [
+          tracked.base.fiWallet,
+          tracked.base.personalWallet,
+          ...(tracked.personalWallets || []),
+        ].filter(Boolean);
+        if (targetAddrs.length > 0) {
+          void refetchAffectedAddresses(targetAddrs);
+        }
+      }
+    } else {
+      lastConfirmedCountRef.current = currentCount;
+    }
+  }, [confirmedTraceIds?.length, address]);
 
   // Listen for global manual refresh requests from the dedicated refresh button
   useEffect(() => {

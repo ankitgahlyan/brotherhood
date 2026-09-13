@@ -10,7 +10,11 @@ import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
 import type { LotteryStorage } from '@wrappers/Lottery.gen';
 import { network } from '@/lib/brotherhood/config';
-import { useContractState } from '@/lib/brotherhood/contract-cache';
+import {
+  useContractState,
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 
 export interface UseLotteryStateResult {
@@ -29,19 +33,28 @@ export function useLotteryState(
 ): UseLotteryStateResult {
   const cleanAddr = lotteryAddressString?.trim() || null;
 
-  // Auto-hydrate on valid address input
+  // Auto-hydrate on valid address input only if not yet cached
   useEffect(() => {
     if (!cleanAddr) return;
-    try {
-      const targetAddr = Address.parse(cleanAddr);
-      batchHydrateUniversal([targetAddr], network, {
-        knownTypes: { [targetAddr.toString()]: 'lottery' },
-      }).catch((err) => {
-        console.warn('[useLotteryState] Auto-hydration error:', err);
-      });
-    } catch {
-      /* ignore */
-    }
+    let isCancelled = false;
+    getContractCache(getNormalizedContractCacheKey(network, cleanAddr)).then(
+      (cached) => {
+        if (isCancelled || cached?.data) return;
+        try {
+          const targetAddr = Address.parse(cleanAddr);
+          batchHydrateUniversal([targetAddr], network, {
+            knownTypes: { [targetAddr.toString()]: 'lottery' },
+          }).catch((err) => {
+            console.warn('[useLotteryState] Auto-hydration error:', err);
+          });
+        } catch {
+          /* ignore */
+        }
+      },
+    );
+    return () => {
+      isCancelled = true;
+    };
   }, [cleanAddr]);
 
   const { data: store, isLoading } = useContractState<LotteryStorage>(

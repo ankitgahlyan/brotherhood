@@ -13,6 +13,7 @@ import {
   addInvitedToCircle,
   addInvitedToRing,
   addPersonalJettons,
+  addPersonalWallets,
   getAllTrackedAddressesList,
   getTrackedAddressesByCategory,
 } from './tracked-addresses-storage';
@@ -352,5 +353,26 @@ describe('Tracked Addresses Storage & Flow', () => {
       (a) => a === extra1.toString(),
     );
     expect(matches.length).toBe(1);
+  });
+
+  it('tracks personal wallets and includes them in getAllTrackedAddressesList', () => {
+    const testOwner = Address.parse(
+      '0:8888888888888888888888888888888888888888888888888888888888888888',
+    );
+    initializeOrGetTrackedAddresses(testOwner);
+    const minter = Address.parse(
+      '0:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
+    const wallet = Address.parse(
+      '0:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    );
+    addPersonalJettons(testOwner, [minter]);
+    const updated = addPersonalWallets(testOwner, [wallet]);
+    expect(updated.personalJettons).toContain(minter.toString());
+    expect(updated.personalWallets).toContain(wallet.toString());
+
+    const allList = getAllTrackedAddressesList(updated);
+    expect(allList).toContain(minter.toString());
+    expect(allList).toContain(wallet.toString());
   });
 });

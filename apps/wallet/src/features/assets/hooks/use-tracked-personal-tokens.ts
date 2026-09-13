@@ -13,36 +13,29 @@ import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
 
 import {
-  discoverPersonalTokensForWallet,
   fetchPersonalTokenMetadata,
-  getFiWalletAddress,
   getPersonalWalletAddress,
   getPersonalWalletBalance,
   isPersonalMinterContract,
   type DiscoveredPersonalToken,
 } from '@/lib/brotherhood/ton';
 import { network } from '@/lib/brotherhood/config';
-import {
-  batchHydrateUniversal,
-  computePersonalWalletAddress,
-} from '@/lib/brotherhood/account-state-hydrator';
+import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
 import {
   getNormalizedContractCacheKey,
   getContractCache,
   setContractCache,
 } from '@/lib/brotherhood/contract-cache';
-import {
-  settingsStorage,
-  SettingsKeys,
-  StringArraySchema,
-} from '@/core/storage';
 
 import {
   loadTrackedAddresses,
-  addPersonalJettons,
+  saveTrackedAddresses,
+  initializeOrGetTrackedAddresses,
+  addPersonalWallets,
+  getAllTrackedAddressesList,
+  getTrackedAddressesKey,
 } from '@/lib/brotherhood/tracked-addresses-storage';
-
-const STORAGE_KEY_PREFIX = SettingsKeys.TRACKED_PERSONAL_TOKENS_PREFIX;
+import { refetchAffectedAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
 
 export function useTrackedPersonalTokens() {
   const queryClient = useQueryClient();
@@ -50,57 +43,50 @@ export function useTrackedPersonalTokens() {
   const walletAddress =
     address || currentWallet?.getAddress() || getActiveWallet()?.address;
 
-  const storageKey = walletAddress
-    ? `${STORAGE_KEY_PREFIX}${walletAddress}`
-    : null;
-
-  // Local state for list of tracked minter addresses
+  // Local state for list of tracked minter addresses loaded exclusively from tracked_addresses
   const [trackedMinters, setTrackedMinters] = useState<string[]>(() => {
     if (!walletAddress) return [];
     const trackedData = loadTrackedAddresses(walletAddress);
-    const fromTracked = trackedData?.personalJettons || [];
-    const fromSettings = storageKey
-      ? settingsStorage.get(storageKey, StringArraySchema, [])
-      : [];
-    return Array.from(new Set([...fromTracked, ...fromSettings]));
+    return trackedData?.personalJettons || [];
   });
 
-  // Re-sync with settingsStorage and tracked_addresses when active wallet changes
+  // Keep tracked minters synced when wallet changes or storage updates
   useEffect(() => {
     if (!walletAddress) {
       setTrackedMinters([]);
       return;
     }
     const trackedData = loadTrackedAddresses(walletAddress);
-    const fromTracked = trackedData?.personalJettons || [];
-    const fromSettings = storageKey
-      ? settingsStorage.get(storageKey, StringArraySchema, [])
-      : [];
-    setTrackedMinters(Array.from(new Set([...fromTracked, ...fromSettings])));
+    setTrackedMinters(trackedData?.personalJettons || []);
 
-    if (storageKey) {
-      return settingsStorage.subscribe(storageKey, () => {
-        const data = loadTrackedAddresses(walletAddress);
-        const pt = data?.personalJettons || [];
-        const setts = settingsStorage.get(storageKey, StringArraySchema, []);
-        setTrackedMinters(Array.from(new Set([...pt, ...setts])));
-      });
-    }
-  }, [storageKey, walletAddress]);
+    const storageKey = getTrackedAddressesKey(walletAddress);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === storageKey) {
+        const freshData = loadTrackedAddresses(walletAddress);
+        setTrackedMinters(freshData?.personalJettons || []);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [walletAddress]);
 
   const persistMinters = useCallback(
     (newMinters: string[]) => {
-      let finalMinters = newMinters;
-      if (walletAddress) {
-        const updated = addPersonalJettons(walletAddress, newMinters);
-        finalMinters = updated.personalJettons || [];
-      }
-      setTrackedMinters(finalMinters);
-      if (storageKey) {
-        settingsStorage.set(storageKey, finalMinters);
-      }
+      if (!walletAddress) return;
+      const current =
+        loadTrackedAddresses(walletAddress) ||
+        initializeOrGetTrackedAddresses(walletAddress);
+      const updated = {
+        ...current,
+        personalJettons: newMinters,
+      };
+      saveTrackedAddresses(walletAddress, updated);
+      setTrackedMinters(newMinters);
     },
-    [storageKey, walletAddress],
+    [walletAddress],
   );
 
   const parsedOwnerAddress = useMemo(() => {
@@ -138,7 +124,7 @@ export function useTrackedPersonalTokens() {
     };
   }, [summaryCacheKey]);
 
-  // Query live balance and metadata for all tracked minters
+  // Pure cache assembler query: reads hydrated state directly from L1 / IndexedDB cache
   const {
     data: personalTokens = [],
     isLoading,
@@ -152,21 +138,9 @@ export function useTrackedPersonalTokens() {
     queryFn: async () => {
       if (!parsedOwnerAddress || trackedMinters.length === 0) return [];
 
-      // 1. Off-chain compute FI wallet address and Personal Wallet addresses if cached
-      const fiWalletAddr = getFiWalletAddress(parsedOwnerAddress);
       const minterAddrs = trackedMinters.map((m) => Address.parse(m));
 
-      // Batch 1: FI wallet + all tracked personal minters in 1 call
-      await batchHydrateUniversal([fiWalletAddr, ...minterAddrs], network, {
-        knownTypes: {
-          [fiWalletAddr.toString()]: 'fiWallet',
-          ...Object.fromEntries(
-            minterAddrs.map((m) => [m.toString(), 'personalMinter']),
-          ),
-        },
-      });
-
-      // 2. Off-chain compute Personal Wallet addresses using cached minter states
+      // Off-chain compute Personal Wallet addresses using cached minter states
       const minterWalletPairs: { minterAddr: Address; walletAddr: Address }[] =
         [];
       for (const minterAddr of minterAddrs) {
@@ -174,21 +148,20 @@ export function useTrackedPersonalTokens() {
         const minterCache = await getContractCache<any>(cacheKey);
         const adminAddress = minterCache?.data?.adminAddress;
         if (adminAddress) {
-          const walletAddr = computePersonalWalletAddress(
-            minterAddr,
-            parsedOwnerAddress,
-            adminAddress,
-          );
-          minterWalletPairs.push({ minterAddr, walletAddr });
+          try {
+            const walletAddr = computePersonalWalletAddress(
+              minterAddr,
+              parsedOwnerAddress,
+              adminAddress,
+            );
+            minterWalletPairs.push({ minterAddr, walletAddr });
+          } catch {
+            /* ignore derivation error */
+          }
         }
       }
 
-      // 3. Batch-hydrate Personal Wallets if any
-      if (minterWalletPairs.length > 0) {
-        await batchHydrateUniversal(minterWalletPairs.map((p) => p.walletAddr));
-      }
-
-      // 4. Build results directly from hydrated cache (with fallback)
+      // Build results directly from hydrated cache
       const results: DiscoveredPersonalToken[] = [];
       for (const { minterAddr, walletAddr } of minterWalletPairs) {
         try {
@@ -229,69 +202,34 @@ export function useTrackedPersonalTokens() {
 
   const [isDiscovering, setIsDiscovering] = useState(false);
 
-  // Discovery process: scans account history, traces, and FI wallet
+  // Lightweight refresh process: triggers central batch hydration without redundant loops
   const discoverTokens = useCallback(async () => {
-    if (!parsedOwnerAddress) {
+    if (!parsedOwnerAddress || !walletAddress) {
       toast.error('No wallet connected');
       return;
     }
 
     setIsDiscovering(true);
     try {
-      const found = await discoverPersonalTokensForWallet(parsedOwnerAddress);
-
-      if (found.length === 0) {
-        toast.info('No new personal tokens with balance > 0 found.');
-      } else {
-        // Merge newly discovered minters into trackedMinters
-        const existingSet = new Set(trackedMinters);
-        let addedCount = 0;
-
-        for (const token of found) {
-          if (!existingSet.has(token.minterAddress)) {
-            existingSet.add(token.minterAddress);
-            addedCount++;
-          }
+      const trackedData = loadTrackedAddresses(walletAddress);
+      if (trackedData) {
+        const allAddrs = getAllTrackedAddressesList(trackedData);
+        if (allAddrs.length > 0) {
+          await refetchAffectedAddresses(allAddrs, network);
         }
-
-        const nextList = Array.from(existingSet);
-        persistMinters(nextList);
-
-        if (addedCount > 0) {
-          toast.success(
-            `Discovered ${addedCount} personal token${addedCount > 1 ? 's' : ''}!`,
-          );
-        } else {
-          toast.success('Tokens refreshed and up to date.');
-        }
-
-        await queryClient.invalidateQueries({
-          queryKey: ['tracked-personal-tokens', walletAddress],
-        });
       }
+
+      await queryClient.invalidateQueries({
+        queryKey: ['tracked-personal-tokens', walletAddress],
+      });
+      toast.success('Tokens refreshed and up to date.');
     } catch (err) {
-      console.error('[discoverTokens] Error during discovery:', err);
-      toast.error('Token discovery failed. Please try again.');
+      console.error('[discoverTokens] Error during refresh:', err);
+      toast.error('Token refresh failed. Please try again.');
     } finally {
       setIsDiscovering(false);
     }
-  }, [
-    parsedOwnerAddress,
-    trackedMinters,
-    persistMinters,
-    queryClient,
-    walletAddress,
-  ]);
-
-  // Initial discovery on first connect if never tracked before
-  useEffect(() => {
-    if (!storageKey || !parsedOwnerAddress) return;
-    const hasDiscoveredKey = `${SettingsKeys.DISCOVERED_INITIAL_PREFIX}${walletAddress}`;
-    if (!settingsStorage.getRaw(hasDiscoveredKey)) {
-      settingsStorage.set(hasDiscoveredKey, '1');
-      void discoverTokens();
-    }
-  }, [storageKey, parsedOwnerAddress, walletAddress, discoverTokens]);
+  }, [parsedOwnerAddress, walletAddress, queryClient]);
 
   // Inspect contract address and return token preview
   const inspectToken = useCallback(
@@ -320,14 +258,6 @@ export function useTrackedPersonalTokens() {
           isVerifiedEcosystem: false,
           error: 'Invalid TON address format.',
         };
-      }
-
-      try {
-        await batchHydrateUniversal([parsedMinter], network, {
-          knownTypes: { [parsedMinter.toString()]: 'personalMinter' },
-        });
-      } catch {
-        /* ignore */
       }
 
       const isMinter = await isPersonalMinterContract(parsedMinter);
@@ -380,7 +310,7 @@ export function useTrackedPersonalTokens() {
       warning?: string;
       token?: DiscoveredPersonalToken;
     }> => {
-      if (!parsedOwnerAddress) {
+      if (!parsedOwnerAddress || !walletAddress) {
         return {
           success: false,
           error: 'No wallet connected. Please select a wallet.',
@@ -404,6 +334,16 @@ export function useTrackedPersonalTokens() {
       if (!alreadyTracked) {
         const nextList = [...trackedMinters, minterStr];
         persistMinters(nextList);
+
+        if (inspection.token.walletAddress) {
+          addPersonalWallets(walletAddress, [inspection.token.walletAddress]);
+        }
+
+        const addrsToFetch = [minterStr];
+        if (inspection.token.walletAddress) {
+          addrsToFetch.push(inspection.token.walletAddress);
+        }
+        void refetchAffectedAddresses(addrsToFetch, network);
       }
 
       await queryClient.invalidateQueries({
@@ -421,11 +361,11 @@ export function useTrackedPersonalTokens() {
     },
     [
       parsedOwnerAddress,
+      walletAddress,
       inspectToken,
       trackedMinters,
       persistMinters,
       queryClient,
-      walletAddress,
     ],
   );
 

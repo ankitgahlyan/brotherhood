@@ -9,7 +9,11 @@
 import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
 import { network } from '@/lib/brotherhood/config';
-import { useContractState } from '@/lib/brotherhood/contract-cache';
+import {
+  useContractState,
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 import type { LocationStore } from '@wrappers/Location.gen';
 
@@ -27,19 +31,28 @@ export function useLocationMembers(
 ): UseLocationMembersResult {
   const cleanAddr = locationAddressString?.trim() || null;
 
-  // Auto-hydrate on valid address input if not yet cached
+  // Auto-hydrate on valid address input only if not yet cached
   useEffect(() => {
     if (!cleanAddr) return;
-    try {
-      const parsed = Address.parse(cleanAddr);
-      batchHydrateUniversal([parsed], network, {
-        knownTypes: { [parsed.toString()]: 'location' },
-      }).catch((err) => {
-        console.warn('[useLocationMembers] Auto-hydration error:', err);
-      });
-    } catch {
-      /* ignore invalid address */
-    }
+    let isCancelled = false;
+    getContractCache(getNormalizedContractCacheKey(network, cleanAddr)).then(
+      (cached) => {
+        if (isCancelled || cached?.data) return;
+        try {
+          const parsed = Address.parse(cleanAddr);
+          batchHydrateUniversal([parsed], network, {
+            knownTypes: { [parsed.toString()]: 'location' },
+          }).catch((err) => {
+            console.warn('[useLocationMembers] Auto-hydration error:', err);
+          });
+        } catch {
+          /* ignore invalid address */
+        }
+      },
+    );
+    return () => {
+      isCancelled = true;
+    };
   }, [cleanAddr]);
 
   const { data: store, isLoading } = useContractState<LocationStore>(
