@@ -234,7 +234,7 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
   return {
     data: formattedData,
     isLoading,
-    error: error instanceof Error ? error : null,
+    error: (error as Error | null) ?? null,
     refetch,
   };
 }

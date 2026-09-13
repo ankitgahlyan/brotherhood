@@ -53,7 +53,7 @@ export function useMemberProfiles(
   const query = useQuery<Record<string, MemberProfileInfo>>({
     queryKey: ['member-profiles', network, key],
     queryFn: () =>
-      cachedQueryFn(cacheKey, async (options) => {
+      cachedQueryFn(cacheKey, async (options?: any) => {
         if (addressStrings.length === 0) return {};
         const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const results: Record<string, MemberProfileInfo> = {};

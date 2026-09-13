@@ -320,6 +320,14 @@ export function useTrackedPersonalTokens() {
         };
       }
 
+      try {
+        await batchHydrateUniversal([parsedMinter], network, {
+          knownTypes: { [parsedMinter.toString()]: 'personalMinter' },
+        });
+      } catch {
+        /* ignore */
+      }
+
       const isMinter = await isPersonalMinterContract(parsedMinter);
       let balance = 0n;
       let walletAddrStr = '';

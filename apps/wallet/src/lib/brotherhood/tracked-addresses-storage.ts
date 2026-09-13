@@ -93,6 +93,7 @@ export function calculateBaseAddresses(
     issuerWallet: fiWalletAddress,
     adminAddress: ownerAddress,
   }).contractAddress;
+
   const personalWallet = computePersonalWalletAddress(
     personalMinter,
     ownerAddress,
@@ -119,7 +120,7 @@ export function loadTrackedAddresses(
 
   try {
     const data = JSON.parse(raw) as TrackedAddressesData;
-    if (!data || !data.base) return null;
+    if (!data.base) return null;
     return {
       base: data.base,
       circle: {

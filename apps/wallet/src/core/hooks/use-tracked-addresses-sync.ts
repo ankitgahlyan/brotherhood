@@ -24,36 +24,35 @@ import { isOnline } from '@/core/lib/network-status';
  */
 export function useTrackedAddressesSync() {
   const { address, activeWalletId } = useWallet();
-  const normalizedAddr = address ? normalizeAddressString(address) : '';
   const lastSyncedAddrRef = useRef<string | null>(null);
 
   const { refetchAll } = useTrackedContractAddresses({
-    ownerAddress: normalizedAddr || null,
+    ownerAddress: address || null,
   });
 
   useEffect(() => {
-    if (!normalizedAddr) return;
+    if (!address) return;
 
     // 1. Save current wallet selection change to localStorage
-    saveCurrentSelectedWallet(normalizedAddr);
+    saveCurrentSelectedWallet(address);
 
     // 2. Ensure base addresses are calculated off-chain and persisted to localStorage
-    initializeOrGetTrackedAddresses(normalizedAddr);
+    initializeOrGetTrackedAddresses(address);
 
     // 3. Trigger initial background hydration if this wallet has not been hydrated in this session
-    if (lastSyncedAddrRef.current !== normalizedAddr) {
-      lastSyncedAddrRef.current = normalizedAddr;
+    if (lastSyncedAddrRef.current !== address) {
+      lastSyncedAddrRef.current = address;
 
       // Non-blocking background fetch (only when online)
       if (isOnline()) {
         refetchAll().catch((err) => {
           console.error(
             '[useTrackedAddressesSync] Background universal hydration error for wallet:',
-            normalizedAddr,
+            address,
             err,
           );
         });
       }
     }
-  }, [normalizedAddr, activeWalletId, refetchAll]);
+  }, [address, activeWalletId, refetchAll]);
 }

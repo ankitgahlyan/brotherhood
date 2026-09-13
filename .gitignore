@@ -3,6 +3,7 @@
 # Build directory
 build/
 dist/
+dev-dist/
 
 .DS_Store
 node_modules/

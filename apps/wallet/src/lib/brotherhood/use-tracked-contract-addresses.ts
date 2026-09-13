@@ -73,20 +73,12 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
  * Invalidate specifically Brotherhood queries without blasting the entire app's query cache
  */
 export async function invalidateBrotherhoodQueries() {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['fi-wallet-state'] }),
-    queryClient.invalidateQueries({
-      queryKey: ['fi-wallet-state-by-contract'],
-    }),
-    queryClient.invalidateQueries({ queryKey: ['member-profiles'] }),
-    queryClient.invalidateQueries({ queryKey: ['ring-invitees'] }),
-    queryClient.invalidateQueries({ queryKey: ['fi-minter-state'] }),
-    queryClient.invalidateQueries({ queryKey: ['fi-total-accounts'] }),
-  ]);
+  // No-op: all components subscribe synchronously to L1 in-memory cache via useContractState
 }
 
 /**
- * Global helper for targeted refetching of affected addresses after state-mutating transactions
+ * Global helper for targeted refetching of affected addresses after state-mutating transactions.
+ * Delays 4 seconds to wait for on-chain block finalization before batch fetching.
  */
 export async function refetchAffectedAddresses(
   addresses: (Address | string)[],
@@ -105,9 +97,11 @@ export async function refetchAffectedAddresses(
     };
   }
 
+  // Wait 4 seconds for block inclusion on TON blockchain
+  await new Promise((resolve) => setTimeout(resolve, 4000));
+
   try {
     const res = await batchHydrateUniversal(cleanAddrs, net);
-    await invalidateBrotherhoodQueries();
     return res;
   } catch (err) {
     console.error(
@@ -334,7 +328,6 @@ export function useTrackedContractAddresses(
     try {
       const res = await batchHydrateUniversal(trackedAddresses, net);
       setLastHydratedAt(Date.now());
-      await invalidateBrotherhoodQueries();
 
       if (res.decodedStores && ownerStr) {
         processFollowUpDiscovery(ownerStr, res.decodedStores).catch((err) => {

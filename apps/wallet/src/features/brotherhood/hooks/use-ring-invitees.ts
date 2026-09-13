@@ -8,14 +8,8 @@
 
 import { useMemo } from 'react';
 import { Address } from '@ton/core';
-import { useQuery } from '@tanstack/react-query';
-import { getFiWalletStateByContractAddress } from '@/lib/brotherhood/ton';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
-import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
-import {
-  getContractCache,
-  getNormalizedContractCacheKey,
-} from '@/lib/brotherhood/contract-cache';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
 
 export interface RingInviteeEntry {
   address: Address;
@@ -35,6 +29,7 @@ export function useRingInvitees(
   enabled = true,
 ): UseRingInviteesResult {
   const { network } = useFormatAddress();
+  const net = network === 'mainnet' ? 'mainnet' : 'testnet';
 
   const parsedAddress = useMemo(() => {
     if (!circleMemberAddress) return null;
@@ -48,65 +43,42 @@ export function useRingInvitees(
     return circleMemberAddress;
   }, [circleMemberAddress]);
 
-  const key = parsedAddress?.toString() ?? 'none';
-  const cacheKey = `ring-invitees:${network}:${key}`;
+  const { data: store, isLoading } = useContractState<any>(
+    enabled ? parsedAddress : null,
+    net,
+  );
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['ring-invitees', network, key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, async (opts) => {
-        if (!parsedAddress) return [];
-        const net = network === 'mainnet' ? 'mainnet' : 'testnet';
-        const normalizedKey = getNormalizedContractCacheKey(net, parsedAddress);
-        let store: any = null;
+  const invitees = useMemo<RingInviteeEntry[]>(() => {
+    if (!store) return [];
+    const invitedMap = store.maps?.ref?.invited;
+    if (!invitedMap) return [];
 
-        if (!opts?.forceFresh) {
-          const cached = await getContractCache<any>(normalizedKey);
-          if (
-            cached?.data &&
-            (cached.data.$ === 'FiWalletStore' ||
-              cached.data.addresses?.ref?.owner)
-          ) {
-            store = cached.data;
-          }
-        }
-
-        if (!store) {
-          store = await getFiWalletStateByContractAddress(
-            parsedAddress,
-            net,
-            opts,
-          );
-        }
-        const invitedMap = store.maps?.ref?.invited;
-        if (!invitedMap) return [];
-
-        const list: RingInviteeEntry[] = [];
-        try {
-          const keys = invitedMap.keys();
-          for (const k of keys) {
-            const amount = invitedMap.get(k) ?? 0n;
-            list.push({
-              address: k,
-              addressString: formatTonAddress(k, {
-                isContract: true,
-                network,
-              }),
-              amount,
-            });
-          }
-        } catch {
-          /* dictionary parse error */
-        }
-        return list;
-      }),
-    enabled: enabled && !!parsedAddress,
-  });
+    const list: RingInviteeEntry[] = [];
+    try {
+      const keys =
+        typeof invitedMap.keys === 'function' ? invitedMap.keys() : [];
+      for (const k of keys) {
+        const amount =
+          (typeof invitedMap.get === 'function' ? invitedMap.get(k) : 0n) ?? 0n;
+        list.push({
+          address: k,
+          addressString: formatTonAddress(k, {
+            isContract: true,
+            network,
+          }),
+          amount,
+        });
+      }
+    } catch {
+      /* dictionary parse error */
+    }
+    return list;
+  }, [store, network]);
 
   return {
-    invitees: Array.isArray(data) ? data : [],
-    isLoading,
-    error: error instanceof Error ? error : null,
-    refetch: createRefetchWrapper(cacheKey, refetch),
+    invitees,
+    isLoading: enabled && isLoading && !!parsedAddress,
+    error: null,
+    refetch: () => {},
   };
 }

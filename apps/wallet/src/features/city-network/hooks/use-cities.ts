@@ -6,17 +6,12 @@
  *
  */
 
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useEffect } from 'react';
 import { Address, Dictionary } from '@ton/core';
-import { Location } from '@wrappers/Location.gen';
+import { Location, type LocationStore } from '@wrappers/Location.gen';
 import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
-import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
-import {
-  getNormalizedContractCacheKey,
-  getContractCache,
-} from '@/lib/brotherhood/contract-cache';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
 
 export interface LocationInfo {
   h3Cell: string | null;
@@ -94,141 +89,138 @@ export function useLocationByH3Cell(
     }
   }, [cleanH3Cell, minterAddressString]);
 
-  const cacheKey = `location-h3-details:${cleanH3Cell}:${calculatedAddress}`;
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['location-h3-details', cleanH3Cell, calculatedAddress],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, async (): Promise<LocationCellDetails | null> => {
-        if (!cleanH3Cell || !calculatedAddress) return null;
-        const locAddr = Address.parse(calculatedAddress);
+  // Auto-hydrate newly calculated address
+  useEffect(() => {
+    if (!calculatedAddress) return;
+    try {
+      const locAddr = Address.parse(calculatedAddress);
+      batchHydrateUniversal([locAddr], network, {
+        knownTypes: { [calculatedAddress]: 'location' },
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }, [calculatedAddress]);
 
-        try {
-          // 1. Batch hydrate Location contract state into IndexedDB
-          await batchHydrateUniversal([locAddr], network, {
-            knownTypes: { [locAddr.toString()]: 'location' },
-          });
+  const { data: store, isLoading } = useContractState<LocationStore>(
+    calculatedAddress,
+    network,
+  );
 
-          // 2. Read from normalized contract cache
-          const cacheKey = getNormalizedContractCacheKey(network, locAddr);
-          const cached = await getContractCache<any>(cacheKey);
-          const store = cached?.data;
+  const data = useMemo<LocationCellDetails | null>(() => {
+    if (!cleanH3Cell || !calculatedAddress) return null;
+    if (!store) {
+      return {
+        h3Cell: cleanH3Cell,
+        contractAddress: calculatedAddress,
+        memberCount: 0,
+        version: null,
+        minterAddress: null,
+        members: [],
+        isDeployed: false,
+      };
+    }
 
-          if (store && store.$ === 'LocationStore') {
-            const memberAddrs: string[] = [];
-            if (store.members && typeof store.members.keys === 'function') {
-              for (const k of store.members.keys()) {
-                memberAddrs.push(k.toString());
-              }
-            }
-
-            return {
-              h3Cell: store.h3Cell || cleanH3Cell,
-              contractAddress: calculatedAddress,
-              memberCount: Number(store.memberCount ?? memberAddrs.length),
-              version:
-                store.version !== null && store.version !== undefined
-                  ? Number(store.version)
-                  : null,
-              minterAddress: store.minterAddress
-                ? store.minterAddress.toString()
-                : null,
-              members: memberAddrs,
-              isDeployed: true,
-            };
-          }
-
-          // Fallback: contract not yet deployed on-chain
-          return {
-            h3Cell: cleanH3Cell,
-            contractAddress: calculatedAddress,
-            memberCount: 0,
-            version: null,
-            minterAddress: null,
-            members: [],
-            isDeployed: false,
-          };
-        } catch {
-          return {
-            h3Cell: cleanH3Cell,
-            contractAddress: calculatedAddress,
-            memberCount: 0,
-            version: null,
-            minterAddress: null,
-            members: [],
-            isDeployed: false,
-          };
+    const memberAddrs: string[] = [];
+    if (store.members && typeof store.members.keys === 'function') {
+      try {
+        for (const k of store.members.keys()) {
+          memberAddrs.push(k.toString());
         }
-      }),
-    enabled: Boolean(cleanH3Cell && calculatedAddress),
-  });
+      } catch {
+        /* dictionary parse */
+      }
+    }
+
+    return {
+      h3Cell: store.h3Cell || cleanH3Cell,
+      contractAddress: calculatedAddress,
+      memberCount: Number(store.memberCount ?? memberAddrs.length),
+      version:
+        store.version !== null && store.version !== undefined
+          ? Number(store.version)
+          : null,
+      minterAddress: store.minterAddress
+        ? store.minterAddress.toString()
+        : null,
+      members: memberAddrs,
+      isDeployed: true,
+    };
+  }, [cleanH3Cell, calculatedAddress, store]);
 
   return {
-    data: data ?? null,
+    data,
     calculatedAddress,
-    isLoading,
-    refetch: createRefetchWrapper(cacheKey, refetch),
+    isLoading: isLoading && Boolean(cleanH3Cell && calculatedAddress),
+    refetch: () => {
+      if (calculatedAddress) {
+        batchHydrateUniversal([calculatedAddress], network, {
+          knownTypes: { [calculatedAddress]: 'location' },
+        }).catch(() => {});
+      }
+    },
   };
 }
 
 export function useLocation(
   locationAddressString: string | null,
 ): UseLocationResult {
-  const cacheKey = `location-info:${locationAddressString ?? 'none'}`;
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['location-info', locationAddressString],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, async () => {
-        if (!locationAddressString) return null;
-        const locAddr = Address.parse(locationAddressString);
+  const cleanAddr = locationAddressString?.trim() || null;
 
-        try {
-          // 1. Batch hydrate Location contract state into IndexedDB
-          await batchHydrateUniversal([locAddr], network, {
-            knownTypes: { [locAddr.toString()]: 'location' },
-          });
+  useEffect(() => {
+    if (!cleanAddr) return;
+    try {
+      const locAddr = Address.parse(cleanAddr);
+      batchHydrateUniversal([locAddr], network, {
+        knownTypes: { [cleanAddr]: 'location' },
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }, [cleanAddr]);
 
-          // 2. Read from normalized contract cache
-          const cacheKey = getNormalizedContractCacheKey(network, locAddr);
-          const cached = await getContractCache<any>(cacheKey);
-          const store = cached?.data;
+  const { data: store, isLoading } = useContractState<LocationStore>(
+    cleanAddr,
+    network,
+  );
 
-          if (store && store.$ === 'LocationStore') {
-            const memberAddrs: string[] = [];
-            if (store.members && typeof store.members.keys === 'function') {
-              for (const k of store.members.keys()) {
-                memberAddrs.push(k.toString());
-              }
-            }
-
-            return {
-              h3Cell: store.h3Cell ?? null,
-              memberCount: Number(store.memberCount ?? memberAddrs.length),
-              version:
-                store.version !== null && store.version !== undefined
-                  ? Number(store.version)
-                  : null,
-              minterAddress: store.minterAddress
-                ? store.minterAddress.toString()
-                : null,
-              members: memberAddrs,
-              isDeployed: true,
-            };
-          }
-
-          return null;
-        } catch {
-          return null;
+  const location = useMemo<LocationInfo | null>(() => {
+    if (!store) return null;
+    const memberAddrs: string[] = [];
+    if (store.members && typeof store.members.keys === 'function') {
+      try {
+        for (const k of store.members.keys()) {
+          memberAddrs.push(k.toString());
         }
-      }),
-    enabled: Boolean(locationAddressString),
-  });
+      } catch {
+        /* dictionary parse */
+      }
+    }
+
+    return {
+      h3Cell: store.h3Cell ?? null,
+      memberCount: Number(store.memberCount ?? memberAddrs.length),
+      version:
+        store.version !== null && store.version !== undefined
+          ? Number(store.version)
+          : null,
+      minterAddress: store.minterAddress
+        ? store.minterAddress.toString()
+        : null,
+      members: memberAddrs,
+      isDeployed: true,
+    };
+  }, [store]);
 
   return {
-    location: data ?? null,
-    isLoading,
-    refetch: createRefetchWrapper(cacheKey, refetch),
+    location,
+    isLoading: isLoading && Boolean(cleanAddr),
+    refetch: () => {
+      if (cleanAddr) {
+        batchHydrateUniversal([cleanAddr], network, {
+          knownTypes: { [cleanAddr]: 'location' },
+        }).catch(() => {});
+      }
+    },
   };
 }
-
-// Backwards compatibility alias
-export const useCities = useLocation;

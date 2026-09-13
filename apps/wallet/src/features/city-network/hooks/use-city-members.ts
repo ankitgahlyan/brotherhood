@@ -6,12 +6,12 @@
  *
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
-import { getTonClient } from '@/lib/brotherhood/ton';
-import { Location } from '@wrappers/Location.gen';
 import { network } from '@/lib/brotherhood/config';
-import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
+import type { LocationStore } from '@wrappers/Location.gen';
 
 export interface UseLocationMembersResult {
   h3Cell: string | null;
@@ -25,57 +25,74 @@ export function useLocationMembers(
   locationAddressString: string | null,
   targetMemberAddressString?: string | null,
 ): UseLocationMembersResult {
-  const cacheKey = `location-members:${locationAddressString ?? 'none'}:${targetMemberAddressString ?? 'none'}`;
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: [
-      'location-members',
-      locationAddressString,
-      targetMemberAddressString,
-    ],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, async () => {
-        if (!locationAddressString) return null;
-        const locAddr = Address.parse(locationAddressString);
-        const client = getTonClient(network);
-        const locationContract = client.open(Location.fromAddress(locAddr));
+  const cleanAddr = locationAddressString?.trim() || null;
 
-        const [h3Cell, dict] = await Promise.all([
-          locationContract.getH3Cell().catch(() => null),
-          locationContract.getMembers().catch(() => null),
-        ]);
+  // Auto-hydrate on valid address input if not yet cached
+  useEffect(() => {
+    if (!cleanAddr) return;
+    try {
+      const parsed = Address.parse(cleanAddr);
+      batchHydrateUniversal([parsed], network, {
+        knownTypes: { [parsed.toString()]: 'location' },
+      }).catch((err) => {
+        console.warn('[useLocationMembers] Auto-hydration error:', err);
+      });
+    } catch {
+      /* ignore invalid address */
+    }
+  }, [cleanAddr]);
 
-        let isTargetMember: boolean | null = null;
-        if (targetMemberAddressString) {
-          try {
-            const target = Address.parse(targetMemberAddressString);
-            isTargetMember = await locationContract.getIsMember(target);
-          } catch {
-            isTargetMember = false;
+  const { data: store, isLoading } = useContractState<LocationStore>(
+    cleanAddr,
+    network,
+  );
+
+  const result = useMemo(() => {
+    if (!store) {
+      return {
+        h3Cell: null,
+        members: [],
+        isTargetMember: null,
+      };
+    }
+
+    const memberAddrs: string[] = [];
+    let isTarget = false;
+
+    if (store.members && typeof store.members.keys === 'function') {
+      try {
+        for (const k of store.members.keys()) {
+          const str = k.toString();
+          memberAddrs.push(str);
+          if (
+            targetMemberAddressString &&
+            str.toLowerCase() === targetMemberAddressString.trim().toLowerCase()
+          ) {
+            isTarget = true;
           }
         }
+      } catch {
+        /* dictionary traversal error */
+      }
+    }
 
-        const memberAddrs: string[] = [];
-        if (dict) {
-          for (const key of dict.keys()) {
-            memberAddrs.push(key.toString());
-          }
-        }
-
-        return {
-          h3Cell,
-          members: memberAddrs,
-          isTargetMember,
-        };
-      }),
-    enabled: Boolean(locationAddressString),
-  });
+    return {
+      h3Cell: store.h3Cell ?? null,
+      members: memberAddrs,
+      isTargetMember: targetMemberAddressString ? isTarget : null,
+    };
+  }, [store, targetMemberAddressString]);
 
   return {
-    h3Cell: data?.h3Cell ?? null,
-    members: data?.members ?? [],
-    isTargetMember: data?.isTargetMember ?? null,
-    isLoading,
-    refetch: createRefetchWrapper(cacheKey, refetch),
+    ...result,
+    isLoading: isLoading && Boolean(cleanAddr),
+    refetch: () => {
+      if (cleanAddr) {
+        batchHydrateUniversal([cleanAddr], network, {
+          knownTypes: { [cleanAddr]: 'location' },
+        }).catch(() => {});
+      }
+    },
   };
 }
 

@@ -6,12 +6,12 @@
  *
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
-import { getTonClient } from '@/lib/brotherhood/ton';
-import { Lottery } from '@wrappers/Lottery.gen';
+import type { LotteryStorage } from '@wrappers/Lottery.gen';
 import { network } from '@/lib/brotherhood/config';
-import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 
 export interface UseLotteryStateResult {
   participantCount: number | null;
@@ -27,52 +27,78 @@ export function useLotteryState(
   lotteryAddressString: string | null,
   userAddressString: string | null,
 ): UseLotteryStateResult {
-  const cacheKey = `lottery-state:${lotteryAddressString ?? 'none'}:${userAddressString ?? 'none'}`;
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['lottery-state', lotteryAddressString, userAddressString],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, async () => {
-        if (!lotteryAddressString) return null;
-        const lotteryAddr = Address.parse(lotteryAddressString);
-        const client = getTonClient(network);
-        const lotteryContract = client.open(Lottery.fromAddress(lotteryAddr));
+  const cleanAddr = lotteryAddressString?.trim() || null;
 
-        const [participantCount, prizePool, currentPhase, deadline] =
-          await Promise.all([
-            lotteryContract.getParticipantCount().catch(() => 0n),
-            lotteryContract.getPrizePool().catch(() => 0n),
-            lotteryContract.getCurrentPhase().catch(() => 0n),
-            lotteryContract.getDeadline().catch(() => 0n),
-          ]);
+  // Auto-hydrate on valid address input
+  useEffect(() => {
+    if (!cleanAddr) return;
+    try {
+      const targetAddr = Address.parse(cleanAddr);
+      batchHydrateUniversal([targetAddr], network, {
+        knownTypes: { [targetAddr.toString()]: 'lottery' },
+      }).catch((err) => {
+        console.warn('[useLotteryState] Auto-hydration error:', err);
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [cleanAddr]);
 
-        let isParticipant = false;
-        if (userAddressString) {
-          try {
-            const uAddr = Address.parse(userAddressString);
-            isParticipant = await lotteryContract.getIsParticipant(uAddr);
-          } catch {
-            isParticipant = false;
-          }
+  const { data: store, isLoading } = useContractState<LotteryStorage>(
+    cleanAddr,
+    network,
+  );
+
+  const result = useMemo(() => {
+    if (!store) {
+      return {
+        participantCount: null,
+        prizePool: null,
+        currentPhase: null,
+        deadline: null,
+        isParticipant: false,
+      };
+    }
+
+    let isParticipant = false;
+    if (userAddressString && store.participants) {
+      try {
+        const uAddr = Address.parse(userAddressString.trim());
+        if (typeof store.participants.has === 'function') {
+          isParticipant = store.participants.has(uAddr);
+        } else if (typeof store.participants.get === 'function') {
+          isParticipant = store.participants.get(uAddr) !== undefined;
         }
+      } catch {
+        isParticipant = false;
+      }
+    }
 
-        return {
-          participantCount: Number(participantCount),
-          prizePool,
-          currentPhase: Number(currentPhase),
-          deadline: Number(deadline),
-          isParticipant,
-        };
-      }),
-    enabled: Boolean(lotteryAddressString),
-  });
+    const deadlineNum = store.revealDeadline ? Number(store.revealDeadline) : 0;
+    const now = Math.floor(Date.now() / 1000);
+    const phase = deadlineNum > 0 && now > deadlineNum ? 1 : 0;
+
+    return {
+      participantCount:
+        store.participantCount !== undefined
+          ? Number(store.participantCount)
+          : null,
+      prizePool: store.prizePool ?? null,
+      currentPhase: phase,
+      deadline: deadlineNum || null,
+      isParticipant,
+    };
+  }, [store, userAddressString]);
 
   return {
-    participantCount: data?.participantCount ?? null,
-    prizePool: data?.prizePool ?? null,
-    currentPhase: data?.currentPhase ?? null,
-    deadline: data?.deadline ?? null,
-    isParticipant: data?.isParticipant ?? false,
-    isLoading,
-    refetch: createRefetchWrapper(cacheKey, refetch),
+    ...result,
+    isLoading: isLoading && Boolean(cleanAddr),
+    refetch: () => {
+      if (cleanAddr) {
+        batchHydrateUniversal([cleanAddr], network, {
+          knownTypes: { [cleanAddr]: 'lottery' },
+        }).catch(() => {});
+      }
+    },
   };
 }

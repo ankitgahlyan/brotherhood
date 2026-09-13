@@ -5,7 +5,7 @@ import { NotFound } from '@/core/components/shared/not-found';
 export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL || '/',
-  defaultPreload: 'intent',
+  defaultPreload: 'viewport',
   defaultNotFoundComponent: NotFound,
 });
 

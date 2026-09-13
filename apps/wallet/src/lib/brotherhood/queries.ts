@@ -1,388 +1,304 @@
-import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+/**
+ * Copyright (c) TonTech.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+import { useMemo } from 'react';
 import { type Address } from '@ton/core';
 import {
-  fetchJettonMaster,
-  fetchWalletBalance,
-  getCircle,
-  getFiMinterState,
-  getFiMinterTotalAccounts,
-  getFiWalletState,
-  getFiWalletStateByContractAddress,
-  getPersonalMinterDetails,
-  getPersonalWalletAddress,
-  getPersonalWalletBalance,
-  isZeroAddress,
-  checkIsContractDeployed,
-  type JettonMasterInfo,
-  type Network,
-  type PersonalMinterDetails,
-} from './ton';
-import {
-  setContractCache,
-  getContractCache,
-  deleteContractCache,
+  useContractState,
   getNormalizedContractCacheKey,
   invalidateContractCache,
+  getContractCache,
+  setContractCache,
 } from './contract-cache';
-import { network } from './config';
-import { isOnline } from '@/core/lib/network-status';
-
-const forceFreshKeys = new Set<string>();
-let forceFreshAll = false;
-
-/**
- * Mark a specific cache key or contract address as needing fresh on-chain data.
- * When called with key, marks that specific key. When called without args (e.g. manual refresh button),
- * sets forceFreshAll = true.
- */
-export function markForceFresh(key?: string) {
-  if (key) {
-    forceFreshKeys.add(key);
-  } else {
-    forceFreshAll = true;
-  }
-}
+import { FI_ADDRESS, network as defaultNetwork, type Network } from './config';
+import {
+  getFiWalletAddress,
+  isZeroAddress,
+  type JettonMasterInfo,
+  type PersonalMinterDetails,
+} from './ton';
+import { computePersonalWalletAddress } from './account-state-hydrator';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import type { FiStore } from '@wrappers/FossFi.gen';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 
 /**
- * Targeted invalidation for a specific contract.
- * Cleans IndexedDB cache and forces fresh fetch for matching TanStack Query keys.
+ * Universal Contract Selectors powered by synchronous L1 in-memory cache
  */
-export async function invalidateContractState(
-  contractAddress: Address | string,
-  net: Network = 'testnet',
-  queryClient?: QueryClient,
-): Promise<void> {
-  const addrStr =
-    typeof contractAddress === 'string'
-      ? contractAddress
-      : contractAddress.toString();
 
-  // 1. Purge from IndexedDB
-  await invalidateContractCache(net, addrStr);
-  await deleteContractCache(`fi-wallet-state-by-contract:${net}:${addrStr}`);
-
-  // 2. Mark force fresh in memory
-  const normalizedKey = getNormalizedContractCacheKey(net, addrStr);
-  markForceFresh(normalizedKey);
-  markForceFresh(`fi-wallet-state-by-contract:${net}:${addrStr}`);
-
-  // 3. Selectively invalidate TanStack queries matching this contract
-  if (queryClient) {
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey;
-        if (!Array.isArray(queryKey)) return false;
-        // Matches ['fi-wallet-state-by-contract', net, addrStr]
-        // or ['fi-wallet-state', owner] if key includes addrStr
-        return queryKey.some(
-          (k) =>
-            typeof k === 'string' && k.toLowerCase() === addrStr.toLowerCase(),
-        );
-      },
-    });
-  }
-}
-
-export function createRefetchWrapper<T>(
-  cacheKey: string,
-  refetchFn: () => Promise<T>,
+export function useFiWalletState(
+  ownerAddress: Address | null | undefined,
+  net: Network = defaultNetwork,
 ) {
-  return async () => {
-    markForceFresh(cacheKey);
-    return await refetchFn();
-  };
-}
-
-export async function cachedQueryFn<T>(
-  cacheKey: string,
-  fetcher: (options?: { forceFresh?: boolean }) => Promise<T>,
-  forceFresh = false,
-): Promise<T> {
-  const online = isOnline();
-
-  // If offline, never hit network; read strictly from IndexedDB
-  if (!online) {
-    const cached = await getContractCache<T>(cacheKey);
-    if (cached && cached.data !== null && cached.data !== undefined) {
-      return cached.data;
+  const fiWalletAddress = useMemo(() => {
+    if (!ownerAddress) return null;
+    try {
+      return getFiWalletAddress(ownerAddress, net);
+    } catch {
+      return null;
     }
-    // Graceful fallback for uncached data when offline
-    return null as unknown as T;
-  }
+  }, [ownerAddress, net]);
 
-  const shouldForce =
-    forceFresh || forceFreshAll || forceFreshKeys.has(cacheKey);
+  const { data, timestamp, isLoading } = useContractState<FiWalletStore>(
+    fiWalletAddress,
+    net,
+  );
 
-  if (forceFreshKeys.has(cacheKey)) {
-    forceFreshKeys.delete(cacheKey);
-  }
-
-  // If not forcing fresh data, serve from IndexedDB indefinitely
-  if (!shouldForce) {
-    const cached = await getContractCache<T>(cacheKey);
-    if (cached && cached.data !== null && cached.data !== undefined) {
-      return cached.data;
-    }
-  }
-
-  // Otherwise fetch from network
-  try {
-    const data = await fetcher({ forceFresh: shouldForce });
-    // Save to IndexedDB with updated timestamp
-    await setContractCache(cacheKey, data);
-    return data;
-  } catch (err) {
-    // Attempt fallback from IndexedDB cache on network error
-    const cached = await getContractCache<T>(cacheKey);
-    if (cached && cached.data !== null && cached.data !== undefined) {
-      console.log(`[ContractCache] Serving cached fallback for ${cacheKey}`);
-      return cached.data;
-    }
-    if (!isOnline()) {
-      return null as unknown as T;
-    }
-    throw err;
-  }
-}
-
-export function useJettonMaster(enabled = true) {
-  const cacheKey = 'jetton-master';
-  const query = useQuery<JettonMasterInfo>({
-    queryKey: ['jetton-master'],
-    queryFn: () => cachedQueryFn(cacheKey, fetchJettonMaster),
-    enabled,
-  });
   return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function useFiMinterState(enabled = true) {
-  const cacheKey = 'fi-minter-state';
-  const query = useQuery({
-    queryKey: ['fi-minter-state'],
-    queryFn: () => cachedQueryFn(cacheKey, getFiMinterState),
-    enabled,
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function useFiTotalAccounts(enabled = true) {
-  const cacheKey = 'fi-total-accounts';
-  const query = useQuery({
-    queryKey: ['fi-total-accounts'],
-    queryFn: () => cachedQueryFn(cacheKey, getFiMinterTotalAccounts),
-    enabled,
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function useFiWalletState(ownerAddress: Address | null) {
-  const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `fi-wallet-state:${key}`;
-  const query = useQuery({
-    queryKey: ['fi-wallet-state', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, (opts) => getFiWalletState(ownerAddress!, opts)),
-    enabled: !!ownerAddress,
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
+    data,
+    isLoading: isLoading && !!ownerAddress,
+    isFetching: isLoading && !!ownerAddress,
+    error: null as Error | null,
+    timestamp,
+    refetch: async () => {},
   };
 }
 
 export function useFiWalletStateByContract(
-  contractAddress: Address | null,
-  net?: Network,
+  contractAddress: Address | string | null | undefined,
+  net: Network = defaultNetwork,
 ) {
-  const key = contractAddress?.toString() ?? 'none';
-  const cacheKey = `fi-wallet-state-by-contract:${net ?? 'default'}:${key}`;
-  const query = useQuery({
-    queryKey: ['fi-wallet-state-by-contract', net ?? 'default', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () =>
-        getFiWalletStateByContractAddress(contractAddress!, net),
-      ),
-    enabled: !!contractAddress,
-  });
+  const { data, timestamp, isLoading } = useContractState<FiWalletStore>(
+    contractAddress,
+    net,
+  );
   return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
+    data,
+    isLoading: isLoading && !!contractAddress,
+    isFetching: isLoading && !!contractAddress,
+    error: null as Error | null,
+    timestamp,
+    refetch: async () => {},
   };
 }
 
-export function useWalletBalance(ownerAddress: Address | null) {
-  const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `wallet-balance:${key}`;
-  const query = useQuery({
-    queryKey: ['wallet-balance', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () => fetchWalletBalance(ownerAddress!)),
-    enabled: !!ownerAddress,
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function useCircle(invitedList: Address[] | null) {
-  const key =
-    invitedList && invitedList.length > 0
-      ? invitedList
-          .map((a) => a.toString())
-          .sort()
-          .join(',')
-      : 'none';
-  const cacheKey = `circle:${key}`;
-  const query = useQuery({
-    queryKey: ['circle', key],
-    queryFn: () => cachedQueryFn(cacheKey, () => getCircle(invitedList!)),
-    enabled: !!invitedList && invitedList.length > 0,
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function usePersonalMinterForIssuer(ownerAddress: Address | null) {
-  const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `fi-wallet-state:${key}`;
-  const query = useQuery({
-    queryKey: ['fi-wallet-state', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
-    enabled: !!ownerAddress,
-    select: (state) => {
-      const minter =
-        state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
-      return minter && !isZeroAddress(minter) ? minter : null;
-    },
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function usePersonalWalletForIssuer(ownerAddress: Address | null) {
-  const key = ownerAddress?.toString() ?? 'none';
-  const cacheKey = `fi-wallet-state:${key}`;
-  const query = useQuery({
-    queryKey: ['fi-wallet-state', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () => getFiWalletState(ownerAddress!)),
-    enabled: !!ownerAddress,
-    select: (state) => {
-      const wallet =
-        state?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonWallet;
-      return wallet && !isZeroAddress(wallet) ? wallet : null;
-    },
-  });
-  return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
-  };
-}
-
-export function usePersonalWalletAddress(
-  personalMinter: Address | null,
-  ownerAddress: Address | null,
+export function useFiMinterState(
   enabled = true,
+  net: Network = defaultNetwork,
 ) {
-  const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
-  const cacheKey = `personal-wallet-address:${key}`;
-  const query = useQuery({
-    queryKey: ['personal-wallet-address', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () =>
-        getPersonalWalletAddress(personalMinter!, ownerAddress!),
-      ),
-    enabled: enabled && !!personalMinter && !!ownerAddress,
-  });
+  const { data, timestamp, isLoading } = useContractState<FiStore>(
+    enabled ? FI_ADDRESS : null,
+    net,
+  );
   return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
+    data,
+    isLoading: enabled && isLoading,
+    isFetching: enabled && isLoading,
+    error: null as Error | null,
+    timestamp,
+    refetch: async () => {},
   };
 }
 
-export function usePersonalWalletBalance(
-  personalMinter: Address | null,
-  ownerAddress: Address | null,
+export function useFiTotalAccounts(
   enabled = true,
+  net: Network = defaultNetwork,
 ) {
-  const key = `${personalMinter?.toString() ?? 'none'}:${ownerAddress?.toString() ?? 'none'}`;
-  const cacheKey = `personal-wallet-balance:${key}`;
-  const query = useQuery({
-    queryKey: ['personal-wallet-balance', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () =>
-        getPersonalWalletBalance(personalMinter!, ownerAddress!),
-      ),
-    enabled: enabled && !!personalMinter && !!ownerAddress,
-  });
+  const { data, timestamp, isLoading } = useContractState<FiStore>(
+    enabled ? FI_ADDRESS : null,
+    net,
+  );
+  const totalAccounts =
+    data && (data as any).totalAccounts !== undefined
+      ? BigInt((data as any).totalAccounts)
+      : (data?.totalSupply ?? null);
+
   return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
+    data: totalAccounts,
+    isLoading: enabled && isLoading,
+    isFetching: enabled && isLoading,
+    error: null as Error | null,
+    timestamp,
+    refetch: async () => {},
+  };
+}
+
+export function usePersonalMinterForIssuer(
+  ownerAddress: Address | null | undefined,
+  net: Network = defaultNetwork,
+) {
+  const { data, isLoading, isFetching } = useFiWalletState(ownerAddress, net);
+  const minter =
+    data?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonMinter;
+  const personalMinter = minter && !isZeroAddress(minter) ? minter : null;
+  return {
+    data: personalMinter,
+    isLoading,
+    isFetching,
+    error: null as Error | null,
+    refetch: async () => {},
+  };
+}
+
+export function usePersonalWalletForIssuer(
+  ownerAddress: Address | null | undefined,
+  net: Network = defaultNetwork,
+) {
+  const { data, isLoading, isFetching } = useFiWalletState(ownerAddress, net);
+  const wallet =
+    data?.addresses?.ref?.trustedJettonAddrs?.ref?.personalJettonWallet;
+  const personalWallet = wallet && !isZeroAddress(wallet) ? wallet : null;
+  return {
+    data: personalWallet,
+    isLoading,
+    isFetching,
+    error: null as Error | null,
+    refetch: async () => {},
   };
 }
 
 export function usePersonalMinterDetails(
-  personalMinter: Address | null,
+  personalMinter: Address | string | null | undefined,
   enabled = true,
+  net: Network = defaultNetwork,
 ) {
-  const key = personalMinter?.toString() ?? 'none';
-  const cacheKey = `personal-minter-details:${key}`;
-  const query = useQuery<PersonalMinterDetails | null>({
-    queryKey: ['personal-minter-details', key],
-    queryFn: () =>
-      cachedQueryFn(cacheKey, () => getPersonalMinterDetails(personalMinter!)),
-    enabled: enabled && !!personalMinter,
-  });
+  const { data, timestamp, isLoading } = useContractState<PersonalStore>(
+    enabled ? personalMinter : null,
+    net,
+  );
+
+  const minterDetails: PersonalMinterDetails | null = data
+    ? {
+        totalSupply: data.totalSupply ?? 0n,
+        fiJettonAddress: data.fiJettonAddress,
+        adminAddress: data.adminAddress,
+        mintable: true,
+      }
+    : null;
+
   return {
-    ...query,
-    refetch: createRefetchWrapper(cacheKey, query.refetch),
+    data: minterDetails,
+    isLoading: enabled && isLoading,
+    isFetching: enabled && isLoading,
+    error: null as Error | null,
+    timestamp,
+    refetch: async () => {},
   };
 }
 
-export function useIsContractDeployed(address: Address | null, enabled = true) {
-  const key =
-    address?.toString({ testOnly: network == 'mainnet' ? false : true }) ??
-    'none';
-  return useQuery<boolean>({
-    queryKey: ['contract-deployed', key],
-    queryFn: () => (address ? checkIsContractDeployed(address) : false),
-    enabled: enabled && !!address,
-  });
+export function usePersonalWalletAddress(
+  personalMinter: Address | null | undefined,
+  ownerAddress: Address | null | undefined,
+  enabled = true,
+  net: Network = defaultNetwork,
+) {
+  const minterDetails = usePersonalMinterDetails(personalMinter, enabled, net);
+  const address = useMemo(() => {
+    if (!enabled || !personalMinter || !ownerAddress) return null;
+    const adminAddress = minterDetails.data?.adminAddress || ownerAddress;
+    try {
+      return computePersonalWalletAddress(
+        personalMinter,
+        ownerAddress,
+        adminAddress,
+      );
+    } catch {
+      return null;
+    }
+  }, [enabled, personalMinter, ownerAddress, minterDetails.data?.adminAddress]);
+
+  return {
+    data: address,
+    isLoading: minterDetails.isLoading,
+    isFetching: minterDetails.isFetching,
+    error: null as Error | null,
+    refetch: async () => {},
+  };
+}
+
+export function usePersonalWalletBalance(
+  personalMinter: Address | null | undefined,
+  ownerAddress: Address | null | undefined,
+  enabled = true,
+  net: Network = defaultNetwork,
+) {
+  const walletAddr = usePersonalWalletAddress(
+    personalMinter,
+    ownerAddress,
+    enabled,
+    net,
+  );
+  const { data: walletStore, isLoading } =
+    useContractState<PersonalWalletStore>(walletAddr.data, net);
+
+  return {
+    data: walletStore?.jettonBalance ?? 0n,
+    isLoading: walletAddr.isLoading || isLoading,
+    isFetching: walletAddr.isFetching || isLoading,
+    error: null as Error | null,
+    refetch: async () => {},
+  };
+}
+
+export function useIsContractDeployed(
+  address: Address | string | null | undefined,
+  enabled = true,
+  net: Network = defaultNetwork,
+) {
+  const { data, isLoading } = useContractState<any>(
+    enabled ? address : null,
+    net,
+  );
+  return {
+    data: Boolean(data),
+    isLoading: enabled && isLoading,
+    isFetching: enabled && isLoading,
+    error: null as Error | null,
+    refetch: async () => {},
+  };
+}
+
+export function useJettonMaster(_enabled = true) {
+  return {
+    data: {
+      address: FI_ADDRESS,
+      name: 'Brotherhood FossFi',
+      symbol: 'FI',
+      decimals: 9,
+    },
+    isLoading: false,
+    isFetching: false,
+    error: null as Error | null,
+    refetch: async () => {},
+  };
 }
 
 export function useRefreshContractQueries() {
-  const queryClient = useQueryClient();
-  return async (keys?: string[]) => {
-    if (!isOnline()) {
-      return;
-    }
-    if (keys && keys.length > 0) {
-      keys.forEach((k) => forceFreshKeys.add(k));
-    } else {
-      forceFreshAll = true;
-    }
-    try {
-      await queryClient.refetchQueries({
-        type: 'active',
-      });
-    } finally {
-      forceFreshAll = false;
-      forceFreshKeys.clear();
-    }
-  };
+  return async (_keys?: string[]) => {};
+}
+
+export function markForceFresh(_key?: string) {}
+
+export async function invalidateContractState(
+  contractAddress: Address | string,
+  net: Network = defaultNetwork,
+  _queryClient?: any,
+): Promise<void> {
+  await invalidateContractCache(net, contractAddress);
+}
+
+export function createRefetchWrapper<T>(
+  _cacheKey: string,
+  refetchFn: () => Promise<T>,
+) {
+  return refetchFn;
+}
+
+export async function cachedQueryFn<T>(
+  cacheKey: string,
+  fetcher: (options?: any) => Promise<T>,
+): Promise<T> {
+  const cached = await getContractCache<T>(cacheKey);
+  if (cached?.data !== undefined && cached.data !== null) {
+    return cached.data;
+  }
+  const fresh = await fetcher();
+  await setContractCache(cacheKey, fresh);
+  return fresh;
 }

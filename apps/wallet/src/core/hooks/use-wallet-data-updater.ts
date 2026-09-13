@@ -45,23 +45,17 @@ export const useWalletDataUpdater = () => {
   const executeWalletSync = useCallback(async () => {
     if (!activeWalletId || !isOnline()) return;
     try {
-      await Promise.allSettled([
-        updateBalance(),
-        loadUserJettons(),
-        loadUserNfts(),
-        loadRates(),
-      ]);
+      await Promise.allSettled([updateBalance(), loadRates()]);
       const now = Date.now();
       localStorage.setItem(`wallet_synced_${activeWalletId}`, String(now));
       notifyCacheUpdated(`wallet-data:${activeWalletId}`, now);
     } catch (err) {
       console.warn('[useWalletDataUpdater] Failed manual wallet sync:', err);
     }
-  }, [activeWalletId, updateBalance, loadUserJettons, loadUserNfts, loadRates]);
+  }, [activeWalletId, updateBalance, loadRates]);
 
   // Initial cold-cache population:
-  // 1. If the wallet has never been synced in storage, perform one initial fetch.
-  // 2. Even if synced before, if userJettons is empty on mount (Zustand store fresh start), fetch jettons.
+  // If the wallet has never been synced in storage, perform one initial fetch.
   useEffect(() => {
     if (!address || !activeWalletId || !isOnline()) return;
 
@@ -70,16 +64,8 @@ export const useWalletDataUpdater = () => {
     );
     if (!hasSyncedBefore) {
       void executeWalletSync();
-    } else if (userJettons.length === 0) {
-      void loadUserJettons();
     }
-  }, [
-    activeWalletId,
-    address,
-    executeWalletSync,
-    loadUserJettons,
-    userJettons.length,
-  ]);
+  }, [activeWalletId, address, executeWalletSync]);
 
   // When userJettons are populated/updated, extract addresses and save to personalJettons
   useEffect(() => {

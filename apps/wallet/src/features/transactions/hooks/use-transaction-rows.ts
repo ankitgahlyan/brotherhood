@@ -45,10 +45,10 @@ export const useTransactionRows = (limit: number): TransactionRows => {
       }),
     );
 
-  useEffect(() => {
-    if (!address) return;
-    void loadEvents(limit, 0);
-  }, [address, loadEvents, limit]);
+  // useEffect(() => {
+  //   if (!address) return;
+  //   void loadEvents(limit, 0);
+  // }, [address, loadEvents, limit]);
 
   const rows = useMemo<TransactionRowModel[]>(() => {
     const eventItems = (events ?? []) as Event[];

@@ -1,4 +1,5 @@
 import { Address, Cell } from '@ton/core';
+import { useSyncExternalStore, useMemo, useCallback } from 'react';
 
 const DB_NAME = 'brotherhood_contract_db';
 const DB_VERSION = 3;
@@ -580,4 +581,125 @@ export async function invalidateContractCache(
 ): Promise<void> {
   const key = getNormalizedContractCacheKey(network, contractAddress);
   await deleteContractCache(key);
+}
+
+export function getContractCacheSync<T = any>(
+  key: string,
+): { data: T; timestamp: number } | null {
+  const mem = memoryContractCache.get(key);
+  if (mem) {
+    return {
+      data: mem.data as T,
+      timestamp: mem.timestamp,
+    };
+  }
+  return null;
+}
+
+let hasPreloadedFromDb = false;
+let preloadPromise: Promise<void> | null = null;
+
+export function preloadContractCacheFromDb(): Promise<void> {
+  if (hasPreloadedFromDb) return Promise.resolve();
+  if (preloadPromise) return preloadPromise;
+  if (typeof window === 'undefined') return Promise.resolve();
+
+  preloadPromise = (async () => {
+    try {
+      const db = await openDB();
+      const entries = await new Promise<CacheEntry[]>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+      for (const entry of entries) {
+        if (!memoryContractCache.has(entry.key)) {
+          const restored = deserializeFromStorage(entry.data);
+          memoryContractCache.set(entry.key, {
+            key: entry.key,
+            data: restored,
+            timestamp: entry.timestamp,
+          });
+          if (entry.timestamp > (lastKnownGlobalFetchTime ?? 0)) {
+            lastKnownGlobalFetchTime = entry.timestamp;
+          }
+        }
+      }
+      hasPreloadedFromDb = true;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(CACHE_UPDATED_EVENT, {
+            detail: { key: '__preload__', timestamp: Date.now() },
+          }),
+        );
+      }
+    } catch (err) {
+      console.warn('[ContractCache] Failed to preload from DB:', err);
+    }
+  })();
+  return preloadPromise;
+}
+
+if (typeof window !== 'undefined') {
+  preloadContractCacheFromDb().catch(() => {});
+}
+
+export function useContractState<T = any>(
+  contractAddress: Address | string | null | undefined,
+  net: string = 'testnet',
+): { data: T | null; timestamp: number | null; isLoading: boolean } {
+  const key = useMemo(() => {
+    if (!contractAddress) return null;
+    return getNormalizedContractCacheKey(net, contractAddress);
+  }, [contractAddress, net]);
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!key || typeof window === 'undefined') {
+        return () => {};
+      }
+      const listener = (event: Event) => {
+        const customEvent = event as CustomEvent<{
+          key?: string;
+          keys?: string[];
+        }>;
+        if (
+          !customEvent.detail ||
+          customEvent.detail.key === '__preload__' ||
+          customEvent.detail.key === key ||
+          customEvent.detail.keys?.includes(key)
+        ) {
+          onStoreChange();
+        }
+      };
+      window.addEventListener(CACHE_UPDATED_EVENT, listener);
+      window.addEventListener(`${CACHE_UPDATED_EVENT}_batch`, listener);
+      return () => {
+        window.removeEventListener(CACHE_UPDATED_EVENT, listener);
+        window.removeEventListener(`${CACHE_UPDATED_EVENT}_batch`, listener);
+      };
+    },
+    [key],
+  );
+
+  const getSnapshot = useCallback(() => {
+    if (!key) return null;
+    return memoryContractCache.get(key) ?? null;
+  }, [key]);
+
+  const getServerSnapshot = useCallback(() => null, []);
+
+  const cached = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
+  return {
+    data: (cached?.data as T) ?? null,
+    timestamp: cached?.timestamp ?? null,
+    isLoading: !cached && Boolean(key),
+  };
 }
