@@ -82,11 +82,12 @@ fun setupPersonalScenario(): (
         pm.address,
         issuerPersonalWallet,
     );
-    issuerWallet.sendSetCreditNeed(
+    issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
         ton("1000"),
         1_800_000_000 + 86400,
+        null,
         { value: ton("0.1") },
     );
 

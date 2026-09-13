@@ -36,7 +36,7 @@ import {
   useMemberProfiles,
   type MemberProfileInfo,
 } from '../hooks/use-member-profiles';
-import { useSetCreditTerms } from '../hooks/use-set-credit-terms';
+import { useLoanRequirement } from '../hooks/use-loan-requirement';
 import { useFiBurn } from '../hooks/use-fi-burn';
 import { useWeeklyClaim } from '../hooks/use-weekly-claim';
 import { usePayEmi } from '../hooks/use-pay-emi';
@@ -338,17 +338,24 @@ export const BrotherhoodScreen: React.FC = () => {
     [account.data, formatWalletAddress],
   );
 
-  // Credit terms state (Credit Need & Multiplier)
-  const [creditNeedInput, setCreditNeedInput] = useState('');
-  const [creditMaturityDays, setCreditMaturityDays] = useState('30');
-  const [creditMultiplierInput, setCreditMultiplierInput] = useState('1');
+  // Loan requirement state
+  const [loanAmountInput, setLoanAmountInput] = useState('');
+  const [loanMaturityDays, setLoanMaturityDays] = useState('');
+  const [loanMultiplierInput, setLoanMultiplierInput] = useState('');
 
-  const creditTerms = useSetCreditTerms({
+  const loanRequirement = useLoanRequirement({
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
     network,
+    accountData: account.data,
+    amount: loanAmountInput,
+    maturityDays: loanMaturityDays,
+    multiplier: loanMultiplierInput,
     onSuccess: () => {
+      setLoanAmountInput('');
+      setLoanMaturityDays('');
+      setLoanMultiplierInput('');
       account.refetch();
     },
   });
@@ -2279,91 +2286,121 @@ export const BrotherhoodScreen: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Set Credit Need Form */}
-                  <div className="space-y-2 pt-1 border-t border-border/40">
-                    <label className="text-xs font-medium text-foreground block">
-                      Set Credit Need (FI to Borrow)
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        step="any"
-                        min="0"
-                        value={creditNeedInput}
-                        onChange={(e) => setCreditNeedInput(e.target.value)}
-                        placeholder={`Current: ${formatFi(account.data?.creditNeed)}`}
-                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-testid="brotherhood-credit-need-input"
-                      />
-                      <input
-                        type="number"
-                        step="1"
-                        min="1"
-                        value={creditMaturityDays}
-                        onChange={(e) => setCreditMaturityDays(e.target.value)}
-                        placeholder="Maturity (Days, e.g. 30)"
-                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-testid="brotherhood-credit-days-input"
-                      />
+                  {/* Set Loan Requirement Form */}
+                  <div className="space-y-3 pt-2 border-t border-border/40">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-foreground block">
+                        Set Loan Requirement
+                      </label>
+                      <span className="text-[11px] text-muted-foreground">
+                        {loanRequirement.hasPersonalToken
+                          ? 'Personal Token Registered'
+                          : 'No Personal Token'}
+                      </span>
                     </div>
+
+                    {!loanRequirement.hasPersonalToken && (
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400">
+                        Personal Token must be registered before setting a loan
+                        requirement.
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <div>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={loanAmountInput}
+                          onChange={(e) => setLoanAmountInput(e.target.value)}
+                          placeholder={`Amount (Current: ${formatFi(account.data?.creditNeed)} FI)`}
+                          disabled={
+                            !canOperate ||
+                            !loanRequirement.hasPersonalToken ||
+                            loanRequirement.isSending
+                          }
+                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          data-testid="brotherhood-loan-amount-input"
+                        />
+                        {loanRequirement.amountValidationError && (
+                          <p className="text-[11px] text-rose-500 mt-1">
+                            {loanRequirement.amountValidationError}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={loanMaturityDays}
+                            onChange={(e) =>
+                              setLoanMaturityDays(e.target.value)
+                            }
+                            placeholder={
+                              account.data?.creditMaturity
+                                ? `Maturity (${formatDate(account.data.creditMaturity)})`
+                                : 'Maturity (Days, e.g. 30)'
+                            }
+                            disabled={
+                              !canOperate ||
+                              !loanRequirement.hasPersonalToken ||
+                              loanRequirement.isSending
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            data-testid="brotherhood-loan-maturity-input"
+                          />
+                          {loanRequirement.maturityValidationError && (
+                            <p className="text-[11px] text-rose-500 mt-1">
+                              {loanRequirement.maturityValidationError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={loanMultiplierInput}
+                            onChange={(e) =>
+                              setLoanMultiplierInput(e.target.value)
+                            }
+                            placeholder={`Multiplier (Current: ${account.data?.multiplier ?? 1}x)`}
+                            disabled={
+                              !canOperate ||
+                              !loanRequirement.hasPersonalToken ||
+                              loanRequirement.isSending
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            data-testid="brotherhood-loan-multiplier-input"
+                          />
+                          {loanRequirement.multiplierValidationError && (
+                            <p className="text-[11px] text-rose-500 mt-1">
+                              {loanRequirement.multiplierValidationError}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     <Button
                       size="sm"
                       fullWidth
-                      onClick={() => {
-                        const days = parseInt(creditMaturityDays, 10) || 30;
-                        const maturitySec =
-                          Math.floor(Date.now() / 1000) + days * 86400;
-                        creditTerms.setCreditNeed(
-                          creditNeedInput || '0',
-                          maturitySec,
-                        );
-                      }}
-                      disabled={
-                        !canOperate || creditTerms.isSending || !creditNeedInput
-                      }
-                      loading={creditTerms.isSending}
-                      data-testid="brotherhood-set-credit-need-submit"
+                      onClick={() => loanRequirement.updateLoanRequirement()}
+                      disabled={loanRequirement.isDisabled}
+                      loading={loanRequirement.isSending}
+                      data-testid="brotherhood-set-loan-requirement-submit"
                     >
-                      Update Credit Need
+                      {loanRequirement.isSending
+                        ? 'Updating Loan Requirement...'
+                        : loanRequirement.isDirty
+                          ? 'Update Loan Requirement'
+                          : 'No Changes'}
                     </Button>
-                  </div>
-
-                  {/* Set Multiplier Form */}
-                  <div className="space-y-2 pt-2 border-t border-border/40">
-                    <label className="text-xs font-medium text-foreground block">
-                      Set Credit Multiplier (Tokens minted per 1 FI borrowed)
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="number"
-                        step="1"
-                        min="1"
-                        value={creditMultiplierInput}
-                        onChange={(e) =>
-                          setCreditMultiplierInput(e.target.value)
-                        }
-                        placeholder={`Current: ${account.data?.multiplier ?? 1}`}
-                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-testid="brotherhood-credit-multiplier-input"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const mult = parseInt(creditMultiplierInput, 10) || 1;
-                          creditTerms.setMultiplier(mult);
-                        }}
-                        disabled={
-                          !canOperate ||
-                          creditTerms.isSending ||
-                          !creditMultiplierInput
-                        }
-                        loading={creditTerms.isSending}
-                        className="shrink-0"
-                        data-testid="brotherhood-set-multiplier-submit"
-                      >
-                        Set Multiplier
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </div>

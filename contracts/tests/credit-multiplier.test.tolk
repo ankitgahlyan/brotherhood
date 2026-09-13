@@ -11,27 +11,31 @@ import "personal-token.test"
 import "test-utils"
 
 get fun `test credit multiplier: allows setting and updating multiplier by owner`() {
-    val (wallet, owner, _minter, _borrower) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(ton("10"));
 
-    val setTx = wallet.sendSetMultiplier(
+    val setTx = wallet.sendSetLoanRequirement(
         owner.address,
         0,
+        null,
+        null,
         2,
         { value: ton("0.1") },
     );
 
-    expect(setTx).toHaveSuccessfulTx<SetMultiplier>({
+    expect(setTx).toHaveSuccessfulTx<SetLoanRequirement>({
         from: owner.address,
         to: wallet.address,
     });
 }
 
 get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`() {
-    val (wallet, _owner, _minter, borrower) = setupDirectWallet(ton("10"));
+    val (wallet, _owner, _minter, borrower) = setupDirectWalletWithPersonal(ton("10"));
 
-    val setTx = wallet.sendSetMultiplier(
+    val setTx = wallet.sendSetLoanRequirement(
         borrower.address, // non-owner
         0,
+        null,
+        null,
         2,
         { value: ton("0.1") },
     );
@@ -43,11 +47,13 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
 }
 
 get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessage`() {
-    val (wallet, owner, _minter, _borrower) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(ton("10"));
 
-    val setTx = wallet.sendSetMultiplier(
+    val setTx = wallet.sendSetLoanRequirement(
         owner.address,
         0,
+        null,
+        null,
         0, // invalid multiplier 0
         { value: ton("0.1") },
     );
@@ -69,9 +75,11 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
     ) = setupPersonalScenario();
 
     // set multiplier to 2
-    issuerWallet.sendSetMultiplier(
+    issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
+        null,
+        null,
         2,
         { value: ton("0.1") },
     );
@@ -114,18 +122,13 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         pm,
     ) = setupPersonalScenario();
 
-    // Set creditNeed to 100 FI and multiplier to 2
+    // Set creditNeed to 100 FI and multiplier to 2 in a single atomic transaction
     val creditNeedAmount = ton("100");
-    issuerWallet.sendSetCreditNeed(
+    issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
         creditNeedAmount,
         1_800_000_000 + 86400,
-        { value: ton("0.1") },
-    );
-    issuerWallet.sendSetMultiplier(
-        notDeployer.address,
-        0,
         2,
         { value: ton("0.1") },
     );

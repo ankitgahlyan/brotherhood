@@ -187,7 +187,9 @@ async function main() {
     console.log(
       '\x1b[34m[Tolk / Acton] Running affected Tolk checks and tests...\x1b[0m',
     );
-    const existingTolk = existingFiles.filter((f) => f.endsWith('.tolk'));
+    const existingTolk = existingFiles.filter(
+      (f) => f.endsWith('.tolk') && !f.startsWith('gen/'),
+    );
     if (existingTolk.length > 0) {
       const escapedTolk = existingTolk.map((f) => `"${f}"`).join(' ');
       run(`acton fmt ${escapedTolk}`);

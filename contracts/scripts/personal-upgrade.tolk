@@ -1,4 +1,5 @@
 import "@acton/build"
+import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
@@ -19,4 +20,5 @@ fun main() {
         build("PersonalMinter"),
         { value: ton("0.2") },
     );
+    println("upgrade hash in Frontend for boc decoding");
 }

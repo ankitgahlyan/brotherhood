@@ -111,8 +111,12 @@ jetton-info = "acton script contracts/scripts/info.tolk"
 jetton-mint = "acton script contracts/scripts/mint.tolk"
 jetton-transfer = "acton script contracts/scripts/transfer.tolk"
 # don't use on mainnet or when approve delay is significant
-fi-upgrade-testnet = "acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet"
-personal-upgrade = "acton script contracts/scripts/personal-upgrade.tolk --net testnet"
+fi-upgrade-testnet = "acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts"
+fi-wallet-upgrade = "JETTON_WALLET_UPGRADE=y acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target fiWallet"
+fi-minter-upgrade = "JETTON_WALLET_UPGRADE=n acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target fiMinter"
+approve-upgrade = "acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts"
+personal-upgrade = "acton script contracts/scripts/personal-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target personalMinter"
+update-code-hashes = "bun scripts/update-contract-code-hashes.ts"
 
 
 [import-mappings]

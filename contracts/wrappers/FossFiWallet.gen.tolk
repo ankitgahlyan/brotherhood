@@ -816,35 +816,20 @@ fun FossFiWallet.sendTriggerDefaultEmi(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendSetCreditNeed(
+fun FossFiWallet.sendSetLoanRequirement(
     self,
     from: address,
     queryId: uint64,
-    amount: coins,
-    maturityDate: uint32,
+    amount: coins?,
+    maturityDate: uint32?,
+    multiplier: uint16?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SetCreditNeed { queryId, amount, maturityDate },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendSetMultiplier(
-    self,
-    from: address,
-    queryId: uint64,
-    multiplier: uint16,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: SetMultiplier { queryId, multiplier },
+        body: SetLoanRequirement { queryId, amount, maturityDate, multiplier },
     });
     return net.send(from, genericMsg);
 }

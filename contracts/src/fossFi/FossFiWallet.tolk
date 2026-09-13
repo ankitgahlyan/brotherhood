@@ -64,8 +64,7 @@ type AllowedMessageToWallet =
     | TriggerDecay
     | ActPayEmi
     | TriggerDefaultEmi
-    | SetCreditNeed
-    | SetMultiplier
+    | SetLoanRequirement
     | RepayDebt
     | ActCloseAccount
     | AuthorityCloseAccount
@@ -1283,23 +1282,48 @@ fun onInternalMessage(in: InMessage): void {
             sendExcesses(msg.queryId, in.valueCoins, in.senderAddress);
         }
 
-        SetCreditNeed => {
+        SetLoanRequirement => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
-            if (msg.amount > 0) {
-                assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
-                if (store.creditMaturity > blockchain.now()) {
-                    assert (msg.maturityDate >= store.creditMaturity) throw Errors.InvalidMessage;
-                }
-                store.creditMaturity = msg.maturityDate;
-            }
-            store.creditNeed = msg.amount;
-        }
+            assert (
+                trustedAddrs.personalJettonMinter != ZERO_ADDRESS &&
+                trustedAddrs.personalJettonMinter != RAW_ZERO_ADDRESS
+            ) throw Errors.PersonalJettonNotRegistered;
+            assert (
+                msg.amount != null || msg.maturityDate != null || msg.multiplier != null
+            ) throw Errors.InvalidMessage;
 
-        SetMultiplier => {
-            assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
-            // todo: multiplier > 1 makes sense
-            assert (msg.multiplier > 0) throw Errors.InvalidMessage;
-            store.multiplier = msg.multiplier;
+            if (msg.multiplier != null) {
+                assert (msg.multiplier >= 1) throw Errors.InvalidMessage;
+                store.multiplier = msg.multiplier;
+            }
+
+            if (msg.amount != null) {
+                if (msg.amount > 0) {
+                    val effectiveMaturity = msg.maturityDate != null
+                        ? msg.maturityDate
+                        : store.creditMaturity;
+                    assert (effectiveMaturity > blockchain.now()) throw Errors.InvalidMessage;
+                    if (store.creditMaturity > blockchain.now()) {
+                        assert (
+                            effectiveMaturity >= store.creditMaturity
+                        ) throw Errors.InvalidMessage;
+                    }
+                    store.creditMaturity = effectiveMaturity;
+                }
+                store.creditNeed = msg.amount;
+            } else if (msg.maturityDate != null) {
+                if (store.creditNeed > 0) {
+                    assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
+                    if (store.creditMaturity > blockchain.now()) {
+                        assert (
+                            msg.maturityDate >= store.creditMaturity
+                        ) throw Errors.InvalidMessage;
+                    }
+                    store.creditMaturity = msg.maturityDate;
+                }
+            }
+
+            returnExcessesBack(msg.queryId, addrs.owner);
         }
 
         RepayDebt => {

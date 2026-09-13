@@ -46,6 +46,10 @@ struct JettonMetadata {
 }
 
 fun promptWalletUpgrade(message: string): bool {
+    val fromEnv = env<string>(message);
+    if (fromEnv != null) {
+        return fromEnv.equalTo("y") || fromEnv.equalTo("true") || fromEnv.equalTo("1");
+    }
     val walletUpgrade = prompt(message, "wallet upgrade?", "y");
     return walletUpgrade.equalTo("y");
 }

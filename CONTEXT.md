@@ -60,10 +60,13 @@ _Avoid_: Points, credits
 **Allowance** — a spending permission an Account grants to a friend, letting them spend a limited amount of the Account's balance (pocket money).
 _Avoid_: Spending limit, delegation
 
-**Credit Need** — an Account's recorded need for credit, specified as an amount and maturity date, checked before a loan or credit purchase to it is processed.
+**Loan Requirement** — an Account's recorded terms for borrowing FI credit, combining the needed FI amount (Credit Need), loan maturity timestamp, and Personal Token mint ratio (Credit Multiplier). Can only be configured when the Account has a registered Personal Token.
+_Avoid_: Borrow terms, credit profile, loan application
+
+**Credit Need** — an Account's recorded amount of FI requested as a loan under its Loan Requirement, checked before an incoming credit transfer is processed. Setting amount to zero cancels active borrowing while preserving maturity for existing loans.
 _Avoid_: Credit score, risk rating
 
-**Credit Multiplier** — the ratio of Personal Tokens minted to a lender per unit of FI credit extended by buying credit from the Account (defaults to 1; e.g. a multiplier of 2 mints 2 Personal Tokens per 1 FI borrowed).
+**Credit Multiplier** — the ratio of Personal Tokens minted to a lender per unit of FI credit extended under an Account's Loan Requirement (defaults to 1; e.g. a multiplier of 2 mints 2 Personal Tokens per 1 FI borrowed).
 _Avoid_: Interest rate, token bonus, leverage
 
 **Accumulated Fees** — fees an Account collects and forwards to the minter in a single transaction once a threshold is crossed.

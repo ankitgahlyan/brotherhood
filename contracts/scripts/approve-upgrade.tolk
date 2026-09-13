@@ -1,3 +1,4 @@
+import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
@@ -10,4 +11,6 @@ fun main() {
     val minter = FossFi.fromAddress(address(FI_ADDRESS));
 
     minter.sendApproveUpgrade(admin.address, { bounce: true });
+
+    println("now update the code hash of upgraded contract in frontend for boc decoding");
 }

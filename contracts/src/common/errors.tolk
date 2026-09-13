@@ -57,4 +57,5 @@ enum Errors {
     AccountInDebt = 761
     HasActiveVotes = 762
     CreditNotMatured = 763
+    PersonalJettonNotRegistered = 764
 }

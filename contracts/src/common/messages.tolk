@@ -419,15 +419,11 @@ struct (0x00001149) ActSetPersonalJetton {
     personalJettonWallet: address
 }
 
-struct (0x0000114a) SetCreditNeed {
+struct (0x0000114a) SetLoanRequirement {
     queryId: uint64 = 0
-    amount: coins
-    maturityDate: uint32 = 0
-}
-
-struct (0x0000114c) SetMultiplier {
-    queryId: uint64 = 0
-    multiplier: uint16
+    amount: coins? = null
+    maturityDate: uint32? = null
+    multiplier: uint16? = null
 }
 
 struct (0x0000114b) RepayDebt {

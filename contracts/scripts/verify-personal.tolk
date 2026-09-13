@@ -107,14 +107,15 @@ fun main() {
         println("VERIFY_FAIL: trusted personal mismatch");
     }
 
-    // Set issuer's credit need with a future maturity date
+    // Set issuer's loan requirement with a future maturity date
     val setCreditRes = FossFiWallet
         .fromAddress(issuerWallet)
-        .sendSetCreditNeed(
+        .sendSetLoanRequirement(
             issuerOwner,
             0,
             ton("1000"),
             1_800_000_000 + 86400,
+            null,
             { value: ton("0.1") },
         );
     setCreditRes.waitForFirstTransaction();

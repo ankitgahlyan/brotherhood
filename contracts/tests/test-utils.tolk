@@ -245,6 +245,28 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
     return (wallet, owner, minter, outsider);
 }
 
+fun setupDirectWalletWithPersonal(initialBalance: coins = 0): (
+    FossFiWallet,
+    Treasury,
+    Treasury,
+    Treasury,
+) {
+    val (wallet, owner, minter, outsider) = setupDirectWallet(initialBalance);
+    val personalMinter = testing.treasury("direct-wallet-personal-minter");
+    val personalWallet = testing.treasury("direct-wallet-personal-wallet");
+    val setPtTx = wallet.sendActSetPersonalJetton(
+        owner.address,
+        personalMinter.address,
+        personalWallet.address,
+        { value: ton("0.1") },
+    );
+    expect(setPtTx).toHaveSuccessfulTx<ActSetPersonalJetton>({
+        from: owner.address,
+        to: wallet.address,
+    });
+    return (wallet, owner, minter, outsider);
+}
+
 fun findSendResultForAccount(res: SendResultList, account: address): SendResult? {
     var i = 0;
     while (i < res.size()) {
