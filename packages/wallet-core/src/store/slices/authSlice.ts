@@ -12,12 +12,53 @@ import { createComponentLogger } from '../../utils/logger';
 // Create logger for auth slice
 const log = createComponentLogger('AuthSlice');
 
+export const SESSION_PASSWORD_KEY = 'brotherhood_session_password';
+
+export function getSessionPassword(): string | undefined {
+  try {
+    const storage =
+      typeof window !== 'undefined' && window.sessionStorage
+        ? window.sessionStorage
+        : typeof globalThis !== 'undefined' &&
+            (globalThis as any).sessionStorage
+          ? (globalThis as any).sessionStorage
+          : undefined;
+    if (storage) {
+      return storage.getItem(SESSION_PASSWORD_KEY) || undefined;
+    }
+  } catch {
+    // ignore sessionStorage access errors
+  }
+  return undefined;
+}
+
+export function setSessionPassword(password: string | undefined): void {
+  try {
+    const storage =
+      typeof window !== 'undefined' && window.sessionStorage
+        ? window.sessionStorage
+        : typeof globalThis !== 'undefined' &&
+            (globalThis as any).sessionStorage
+          ? (globalThis as any).sessionStorage
+          : undefined;
+    if (storage) {
+      if (password) {
+        storage.setItem(SESSION_PASSWORD_KEY, password);
+      } else {
+        storage.removeItem(SESSION_PASSWORD_KEY);
+      }
+    }
+  } catch {
+    // ignore sessionStorage access errors
+  }
+}
+
 export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   // Initial state
   auth: {
     isPasswordSet: false,
     isUnlocked: false,
-    currentPassword: undefined,
+    currentPassword: getSessionPassword(),
     passwordHash: undefined,
     persistPassword: false,
     holdToSign: true, // Default to true for better security
@@ -36,6 +77,8 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       );
 
       const passwordHash = Array.from(new Uint8Array(passwordHashBuffer));
+
+      setSessionPassword(password);
 
       set((state) => {
         state.auth.isPasswordSet = true;
@@ -66,6 +109,7 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       );
 
       if (isValid) {
+        setSessionPassword(password);
         set((state) => {
           state.auth.isUnlocked = true;
           state.auth.currentPassword = password;
@@ -81,7 +125,7 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   },
 
   lock: () => {
-    // const state = get();
+    setSessionPassword(undefined);
     set((state) => {
       state.auth.isUnlocked = false;
       state.auth.currentPassword = undefined;
@@ -89,6 +133,7 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   },
 
   reset: () => {
+    setSessionPassword(undefined);
     const state = get();
 
     // Clear WalletKit internal storage (wallets + sessions)

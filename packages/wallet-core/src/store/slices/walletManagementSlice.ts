@@ -94,7 +94,18 @@ export const createWalletManagementSlice =
             continue;
           }
 
-          await walletKit.addWallet(walletAdapter);
+          const loadedWallet = await walletKit.addWallet(walletAdapter);
+          if (loadedWallet) {
+            const newKitWalletId = loadedWallet.getWalletId();
+            if (newKitWalletId && newKitWalletId !== savedWallet.kitWalletId) {
+              set((state) => {
+                const sw = state.walletManagement.savedWallets.find(
+                  (w) => w.id === savedWallet.id,
+                );
+                if (sw) sw.kitWalletId = newKitWalletId;
+              });
+            }
+          }
           log.info(
             `Loaded wallet ${savedWallet.name} (${savedWallet.address})`,
           );
@@ -323,9 +334,6 @@ export const createWalletManagementSlice =
 
     switchWallet: async (walletId: string) => {
       const state = get();
-      if (!state.auth.currentPassword) {
-        throw new Error('User not authenticated');
-      }
 
       if (!state.walletCore.walletKit) {
         throw new Error('WalletKit not initialized');
@@ -358,7 +366,35 @@ export const createWalletManagementSlice =
           ? state.walletCore.walletKit.getWallet(savedWallet.kitWalletId)
           : undefined;
 
+        // Fallback: check if the wallet was already registered under a matching address
+        if (!wallet && savedWallet.address) {
+          const loadedWallets = state.walletCore.walletKit.getWallets();
+          wallet = loadedWallets.find((w) => {
+            try {
+              return compareAddress(w.getAddress(), savedWallet.address);
+            } catch {
+              return w.getAddress() === savedWallet.address;
+            }
+          });
+          if (wallet) {
+            const matchedKitWalletId = wallet.getWalletId();
+            if (matchedKitWalletId !== savedWallet.kitWalletId) {
+              set((state) => {
+                const sw = state.walletManagement.savedWallets.find(
+                  (w) => w.id === walletId,
+                );
+                if (sw) sw.kitWalletId = matchedKitWalletId;
+              });
+            }
+          }
+        }
+
+        // Wallet is not in WalletKit yet — decrypt mnemonic and create adapter
         if (!wallet) {
+          if (!state.auth.currentPassword) {
+            throw new Error('User not authenticated');
+          }
+
           const walletAdapter = await state.createAdapterFromSavedWallet(
             state.walletCore.walletKit,
             savedWallet,
@@ -444,7 +480,9 @@ export const createWalletManagementSlice =
         log.info(`Switched to wallet ${walletId} successfully`);
       } catch (error) {
         log.error('Error switching wallet:', error);
-        throw new Error('Failed to switch wallet');
+        throw error instanceof Error
+          ? error
+          : new Error('Failed to switch wallet');
       }
     },
 
@@ -519,19 +557,17 @@ export const createWalletManagementSlice =
     },
 
     loadAllWallets: async () => {
-      let state = get();
+      const state = get();
       if (!state.auth.currentPassword) {
-        throw new Error('User not authenticated');
-      }
-
-      state = get();
-
-      if (!state.auth.currentPassword) {
-        throw new Error('User not authenticated');
+        log.info(
+          'Skipping loadAllWallets: session password not set or user not authenticated',
+        );
+        return;
       }
 
       if (!state.walletCore.walletKit) {
-        throw new Error('WalletKit not initialized');
+        log.info('Skipping loadAllWallets: WalletKit not initialized');
+        return;
       }
 
       try {
@@ -541,9 +577,31 @@ export const createWalletManagementSlice =
 
         for (const savedWallet of state.walletManagement.savedWallets) {
           // Check if wallet already loaded using kitWalletId or address fallback
-          const existingWallet = savedWallet.kitWalletId
+          let existingWallet = savedWallet.kitWalletId
             ? state.walletCore.walletKit.getWallet(savedWallet.kitWalletId)
             : undefined;
+
+          if (!existingWallet && savedWallet.address) {
+            const loadedWallets = state.walletCore.walletKit.getWallets();
+            existingWallet = loadedWallets.find((w) => {
+              try {
+                return compareAddress(w.getAddress(), savedWallet.address);
+              } catch {
+                return w.getAddress() === savedWallet.address;
+              }
+            });
+            if (existingWallet) {
+              const matchedKitWalletId = existingWallet.getWalletId();
+              if (matchedKitWalletId !== savedWallet.kitWalletId) {
+                set((state) => {
+                  const sw = state.walletManagement.savedWallets.find(
+                    (w) => w.id === savedWallet.id,
+                  );
+                  if (sw) sw.kitWalletId = matchedKitWalletId;
+                });
+              }
+            }
+          }
 
           if (existingWallet) {
             log.info(`Wallet ${savedWallet.id} already loaded`);
@@ -560,7 +618,19 @@ export const createWalletManagementSlice =
             continue;
           }
 
-          await state.walletCore.walletKit.addWallet(walletAdapter);
+          const loadedWallet =
+            await state.walletCore.walletKit.addWallet(walletAdapter);
+          if (loadedWallet) {
+            const newKitWalletId = loadedWallet.getWalletId();
+            if (newKitWalletId && newKitWalletId !== savedWallet.kitWalletId) {
+              set((state) => {
+                const sw = state.walletManagement.savedWallets.find(
+                  (w) => w.id === savedWallet.id,
+                );
+                if (sw) sw.kitWalletId = newKitWalletId;
+              });
+            }
+          }
         }
 
         // Switch to active wallet — errors here should not block login
@@ -706,7 +776,10 @@ export const createWalletManagementSlice =
       }
 
       const wallet = state.walletManagement.currentWallet;
-      const network = wallet?.getNetwork();
+      const network =
+        typeof wallet?.getNetwork === 'function'
+          ? wallet.getNetwork()
+          : undefined;
       if (!network) return;
 
       const streaming = state.walletCore.walletKit?.streaming;

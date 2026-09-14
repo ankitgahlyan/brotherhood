@@ -11,7 +11,10 @@ import { useNavigate } from '@/core/routing';
 import { Plus } from 'lucide-react';
 import { useWallet } from '@demo/wallet-core';
 
+import { toast } from 'sonner';
+
 import { WalletRow } from '../wallet-row';
+import { WalletUnlockModal } from '../wallet-unlock-modal';
 
 import { Modal } from '@/core/components/ui/modal';
 import { AddWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
@@ -35,16 +38,37 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
   } = useWallet();
   const navigate = useNavigate();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [pendingWalletId, setPendingWalletId] = useState<string | null>(null);
+  const [isUnlockOpen, setIsUnlockOpen] = useState(false);
+
+  const pendingWallet = savedWallets.find((w) => w.id === pendingWalletId);
+
+  const performSwitch = async (walletId: string) => {
+    try {
+      await switchWallet(walletId);
+      toast.success('Switched wallet successfully');
+      onClose();
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Failed to switch wallet';
+      if (
+        msg.includes('User not authenticated') ||
+        msg.includes('Cannot load wallets')
+      ) {
+        setPendingWalletId(walletId);
+        setIsUnlockOpen(true);
+      } else {
+        toast.error(msg);
+      }
+    }
+  };
 
   const handleSelect = async (walletId: string) => {
     if (walletId !== activeWalletId) {
-      try {
-        await switchWallet(walletId);
-      } catch {
-        // ignore — store surfaces errors via its own state
-      }
+      await performSwitch(walletId);
+    } else {
+      onClose();
     }
-    onClose();
   };
 
   // Already authenticated here — go straight to the chosen setup screen, no password step.
@@ -57,7 +81,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
   return (
     <>
       <Modal.Container
-        isOpened={isOpen && !isAddOpen}
+        isOpened={isOpen && !isAddOpen && !isUnlockOpen}
         onOpenChange={(open) => !open && onClose()}
         className="px-2"
       >
@@ -100,6 +124,20 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSelect={handleAddSelect}
+      />
+
+      <WalletUnlockModal
+        isOpen={isUnlockOpen}
+        onClose={() => {
+          setIsUnlockOpen(false);
+          setPendingWalletId(null);
+        }}
+        targetWalletName={pendingWallet?.name}
+        onSuccess={() => {
+          if (pendingWalletId) {
+            void performSwitch(pendingWalletId);
+          }
+        }}
       />
     </>
   );

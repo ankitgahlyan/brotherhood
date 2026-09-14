@@ -59,7 +59,11 @@ export const useTonWallet = (): UseTonWalletReturn => {
       setIsInitialized(true);
 
       // Load existing wallet if available
-      if (walletStore.hasWallet && authStore.isUnlocked) {
+      if (
+        walletStore.hasWallet &&
+        authStore.isUnlocked &&
+        authStore.currentPassword
+      ) {
         await walletStore.loadAllWallets();
       }
     } catch (err) {
@@ -67,7 +71,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
       setError(errorMessage);
       log.error('Error initializing TON wallet:', err);
     }
-  }, [walletStore, authStore.isUnlocked]);
+  }, [walletStore, authStore.isUnlocked, authStore.currentPassword]);
 
   const createNewWallet = useCallback(async (): Promise<string[]> => {
     if (!tonKit) throw new Error('TON Kit not initialized');

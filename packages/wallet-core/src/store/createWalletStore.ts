@@ -15,7 +15,7 @@ import {
 } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { createAuthSlice } from './slices/authSlice';
+import { createAuthSlice, getSessionPassword } from './slices/authSlice';
 import { createWalletCoreSlice } from './slices/walletCoreSlice';
 import { createWalletManagementSlice } from './slices/walletManagementSlice';
 import { createTonConnectSlice } from './slices/tonConnectSlice';
@@ -224,15 +224,25 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   w.id === persisted?.walletManagement?.activeWalletId,
               );
 
+              const sessionPassword = getSessionPassword();
+              const effectivePassword =
+                (persisted?.auth?.persistPassword
+                  ? persisted?.auth?.currentPassword
+                  : undefined) ||
+                sessionPassword ||
+                currentState?.auth?.currentPassword;
+
+              const isUnlocked = Boolean(
+                persisted?.auth?.isPasswordSet && effectivePassword,
+              );
+
               const merged = {
                 ...currentState,
                 auth: {
                   ...currentState.auth,
                   ...persisted?.auth,
-                  isUnlocked:
-                    persisted?.auth?.persistPassword &&
-                    persisted?.auth?.currentPassword &&
-                    persisted?.auth?.isPasswordSet,
+                  currentPassword: effectivePassword,
+                  isUnlocked,
                 },
                 walletManagement: {
                   ...currentState.walletManagement,
