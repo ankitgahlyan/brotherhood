@@ -271,9 +271,15 @@ function getOrCreateHydratorWorker(): Worker | null {
       };
       workerInstance.onerror = (err) => {
         console.warn(
-          '[HydratorWorker] Worker error, falling back in-process:',
+          '[HydratorWorker] Worker fatal error, resetting worker instance and falling back in-process:',
           err,
         );
+        try {
+          workerInstance?.terminate();
+        } catch {
+          // ignore
+        }
+        workerInstance = null;
         // Clean up pending callbacks with empty result to trigger fallback
         for (const [id, cb] of workerPendingCallbacks.entries()) {
           workerPendingCallbacks.delete(id);

@@ -20,8 +20,8 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-cache';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'a3PTMdb7/Schs/oj3KAVK3eUUm0rSRinFX8fsuWKr4Y=',
-  fiMinter: 'nv5ymWY8+YfroE7kKY52DJHm1iE182LA/yf2mLx/Iig=',
+  fiWallet: 'xm9BXDJq3MF9/BqeILEYO9FHehaXosty40NSAci3b1w=',
+  fiMinter: 'HIAis4i6tJuEdZ16fNKuxoS+CiBvf33Pc+4kDOt/2kU=',
   personalMinter: 'Tvog65zMpvpaesj09SsYeyJLFVlYCG802aUZ+AqpIZs=',
   personalWallet: 'j6cSSA6AECyBf/Qb2UvajkByeAvdrNk9O9cRhkKEW4A=',
   location: 'xB9hKP2yNL+B4skAr4q26SlNqHXwsva1XFn8Ib3MjkU=',
@@ -214,7 +214,16 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
   const outdatedAccounts: string[] = [];
   const failedAddresses: string[] = [];
 
+  if (!accounts || !Array.isArray(accounts)) {
+    return {
+      serializedStores,
+      outdatedAccounts,
+      failedAddresses,
+    };
+  }
+
   for (const item of accounts) {
+    if (!item || !item.address) continue;
     const addr = item.address;
     if (item.status !== 'active' || !item.data_boc) {
       failedAddresses.push(addr);
@@ -235,32 +244,36 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
     let decodedStore: any = null;
     const dataBoc = item.data_boc;
 
-    if (detectedType === 'location') {
-      decodedStore = deserializeLocationDataBoc(dataBoc);
-    } else if (detectedType === 'personalMinter') {
-      decodedStore = deserializePersonalStoreDataBoc(dataBoc);
-    } else if (detectedType === 'personalWallet') {
-      decodedStore = deserializePersonalWalletDataBoc(dataBoc);
-    } else if (detectedType === 'lottery') {
-      decodedStore = deserializeLotteryDataBoc(dataBoc);
-    } else if (detectedType === 'poll') {
-      decodedStore = deserializePollDataBoc(dataBoc);
-    } else if (detectedType === 'fiMinter') {
-      decodedStore = deserializeFiMinterDataBoc(dataBoc);
-    } else if (detectedType === 'fiWallet') {
-      decodedStore = deserializeFiWalletDataBoc(dataBoc);
-    } else if (detectedType === 'walletV5R1') {
-      decodedStore = deserializeWalletV5R1DataBoc(dataBoc);
-    } else {
-      decodedStore =
-        deserializeFiWalletDataBoc(dataBoc) ||
-        deserializeLocationDataBoc(dataBoc) ||
-        deserializePersonalStoreDataBoc(dataBoc) ||
-        deserializePersonalWalletDataBoc(dataBoc) ||
-        deserializeLotteryDataBoc(dataBoc) ||
-        deserializePollDataBoc(dataBoc) ||
-        deserializeFiMinterDataBoc(dataBoc) ||
-        deserializeWalletV5R1DataBoc(dataBoc);
+    try {
+      if (detectedType === 'location') {
+        decodedStore = deserializeLocationDataBoc(dataBoc);
+      } else if (detectedType === 'personalMinter') {
+        decodedStore = deserializePersonalStoreDataBoc(dataBoc);
+      } else if (detectedType === 'personalWallet') {
+        decodedStore = deserializePersonalWalletDataBoc(dataBoc);
+      } else if (detectedType === 'lottery') {
+        decodedStore = deserializeLotteryDataBoc(dataBoc);
+      } else if (detectedType === 'poll') {
+        decodedStore = deserializePollDataBoc(dataBoc);
+      } else if (detectedType === 'fiMinter') {
+        decodedStore = deserializeFiMinterDataBoc(dataBoc);
+      } else if (detectedType === 'fiWallet') {
+        decodedStore = deserializeFiWalletDataBoc(dataBoc);
+      } else if (detectedType === 'walletV5R1') {
+        decodedStore = deserializeWalletV5R1DataBoc(dataBoc);
+      } else {
+        decodedStore =
+          deserializeFiWalletDataBoc(dataBoc) ||
+          deserializeLocationDataBoc(dataBoc) ||
+          deserializePersonalStoreDataBoc(dataBoc) ||
+          deserializePersonalWalletDataBoc(dataBoc) ||
+          deserializeLotteryDataBoc(dataBoc) ||
+          deserializePollDataBoc(dataBoc) ||
+          deserializeFiMinterDataBoc(dataBoc) ||
+          deserializeWalletV5R1DataBoc(dataBoc);
+      }
+    } catch {
+      decodedStore = null;
     }
 
     if (!decodedStore) {
@@ -295,12 +308,29 @@ if (
   typeof (self as any).postMessage === 'function'
 ) {
   self.onmessage = (event: MessageEvent<WorkerHydrateRequest>) => {
-    const { id, accounts } = event.data;
-    const result = processAccountItems(accounts);
-    const response: WorkerHydrateResponse = {
-      id,
-      ...result,
-    };
-    (self as any).postMessage(response);
+    try {
+      if (!event.data || typeof event.data !== 'object') return;
+      const { id, accounts } = event.data;
+      if (!id) return;
+
+      const result = processAccountItems(accounts);
+      const response: WorkerHydrateResponse = {
+        id,
+        ...result,
+      };
+      (self as any).postMessage(response);
+    } catch (err) {
+      const fallbackId = event.data?.id || `err_${Date.now()}`;
+      try {
+        (self as any).postMessage({
+          id: fallbackId,
+          serializedStores: {},
+          outdatedAccounts: [],
+          failedAddresses: [],
+        } satisfies WorkerHydrateResponse);
+      } catch {
+        // Suppress message failure
+      }
+    }
   };
 }
