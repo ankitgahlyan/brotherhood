@@ -1641,3 +1641,13 @@ get fun get_followers_count(): uint32 {
     val social = lazy maps.social.load();
     return social.followersCount;
 }
+
+get fun get_allowance(grantee: address): coins {
+    val store = lazy FiWalletStore.load();
+    val maps = lazy store.maps.load();
+    val granted = maps.allowances.get(grantee);
+    if (!granted.isFound) {
+        return 0;
+    }
+    return granted.loadValue();
+}
