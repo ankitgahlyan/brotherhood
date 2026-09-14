@@ -10,6 +10,7 @@ import { Base64ToHex } from '@ton/walletkit';
 import type { Action, Event } from '@ton/walletkit';
 
 import { formatLargeValue, formatUnits, sameAddress } from '@/core/utils';
+import { KNOWN_OPCODES } from '@/core/utils/payload';
 import { getExplorerTxUrl, type ExplorerChoice } from '@/core/explorer';
 import type { NetworkType } from '@demo/wallet-core';
 
@@ -29,10 +30,12 @@ export interface TransactionRowModel {
   network?: ExplorerNetwork;
   /** Default explorer transaction URL. Undefined for not-yet-on-chain pending transactions. */
   explorerUrl?: string;
-  /** Primary label, e.g. "Sent 5 GRAM" / "Received 1 USDT". */
+  /** Primary label: Action Name (e.g. "Sent GRAM", "Spend Allowance", "Mint New Jettons"). */
   title: string;
-  /** Truncated trace id shown as the subtitle. */
+  /** Secondary label: transfer summary / trace id. */
   subtitleId: string;
+  /** Decoded failure reason if transaction failed. */
+  failureReason?: string;
   /** Signed crypto amount, e.g. "+5 GRAM" / "-1 USDT". */
   amount: string;
   /** Outgoing transfers are red, incoming are green. */
@@ -54,6 +57,104 @@ interface PendingLike {
 const GRAM_DECIMALS = 9;
 /** Cap on fractional digits shown for amounts (matches the appkit widget formatter). */
 const AMOUNT_DECIMALS = 4;
+
+/** Common TVM and contract exit codes. */
+export const TVM_EXIT_CODES: Record<number, string> = {
+  // Standard TVM Exceptions
+  0: 'Success',
+  1: 'Alternative Success',
+  2: 'Stack Underflow',
+  3: 'Stack Overflow',
+  4: 'Integer Overflow',
+  5: 'Integer Out of Range',
+  6: 'Invalid Opcode',
+  7: 'Type Check Error',
+  8: 'Cell Overflow',
+  9: 'Cell Underflow',
+  10: 'Dictionary Error',
+  11: 'Unknown Error',
+  13: 'Out of Gas',
+  // Common Contract Errors
+  47: 'Balance Error',
+  48: 'Not Enough Gas',
+  49: 'Invalid Message',
+  72: 'Invalid Op',
+  73: 'Not Owner',
+  74: 'Not Valid Wallet',
+  333: 'Wrong Workchain',
+  404: 'Not Found',
+  // Brotherhood Specific Errors
+  700: 'Incorrect Sender',
+  701: 'Account Terminated',
+  702: 'Account Inactive',
+  703: 'Insufficient Gas Sent',
+  704: 'Reserved Internal',
+  706: 'No Pending Request',
+  707: 'Cannot Unfollow Reported',
+  708: 'Incorrect Receiver',
+  709: 'Insufficient Balance',
+  710: 'Already Reported',
+  711: 'Account Not Reported',
+  719: 'Connection Exists',
+  720: 'Not Friend',
+  721: 'Not Invitor',
+  723: 'Already Invited',
+  724: 'Unauthorized Burn',
+  730: 'Mint Closed',
+  731: 'No Votes Available',
+  732: 'Not Voted Yet',
+  733: 'Upgrade Required',
+  734: 'Version Mismatch',
+  735: 'Wait More',
+  736: 'Not Close Friend',
+  737: 'Already Vouched',
+  738: 'Provide Coordinates',
+  739: 'Invalid Forward Payload',
+  740: 'Invite First',
+  741: 'Already Reported For Other Reason',
+  750: 'Proposal Already Active',
+  751: 'Proposal Not Found',
+  752: 'Proposal Pending Accounts',
+  753: 'Proposal Already Executed',
+  754: 'Proposal Expired',
+  755: 'Already Voted',
+  756: 'Proposal Fee Insufficient',
+  757: 'Duplicate Vote',
+  758: 'Invalid DAO Voter',
+  759: 'Country Mismatch',
+  760: 'Credit Need Exceeded',
+  761: 'Account In Debt',
+  762: 'Has Active Votes',
+  763: 'Credit Not Matured',
+  764: 'Personal Jetton Not Registered',
+};
+
+export function decodeExitCode(code: number): string {
+  const name = TVM_EXIT_CODES[code];
+  return name ? `${name} (exit ${code})` : `Exit ${code}`;
+}
+
+/** Extracts the failure exit code from transaction compute phase if available. */
+function extractFailureReason(event: Event): string | undefined {
+  if (!event.transactions) return undefined;
+  for (const tx of Object.values(event.transactions)) {
+    const computePh = tx.description?.compute_ph;
+    if (computePh) {
+      if (
+        !computePh.success &&
+        computePh.exit_code !== undefined &&
+        computePh.exit_code !== 0
+      ) {
+        return decodeExitCode(computePh.exit_code);
+      }
+    }
+    const actionPh = tx.description?.action;
+    if (actionPh && !actionPh.success && actionPh.result_code !== 0) {
+      return `Action Failed (code ${actionPh.result_code})`;
+    }
+  }
+  return undefined;
+}
 
 /** Raw amount (nanoton / jetton base units) -> compact human string, e.g. "1M" / "1,234.5". */
 const formatAmount = (raw: bigint | string, decimals: number): string =>
@@ -91,26 +192,85 @@ const isOutgoingFromAction = (action: Action, myAddress: string): boolean => {
   );
 };
 
-/** Title + bare value (no sign) for an action, derived from the typed amount fields. */
+/** Action name + transfer detail + value (no sign), derived from the typed action fields. */
 const describeAction = (
   action: Action,
   isOutgoing: boolean,
-): { title: string; value: string } => {
+): { actionName: string; transferDetail: string; value: string } => {
   const label = isOutgoing ? 'Sent' : 'Received';
 
   if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
     const value = `${formatAmount(action.TonTransfer.amount, GRAM_DECIMALS)} GRAM`;
-    return { title: `${label} ${value}`, value };
+    const comment = action.TonTransfer.comment?.trim();
+    return {
+      actionName: comment
+        ? `Comment: “${comment}”`
+        : isOutgoing
+          ? 'Sent GRAM'
+          : 'Received GRAM',
+      transferDetail: `${label} ${value}`,
+      value,
+    };
   }
+
   if (action.type === 'JettonTransfer' && 'JettonTransfer' in action) {
-    const { amount, jetton } = action.JettonTransfer;
+    const { amount, jetton, comment } = action.JettonTransfer;
     const value =
       `${formatAmount(amount, jetton.decimals)} ${jetton.symbol}`.trim();
-    return { title: `${label} ${value}`, value };
+    return {
+      actionName: comment
+        ? `Jetton Transfer: “${comment}”`
+        : `${jetton.symbol} Transfer`,
+      transferDetail: `${label} ${value}`,
+      value,
+    };
   }
+
+  if (action.type === 'SmartContractExec' && 'SmartContractExec' in action) {
+    const op = action.SmartContractExec.operation;
+    const opNumber = Number(op);
+    const decodedName =
+      !Number.isNaN(opNumber) && KNOWN_OPCODES[opNumber]
+        ? KNOWN_OPCODES[opNumber]
+        : op
+          ? `Contract Call (${op})`
+          : 'Smart Contract Call';
+    const val =
+      action.SmartContractExec.tonAttached > 0n
+        ? `${formatAmount(action.SmartContractExec.tonAttached, GRAM_DECIMALS)} GRAM`
+        : '';
+    return {
+      actionName: decodedName,
+      transferDetail: val
+        ? `${label} ${val}`
+        : action.simplePreview.description,
+      value: val,
+    };
+  }
+
+  if (action.type === 'ContractDeploy') {
+    return {
+      actionName: 'Deploy Contract',
+      transferDetail: action.simplePreview.description || 'Deploy Contract',
+      value: action.simplePreview.value || '',
+    };
+  }
+
+  if (action.type === 'JettonSwap') {
+    return {
+      actionName: 'Swap Jettons',
+      transferDetail: action.simplePreview.description || 'Swap',
+      value: action.simplePreview.value || '',
+    };
+  }
+
   // Other action types (swap, nft, contract): fall back to the API preview text.
   return {
-    title: action.simplePreview.description,
+    actionName:
+      action.simplePreview.name ||
+      action.simplePreview.description ||
+      'Transaction',
+    transferDetail: action.simplePreview.description,
     value: action.simplePreview.value,
   };
 };
@@ -142,21 +302,30 @@ export const mapEventToRow = (
   if (!event.actions || event.actions.length === 0) return null;
   const action = selectRelevantAction(event.actions, myAddress);
   const isOutgoing = isOutgoingFromAction(action, myAddress);
-  const { title, value } = describeAction(action, isOutgoing);
+  const { actionName, transferDetail, value } = describeAction(
+    action,
+    isOutgoing,
+  );
   const eventId = String(event.eventId);
   const hash =
     eventId ||
     (event.traceExternalHash ? Base64ToHex(event.traceExternalHash) : '');
+  const isFailed = action.status === 'failure';
+  const failureReason = isFailed
+    ? (extractFailureReason(event) ?? 'Transaction Failed')
+    : undefined;
+
   return {
     id: eventId,
     txHash: hash,
     network,
     explorerUrl: getExplorerTxUrl(network, hash, explorer),
-    title,
-    subtitleId: truncateMiddle(eventId),
+    title: actionName,
+    subtitleId: transferDetail || truncateMiddle(eventId),
+    failureReason,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
-    status: action.status === 'failure' ? 'failed' : 'success',
+    status: isFailed ? 'failed' : 'success',
     date: formatTxDate(event.timestamp),
   };
 };
@@ -198,10 +367,14 @@ export const mapPendingToRow = (
 
   if (pending.action) {
     const isOutgoing = isOutgoingFromAction(pending.action, myAddress);
-    const { title, value } = describeAction(pending.action, isOutgoing);
+    const { actionName, transferDetail, value } = describeAction(
+      pending.action,
+      isOutgoing,
+    );
     return {
       ...base,
-      title,
+      title: actionName,
+      subtitleId: transferDetail || truncateMiddle(pending.traceId),
       amount: signedAmount(value, isOutgoing),
       isOutgoing,
     };
@@ -211,12 +384,14 @@ export const mapPendingToRow = (
   const value = pending.preview
     ? `${formatAmount(pending.preview.amount, GRAM_DECIMALS)} GRAM`
     : '';
-  const title = pending.preview
+  const title = isOutgoing ? 'Sent GRAM' : 'Received GRAM';
+  const transferDetail = pending.preview
     ? `${isOutgoing ? 'Sent' : 'Received'} ${value}`
     : 'Processing';
   return {
     ...base,
     title,
+    subtitleId: transferDetail,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
   };

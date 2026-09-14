@@ -50,6 +50,7 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
   explorerUrl,
   title,
   subtitleId,
+  failureReason,
   amount,
   isOutgoing,
   status,
@@ -115,9 +116,15 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
         <div className="text-sm font-semibold text-foreground truncate">
           {title}
         </div>
-        <div className="text-xs text-muted-foreground truncate">
-          {subtitleId}
-        </div>
+        {status === 'failed' && failureReason ? (
+          <div className="text-xs text-red-500 font-medium truncate">
+            {failureReason}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground truncate">
+            {subtitleId}
+          </div>
+        )}
       </div>
 
       <div className="text-right flex-shrink-0">

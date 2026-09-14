@@ -344,8 +344,10 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
           <FormattedValue value={decodedGetter.data} />
         ) : activeMode === 'clean' && cleanPayload ? (
           <FormattedValue value={cleanPayload} />
+        ) : parsedJson !== null ? (
+          <FormattedValue value={parsedJson} />
         ) : (
-          <pre className="whitespace-pre-wrap break-all text-foreground font-mono">
+          <pre className="whitespace-pre-wrap break-all text-foreground font-mono leading-relaxed">
             {payload}
           </pre>
         )}

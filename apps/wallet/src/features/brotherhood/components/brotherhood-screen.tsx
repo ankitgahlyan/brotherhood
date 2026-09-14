@@ -19,6 +19,7 @@ import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
+import { Modal } from '@/core/components/ui/modal';
 import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
@@ -50,6 +51,7 @@ import { useGoldTransfer } from '../hooks/use-gold-transfer';
 import { useProfile } from '../hooks/use-profile';
 import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
+import { usePushUpgrade } from '../hooks/use-push-upgrade';
 import { NetworkTab } from './network';
 import {
   CircleCreditList,
@@ -195,6 +197,10 @@ export const BrotherhoodScreen: React.FC = () => {
   const [authoritySubTab, setAuthoritySubTab] = useState<
     'status' | 'close' | 'sanction'
   >('status');
+
+  // Push Upgrade to Any Address Tool
+  const [isPushUpgradeOpen, setIsPushUpgradeOpen] = useState(false);
+  const [pushUpgradeTarget, setPushUpgradeTarget] = useState('');
 
   // FiAccount hook
   const account = useFiAccount(address ?? null);
@@ -496,6 +502,11 @@ export const BrotherhoodScreen: React.FC = () => {
     minterVersion,
   });
 
+  const pushUpgrade = usePushUpgrade({
+    wallet: currentWallet,
+    walletKit,
+  });
+
   const isAuthority = account.data?.isAuthorityAccount ?? false;
   const memberCountry = getCountryByCode(account.data?.country);
 
@@ -551,39 +562,6 @@ export const BrotherhoodScreen: React.FC = () => {
       <div className="space-y-4">
         {/* Activation & Status Banner */}
         <ActivationBanner />
-
-        {/* Contract Upgrade Alert Banner */}
-        {upgrade.hasUpgradeAvailable && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex justify-between items-center gap-3">
-            <div>
-              <span className="font-semibold flex items-center gap-1.5">
-                <span>⚡ Contract Upgrade Available</span>
-              </span>
-              <span className="text-[11px] text-muted-foreground block mt-0.5">
-                Your wallet is on{' '}
-                <span className="font-semibold text-foreground">
-                  v{upgrade.walletVersion}
-                </span>
-                . Latest minter version is{' '}
-                <span className="font-semibold text-foreground">
-                  v{upgrade.minterVersion}
-                </span>
-                .
-              </span>
-            </div>
-            <Button
-              size="sm"
-              variant="primary"
-              className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
-              onClick={() => upgrade.send()}
-              disabled={upgrade.isDisabled}
-              loading={upgrade.isSending}
-              data-testid="brotherhood-upgrade-submit"
-            >
-              Upgrade to v{upgrade.minterVersion}
-            </Button>
-          </div>
-        )}
 
         {account.data && account.data.debts && (
           <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex justify-between items-center">
@@ -858,7 +836,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     <span className="text-muted-foreground">
                       Contract Version
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       <span className="text-foreground font-medium text-[11px]">
                         v{account.data.version} (Minter: v
                         {minterVersion ?? '...'})
@@ -879,6 +857,14 @@ export const BrotherhoodScreen: React.FC = () => {
                           ✓ Up to date
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setIsPushUpgradeOpen(true)}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition cursor-pointer"
+                        title="Push latest contract upgrade code to any target wallet"
+                      >
+                        Push Upgrade ↗
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -3174,6 +3160,46 @@ export const BrotherhoodScreen: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Push Upgrade Modal */}
+        <Modal.Container
+          isOpened={isPushUpgradeOpen}
+          onOpenChange={setIsPushUpgradeOpen}
+        >
+          <Modal.Header
+            title="Push Upgrade to Address"
+            onClose={() => setIsPushUpgradeOpen(false)}
+          />
+          <Modal.Body className="space-y-3 text-xs">
+            <p className="text-muted-foreground">
+              Send the latest wallet bytecode and version from Minter directly
+              to any target wallet address. This upgrades the target&apos;s
+              FiWallet on-chain without requiring them to trigger it.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-muted-foreground block font-medium">
+                Target Wallet Address (or FiWallet Address)
+              </label>
+              <InputScan
+                value={pushUpgradeTarget}
+                onChange={setPushUpgradeTarget}
+                placeholder="UQ... or 0Q... or EQ..."
+              />
+            </div>
+            <Button
+              onClick={async () => {
+                await pushUpgrade.sendPushUpgrade(pushUpgradeTarget);
+                setIsPushUpgradeOpen(false);
+                setPushUpgradeTarget('');
+              }}
+              disabled={!pushUpgradeTarget.trim() || pushUpgrade.isSending}
+              loading={pushUpgrade.isSending}
+              fullWidth
+            >
+              Push Upgrade
+            </Button>
+          </Modal.Body>
+        </Modal.Container>
       </div>
     </NewLayout>
   );

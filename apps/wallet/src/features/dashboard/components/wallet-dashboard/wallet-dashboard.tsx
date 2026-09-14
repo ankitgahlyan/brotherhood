@@ -13,6 +13,7 @@ import { DashboardActions } from '../dashboard-actions';
 import { DashboardAssets } from '../dashboard-assets';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { TransactionHistory } from '@/features/transactions';
+import { UpgradeBanner } from '@/features/brotherhood';
 import { useTonWallet } from '@/core/hooks';
 
 export const WalletDashboard: React.FC = () => {
@@ -26,6 +27,7 @@ export const WalletDashboard: React.FC = () => {
     <NewLayout header={<DashboardHeader />}>
       <div className="space-y-4">
         <BalanceTotal />
+        <UpgradeBanner />
         <DashboardActions />
         <DashboardAssets />
         {/* /<NftsCard /> */}

@@ -10,6 +10,9 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
+/** Global module-level cache of successfully loaded image URLs to prevent remount flicker. */
+const LOADED_IMAGE_URLS = new Set<string>();
+
 const toList = (src: string | string[] | undefined): string[] =>
   (Array.isArray(src) ? src : src ? [src] : []).filter((url): url is string =>
     Boolean(url),
@@ -25,19 +28,31 @@ const useImageStatus = (src: string | undefined): ImageStatus => {
   }, []);
 
   const resolve = useCallback((): ImageStatus => {
+    if (!src) return 'idle';
+    if (LOADED_IMAGE_URLS.has(src)) return 'loaded';
     const image = getImage();
-    if (!image || !src) return 'idle';
+    if (!image) return 'idle';
     if (image.src !== src) image.src = src;
-    return image.complete && image.naturalWidth > 0 ? 'loaded' : 'loading';
+    if (image.complete && image.naturalWidth > 0) {
+      LOADED_IMAGE_URLS.add(src);
+      return 'loaded';
+    }
+    return 'loading';
   }, [getImage, src]);
 
   const [status, setStatus] = useState<ImageStatus>(resolve);
 
   useLayoutEffect(() => {
-    setStatus(resolve());
+    const currentStatus = resolve();
+    setStatus(currentStatus);
+    if (currentStatus === 'loaded') return;
+
     const image = getImage();
-    if (!image) return;
-    const onLoad = () => setStatus('loaded');
+    if (!image || !src) return;
+    const onLoad = () => {
+      LOADED_IMAGE_URLS.add(src);
+      setStatus('loaded');
+    };
     const onError = () => setStatus('error');
     image.addEventListener('load', onLoad);
     image.addEventListener('error', onError);
@@ -45,7 +60,7 @@ const useImageStatus = (src: string | undefined): ImageStatus => {
       image.removeEventListener('load', onLoad);
       image.removeEventListener('error', onError);
     };
-  }, [getImage, resolve]);
+  }, [getImage, resolve, src]);
 
   return status;
 };

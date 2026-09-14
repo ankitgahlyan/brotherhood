@@ -10,18 +10,23 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet } from '@demo/wallet-core';
 import { Address } from '@ton/core';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Search, X } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
-import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
+import {
+  useFormatAddress,
+  formatTonAddress,
+  sameAddress,
+} from '@/core/utils/formatters';
 import { getH3ViewerUrl } from '@/core/utils/h3';
 import { openTelegramProfile } from '@/core/utils/telegram';
 import { MemberGuard, ActivationBanner } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { useMemberProfiles } from '@/features/brotherhood/hooks/use-member-profiles';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 import { useLocationByH3Cell } from '../hooks/use-cities';
@@ -43,6 +48,9 @@ export const CityNetworkScreen: React.FC = () => {
   // Verify Member Tool
   const [verifyLocationAddr, setVerifyLocationAddr] = useState('');
   const [targetMember, setTargetMember] = useState('');
+
+  // Member Search Query
+  const [memberSearch, setMemberSearch] = useState('');
 
   // Prefill H3 cell with connected wallet's cell once loaded
   useEffect(() => {
@@ -67,10 +75,56 @@ export const CityNetworkScreen: React.FC = () => {
     targetMember,
   );
 
-  // Member profiles hydration
+  // Member profiles hydration: Location stores member owner addresses.
+  // Derive both owner and deterministic FiWallet contract addresses so profiles are resolved.
   const rawMembers = locationByH3Query.data?.members || [];
-  const memberProfilesQuery = useMemberProfiles(rawMembers, network);
+  const memberLookupAddresses = useMemo(() => {
+    const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+    const list: string[] = [];
+    for (const m of rawMembers) {
+      list.push(m);
+      try {
+        const fiAddr = getFiWalletAddress(Address.parse(m), net);
+        list.push(fiAddr.toString());
+      } catch {
+        /* ignore derivation error */
+      }
+    }
+    return list;
+  }, [rawMembers, network]);
+
+  const memberProfilesQuery = useMemberProfiles(memberLookupAddresses, network);
   const profiles = memberProfilesQuery.data || {};
+
+  // Helper to retrieve profile username for a given member address
+  const getMemberProfile = (memberAddr: string) => {
+    let p = profiles[memberAddr];
+    if (p?.username) return p;
+    try {
+      const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+      const fiAddr = getFiWalletAddress(
+        Address.parse(memberAddr),
+        net,
+      ).toString();
+      p = profiles[fiAddr] || p;
+    } catch {
+      /* ignore */
+    }
+    return p;
+  };
+
+  // Filter members by search input (matching username or address)
+  const filteredMembers = useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return rawMembers;
+    return rawMembers.filter((m) => {
+      const p = getMemberProfile(m);
+      const uname = (p?.username || '').toLowerCase();
+      const addrStr = m.toLowerCase();
+      const formatted = formatContractAddress(m).toLowerCase();
+      return uname.includes(q) || addrStr.includes(q) || formatted.includes(q);
+    });
+  }, [rawMembers, memberSearch, profiles, network, formatContractAddress]);
 
   return (
     <MemberGuard title="Location & Spatial Network">
@@ -250,67 +304,91 @@ export const CityNetworkScreen: React.FC = () => {
                     )}
                   </div>
 
-                  {locationByH3Query.data.members.length > 0 ? (
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                      {locationByH3Query.data.members.map((m) => {
-                        let isYou = false;
-                        if (address) {
-                          try {
-                            isYou = Address.parse(m).equals(
-                              Address.parse(address),
-                            );
-                          } catch {
-                            /* ignore parse error */
-                          }
-                        }
-
-                        // Retrieve profile username if hydrated
-                        const profile =
-                          profiles[m] ||
-                          (() => {
-                            try {
-                              const normalized = formatTonAddress(
-                                Address.parse(m),
-                                { isContract: true, network },
-                              );
-                              return profiles[normalized];
-                            } catch {
-                              return undefined;
-                            }
-                          })();
-                        const username = profile?.username?.trim();
-
-                        return (
-                          <div
-                            key={m}
-                            className="flex items-center justify-between p-2 bg-secondary/50 rounded-xl border border-border/50 text-xs gap-2"
-                          >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              {username ? (
-                                <button
-                                  type="button"
-                                  onClick={() => openTelegramProfile(username)}
-                                  className="inline-flex items-center gap-0.5 font-medium text-blue-500 hover:underline shrink-0 text-[11px] cursor-pointer"
-                                  title={`Open @${username} on Telegram`}
-                                >
-                                  <span>@{username}</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </button>
-                              ) : null}
-                              <span className="font-mono text-foreground break-all text-[11px]">
-                                {formatContractAddress(m)}
-                              </span>
-                              {isYou && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20 shrink-0">
-                                  You
-                                </span>
-                              )}
-                            </div>
-                            <CopyButton address={m} type="contract" size="xs" />
-                          </div>
-                        );
-                      })}
+                  {/* Real-time Member Search Input */}
+                  {rawMembers.length > 0 && (
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                      <input
+                        type="text"
+                        value={memberSearch}
+                        onChange={(e) => setMemberSearch(e.target.value)}
+                        placeholder="Search member by username or address..."
+                        className="w-full pl-8 pr-8 py-1.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      {memberSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setMemberSearch('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
+                  )}
+
+                  {rawMembers.length > 0 ? (
+                    filteredMembers.length > 0 ? (
+                      <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                        {filteredMembers.map((m) => {
+                          let isYou = false;
+                          if (address) {
+                            try {
+                              isYou = Address.parse(m).equals(
+                                Address.parse(address),
+                              );
+                            } catch {
+                              /* ignore parse error */
+                            }
+                          }
+
+                          // Retrieve profile username if hydrated
+                          const profile = getMemberProfile(m);
+                          const username = profile?.username?.trim();
+
+                          return (
+                            <div
+                              key={m}
+                              className="flex items-center justify-between p-2 bg-secondary/50 rounded-xl border border-border/50 text-xs gap-2"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                {username ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openTelegramProfile(username)
+                                    }
+                                    className="inline-flex items-center gap-0.5 font-medium text-blue-500 hover:underline shrink-0 text-[11px] cursor-pointer"
+                                    title={`Open @${username} on Telegram`}
+                                  >
+                                    <span>@{username}</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </button>
+                                ) : null}
+                                <span className="font-mono text-foreground break-all text-[11px]">
+                                  {formatContractAddress(m)}
+                                </span>
+                                {isYou && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20 shrink-0">
+                                    You
+                                  </span>
+                                )}
+                              </div>
+                              <CopyButton
+                                address={m}
+                                type="contract"
+                                size="xs"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground py-2 text-center">
+                        No members matching &ldquo;{memberSearch}&rdquo;
+                      </p>
+                    )
                   ) : (
                     <p className="text-xs text-muted-foreground py-1">
                       {locationByH3Query.data.isDeployed
