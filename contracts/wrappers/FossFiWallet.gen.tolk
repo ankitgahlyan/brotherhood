@@ -143,6 +143,7 @@ fun FossFiWallet.sendDeActivateCircleRing(
 fun FossFiWallet.sendDeActivateCircleRingInternal(
     self,
     from: address,
+    version: uint10,
     fundsReceiver: address?,
     amount: coins,
     toggleActive: bool,
@@ -152,7 +153,7 @@ fun FossFiWallet.sendDeActivateCircleRingInternal(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: DeActivateCircleRingInternal { fundsReceiver, amount, toggleActive },
+        body: DeActivateCircleRingInternal { version, fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -322,6 +323,7 @@ fun FossFiWallet.sendBuyCredit(
 fun FossFiWallet.sendAuthorityAction(
     self,
     from: address,
+    version: uint10,
     sender: address,
     fundsReceiver: address?,
     amount: coins,
@@ -332,7 +334,7 @@ fun FossFiWallet.sendAuthorityAction(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: AuthorityAction { sender, fundsReceiver, amount, toggleActive },
+        body: AuthorityAction { version, sender, fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -552,6 +554,7 @@ fun FossFiWallet.sendHotUpgrade(
 fun FossFiWallet.sendVotingAction(
     self,
     from: address,
+    version: uint10,
     positiveVote: bool,
     count: uint4,
     sender: address,
@@ -562,7 +565,7 @@ fun FossFiWallet.sendVotingAction(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: VotingAction { positiveVote, count, sender, country },
+        body: VotingAction { version, positiveVote, count, sender, country },
     });
     return net.send(from, genericMsg);
 }
@@ -769,6 +772,7 @@ fun FossFiWallet.sendInternalGoldCoinsTransfer(
     from: address,
     queryId: uint64,
     amount: uint32,
+    version: uint10,
     transferInitiator: address,
     config: SendParams = {},
 ): SendResultList {
@@ -776,7 +780,7 @@ fun FossFiWallet.sendInternalGoldCoinsTransfer(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: InternalGoldCoinsTransfer { queryId, amount, transferInitiator },
+        body: InternalGoldCoinsTransfer { queryId, amount, version, transferInitiator },
     });
     return net.send(from, genericMsg);
 }

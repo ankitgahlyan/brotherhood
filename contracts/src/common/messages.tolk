@@ -189,6 +189,11 @@ struct (0x00001010) InitDaoProxy {
     targetAddress: address
 }
 
+struct (0x00001011) PushUpgradeCode {
+    queryId: uint64 = 0
+    targetAddress: address
+}
+
 // ============================================================================
 // GROUP 2: ACCOUNT LIFECYCLE & ONBOARDING (Range: 0x00001050 - 0x0000109F)
 // Buffer: 50 reserved opcodes for future lifecycle features
@@ -235,6 +240,7 @@ struct (0x00001055) DeActivateCircleRing {
 }
 
 struct (0x00001056) DeActivateCircleRingInternal {
+    version: uint10 = 0
     fundsReceiver: address? = null
     amount: coins = 0
     toggleActive: bool = true
@@ -292,6 +298,7 @@ struct (0x000010f2) ActUnvote {
 }
 
 struct (0x000010f3) VotingAction {
+    version: uint10 = 0
     positiveVote: bool = true
     count: uint4 = 10
     sender: address
@@ -306,6 +313,7 @@ struct (0x000010f4) ActDispatchAuthorityAction {
 }
 
 struct (0x000010f5) AuthorityAction {
+    version: uint10 = 0
     sender: address
     fundsReceiver: address? = null
     amount: coins = 0
@@ -411,6 +419,7 @@ struct (0x00001145) AskGoldCoinsTransfer {
 struct (0x00001146) InternalGoldCoinsTransfer {
     queryId: uint64
     amount: uint32
+    version: uint10 = 0
     transferInitiator: address
 }
 

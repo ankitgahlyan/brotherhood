@@ -9,6 +9,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
+import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
@@ -935,5 +936,57 @@ get fun `test : direct minter upgrade request from owner`() {
     expect(reqUpgradeRes).toHaveSuccessfulTx<ReturnExcessesBack>({
         from: wallet.address,
         to: deployer.address,
+    });
+}
+
+get fun `test : push upgrade code to target address via minter`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val senderWallet = userWallet(minter, deployer.address);
+    val targetWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
+
+    val pushRes = minter.sendPushUpgradeCode(
+        deployer.address,
+        0,
+        notDeployer.address,
+        { value: ton("0.1") },
+    );
+
+    expect(pushRes).toHaveSuccessfulTx<PushUpgradeCode>({
+        from: deployer.address,
+        to: minter.address,
+    });
+    expect(pushRes).toHaveSuccessfulTx<Upgrade>({
+        from: minter.address,
+        to: targetWallet.address,
+    });
+}
+
+get fun `test : version mismatch between fiwallets throws VersionMismatch`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val senderWallet = mintTo(minter, deployer, deployer.address, ton("20"));
+    val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
+
+    // Send an internal transfer message directly with a mismatched version (e.g. version 99)
+    val mismatchedBody = makeInternalTransferStep(
+        0,
+        ton("1"),
+        deployer.address,
+        deployer.address,
+        0,
+        createEmptySlice(),
+        99, // Mismatched version!
+    );
+
+    val res = sendRawTransferPayload(
+        senderWallet.address,
+        receiverWallet.address,
+        mismatchedBody,
+        ton("0.2"),
+    );
+
+    expect(res).toHaveFailedTx<InternalTransferStep>({
+        from: senderWallet.address,
+        to: receiverWallet.address,
+        exitCode: Errors.VersionMismatch,
     });
 }

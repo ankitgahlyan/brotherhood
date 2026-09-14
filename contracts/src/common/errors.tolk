@@ -34,6 +34,7 @@ enum Errors {
     NoVotesAvailable = 731
     NotVotedYet = 732
     Upgrade = 733
+    VersionMismatch = 734
     WaitMore = 735
     NotCloseFriend = 736
     AlreadyVouched = 737

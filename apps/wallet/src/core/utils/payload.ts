@@ -42,6 +42,7 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x0000100e: 'Request Total Accounts',
   0x0000100f: 'Response Total Accounts',
   0x00001010: 'Init DAO Proxy',
+  0x00001011: 'Push Upgrade Code',
 
   // Brotherhood Group 2: Account Lifecycle & Onboarding
   0x00001051: 'Invite Member',

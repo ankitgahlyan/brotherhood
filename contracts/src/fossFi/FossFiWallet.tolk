@@ -420,6 +420,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: candidate,
                 value: 0,
                 body: VotingAction {
+                    version: store.version,
                     positiveVote: true,
                     count: msg.count,
                     sender: addrs.owner,
@@ -454,6 +455,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: candidate,
                 value: 0,
                 body: VotingAction {
+                    version: store.version,
                     positiveVote: false,
                     count: msg.count,
                     sender: addrs.owner,
@@ -477,6 +479,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: msg.transferRecipient.getAddrFiWallet(),
                 value: 0,
                 body: DeActivateCircleRingInternal {
+                    version: store.version,
                     fundsReceiver: msg.fundsReceiver,
                     amount: msg.amount,
                     toggleActive: msg.toggleActive,
@@ -503,6 +506,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: msg.transferRecipient.getAddrFiWallet(),
                 value: 0,
                 body: AuthorityAction {
+                    version: store.version,
                     sender: addrs.owner,
                     fundsReceiver: msg.fundsReceiver,
                     amount: msg.amount,
@@ -540,14 +544,8 @@ fun onInternalMessage(in: InMessage): void {
 
         InternalTransferStep => {
             checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
-            // sync version
-            // assert (msg.version == store.version) throw Errors.UPGRADE;
-            if (msg.version == store.version) {
-                // continue
-            } else if (msg.version < store.version) {
-                sendUpgrade(in.senderAddress, addrs.owner, store.version);
-            } else {
-                requestUpgrade(in.senderAddress);
+            if (in.senderAddress != trustedAddrs.minterAddr) {
+                assert (msg.version == store.version) throw Errors.VersionMismatch;
             }
             // val incomingTransfersLocked = ((self.status & 2) == 2);
             // val incomingTransfersLocked = (store.locked != false);
@@ -765,6 +763,7 @@ fun onInternalMessage(in: InMessage): void {
 
         // both invitor & invitor0 can deactivate and confiscate/transfer
         DeActivateCircleRingInternal => {
+            assert (msg.version == store.version) throw Errors.VersionMismatch;
             // need to check correctInternalSender() for STORED jettonAddrs
             assert (
                 (in.senderAddress == nomins.invitor0!) | (in.senderAddress == nomins.invitor!)
@@ -817,6 +816,7 @@ fun onInternalMessage(in: InMessage): void {
 
         // DeActivate accounts by authority and confiscate/transfer funds
         AuthorityAction => {
+            assert (msg.version == store.version) throw Errors.VersionMismatch;
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             // not allowed to block authority, but previledged can be deactivated
             assert (!store.isAuthorityAccount) throw Errors.IncorrectReceiver;
@@ -912,6 +912,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         VotingAction => {
+            assert (msg.version == store.version) throw Errors.VersionMismatch;
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             if (msg.positiveVote) {
                 assert (msg.country == profile.country) throw Errors.CountryMismatch;
@@ -1344,6 +1345,7 @@ fun onInternalMessage(in: InMessage): void {
                 body: InternalGoldCoinsTransfer {
                     queryId: msg.queryId,
                     amount: msg.amount,
+                    version: store.version,
                     transferInitiator: addrs.owner,
                 },
             });
@@ -1353,6 +1355,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         InternalGoldCoinsTransfer => {
+            assert (msg.version == store.version) throw Errors.VersionMismatch;
             checkCorrectSenderInternal(in.senderAddress, msg.transferInitiator);
             store.goldCoins += msg.amount;
             sendExcesses(msg.queryId, in.valueCoins, in.senderAddress);

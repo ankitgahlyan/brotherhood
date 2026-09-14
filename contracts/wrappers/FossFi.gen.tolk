@@ -263,6 +263,22 @@ fun FossFi.sendRequestUpgradeCode(self, from: address, config: SendParams = {}):
     return net.send(from, genericMsg);
 }
 
+fun FossFi.sendPushUpgradeCode(
+    self,
+    from: address,
+    queryId: uint64,
+    targetAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: PushUpgradeCode { queryId, targetAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun FossFi.sendEnterLottery(
     self,
     from: address,

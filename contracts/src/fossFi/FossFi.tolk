@@ -30,6 +30,7 @@ type AllowedMessageToMinter =
     | InformMinterInviteInternal
     | InformMinterChangeLocation
     | RequestUpgradeCode
+    | PushUpgradeCode
     | EnterLottery
     | LotteryWin
     | UpgradeLotteryCode
@@ -351,6 +352,23 @@ fun onInternalMessage(in: InMessage): void {
                 dest: fiWallet,
                 body: Upgrade {
                     // todo: fixme: send HotUpgrades only to support state migration
+                    walletVersion: store.walletVersion,
+                    sender: store.adminAddress,
+                    newCode: others.latestFiWalletCode,
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
+        }
+
+        PushUpgradeCode => {
+            val fiWallet = getAutoAddress(msg.targetAddress).calculateAddress();
+            val upgradeMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: fiWallet,
+                body: Upgrade {
                     walletVersion: store.walletVersion,
                     sender: store.adminAddress,
                     newCode: others.latestFiWalletCode,
