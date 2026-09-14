@@ -40,3 +40,16 @@ export function getAddressExplorerUrls(
     actonScan: `https://actonscan.com/address/${address}${actonQuery}`,
   };
 }
+
+export function getHoldersExplorerUrls(
+  minterAddress: string,
+  network: NetworkType,
+): { tonScan: string; tonViewer: string; actonScan: string } {
+  const prefix = getPrefix(network);
+  const actonQuery = network === 'testnet' ? '?network=testnet' : '';
+  return {
+    tonScan: `https://${prefix}tonscan.org/jetton/${minterAddress}?tab=holders`,
+    tonViewer: `https://${prefix}tonviewer.com/${minterAddress}?section=holders`,
+    actonScan: `https://actonscan.com/address/${minterAddress}${actonQuery}#holders`,
+  };
+}

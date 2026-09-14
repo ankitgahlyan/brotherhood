@@ -140,3 +140,19 @@ export function getExplorerAddressUrl(
   }
   return `https://${prefix}tonscan.org/address/${address}`;
 }
+
+export function getExplorerHoldersUrl(
+  network: NetworkType,
+  minterAddress: string,
+  explorer: ExplorerChoice = 'tonscan',
+): string {
+  if (explorer === 'actonscan') {
+    const query = network === 'testnet' ? '?network=testnet' : '';
+    return `https://actonscan.com/address/${minterAddress}${query}#holders`;
+  }
+  const prefix = getPrefix(network);
+  if (explorer === 'tonviewer') {
+    return `https://${prefix}tonviewer.com/${minterAddress}?section=holders`;
+  }
+  return `https://${prefix}tonscan.org/jetton/${minterAddress}?tab=holders`;
+}

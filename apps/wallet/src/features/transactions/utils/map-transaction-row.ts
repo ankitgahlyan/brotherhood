@@ -144,9 +144,9 @@ export const mapEventToRow = (
   const isOutgoing = isOutgoingFromAction(action, myAddress);
   const { title, value } = describeAction(action, isOutgoing);
   const eventId = String(event.eventId);
-  const hash = event.traceExternalHash
-    ? Base64ToHex(event.traceExternalHash)
-    : eventId;
+  const hash =
+    eventId ||
+    (event.traceExternalHash ? Base64ToHex(event.traceExternalHash) : '');
   return {
     id: eventId,
     txHash: hash,
