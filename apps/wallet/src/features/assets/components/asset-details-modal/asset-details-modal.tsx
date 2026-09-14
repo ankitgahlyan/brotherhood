@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import {
   Copy,
@@ -19,13 +19,20 @@ import {
   User,
   Hash,
   Trash2,
+  Flame,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
 
 import { Modal } from '@/core/components/ui/modal';
+import { BurnTokenModal } from '../burn-token-modal';
 import { FallbackImage } from '@/core/components/ui/fallback-image';
-import { useExplorer, getExplorerAddressUrl } from '@/core/explorer';
+import {
+  useExplorer,
+  getExplorerAddressUrl,
+  getExplorerHoldersUrl,
+} from '@/core/explorer';
 import { useNavigate } from '@/core/routing';
 import { formatLargeValue, shortenAddress, toDecimal } from '@/core/utils';
 import type { AssetRowData } from '../asset-row';
@@ -56,6 +63,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   const { explorer } = useExplorer();
 
   const { trackedMinters, untrackToken } = useTrackedPersonalTokens();
+  const [isBurnModalOpen, setIsBurnModalOpen] = useState(false);
 
   const isGram = asset?.id === 'TON' || asset?.symbol === 'GRAM';
   const isFi = useMemo(() => {
@@ -122,216 +130,471 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   if (!asset) return null;
 
   return (
-    <Modal.Container
-      isOpened={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      className="px-2"
-    >
-      <Modal.Header onClose={onClose}>
-        <Modal.Title className="flex items-center gap-2">
-          <span>{asset.name}</span>
-          <span className="text-xs font-normal text-muted-foreground">
-            ({asset.symbol})
-          </span>
-        </Modal.Title>
-      </Modal.Header>
+    <>
+      <Modal.Container
+        isOpened={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        className="px-2"
+      >
+        <Modal.Header onClose={onClose}>
+          <Modal.Title className="flex items-center gap-2">
+            <span>{asset.name}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              ({asset.symbol})
+            </span>
+          </Modal.Title>
+        </Modal.Header>
 
-      <Modal.Body className="space-y-4">
-        {/* Token Balance Card */}
-        <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-secondary/50 border border-border">
-          <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center mb-3">
-            <FallbackImage
-              src={asset.icon}
-              alt={asset.name}
-              className="w-full h-full object-cover"
-              fallback={
-                <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-base flex items-center justify-center">
-                  {asset.fallbackText}
-                </span>
-              }
-            />
-          </div>
-          <div className="text-2xl font-bold text-foreground tabular-nums">
-            {formatLargeValue(String(asset.amount), 4)} {asset.symbol}
-          </div>
-          {asset.fiat !== undefined && (
-            <div className="text-sm text-muted-foreground mt-0.5">
-              ${formatLargeValue(String(asset.fiat), 2, 2)}
-              {asset.rateLabel && ` · ${asset.rateLabel}`}
-            </div>
-          )}
-        </div>
-
-        {/* 1. GRAMS SPECIFIC VIEW */}
-        {isGram && (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card p-3 space-y-2">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Network Info
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-primary" /> Network
-                </span>
-                <span className="font-semibold capitalize text-foreground">
-                  {network}
-                </span>
-              </div>
-              {userAddress && (
-                <div className="flex items-center justify-between text-sm py-1">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-primary" /> Your Wallet
+        <Modal.Body className="space-y-4">
+          {/* Token Balance Card */}
+          <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-secondary/50 border border-border">
+            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center mb-3">
+              <FallbackImage
+                src={asset.icon}
+                alt={asset.name}
+                className="w-full h-full object-cover"
+                fallback={
+                  <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-base flex items-center justify-center">
+                    {asset.fallbackText}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-foreground">
-                      {shortenAddress(userAddress, 4, false, network)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(userAddress, 'Wallet address')}
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="Copy wallet address"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <a
-                      href={getExplorerAddressUrl(
-                        network,
-                        userAddress,
-                        explorer,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="View on explorer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              )}
+                }
+              />
             </div>
-
-            {/* Testnet Faucet Redirect Button */}
-            {network === 'testnet' ? (
-              <a
-                href="https://t.me/tnfaucet_bot/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                <Sparkles className="w-4 h-4 text-primary-foreground animate-pulse" />
-                <span>Get Grams</span>
-                <ExternalLink className="w-4 h-4 ml-auto" />
-              </a>
-            ) : (
-              <div className="text-center text-xs text-muted-foreground py-1">
-                Grams is the native coin of The Open Network.
+            <div className="text-2xl font-bold text-foreground tabular-nums">
+              {formatLargeValue(String(asset.amount), 4)} {asset.symbol}
+            </div>
+            {asset.fiat !== undefined && (
+              <div className="text-sm text-muted-foreground mt-0.5">
+                ${formatLargeValue(String(asset.fiat), 2, 2)}
+                {asset.rateLabel && ` · ${asset.rateLabel}`}
               </div>
             )}
           </div>
-        )}
 
-        {/* 2. FI TOKEN SPECIFIC VIEW */}
-        {isFi && (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card p-3 space-y-2.5">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                <span>BrotherHood FI Minter Data</span>
-                {fiStateQuery.isFetching && (
-                  <span className="text-[10px] text-muted-foreground animate-pulse">
-                    Refreshing...
+          {/* 1. GRAMS SPECIFIC VIEW */}
+          {isGram && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card p-3 space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Network Info
+                </div>
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-primary" /> Network
                   </span>
+                  <span className="font-semibold capitalize text-foreground">
+                    {network}
+                  </span>
+                </div>
+                {userAddress && (
+                  <div className="flex items-center justify-between text-sm py-1">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-primary" /> Your Wallet
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-foreground">
+                        {shortenAddress(userAddress, 4, false, network)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(userAddress, 'Wallet address')
+                        }
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copy wallet address"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <a
+                        href={getExplorerAddressUrl(
+                          network,
+                          userAddress,
+                          explorer,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="View on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Total Accounts */}
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-primary" /> Total Accounts
-                </span>
-                <span className="font-semibold text-foreground tabular-nums">
-                  {fiTotalAccountsQuery.isLoading
-                    ? 'Loading...'
-                    : fiStateQuery.data?.others?.ref?.totalAccounts !==
-                        undefined
-                      ? Number(
-                          fiStateQuery.data.others.ref.totalAccounts,
-                        ).toLocaleString()
-                      : '—'}
-                </span>
-              </div>
-
-              {/* Total Supply */}
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-primary" /> Total Supply
-                </span>
-                <span className="font-semibold text-foreground tabular-nums">
-                  {fiStateQuery.isLoading
-                    ? 'Loading...'
-                    : fiStateQuery.data?.totalSupply !== undefined
-                      ? `${formatLargeValue(String(toDecimal(fiStateQuery.data.totalSupply, 9)), 2)} FI`
-                      : '—'}
-                </span>
-              </div>
-
-              {/* Admin Address */}
-              {fiStateQuery.data?.adminAddress && (
-                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-primary" /> Admin Address
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-foreground">
-                      {shortenAddress(
-                        fiStateQuery.data.adminAddress.toString(),
-                        4,
-                        false,
-                        network,
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          fiStateQuery.data!.adminAddress.toString(),
-                          'Admin address',
-                        )
-                      }
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="Copy admin address"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <a
-                      href={getExplorerAddressUrl(
-                        network,
-                        fiStateQuery.data.adminAddress.toString(),
-                        explorer,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="View admin on explorer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
+              {/* Testnet Faucet Redirect Button */}
+              {network === 'testnet' ? (
+                <a
+                  href="https://t.me/tnfaucet_bot/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4 text-primary-foreground animate-pulse" />
+                  <span>Get Grams</span>
+                  <ExternalLink className="w-4 h-4 ml-auto" />
+                </a>
+              ) : (
+                <div className="text-center text-xs text-muted-foreground py-1">
+                  Grams is the native coin of The Open Network.
                 </div>
               )}
+            </div>
+          )}
 
-              {/* DAO Address */}
-              {fiStateQuery.data?.daoAddress &&
-                !isZeroAddress(fiStateQuery.data.daoAddress) && (
+          {/* 2. FI TOKEN SPECIFIC VIEW */}
+          {isFi && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card p-3 space-y-2.5">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                  <span>BrotherHood FI Minter Data</span>
+                  {fiStateQuery.isFetching && (
+                    <span className="text-[10px] text-muted-foreground animate-pulse">
+                      Refreshing...
+                    </span>
+                  )}
+                </div>
+
+                {/* Total Accounts */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-primary" /> Total Accounts
+                  </span>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {fiTotalAccountsQuery.isLoading
+                      ? 'Loading...'
+                      : fiStateQuery.data?.others?.ref?.totalAccounts !==
+                          undefined
+                        ? Number(
+                            fiStateQuery.data.others.ref.totalAccounts,
+                          ).toLocaleString()
+                        : '—'}
+                  </span>
+                </div>
+
+                {/* Total Supply */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-primary" /> Total Supply
+                  </span>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {fiStateQuery.isLoading
+                      ? 'Loading...'
+                      : fiStateQuery.data?.totalSupply !== undefined
+                        ? `${formatLargeValue(String(toDecimal(fiStateQuery.data.totalSupply, 9)), 2)} FI`
+                        : '—'}
+                  </span>
+                </div>
+
+                {/* See All Holders */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-primary" /> Holders
+                  </span>
+                  <a
+                    href={getExplorerHoldersUrl(network, FI_ADDRESS, explorer)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                  >
+                    See all holders
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                {/* Admin Address */}
+                {fiStateQuery.data?.adminAddress && (
                   <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="w-4 h-4 text-primary" /> DAO Address
+                      <Shield className="w-4 h-4 text-primary" /> Admin Address
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono text-xs text-foreground">
                         {shortenAddress(
-                          fiStateQuery.data.daoAddress.toString(),
+                          fiStateQuery.data.adminAddress.toString(),
+                          4,
+                          false,
+                          network,
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            fiStateQuery.data!.adminAddress.toString(),
+                            'Admin address',
+                          )
+                        }
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copy admin address"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <a
+                        href={getExplorerAddressUrl(
+                          network,
+                          fiStateQuery.data.adminAddress.toString(),
+                          explorer,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="View admin on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* DAO Address */}
+                {fiStateQuery.data?.daoAddress &&
+                  !isZeroAddress(fiStateQuery.data.daoAddress) && (
+                    <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-primary" /> DAO Address
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs text-foreground">
+                          {shortenAddress(
+                            fiStateQuery.data.daoAddress.toString(),
+                            4,
+                            true,
+                            network,
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(
+                              fiStateQuery.data!.daoAddress.toString(),
+                              'DAO address',
+                            )
+                          }
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          title="Copy DAO address"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <a
+                          href={getExplorerAddressUrl(
+                            network,
+                            fiStateQuery.data.daoAddress.toString(),
+                            explorer,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          title="View DAO on explorer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Wallet Version */}
+                {fiStateQuery.data?.walletVersion !== undefined && (
+                  <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Hash className="w-4 h-4 text-primary" /> Wallet Version
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      v{Number(fiStateQuery.data.walletVersion)}
+                    </span>
+                  </div>
+                )}
+
+                {/* FI Minter Address */}
+                <div className="flex items-center justify-between text-sm py-1">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-primary" /> Minter Address
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs text-foreground">
+                      {shortenAddress(FI_ADDRESS, 4, true, network)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(FI_ADDRESS, 'FI Minter address')
+                      }
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="Copy FI Minter address"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <a
+                      href={getExplorerAddressUrl(
+                        network,
+                        FI_ADDRESS,
+                        explorer,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="View minter on explorer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shortcut to Brotherhood */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate('/brotherhood');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+              >
+                <span>Open Brotherhood Network</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+
+              {/* Burn FI Token Button */}
+              <button
+                type="button"
+                onClick={() => setIsBurnModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
+                data-testid="fi-burn-button"
+              >
+                <Flame className="w-3.5 h-3.5" />
+                <span>Burn FI</span>
+              </button>
+            </div>
+          )}
+
+          {/* 3. PERSONAL TOKEN SPECIFIC VIEW */}
+          {isPersonal && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card p-3 space-y-2.5">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                  <span>Personal Token Minter Data</span>
+                  {personalDetailsQuery.isFetching && (
+                    <span className="text-[10px] text-muted-foreground animate-pulse">
+                      Refreshing...
+                    </span>
+                  )}
+                </div>
+
+                {/* Total Supply */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-primary" /> Total Supply
+                  </span>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {personalDetailsQuery.isLoading
+                      ? 'Loading...'
+                      : personalDetailsQuery.data?.totalSupply !== undefined
+                        ? `${formatLargeValue(String(toDecimal(personalDetailsQuery.data.totalSupply, 9)), 2)} ${asset.symbol}`
+                        : '—'}
+                  </span>
+                </div>
+
+                {/* See All Holders */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-primary" /> Holders
+                  </span>
+                  <a
+                    href={getExplorerHoldersUrl(network, asset.id, explorer)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                  >
+                    See all holders
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                {/* Issuer / Admin Address */}
+                {personalDetailsQuery.data?.adminAddress && (
+                  <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-primary" /> Issuer (Admin)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-foreground">
+                        {shortenAddress(
+                          personalDetailsQuery.data.adminAddress.toString(),
+                          4,
+                          false,
+                          network,
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            personalDetailsQuery.data!.adminAddress.toString(),
+                            'Issuer address',
+                          )
+                        }
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copy issuer address"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <a
+                        href={getExplorerAddressUrl(
+                          network,
+                          personalDetailsQuery.data.adminAddress.toString(),
+                          explorer,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="View issuer on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Minter Address */}
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-primary" /> Minter Address
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs text-foreground">
+                      {shortenAddress(asset.id, 4, true, network)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(asset.id, 'Minter address')}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="Copy minter address"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <a
+                      href={getExplorerAddressUrl(network, asset.id, explorer)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="View minter on explorer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* FI Reference */}
+                {personalDetailsQuery.data?.fiJettonAddress && (
+                  <div className="flex items-center justify-between text-sm py-1">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Coins className="w-4 h-4 text-primary" /> FI Jetton
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-foreground">
+                        {shortenAddress(
+                          personalDetailsQuery.data.fiJettonAddress.toString(),
                           4,
                           true,
                           network,
@@ -341,287 +604,107 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                         type="button"
                         onClick={() =>
                           handleCopy(
-                            fiStateQuery.data!.daoAddress.toString(),
-                            'DAO address',
+                            personalDetailsQuery.data!.fiJettonAddress.toString(),
+                            'FI address',
                           )
                         }
                         className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                        title="Copy DAO address"
+                        title="Copy FI address"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <a
                         href={getExplorerAddressUrl(
                           network,
-                          fiStateQuery.data.daoAddress.toString(),
+                          personalDetailsQuery.data.fiJettonAddress.toString(),
                           explorer,
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                        title="View DAO on explorer"
+                        title="View FI on explorer"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     </div>
                   </div>
                 )}
+              </div>
 
-              {/* Wallet Version */}
-              {fiStateQuery.data?.walletVersion !== undefined && (
-                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <Hash className="w-4 h-4 text-primary" /> Wallet Version
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    v{Number(fiStateQuery.data.walletVersion)}
-                  </span>
-                </div>
+              {/* Direct Link to Minter on Explorer */}
+              <a
+                href={getExplorerAddressUrl(network, asset.id, explorer)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border bg-secondary/70 hover:bg-secondary text-foreground text-xs font-semibold transition-colors"
+              >
+                <span>
+                  View Minter on{' '}
+                  {explorer === 'actonscan'
+                    ? 'ActonScan'
+                    : explorer === 'tonviewer'
+                      ? 'Tonviewer'
+                      : 'Tonscan'}
+                </span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              {/* Issuer shortcut button */}
+              {isUserPersonalIssuer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    navigate('/personal-jetton');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+                >
+                  <span>Manage Your Personal Token</span>
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                </button>
               )}
 
-              {/* FI Minter Address */}
-              <div className="flex items-center justify-between text-sm py-1">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-primary" /> Minter Address
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-xs text-foreground">
-                    {shortenAddress(FI_ADDRESS, 4, true, network)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(FI_ADDRESS, 'FI Minter address')}
-                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy FI Minter address"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <a
-                    href={getExplorerAddressUrl(network, FI_ADDRESS, explorer)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    title="View minter on explorer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Shortcut to Brotherhood */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                navigate('/brotherhood');
-              }}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
-            >
-              <span>Open Brotherhood Network</span>
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            </button>
-          </div>
-        )}
-
-        {/* 3. PERSONAL TOKEN SPECIFIC VIEW */}
-        {isPersonal && (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card p-3 space-y-2.5">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                <span>Personal Token Minter Data</span>
-                {personalDetailsQuery.isFetching && (
-                  <span className="text-[10px] text-muted-foreground animate-pulse">
-                    Refreshing...
-                  </span>
-                )}
-              </div>
-
-              {/* Total Supply */}
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-primary" /> Total Supply
-                </span>
-                <span className="font-semibold text-foreground tabular-nums">
-                  {personalDetailsQuery.isLoading
-                    ? 'Loading...'
-                    : personalDetailsQuery.data?.totalSupply !== undefined
-                      ? `${formatLargeValue(String(toDecimal(personalDetailsQuery.data.totalSupply, 9)), 2)} ${asset.symbol}`
-                      : '—'}
-                </span>
-              </div>
-
-              {/* Issuer / Admin Address */}
-              {personalDetailsQuery.data?.adminAddress && (
-                <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-primary" /> Issuer (Admin)
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-foreground">
-                      {shortenAddress(
-                        personalDetailsQuery.data.adminAddress.toString(),
-                        4,
-                        false,
-                        network,
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          personalDetailsQuery.data!.adminAddress.toString(),
-                          'Issuer address',
-                        )
-                      }
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="Copy issuer address"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <a
-                      href={getExplorerAddressUrl(
-                        network,
-                        personalDetailsQuery.data.adminAddress.toString(),
-                        explorer,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="View issuer on explorer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
+              {/* Untrack Personal Token Button if explicitly tracked */}
+              {isTracked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void untrackToken(asset.id);
+                    toast.success('Token removed from tracked assets');
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Untrack Token</span>
+                </button>
               )}
 
-              {/* Minter Address */}
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-primary" /> Minter Address
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-xs text-foreground">
-                    {shortenAddress(asset.id, 4, true, network)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(asset.id, 'Minter address')}
-                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy minter address"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <a
-                    href={getExplorerAddressUrl(network, asset.id, explorer)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    title="View minter on explorer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-
-              {/* FI Reference */}
-              {personalDetailsQuery.data?.fiJettonAddress && (
-                <div className="flex items-center justify-between text-sm py-1">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-primary" /> FI Jetton
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-foreground">
-                      {shortenAddress(
-                        personalDetailsQuery.data.fiJettonAddress.toString(),
-                        4,
-                        true,
-                        network,
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          personalDetailsQuery.data!.fiJettonAddress.toString(),
-                          'FI address',
-                        )
-                      }
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="Copy FI address"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <a
-                      href={getExplorerAddressUrl(
-                        network,
-                        personalDetailsQuery.data.fiJettonAddress.toString(),
-                        explorer,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="View FI on explorer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Direct Link to Minter on Explorer */}
-            <a
-              href={getExplorerAddressUrl(network, asset.id, explorer)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border bg-secondary/70 hover:bg-secondary text-foreground text-xs font-semibold transition-colors"
-            >
-              <span>
-                View Minter on{' '}
-                {explorer === 'actonscan'
-                  ? 'ActonScan'
-                  : explorer === 'tonviewer'
-                    ? 'Tonviewer'
-                    : 'Tonscan'}
-              </span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-
-            {/* Issuer shortcut button */}
-            {isUserPersonalIssuer && (
+              {/* Burn Token Button */}
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  navigate('/personal-jetton');
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+                onClick={() => setIsBurnModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
+                data-testid="personal-burn-button"
               >
-                <span>Manage Your Personal Token</span>
-                <ChevronRight className="w-4 h-4 ml-auto" />
+                <Flame className="w-3.5 h-3.5" />
+                <span>Burn {asset.symbol}</span>
               </button>
-            )}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal.Container>
 
-            {/* Untrack Personal Token Button if explicitly tracked */}
-            {isTracked && (
-              <button
-                type="button"
-                onClick={() => {
-                  void untrackToken(asset.id);
-                  toast.success('Token removed from tracked assets');
-                  onClose();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Untrack Token</span>
-              </button>
-            )}
-          </div>
-        )}
-      </Modal.Body>
-    </Modal.Container>
+      <BurnTokenModal
+        asset={asset}
+        isOpen={isBurnModalOpen}
+        onClose={() => setIsBurnModalOpen(false)}
+        onSuccess={() => {
+          setIsBurnModalOpen(false);
+          onClose();
+          navigate('/wallet/history');
+        }}
+      />
+    </>
   );
 };
