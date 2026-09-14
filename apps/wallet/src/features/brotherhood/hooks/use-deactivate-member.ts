@@ -24,8 +24,14 @@ export interface UseDeactivateMemberParams {
   accountData?: FiAccountData | null;
 }
 
+export interface DeactivateMemberOptions {
+  fundsReceiver?: string | null;
+  amount?: bigint;
+  toggleActive?: boolean;
+}
+
 export interface UseDeactivateMemberResult {
-  toggleActive: () => Promise<void>;
+  toggleActive: (options?: DeactivateMemberOptions) => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
@@ -60,34 +66,55 @@ export function useDeactivateMember({
     return null;
   }, [wallet, walletAddress, accountData, targetAddress]);
 
-  const toggleActive = useCallback(async () => {
-    if (!walletAddress) throw new Error('No wallet address');
-    const ownerAddr = Address.parse(walletAddress);
-    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-    const target = Address.parse(targetAddress.trim());
-    let targetFiWallet: Address | null = null;
-    try {
-      targetFiWallet = await getFiWalletAddress(target, network);
-    } catch {
-      // ignore
-    }
+  const toggleActive = useCallback(
+    async (options?: DeactivateMemberOptions) => {
+      if (!walletAddress) throw new Error('No wallet address');
+      const ownerAddr = Address.parse(walletAddress);
+      const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+      const target = Address.parse(targetAddress.trim());
+      let targetFiWallet: Address | null = null;
+      try {
+        targetFiWallet = await getFiWalletAddress(target, network);
+      } catch {
+        // ignore
+      }
 
-    const payload = DeActivateCircleRing.toCell(
-      DeActivateCircleRing.create({
-        transferRecipient: target,
-      }),
-    );
+      let parsedReceiver: Address | null = null;
+      if (options?.fundsReceiver?.trim()) {
+        try {
+          parsedReceiver = Address.parse(options.fundsReceiver.trim());
+        } catch {
+          // ignore
+        }
+      }
 
-    const affected = [fiWalletAddr];
-    if (targetFiWallet) {
-      affected.push(targetFiWallet);
-    }
+      const payload = DeActivateCircleRing.toCell(
+        DeActivateCircleRing.create({
+          transferRecipient: target,
+          fundsReceiver: parsedReceiver,
+          amount: options?.amount ?? 0n,
+          toggleActive: options?.toggleActive ?? true,
+        }),
+      );
 
-    await sendTx(
-      [{ toAddress: fiWalletAddr.toString(), amount: GAS.AUTHORITY, payload }],
-      { affectedContracts: affected },
-    );
-  }, [walletAddress, targetAddress, network, sendTx]);
+      const affected = [fiWalletAddr];
+      if (targetFiWallet) {
+        affected.push(targetFiWallet);
+      }
+
+      await sendTx(
+        [
+          {
+            toAddress: fiWalletAddr.toString(),
+            amount: GAS.AUTHORITY,
+            payload,
+          },
+        ],
+        { affectedContracts: affected },
+      );
+    },
+    [walletAddress, targetAddress, network, sendTx],
+  );
 
   const isDisabled = Boolean(validationError) || isSending;
 

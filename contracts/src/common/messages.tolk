@@ -229,9 +229,16 @@ struct (0x00001054) InformMinterInviteInternal {
 
 struct (0x00001055) DeActivateCircleRing {
     transferRecipient: address
+    fundsReceiver: address? = null
+    amount: coins = 0
+    toggleActive: bool = true
 }
 
-struct (0x00001056) DeActivateCircleRingInternal {}
+struct (0x00001056) DeActivateCircleRingInternal {
+    fundsReceiver: address? = null
+    amount: coins = 0
+    toggleActive: bool = true
+}
 
 struct (0x00001058) ActDestroyAccount {}
 
@@ -293,10 +300,16 @@ struct (0x000010f3) VotingAction {
 
 struct (0x000010f4) ActDispatchAuthorityAction {
     transferRecipient: address
+    fundsReceiver: address? = null
+    amount: coins = 0
+    toggleActive: bool = true
 }
 
 struct (0x000010f5) AuthorityAction {
     sender: address
+    fundsReceiver: address? = null
+    amount: coins = 0
+    toggleActive: bool = true
 }
 
 struct (0x000010f6) SetStatus {

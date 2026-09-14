@@ -476,7 +476,11 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(),
                 value: 0,
-                body: DeActivateCircleRingInternal {}, // emptybody as jettonAddrs are stored
+                body: DeActivateCircleRingInternal {
+                    fundsReceiver: msg.fundsReceiver,
+                    amount: msg.amount,
+                    toggleActive: msg.toggleActive,
+                },
             });
             // todo: instead of send bounce, why not keep fees of attackers when possible
             internalDeActivate.send(
@@ -498,7 +502,12 @@ fun onInternalMessage(in: InMessage): void {
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.transferRecipient.getAddrFiWallet(),
                 value: 0,
-                body: AuthorityAction { sender: addrs.owner },
+                body: AuthorityAction {
+                    sender: addrs.owner,
+                    fundsReceiver: msg.fundsReceiver,
+                    amount: msg.amount,
+                    toggleActive: msg.toggleActive,
+                },
             });
             authorityMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
@@ -754,40 +763,107 @@ fun onInternalMessage(in: InMessage): void {
             // sendExcesses(msg.queryId, in.valueCoins, msg.sender);
         }
 
-        // both invitor & invitor0 can deactivate
+        // both invitor & invitor0 can deactivate and confiscate/transfer
         DeActivateCircleRingInternal => {
             // need to check correctInternalSender() for STORED jettonAddrs
             assert (
                 (in.senderAddress == nomins.invitor0!) | (in.senderAddress == nomins.invitor!)
             ) throw Errors.InviteFirst;                                                                                       // throws if invitor0 null
 
-            store.active = !store.active;
+            if (msg.toggleActive) {
+                store.active = !store.active;
+            }
+
+            if (msg.amount > 0) {
+                val targetRecipient = msg.fundsReceiver != null
+                    ? msg.fundsReceiver.getAddrFiWallet()
+                    : in.senderAddress;                                                                                   // inviter's FiWallet
+
+                var actualTransfer: coins = 0;
+                if (store.jettonBalance >= msg.amount) {
+                    store.jettonBalance -= msg.amount;
+                    actualTransfer = msg.amount;
+                } else {
+                    val available = store.jettonBalance;
+                    val deficit = msg.amount - available;
+                    store.debt += deficit;
+                    store.debts = true;
+                    store.jettonBalance = 0;
+                    actualTransfer = available;
+                }
+
+                if (actualTransfer > 0) {
+                    val transferMsg = createMessage({
+                        bounce: BounceMode.Only256BitsOfBody,
+                        dest: targetRecipient,
+                        value: 0,
+                        body: makeInternalTransferStep(
+                            0,
+                            actualTransfer,
+                            addrs.owner,
+                            in.senderAddress,
+                            0,
+                            "lineageAction".beginParse(),
+                            store.version,
+                        ),
+                    });
+                    transferMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                    );
+                }
+            }
         }
 
-        // todo: DeActivate accounts by authority and confiscate funds
+        // DeActivate accounts by authority and confiscate/transfer funds
         AuthorityAction => {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             // not allowed to block authority, but previledged can be deactivated
             assert (!store.isAuthorityAccount) throw Errors.IncorrectReceiver;
-            store.active = !store.active; // todo fixme: action override by others(invitor0 etc)
-            if (store.jettonBalance != 0) {
-                val transferMsg = createMessage({
-                    bounce: BounceMode.Only256BitsOfBody,
-                    dest: in.senderAddress, // to authority
-                    value: 0,
-                    body: makeInternalTransferStep(
-                        0,
-                        store.jettonBalance,            // all coins
-                        addrs.owner,
-                        msg.sender,                     // sendExcessesTo
-                        0,
-                        "authorityFreeze".beginParse(), // todo
-                        store.version,
-                    ),
-                });
-                transferMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
-                );
+
+            if (msg.toggleActive) {
+                store.active = !store.active;
+            }
+
+            val targetAmount = msg.amount > 0 ? msg.amount : store.jettonBalance;
+            if (targetAmount > 0) {
+                val targetRecipient = msg.fundsReceiver != null
+                    ? msg.fundsReceiver.getAddrFiWallet()
+                    : in.senderAddress;                                                                                   // authority FiWallet
+
+                var actualTransfer: coins = 0;
+                if (store.jettonBalance >= targetAmount) {
+                    store.jettonBalance -= targetAmount;
+                    actualTransfer = targetAmount;
+                } else {
+                    val available = store.jettonBalance;
+                    val deficit = targetAmount - available;
+                    store.debt += deficit;
+                    store.debts = true;
+                    store.jettonBalance = 0;
+                    actualTransfer = available;
+                }
+
+                if (actualTransfer > 0) {
+                    val transferMsg = createMessage({
+                        bounce: BounceMode.Only256BitsOfBody,
+                        dest: targetRecipient,
+                        value: 0,
+                        body: makeInternalTransferStep(
+                            0,
+                            actualTransfer,
+                            addrs.owner,
+                            msg.sender, // sendExcessesTo
+                            0,
+                            "authorityFreeze".beginParse(),
+                            store.version,
+                        ),
+                    });
+                    transferMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                    );
+                }
             }
         }
 

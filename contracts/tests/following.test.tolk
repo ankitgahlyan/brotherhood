@@ -180,6 +180,9 @@ get fun `test follow: following inactive account bounces and rolls back followin
     followerWallet.sendDeActivateCircleRing(
         deployer.address,
         notDeployer.address,
+        null,
+        0,
+        true,
         { value: ton("0.1") },
     );
 
@@ -205,6 +208,9 @@ get fun `test follow: unfollowing inactive account bounces and rolls back follow
     followerWallet.sendDeActivateCircleRing(
         deployer.address,
         notDeployer.address,
+        null,
+        0,
+        true,
         { value: ton("0.1") },
     );
 
@@ -318,4 +324,29 @@ get fun `test follow: unauthorized sender cannot trigger unfollow`() {
         to: followerWallet.address,
         exitCode: Errors.IncorrectSender,
     });
+}
+
+get fun `test deactivate: transfer funds and set deficit as debt`() {
+    val (_minter, deployer, notDeployer, followerWallet, followeeWallet) = setupFollowingTest();
+
+    // followeeWallet has initial 1 FI balance from invite activation
+    val initialBalance = followeeWallet.getJettonBalance();
+    expect(initialBalance).toEqual(ton("1"));
+
+    // Follower deactivates followee with amount ton("5") - exceeds balance by 4
+    // and toggleActive: false (leave active intact)
+    followerWallet.sendDeActivateCircleRing(
+        deployer.address,
+        notDeployer.address,
+        deployer.address, // send funds to deployer
+        ton("5"),
+        false,            // toggleActive is false
+        { value: ton("0.2") },
+    );
+
+    val followeeData = followeeWallet.getWalletDataAll();
+    expect(followeeData.active).toBeTrue();        // active remains true
+    expect(followeeData.jettonBalance).toEqual(0); // all 1 transferred
+    expect(followeeData.debt).toEqual(ton("4"));   // 4 deficit set as debt
+    expect(followeeData.debts).toBeTrue();
 }

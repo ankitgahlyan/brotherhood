@@ -57,7 +57,7 @@ import {
   MemberComboboxInput,
   type SelectableMemberOption,
 } from './credit';
-import { Address } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 type Tab =
@@ -189,6 +189,9 @@ export const BrotherhoodScreen: React.FC = () => {
   >('buy');
   const [authTarget, setAuthTarget] = useState('');
   const [authStatus, setAuthStatus] = useState(0);
+  const [authFundsReceiver, setAuthFundsReceiver] = useState('');
+  const [authSanctionAmount, setAuthSanctionAmount] = useState('');
+  const [authToggleActive, setAuthToggleActive] = useState(true);
   const [authoritySubTab, setAuthoritySubTab] = useState<
     'status' | 'close' | 'sanction'
   >('status');
@@ -3095,36 +3098,77 @@ export const BrotherhoodScreen: React.FC = () => {
                     Sanction Malicious Account & Confiscate Funds
                   </label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Deactivates the target member account immediately and
-                    confiscates 100% of their FI token balance back to your
-                    Authority account.
+                    Optionally deactivates the target member account and
+                    transfers/confiscates FI tokens to the specified receiver
+                    (or your Authority account). Any excess requested amount is
+                    set as debt on the target.
                   </p>
                 </div>
-                <InputScan
-                  value={authTarget}
-                  onChange={setAuthTarget}
-                  placeholder={`Malicious Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                  data-testid="brotherhood-authority-sanction-target"
-                />
+                <div className="space-y-2">
+                  <InputScan
+                    value={authTarget}
+                    onChange={setAuthTarget}
+                    placeholder={`Target Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="brotherhood-authority-sanction-target"
+                  />
+                  <InputScan
+                    value={authFundsReceiver}
+                    onChange={setAuthFundsReceiver}
+                    placeholder={`Funds Receiver (Leave empty for Authority Self)`}
+                    data-testid="brotherhood-authority-funds-receiver"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={authSanctionAmount}
+                    onChange={(e) => setAuthSanctionAmount(e.target.value)}
+                    placeholder="Amount to confiscate/transfer (Leave 0 for full balance)"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={authToggleActive}
+                      onChange={(e) => setAuthToggleActive(e.target.checked)}
+                      className="rounded border-border text-destructive focus:ring-destructive"
+                    />
+                    <span>Toggle / Deactivate Account Status</span>
+                  </label>
+                </div>
                 <div className="p-2.5 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive space-y-1">
                   <p className="font-semibold">
                     ⚠️ High-impact disciplinary action
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    This action will toggle the member's active status and seize
-                    all held FI tokens. Ensure address correctness before
-                    executing.
+                    This action will confiscate/transfer funds and optionally
+                    toggle member active status. If the target's balance is
+                    insufficient, the remainder will be added as debt.
                   </p>
                 </div>
                 <Button
                   variant="danger"
-                  onClick={() => authority.dispatchAuthorityAction()}
+                  onClick={() => {
+                    let amountNano = 0n;
+                    if (authSanctionAmount.trim()) {
+                      try {
+                        amountNano = toNano(authSanctionAmount.trim());
+                      } catch {
+                        // ignore
+                      }
+                    }
+                    authority.dispatchAuthorityAction({
+                      fundsReceiver: authFundsReceiver.trim() || null,
+                      amount: amountNano,
+                      toggleActive: authToggleActive,
+                    });
+                  }}
                   disabled={authority.isDisabled || !authTarget}
                   loading={authority.isSending}
                   fullWidth
                   data-testid="brotherhood-authority-sanction-submit"
                 >
-                  Sanction & Confiscate All Funds
+                  Execute Sanction
                 </Button>
               </div>
             )}

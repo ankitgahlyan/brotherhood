@@ -7,9 +7,10 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Address } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
+import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
@@ -99,6 +100,18 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
 
   const targetOwnerAddress = data?.ownerAddressString ?? '';
 
+  // Circle/Ring management inputs
+  const [showLineageOptions, setShowLineageOptions] = useState(false);
+  const [lineageFundsReceiver, setLineageFundsReceiver] = useState('');
+  const [lineageAmount, setLineageAmount] = useState('');
+  const [lineageToggleActive, setLineageToggleActive] = useState(true);
+
+  // Authority sanction inputs
+  const [showAuthorityOptions, setShowAuthorityOptions] = useState(false);
+  const [authFundsReceiver, setAuthFundsReceiver] = useState('');
+  const [authAmount, setAuthAmount] = useState('');
+  const [authToggleActive, setAuthToggleActive] = useState(true);
+
   const deactivate = useDeactivateMember({
     wallet: currentWallet,
     walletKit,
@@ -122,19 +135,30 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
     if (!data) return;
     const isCurrentlyActive = data.active;
     const memberName = data.username ? `@${data.username}` : 'this member';
-    const confirmMsg = isCurrentlyActive
-      ? `Are you sure you want to suspend ${memberName}? This will toggle their active state to inactive and pause member operations.`
-      : `Are you sure you want to reactivate ${memberName}? This will restore their active state.`;
+    const actionDesc = lineageAmount.trim()
+      ? `transfer ${lineageAmount} FI`
+      : isCurrentlyActive
+        ? 'suspend'
+        : 'reactivate';
+    const confirmMsg = `Are you sure you want to execute this lineage action on ${memberName}? (${actionDesc})`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      await deactivate.toggleActive();
-      toast.success(
-        isCurrentlyActive
-          ? 'Member suspension broadcasted'
-          : 'Member reactivation broadcasted',
-      );
+      let amountNano = 0n;
+      if (lineageAmount.trim()) {
+        try {
+          amountNano = toNano(lineageAmount.trim());
+        } catch {
+          // ignore
+        }
+      }
+      await deactivate.toggleActive({
+        fundsReceiver: lineageFundsReceiver.trim() || null,
+        amount: amountNano,
+        toggleActive: lineageToggleActive,
+      });
+      toast.success('Lineage action broadcasted');
       setTimeout(() => refetch(), 4000);
     } catch {
       // Handled in useBrotherhoodTransaction
@@ -144,13 +168,28 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
   const handleAuthoritySanction = async () => {
     if (!data) return;
     const memberName = data.username ? `@${data.username}` : 'this member';
-    const confirmMsg = `CRITICAL ACTION: Are you sure you want to sanction ${memberName}? This will toggle their active state and CONFISCATE ${formatFi(data.jettonBalance)} FI back to your Authority account.`;
+    const amountLabel = authAmount.trim()
+      ? `${authAmount} FI`
+      : `${formatFi(data.jettonBalance)} FI`;
+    const confirmMsg = `CRITICAL ACTION: Are you sure you want to sanction ${memberName}? This will transfer/confiscate ${amountLabel} and execute authority enforcement.`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      await authority.dispatchAuthorityAction();
-      toast.success('Authority sanction and fund confiscation broadcasted');
+      let amountNano = 0n;
+      if (authAmount.trim()) {
+        try {
+          amountNano = toNano(authAmount.trim());
+        } catch {
+          // ignore
+        }
+      }
+      await authority.dispatchAuthorityAction({
+        fundsReceiver: authFundsReceiver.trim() || null,
+        amount: amountNano,
+        toggleActive: authToggleActive,
+      });
+      toast.success('Authority sanction and fund transfer broadcasted');
       setTimeout(() => refetch(), 4000);
     } catch {
       // Handled in useBrotherhoodTransaction
@@ -322,7 +361,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
 
           {/* Circle / Ring Member Suspension / Reactivation */}
           {canManageMember && (
-            <div className="p-3 bg-secondary/50 border border-border/70 rounded-xl space-y-2">
+            <div className="p-3 bg-secondary/50 border border-border/70 rounded-xl space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <span className="text-xs font-semibold text-foreground block">
@@ -334,20 +373,61 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                       : 'You are this member’s upstream inviter (Ring)'}
                   </span>
                 </div>
-                <Button
-                  variant={data.active ? 'danger' : 'primary'}
-                  size="sm"
-                  disabled={deactivate.isDisabled || !targetOwnerAddress}
-                  onClick={handleToggleActive}
-                  className="text-xs shrink-0"
-                >
-                  {deactivate.isSending
-                    ? 'Broadcasting...'
-                    : data.active
-                      ? 'Suspend Member'
-                      : 'Reactivate Member'}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowLineageOptions((prev) => !prev)}
+                    className="text-[11px] text-primary hover:underline px-1.5 py-0.5"
+                  >
+                    {showLineageOptions ? 'Simple' : 'Advanced'}
+                  </button>
+                  <Button
+                    variant={data.active ? 'danger' : 'primary'}
+                    size="sm"
+                    disabled={deactivate.isDisabled || !targetOwnerAddress}
+                    onClick={handleToggleActive}
+                    className="text-xs shrink-0"
+                  >
+                    {deactivate.isSending
+                      ? 'Broadcasting...'
+                      : data.active
+                        ? 'Suspend / Transfer'
+                        : 'Reactivate'}
+                  </Button>
+                </div>
               </div>
+
+              {showLineageOptions && (
+                <div className="space-y-2 pt-1 border-t border-border/50 text-xs">
+                  <InputScan
+                    value={lineageFundsReceiver}
+                    onChange={setLineageFundsReceiver}
+                    placeholder="Beneficiary Address (Leave empty for Self)"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={lineageAmount}
+                    onChange={(e) => setLineageAmount(e.target.value)}
+                    placeholder="Transfer amount (excess is set as debt, leave 0 for none)"
+                    className="w-full p-2 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <label className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineageToggleActive}
+                      onChange={(e) => setLineageToggleActive(e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span>
+                      Toggle Active Status (currently{' '}
+                      {data.active ? 'Active' : 'Inactive'})
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 {data.active
                   ? 'Suspending will toggle this account inactive, temporarily pausing their ability to perform member operations until reactivated.'
@@ -358,31 +438,72 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
 
           {/* Authority Enforcement Action */}
           {isAuthority && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <span className="text-xs font-semibold text-destructive block">
                     Authority Sanction
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    Confiscate 100% of malicious member’s FI tokens
+                    Confiscate or transfer member funds & manage active status
                   </span>
                 </div>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={authority.isDisabled || !targetOwnerAddress}
-                  onClick={handleAuthoritySanction}
-                  className="text-xs shrink-0"
-                >
-                  {authority.isSending
-                    ? 'Sanctioning...'
-                    : 'Sanction & Confiscate'}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAuthorityOptions((prev) => !prev)}
+                    className="text-[11px] text-destructive hover:underline px-1.5 py-0.5"
+                  >
+                    {showAuthorityOptions ? 'Simple' : 'Advanced'}
+                  </button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={authority.isDisabled || !targetOwnerAddress}
+                    onClick={handleAuthoritySanction}
+                    className="text-xs shrink-0"
+                  >
+                    {authority.isSending
+                      ? 'Sanctioning...'
+                      : 'Execute Sanction'}
+                  </Button>
+                </div>
               </div>
+
+              {showAuthorityOptions && (
+                <div className="space-y-2 pt-1 border-t border-destructive/20 text-xs">
+                  <InputScan
+                    value={authFundsReceiver}
+                    onChange={setAuthFundsReceiver}
+                    placeholder="Beneficiary Address (Leave empty for Authority Self)"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={authAmount}
+                    onChange={(e) => setAuthAmount(e.target.value)}
+                    placeholder="Confiscate amount (leave 0 for full balance)"
+                    className="w-full p-2 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive"
+                  />
+                  <label className="flex items-center gap-2 text-[11px] text-destructive cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={authToggleActive}
+                      onChange={(e) => setAuthToggleActive(e.target.checked)}
+                      className="rounded border-border text-destructive focus:ring-destructive"
+                    />
+                    <span>
+                      Toggle Active Status (currently{' '}
+                      {data.active ? 'Active' : 'Inactive'})
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <p className="text-[11px] text-destructive/80 leading-relaxed">
-                Toggles active state and confiscates{' '}
-                {formatFi(data.jettonBalance)} FI to your Authority wallet.
+                Transfers funds to beneficiary and optionally toggles active
+                status. Excess requested amounts are set as debt.
               </p>
             </div>
           )}

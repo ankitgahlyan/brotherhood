@@ -126,13 +126,16 @@ fun FossFiWallet.sendDeActivateCircleRing(
     self,
     from: address,
     transferRecipient: address,
+    fundsReceiver: address?,
+    amount: coins,
+    toggleActive: bool,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: DeActivateCircleRing { transferRecipient },
+        body: DeActivateCircleRing { transferRecipient, fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -140,13 +143,16 @@ fun FossFiWallet.sendDeActivateCircleRing(
 fun FossFiWallet.sendDeActivateCircleRingInternal(
     self,
     from: address,
+    fundsReceiver: address?,
+    amount: coins,
+    toggleActive: bool,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: DeActivateCircleRingInternal {},
+        body: DeActivateCircleRingInternal { fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -155,13 +161,16 @@ fun FossFiWallet.sendActDispatchAuthorityAction(
     self,
     from: address,
     transferRecipient: address,
+    fundsReceiver: address?,
+    amount: coins,
+    toggleActive: bool,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: ActDispatchAuthorityAction { transferRecipient },
+        body: ActDispatchAuthorityAction { transferRecipient, fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -314,13 +323,16 @@ fun FossFiWallet.sendAuthorityAction(
     self,
     from: address,
     sender: address,
+    fundsReceiver: address?,
+    amount: coins,
+    toggleActive: bool,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: AuthorityAction { sender },
+        body: AuthorityAction { sender, fundsReceiver, amount, toggleActive },
     });
     return net.send(from, genericMsg);
 }
@@ -918,4 +930,8 @@ fun FossFiWallet.getFollowingCount(self): uint32 {
 
 fun FossFiWallet.getFollowersCount(self): uint32 {
     return net.runGetMethod(self.address, "get_followers_count");
+}
+
+fun FossFiWallet.getAllowance(self, grantee: address): coins {
+    return net.runGetMethod(self.address, "get_allowance", [grantee]);
 }
