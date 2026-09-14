@@ -129,4 +129,33 @@ describe('Deterministic Address Caching', () => {
     expect(lastFetch).not.toBeNull();
     expect(lastFetch).toBe(cached?.timestamp ?? 0);
   });
+
+  it('deserializes both JSON strings and legacy IndexedDB objects gracefully', async () => {
+    const { serializeForStorage, deserializeFromStorage } =
+      await import('./contract-cache');
+
+    const originalData = {
+      count: 42n,
+      active: true,
+      text: 'hello',
+    };
+
+    // 1. Standard string serialization
+    const jsonStr = serializeForStorage(originalData);
+    expect(typeof jsonStr).toBe('string');
+    const fromString = deserializeFromStorage<typeof originalData>(jsonStr);
+    expect(fromString.count).toBe(42n);
+    expect(fromString.active).toBe(true);
+
+    // 2. Legacy object in IndexedDB (parsed JSON with __type markers)
+    const legacyObj = JSON.parse(jsonStr);
+    expect(typeof legacyObj).toBe('object');
+    const fromObject = deserializeFromStorage<typeof originalData>(legacyObj);
+    expect(fromObject.count).toBe(42n);
+    expect(fromObject.active).toBe(true);
+
+    // 3. Null / undefined safety
+    expect(deserializeFromStorage(null)).toBeNull();
+    expect(deserializeFromStorage(undefined)).toBeUndefined();
+  });
 });

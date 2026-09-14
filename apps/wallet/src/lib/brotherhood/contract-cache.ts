@@ -143,7 +143,11 @@ export function serializeForStorage(data: any): string {
   return JSON.stringify(data, serializeReplacer);
 }
 
-export function deserializeFromStorage<T = any>(jsonStr: string): T {
+export function deserializeFromStorage<T = any>(data: string | any): T {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
   return JSON.parse(jsonStr, serializeReviver);
 }
 
@@ -347,7 +351,7 @@ export async function setContractCache(key: string, data: any): Promise<void> {
   // 2. Persist to IndexedDB asynchronously
   try {
     const db = await openDB();
-    const serializedData = JSON.parse(JSON.stringify(data, serializeReplacer));
+    const serializedData = serializeForStorage(data);
     const entry: CacheEntry = {
       key,
       data: serializedData,
@@ -432,10 +436,7 @@ export async function getContractCache<T = any>(
     );
 
     if (!entry) return null;
-    const restoredData = JSON.parse(
-      JSON.stringify(entry.data),
-      serializeReviver,
-    );
+    const restoredData = deserializeFromStorage<T>(entry.data);
 
     // Populate L1 cache
     memoryContractCache.set(key, {
@@ -616,14 +617,22 @@ export function preloadContractCacheFromDb(): Promise<void> {
       });
       for (const entry of entries) {
         if (!memoryContractCache.has(entry.key)) {
-          const restored = deserializeFromStorage(entry.data);
-          memoryContractCache.set(entry.key, {
-            key: entry.key,
-            data: restored,
-            timestamp: entry.timestamp,
-          });
-          if (entry.timestamp > (lastKnownGlobalFetchTime ?? 0)) {
-            lastKnownGlobalFetchTime = entry.timestamp;
+          try {
+            const restored = deserializeFromStorage(entry.data);
+            memoryContractCache.set(entry.key, {
+              key: entry.key,
+              data: restored,
+              timestamp: entry.timestamp,
+            });
+            if (entry.timestamp > (lastKnownGlobalFetchTime ?? 0)) {
+              lastKnownGlobalFetchTime = entry.timestamp;
+            }
+          } catch (entryErr) {
+            console.warn(
+              '[ContractCache] Failed to deserialize entry from DB:',
+              entry.key,
+              entryErr,
+            );
           }
         }
       }
