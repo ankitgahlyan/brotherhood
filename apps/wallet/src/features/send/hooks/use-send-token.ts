@@ -113,16 +113,30 @@ export const useSendToken = ({
 
     const senderAddress = wallet.getAddress();
     const recipientAddress = recipient;
+    const net =
+      String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
 
     setTimeout(async () => {
       try {
         const targets: string[] = [];
-        if (recipientAddress) targets.push(recipientAddress);
+        if (recipientAddress) {
+          targets.push(recipientAddress);
+          try {
+            const recipientFiWallet = getFiWalletAddress(
+              Address.parse(recipientAddress),
+              net,
+            );
+            targets.push(recipientFiWallet.toString());
+          } catch {
+            /* pass */
+          }
+        }
         if (senderAddress) {
           targets.push(senderAddress.toString());
           try {
-            const userFiWallet = await getFiWalletAddress(
+            const userFiWallet = getFiWalletAddress(
               Address.parse(senderAddress),
+              net,
             );
             targets.push(userFiWallet.toString());
           } catch {
@@ -132,7 +146,7 @@ export const useSendToken = ({
 
         await Promise.all(
           targets.map((addr) =>
-            invalidateContractState(addr, 'testnet', queryClient),
+            invalidateContractState(addr, net, queryClient),
           ),
         );
         toast.info('On-chain state updated');

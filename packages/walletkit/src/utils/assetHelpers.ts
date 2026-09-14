@@ -26,6 +26,18 @@ import type {
 // Jetton Helpers
 // ==========================================
 
+// Cache for jetton wallet addresses by master + owner
+const JETTON_WALLET_BY_OWNER_CACHE_SIZE = 1000;
+const JETTON_WALLET_BY_OWNER_CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours TTL
+const jettonWalletByOwnerCache = new LRUCache<string, UserFriendlyAddress>({
+  max: JETTON_WALLET_BY_OWNER_CACHE_SIZE,
+  ttl: JETTON_WALLET_BY_OWNER_CACHE_TTL,
+});
+
+export function clearJettonWalletAddressCache(): void {
+  jettonWalletByOwnerCache.clear();
+}
+
 /**
  * Gets the jetton wallet address for an owner
  */
@@ -36,6 +48,50 @@ export async function getJettonWalletAddressFromClient(
 ): Promise<UserFriendlyAddress> {
   if (!isValidAddress(jettonAddress)) {
     throw new Error(`Invalid jetton address: ${jettonAddress}`);
+  }
+  if (!isValidAddress(ownerAddress)) {
+    throw new Error(`Invalid owner address: ${ownerAddress}`);
+  }
+
+  let netName = 'testnet';
+  try {
+    const network = client.getNetwork?.();
+    if (network) {
+      netName = String(network.chainId) === '-239' ? 'mainnet' : 'testnet';
+    }
+  } catch {
+    /* pass */
+  }
+
+  let minterCanonical = jettonAddress;
+  let ownerCanonical = ownerAddress;
+  try {
+    minterCanonical = Address.parse(jettonAddress).toString();
+    ownerCanonical = Address.parse(ownerAddress).toString();
+  } catch {
+    /* pass */
+  }
+
+  const cacheKey = `deterministic_wallet:${netName}:${minterCanonical}:${ownerCanonical}`;
+
+  // 1. Check L1 in-memory LRU cache
+  const memCached = jettonWalletByOwnerCache.get(cacheKey);
+  if (memCached) {
+    return memCached;
+  }
+
+  // 2. Check localStorage (ADR 0013 compliant)
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = localStorage.getItem(cacheKey);
+      if (stored && isValidAddress(stored)) {
+        const friendly = asAddressFriendly(stored);
+        jettonWalletByOwnerCache.set(cacheKey, friendly);
+        return friendly;
+      }
+    } catch {
+      /* pass */
+    }
   }
 
   try {
@@ -60,7 +116,18 @@ export async function getJettonWalletAddressFromClient(
       throw new Error('Failed to get jetton wallet address');
     }
 
-    return asAddressFriendly(jettonWalletAddress.toString());
+    const resolved = asAddressFriendly(jettonWalletAddress.toString());
+    jettonWalletByOwnerCache.set(cacheKey, resolved);
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem(cacheKey, resolved);
+      } catch {
+        /* pass */
+      }
+    }
+
+    return resolved;
   } catch (error) {
     throw new Error(
       `Failed to get jetton wallet address for ${jettonAddress}: ${

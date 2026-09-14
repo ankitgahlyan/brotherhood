@@ -14,12 +14,23 @@ import { Address } from '@ton/core';
 import { Input } from '@/core/components/ui/input';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
 import { useFormatAddress } from '@/core/utils/formatters';
-import { getFiWalletState } from '@/lib/brotherhood/ton';
+import {
+  getFiWalletState,
+  getFiWalletAddress,
+  type Network,
+} from '@/lib/brotherhood/ton';
+import {
+  getContractCacheSync,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import {
   getCachedUsername,
   getCachedAddressByUsername,
   saveUsernameAddressMapping,
 } from '../../lib/contact-storage';
+
+// In-memory negative cache for addresses without usernames to avoid redundant on-chain calls
+const negativeUsernameCache = new Set<string>();
 
 interface RecipientFieldProps {
   value: string;
@@ -98,13 +109,55 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
         return;
       }
 
-      // Not in localStorage: query on-chain FiWallet every time
+      // Check negative cache to avoid repeating failed on-chain queries for the same address
+      let parsedAddress: Address | null = null;
+      try {
+        parsedAddress = Address.parse(trimmed);
+      } catch {
+        // Not a parsable address
+      }
+
+      const canonicalKey = parsedAddress
+        ? `${net}:${parsedAddress.toString()}`
+        : `${net}:${trimmed}`;
+      if (negativeUsernameCache.has(canonicalKey)) {
+        setResolvedUsername(null);
+        setIsResolving(false);
+        return;
+      }
+
+      // Check L1/IndexedDB ContractCache using off-chain calculated FiWallet address
+      if (parsedAddress) {
+        try {
+          const offchainFiWallet = getFiWalletAddress(
+            parsedAddress,
+            net as Network,
+          );
+          const cacheKey = getNormalizedContractCacheKey(
+            net as Network,
+            offchainFiWallet,
+          );
+          const cachedEntry = getContractCacheSync<any>(cacheKey);
+          const uname = cachedEntry?.data?.profile?.username;
+          if (uname && typeof uname === 'string' && uname.trim().length > 0) {
+            const clean = uname.trim().replace(/^@+/, '');
+            setResolvedUsername(clean);
+            saveUsernameAddressMapping(clean, trimmed, net);
+            setIsResolving(false);
+            return;
+          }
+        } catch {
+          // Offchain calculation / cache check failed, proceed to on-chain fallback
+        }
+      }
+
+      // Not in cache: query on-chain FiWallet with debounce
       setResolvedUsername(null);
       setIsResolving(true);
 
       const timer = setTimeout(async () => {
         try {
-          const parsed = Address.parse(trimmed);
+          const parsed = parsedAddress || Address.parse(trimmed);
           const fiState = await getFiWalletState(parsed, { net });
           if (isCancelled) return;
 
@@ -115,11 +168,13 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             // Save to localStorage for future suggestions
             saveUsernameAddressMapping(clean, trimmed, net);
           } else {
-            // No username on-chain, do not cache empty
+            // No username on-chain, mark in negative cache
+            negativeUsernameCache.add(canonicalKey);
             setResolvedUsername(null);
           }
         } catch (_err) {
           if (!isCancelled) {
+            negativeUsernameCache.add(canonicalKey);
             setResolvedUsername(null);
           }
         } finally {
