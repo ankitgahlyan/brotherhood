@@ -314,13 +314,13 @@ export const SettingsDropdown: React.FC = () => {
       <Modal.Container
         isOpened={panel === 'menu'}
         onOpenChange={(open) => !open && setPanel(null)}
-        className="max-h-[90vh] flex flex-col overflow-hidden px-2"
+        className="h-[90vh] flex flex-col overflow-hidden px-2"
       >
         <Modal.Header onClose={() => setPanel(null)}>
           <Modal.Title>Settings</Modal.Title>
         </Modal.Header>
 
-        <Modal.Body className="gap-3 flex-1 overflow-y-auto min-h-0">
+        <Modal.Body className="gap-3 flex-1 overflow-y-auto min-h-0 pb-10">
           {/* Appearance Section */}
           <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2 block">

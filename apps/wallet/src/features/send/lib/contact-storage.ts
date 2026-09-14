@@ -6,6 +6,8 @@
  *
  */
 
+import { Address } from '@ton/core';
+
 export interface RecentTransactedMember {
   address: string;
   username?: string;
@@ -14,6 +16,15 @@ export interface RecentTransactedMember {
 
 const normalizeUsername = (raw: string): string => {
   return raw.trim().replace(/^@+/, '').toLowerCase();
+};
+
+export const normalizeContactAddress = (raw: string): string => {
+  const trimmed = raw.trim();
+  try {
+    return Address.parse(trimmed).toRawString();
+  } catch {
+    return trimmed.toLowerCase();
+  }
 };
 
 const getUsernamesKey = (network: string) =>
@@ -55,7 +66,8 @@ export function getCachedUsername(
     getAddressesKey(network),
     {},
   );
-  return addresses[address.trim()] || null;
+  const rawKey = normalizeContactAddress(address);
+  return addresses[rawKey] || addresses[address.trim()] || null;
 }
 
 /**
@@ -98,7 +110,10 @@ export function saveUsernameAddressMapping(
     getAddressesKey(network),
     {},
   );
-  addresses[addr] = username.trim().replace(/^@+/, '');
+  const cleanUname = username.trim().replace(/^@+/, '');
+  const rawKey = normalizeContactAddress(addr);
+  addresses[addr] = cleanUname;
+  addresses[rawKey] = cleanUname;
   safeSetItem(getAddressesKey(network), addresses);
 }
 

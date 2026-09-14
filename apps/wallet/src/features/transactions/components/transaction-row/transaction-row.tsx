@@ -7,7 +7,18 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { Check, MinusCircle, PlusCircle, X } from 'lucide-react';
+import { Check, MinusCircle, PlusCircle, X, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { useWalletStore } from '@demo/wallet-core';
+import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
+import {
+  getCachedUsername,
+  saveUsernameAddressMapping,
+} from '@/features/send/lib/contact-storage';
+import { Modal } from '@/core/components/ui/modal/modal';
+import { Button } from '@/core/components/ui/button';
+import { Input } from '@/core/components/ui/input';
 
 import type {
   TransactionRowModel,
@@ -46,10 +57,11 @@ const StatusBadge: React.FC<{ status: TransactionRowStatus }> = ({
 export const TransactionRow: React.FC<TransactionRowModel> = ({
   id,
   txHash,
-  network,
+  network = 'testnet',
   explorerUrl,
   title,
   subtitleId,
+  counterpartyAddress,
   failureReason,
   amount,
   isOutgoing,
@@ -57,6 +69,8 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
   date,
 }) => {
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
+  const [editingName, setEditingName] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
 
@@ -95,6 +109,53 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
     }
   };
 
+  const { formatWalletAddress } = useFormatAddress();
+  const savedWallets = useWalletStore(
+    (state) => state.walletManagement.savedWallets,
+  );
+  const activeWalletId = useWalletStore(
+    (state) => state.walletManagement.activeWalletId,
+  );
+  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
+  const myAddress = activeWallet?.address;
+
+  // Resolve counterparty representation
+  let counterpartyLabel = subtitleId;
+  let showEditButton = false;
+  let cachedName: string | null = null;
+
+  if (counterpartyAddress) {
+    if (myAddress && sameAddress(counterpartyAddress, myAddress)) {
+      counterpartyLabel = 'self';
+    } else {
+      cachedName = getCachedUsername(counterpartyAddress, network);
+      if (cachedName) {
+        counterpartyLabel = `@${cachedName}`;
+      } else {
+        counterpartyLabel = formatWalletAddress(counterpartyAddress, true);
+      }
+      showEditButton = true;
+    }
+  }
+
+  const handleOpenEditName = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingName(cachedName || '');
+    setIsEditNameOpen(true);
+  };
+
+  const handleSaveName = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!counterpartyAddress) return;
+    const clean = editingName.trim().replace(/^@+/, '');
+    if (clean) {
+      saveUsernameAddressMapping(clean, counterpartyAddress, network);
+      toast.success(`Saved @${clean} for address`);
+    }
+    setIsEditNameOpen(false);
+  };
+
   const content = (
     <>
       <span className="relative w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
@@ -121,8 +182,19 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
             {failureReason}
           </div>
         ) : (
-          <div className="text-xs text-muted-foreground truncate">
-            {subtitleId}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+            <span className="truncate">{counterpartyLabel}</span>
+            {showEditButton && (
+              <button
+                type="button"
+                onClick={handleOpenEditName}
+                className="opacity-60 hover:opacity-100 hover:text-foreground transition-opacity p-0.5"
+                title="Save contact name"
+                aria-label="Save contact name"
+              >
+                <Pencil className="w-2.5 h-2.5" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -183,6 +255,38 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
         txHash={hashForModal}
         network={network}
       />
+
+      <Modal.Container
+        isOpened={isEditNameOpen}
+        onOpenChange={setIsEditNameOpen}
+      >
+        <Modal.Header onClose={() => setIsEditNameOpen(false)}>
+          <Modal.Title>Save Contact Name</Modal.Title>
+        </Modal.Header>
+        <form onSubmit={handleSaveName}>
+          <Modal.Body className="space-y-4">
+            <div className="text-xs text-muted-foreground font-mono break-all">
+              {counterpartyAddress}
+            </div>
+            <Input.Container>
+              <Input.Field>
+                <Input.Input
+                  type="text"
+                  placeholder="e.g. Alice or @alice"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  autoFocus
+                />
+              </Input.Field>
+            </Input.Container>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button type="submit" className="w-full">
+              Save Contact
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Container>
     </>
   );
 };

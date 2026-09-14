@@ -34,7 +34,8 @@ import { useLocationMembers } from '../hooks/use-city-members';
 
 export const CityNetworkScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { network, formatContractAddress } = useFormatAddress();
+  const { network, formatContractAddress, formatWalletAddress } =
+    useFormatAddress();
   const { address } = useWallet();
   const account = useFiAccount(address ?? null);
 
@@ -121,10 +122,22 @@ export const CityNetworkScreen: React.FC = () => {
       const p = getMemberProfile(m);
       const uname = (p?.username || '').toLowerCase();
       const addrStr = m.toLowerCase();
-      const formatted = formatContractAddress(m).toLowerCase();
-      return uname.includes(q) || addrStr.includes(q) || formatted.includes(q);
+      const formatted = formatWalletAddress(m).toLowerCase();
+      const contractFormatted = formatContractAddress(m).toLowerCase();
+      return (
+        uname.includes(q) ||
+        addrStr.includes(q) ||
+        formatted.includes(q) ||
+        contractFormatted.includes(q)
+      );
     });
-  }, [rawMembers, memberSearch, profiles, network, formatContractAddress]);
+  }, [
+    rawMembers,
+    memberSearch,
+    profiles,
+    formatWalletAddress,
+    formatContractAddress,
+  ]);
 
   return (
     <MemberGuard title="Location & Spatial Network">
@@ -367,7 +380,7 @@ export const CityNetworkScreen: React.FC = () => {
                                   </button>
                                 ) : null}
                                 <span className="font-mono text-foreground break-all text-[11px]">
-                                  {formatContractAddress(m)}
+                                  {formatWalletAddress(m)}
                                 </span>
                                 {isYou && (
                                   <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20 shrink-0">
@@ -375,11 +388,7 @@ export const CityNetworkScreen: React.FC = () => {
                                   </span>
                                 )}
                               </div>
-                              <CopyButton
-                                address={m}
-                                type="contract"
-                                size="xs"
-                              />
+                              <CopyButton address={m} type="wallet" size="xs" />
                             </div>
                           );
                         })}

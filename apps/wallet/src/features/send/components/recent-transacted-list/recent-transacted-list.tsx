@@ -7,14 +7,18 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Copy, Trash2, Check, User } from 'lucide-react';
+import { Copy, Trash2, Check, User, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getRecentTransacted,
   removeRecentTransacted,
   clearAllRecentTransacted,
+  saveUsernameAddressMapping,
   type RecentTransactedMember,
 } from '../../lib/contact-storage';
+import { Modal } from '@/core/components/ui/modal/modal';
+import { Button } from '@/core/components/ui/button';
+import { Input } from '@/core/components/ui/input';
 
 interface RecentTransactedListProps {
   network: string;
@@ -27,6 +31,9 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
 }) => {
   const [recent, setRecent] = useState<RecentTransactedMember[]>([]);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [editingMember, setEditingMember] =
+    useState<RecentTransactedMember | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   const reload = useCallback(() => {
     setRecent(getRecentTransacted(network));
@@ -57,82 +64,147 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
     toast.info('Recent contacts cleared');
   };
 
+  const handleStartEdit = (
+    e: React.MouseEvent,
+    item: RecentTransactedMember,
+  ) => {
+    e.stopPropagation();
+    setEditingMember(item);
+    setEditingName(item.username || '');
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    const clean = editingName.trim().replace(/^@+/, '');
+    if (clean) {
+      saveUsernameAddressMapping(clean, editingMember.address, network);
+      toast.success(`Saved @${clean} for address`);
+    }
+    setEditingMember(null);
+    reload();
+  };
+
   if (recent.length === 0) {
     return null;
   }
 
   return (
-    <div className="pt-4 border-t border-gray-100 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
-          Recent Transacted Members ({recent.length})
-        </h4>
-        <button
-          type="button"
-          onClick={handleClearAll}
-          className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
-          data-testid="clear-all-recent-transacted"
-        >
-          Clear All
-        </button>
-      </div>
-
-      <div
-        className="space-y-2 max-h-70 overflow-y-auto pr-0.5"
-        data-testid="recent-transacted-list"
-      >
-        {recent.map((item) => (
-          <div
-            key={item.address}
-            onClick={() => onSelectMember(item)}
-            className="group flex flex-col gap-1.5 p-3 bg-white hover:bg-gray-50/80 border border-gray-200/70 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-xs"
-            role="button"
-            tabIndex={0}
-            data-testid={`recent-member-${item.address}`}
+    <>
+      <div className="pt-4 border-t border-gray-100 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+            Recent Transacted Members ({recent.length})
+          </h4>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+            data-testid="clear-all-recent-transacted"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <User className="w-3.5 h-3.5" />
+            Clear All
+          </button>
+        </div>
+
+        <div
+          className="space-y-2 max-h-70 overflow-y-auto pr-0.5"
+          data-testid="recent-transacted-list"
+        >
+          {recent.map((item) => (
+            <div
+              key={item.address}
+              onClick={() => onSelectMember(item)}
+              className="group flex flex-col gap-1.5 p-3 bg-white hover:bg-gray-50/80 border border-gray-200/70 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-xs"
+              role="button"
+              tabIndex={0}
+              data-testid={`recent-member-${item.address}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-semibold text-sm text-foreground">
+                    {item.username ? `@${item.username}` : 'No username set'}
+                  </span>
                 </div>
-                <span className="font-semibold text-sm text-foreground">
-                  {item.username ? `@${item.username}` : 'No username set'}
-                </span>
+
+                <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={(e) => handleStartEdit(e, item)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+                    title="Edit username"
+                    aria-label="Edit username"
+                    data-testid={`edit-recent-${item.address}`}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleCopy(e, item.address)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+                    title="Copy address"
+                    aria-label="Copy address"
+                  >
+                    {copiedAddress === item.address ? (
+                      <Check className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDelete(e, item.address)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Remove from recent"
+                    aria-label="Remove from recent"
+                    data-testid={`delete-recent-${item.address}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={(e) => handleCopy(e, item.address)}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
-                  title="Copy address"
-                  aria-label="Copy address"
-                >
-                  {copiedAddress === item.address ? (
-                    <Check className="w-3.5 h-3.5 text-green-600" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleDelete(e, item.address)}
-                  className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                  title="Remove from recent"
-                  aria-label="Remove from recent"
-                  data-testid={`delete-recent-${item.address}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground break-all pl-9">
+                <span className="select-all">{item.address}</span>
               </div>
             </div>
-
-            <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground break-all pl-9">
-              <span className="select-all">{item.address}</span>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+
+      <Modal.Container
+        isOpened={Boolean(editingMember)}
+        onOpenChange={(open) => !open && setEditingMember(null)}
+      >
+        <Modal.Header onClose={() => setEditingMember(null)}>
+          <Modal.Title>Edit Contact Username</Modal.Title>
+        </Modal.Header>
+        <form onSubmit={handleSaveEdit}>
+          <Modal.Body className="space-y-4">
+            <div className="text-xs text-muted-foreground font-mono break-all">
+              {editingMember?.address}
+            </div>
+            <Input.Container>
+              <Input.Field>
+                <Input.Input
+                  type="text"
+                  placeholder="e.g. Alice or @alice"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  autoFocus
+                />
+              </Input.Field>
+            </Input.Container>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button type="submit" className="w-full">
+              Save Username
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Container>
+    </>
   );
 };

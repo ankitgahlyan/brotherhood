@@ -30,10 +30,12 @@ export interface TransactionRowModel {
   network?: ExplorerNetwork;
   /** Default explorer transaction URL. Undefined for not-yet-on-chain pending transactions. */
   explorerUrl?: string;
-  /** Primary label: Action Name (e.g. "Sent GRAM", "Spend Allowance", "Mint New Jettons"). */
+  /** Primary label: Exact Tolk Message / Action Name (e.g. "ActInvite", "ActVote", "BuyCredit", "AskToTransfer"). */
   title: string;
-  /** Secondary label: transfer summary / trace id. */
+  /** Secondary label: transfer summary / trace id / counterparty label. */
   subtitleId: string;
+  /** Counterparty address (recipient for outgoing, sender for incoming, or contract address). */
+  counterpartyAddress?: string;
   /** Decoded failure reason if transaction failed. */
   failureReason?: string;
   /** Signed crypto amount, e.g. "+5 GRAM" / "-1 USDT". */
@@ -51,7 +53,11 @@ interface PendingLike {
   externalHash?: string;
   finality?: 'pending' | 'confirmed' | 'finalized' | 'invalidated';
   action?: Action;
-  preview?: { type: 'send' | 'receive' | 'contract'; amount: string };
+  preview?: {
+    type: 'send' | 'receive' | 'contract';
+    amount: string;
+    recipient?: string;
+  };
 }
 
 const GRAM_DECIMALS = 9;
@@ -192,6 +198,42 @@ const isOutgoingFromAction = (action: Action, myAddress: string): boolean => {
   );
 };
 
+/** Extracts counterparty address from Action based on direction. */
+const getCounterpartyAddress = (
+  action: Action,
+  isOutgoing: boolean,
+  myAddress: string,
+): string | undefined => {
+  if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
+    const target = isOutgoing
+      ? action.TonTransfer?.recipient?.address
+      : action.TonTransfer?.sender?.address;
+    if (target) return target;
+  }
+  if (action.type === 'JettonTransfer' && 'JettonTransfer' in action) {
+    const target = isOutgoing
+      ? action.JettonTransfer?.recipient?.address
+      : action.JettonTransfer?.sender?.address;
+    if (target) return target;
+  }
+  if (action.type === 'NftItemTransfer' && 'NftItemTransfer' in action) {
+    const target = isOutgoing
+      ? action.NftItemTransfer?.recipient?.address
+      : action.NftItemTransfer?.sender?.address;
+    if (target) return target;
+  }
+  if (action.type === 'SmartContractExec' && 'SmartContractExec' in action) {
+    const contract = action.SmartContractExec?.contract?.address;
+    if (contract) return contract;
+  }
+  const accounts = action.simplePreview?.accounts;
+  if (accounts && accounts.length > 1) {
+    const other = accounts.find((acc) => !sameAddress(acc.address, myAddress));
+    if (other?.address) return other.address;
+  }
+  return accounts?.[0]?.address;
+};
+
 /** Action name + transfer detail + value (no sign), derived from the typed action fields. */
 const describeAction = (
   action: Action,
@@ -203,11 +245,7 @@ const describeAction = (
     const value = `${formatAmount(action.TonTransfer.amount, GRAM_DECIMALS)} GRAM`;
     const comment = action.TonTransfer.comment?.trim();
     return {
-      actionName: comment
-        ? `Comment: “${comment}”`
-        : isOutgoing
-          ? 'Sent GRAM'
-          : 'Received GRAM',
+      actionName: comment ? `Comment: “${comment}”` : 'TonTransfer',
       transferDetail: `${label} ${value}`,
       value,
     };
@@ -218,9 +256,7 @@ const describeAction = (
     const value =
       `${formatAmount(amount, jetton.decimals)} ${jetton.symbol}`.trim();
     return {
-      actionName: comment
-        ? `Jetton Transfer: “${comment}”`
-        : `${jetton.symbol} Transfer`,
+      actionName: comment ? `JettonTransfer: “${comment}”` : 'AskToTransfer',
       transferDetail: `${label} ${value}`,
       value,
     };
@@ -234,7 +270,7 @@ const describeAction = (
         ? KNOWN_OPCODES[opNumber]
         : op
           ? `Contract Call (${op})`
-          : 'Smart Contract Call';
+          : 'SmartContractExec';
     const val =
       action.SmartContractExec.tonAttached > 0n
         ? `${formatAmount(action.SmartContractExec.tonAttached, GRAM_DECIMALS)} GRAM`
@@ -250,7 +286,7 @@ const describeAction = (
 
   if (action.type === 'ContractDeploy') {
     return {
-      actionName: 'Deploy Contract',
+      actionName: 'ContractDeploy',
       transferDetail: action.simplePreview.description || 'Deploy Contract',
       value: action.simplePreview.value || '',
     };
@@ -258,15 +294,16 @@ const describeAction = (
 
   if (action.type === 'JettonSwap') {
     return {
-      actionName: 'Swap Jettons',
+      actionName: 'JettonSwap',
       transferDetail: action.simplePreview.description || 'Swap',
       value: action.simplePreview.value || '',
     };
   }
 
-  // Other action types (swap, nft, contract): fall back to the API preview text.
+  // Other action types (swap, nft, contract): map to exact type name or fall back.
   return {
     actionName:
+      action.type ||
       action.simplePreview.name ||
       action.simplePreview.description ||
       'Transaction',
@@ -315,6 +352,8 @@ export const mapEventToRow = (
     ? (extractFailureReason(event) ?? 'Transaction Failed')
     : undefined;
 
+  const counterparty = getCounterpartyAddress(action, isOutgoing, myAddress);
+
   return {
     id: eventId,
     txHash: hash,
@@ -322,6 +361,7 @@ export const mapEventToRow = (
     explorerUrl: getExplorerTxUrl(network, hash, explorer),
     title: actionName,
     subtitleId: transferDetail || truncateMiddle(eventId),
+    counterpartyAddress: counterparty,
     failureReason,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
@@ -371,10 +411,16 @@ export const mapPendingToRow = (
       pending.action,
       isOutgoing,
     );
+    const counterparty = getCounterpartyAddress(
+      pending.action,
+      isOutgoing,
+      myAddress,
+    );
     return {
       ...base,
       title: actionName,
       subtitleId: transferDetail || truncateMiddle(pending.traceId),
+      counterpartyAddress: counterparty,
       amount: signedAmount(value, isOutgoing),
       isOutgoing,
     };
@@ -384,7 +430,7 @@ export const mapPendingToRow = (
   const value = pending.preview
     ? `${formatAmount(pending.preview.amount, GRAM_DECIMALS)} GRAM`
     : '';
-  const title = isOutgoing ? 'Sent GRAM' : 'Received GRAM';
+  const title = isOutgoing ? 'TonTransfer' : 'TonTransfer';
   const transferDetail = pending.preview
     ? `${isOutgoing ? 'Sent' : 'Received'} ${value}`
     : 'Processing';
@@ -392,6 +438,7 @@ export const mapPendingToRow = (
     ...base,
     title,
     subtitleId: transferDetail,
+    counterpartyAddress: pending.preview?.recipient,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
   };

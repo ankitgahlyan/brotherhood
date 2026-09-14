@@ -32,8 +32,8 @@ describe('payload decoding', () => {
     expect(decoded).not.toBeNull();
     expect(decoded?.isComment).toBe(false);
     expect(decoded?.opcode).toBe(0x0f8a7ea5);
-    expect(decoded?.messageName).toBe('Jetton Transfer');
-    expect(getPayloadMessageName(base64)).toBe('Jetton Transfer');
+    expect(decoded?.messageName).toBe('AskToTransfer');
+    expect(getPayloadMessageName(base64)).toBe('AskToTransfer');
   });
 
   it('decodes Brotherhood Cast Vote opcode', () => {
@@ -44,7 +44,7 @@ describe('payload decoding', () => {
     expect(decoded).not.toBeNull();
     expect(decoded?.isComment).toBe(false);
     expect(decoded?.opcode).toBe(0x000010f1);
-    expect(decoded?.messageName).toBe('Cast Vote');
+    expect(decoded?.messageName).toBe('ActVote');
   });
 
   it('decodes Brotherhood Buy Credit opcode', () => {
@@ -55,7 +55,7 @@ describe('payload decoding', () => {
     expect(decoded).not.toBeNull();
     expect(decoded?.isComment).toBe(false);
     expect(decoded?.opcode).toBe(0x00001147);
-    expect(decoded?.messageName).toBe('Buy Credit (Personal Token)');
+    expect(decoded?.messageName).toBe('BuyCredit');
   });
 
   it('handles unknown opcode gracefully with hex representation', () => {
