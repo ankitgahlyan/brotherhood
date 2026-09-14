@@ -68,7 +68,7 @@ export default defineConfig({
       babel: {
         plugins: [['babel-plugin-react-compiler', {}]],
       },
-    }),
+    } as Parameters<typeof react>[0]),
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
@@ -142,17 +142,55 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 3000,
   },
+  legacy: {
+    skipWebSocketTokenCheck: true,
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,
-    hmr: {
+    ws: {
       clientPort: 3000,
     },
     allowedHosts: ['localhost', '127.0.0.1', 'local.dev'],
   },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'zustand',
+      'immer',
+      '@tanstack/react-query',
+      '@tanstack/react-router',
+      'sonner',
+    ],
+  },
   resolve: {
-    dedupe: ['react', 'react-dom', 'zustand'],
+    dedupe: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'zustand',
+    ],
     alias: {
+      react: path.resolve(projectRoot, './node_modules/react'),
+      'react-dom': path.resolve(projectRoot, './node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve(
+        projectRoot,
+        './node_modules/react/jsx-runtime.js',
+      ),
+      'react/jsx-dev-runtime': path.resolve(
+        projectRoot,
+        './node_modules/react/jsx-dev-runtime.js',
+      ),
+      'react-dom/client': path.resolve(
+        projectRoot,
+        './node_modules/react-dom/client.js',
+      ),
       '@': path.resolve(projectRoot, './src'),
       '@wrappers': path.resolve(projectRoot, '../../wrappers-ts'),
       '@ton/core': path.resolve(projectRoot, './node_modules/@ton/core'),

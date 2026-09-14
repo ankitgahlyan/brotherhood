@@ -105,9 +105,7 @@ export function useFiTotalAccounts(
     net,
   );
   const totalAccounts =
-    data && (data as any).totalAccounts !== undefined
-      ? BigInt((data as any).totalAccounts)
-      : (data?.totalSupply ?? null);
+    data !== null ? BigInt(data.others.ref.totalAccounts) : 0n;
 
   return {
     data: totalAccounts,

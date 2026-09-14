@@ -6,13 +6,12 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { isValidAddress } from '@ton/walletkit';
 import type { TONTransferRequest } from '@ton/walletkit';
 import {
   useAuth,
-  useJettons,
   useWallet,
   useWalletKit,
   getTransactionExplorerUrls,
@@ -42,7 +41,6 @@ export const SendTransaction: React.FC = () => {
   const walletKit = useWalletKit();
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const { showFastSend } = useAuth();
-  const { loadUserJettons } = useJettons();
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
 
@@ -67,10 +65,6 @@ export const SendTransaction: React.FC = () => {
   });
   const gasless = sender.gasless;
   const effectiveGasless = gasless.effective;
-
-  useEffect(() => {
-    loadUserJettons();
-  }, [loadUserJettons]);
 
   // Success toast with explorer links — for flows that return a broadcast hash
   // immediately (gasless send, fast send).

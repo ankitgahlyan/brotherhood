@@ -215,13 +215,13 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
             {/* Testnet Faucet Redirect Button */}
             {network === 'testnet' ? (
               <a
-                href="https://t.me/tnfaucet_bot"
+                href="https://t.me/tnfaucet_bot/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm"
               >
                 <Sparkles className="w-4 h-4 text-primary-foreground animate-pulse" />
-                <span>Get Grams from Faucet (@tnfaucet_bot)</span>
+                <span>Get Grams</span>
                 <ExternalLink className="w-4 h-4 ml-auto" />
               </a>
             ) : (
@@ -253,14 +253,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                 <span className="font-semibold text-foreground tabular-nums">
                   {fiTotalAccountsQuery.isLoading
                     ? 'Loading...'
-                    : fiTotalAccountsQuery.data !== undefined
-                      ? Number(fiTotalAccountsQuery.data).toLocaleString()
-                      : fiStateQuery.data?.others?.ref?.totalAccounts !==
-                          undefined
-                        ? Number(
-                            fiStateQuery.data.others.ref.totalAccounts,
-                          ).toLocaleString()
-                        : '—'}
+                    : fiStateQuery.data?.others?.ref?.totalAccounts !==
+                        undefined
+                      ? Number(
+                          fiStateQuery.data.others.ref.totalAccounts,
+                        ).toLocaleString()
+                      : '—'}
                 </span>
               </div>
 

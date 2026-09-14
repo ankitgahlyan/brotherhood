@@ -6,8 +6,6 @@
  *
  */
 
-import { registerSW } from 'virtual:pwa-register';
-
 type UpdateCallback = (hasUpdate: boolean) => void;
 
 let updateSWFn: ((reloadPage?: boolean) => Promise<void>) | null = null;
@@ -40,7 +38,7 @@ export function isUpdateAvailable(): boolean {
   return hasPendingUpdate;
 }
 
-export function initServiceWorker() {
+export async function initServiceWorker(): Promise<void> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return;
   }
@@ -58,6 +56,7 @@ export function initServiceWorker() {
     return;
   }
 
+  const { registerSW } = await import('virtual:pwa-register');
   updateSWFn = registerSW({
     immediate: true,
     onNeedRefresh() {
