@@ -148,11 +148,11 @@ export function getExplorerHoldersUrl(
 ): string {
   if (explorer === 'actonscan') {
     const query = network === 'testnet' ? '?network=testnet' : '';
-    return `https://actonscan.com/address/${minterAddress}${query}#holders`;
+    return `https://actonscan.com/address/${minterAddress}${query}?tab=holders`;
   }
   const prefix = getPrefix(network);
   if (explorer === 'tonviewer') {
     return `https://${prefix}tonviewer.com/${minterAddress}?section=holders`;
   }
-  return `https://${prefix}tonscan.org/jetton/${minterAddress}?tab=holders`;
+  return `https://${prefix}tonscan.org/jetton/${minterAddress}#holders`;
 }
