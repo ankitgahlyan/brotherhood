@@ -63,14 +63,25 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
   const { address } = useWallet();
   const account = useFiAccount(address ?? null);
 
+  const data = account.data;
+  const isPending = Boolean(
+    data &&
+    data.accountInit > 0 &&
+    !data.isPrevilegedAccount &&
+    data.active &&
+    data.status === 0 &&
+    data.accountInit + ACTIVATION_WAIT_SECONDS > Math.floor(Date.now() / 1000),
+  );
+
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
+    if (!isPending) return undefined;
     const timer = setInterval(() => {
       setNowSec(Math.floor(Date.now() / 1000));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPending]);
 
   const {
     isMember,

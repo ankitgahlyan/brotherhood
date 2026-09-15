@@ -259,16 +259,19 @@ function getOrCreateHydratorWorker(): Worker | null {
         new URL('./account-hydrator.worker.ts', import.meta.url),
         { type: 'module' },
       );
-      workerInstance.onmessage = (
-        event: MessageEvent<WorkerHydrateResponse>,
-      ) => {
-        const { id } = event.data;
+      const handleResponse = (event: MessageEvent<WorkerHydrateResponse>) => {
+        const { id } = event.data || {};
+        if (!id) return;
         const cb = workerPendingCallbacks.get(id);
         if (cb) {
           workerPendingCallbacks.delete(id);
           cb(event.data);
         }
       };
+      if (typeof workerInstance.addEventListener === 'function') {
+        workerInstance.addEventListener('message', handleResponse);
+      }
+      workerInstance.onmessage = handleResponse;
       workerInstance.onerror = (err) => {
         console.warn(
           '[HydratorWorker] Worker fatal error, resetting worker instance and falling back in-process:',

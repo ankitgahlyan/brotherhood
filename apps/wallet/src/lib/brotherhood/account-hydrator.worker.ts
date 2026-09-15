@@ -17,7 +17,7 @@ import { LocationStore } from '@wrappers/Location.gen';
 import { LotteryStorage } from '@wrappers/Lottery.gen';
 import { PollStore } from '@wrappers/Poll.gen';
 import type { WalletV5Config } from '@ton/walletkit';
-import { serializeForStorage } from './contract-cache';
+import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
   fiWallet: 'd2E9uYL4vQDMtBlD8w/Yij+0oUIE18v1I8jR7uI+/ZI=',
@@ -307,7 +307,7 @@ if (
   typeof self !== 'undefined' &&
   typeof (self as any).postMessage === 'function'
 ) {
-  self.onmessage = (event: MessageEvent<WorkerHydrateRequest>) => {
+  const handleWorkerMessage = (event: MessageEvent<WorkerHydrateRequest>) => {
     try {
       if (!event.data || typeof event.data !== 'object') return;
       const { id, accounts } = event.data;
@@ -333,4 +333,9 @@ if (
       }
     }
   };
+
+  if (typeof (self as any).addEventListener === 'function') {
+    (self as any).addEventListener('message', handleWorkerMessage);
+  }
+  self.onmessage = handleWorkerMessage;
 }

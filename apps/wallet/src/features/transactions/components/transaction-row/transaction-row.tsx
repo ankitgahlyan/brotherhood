@@ -249,44 +249,48 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
         </div>
       )}
 
-      <ExplorerChoiceModal
-        isOpen={isChoiceModalOpen}
-        onClose={() => setIsChoiceModalOpen(false)}
-        txHash={hashForModal}
-        network={network}
-      />
+      {isChoiceModalOpen && (
+        <ExplorerChoiceModal
+          isOpen={isChoiceModalOpen}
+          onClose={() => setIsChoiceModalOpen(false)}
+          txHash={hashForModal}
+          network={network}
+        />
+      )}
 
-      <Modal.Container
-        isOpened={isEditNameOpen}
-        onOpenChange={setIsEditNameOpen}
-      >
-        <Modal.Header onClose={() => setIsEditNameOpen(false)}>
-          <Modal.Title>Save Contact Name</Modal.Title>
-        </Modal.Header>
-        <form onSubmit={handleSaveName}>
-          <Modal.Body className="space-y-4">
-            <div className="text-xs text-muted-foreground font-mono break-all">
-              {counterpartyAddress}
-            </div>
-            <Input.Container>
-              <Input.Field>
-                <Input.Input
-                  type="text"
-                  placeholder="e.g. Alice or @alice"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  autoFocus
-                />
-              </Input.Field>
-            </Input.Container>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button type="submit" className="w-full">
-              Save Contact
-            </Button>
-          </Modal.Footer>
-        </form>
-      </Modal.Container>
+      {isEditNameOpen && (
+        <Modal.Container
+          isOpened={isEditNameOpen}
+          onOpenChange={setIsEditNameOpen}
+        >
+          <Modal.Header onClose={() => setIsEditNameOpen(false)}>
+            <Modal.Title>Save Contact Name</Modal.Title>
+          </Modal.Header>
+          <form onSubmit={handleSaveName}>
+            <Modal.Body className="space-y-4">
+              <div className="text-xs text-muted-foreground font-mono break-all">
+                {counterpartyAddress}
+              </div>
+              <Input.Container>
+                <Input.Field>
+                  <Input.Input
+                    type="text"
+                    placeholder="e.g. Alice or @alice"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    autoFocus
+                  />
+                </Input.Field>
+              </Input.Container>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button type="submit" className="w-full">
+                Save Contact
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Container>
+      )}
     </>
   );
 };
