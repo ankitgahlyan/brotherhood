@@ -25,7 +25,6 @@ export const FloatingDevButton: React.FC = () => {
     return null;
   }
 
-  const errorCount = metrics.failedApiCalls + metrics.consoleErrors;
   const hasInFlight = metrics.activeApiCalls > 0;
 
   return (
@@ -59,18 +58,32 @@ export const FloatingDevButton: React.FC = () => {
         <div className="relative w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border/80 shadow-lg hover:shadow-blue-500/10 flex items-center justify-center transition-colors">
           <Terminal className="w-5 h-5 text-blue-500" />
 
-          {/* In-Flight Pulse Indicator */}
-          {hasInFlight && !errorCount && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+          {/* Top-left: In-Flight Pulse (amber) */}
+          {hasInFlight && (
+            <span className="absolute -top-0.5 -left-0.5 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
             </span>
           )}
 
-          {/* Error Count Badge */}
-          {errorCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
-              {errorCount > 99 ? '99+' : errorCount}
+          {/* Top-right: Total API Calls (green) */}
+          {metrics.totalApiCalls > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
+              {metrics.totalApiCalls > 99 ? '99+' : metrics.totalApiCalls}
+            </span>
+          )}
+
+          {/* Bottom-right: Console Errors (red) */}
+          {metrics.consoleErrors > 0 && (
+            <span className="absolute -bottom-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
+              {metrics.consoleErrors > 99 ? '99+' : metrics.consoleErrors}
+            </span>
+          )}
+
+          {/* Bottom-left: Failed API Calls (yellow/amber) */}
+          {metrics.failedApiCalls > 0 && (
+            <span className="absolute -bottom-1 -left-1 min-w-4 h-4 px-1 rounded-full bg-amber-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
+              {metrics.failedApiCalls > 99 ? '99+' : metrics.failedApiCalls}
             </span>
           )}
         </div>

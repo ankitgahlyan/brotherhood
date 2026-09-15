@@ -555,6 +555,23 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
   );
 };
 
+function parseUrl(raw: string): {
+  baseUrl: string;
+  path: string;
+  params: [string, string][];
+} {
+  try {
+    const u = new URL(raw);
+    const baseUrl = `${u.protocol}//${u.host}`;
+    const path = u.pathname;
+    const params: [string, string][] = [];
+    u.searchParams.forEach((v, k) => params.push([k, v]));
+    return { baseUrl, path, params };
+  } catch {
+    return { baseUrl: raw, path: '', params: [] };
+  }
+}
+
 const ApiCard: React.FC<{
   item: ApiCallLog;
   isExpanded: boolean;
@@ -656,9 +673,39 @@ const ApiCard: React.FC<{
             </span>
           </div>
 
-          <p className="text-xs font-mono text-foreground break-all mt-1.5 select-text font-medium">
-            {item.url}
-          </p>
+          {(() => {
+            const { baseUrl, path, params } = parseUrl(item.url);
+            return (
+              <div className="mt-1.5 font-mono text-[11px] select-text leading-relaxed space-y-0.5">
+                <div className="flex flex-wrap items-baseline gap-0.5">
+                  <span className="text-muted-foreground">{baseUrl}</span>
+                  {path && (
+                    <span className="text-foreground font-semibold">
+                      {path}
+                    </span>
+                  )}
+                </div>
+                {params.length > 0 && (
+                  <div className="flex flex-wrap gap-x-1.5 gap-y-0.5 pl-1">
+                    {params.map(([k, v], i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-0.5"
+                      >
+                        <span className="text-sky-500 dark:text-sky-400">
+                          {k}
+                        </span>
+                        <span className="text-muted-foreground">=</span>
+                        <span className="text-amber-600 dark:text-amber-400 break-all">
+                          {v.length > 40 ? `${v.slice(0, 40)}…` : v}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <button

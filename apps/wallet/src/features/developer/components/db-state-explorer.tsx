@@ -19,6 +19,31 @@ import { Button } from '@/core/components/ui/button';
 import { queryClient } from '@/lib/brotherhood/ton';
 import { StorageEditorDialog } from './storage-editor-dialog';
 
+/** JSON.stringify that handles BigInt, undefined, Symbol, and circular refs. */
+function safeStringify(value: unknown, indent = 2): string {
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(
+      value,
+      (_key, val) => {
+        if (typeof val === 'bigint') return `${val.toString()}n`;
+        if (typeof val === 'undefined') return '__undefined__';
+        if (typeof val === 'symbol') return val.toString();
+        if (typeof val === 'function')
+          return `[Function: ${val.name || 'anonymous'}]`;
+        if (val !== null && typeof val === 'object') {
+          if (seen.has(val)) return '[Circular]';
+          seen.add(val);
+        }
+        return val;
+      },
+      indent,
+    );
+  } catch {
+    return String(value);
+  }
+}
+
 interface LocalStorageEntry {
   key: string;
   value: string;
@@ -313,7 +338,7 @@ export const DbStateExplorer: React.FC = () => {
     return queryEntries.filter(
       (e) =>
         e.queryHash.toLowerCase().includes(q) ||
-        JSON.stringify(e.queryKey).toLowerCase().includes(q),
+        safeStringify(e.queryKey).toLowerCase().includes(q),
     );
   }, [queryEntries, searchQuery]);
 
@@ -646,7 +671,7 @@ export const DbStateExplorer: React.FC = () => {
                       </div>
                       <pre className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
                         {item.isJson
-                          ? JSON.stringify(JSON.parse(item.value), null, 2)
+                          ? safeStringify(JSON.parse(item.value))
                           : item.value}
                       </pre>
                     </div>
@@ -721,7 +746,7 @@ export const DbStateExplorer: React.FC = () => {
           ) : (
             filteredQueries.map((item) => {
               const isExpanded = !!expandedKeys[item.queryHash];
-              const queryKeyStr = JSON.stringify(item.queryKey);
+              const queryKeyStr = safeStringify(item.queryKey);
 
               return (
                 <div
@@ -791,7 +816,7 @@ export const DbStateExplorer: React.FC = () => {
                         onClick={() =>
                           handleCopy(
                             item.queryHash,
-                            JSON.stringify(item.data, null, 2),
+                            safeStringify(item.data),
                             'Query Data',
                           )
                         }
@@ -813,7 +838,7 @@ export const DbStateExplorer: React.FC = () => {
                         Cached Data:
                       </span>
                       <pre className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
-                        {JSON.stringify(item.data, null, 2)}
+                        {safeStringify(item.data)}
                       </pre>
                     </div>
                   )}
