@@ -1,6 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { Copy, Check, ChevronRight, ChevronDown } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  ChevronRight,
+  ChevronDown,
+  ExternalLink,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '@demo/wallet-core';
+import type { NetworkType } from '@demo/wallet-core';
+import {
+  useExplorer,
+  getExplorerAddressUrl,
+  type ExplorerChoice,
+} from '@/core/explorer/use-explorer';
 import { decodeGetterResponse } from '../../../core/lib/getter-decoder';
 
 interface PayloadViewerProps {
@@ -8,6 +21,48 @@ interface PayloadViewerProps {
   payload: string | null | undefined;
   requestPayload?: string | null | undefined;
   isRequest?: boolean;
+}
+
+/** Matches TON friendly-format addresses (48 chars) and raw hex format (-1:... or 0:...) */
+const TON_ADDRESS_RE =
+  /^(?:(?:EQ|UQ|kQ|0Q|Ef|Uf|kf|0f|k0|00)[A-Za-z0-9_\-+/]{46}|-?[0-1]:[0-9a-fA-F]{64})$/;
+
+/** Key names that strongly hint the value is an address */
+const ADDRESS_KEY_HINTS = new Set([
+  'address',
+  'owner',
+  'wallet',
+  'destination',
+  'source',
+  'contract',
+  'jetton_wallet_address',
+  'admin_address',
+  'minter_address',
+  'jetton_master_address',
+  'recipient',
+  'sender',
+  'account',
+]);
+
+function isTonAddress(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return TON_ADDRESS_RE.test(trimmed);
+}
+
+function isAddressKey(key: string): boolean {
+  const norm = key.toLowerCase().replace(/[^a-z_]/g, '');
+  if (ADDRESS_KEY_HINTS.has(norm)) return true;
+  return (
+    norm.endsWith('_address') || norm.endsWith('address') || norm === 'address'
+  );
+}
+
+export interface RenderCtx {
+  network: NetworkType;
+  explorer: ExplorerChoice;
+  /** parent key name for key-name hinting */
+  parentKey?: string;
 }
 
 // Helper to detect if a string looks like a large BoC or base64 blob
@@ -112,10 +167,11 @@ const CollapsibleBlob: React.FC<{ value: string }> = ({ value }) => {
 };
 
 // Interactive JSON tree / highlighter
-const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
-  value,
-  depth = 0,
-}) => {
+export const FormattedValue: React.FC<{
+  value: unknown;
+  depth?: number;
+  ctx: RenderCtx;
+}> = ({ value, depth = 0, ctx }) => {
   const indent = '  '.repeat(depth);
 
   if (value === null) {
@@ -137,9 +193,39 @@ const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
     if (isLargeBase64Blob(value)) {
       return <CollapsibleBlob value={value} />;
     }
+    const strVal = value;
+    // Address detection: pattern match OR parent key hint
+    const isAddr =
+      isTonAddress(strVal) ||
+      (!!ctx.parentKey && isAddressKey(ctx.parentKey) && strVal.length > 20);
+    if (isAddr) {
+      const url = getExplorerAddressUrl(
+        ctx.network,
+        strVal.trim(),
+        ctx.explorer,
+      );
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="text-emerald-600 dark:text-emerald-400 select-all">
+            &quot;
+          </span>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline underline-offset-2 break-all select-all"
+            title={`Open ${strVal} in ${ctx.explorer}`}
+          >
+            {strVal}
+            <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />
+          </a>
+          <span className="text-emerald-600 dark:text-emerald-400">&quot;</span>
+        </span>
+      );
+    }
     return (
       <span className="text-emerald-600 dark:text-emerald-400 break-all select-all">
-        &quot;{value}&quot;
+        &quot;{strVal}&quot;
       </span>
     );
   }
@@ -154,7 +240,7 @@ const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
         <div className="pl-4 border-l border-border/40 my-0.5 space-y-0.5">
           {value.map((item, idx) => (
             <div key={idx} className="flex items-start">
-              <FormattedValue value={item} depth={depth + 1} />
+              <FormattedValue value={item} depth={depth + 1} ctx={ctx} />
               {idx < value.length - 1 && (
                 <span className="text-muted-foreground">,</span>
               )}
@@ -190,7 +276,11 @@ const FormattedValue: React.FC<{ value: unknown; depth?: number }> = ({
                 &quot;{k}&quot;
               </span>
               <span className="text-muted-foreground mr-1">:</span>
-              <FormattedValue value={v} depth={depth + 1} />
+              <FormattedValue
+                value={v}
+                depth={depth + 1}
+                ctx={{ ...ctx, parentKey: k }}
+              />
               {idx < entries.length - 1 && (
                 <span className="text-muted-foreground">,</span>
               )}
@@ -214,6 +304,14 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
   requestPayload,
   isRequest = false,
 }) => {
+  const { currentWallet } = useWallet();
+  const { explorer } = useExplorer();
+  const network: NetworkType =
+    String(currentWallet?.getNetwork()?.chainId) === '-239'
+      ? 'mainnet'
+      : 'testnet';
+  const ctx: RenderCtx = { network, explorer };
+
   // Parse JSON if possible
   const { parsedJson } = useMemo(() => {
     if (!payload) return { parsedJson: null };
@@ -341,11 +439,11 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
 
       <div className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground max-h-80 overflow-y-auto">
         {activeMode === 'decoded' && decodedGetter ? (
-          <FormattedValue value={decodedGetter.data} />
+          <FormattedValue value={decodedGetter.data} ctx={ctx} />
         ) : activeMode === 'clean' && cleanPayload ? (
-          <FormattedValue value={cleanPayload} />
+          <FormattedValue value={cleanPayload} ctx={ctx} />
         ) : parsedJson !== null ? (
-          <FormattedValue value={parsedJson} />
+          <FormattedValue value={parsedJson} ctx={ctx} />
         ) : (
           <pre className="whitespace-pre-wrap break-all text-foreground font-mono leading-relaxed">
             {payload}

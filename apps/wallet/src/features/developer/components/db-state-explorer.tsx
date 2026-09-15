@@ -15,9 +15,13 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '@demo/wallet-core';
+import type { NetworkType } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
+import { useExplorer } from '@/core/explorer/use-explorer';
 import { queryClient } from '@/lib/brotherhood/ton';
 import { StorageEditorDialog } from './storage-editor-dialog';
+import { FormattedValue, type RenderCtx } from './payload-viewer';
 
 /** JSON.stringify that handles BigInt, undefined, Symbol, and circular refs. */
 function safeStringify(value: unknown, indent = 2): string {
@@ -68,6 +72,17 @@ interface QueryCacheEntry {
 const DEV_MODE_KEY = 'brotherhood_developer_mode';
 
 export const DbStateExplorer: React.FC = () => {
+  const { currentWallet } = useWallet();
+  const { explorer } = useExplorer();
+  const network: NetworkType =
+    String(currentWallet?.getNetwork()?.chainId) === '-239'
+      ? 'mainnet'
+      : 'testnet';
+  const renderCtx: RenderCtx = useMemo(
+    () => ({ network, explorer }),
+    [network, explorer],
+  );
+
   const [subTab, setSubTab] = useState<
     'localstorage' | 'indexeddb' | 'querycache'
   >('localstorage');
@@ -669,11 +684,30 @@ export const DbStateExplorer: React.FC = () => {
                           </button>
                         </div>
                       </div>
-                      <pre className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
-                        {item.isJson
-                          ? safeStringify(JSON.parse(item.value))
-                          : item.value}
-                      </pre>
+                      {item.isJson ? (
+                        <div className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground max-h-72 overflow-y-auto">
+                          {(() => {
+                            try {
+                              return (
+                                <FormattedValue
+                                  value={JSON.parse(item.value)}
+                                  ctx={renderCtx}
+                                />
+                              );
+                            } catch {
+                              return (
+                                <span className="whitespace-pre-wrap break-all">
+                                  {item.value}
+                                </span>
+                              );
+                            }
+                          })()}
+                        </div>
+                      ) : (
+                        <pre className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
+                          {item.value}
+                        </pre>
+                      )}
                     </div>
                   )}
                 </div>
@@ -837,9 +871,9 @@ export const DbStateExplorer: React.FC = () => {
                       <span className="font-semibold text-muted-foreground block text-[11px]">
                         Cached Data:
                       </span>
-                      <pre className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
-                        {safeStringify(item.data)}
-                      </pre>
+                      <div className="p-2.5 rounded-lg bg-background border border-border font-mono text-[11px] overflow-x-auto text-foreground max-h-72 overflow-y-auto">
+                        <FormattedValue value={item.data} ctx={renderCtx} />
+                      </div>
                     </div>
                   )}
                 </div>
