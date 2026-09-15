@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { CityNetworkScreen } from '@/features/city-network';
 import { ProtectedRoute } from '@/core/routing';
+import { RouteFallback } from '@/core/components/shared/route-fallback';
+
+const CityNetworkScreen = lazy(() =>
+  import('@/features/city-network').then((m) => ({
+    default: m.CityNetworkScreen,
+  })),
+);
 
 export const Route = createFileRoute('/city-network')({
   component: () => (
     <ProtectedRoute requiresWallet>
-      <CityNetworkScreen />
+      <Suspense fallback={<RouteFallback />}>
+        <CityNetworkScreen />
+      </Suspense>
     </ProtectedRoute>
   ),
 });

@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { LedgerScreen } from '@/features/ledger';
 import { ProtectedRoute } from '@/core/routing';
+import { RouteFallback } from '@/core/components/shared/route-fallback';
+
+const LedgerScreen = lazy(() =>
+  import('@/features/ledger').then((m) => ({
+    default: m.LedgerScreen,
+  })),
+);
 
 export const Route = createFileRoute('/ledger')({
   component: () => (
     <ProtectedRoute>
-      <LedgerScreen />
+      <Suspense fallback={<RouteFallback />}>
+        <LedgerScreen />
+      </Suspense>
     </ProtectedRoute>
   ),
 });

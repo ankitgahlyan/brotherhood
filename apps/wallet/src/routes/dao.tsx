@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { DaoScreen } from '@/features/dao';
 import { ProtectedRoute } from '@/core/routing';
+import { RouteFallback } from '@/core/components/shared/route-fallback';
+
+const DaoScreen = lazy(() =>
+  import('@/features/dao').then((m) => ({
+    default: m.DaoScreen,
+  })),
+);
 
 export const Route = createFileRoute('/dao')({
   component: () => (
     <ProtectedRoute requiresWallet>
-      <DaoScreen />
+      <Suspense fallback={<RouteFallback />}>
+        <DaoScreen />
+      </Suspense>
     </ProtectedRoute>
   ),
 });

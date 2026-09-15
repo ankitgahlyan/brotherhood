@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import type { ManifestOptions } from 'vite-plugin-pwa';
@@ -55,187 +56,213 @@ const pwaManifest: Partial<ManifestOptions> = {
   ],
 };
 
-export default defineConfig({
-  base,
-  root: projectRoot,
-  envDir: path.resolve(projectRoot, '../../'),
-  envPrefix: ['VITE_', 'TONCENTER_'],
-  define: {
-    global: 'globalThis',
-  },
-  plugins: [
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', {}]],
-      },
-    } as Parameters<typeof react>[0]),
-    tailwindcss(),
-    VitePWA({
-      registerType: 'prompt',
-      injectRegister: false,
-      devOptions: {
-        enabled: false,
-      },
-      manifest: pwaManifest,
-      workbox: {
-        globPatterns: [
-          '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff,woff2,ttf,eot,webmanifest}',
-        ],
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
-        navigateFallback: `${base}index.html`,
-        navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
-        runtimeCaching: [
+export default defineConfig(() => {
+  return {
+    base,
+    root: projectRoot,
+    envDir: path.resolve(projectRoot, '../../'),
+    envPrefix: ['VITE_', 'TONCENTER_'],
+    define: {
+      global: 'globalThis',
+    },
+    plugins: [
+      react(),
+      babel({
+        presets: [reactCompilerPreset()],
+        overrides: [
           {
-            urlPattern: ({ request }) =>
-              request.destination === 'style' ||
-              request.destination === 'script' ||
-              request.destination === 'worker',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'brotherhood-static-resources',
-              expiration: {
-                maxEntries: 150,
-                maxAgeSeconds: 60 * 24 * 60 * 60,
-              },
-            },
-          },
-          {
-            urlPattern: ({ request }) => request.destination === 'image',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'brotherhood-images',
-              expiration: {
-                maxEntries: 300,
-                maxAgeSeconds: 60 * 24 * 60 * 60,
-              },
-            },
-          },
-          {
-            urlPattern: ({ request }) => request.destination === 'font',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'brotherhood-fonts',
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 365 * 24 * 60 * 60,
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'brotherhood-telegram-sdk',
-              expiration: {
-                maxEntries: 5,
-                maxAgeSeconds: 30 * 24 * 60 * 60,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
+            test: /\.[mc]ts(?:$|\?)/,
+            parserOpts: { plugins: ['typescript'] },
           },
         ],
+      }),
+      tailwindcss(),
+      VitePWA({
+        registerType: 'prompt',
+        injectRegister: false,
+        devOptions: {
+          enabled: false,
+        },
+        manifest: pwaManifest,
+        workbox: {
+          globPatterns: [
+            '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff,woff2,ttf,eot,webmanifest}',
+          ],
+          maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+          navigateFallback: `${base}index.html`,
+          navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
+          runtimeCaching: [
+            {
+              urlPattern: ({ request }) =>
+                request.destination === 'style' ||
+                request.destination === 'script' ||
+                request.destination === 'worker',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'brotherhood-static-resources',
+                expiration: {
+                  maxEntries: 150,
+                  maxAgeSeconds: 60 * 24 * 60 * 60,
+                },
+              },
+            },
+            {
+              urlPattern: ({ request }) => request.destination === 'image',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'brotherhood-images',
+                expiration: {
+                  maxEntries: 300,
+                  maxAgeSeconds: 60 * 24 * 60 * 60,
+                },
+              },
+            },
+            {
+              urlPattern: ({ request }) => request.destination === 'font',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'brotherhood-fonts',
+                expiration: {
+                  maxEntries: 60,
+                  maxAgeSeconds: 365 * 24 * 60 * 60,
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'brotherhood-telegram-sdk',
+                expiration: {
+                  maxEntries: 5,
+                  maxAgeSeconds: 30 * 24 * 60 * 60,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ],
+    build: {
+      chunkSizeWarningLimit: 3000,
+    },
+    legacy: {
+      skipWebSocketTokenCheck: true,
+    },
+    server: {
+      host: '0.0.0.0',
+      port: 3000,
+      ws: {
+        clientPort: 3000,
       },
-    }),
-  ],
-  build: {
-    chunkSizeWarningLimit: 3000,
-  },
-  legacy: {
-    skipWebSocketTokenCheck: true,
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 3000,
-    ws: {
-      clientPort: 3000,
+      allowedHosts: ['localhost', '127.0.0.1', 'local.dev'],
     },
-    allowedHosts: ['localhost', '127.0.0.1', 'local.dev'],
-  },
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-dom/client',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime',
-      'zustand',
-      'immer',
-      '@tanstack/react-query',
-      '@tanstack/react-router',
-      'sonner',
-    ],
-  },
-  resolve: {
-    dedupe: [
-      'react',
-      'react-dom',
-      'react-dom/client',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime',
-      'zustand',
-    ],
-    alias: {
-      react: path.resolve(projectRoot, './node_modules/react'),
-      'react-dom': path.resolve(projectRoot, './node_modules/react-dom'),
-      'react/jsx-runtime': path.resolve(
-        projectRoot,
-        './node_modules/react/jsx-runtime.js',
-      ),
-      'react/jsx-dev-runtime': path.resolve(
-        projectRoot,
-        './node_modules/react/jsx-dev-runtime.js',
-      ),
-      'react-dom/client': path.resolve(
-        projectRoot,
-        './node_modules/react-dom/client.js',
-      ),
-      '@': path.resolve(projectRoot, './src'),
-      '@wrappers': path.resolve(projectRoot, '../../wrappers-ts'),
-      '@ton/core': path.resolve(projectRoot, './node_modules/@ton/core'),
-      '@ton/crypto': path.resolve(projectRoot, './node_modules/@ton/crypto'),
-      '@ton/ton': path.resolve(projectRoot, './node_modules/@ton/ton'),
-      '@ton/walletkit/swap/omniston': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/swap/omniston/index.ts',
-      ),
-      '@ton/walletkit/swap/dedust': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/swap/dedust/index.ts',
-      ),
-      '@ton/walletkit/staking/tonstakers': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/staking/tonstakers/index.ts',
-      ),
-      '@ton/walletkit/gasless/tonapi': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/gasless/tonapi/index.ts',
-      ),
-      '@ton/walletkit/crypto-onramp/decent': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/crypto-onramp/decent/index.ts',
-      ),
-      '@ton/walletkit/crypto-onramp/layerswap': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/defi/crypto-onramp/layerswap/index.ts',
-      ),
-      '@ton/walletkit/bridge': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/bridge/JSBridgeInjector.ts',
-      ),
-      '@ton/walletkit': path.resolve(
-        projectRoot,
-        '../../packages/walletkit/src/index.ts',
-      ),
-      '@demo/v4ledger-adapter': path.resolve(
-        projectRoot,
-        '../../packages/v4ledger-adapter/src/index.ts',
-      ),
-      '@demo/wallet-core': path.resolve(
-        projectRoot,
-        '../../packages/wallet-core/src/index.ts',
-      ),
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'zustand',
+        'immer',
+        '@tanstack/react-query',
+        '@tanstack/react-router',
+        'sonner',
+        '@ton/core',
+        '@ton/crypto',
+        '@ton/ton',
+        '@scure/bip39',
+        'buffer',
+        'lucide-react',
+        'clsx',
+        'tailwind-merge',
+        'framer-motion',
+        '@telegram-apps/sdk',
+        '@radix-ui/react-dialog',
+        '@radix-ui/react-label',
+        '@radix-ui/react-popover',
+        '@radix-ui/react-select',
+        '@radix-ui/react-slot',
+        '@radix-ui/react-switch',
+        '@radix-ui/react-tabs',
+        '@tonconnect/ui-react',
+        'qr-code-styling',
+      ],
     },
-  },
+    resolve: {
+      dedupe: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'zustand',
+      ],
+      alias: {
+        react: path.resolve(projectRoot, './node_modules/react'),
+        'react-dom': path.resolve(projectRoot, './node_modules/react-dom'),
+        'react/jsx-runtime': path.resolve(
+          projectRoot,
+          './node_modules/react/jsx-runtime.js',
+        ),
+        'react/jsx-dev-runtime': path.resolve(
+          projectRoot,
+          './node_modules/react/jsx-dev-runtime.js',
+        ),
+        'react-dom/client': path.resolve(
+          projectRoot,
+          './node_modules/react-dom/client.js',
+        ),
+        '@': path.resolve(projectRoot, './src'),
+        '@wrappers': path.resolve(projectRoot, '../../wrappers-ts'),
+        '@ton/core': path.resolve(projectRoot, './node_modules/@ton/core'),
+        '@ton/crypto': path.resolve(projectRoot, './node_modules/@ton/crypto'),
+        '@ton/ton': path.resolve(projectRoot, './node_modules/@ton/ton'),
+        '@ton/walletkit/swap/omniston': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/swap/omniston/index.ts',
+        ),
+        '@ton/walletkit/swap/dedust': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/swap/dedust/index.ts',
+        ),
+        '@ton/walletkit/staking/tonstakers': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/staking/tonstakers/index.ts',
+        ),
+        '@ton/walletkit/gasless/tonapi': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/gasless/tonapi/index.ts',
+        ),
+        '@ton/walletkit/crypto-onramp/decent': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/crypto-onramp/decent/index.ts',
+        ),
+        '@ton/walletkit/crypto-onramp/layerswap': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/defi/crypto-onramp/layerswap/index.ts',
+        ),
+        '@ton/walletkit/bridge': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/bridge/JSBridgeInjector.ts',
+        ),
+        '@ton/walletkit': path.resolve(
+          projectRoot,
+          '../../packages/walletkit/src/index.ts',
+        ),
+        '@demo/v4ledger-adapter': path.resolve(
+          projectRoot,
+          '../../packages/v4ledger-adapter/src/index.ts',
+        ),
+        '@demo/wallet-core': path.resolve(
+          projectRoot,
+          '../../packages/wallet-core/src/index.ts',
+        ),
+      },
+    },
+  };
 });

@@ -15,7 +15,7 @@ import { Button } from '@/core/components/ui/button';
 import { GlobalRequestModals } from '@/features/ton-connect';
 import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
-import { FloatingDevButton } from '@/features/developer';
+import { FloatingDevButton } from '@/features/developer/components/floating-dev-button';
 import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
 import { registerRouterBack } from '@/core/lib/back-stack';
 
