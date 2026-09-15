@@ -22,7 +22,9 @@ import {
   Check,
   Globe,
   RefreshCw,
+  X,
 } from 'lucide-react';
+import { cn } from '@/core/lib/utils';
 import {
   checkForAppUpdates,
   applyAppUpdate,
@@ -314,166 +316,198 @@ export const SettingsDropdown: React.FC = () => {
       <Modal.Container
         isOpened={panel === 'menu'}
         onOpenChange={(open) => !open && setPanel(null)}
-        className="h-[90vh] flex flex-col overflow-hidden px-2"
+        className="max-w-md h-[90vh] md:h-[85vh] flex flex-col p-0 overflow-hidden"
       >
-        <Modal.Header onClose={() => setPanel(null)}>
-          <Modal.Title>Settings</Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body className="gap-3 flex-1 overflow-y-auto min-h-0 pb-10">
-          {/* Appearance Section */}
-          <div className="rounded-2xl bg-secondary/60 p-3 border border-border">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2 block">
-              Appearance
-            </span>
-            <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
-              {THEME_OPTIONS.map((opt) => {
-                const isSelected = theme === opt.mode;
-                return (
-                  <button
-                    key={opt.mode}
-                    type="button"
-                    onClick={() => setTheme(opt.mode)}
-                    className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                    }`}
-                    data-testid={`theme-option-${opt.mode}`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {opt.icon}
-                      {isSelected && (
-                        <Check className="w-3 h-3 text-blue-500" />
-                      )}
-                    </div>
-                    <span>{opt.label}</span>
-                  </button>
-                );
-              })}
+        <div className="flex-1 flex flex-col min-h-0 bg-background text-foreground overflow-hidden">
+          {/* Header styled like DeveloperScreen with Close button */}
+          <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3 pt-[calc(0.75rem+var(--tg-safe-area-top,0px))] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-blue-500" />
+              <h2 className="text-base font-bold text-foreground">Settings</h2>
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-            {isBiometricsSupported && (
-              <ToggleRow
-                testId="biometric-unlock"
-                label="Fingerprint / Biometric Unlock"
-                description="Unlock wallet using device fingerprint or Face ID"
-                checked={isBiometricsEnabled}
-                onChange={handleToggleBiometrics}
-              />
-            )}
-            <ToggleRow
-              testId="auto-lock"
-              label="Auto-Lock"
-              description="Lock wallet on app reload (more secure)"
-              checked={!persistPassword}
-              onChange={(checked) => setPersistPassword(!checked)}
-              info={
-                <>
-                  <strong>Security notice:</strong> when auto-lock is off, your
-                  password is stored locally and the wallet stays unlocked. Only
-                  use for development.
-                </>
-              }
-            />
-            <ToggleRow
-              testId="hold-to-sign"
-              label="Hold to Sign"
-              description="Hold the button for 3 seconds to approve transactions"
-              checked={holdToSign ?? true}
-              onChange={setHoldToSign}
-              info={
-                <>
-                  <strong>Security notice:</strong> disabling hold-to-sign makes
-                  it easier to accidentally approve transactions. Only use for
-                  testing.
-                </>
-              }
-            />
-            <ToggleRow
-              testId="show-fast-send"
-              label="Show fast send"
-              description="Show “Send Fast” button (1 nano, no confirmation)"
-              checked={showFastSend ?? false}
-              onChange={setShowFastSend}
-            />
-          </div>
-
-          <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-            <ActionRow
-              icon={<Globe className="w-5 h-5" />}
-              label="Network & API Keys"
-              subtitle={networkSubtitle}
-              onClick={() => setIsApiKeysModalOpen(true)}
-            />
-            <ActionRow
-              icon={<Download className="w-5 h-5" />}
-              label="Install App / Add Shortcut"
-              onClick={() => {
-                setPanel(null);
-                setIsInstallOpen(true);
-              }}
-            />
-            <ActionRow
-              icon={
-                <RefreshCw
-                  className={`w-5 h-5 ${isCheckingUpdate ? 'animate-spin text-primary' : ''}`}
-                />
-              }
-              label="Check for App Updates"
-              subtitle={
-                hasPendingUpdate
-                  ? 'Update ready — click to reload & apply'
-                  : isCheckingUpdate
-                    ? 'Checking host for updates…'
-                    : 'Serving from browser cache'
-              }
-              onClick={handleCheckForUpdate}
-              disabled={isCheckingUpdate}
-            />
-            <ActionRow
-              icon={<Plus className="w-5 h-5" />}
-              label="Add Wallet"
-              onClick={handleAddWallet}
-            />
-            <ActionRow
-              icon={<KeyRound className="w-5 h-5" />}
-              label={isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'}
-              onClick={handleViewRecoveryPhrase}
-              disabled={isLoadingMnemonic}
-            />
-            <ActionRow
-              icon={<Lock className="w-5 h-5" />}
-              label="Lock Wallet"
-              onClick={handleLockWallet}
-            />
-            <ActionRow
-              icon={<Trash2 className="w-5 h-5" />}
-              label="Delete Wallet"
-              onClick={handleDeleteWallet}
-              danger
-            />
-          </div>
-
-          {mnemonicError && (
-            <p className="text-red-500 text-sm text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-              {mnemonicError}
-            </p>
-          )}
-
-          <div className="pt-2 pb-1 text-center">
             <button
               type="button"
-              onClick={handleBrotherhoodTap}
-              className="text-xs font-mono text-muted-foreground/60 hover:text-muted-foreground transition-colors select-none tracking-widest uppercase cursor-pointer py-1 px-3 rounded-md hover:bg-muted/40"
-              data-testid="brotherhood-tap-easter-egg"
+              onClick={() => setPanel(null)}
+              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold border border-border transition-colors flex items-center gap-1 cursor-pointer"
+              aria-label="Close settings"
             >
-              brotherhood
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
             </button>
+          </header>
+
+          {/* Scrollable body matching DeveloperScreen flex-1 overflow-y-auto min-h-0 */}
+          <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-4 py-4 space-y-4 pb-12">
+            {/* Section 1: Appearance */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
+                Appearance
+              </span>
+              <div className="rounded-2xl bg-secondary/60 p-2.5 border border-border">
+                <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
+                  {THEME_OPTIONS.map((opt) => {
+                    const isSelected = theme === opt.mode;
+                    return (
+                      <button
+                        key={opt.mode}
+                        type="button"
+                        onClick={() => setTheme(opt.mode)}
+                        className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
+                          isSelected
+                            ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                        data-testid={`theme-option-${opt.mode}`}
+                      >
+                        <div className="flex items-center gap-1">
+                          {opt.icon}
+                          {isSelected && (
+                            <Check className="w-3 h-3 text-blue-500" />
+                          )}
+                        </div>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Security & Preferences */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
+                Security & Preferences
+              </span>
+              <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+                {isBiometricsSupported && (
+                  <ToggleRow
+                    testId="biometric-unlock"
+                    label="Fingerprint / Biometric Unlock"
+                    description="Unlock wallet using device fingerprint or Face ID"
+                    checked={isBiometricsEnabled}
+                    onChange={handleToggleBiometrics}
+                  />
+                )}
+                <ToggleRow
+                  testId="auto-lock"
+                  label="Auto-Lock"
+                  description="Lock wallet on app reload (more secure)"
+                  checked={!persistPassword}
+                  onChange={(checked) => setPersistPassword(!checked)}
+                  info={
+                    <>
+                      <strong>Security notice:</strong> when auto-lock is off,
+                      your password is stored locally and the wallet stays
+                      unlocked. Only use for development.
+                    </>
+                  }
+                />
+                <ToggleRow
+                  testId="hold-to-sign"
+                  label="Hold to Sign"
+                  description="Hold the button for 3 seconds to approve transactions"
+                  checked={holdToSign ?? true}
+                  onChange={setHoldToSign}
+                  info={
+                    <>
+                      <strong>Security notice:</strong> disabling hold-to-sign
+                      makes it easier to accidentally approve transactions. Only
+                      use for testing.
+                    </>
+                  }
+                />
+                <ToggleRow
+                  testId="show-fast-send"
+                  label="Show fast send"
+                  description="Show “Send Fast” button (1 nano, no confirmation)"
+                  checked={showFastSend ?? false}
+                  onChange={setShowFastSend}
+                />
+              </div>
+            </div>
+
+            {/* Section 3: Management & Actions */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
+                Management & Actions
+              </span>
+              <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+                <ActionRow
+                  icon={<Globe className="w-5 h-5" />}
+                  label="Network & API Keys"
+                  subtitle={networkSubtitle}
+                  onClick={() => setIsApiKeysModalOpen(true)}
+                />
+                <ActionRow
+                  icon={<Download className="w-5 h-5" />}
+                  label="Install App / Add Shortcut"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsInstallOpen(true);
+                  }}
+                />
+                <ActionRow
+                  icon={
+                    <RefreshCw
+                      className={`w-5 h-5 ${isCheckingUpdate ? 'animate-spin text-primary' : ''}`}
+                    />
+                  }
+                  label="Check for App Updates"
+                  subtitle={
+                    hasPendingUpdate
+                      ? 'Update ready — click to reload & apply'
+                      : isCheckingUpdate
+                        ? 'Checking host for updates…'
+                        : 'Serving from browser cache'
+                  }
+                  onClick={handleCheckForUpdate}
+                  disabled={isCheckingUpdate}
+                />
+                <ActionRow
+                  icon={<Plus className="w-5 h-5" />}
+                  label="Add Wallet"
+                  onClick={handleAddWallet}
+                />
+                <ActionRow
+                  icon={<KeyRound className="w-5 h-5" />}
+                  label={
+                    isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'
+                  }
+                  onClick={handleViewRecoveryPhrase}
+                  disabled={isLoadingMnemonic}
+                />
+                <ActionRow
+                  icon={<Lock className="w-5 h-5" />}
+                  label="Lock Wallet"
+                  onClick={handleLockWallet}
+                />
+                <ActionRow
+                  icon={<Trash2 className="w-5 h-5" />}
+                  label="Delete Wallet"
+                  onClick={handleDeleteWallet}
+                  danger
+                />
+              </div>
+            </div>
+
+            {mnemonicError && (
+              <p className="text-red-500 text-sm text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                {mnemonicError}
+              </p>
+            )}
+
+            <div className="pt-2 pb-1 text-center">
+              <button
+                type="button"
+                onClick={handleBrotherhoodTap}
+                className="text-xs font-mono text-muted-foreground/60 hover:text-muted-foreground transition-colors select-none tracking-widest uppercase cursor-pointer py-1 px-3 rounded-md hover:bg-muted/40"
+                data-testid="brotherhood-tap-easter-egg"
+              >
+                brotherhood
+              </button>
+            </div>
           </div>
-        </Modal.Body>
+        </div>
       </Modal.Container>
 
       <Modal.Container
