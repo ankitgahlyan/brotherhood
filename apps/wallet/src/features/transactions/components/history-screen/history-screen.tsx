@@ -6,8 +6,9 @@
  *
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FC } from 'react';
+import { useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 
 import { TransactionRow } from '../transaction-row';
@@ -24,6 +25,13 @@ export const HistoryScreen: FC = () => {
   const navigate = useNavigate();
   const [limit, setLimit] = useState(PAGE_SIZE);
   const { rows, hasMore } = useTransactionRows(limit);
+  const loadEvents = useWalletStore((state) => state.loadEvents);
+  const address = useWalletStore((state) => state.walletManagement.address);
+
+  useEffect(() => {
+    if (!address) return;
+    void loadEvents(limit, 0);
+  }, [address, loadEvents, limit]);
 
   return (
     <NewLayout

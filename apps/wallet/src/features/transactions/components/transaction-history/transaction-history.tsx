@@ -13,9 +13,9 @@ import { useNavigate } from '@/core/routing';
 import { TransactionRow } from '../transaction-row';
 import { useTransactionRows } from '../../hooks/use-transaction-rows';
 
-const PREVIEW_COUNT = 6;
-// Load a few extra so the preview still fills 6 rows after action-less events are skipped.
-const PREVIEW_LOAD = 10;
+const PREVIEW_COUNT = 10;
+// Load a few extra so the preview still fills 10 rows after action-less events are skipped.
+const PREVIEW_LOAD = 20;
 
 /**
  * Dashboard "History" block: the latest transactions. Like NftsCard, renders nothing
