@@ -193,6 +193,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 activeWalletId: state.walletManagement.activeWalletId,
                 address: state.walletManagement.address,
                 balance: state.walletManagement.balance,
+                balancesByAddress:
+                  state.walletManagement.balancesByAddress || {},
               },
               tonConnect: {
                 requestQueue: {
@@ -251,7 +253,14 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   address:
                     persisted?.walletManagement?.address ||
                     activeWallet?.address,
-                  balance: persisted?.walletManagement?.balance,
+                  balancesByAddress:
+                    persisted?.walletManagement?.balancesByAddress || {},
+                  balance:
+                    (activeWallet?.address &&
+                      persisted?.walletManagement?.balancesByAddress?.[
+                        activeWallet.address
+                      ]) ||
+                    persisted?.walletManagement?.balance,
                   hasWallet:
                     (persisted?.walletManagement?.savedWallets?.length || 0) >
                     0,

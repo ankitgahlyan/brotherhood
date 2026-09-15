@@ -151,4 +151,114 @@ describe('Wallet Switching & Session Authentication', () => {
       'User not authenticated',
     );
   });
+
+  it('switchWallet restores cached balance from balancesByAddress without calling getBalance', async () => {
+    const store = createWalletStore({ enableDevtools: false });
+    const wallet1Addr =
+      '0:1111111111111111111111111111111111111111111111111111111111111111';
+    const wallet2Addr =
+      '0:2222222222222222222222222222222222222222222222222222222222222222';
+
+    let getBalanceCalls = 0;
+    const mockKitWallet2: any = {
+      getWalletId: () => 'kit_w2',
+      getAddress: () => wallet2Addr,
+      getPublicKey: () => 'pubkey_2',
+      getBalance: async () => {
+        getBalanceCalls++;
+        return 9999999999n;
+      },
+      getNetwork: () => ({ chainId: -3 }),
+    };
+
+    const mockWalletKit: any = {
+      getWallet: (id: string) => (id === 'kit_w2' ? mockKitWallet2 : undefined),
+      getWallets: () => [mockKitWallet2],
+      addWallet: async () => mockKitWallet2,
+    };
+
+    (store.setState as any)((state: any) => {
+      state.walletCore.walletKit = mockWalletKit;
+      state.walletManagement.isStreamingConnected = true;
+      state.walletManagement.activeWalletId = 'w1';
+      state.walletManagement.address = wallet1Addr;
+      state.walletManagement.balance = '1000000000';
+      state.walletManagement.balancesByAddress = {
+        [wallet1Addr]: '1000000000',
+        [wallet2Addr]: '5550000000',
+      };
+      state.walletManagement.savedWallets = [
+        { id: 'w1', address: wallet1Addr, name: 'Wallet 1' },
+        {
+          id: 'w2',
+          address: wallet2Addr,
+          name: 'Wallet 2',
+          kitWalletId: 'kit_w2',
+        },
+      ];
+    });
+
+    await store.getState().switchWallet('w2');
+
+    expect(store.getState().walletManagement.activeWalletId).toBe('w2');
+    expect(store.getState().walletManagement.address).toBe(wallet2Addr);
+    // Cached balance must be applied immediately
+    expect(store.getState().walletManagement.balance).toBe('5550000000');
+    // getBalance must not have been called eagerly
+    expect(getBalanceCalls).toBe(0);
+  });
+
+  it('loadAllWallets lazily loads only the active wallet into walletKit', async () => {
+    const store = createWalletStore({ enableDevtools: false });
+    const addedWalletIds: string[] = [];
+
+    const mockWalletKit: any = {
+      getWallet: () => undefined,
+      getWallets: () => [],
+      addWallet: async (adapter: any) => {
+        addedWalletIds.push(adapter.id);
+        return {
+          getWalletId: () => adapter.id,
+          getAddress: () => adapter.address,
+          getPublicKey: () => 'pk',
+          getNetwork: () => ({ chainId: -3 }),
+        };
+      },
+    };
+
+    (store.setState as any)((state: any) => {
+      state.auth.currentPassword = 'password123';
+      state.walletCore.walletKit = mockWalletKit;
+      state.walletManagement.isStreamingConnected = true;
+      state.walletManagement.activeWalletId = 'w1';
+      state.walletManagement.savedWallets = [
+        {
+          id: 'w1',
+          address: '0:1',
+          name: 'Wallet 1',
+          encryptedMnemonic: 'enc1',
+        },
+        {
+          id: 'w2',
+          address: '0:2',
+          name: 'Wallet 2',
+          encryptedMnemonic: 'enc2',
+        },
+      ];
+      // Mock createAdapterFromSavedWallet
+      state.createAdapterFromSavedWallet = async (
+        _kit: any,
+        sw: { id: string; address: string },
+      ) => ({
+        id: `kit_${sw.id}`,
+        address: sw.address,
+      });
+    });
+
+    await store.getState().loadAllWallets();
+
+    // Only active wallet w1 should be added into walletKit, NOT w2
+    expect(addedWalletIds).toEqual(['kit_w1']);
+    expect(store.getState().walletManagement.activeWalletId).toBe('w1');
+  });
 });

@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import globals from 'globals';
-import reactCompiler from 'eslint-plugin-react-compiler';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
@@ -36,11 +35,13 @@ export default tseslint.config(
     },
     plugins: {
       'react-hooks': reactHooks,
-      'react-compiler': reactCompiler,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
-      ...reactCompiler.configs.recommended.rules,
+      ...reactHooks.configs['recommended-latest'].rules,
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {

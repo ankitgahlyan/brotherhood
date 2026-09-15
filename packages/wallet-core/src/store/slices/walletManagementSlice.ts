@@ -47,6 +47,7 @@ export const createWalletManagementSlice =
       activeWalletId: undefined,
       address: undefined,
       balance: undefined,
+      balancesByAddress: {},
       publicKey: undefined,
       events: [],
       hasNextEvents: false,
@@ -59,7 +60,7 @@ export const createWalletManagementSlice =
       isStreamingConnected: false,
     },
 
-    // Load all saved wallets into WalletKit
+    // Load saved wallets into WalletKit (lazy: only loads active/primary wallet)
     loadSavedWalletsIntoKit: async (walletKit: ITonWalletKit) => {
       const state = get();
       const savedWallets = state.walletManagement.savedWallets;
@@ -71,47 +72,54 @@ export const createWalletManagementSlice =
         return;
       }
 
-      log.info(`Loading ${savedWallets.length} saved wallets into WalletKit`);
+      const targetWallet =
+        savedWallets.find(
+          (w) => w.id === state.walletManagement.activeWalletId,
+        ) ?? savedWallets[0];
 
-      for (const savedWallet of savedWallets) {
-        try {
-          // Check if wallet already loaded using kitWalletId
-          if (
-            savedWallet.kitWalletId &&
-            walletKit.getWallet(savedWallet.kitWalletId)
-          ) {
-            log.info(`Wallet ${savedWallet.name} already loaded`);
-            continue;
-          }
+      if (!targetWallet) {
+        return;
+      }
 
-          const walletAdapter = await state.createAdapterFromSavedWallet(
-            walletKit,
-            savedWallet,
-          );
+      log.info(`Loading active wallet ${targetWallet.name} into WalletKit`);
 
-          if (!walletAdapter) {
-            log.warn(`Failed to create adapter for wallet ${savedWallet.name}`);
-            continue;
-          }
-
-          const loadedWallet = await walletKit.addWallet(walletAdapter);
-          if (loadedWallet) {
-            const newKitWalletId = loadedWallet.getWalletId();
-            if (newKitWalletId && newKitWalletId !== savedWallet.kitWalletId) {
-              set((state) => {
-                const sw = state.walletManagement.savedWallets.find(
-                  (w) => w.id === savedWallet.id,
-                );
-                if (sw) sw.kitWalletId = newKitWalletId;
-              });
-            }
-          }
-          log.info(
-            `Loaded wallet ${savedWallet.name} (${savedWallet.address})`,
-          );
-        } catch (error) {
-          log.error(`Failed to load wallet ${savedWallet.name}:`, error);
+      try {
+        // Check if wallet already loaded using kitWalletId
+        if (
+          targetWallet.kitWalletId &&
+          walletKit.getWallet(targetWallet.kitWalletId)
+        ) {
+          log.info(`Wallet ${targetWallet.name} already loaded`);
+          return;
         }
+
+        const walletAdapter = await state.createAdapterFromSavedWallet(
+          walletKit,
+          targetWallet,
+        );
+
+        if (!walletAdapter) {
+          log.warn(`Failed to create adapter for wallet ${targetWallet.name}`);
+          return;
+        }
+
+        const loadedWallet = await walletKit.addWallet(walletAdapter);
+        if (loadedWallet) {
+          const newKitWalletId = loadedWallet.getWalletId();
+          if (newKitWalletId && newKitWalletId !== targetWallet.kitWalletId) {
+            set((state) => {
+              const sw = state.walletManagement.savedWallets.find(
+                (w) => w.id === targetWallet.id,
+              );
+              if (sw) sw.kitWalletId = newKitWalletId;
+            });
+          }
+        }
+        log.info(
+          `Loaded wallet ${targetWallet.name} (${targetWallet.address})`,
+        );
+      } catch (error) {
+        log.error(`Failed to load wallet ${targetWallet.name}:`, error);
       }
     },
 
@@ -318,6 +326,10 @@ export const createWalletManagementSlice =
           state.walletManagement.address = address;
           state.walletManagement.publicKey = publicKey;
           state.walletManagement.balance = balance.toString();
+          if (address) {
+            state.walletManagement.balancesByAddress[address] =
+              balance.toString();
+          }
           state.walletManagement.currentWallet = wallet;
         });
 
@@ -427,34 +439,23 @@ export const createWalletManagementSlice =
           throw new Error('Failed to load wallet');
         }
 
-        // Activate the wallet immediately, even if API calls fail
-        let balance: string | undefined;
-        try {
-          const balancePromise = wallet.getBalance();
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('getBalance timeout after 4000ms')),
-              4000,
-            ),
-          );
-          const balanceResult = await Promise.race([
-            balancePromise,
-            timeoutPromise,
-          ]);
-          balance = balanceResult.toString();
-        } catch (balanceError) {
-          log.warn(
-            'Failed to fetch balance during wallet switch (API may be down):',
-            balanceError,
-          );
-        }
+        // Activate the wallet immediately using cached balance if available
+        const cachedBalance = savedWallet.address
+          ? (state.walletManagement.balancesByAddress?.[savedWallet.address] ??
+            (state.walletManagement.activeWalletId === walletId
+              ? state.walletManagement.balance
+              : undefined))
+          : undefined;
 
         set((state) => {
           state.walletManagement.activeWalletId = walletId;
           state.walletManagement.address = savedWallet.address;
           state.walletManagement.publicKey = savedWallet.publicKey;
-          state.walletManagement.balance =
-            balance ?? state.walletManagement.balance;
+          state.walletManagement.balance = cachedBalance;
+          if (savedWallet.address && cachedBalance !== undefined) {
+            state.walletManagement.balancesByAddress[savedWallet.address] =
+              cachedBalance;
+          }
           state.walletManagement.currentWallet = wallet;
           state.walletManagement.events = [];
 
@@ -471,11 +472,6 @@ export const createWalletManagementSlice =
         });
 
         await get().startWebSocketStreaming();
-        void get()
-          .loadEvents()
-          .catch((err) =>
-            log.error('Error loading events after switching wallet:', err),
-          );
 
         log.info(`Switched to wallet ${walletId} successfully`);
       } catch (error) {
@@ -509,7 +505,13 @@ export const createWalletManagementSlice =
           : undefined;
 
       set((state) => {
-        state.walletManagement.savedWallets.splice(walletIndex, 1);
+        const removed = state.walletManagement.savedWallets.splice(
+          walletIndex,
+          1,
+        )[0];
+        if (removed?.address) {
+          delete state.walletManagement.balancesByAddress[removed.address];
+        }
 
         if (isRemovingActiveWallet && isLastWallet) {
           state.walletManagement.hasWallet = false;
@@ -518,6 +520,7 @@ export const createWalletManagementSlice =
           state.walletManagement.address = undefined;
           state.walletManagement.publicKey = undefined;
           state.walletManagement.balance = undefined;
+          state.walletManagement.balancesByAddress = {};
           state.walletManagement.currentWallet = undefined;
           state.walletManagement.events = [];
           state.walletManagement.pendingTransactions = [];
@@ -570,85 +573,27 @@ export const createWalletManagementSlice =
         return;
       }
 
+      const savedWallets = state.walletManagement.savedWallets;
+      if (!savedWallets || savedWallets.length === 0) {
+        return;
+      }
+
       try {
+        const targetWallet =
+          savedWallets.find(
+            (w) => w.id === state.walletManagement.activeWalletId,
+          ) ?? savedWallets[0];
+
+        if (!targetWallet) {
+          return;
+        }
+
         log.info(
-          `Loading ${state.walletManagement.savedWallets.length} saved wallets`,
+          `Loading active wallet ${targetWallet.name} (${targetWallet.id})`,
         );
 
-        for (const savedWallet of state.walletManagement.savedWallets) {
-          // Check if wallet already loaded using kitWalletId or address fallback
-          let existingWallet = savedWallet.kitWalletId
-            ? state.walletCore.walletKit.getWallet(savedWallet.kitWalletId)
-            : undefined;
-
-          if (!existingWallet && savedWallet.address) {
-            const loadedWallets = state.walletCore.walletKit.getWallets();
-            existingWallet = loadedWallets.find((w) => {
-              try {
-                return compareAddress(w.getAddress(), savedWallet.address);
-              } catch {
-                return w.getAddress() === savedWallet.address;
-              }
-            });
-            if (existingWallet) {
-              const matchedKitWalletId = existingWallet.getWalletId();
-              if (matchedKitWalletId !== savedWallet.kitWalletId) {
-                set((state) => {
-                  const sw = state.walletManagement.savedWallets.find(
-                    (w) => w.id === savedWallet.id,
-                  );
-                  if (sw) sw.kitWalletId = matchedKitWalletId;
-                });
-              }
-            }
-          }
-
-          if (existingWallet) {
-            log.info(`Wallet ${savedWallet.id} already loaded`);
-            continue;
-          }
-
-          const walletAdapter = await state.createAdapterFromSavedWallet(
-            state.walletCore.walletKit,
-            savedWallet,
-          );
-
-          if (!walletAdapter) {
-            log.warn(`Failed to create adapter for wallet ${savedWallet.name}`);
-            continue;
-          }
-
-          const loadedWallet =
-            await state.walletCore.walletKit.addWallet(walletAdapter);
-          if (loadedWallet) {
-            const newKitWalletId = loadedWallet.getWalletId();
-            if (newKitWalletId && newKitWalletId !== savedWallet.kitWalletId) {
-              set((state) => {
-                const sw = state.walletManagement.savedWallets.find(
-                  (w) => w.id === savedWallet.id,
-                );
-                if (sw) sw.kitWalletId = newKitWalletId;
-              });
-            }
-          }
-        }
-
-        // Switch to active wallet — errors here should not block login
-        try {
-          if (
-            state.walletManagement.savedWallets.length > 0 &&
-            !state.walletManagement.activeWalletId
-          ) {
-            await get().switchWallet(state.walletManagement.savedWallets[0].id);
-          } else if (state.walletManagement.activeWalletId) {
-            await get().switchWallet(state.walletManagement.activeWalletId);
-          }
-        } catch (switchError) {
-          log.warn(
-            'Failed to switch wallet during loadAllWallets (API may be down):',
-            switchError,
-          );
-        }
+        // Switch to active wallet — lazily instantiates adapter if not yet in kit and activates it
+        await get().switchWallet(targetWallet.id);
 
         set((state) => {
           state.walletManagement.hasWallet =
@@ -657,9 +602,9 @@ export const createWalletManagementSlice =
             state.walletManagement.savedWallets.length > 0;
         });
 
-        log.info('All wallets loaded successfully');
+        log.info('Active wallet loaded successfully');
       } catch (error) {
-        log.error('Error loading wallets:', error);
+        log.error('Error loading active wallet:', error);
         // Still mark as authenticated if we have saved wallets —
         // the user should be able to enter the app even if API is down
         set((state) => {
@@ -725,6 +670,7 @@ export const createWalletManagementSlice =
         state.walletManagement.activeWalletId = undefined;
         state.walletManagement.address = undefined;
         state.walletManagement.balance = undefined;
+        state.walletManagement.balancesByAddress = {};
         state.walletManagement.publicKey = undefined;
         state.walletManagement.events = [];
         state.walletManagement.pendingTransactions = [];
@@ -757,9 +703,13 @@ export const createWalletManagementSlice =
       try {
         const balance = await state.walletManagement.currentWallet.getBalance();
         const balanceString = balance.toString();
+        const address = state.walletManagement.address;
 
         set((state) => {
           state.walletManagement.balance = balanceString;
+          if (address) {
+            state.walletManagement.balancesByAddress[address] = balanceString;
+          }
         });
       } catch (error) {
         log.error('Error updating balance:', error);
@@ -807,6 +757,10 @@ export const createWalletManagementSlice =
               s.walletManagement.balance !== update.rawBalance
             ) {
               s.walletManagement.balance = update.rawBalance;
+              if (address) {
+                s.walletManagement.balancesByAddress[address] =
+                  update.rawBalance;
+              }
               log.info('Balance updated via WebSocket:', update.rawBalance);
             }
           });

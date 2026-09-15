@@ -81,6 +81,7 @@ export interface WalletManagementSlice {
     activeWalletId?: string;
     address?: string;
     balance?: string;
+    balancesByAddress: Record<string, string>;
     publicKey?: string;
 
     // Event history for active wallet
