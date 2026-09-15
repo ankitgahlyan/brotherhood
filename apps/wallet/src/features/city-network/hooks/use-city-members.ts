@@ -22,7 +22,7 @@ export interface UseLocationMembersResult {
   members: string[];
   isTargetMember: boolean | null;
   isLoading: boolean;
-  refetch: () => void;
+  refetch: () => Promise<void> | void;
 }
 
 export function useLocationMembers(
@@ -99,11 +99,11 @@ export function useLocationMembers(
   return {
     ...result,
     isLoading: isLoading && Boolean(cleanAddr),
-    refetch: () => {
+    refetch: async () => {
       if (cleanAddr) {
-        batchHydrateUniversal([cleanAddr], network, {
+        await batchHydrateUniversal([cleanAddr], network, {
           knownTypes: { [cleanAddr]: 'location' },
-        }).catch(() => {});
+        });
       }
     },
   };

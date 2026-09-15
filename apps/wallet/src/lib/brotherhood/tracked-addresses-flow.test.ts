@@ -375,4 +375,27 @@ describe('Tracked Addresses Storage & Flow', () => {
     expect(allList).toContain(minter.toString());
     expect(allList).toContain(wallet.toString());
   });
+
+  it('throttles rapid repeated batch hydration requests for the same address within cooldown', async () => {
+    const { batchHydrateUniversal, clearHydrationCooldowns } =
+      await import('./account-state-hydrator');
+    clearHydrationCooldowns();
+
+    const addr =
+      '0:7777777777777777777777777777777777777777777777777777777777777777';
+
+    // First call fetches from network / mock
+    const res1 = await batchHydrateUniversal([addr], 'testnet');
+    expect(res1.totalRequested).toBe(1);
+
+    // Second call immediately within cooldown window (3500ms) should be throttled
+    const res2 = await batchHydrateUniversal([addr], 'testnet');
+    expect(res2.totalRequested).toBe(1);
+
+    // Force option bypasses cooldown
+    const res3 = await batchHydrateUniversal([addr], 'testnet', {
+      force: true,
+    });
+    expect(res3.totalRequested).toBe(1);
+  }, 15000);
 });

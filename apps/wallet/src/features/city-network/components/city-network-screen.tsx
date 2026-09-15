@@ -14,6 +14,7 @@ import { ExternalLink, Loader2, Search, X } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import {
@@ -303,14 +304,11 @@ export const CityNetworkScreen: React.FC = () => {
               <span className="text-xs font-semibold text-foreground">
                 Spatial Cell Details
               </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => locationByH3Query.refetch()}
-                disabled={locationByH3Query.isLoading}
-              >
-                Refresh
-              </Button>
+              <RefreshButton
+                onRefresh={locationByH3Query.refetch}
+                disabled={!queriedH3Cell}
+                testId="city-location-refresh-btn"
+              />
             </div>
 
             {locationByH3Query.isLoading ? (

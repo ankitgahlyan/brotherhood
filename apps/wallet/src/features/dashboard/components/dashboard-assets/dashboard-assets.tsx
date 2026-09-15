@@ -7,10 +7,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Plus, RefreshCw } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons } from '@demo/wallet-core';
-import { toast } from 'sonner';
 
 import {
   AddTokenModal,
@@ -32,25 +32,10 @@ export const DashboardAssets: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleAssetClick = (asset: AssetRowData) => {
     setSelectedAsset(asset);
     setIsModalOpen(true);
-  };
-
-  const handleRefreshTokens = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadUserJettons();
-      toast.success('Tokens refreshed successfully');
-    } catch (err) {
-      console.error('[DashboardAssets] Failed to refresh tokens:', err);
-      toast.error('Failed to refresh tokens');
-    } finally {
-      setIsRefreshing(false);
-    }
   };
 
   // Preview: up to JETTON_SLOTS held member jettons or all if showAll is true
@@ -77,17 +62,16 @@ export const DashboardAssets: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleRefreshTokens}
-            disabled={isRefreshing}
-            className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+          <RefreshButton
+            iconOnly
+            onRefresh={async () => {
+              await loadUserJettons();
+            }}
+            className="rounded-full bg-secondary p-1"
             title="Refresh and discover tokens"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
-            />
-          </button>
+            ariaLabel="Refresh and discover tokens"
+            testId="dashboard-assets-refresh-btn"
+          />
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}

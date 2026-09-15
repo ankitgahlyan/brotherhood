@@ -6,7 +6,7 @@
  *
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { type Address } from '@ton/core';
 import {
   useContractState,
@@ -50,13 +50,23 @@ export function useFiWalletState(
     net,
   );
 
+  const refetch = useCallback(async () => {
+    if (fiWalletAddress) {
+      const { batchHydrateUniversal } =
+        await import('./account-state-hydrator');
+      await batchHydrateUniversal([fiWalletAddress], net, {
+        knownTypes: { [fiWalletAddress.toRawString()]: 'fiWallet' },
+      });
+    }
+  }, [fiWalletAddress, net]);
+
   return {
     data,
     isLoading: isLoading && !!ownerAddress,
     isFetching: isLoading && !!ownerAddress,
     error: null as Error | null,
     timestamp,
-    refetch: async () => {},
+    refetch,
   };
 }
 
@@ -68,13 +78,28 @@ export function useFiWalletStateByContract(
     contractAddress,
     net,
   );
+
+  const refetch = useCallback(async () => {
+    if (contractAddress) {
+      const { batchHydrateUniversal } =
+        await import('./account-state-hydrator');
+      const clean =
+        typeof contractAddress === 'string'
+          ? contractAddress.trim()
+          : contractAddress.toRawString();
+      await batchHydrateUniversal([clean], net, {
+        knownTypes: { [clean]: 'fiWallet' },
+      });
+    }
+  }, [contractAddress, net]);
+
   return {
     data,
     isLoading: isLoading && !!contractAddress,
     isFetching: isLoading && !!contractAddress,
     error: null as Error | null,
     timestamp,
-    refetch: async () => {},
+    refetch,
   };
 }
 
@@ -268,7 +293,13 @@ export function useJettonMaster(_enabled = true) {
 }
 
 export function useRefreshContractQueries() {
-  return async (_keys?: string[]) => {};
+  return useCallback(async (_keys?: string[]) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('brotherhood_manual_wallet_refresh'),
+      );
+    }
+  }, []);
 }
 
 export function markForceFresh(_key?: string) {}

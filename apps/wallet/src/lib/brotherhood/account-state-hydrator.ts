@@ -23,6 +23,7 @@ import {
   setAddressBookCache,
   getNormalizedContractCacheKey,
   deserializeFromStorage,
+  getContractCache,
 } from './contract-cache';
 import { rateLimitedFetch } from './rate-limiter';
 import { toncenterApiKey, type Network } from './ton';
@@ -330,12 +331,20 @@ export function computePersonalWalletAddress(
  * Marks outdated contracts without wasting RPC calls.
  */
 const inFlightHydrations = new Map<string, Promise<UniversalHydrateResult>>();
+const hydrationCooldowns = new Map<string, number>();
+export const DEFAULT_HYDRATION_COOLDOWN_MS = 3500;
+
+export function clearHydrationCooldowns(): void {
+  hydrationCooldowns.clear();
+}
 
 export function batchHydrateUniversal(
   addresses: (Address | string)[],
   net: Network = defaultNetwork,
   options?: {
     knownTypes?: Record<string, KnownContractType>;
+    force?: boolean;
+    cooldownMs?: number;
   },
 ): Promise<UniversalHydrateResult> {
   // Format-insensitive deduplication and alias mapping:
@@ -372,8 +381,40 @@ export function batchHydrateUniversal(
   }
 
   const hydrationPromise = (async () => {
+    const now = Date.now();
+    const cooldownLimit = options?.cooldownMs ?? DEFAULT_HYDRATION_COOLDOWN_MS;
+
+    const addressesToFetch: string[] = [];
+    for (const addr of normalizedAddresses) {
+      const key = `${net}:${addr}`;
+      const last = hydrationCooldowns.get(key) ?? 0;
+      if (options?.force || now - last >= cooldownLimit) {
+        addressesToFetch.push(addr);
+      } else {
+        // Address is within cooldown window: reuse cached store directly
+        const cacheKey = getNormalizedContractCacheKey(net, addr);
+        const cached = await getContractCache(cacheKey);
+        if (cached?.data) {
+          result.decodedStores![addr] = cached.data;
+          result.hydrated++;
+        }
+      }
+    }
+
+    if (addressesToFetch.length === 0) {
+      // All requested addresses satisfied via cooldown cache
+      if (result.decodedStores) {
+        for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
+          if (origKey !== canonical && result.decodedStores[canonical]) {
+            result.decodedStores[origKey] = result.decodedStores[canonical];
+          }
+        }
+      }
+      return result;
+    }
+
     const fetchResult = await batchFetchAccountStates(
-      normalizedAddresses,
+      addressesToFetch,
       net,
       30,
     );
@@ -555,6 +596,11 @@ export function batchHydrateUniversal(
           result.decodedStores[origKey] = result.decodedStores[canonical];
         }
       }
+    }
+
+    const completedAt = Date.now();
+    for (const addr of addressesToFetch) {
+      hydrationCooldowns.set(`${net}:${addr}`, completedAt);
     }
 
     return result;

@@ -10,6 +10,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
@@ -221,15 +222,10 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
           ← Back to List
         </Button>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="text-xs"
-          >
-            Refresh
-          </Button>
+          <RefreshButton
+            onRefresh={refetch}
+            testId="member-detail-refresh-btn"
+          />
         </div>
       </div>
 
@@ -252,9 +248,9 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
           <p className="text-xs text-muted-foreground">
             {error?.message || 'Contract not found or invalid address.'}
           </p>
-          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+          <RefreshButton onRefresh={refetch} testId="member-detail-retry-btn">
             Retry
-          </Button>
+          </RefreshButton>
         </div>
       ) : (
         <div className="space-y-3">

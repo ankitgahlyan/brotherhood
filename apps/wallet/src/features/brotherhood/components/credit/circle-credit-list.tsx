@@ -7,7 +7,8 @@
  */
 
 import React from 'react';
-import { RefreshCw, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import type { MemberProfileInfo } from '../../hooks/use-member-profiles';
 import { CreditMemberCard } from './credit-member-card';
@@ -16,7 +17,7 @@ export interface CircleCreditListProps {
   circleMembers: InvitedMemberEntry[];
   profiles?: Record<string, MemberProfileInfo>;
   isLoading?: boolean;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<unknown> | void;
   onSendCredit: (ownerAddress: string, creditNeed: bigint) => void;
 }
 
@@ -57,18 +58,12 @@ export const CircleCreditList: React.FC<CircleCreditListProps> = ({
         </div>
 
         {onRefresh && (
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer disabled:opacity-50"
+          <RefreshButton
+            iconOnly
+            onRefresh={onRefresh}
             title="Refresh Circle credit requests"
-            aria-label="Refresh Circle credit requests"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
-            />
-          </button>
+            ariaLabel="Refresh Circle credit requests"
+          />
         )}
       </div>
 

@@ -10,6 +10,7 @@ import React, { useState, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import { openTelegramProfile } from '@/core/utils/telegram';
 import { useFormatAddress } from '@/core/utils/formatters';
@@ -161,18 +162,17 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isExpanded && (
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+            <RefreshButton
+              iconOnly
+              onRefresh={async () => {
+                refetchInvitees();
+                if (resolvedRingProfiles.refetch) {
+                  await resolvedRingProfiles.refetch();
+                }
+              }}
               title={`Refresh 2nd-degree invitees for ${inviterUsername}`}
-              aria-label={`Refresh 2nd-degree invitees for ${inviterUsername}`}
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
-              />
-            </button>
+              ariaLabel={`Refresh 2nd-degree invitees for ${inviterUsername}`}
+            />
           )}
           <button
             type="button"

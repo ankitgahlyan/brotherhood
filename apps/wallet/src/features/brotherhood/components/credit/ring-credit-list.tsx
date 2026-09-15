@@ -14,6 +14,7 @@ import {
   Network as NetworkIcon,
   Loader2,
 } from 'lucide-react';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useFormatAddress } from '@/core/utils/formatters';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import {
@@ -116,18 +117,15 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors cursor-pointer disabled:opacity-50"
+          <RefreshButton
+            iconOnly
+            onRefresh={async () => {
+              refetchInvitees();
+              await Promise.resolve(refetchProfiles());
+            }}
             title={`Refresh invitees for ${inviterUsername}`}
-            aria-label={`Refresh invitees for ${inviterUsername}`}
-          >
-            <RefreshCw
-              className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`}
-            />
-          </button>
+            ariaLabel={`Refresh invitees for ${inviterUsername}`}
+          />
           <button
             type="button"
             onClick={onToggle}

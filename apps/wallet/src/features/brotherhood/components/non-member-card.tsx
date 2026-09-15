@@ -11,10 +11,11 @@ import { Copy, Check, ShieldAlert } from 'lucide-react';
 import { useWallet } from '@demo/wallet-core';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 
 interface NonMemberCardProps {
   className?: string;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<unknown> | void;
 }
 
 export const NonMemberCard: React.FC<NonMemberCardProps> = ({
@@ -92,15 +93,15 @@ export const NonMemberCard: React.FC<NonMemberCardProps> = ({
 
       {onRefresh && (
         <div className="pt-1">
-          <Button
+          <RefreshButton
             variant="secondary"
             size="sm"
-            onClick={onRefresh}
-            fullWidth
-            data-testid="refresh-membership-btn"
+            onRefresh={onRefresh}
+            className="w-full justify-center"
+            testId="refresh-membership-btn"
           >
             Check Membership Status
-          </Button>
+          </RefreshButton>
         </div>
       )}
     </div>

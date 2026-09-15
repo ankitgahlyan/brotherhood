@@ -7,10 +7,10 @@
  */
 
 import { useState, type FC } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons } from '@demo/wallet-core';
-import { toast } from 'sonner';
 
 import { AssetRow, AssetRowSkeleton } from '../asset-row';
 import { AssetDetailsModal } from '../asset-details-modal';
@@ -31,25 +31,10 @@ export const AssetsScreen: FC = () => {
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleAssetClick = (asset: AssetRowData) => {
     setSelectedAsset(asset);
     setIsModalOpen(true);
-  };
-
-  const handleRefreshTokens = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadUserJettons();
-      toast.success('Tokens refreshed successfully');
-    } catch (err) {
-      console.error('[AssetsScreen] Failed to refresh tokens:', err);
-      toast.error('Failed to refresh tokens');
-    } finally {
-      setIsRefreshing(false);
-    }
   };
 
   return (
@@ -61,17 +46,16 @@ export const AssetsScreen: FC = () => {
           rightElement={
             <div className="flex items-center gap-1.5">
               <SyncStatusButton />
-              <button
-                type="button"
-                onClick={handleRefreshTokens}
-                disabled={isRefreshing}
-                className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+              <RefreshButton
+                iconOnly
+                onRefresh={async () => {
+                  await loadUserJettons();
+                }}
+                className="rounded-full bg-secondary p-1"
                 title="Refresh and discover tokens"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
-                />
-              </button>
+                ariaLabel="Refresh and discover tokens"
+                testId="assets-refresh-btn"
+              />
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}

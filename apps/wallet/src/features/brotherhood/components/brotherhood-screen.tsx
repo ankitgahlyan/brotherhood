@@ -18,6 +18,7 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { Modal } from '@/core/components/ui/modal';
 import { CountrySelect } from '@/core/components/ui/country-select';
@@ -623,13 +624,10 @@ export const BrotherhoodScreen: React.FC = () => {
               <h3 className="font-semibold text-base">
                 Member Account Profile
               </h3>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => account.refetch()}
-              >
-                Refresh
-              </Button>
+              <RefreshButton
+                onRefresh={account.refetch}
+                testId="brotherhood-account-refresh-btn"
+              />
             </div>
 
             {account.isLoading ? (

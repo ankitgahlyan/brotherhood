@@ -40,14 +40,14 @@ export interface LocationCellDetails {
 export interface UseLocationResult {
   location: LocationInfo | null;
   isLoading: boolean;
-  refetch: () => void;
+  refetch: () => Promise<void> | void;
 }
 
 export interface UseLocationByH3CellResult {
   data: LocationCellDetails | null;
   calculatedAddress: string | null;
   isLoading: boolean;
-  refetch: () => void;
+  refetch: () => Promise<void> | void;
 }
 
 /**
@@ -169,11 +169,11 @@ export function useLocationByH3Cell(
     data,
     calculatedAddress,
     isLoading: isLoading && Boolean(cleanH3Cell && calculatedAddress),
-    refetch: () => {
+    refetch: async () => {
       if (calculatedAddress) {
-        batchHydrateUniversal([calculatedAddress], network, {
+        await batchHydrateUniversal([calculatedAddress], network, {
           knownTypes: { [calculatedAddress]: 'location' },
-        }).catch(() => {});
+        });
       }
     },
   };
@@ -232,11 +232,11 @@ export function useLocation(
   return {
     location,
     isLoading: isLoading && Boolean(cleanAddr),
-    refetch: () => {
+    refetch: async () => {
       if (cleanAddr) {
-        batchHydrateUniversal([cleanAddr], network, {
+        await batchHydrateUniversal([cleanAddr], network, {
           knownTypes: { [cleanAddr]: 'location' },
-        }).catch(() => {});
+        });
       }
     },
   };
