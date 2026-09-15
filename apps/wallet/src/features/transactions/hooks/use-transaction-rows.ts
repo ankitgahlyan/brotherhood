@@ -6,7 +6,7 @@
  *
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useWalletStore, useShallow } from '@demo/wallet-core';
 import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
@@ -45,10 +45,10 @@ export const useTransactionRows = (limit: number): TransactionRows => {
       }),
     );
 
-  // useEffect(() => {
-  //   if (!address) return;
-  //   void loadEvents(limit, 0);
-  // }, [address, loadEvents, limit]);
+  useEffect(() => {
+    if (!address) return;
+    void loadEvents(limit, 0);
+  }, [address, loadEvents, limit]);
 
   const rows = useMemo<TransactionRowModel[]>(() => {
     const eventItems = (events ?? []) as Event[];

@@ -53,6 +53,14 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
         }
       }
     } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === 'NotAllowedError' ||
+          err.name === 'AbortError' ||
+          err.name === 'SecurityError')
+      ) {
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Biometric unlock failed');
     } finally {
       setIsBiometricLoading(false);

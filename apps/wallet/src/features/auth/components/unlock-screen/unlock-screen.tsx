@@ -51,6 +51,15 @@ export const UnlockScreen: React.FC = () => {
         }
       }
     } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === 'NotAllowedError' ||
+          err.name === 'AbortError' ||
+          err.name === 'SecurityError')
+      ) {
+        // Silently handled (user cancelled or auto-prompt user gesture requirement)
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Biometric unlock failed');
     } finally {
       setIsBiometricLoading(false);

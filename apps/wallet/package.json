@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:https": "bun ../../scripts/generate-dev-cert.mjs && VITE_HTTPS=true vite",
     "generate-routes": "tsr generate",
     "build": "tsr generate && vite build",
     "preview": "vite preview",
+    "preview:https": "VITE_HTTPS=true vite preview",
     "typecheck": "../../node_modules/typescript-7/bin/tsc --noEmit",
     "e2e": "playwright test --config e2e.config.ts"
   },

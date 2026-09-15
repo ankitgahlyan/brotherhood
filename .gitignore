@@ -51,3 +51,4 @@ wallets.toml
 global.wallets.toml
 global.libraries.toml
 lcov.info
+.cert/

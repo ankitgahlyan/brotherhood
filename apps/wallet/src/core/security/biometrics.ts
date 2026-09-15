@@ -57,6 +57,24 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 }
 
 /**
+ * Returns true if the browser execution environment is a Secure Context (HTTPS or localhost).
+ */
+export function isSecureContextAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(window.isSecureContext);
+}
+
+/**
+ * Returns true if the app is accessed on the Web over an insecure context (e.g. plain HTTP on LAN).
+ * In this state, WebAuthn and Web Crypto are unavailable.
+ */
+export function isInsecureWebContext(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (hasTelegramBiometricManager()) return false;
+  return !window.isSecureContext;
+}
+
+/**
  * Check if the current browser/device supports WebAuthn platform authenticators or Telegram BiometricManager.
  */
 export async function isBiometricsSupported(): Promise<boolean> {
@@ -67,7 +85,12 @@ export async function isBiometricsSupported(): Promise<boolean> {
     return isTelegramBiometricsAvailable();
   }
 
-  if (!window.PublicKeyCredential) {
+  // WebAuthn and Web Crypto require a Secure Context (HTTPS or localhost)
+  if (!window.isSecureContext) {
+    return false;
+  }
+
+  if (!window.PublicKeyCredential || !window.crypto?.subtle) {
     return false;
   }
   try {
@@ -149,6 +172,9 @@ export async function registerBiometrics(
   username = 'BrotherHood Wallet',
 ): Promise<boolean> {
   if (!password) return false;
+  if (!isSecureContextAvailable() && !hasTelegramBiometricManager()) {
+    throw new Error('Biometrics requires a secure connection (HTTPS).');
+  }
   const supported = await isBiometricsSupported();
   if (!supported) {
     throw new Error('Biometrics not supported on this device');
@@ -179,8 +205,8 @@ export async function registerBiometrics(
         ],
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          residentKey: 'preferred',
+          userVerification: 'preferred',
+          residentKey: 'discouraged',
         },
         timeout: 60000,
       },
@@ -235,6 +261,10 @@ export async function authenticateBiometrics(): Promise<string | null> {
     return null;
   }
 
+  if (!isSecureContextAvailable()) {
+    return null;
+  }
+
   try {
     const raw = localStorage.getItem(BIOMETRIC_VAULT_KEY);
     if (!raw) return null;
@@ -250,10 +280,9 @@ export async function authenticateBiometrics(): Promise<string | null> {
           {
             type: 'public-key',
             id: credIdBuffer,
-            transports: ['internal'],
           },
         ],
-        userVerification: 'required',
+        userVerification: 'preferred',
         timeout: 60000,
       },
     })) as PublicKeyCredential | null;
@@ -277,9 +306,11 @@ export async function authenticateBiometrics(): Promise<string | null> {
   } catch (err) {
     if (
       err instanceof Error &&
-      (err.name === 'NotAllowedError' || err.name === 'AbortError')
+      (err.name === 'NotAllowedError' ||
+        err.name === 'AbortError' ||
+        err.name === 'SecurityError')
     ) {
-      // User cancelled prompt
+      // User cancelled prompt or transient user activation missing
       return null;
     }
     console.warn('[Biometrics] Authentication failed:', err);

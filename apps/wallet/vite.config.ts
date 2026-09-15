@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
@@ -57,6 +58,18 @@ const pwaManifest: Partial<ManifestOptions> = {
 };
 
 export default defineConfig(() => {
+  const isHttps = process.env.VITE_HTTPS === 'true';
+  const certKeyPath = path.resolve(projectRoot, '../../.cert/dev-key.pem');
+  const certPath = path.resolve(projectRoot, '../../.cert/dev-cert.pem');
+  const hasCert = fs.existsSync(certKeyPath) && fs.existsSync(certPath);
+  const httpsConfig =
+    isHttps && hasCert
+      ? {
+          key: fs.readFileSync(certKeyPath),
+          cert: fs.readFileSync(certPath),
+        }
+      : undefined;
+
   return {
     base,
     root: projectRoot,
@@ -155,10 +168,16 @@ export default defineConfig(() => {
     server: {
       host: '0.0.0.0',
       port: 3000,
+      https: httpsConfig,
       ws: {
         clientPort: 3000,
       },
       allowedHosts: ['localhost', '127.0.0.1', 'local.dev'],
+    },
+    preview: {
+      host: '0.0.0.0',
+      port: 3000,
+      https: httpsConfig,
     },
     optimizeDeps: {
       include: [

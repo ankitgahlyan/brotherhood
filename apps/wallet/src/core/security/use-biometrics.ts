@@ -13,11 +13,13 @@ import {
   registerBiometrics,
   authenticateBiometrics,
   clearBiometrics,
+  isInsecureWebContext,
 } from './biometrics';
 
 export interface UseBiometricsResult {
   isSupported: boolean;
   isEnabled: boolean;
+  isInsecureContext: boolean;
   isLoading: boolean;
   error: string | null;
   register: (password: string) => Promise<boolean>;
@@ -29,11 +31,13 @@ export interface UseBiometricsResult {
 export function useBiometrics(): UseBiometricsResult {
   const [isSupported, setIsSupported] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
+  const [isInsecureContext, setIsInsecureContext] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
+      setIsInsecureContext(isInsecureWebContext());
       const supported = await isBiometricsSupported();
       const enabled = isBiometricsRegistered();
       setIsSupported(supported);
@@ -94,6 +98,7 @@ export function useBiometrics(): UseBiometricsResult {
   return {
     isSupported,
     isEnabled,
+    isInsecureContext,
     isLoading,
     error,
     register,

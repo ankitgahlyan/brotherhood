@@ -24,7 +24,6 @@ import {
   RefreshCw,
   X,
 } from 'lucide-react';
-import { cn } from '@/core/lib/utils';
 import {
   checkForAppUpdates,
   applyAppUpdate,
@@ -129,6 +128,7 @@ export const SettingsDropdown: React.FC = () => {
   const {
     isSupported: isBiometricsSupported,
     isEnabled: isBiometricsEnabled,
+    isInsecureContext: isBiometricsInsecure,
     register: registerBiometrics,
     disable: disableBiometrics,
   } = useBiometrics();
@@ -233,6 +233,12 @@ export const SettingsDropdown: React.FC = () => {
   };
 
   const handleToggleBiometrics = async (checked: boolean) => {
+    if (isBiometricsInsecure) {
+      toast.error(
+        'Biometrics requires a secure connection (HTTPS). On mobile browsers, please access via HTTPS or use Telegram.',
+      );
+      return;
+    }
     if (!checked) {
       disableBiometrics();
     } else {
@@ -241,6 +247,9 @@ export const SettingsDropdown: React.FC = () => {
           await registerBiometrics(currentPassword);
         } catch (e) {
           log.error('Failed to enable biometrics:', e);
+          toast.error(
+            e instanceof Error ? e.message : 'Failed to enable biometrics',
+          );
         }
       } else {
         setBiometricPasscode('');
@@ -379,13 +388,35 @@ export const SettingsDropdown: React.FC = () => {
                 Security & Preferences
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
-                {isBiometricsSupported && (
+                {(isBiometricsSupported || isBiometricsInsecure) && (
                   <ToggleRow
                     testId="biometric-unlock"
                     label="Fingerprint / Biometric Unlock"
-                    description="Unlock wallet using device fingerprint or Face ID"
-                    checked={isBiometricsEnabled}
+                    description={
+                      isBiometricsInsecure
+                        ? 'Unavailable on plain HTTP. Access via HTTPS or Telegram.'
+                        : 'Unlock wallet using device fingerprint or Face ID'
+                    }
+                    checked={isBiometricsEnabled && !isBiometricsInsecure}
+                    disabled={isBiometricsInsecure}
+                    badge={
+                      isBiometricsInsecure ? (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                          Requires HTTPS
+                        </span>
+                      ) : undefined
+                    }
                     onChange={handleToggleBiometrics}
+                    info={
+                      isBiometricsInsecure ? (
+                        <>
+                          <strong>HTTPS Required:</strong> Web browsers strictly
+                          restrict WebAuthn platform biometrics to secure
+                          contexts (HTTPS or localhost). Run dev with HTTPS or
+                          open in Telegram.
+                        </>
+                      ) : undefined
+                    }
                   />
                 )}
                 <ToggleRow
