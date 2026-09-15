@@ -19,7 +19,7 @@ import {
   isFiJetton,
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
-import { usePersonalJettonInfo } from '@/features/personal-jetton';
+import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
 import { useTrackedPersonalTokens } from './use-tracked-personal-tokens';
 import {

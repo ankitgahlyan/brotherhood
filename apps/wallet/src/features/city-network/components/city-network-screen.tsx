@@ -10,7 +10,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet } from '@demo/wallet-core';
 import { Address } from '@ton/core';
-import { ExternalLink, Search, X } from 'lucide-react';
+import { ExternalLink, Loader2, Search, X } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
@@ -21,7 +21,11 @@ import {
   formatTonAddress,
   sameAddress,
 } from '@/core/utils/formatters';
-import { getH3ViewerUrl } from '@/core/utils/h3';
+import {
+  getH3ViewerUrl,
+  isValidH3Cell,
+  normalizeH3Cell,
+} from '@/core/utils/h3';
 import { openTelegramProfile } from '@/core/utils/telegram';
 import { MemberGuard, ActivationBanner } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
@@ -44,6 +48,7 @@ export const CityNetworkScreen: React.FC = () => {
 
   // Spatial Cell Input & Query
   const [h3CellInput, setH3CellInput] = useState('');
+  const [queriedH3Cell, setQueriedH3Cell] = useState('');
   const [hasInitializedH3, setHasInitializedH3] = useState(false);
 
   // Verify Member Tool
@@ -56,13 +61,34 @@ export const CityNetworkScreen: React.FC = () => {
   // Prefill H3 cell with connected wallet's cell once loaded
   useEffect(() => {
     if (myH3Cell && !hasInitializedH3) {
-      setH3CellInput(myH3Cell);
+      const normalized = normalizeH3Cell(myH3Cell);
+      setH3CellInput(normalized);
+      if (isValidH3Cell(normalized)) {
+        setQueriedH3Cell(normalized);
+      }
       setHasInitializedH3(true);
     }
   }, [myH3Cell, hasInitializedH3]);
 
-  // Queries
-  const locationByH3Query = useLocationByH3Cell(h3CellInput);
+  // Queries - only executed for confirmed valid H3 cells
+  const locationByH3Query = useLocationByH3Cell(queriedH3Cell);
+
+  const isInputValid = isValidH3Cell(h3CellInput);
+  const showValidationError = h3CellInput.trim().length > 0 && !isInputValid;
+
+  const handleQueryCell = () => {
+    if (!isInputValid) return;
+    setQueriedH3Cell(normalizeH3Cell(h3CellInput));
+  };
+
+  const handleResetToMyCell = () => {
+    if (!myH3Cell) return;
+    const normalized = normalizeH3Cell(myH3Cell);
+    setH3CellInput(normalized);
+    if (isValidH3Cell(normalized)) {
+      setQueriedH3Cell(normalized);
+    }
+  };
 
   // Auto-populate verify location address with current calculated location if empty
   useEffect(() => {
@@ -181,7 +207,7 @@ export const CityNetworkScreen: React.FC = () => {
                 </span>
                 <div className="flex items-center gap-2">
                   <a
-                    href={getH3ViewerUrl(h3CellInput)}
+                    href={getH3ViewerUrl(queriedH3Cell || h3CellInput)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11px] font-medium text-blue-500 hover:underline flex items-center gap-0.5"
@@ -191,7 +217,7 @@ export const CityNetworkScreen: React.FC = () => {
                   {myH3Cell && h3CellInput !== myH3Cell && (
                     <button
                       type="button"
-                      onClick={() => setH3CellInput(myH3Cell)}
+                      onClick={handleResetToMyCell}
                       className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors"
                     >
                       Reset to My Cell
@@ -199,14 +225,45 @@ export const CityNetworkScreen: React.FC = () => {
                   )}
                 </div>
               </div>
-              <input
-                type="text"
-                value={h3CellInput}
-                onChange={(e) => setH3CellInput(e.target.value)}
-                placeholder="H3 Spatial Index (e.g. 8828308281fffff)"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="city-location-input"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={h3CellInput}
+                  onChange={(e) => setH3CellInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && isInputValid) {
+                      handleQueryCell();
+                    }
+                  }}
+                  placeholder="H3 Spatial Index (e.g. 8828308281fffff)"
+                  className={`w-full p-2.5 border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 ${
+                    showValidationError
+                      ? 'border-destructive focus:ring-destructive'
+                      : 'border-border focus:ring-blue-500'
+                  }`}
+                  data-testid="city-location-input"
+                />
+                <Button
+                  type="button"
+                  onClick={handleQueryCell}
+                  disabled={!isInputValid || locationByH3Query.isLoading}
+                  size="sm"
+                  className="shrink-0 px-3.5"
+                  data-testid="city-location-query-btn"
+                >
+                  {locationByH3Query.isLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Search className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Query
+                </Button>
+              </div>
+              {showValidationError && (
+                <p className="text-[11px] text-destructive">
+                  Enter a valid 15-character hex H3 cell (e.g. 882681a339fffff).
+                </p>
+              )}
             </div>
 
             {/* Derived Location Contract Address Card */}
@@ -283,26 +340,6 @@ export const CityNetworkScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {locationByH3Query.data.minterAddress && (
-                  <div className="p-2.5 border border-border/60 rounded-xl bg-secondary/50 text-xs">
-                    <span className="text-muted-foreground block text-[10px]">
-                      Minter Address
-                    </span>
-                    <div className="flex items-center justify-between gap-1 mt-0.5">
-                      <span className="font-mono text-foreground text-[11px] break-all">
-                        {formatContractAddress(
-                          locationByH3Query.data.minterAddress,
-                        )}
-                      </span>
-                      <CopyButton
-                        address={locationByH3Query.data.minterAddress}
-                        type="contract"
-                        size="xs"
-                      />
-                    </div>
-                  </div>
-                )}
-
                 {/* Registered Members List */}
                 <div className="space-y-2 pt-2 border-t border-border/50">
                   <div className="flex items-center justify-between">
@@ -310,7 +347,7 @@ export const CityNetworkScreen: React.FC = () => {
                       Registered Members (
                       {locationByH3Query.data.members.length})
                     </h4>
-                    {myH3Cell === h3CellInput && myH3Cell !== '' && (
+                    {myH3Cell === queriedH3Cell && myH3Cell !== '' && (
                       <span className="text-[10px] text-muted-foreground">
                         Your Cell
                       </span>
@@ -409,59 +446,13 @@ export const CityNetworkScreen: React.FC = () => {
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                {h3CellInput
-                  ? 'Calculating location contract address…'
-                  : 'Enter an H3 spatial cell index above to inspect.'}
+                {queriedH3Cell
+                  ? locationByH3Query.isLoading
+                    ? 'Loading location contract data…'
+                    : 'No data found for this H3 spatial cell.'
+                  : 'Enter an H3 spatial cell index above and click Query to inspect.'}
               </p>
             )}
-          </div>
-
-          {/* Verify Member Status Tool */}
-          <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            <h3 className="font-semibold text-base mb-1">
-              Verify Member in Location
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Check if an address is registered on-chain in this location
-              contract.
-            </p>
-            <div className="space-y-2">
-              <InputScan
-                value={verifyLocationAddr}
-                onChange={setVerifyLocationAddr}
-                placeholder={`Location Contract Address (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`}
-                data-testid="city-manage-citymap-addr"
-              />
-              <InputScan
-                value={targetMember}
-                onChange={setTargetMember}
-                placeholder={`Target Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                data-testid="city-manage-target-member"
-              />
-            </div>
-            <div className="space-y-2 pt-1">
-              <Button
-                onClick={() => locationMembersQuery.refetch()}
-                disabled={!verifyLocationAddr || !targetMember}
-                fullWidth
-                data-testid="city-manage-register-submit"
-              >
-                Check Membership Status
-              </Button>
-              {locationMembersQuery.isTargetMember !== null && (
-                <div
-                  className={`p-3 rounded-xl text-xs font-semibold ${
-                    locationMembersQuery.isTargetMember
-                      ? 'bg-green-500/10 text-green-600 border border-green-500/20'
-                      : 'bg-red-500/10 text-red-600 border border-red-500/20'
-                  }`}
-                >
-                  {locationMembersQuery.isTargetMember
-                    ? 'Address is an active member in this location!'
-                    : 'Address is NOT a member in this location.'}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </NewLayout>

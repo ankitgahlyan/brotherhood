@@ -16,6 +16,7 @@ import {
   getContractCache,
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
+import { isValidH3Cell, normalizeH3Cell } from '@/core/utils/h3';
 
 export interface LocationInfo {
   h3Cell: string | null;
@@ -79,7 +80,10 @@ export function useLocationByH3Cell(
   h3Cell: string | null,
   minterAddressString?: string | null,
 ): UseLocationByH3CellResult {
-  const cleanH3Cell = h3Cell?.trim() ?? '';
+  const cleanH3Cell = useMemo(() => {
+    if (!isValidH3Cell(h3Cell)) return '';
+    return normalizeH3Cell(h3Cell);
+  }, [h3Cell]);
 
   const calculatedAddress = useMemo(() => {
     if (!cleanH3Cell) return null;
