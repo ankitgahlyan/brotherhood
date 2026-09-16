@@ -50,6 +50,7 @@ export const createWalletManagementSlice =
       balancesByAddress: {},
       publicKey: undefined,
       events: [],
+      eventsByAddress: {},
       hasNextEvents: false,
       pendingTransactions: [],
       confirmedTraceIds: [],
@@ -457,7 +458,10 @@ export const createWalletManagementSlice =
               cachedBalance;
           }
           state.walletManagement.currentWallet = wallet;
-          state.walletManagement.events = [];
+          state.walletManagement.events =
+            (savedWallet.address &&
+              state.walletManagement.eventsByAddress[savedWallet.address]) ||
+            [];
 
           // Restore cached jettons and nfts for the newly active wallet (or reset to empty if not yet loaded)
           const cachedJettons = savedWallet.address
@@ -511,6 +515,9 @@ export const createWalletManagementSlice =
         )[0];
         if (removed?.address) {
           delete state.walletManagement.balancesByAddress[removed.address];
+          delete state.walletManagement.eventsByAddress[removed.address];
+          delete state.jettons.jettonsByAddress[removed.address];
+          delete state.nfts.nftsByAddress[removed.address];
         }
 
         if (isRemovingActiveWallet && isLastWallet) {
@@ -523,6 +530,7 @@ export const createWalletManagementSlice =
           state.walletManagement.balancesByAddress = {};
           state.walletManagement.currentWallet = undefined;
           state.walletManagement.events = [];
+          state.walletManagement.eventsByAddress = {};
           state.walletManagement.pendingTransactions = [];
           state.walletManagement.confirmedTraceIds = [];
           state.walletManagement.confirmedExternalHashes = [];
@@ -673,6 +681,7 @@ export const createWalletManagementSlice =
         state.walletManagement.balancesByAddress = {};
         state.walletManagement.publicKey = undefined;
         state.walletManagement.events = [];
+        state.walletManagement.eventsByAddress = {};
         state.walletManagement.pendingTransactions = [];
         state.walletManagement.confirmedTraceIds = [];
         state.walletManagement.confirmedExternalHashes = [];
@@ -953,7 +962,17 @@ export const createWalletManagementSlice =
         throw new Error('WalletKit not initialized');
       }
 
-      const key = `${address}:${limit}:${offset}`;
+      const allSavedWallets = state.walletManagement.savedWallets;
+      const allAddresses = Array.from(
+        new Set(
+          [
+            address,
+            ...allSavedWallets.map((w) => w.address).filter(Boolean),
+          ].map((a) => String(a)),
+        ),
+      );
+
+      const key = `${allAddresses.sort().join(',')}:${limit}:${offset}`;
       if (inFlightLoadEvents && lastLoadEventsKey === key) {
         return inFlightLoadEvents;
       }
@@ -961,8 +980,8 @@ export const createWalletManagementSlice =
       const run = async () => {
         try {
           log.info(
-            'Loading events for address:',
-            address,
+            'Loading events for addresses:',
+            allAddresses,
             'limit:',
             limit,
             'offset:',
@@ -974,19 +993,88 @@ export const createWalletManagementSlice =
           );
           const walletNetwork = activeWallet?.network || 'testnet';
 
+          // Single call passing all saved wallet addresses
           const response = await state.walletCore.walletKit
             ?.getApiClient(getChainNetwork(walletNetwork))
             .getEvents({
-              account: address,
-              limit,
+              account:
+                allAddresses.length === 1 ? allAddresses[0] : allAddresses,
+              limit: Math.max(limit, 50),
               offset,
             });
 
           if (!response) return;
 
           set((state) => {
-            state.walletManagement.events = response.events;
+            // Partition events by wallet address
+            const newEventsByAddress: Record<string, unknown[]> = {
+              ...state.walletManagement.eventsByAddress,
+            };
+
+            for (const addr of allAddresses) {
+              if (!newEventsByAddress[addr]) {
+                newEventsByAddress[addr] = [];
+              }
+            }
+
+            for (const ev of response.events as Array<{
+              account?: { address?: string };
+              actions?: Array<{
+                TonTransfer?: {
+                  sender?: { address?: string };
+                  recipient?: { address?: string };
+                };
+              }>;
+            }>) {
+              const evAccount = ev.account?.address;
+              if (evAccount) {
+                for (const addr of allAddresses) {
+                  try {
+                    if (compareAddress(evAccount, addr)) {
+                      if (
+                        !newEventsByAddress[addr].some(
+                          (e: any) => e.eventId === (ev as any).eventId,
+                        )
+                      ) {
+                        newEventsByAddress[addr].push(ev);
+                      }
+                    }
+                  } catch {
+                    if (evAccount === addr) {
+                      if (
+                        !newEventsByAddress[addr].some(
+                          (e: any) => e.eventId === (ev as any).eventId,
+                        )
+                      ) {
+                        newEventsByAddress[addr].push(ev);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // Cap each address at 50 most recent events to prevent unbounded growth in state and storage
+            for (const addr of allAddresses) {
+              if (
+                newEventsByAddress[addr] &&
+                newEventsByAddress[addr].length > 50
+              ) {
+                newEventsByAddress[addr] = newEventsByAddress[addr].slice(
+                  0,
+                  50,
+                );
+              }
+            }
+
+            state.walletManagement.eventsByAddress = newEventsByAddress;
+            state.walletManagement.events =
+              newEventsByAddress[address] &&
+              newEventsByAddress[address].length > 0
+                ? newEventsByAddress[address].slice(0, limit)
+                : response.events.slice(0, limit);
             state.walletManagement.hasNextEvents = response.hasNext;
+
             const eventTraceIds = new Set<string>();
             const eventExtHashes = new Set<string>();
             for (const ev of response.events as Array<{
@@ -1013,7 +1101,9 @@ export const createWalletManagementSlice =
               );
           });
 
-          log.info(`Loaded ${response.events.length} events`);
+          log.info(
+            `Loaded ${response.events.length} events across all wallets`,
+          );
         } catch (error) {
           log.error('Error loading events:', error);
         } finally {

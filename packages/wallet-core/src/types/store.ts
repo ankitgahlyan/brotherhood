@@ -84,8 +84,9 @@ export interface WalletManagementSlice {
     balancesByAddress: Record<string, string>;
     publicKey?: string;
 
-    // Event history for active wallet
+    // Event history for active wallet and per-address cache
     events: unknown[];
+    eventsByAddress: Record<string, unknown[]>;
     hasNextEvents: boolean;
 
     /** Pending transactions from WebSocket streaming */

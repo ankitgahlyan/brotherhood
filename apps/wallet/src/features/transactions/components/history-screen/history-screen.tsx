@@ -28,10 +28,13 @@ export const HistoryScreen: FC = () => {
   const loadEvents = useWalletStore((state) => state.loadEvents);
   const address = useWalletStore((state) => state.walletManagement.address);
 
-  useEffect(() => {
-    if (!address) return;
-    void loadEvents(limit, 0);
-  }, [address, loadEvents, limit]);
+  const handleLoadMore = async () => {
+    const nextLimit = limit + PAGE_SIZE;
+    setLimit(nextLimit);
+    if (address) {
+      await loadEvents(nextLimit, 0);
+    }
+  };
 
   return (
     <NewLayout
@@ -53,11 +56,7 @@ export const HistoryScreen: FC = () => {
 
       {hasMore && (
         <div className="mt-4 flex justify-center">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setLimit((current) => current + PAGE_SIZE)}
-          >
+          <Button variant="secondary" size="sm" onClick={handleLoadMore}>
             Load more
           </Button>
         </div>

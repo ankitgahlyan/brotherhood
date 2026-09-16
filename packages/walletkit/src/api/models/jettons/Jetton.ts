@@ -25,6 +25,11 @@ export interface Jetton {
   walletAddress: UserFriendlyAddress;
 
   /**
+   * The owner address of this jetton wallet
+   */
+  ownerAddress?: UserFriendlyAddress;
+
+  /**
    * The current jetton balance
    */
   balance: TokenAmount;

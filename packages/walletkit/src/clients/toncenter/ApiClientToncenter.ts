@@ -479,12 +479,18 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
   async jettonsByOwnerAddress(
     request: GetJettonsByOwnerRequest,
   ): Promise<JettonsResponse> {
+    const rawOwners = Array.isArray(request.ownerAddress)
+      ? request.ownerAddress
+      : [request.ownerAddress];
+    const owners = rawOwners.map((a) =>
+      a instanceof Address ? a.toString() : String(a),
+    );
     const offset = request.offset ?? 0;
     const limit = request.limit ?? 50;
     const rawResponse = await this.getJson<ToncenterResponseJettonWallets>(
       '/api/v3/jetton/wallets',
       {
-        owner_address: request.ownerAddress,
+        owner_address: owners.length === 1 ? owners[0] : owners,
         offset,
         limit,
       },
@@ -512,6 +518,9 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
             asMaybeAddressFriendly(wallet.jetton) ?? (wallet.jetton as any);
           const walletAddress =
             asMaybeAddressFriendly(wallet.address) ?? (wallet.address as any);
+          const ownerAddress = wallet.owner
+            ? (asMaybeAddressFriendly(wallet.owner) ?? (wallet.owner as any))
+            : undefined;
           const jettonInfo = this.extractJettonInfoFromMetadata(
             wallet.jetton,
             rawResponse.metadata ?? {},
@@ -519,6 +528,7 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
           const jetton: Jetton = {
             address: jettonAddress,
             walletAddress: walletAddress,
+            ownerAddress,
             balance: wallet.balance ?? '0',
             info: {
               name: jettonInfo.name,
@@ -598,14 +608,16 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
   }
 
   async getEvents(request: GetEventsRequest): Promise<GetEventsResponse> {
-    const account =
-      request.account instanceof Address
-        ? request.account.toString()
-        : request.account;
+    const rawAccounts = Array.isArray(request.account)
+      ? request.account
+      : [request.account];
+    const accounts = rawAccounts.map((a) =>
+      a instanceof Address ? a.toString() : String(a),
+    );
     const limit = request.limit ?? 20;
     const offset = request.offset ?? 0;
     const query: Record<string, unknown> = {
-      account,
+      account: accounts.length === 1 ? accounts[0] : accounts,
       limit,
       offset,
     };
@@ -621,7 +633,27 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     };
     const addressBook = toAddressBook(list);
     for (const trace of list.traces) {
-      out.events.push(toEvent(trace, account, addressBook));
+      if (accounts.length === 1) {
+        out.events.push(toEvent(trace, accounts[0], addressBook));
+      } else {
+        // For multiple accounts, identify which of the requested accounts are part of this trace
+        const txs = Object.values(trace.transactions || {});
+        const participating = accounts.filter((acc) => {
+          const accFriendly = asAddressFriendly(acc);
+          return txs.some(
+            (tx) => asAddressFriendly(tx.account) === accFriendly,
+          );
+        });
+
+        if (participating.length > 0) {
+          for (const acc of participating) {
+            out.events.push(toEvent(trace, acc, addressBook));
+          }
+        } else {
+          // Fallback: parse relative to the first account
+          out.events.push(toEvent(trace, accounts[0], addressBook));
+        }
+      }
     }
     return out;
   }

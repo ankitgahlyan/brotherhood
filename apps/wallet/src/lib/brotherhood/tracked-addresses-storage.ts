@@ -7,7 +7,12 @@
  */
 
 import { Address } from '@ton/core';
-import { FI_ADDRESS, network as defaultNetwork, type Network } from './config';
+import {
+  FI_ADDRESS,
+  network as defaultNetwork,
+  type Network,
+  network,
+} from './config';
 import { getFiWalletAddress } from './ton';
 import { getPersonalMinter } from './deploy';
 import { computePersonalWalletAddress } from './account-state-hydrator';
@@ -40,6 +45,7 @@ export interface TrackedAddressesData {
   personalWallets?: string[];
 }
 
+// todo: accept network
 export function normalizeAddressString(addr: Address | string): string {
   try {
     const parsed = typeof addr === 'string' ? Address.parse(addr) : addr;
@@ -484,4 +490,56 @@ export function getTrackedAddressesByCategory(
   }
 
   return [];
+}
+
+/**
+ * Clean up tracked addresses storage for a deleted wallet
+ */
+export function removeTrackedAddresses(walletAddress: Address | string): void {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const key = getTrackedAddressesKey(walletAddress);
+  storage.removeItem(key);
+
+  const selected = getCurrentSelectedWallet();
+  const normalized = normalizeAddressString(walletAddress);
+  if (selected && selected === normalized) {
+    storage.removeItem(CURRENT_SELECTED_WALLET_KEY);
+  }
+}
+
+/**
+ * Collect, calculate base addresses, and format-insensitively deduplicate
+ * tracked addresses across ALL saved wallets into a single master array.
+ */
+export function getAllSavedWalletsTrackedAddresses(
+  savedWallets: Array<{ address?: string }>,
+  net: Network = defaultNetwork,
+): string[] {
+  const masterSet = new Set<string>();
+
+  const add = (addr?: string | null) => {
+    if (!addr) return;
+    try {
+      const parsed = Address.parse(addr.trim());
+      masterSet.add(parsed.toString());
+    } catch {
+      const trimmed = addr.trim();
+      if (trimmed) masterSet.add(trimmed);
+    }
+  };
+
+  for (const wallet of savedWallets) {
+    if (!wallet.address) continue;
+    // Ensure base addresses are calculated and available in storage
+    const data = initializeOrGetTrackedAddresses(wallet.address, net);
+    if (!data) continue;
+
+    const list = getAllTrackedAddressesList(data);
+    for (const item of list) {
+      add(item);
+    }
+  }
+
+  return Array.from(masterSet);
 }

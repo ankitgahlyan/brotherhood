@@ -162,6 +162,9 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       state.walletManagement.balance = undefined;
       state.walletManagement.publicKey = undefined;
       state.walletManagement.events = [];
+      state.walletManagement.eventsByAddress = {};
+      state.walletManagement.confirmedTraceIds = [];
+      state.walletManagement.confirmedExternalHashes = [];
       state.walletManagement.hasNextEvents = false;
       state.walletManagement.currentWallet = undefined;
       state.walletManagement.hasWallet = false;

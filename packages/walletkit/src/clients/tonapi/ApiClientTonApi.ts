@@ -26,6 +26,7 @@ import type {
   AccountStates,
   Base64String,
   GetMethodResult,
+  Jetton,
   JettonsResponse,
   MasterchainInfo,
   NFTsRequest,
@@ -207,11 +208,56 @@ export class ApiClientTonApi extends BaseApiClient implements ApiClient {
   async jettonsByOwnerAddress(
     request: GetJettonsByOwnerRequest,
   ): Promise<JettonsResponse> {
-    const raw = await this.getJson<TonApiJettonsBalances>(
-      `/v2/accounts/${this.normalizeAddress(request.ownerAddress)}/jettons?currencies=usd`,
+    const rawOwners = Array.isArray(request.ownerAddress)
+      ? request.ownerAddress
+      : [request.ownerAddress];
+
+    if (rawOwners.length === 0) {
+      return { jettons: [], addressBook: {} };
+    }
+
+    if (rawOwners.length === 1) {
+      const ownerStr = this.normalizeAddress(rawOwners[0]);
+      const raw = await this.getJson<TonApiJettonsBalances>(
+        `/v2/accounts/${ownerStr}/jettons?currencies=usd`,
+      );
+      const res = mapUserJettons(raw);
+      const friendlyOwner = asAddressFriendly(ownerStr);
+      for (const j of res.jettons) {
+        j.ownerAddress = friendlyOwner;
+      }
+      return res;
+    }
+
+    const results = await Promise.allSettled(
+      rawOwners.map(async (owner) => {
+        const ownerStr = this.normalizeAddress(owner);
+        const raw = await this.getJson<TonApiJettonsBalances>(
+          `/v2/accounts/${ownerStr}/jettons?currencies=usd`,
+        );
+        const res = mapUserJettons(raw);
+        const friendlyOwner = asAddressFriendly(ownerStr);
+        for (const j of res.jettons) {
+          j.ownerAddress = friendlyOwner;
+        }
+        return res;
+      }),
     );
 
-    return mapUserJettons(raw);
+    const allJettons: Jetton[] = [];
+    const mergedAddressBook: Record<string, any> = {};
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        allJettons.push(...r.value.jettons);
+        Object.assign(mergedAddressBook, r.value.addressBook);
+      }
+    }
+
+    return {
+      jettons: allJettons,
+      addressBook: mergedAddressBook,
+    };
   }
 
   async nftItemsByAddress(request: NFTsRequest): Promise<NFTsResponse> {
@@ -445,28 +491,73 @@ export class ApiClientTonApi extends BaseApiClient implements ApiClient {
   }
 
   async getEvents(request: GetEventsRequest): Promise<GetEventsResponse> {
-    const account = String(request.account);
+    const rawAccounts = Array.isArray(request.account)
+      ? request.account
+      : [request.account];
+    const accounts = rawAccounts.map((a) => String(a));
     const limit = Math.max(1, Math.min(request.limit ?? 20, 100));
     const offset = Math.max(0, request.offset ?? 0);
 
-    const response = await this.getJson<TonApiAccountEventsResponse>(
-      `/v2/accounts/${account}/events`,
-      {
-        limit,
+    if (accounts.length <= 1) {
+      const account = accounts[0] ?? '';
+      const response = await this.getJson<TonApiAccountEventsResponse>(
+        `/v2/accounts/${account}/events`,
+        {
+          limit,
+          offset,
+          sort_order: 'desc',
+          i18n: 'en',
+        },
+      );
+
+      const pageEvents = response.events ?? [];
+
+      return {
+        events: pageEvents.map(mapTonApiEvent),
         offset,
-        sort_order: 'desc',
-        i18n: 'en',
-      },
+        limit,
+        hasNext:
+          Number(response.next_from ?? 0) > 0 || pageEvents.length >= limit,
+      };
+    }
+
+    // Multi-account: query concurrently in parallel and merge
+    const responses = await Promise.allSettled(
+      accounts.map((acc) =>
+        this.getJson<TonApiAccountEventsResponse>(
+          `/v2/accounts/${acc}/events`,
+          {
+            limit,
+            offset,
+            sort_order: 'desc',
+            i18n: 'en',
+          },
+        ),
+      ),
     );
 
-    const pageEvents = response.events ?? [];
+    const allEvents: any[] = [];
+    let hasNext = false;
+    for (const res of responses) {
+      if (res.status === 'fulfilled' && res.value?.events) {
+        allEvents.push(...res.value.events);
+        if (
+          Number(res.value.next_from ?? 0) > 0 ||
+          res.value.events.length >= limit
+        ) {
+          hasNext = true;
+        }
+      }
+    }
+
+    // Sort descending by timestamp
+    allEvents.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
 
     return {
-      events: pageEvents.map(mapTonApiEvent),
+      events: allEvents.slice(0, limit).map(mapTonApiEvent),
       offset,
       limit,
-      hasNext:
-        Number(response.next_from ?? 0) > 0 || pageEvents.length >= limit,
+      hasNext,
     };
   }
 

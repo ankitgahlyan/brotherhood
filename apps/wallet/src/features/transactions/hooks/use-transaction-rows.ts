@@ -45,10 +45,14 @@ export const useTransactionRows = (limit: number): TransactionRows => {
       }),
     );
 
-  useEffect(() => {
-    if (!address) return;
-    void loadEvents(limit, 0);
-  }, [address, loadEvents, limit]);
+  // useEffect(() => {
+  //   if (!address) return;
+  //   // Only fetch from API on mount if events have not yet been loaded for this wallet.
+  //   // When returning to dashboard with events already loaded, rely on cache and WebSocket streaming.
+  //   if (!events || events.length === 0) {
+  //     void loadEvents(limit, 0);
+  //   }
+  // }, [address, loadEvents, limit, events]);
 
   const rows = useMemo<TransactionRowModel[]>(() => {
     const eventItems = (events ?? []) as Event[];

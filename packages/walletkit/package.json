@@ -119,6 +119,7 @@
     "build:cjs": "tsc -p tsconfig.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "dev": "tsc -p tsconfig.esm.json --watch",
+    "test": "vitest run",
     "typecheck": "../../node_modules/typescript-7/bin/tsc --noEmit"
   },
   "files": [
@@ -148,6 +149,7 @@
   "devDependencies": {
     "@ton/core": "^0.63.1",
     "@ton/crypto": "^3.3.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.1"
   }
 }

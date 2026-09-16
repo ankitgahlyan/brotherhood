@@ -16,6 +16,8 @@ import {
   addPersonalWallets,
   getAllTrackedAddressesList,
   getTrackedAddressesByCategory,
+  removeTrackedAddresses,
+  getAllSavedWalletsTrackedAddresses,
 } from './tracked-addresses-storage';
 import {
   CONTRACT_CODE_HASHES,
@@ -398,4 +400,199 @@ describe('Tracked Addresses Storage & Flow', () => {
     });
     expect(res3.totalRequested).toBe(1);
   }, 15000);
+
+  it('removes tracked addresses and resets current selected wallet if matched', () => {
+    const testOwner = Address.parse(
+      '0:9999999999999999999999999999999999999999999999999999999999999999',
+    );
+    saveCurrentSelectedWallet(testOwner);
+    initializeOrGetTrackedAddresses(testOwner);
+
+    expect(loadTrackedAddresses(testOwner)).not.toBeNull();
+    expect(getCurrentSelectedWallet()).toBe(testOwner.toString());
+
+    removeTrackedAddresses(testOwner);
+    expect(loadTrackedAddresses(testOwner)).toBeNull();
+    expect(getCurrentSelectedWallet()).toBeNull();
+  });
+
+  it('collects and deduplicates tracked addresses across all saved wallets into a single master set', () => {
+    const owner1 = Address.parse(
+      '0:1212121212121212121212121212121212121212121212121212121212121212',
+    );
+    const owner2 = Address.parse(
+      '0:3434343434343434343434343434343434343434343434343434343434343434',
+    );
+
+    const savedWallets = [
+      { address: owner1.toString() },
+      { address: owner2.toString() },
+    ];
+
+    const allAddrs = getAllSavedWalletsTrackedAddresses(
+      savedWallets,
+      'testnet',
+    );
+    expect(allAddrs.length).toBeGreaterThan(0);
+
+    // Should include both owners
+    expect(allAddrs).toContain(owner1.toString());
+    expect(allAddrs).toContain(owner2.toString());
+
+    // Should contain NO duplicate addresses in the entire master list
+    const set = new Set(allAddrs);
+    expect(set.size).toBe(allAddrs.length);
+  });
+
+  it('discovers circle and ring addresses and isolates fresh addresses across saved wallets', () => {
+    const owner1 = Address.parse(
+      '0:1111111111111111111111111111111111111111111111111111111111111111',
+    );
+    const owner2 = Address.parse(
+      '0:2222222222222222222222222222222222222222222222222222222222222222',
+    );
+
+    const init1 = initializeOrGetTrackedAddresses(owner1);
+    const init2 = initializeOrGetTrackedAddresses(owner2);
+
+    const circleMember1 = Address.parse(
+      '0:3333333333333333333333333333333333333333333333333333333333333333',
+    );
+    const ringMember1 = Address.parse(
+      '0:4444444444444444444444444444444444444444444444444444444444444444',
+    );
+
+    // Mock decoded stores containing FiWallet for owner1 with circleMember1,
+    // and FiWallet for circleMember1 with ringMember1
+    const decodedStores: Record<string, any> = {
+      [init1.base.fiWallet]: {
+        $: 'FiWalletStore',
+        maps: {
+          ref: {
+            invited: {
+              keys: () => [circleMember1],
+            },
+          },
+        },
+        profile: {
+          ref: {
+            h3Cell: '881f1d4887fffff',
+          },
+        },
+      },
+      [circleMember1.toString()]: {
+        $: 'FiWalletStore',
+        maps: {
+          ref: {
+            invited: {
+              keys: () => [ringMember1],
+            },
+          },
+        },
+        profile: {
+          ref: {
+            h3Cell: '',
+          },
+        },
+      },
+    };
+
+    const savedWallets = [
+      { address: owner1.toString() },
+      { address: owner2.toString() },
+    ];
+
+    // Simulate the discovery logic from useTrackedAddressesSync
+    const freshAddressesSet = new Set<string>();
+
+    for (const wallet of savedWallets) {
+      const walletAddrStr = wallet.address;
+      const currentData = loadTrackedAddresses(walletAddrStr);
+      if (!currentData) continue;
+
+      const existingBefore = new Set(getAllTrackedAddressesList(currentData));
+
+      let updatedData = currentData;
+      const fiWalletStr = currentData.base.fiWallet;
+      const fiWalletStore = decodedStores[fiWalletStr];
+
+      if (fiWalletStore) {
+        const { invited, h3Cell } =
+          extractInvitedAndLocationFromFiWallet(fiWalletStore);
+        const existingCircle = new Set(currentData.circle.invited || []);
+        const freshInvites = invited.filter((i) => !existingCircle.has(i));
+
+        if (
+          freshInvites.length > 0 ||
+          (h3Cell && !currentData.circle.location)
+        ) {
+          updatedData = addInvitedToCircle(walletAddrStr, invited, h3Cell);
+        }
+      }
+
+      // Check ring invites
+      const ringInvites: string[] = [];
+      for (const cAddr of updatedData.circle.invited) {
+        const cStore = decodedStores[cAddr];
+        if (cStore) {
+          const { invited } = extractInvitedAndLocationFromFiWallet(cStore);
+          ringInvites.push(...invited);
+        }
+      }
+      if (ringInvites.length > 0) {
+        updatedData = addInvitedToRing(walletAddrStr, ringInvites);
+      }
+
+      const afterList = getAllTrackedAddressesList(updatedData);
+      for (const addr of afterList) {
+        if (!existingBefore.has(addr)) {
+          freshAddressesSet.add(addr);
+        }
+      }
+    }
+
+    // Fresh addresses should contain circleMember1, ringMember1, and location
+    expect(freshAddressesSet.size).toBeGreaterThan(0);
+    expect(freshAddressesSet).toContain(circleMember1.toString());
+    expect(freshAddressesSet).toContain(ringMember1.toString());
+
+    // On second run with same decodedStores, no addresses are fresh (0 new network calls)
+    const secondRunFresh = new Set<string>();
+    for (const wallet of savedWallets) {
+      const walletAddrStr = wallet.address;
+      const currentData = loadTrackedAddresses(walletAddrStr)!;
+      const existingBefore = new Set(getAllTrackedAddressesList(currentData));
+
+      let updatedData = currentData;
+      const fiWalletStr = currentData.base.fiWallet;
+      const fiWalletStore = decodedStores[fiWalletStr];
+
+      if (fiWalletStore) {
+        const { invited, h3Cell } =
+          extractInvitedAndLocationFromFiWallet(fiWalletStore);
+        updatedData = addInvitedToCircle(walletAddrStr, invited, h3Cell);
+      }
+
+      const ringInvites: string[] = [];
+      for (const cAddr of updatedData.circle.invited) {
+        const cStore = decodedStores[cAddr];
+        if (cStore) {
+          const { invited } = extractInvitedAndLocationFromFiWallet(cStore);
+          ringInvites.push(...invited);
+        }
+      }
+      if (ringInvites.length > 0) {
+        updatedData = addInvitedToRing(walletAddrStr, ringInvites);
+      }
+
+      const afterList = getAllTrackedAddressesList(updatedData);
+      for (const addr of afterList) {
+        if (!existingBefore.has(addr)) {
+          secondRunFresh.add(addr);
+        }
+      }
+    }
+
+    expect(secondRunFresh.size).toBe(0);
+  });
 });

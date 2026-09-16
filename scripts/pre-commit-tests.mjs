@@ -233,9 +233,23 @@ async function main() {
     );
     // bun test --changed runs test files affected by changed files according to git
     run(
-      'bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**" --path-ignore-patterns "**/apps/wallet-v2/**"',
+      'bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**" --path-ignore-patterns "**/apps/wallet-v2/**" --path-ignore-patterns "**/packages/walletkit/**"',
     );
     console.log('');
+
+    const walletkitFiles = changedFiles
+      .filter((f) => f.startsWith('packages/walletkit/src/'))
+      .map((f) => f.replace(/^packages\/walletkit\//, ''));
+
+    if (walletkitFiles.length > 0) {
+      console.log(
+        '\x1b[34m[Vitest / walletkit] Running affected walletkit tests...\x1b[0m',
+      );
+      run(
+        `bun run --cwd packages/walletkit vitest related --run ${walletkitFiles.join(' ')}`,
+      );
+      console.log('');
+    }
   } else {
     console.log(
       '\x1b[90m[TypeScript / Bun] No TS/JS files changed. Skipping Typecheck and Bun tests.\x1b[0m',

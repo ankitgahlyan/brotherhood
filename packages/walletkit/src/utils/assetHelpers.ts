@@ -245,7 +245,7 @@ export async function getJettonBalanceFromClient(
  */
 export async function getJettonsFromClient(
   client: ApiClient,
-  ownerAddress: UserFriendlyAddress,
+  ownerAddress: UserFriendlyAddress | UserFriendlyAddress[],
   params?: JettonsRequest,
 ): Promise<JettonsResponse> {
   return client.jettonsByOwnerAddress({

@@ -10,6 +10,7 @@ import { JettonError, compareAddress } from '@ton/walletkit';
 import type { Jetton, JettonTransfer, JettonInfo } from '@ton/walletkit';
 
 import { createComponentLogger } from '../../utils/logger';
+import { getChainNetwork } from '../../utils/network';
 import type { SetState, JettonsSliceCreator } from '../../types/store';
 
 const log = createComponentLogger('JettonsSlice');
@@ -64,26 +65,39 @@ export const createJettonsSlice: JettonsSliceCreator = (
       return;
     }
 
-    if (!state.walletManagement.currentWallet) {
-      log.warn('Current wallet not initialized');
-      return;
-    }
-
     set((state) => {
       state.jettons.isLoadingJettons = true;
       state.jettons.error = null;
     });
 
     try {
-      log.info('Loading user jettons', { address });
+      const allSavedWallets = state.walletManagement.savedWallets;
+      const allAddresses = Array.from(
+        new Set(
+          [address, ...allSavedWallets.map((w) => w.address).filter(Boolean)]
+            .filter(Boolean)
+            .map((a) => String(a)),
+        ),
+      );
 
-      const jettonsResponse =
-        await state.walletManagement.currentWallet.getJettons({
-          pagination: {
-            limit: 10,
-            offset: 0,
-          },
-        });
+      log.info('Loading user jettons for all addresses', {
+        addresses: allAddresses,
+      });
+
+      const activeWallet = state.walletManagement.savedWallets.find(
+        (w) => w.id === state.walletManagement.activeWalletId,
+      );
+      const walletNetwork = activeWallet?.network || 'testnet';
+      const client =
+        state.walletManagement.currentWallet?.getClient() ??
+        state.walletCore.walletKit.getApiClient(getChainNetwork(walletNetwork));
+
+      const jettonsResponse = await client.jettonsByOwnerAddress({
+        ownerAddress:
+          allAddresses.length === 1 ? allAddresses[0] : allAddresses,
+        offset: 0,
+        limit: Math.max(50, allAddresses.length * 20),
+      });
 
       if (!jettonsResponse) {
         log.warn('No jettons response received');
@@ -93,25 +107,57 @@ export const createJettonsSlice: JettonsSliceCreator = (
         return;
       }
 
-      set((s) => {
-        const targetAddress =
-          userAddress || s.walletManagement.address || address;
-        s.jettons.jettonsByAddress[targetAddress] = jettonsResponse.jettons;
+      const partitioned: Record<string, Jetton[]> = {};
+      for (const addr of allAddresses) {
+        partitioned[addr] = [];
+      }
 
-        const currentActiveAddress = s.walletManagement.address;
-        if (
-          !currentActiveAddress ||
-          compareAddress(currentActiveAddress, targetAddress)
-        ) {
-          s.jettons.userJettons = jettonsResponse.jettons;
+      for (const jetton of jettonsResponse.jettons) {
+        if (jetton.ownerAddress) {
+          const matchingAddr = allAddresses.find((a) =>
+            compareAddress(a, jetton.ownerAddress!),
+          );
+          if (matchingAddr) {
+            partitioned[matchingAddr].push(jetton);
+          } else {
+            if (!partitioned[jetton.ownerAddress]) {
+              partitioned[jetton.ownerAddress] = [];
+            }
+            partitioned[jetton.ownerAddress].push(jetton);
+          }
+        } else {
+          const fallbackTarget = userAddress || address;
+          if (fallbackTarget) {
+            if (!partitioned[fallbackTarget]) {
+              partitioned[fallbackTarget] = [];
+            }
+            partitioned[fallbackTarget].push(jetton);
+          }
+        }
+      }
+
+      set((s) => {
+        for (const [addr, jettons] of Object.entries(partitioned)) {
+          s.jettons.jettonsByAddress[addr] = jettons;
+        }
+
+        const currentActiveAddress = s.walletManagement.address || address;
+        if (currentActiveAddress) {
+          const matchingKey = Object.keys(s.jettons.jettonsByAddress).find(
+            (k) => compareAddress(k, currentActiveAddress),
+          );
+          s.jettons.userJettons = matchingKey
+            ? s.jettons.jettonsByAddress[matchingKey]
+            : [];
           s.jettons.lastJettonsUpdate = Date.now();
         }
         s.jettons.isLoadingJettons = false;
         s.jettons.error = null;
       });
 
-      log.info('Successfully loaded user jettons', {
-        count: jettonsResponse.jettons.length,
+      log.info('Successfully loaded user jettons for all wallets', {
+        totalCount: jettonsResponse.jettons.length,
+        walletCount: allAddresses.length,
       });
     } catch (error) {
       log.error('Failed to load user jettons:', error);

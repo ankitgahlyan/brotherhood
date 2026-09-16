@@ -195,6 +195,19 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 balance: state.walletManagement.balance,
                 balancesByAddress:
                   state.walletManagement.balancesByAddress || {},
+                eventsByAddress: Object.fromEntries(
+                  Object.entries(
+                    state.walletManagement.eventsByAddress || {},
+                  ).map(([addr, events]) => [
+                    addr,
+                    Array.isArray(events) ? events.slice(0, 50) : [],
+                  ]),
+                ),
+                confirmedTraceIds:
+                  state.walletManagement.confirmedTraceIds?.slice(-100) || [],
+                confirmedExternalHashes:
+                  state.walletManagement.confirmedExternalHashes?.slice(-100) ||
+                  [],
               },
               tonConnect: {
                 requestQueue: {
@@ -261,6 +274,18 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                         activeWallet.address
                       ]) ||
                     persisted?.walletManagement?.balance,
+                  eventsByAddress:
+                    persisted?.walletManagement?.eventsByAddress || {},
+                  events:
+                    (activeWallet?.address &&
+                      persisted?.walletManagement?.eventsByAddress?.[
+                        activeWallet.address
+                      ]) ||
+                    [],
+                  confirmedTraceIds:
+                    persisted?.walletManagement?.confirmedTraceIds || [],
+                  confirmedExternalHashes:
+                    persisted?.walletManagement?.confirmedExternalHashes || [],
                   hasWallet:
                     (persisted?.walletManagement?.savedWallets?.length || 0) >
                     0,

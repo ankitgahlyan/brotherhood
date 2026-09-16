@@ -75,7 +75,7 @@ export type GetPendingTraceRequest = {
 };
 
 export interface GetJettonsByOwnerRequest {
-  ownerAddress: Address | string;
+  ownerAddress: Address | string | Array<Address | string>;
   offset?: number;
   limit?: number;
 }
@@ -87,7 +87,7 @@ export interface GetJettonsByAddressRequest {
 }
 
 export interface GetEventsRequest {
-  account: Address | string;
+  account: Address | string | Array<Address | string>;
   offset?: number;
   limit?: number;
 }
