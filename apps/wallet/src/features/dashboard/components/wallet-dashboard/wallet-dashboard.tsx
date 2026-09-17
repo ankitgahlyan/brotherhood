@@ -25,7 +25,7 @@ export const WalletDashboard: React.FC = () => {
 
   return (
     <NewLayout header={<DashboardHeader />}>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <BalanceTotal />
         <UpgradeBanner />
         <DashboardActions />

@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import { Zap } from 'lucide-react';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { Button } from '@/core/components/ui/button';
@@ -35,12 +36,13 @@ export const UpgradeBanner: React.FC = () => {
 
   return (
     <div
-      className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex justify-between items-center gap-3"
+      className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-700 dark:text-amber-400 flex justify-between items-center gap-3 shadow-xs"
       data-testid="main-upgrade-banner"
     >
       <div>
         <span className="font-semibold flex items-center gap-1.5">
-          <span>⚡ Contract Upgrade Available</span>
+          <Zap className="w-4 h-4 text-amber-500 fill-amber-500/30" />
+          <span>Contract Upgrade Available</span>
         </span>
         <span className="text-[11px] text-muted-foreground block mt-0.5">
           Your wallet is on{' '}

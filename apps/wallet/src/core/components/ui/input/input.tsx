@@ -224,7 +224,7 @@ const Caption: FC<ComponentProps<'span'>> = ({
     <span
       className={cn(
         'px-1 text-xs',
-        error ? 'text-red-500' : 'text-gray-500',
+        error ? 'text-destructive' : 'text-muted-foreground',
         className,
       )}
       {...props}

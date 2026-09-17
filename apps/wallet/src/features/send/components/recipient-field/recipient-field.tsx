@@ -262,28 +262,28 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             data-testid="recipient-input"
           />
           {isResolving && (
-            <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+            <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
           )}
           <button
             type="button"
             onClick={() => setIsScannerVisible(true)}
             aria-label="Scan QR code"
             title="Scan QR code"
-            className="shrink-0 p-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+            className="shrink-0 p-1.5 rounded-full bg-secondary text-primary hover:bg-secondary/80 transition-colors"
           >
-            <QrCode className="w-4 h-4 text-blue-600" />
+            <QrCode className="w-4 h-4" />
           </button>
         </Input.Field>
 
         {/* Suggestions dropdown */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-40 overflow-y-auto divide-y divide-gray-100">
+          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl max-h-40 overflow-y-auto divide-y divide-border">
             {suggestions.map((item) => (
               <button
                 key={item.address}
                 type="button"
                 onMouseDown={() => handleSelectSuggestion(item)}
-                className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-xs"
+                className="w-full px-3 py-2 text-left hover:bg-secondary/70 flex items-center justify-between text-xs transition-colors"
               >
                 <span className="font-medium text-foreground">
                   @{item.username}
@@ -299,14 +299,14 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
 
       {/* Resolved identity pill */}
       {resolvedAddress && (
-        <div className="flex items-center justify-between mt-1 px-3 py-1.5 bg-green-50/80 border border-green-200/60 rounded-lg text-xs text-green-900">
+        <div className="flex items-center justify-between mt-1 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-500">
           <div className="flex items-center gap-1.5 font-medium">
-            <Check className="w-3.5 h-3.5 text-green-600" />
+            <Check className="w-3.5 h-3.5 text-emerald-500" />
             <span>
               {resolvedUsername ? `@${resolvedUsername}` : 'Verified Owner'}
             </span>
           </div>
-          <span className="text-[11px] font-mono text-green-800 truncate max-w-[180px]">
+          <span className="text-[11px] font-mono text-emerald-400/90 truncate max-w-[180px]">
             {formatWalletAddress(resolvedAddress, false)}
           </span>
         </div>
@@ -314,7 +314,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
 
       {/* Unresolved username warning */}
       {isUsernameInput && !resolvedAddress && !isResolving && (
-        <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
+        <div className="flex items-center gap-1 mt-1 text-xs text-amber-500">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>
             Username not found in saved contacts. Please enter owner address.

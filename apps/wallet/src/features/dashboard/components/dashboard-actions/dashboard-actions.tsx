@@ -9,8 +9,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  Vote,
+  Coins,
+  Sparkles,
+  Building2,
+  Ticket,
+  MapPin,
+} from 'lucide-react';
+
 import { DashboardActionButton } from '../dashboard-action-button';
-import { SendIcon, ReceiveIcon, VoteIcon } from '@/core/components/ui/icons';
 import { ReceiveModal } from '@/features/wallets/components/receive-modal';
 import { useIsNetworkMember, NonMemberCard } from '@/features/brotherhood';
 
@@ -20,80 +30,103 @@ export const DashboardActions: React.FC = () => {
   const { isMember, isLoading, refetch } = useIsNetworkMember();
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-stretch gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <DashboardActionButton
-          icon={<SendIcon className="w-6 h-6 text-primary" />}
+          icon={<ArrowUpRight className="w-5 h-5" strokeWidth={2.5} />}
+          iconContainerClassName="jewel-btn-send"
           label="Send"
           onClick={() => navigate('/send')}
           testId="send-button"
-          className="min-w-[105px] shrink-0 snap-start"
+          className="min-w-[100px] shrink-0 snap-start"
         />
         <DashboardActionButton
-          icon={<ReceiveIcon className="w-6 h-6 text-primary" />}
+          icon={<ArrowDownLeft className="w-5 h-5" strokeWidth={2.5} />}
+          iconContainerClassName="jewel-btn-receive"
           label="Receive"
           onClick={() => setIsReceiveOpen(true)}
           testId="receive-button"
-          className="min-w-[105px] shrink-0 snap-start"
+          className="min-w-[100px] shrink-0 snap-start"
         />
         <DashboardActionButton
-          icon={<VoteIcon className="w-6 h-6 text-primary" />}
+          icon={<Vote className="w-5 h-5" strokeWidth={2.5} />}
+          iconContainerClassName="jewel-btn-vote"
           label="Vote"
           onClick={() => navigate('/brotherhood', { search: { tab: 'vote' } })}
           testId="vote-button"
-          className="min-w-[105px] shrink-0 snap-start"
+          className="min-w-[100px] shrink-0 snap-start"
         />
       </div>
 
       {/* BrotherHood Ecosystem Features (Members Only) */}
       {isLoading ? (
-        <div className="h-12 bg-secondary/40 border border-border/50 rounded-xl animate-pulse" />
+        <div className="h-16 bg-secondary/40 border border-border/50 rounded-2xl animate-pulse" />
       ) : isMember ? (
-        <div className="grid grid-cols-5 gap-1.5 pt-1">
+        <div className="grid grid-cols-5 gap-1.5 pt-0.5">
           <button
+            type="button"
             onClick={() => navigate('/brotherhood')}
-            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 min-w-0 bg-secondary/60 border border-border/70 rounded-2xl text-center hover:bg-secondary active:scale-[0.95] transition-all cursor-pointer shadow-xs"
             data-testid="brotherhood-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground truncate">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs">
+              <Coins className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="block text-[10px] font-semibold text-foreground truncate w-full text-center">
               Fi
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate('/personal-jetton')}
-            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 min-w-0 bg-secondary/60 border border-border/70 rounded-2xl text-center hover:bg-secondary active:scale-[0.95] transition-all cursor-pointer shadow-xs"
             data-testid="personal-jetton-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground truncate">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Sparkles className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="block text-[10px] font-semibold text-foreground truncate w-full text-center">
               My Coin
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate('/dao')}
-            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 min-w-0 bg-secondary/60 border border-border/70 rounded-2xl text-center hover:bg-secondary active:scale-[0.95] transition-all cursor-pointer shadow-xs"
             data-testid="dao-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground truncate">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-xs">
+              <Building2 className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="block text-[10px] font-semibold text-foreground truncate w-full text-center">
               DAO
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate('/lottery')}
-            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 min-w-0 bg-secondary/60 border border-border/70 rounded-2xl text-center hover:bg-secondary active:scale-[0.95] transition-all cursor-pointer shadow-xs"
             data-testid="lottery-button"
           >
-            <span className="block text-[11px] font-semibold text-foreground truncate">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-600 text-white flex items-center justify-center shadow-xs">
+              <Ticket className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="block text-[10px] font-semibold text-foreground truncate w-full text-center">
               Lottery
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate('/city-network')}
-            className="p-2 min-w-0 bg-secondary/70 border border-border rounded-xl text-center hover:bg-secondary transition-colors"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 min-w-0 bg-secondary/60 border border-border/70 rounded-2xl text-center hover:bg-secondary active:scale-[0.95] transition-all cursor-pointer shadow-xs"
             data-testid="city-network-button"
             title="NeighbourHOOD"
           >
-            <span className="block text-[10px] sm:text-[11px] font-semibold text-foreground truncate">
-              NeighbourHOOD
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-xs">
+              <MapPin className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="block text-[10px] font-semibold text-foreground truncate w-full text-center">
+              Cities
             </span>
           </button>
         </div>

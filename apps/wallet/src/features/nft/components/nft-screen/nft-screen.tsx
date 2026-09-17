@@ -25,7 +25,9 @@ export const NftsScreen: FC = () => {
       header={<ScreenHeader title="NFTs" onBack={() => navigate('/wallet')} />}
     >
       {userNfts.length === 0 ? (
-        <p className="py-12 text-center text-sm text-gray-400">No NFTs yet</p>
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No NFTs yet
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {userNfts.map((nft) => (

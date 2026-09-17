@@ -43,7 +43,9 @@ export const TokenSelectModal: React.FC<TokenSelectModalProps> = ({
           onClick={() => onSelect(option)}
           className={cn(
             'w-full rounded-2xl px-2 text-left transition-colors',
-            option.id === selectedId ? 'bg-blue-50' : 'hover:bg-gray-50',
+            option.id === selectedId
+              ? 'bg-primary/15 border border-primary/30'
+              : 'hover:bg-secondary/60 border border-transparent',
           )}
         >
           <AssetRow

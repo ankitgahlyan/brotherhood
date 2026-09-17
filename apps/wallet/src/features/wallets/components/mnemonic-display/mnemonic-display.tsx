@@ -86,10 +86,10 @@ export const MnemonicDisplay: React.FC<MnemonicDisplayProps> = ({
         {mnemonic.map((word, index) => (
           <div
             key={index}
-            className="bg-gray-50 border border-gray-200 rounded-md p-2 text-center text-sm font-mono"
+            className="bg-secondary/60 border border-border rounded-md p-2 text-center text-sm font-mono"
           >
-            <span className="text-gray-500 text-xs">{index + 1}.</span>
-            <div className="font-medium text-xs text-gray-900">{word}</div>
+            <span className="text-muted-foreground text-xs">{index + 1}.</span>
+            <div className="font-medium text-xs text-foreground">{word}</div>
           </div>
         ))}
       </div>
@@ -98,7 +98,7 @@ export const MnemonicDisplay: React.FC<MnemonicDisplayProps> = ({
       <div className="flex justify-center">
         <button
           onClick={handleCopyMnemonic}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors border border-gray-300"
+          className="flex items-center space-x-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors border border-border"
         >
           <svg
             className="w-4 h-4"

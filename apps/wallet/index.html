@@ -44,6 +44,9 @@
           document.documentElement.setAttribute('data-theme', theme);
           var meta = document.querySelector('meta[name="color-scheme"]');
           if (meta) meta.setAttribute('content', isDark ? 'dark' : 'light');
+
+          var palette = localStorage.getItem('brotherhood-palette') || 'violet';
+          document.documentElement.setAttribute('data-palette', palette);
         } catch (e) {}
       })();
     </script>

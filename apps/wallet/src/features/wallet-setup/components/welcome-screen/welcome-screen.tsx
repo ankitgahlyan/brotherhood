@@ -37,7 +37,7 @@ export const WelcomeScreen: React.FC = () => {
   };
 
   const footer = (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <Button
         fullWidth
         onClick={() => setIsAddOpen(true)}
@@ -45,13 +45,13 @@ export const WelcomeScreen: React.FC = () => {
       >
         Add wallet
       </Button>
-      <p className="pt-1 text-center text-xs text-gray-400">
+      <p className="pt-1 text-center text-xs text-muted-foreground">
         By continuing, you agree to the{' '}
-        <a href="#" className="text-blue-500">
+        <a href="#" className="text-primary hover:underline">
           Terms
         </a>{' '}
         and{' '}
-        <a href="#" className="text-blue-500">
+        <a href="#" className="text-primary hover:underline">
           Privacy Policy
         </a>
       </p>

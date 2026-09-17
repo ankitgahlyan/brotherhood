@@ -35,45 +35,45 @@ export const DashboardHeader: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsConnectOpen(true)}
-        className="p-1.5 -ml-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
+        className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
         aria-label="Scan"
         data-testid="connect-dapp-button"
       >
         <ScanIcon className="w-5 h-5 text-foreground" />
       </button>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <NetworkIndicator />
         <button
           type="button"
           onClick={() => setIsWalletSelectorOpen(true)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary cursor-pointer hover:bg-secondary/80 border border-border transition-colors"
+          className="h-9 flex items-center gap-1.5 px-3.5 rounded-full bg-secondary/70 cursor-pointer hover:bg-secondary border border-border/70 active:scale-95 transition-all shadow-2xs"
           aria-label="Select wallet"
         >
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-xs font-bold text-foreground">
             {activeWallet?.name || 'No wallet'}
           </span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
         <SyncStatusButton />
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={toggleTheme}
-          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs"
           aria-label={`Toggle theme (currently ${resolvedTheme})`}
           title={`Current theme: ${resolvedTheme}. Click to toggle.`}
           data-testid="header-theme-toggle"
         >
           {resolvedTheme === 'light' ? (
-            <Moon className="w-5 h-5" />
+            <Moon className="w-4.5 h-4.5 text-primary" />
           ) : resolvedTheme === 'oled' ? (
-            <Sparkles className="w-5 h-5 text-amber-400" />
+            <Sparkles className="w-4.5 h-4.5 text-amber-400" />
           ) : (
-            <Sun className="w-5 h-5 text-yellow-500" />
+            <Sun className="w-4.5 h-4.5 text-yellow-400" />
           )}
         </button>
         <SettingsDropdown />

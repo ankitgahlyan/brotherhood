@@ -35,14 +35,14 @@ export const TransactionHistory: React.FC = () => {
       <button
         type="button"
         onClick={() => navigate('/wallet/history')}
-        className="mb-2 flex items-center gap-1"
+        className="mb-2 flex items-center gap-1 group cursor-pointer"
         aria-label="View all transactions"
       >
-        <h2 className="text-base font-semibold text-gray-900">History</h2>
-        <ChevronRight className="h-4 w-4 text-gray-400" />
+        <h2 className="text-base font-semibold text-foreground">History</h2>
+        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </button>
 
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         {preview.map((row) => (
           <TransactionRow key={row.id} {...row} />
         ))}

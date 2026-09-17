@@ -42,10 +42,12 @@ export const MnemonicSkeleton: React.FC = () => {
           .map((_, index) => (
             <div
               key={index}
-              className="bg-gray-50 border border-gray-200 rounded p-1 text-center"
+              className="bg-secondary/60 border border-border rounded p-1 text-center"
             >
-              <span className="text-gray-400 text-[10px]">{index + 1}.</span>
-              <div className="text-[10px] text-gray-300 animate-pulse">
+              <span className="text-muted-foreground text-[10px]">
+                {index + 1}.
+              </span>
+              <div className="text-[10px] text-muted-foreground/40 animate-pulse">
                 ····
               </div>
             </div>
@@ -56,7 +58,7 @@ export const MnemonicSkeleton: React.FC = () => {
       <div className="flex justify-center">
         <button
           disabled
-          className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 text-gray-400 rounded text-xs border border-gray-300 cursor-not-allowed"
+          className="flex items-center space-x-1 px-3 py-1.5 bg-secondary text-muted-foreground rounded text-xs border border-border cursor-not-allowed"
         >
           <svg
             className="w-3 h-3"

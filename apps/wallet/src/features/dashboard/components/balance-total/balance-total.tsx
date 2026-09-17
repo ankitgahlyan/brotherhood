@@ -70,9 +70,13 @@ export const BalanceTotal: React.FC = () => {
     return total;
   }, [ready, ratesUpdated, rates, balance, userJettons]);
 
+  const [copied, setCopied] = React.useState(false);
+
   const handleCopy = useCallback(async () => {
     if (!address) return;
     await copyWalletAddress(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [address, copyWalletAddress]);
 
   const animatedFi = useCountUp(fiAmount);
@@ -81,47 +85,64 @@ export const BalanceTotal: React.FC = () => {
     balance !== undefined ? toDecimal(balance, GRAM_DECIMALS) : 0;
 
   return (
-    <section className="flex flex-col items-center pt-6 pb-6 text-center">
+    <section className="relative flex flex-col items-center pt-5 pb-5 text-center">
+      {/* Ambient background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-24 rounded-full bg-primary/15 blur-3xl -z-10 pointer-events-none" />
+
       {ready ? (
         <>
-          <div className="flex items-baseline justify-center font-display font-bold tabular-nums leading-none tracking-[-2%]">
-            <span className="text-5xl text-foreground">{intPart}</span>
-            <span className="text-5xl text-muted-foreground">.</span>
-            <span className="text-3xl text-muted-foreground">{fracPart}</span>
-            <span className="ml-2 text-2xl font-semibold text-primary">FI</span>
+          <div className="flex items-baseline justify-center font-display font-bold tabular-nums leading-none tracking-tight">
+            <span className="text-5xl font-extrabold text-foreground tracking-tight drop-shadow-xs">
+              {intPart}
+            </span>
+            <span className="text-5xl text-muted-foreground/70">.</span>
+            <span className="text-3xl font-semibold text-muted-foreground">
+              {fracPart}
+            </span>
+            <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              FI
+            </span>
           </div>
 
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground font-medium">
+          <div className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground font-medium">
             {totalUsd > 0 && (
               <>
-                <span>≈ ${usdFormat.format(totalUsd)} USD</span>
-                <span>•</span>
+                <span className="font-semibold text-foreground/80">
+                  ≈ ${usdFormat.format(totalUsd)} USD
+                </span>
+                <span className="text-muted-foreground/50">•</span>
               </>
             )}
             <span>{tonDecimal.toFixed(2)} TON</span>
           </div>
         </>
       ) : (
-        <div className="h-12 w-56 rounded-lg bg-muted animate-pulse" />
+        <div className="h-12 w-56 rounded-2xl bg-muted/60 animate-pulse" />
       )}
 
       {address ? (
         <button
           type="button"
           onClick={handleCopy}
-          className="mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 bg-secondary/60 hover:bg-secondary transition-colors"
+          className="mt-3.5 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/70 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
           aria-label="Copy address"
         >
-          <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0">
+          <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
             <img src={assetUrl('fi.svg')} alt="FI" className="w-full h-full" />
           </span>
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-xs font-semibold text-foreground">
             {formatWalletAddress(address, true, 4)}
           </span>
-          <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+          {copied ? (
+            <span className="text-emerald-500 flex items-center gap-1 text-xs font-semibold">
+              Copied
+            </span>
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+          )}
         </button>
       ) : (
-        <div className="mt-3 h-4 w-32 rounded-full bg-muted animate-pulse" />
+        <div className="mt-3.5 h-7 w-32 rounded-full bg-muted/60 animate-pulse" />
       )}
     </section>
   );

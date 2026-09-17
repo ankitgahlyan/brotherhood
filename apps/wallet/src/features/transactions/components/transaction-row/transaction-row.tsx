@@ -7,7 +7,7 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { Check, MinusCircle, PlusCircle, X, Pencil } from 'lucide-react';
+import { Check, ArrowUpRight, ArrowDownLeft, X, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useWalletStore } from '@demo/wallet-core';
@@ -158,17 +158,15 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
 
   const content = (
     <>
-      <span className="relative w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+      <span className="relative w-10 h-10 rounded-full bg-secondary/80 border border-border/80 flex items-center justify-center flex-shrink-0 shadow-2xs">
         {isOutgoing ? (
-          <MinusCircle
-            className="w-6 h-6 text-muted-foreground"
-            strokeWidth={2}
-          />
+          <div className="w-7 h-7 rounded-full bg-rose-500/15 text-rose-500 flex items-center justify-center">
+            <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
+          </div>
         ) : (
-          <PlusCircle
-            className="w-6 h-6 text-muted-foreground"
-            strokeWidth={2}
-          />
+          <div className="w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+            <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />
+          </div>
         )}
         <StatusBadge status={status} />
       </span>
@@ -211,7 +209,7 @@ export const TransactionRow: React.FC<TransactionRowModel> = ({
   );
 
   const rowClassName =
-    'flex items-center gap-3 py-2 -mx-1 px-1 rounded-xl select-none cursor-pointer';
+    'flex items-center gap-3 py-2 -mx-1 px-2 rounded-xl select-none cursor-pointer hover:bg-secondary/60 active:scale-[0.98] transition-all';
 
   return (
     <>

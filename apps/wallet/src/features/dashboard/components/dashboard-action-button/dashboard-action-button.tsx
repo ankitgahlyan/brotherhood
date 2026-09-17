@@ -16,6 +16,7 @@ interface DashboardActionButtonProps {
   'aria-label'?: string;
   testId?: string;
   className?: string;
+  iconContainerClassName?: string;
 }
 
 export const DashboardActionButton: React.FC<DashboardActionButtonProps> = ({
@@ -25,6 +26,7 @@ export const DashboardActionButton: React.FC<DashboardActionButtonProps> = ({
   'aria-label': ariaLabel,
   testId,
   className,
+  iconContainerClassName,
 }) => (
   <button
     type="button"
@@ -32,11 +34,18 @@ export const DashboardActionButton: React.FC<DashboardActionButtonProps> = ({
     data-testid={testId}
     aria-label={ariaLabel ?? label}
     className={cn(
-      'flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl bg-secondary/70 border border-border text-foreground text-sm font-medium hover:bg-secondary hover:scale-[1.03] active:scale-[0.97] transition-all',
+      'flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl bg-secondary/50 hover:bg-secondary/80 border border-border/80 text-foreground text-xs font-semibold hover:shadow-sm active:scale-[0.96] transition-all cursor-pointer select-none',
       className,
     )}
   >
-    {icon}
-    <span>{label}</span>
+    <div
+      className={cn(
+        'w-10 h-10 rounded-xl flex items-center justify-center transition-transform',
+        iconContainerClassName,
+      )}
+    >
+      {icon}
+    </div>
+    <span className="tracking-tight">{label}</span>
   </button>
 );

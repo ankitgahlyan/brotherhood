@@ -50,7 +50,7 @@ export const InputScan: React.FC<InputScanProps> = ({
         disabled={disabled}
         data-testid={dataTestId}
         className={cn(
-          'w-full flex-1 p-2 border rounded-lg text-xs outline-none focus:border-blue-500',
+          'w-full flex-1 p-2 border border-border bg-card rounded-lg text-xs text-foreground outline-none focus:border-primary',
           className,
         )}
       />
@@ -60,9 +60,9 @@ export const InputScan: React.FC<InputScanProps> = ({
         disabled={disabled}
         aria-label="Scan QR code"
         title="Scan QR code"
-        className="shrink-0 p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-gray-200"
+        className="shrink-0 p-2 rounded-lg bg-secondary text-primary hover:bg-secondary/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-border"
       >
-        <QrCode className="w-4 h-4 text-blue-600" />
+        <QrCode className="w-4 h-4" />
       </button>
       <QrScanner
         isVisible={isScannerVisible}

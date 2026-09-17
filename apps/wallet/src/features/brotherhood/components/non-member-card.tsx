@@ -10,7 +10,6 @@ import React, { useState } from 'react';
 import { Copy, Check, ShieldAlert } from 'lucide-react';
 import { useWallet } from '@demo/wallet-core';
 import { useFormatAddress } from '@/core/utils/formatters';
-import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 
 interface NonMemberCardProps {
@@ -42,14 +41,14 @@ export const NonMemberCard: React.FC<NonMemberCardProps> = ({
 
   return (
     <div
-      className={`p-4 bg-card text-card-foreground border border-border/80 rounded-2xl shadow-sm space-y-3 ${className}`}
+      className={`p-4 bg-card text-card-foreground border border-border/80 rounded-2xl shadow-sm flex flex-col gap-3 ${className}`}
       data-testid="non-member-card"
     >
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
           <ShieldAlert className="w-5 h-5" />
         </div>
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <h4 className="text-sm font-semibold text-foreground">
             Brotherhood Network Access
           </h4>
@@ -61,7 +60,7 @@ export const NonMemberCard: React.FC<NonMemberCardProps> = ({
       </div>
 
       {address && (
-        <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 space-y-1.5">
+        <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 flex flex-col gap-1.5">
           <div className="flex justify-between items-center text-[11px]">
             <span className="text-muted-foreground font-medium">
               Your Wallet Address (for Invite)

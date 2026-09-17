@@ -43,8 +43,8 @@ export const GaslessOptions: React.FC<GaslessOptionsProps> = ({ gasless }) => {
   if (!gasless.canUse) return null;
 
   return (
-    <div className="space-y-3">
-      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+    <div className="flex flex-col gap-3">
+      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
         <input
           type="checkbox"
           checked={gasless.enabled}
@@ -56,21 +56,23 @@ export const GaslessOptions: React.FC<GaslessOptionsProps> = ({ gasless }) => {
 
       {gasless.effective && (
         <>
-          <div className="space-y-1">
-            <span className="block px-1 text-xs text-gray-500">Fee asset</span>
+          <div className="flex flex-col gap-1">
+            <span className="block px-1 text-xs text-muted-foreground">
+              Fee asset
+            </span>
             <Select
               value={gasless.feeAsset ?? ''}
               onValueChange={gasless.setFeeAsset}
               disabled={gasless.supportedAssets.length === 0}
             >
               <SelectTrigger
-                className="w-full rounded-2xl border-2 border-transparent bg-gray-100 p-3.5 text-base font-medium text-gray-900 hover:bg-gray-100 focus-visible:border-blue-500 focus-visible:ring-0 data-[state=open]:border-blue-500"
+                className="w-full rounded-2xl border border-border bg-secondary p-3.5 text-base font-medium text-foreground hover:bg-secondary/80 focus-visible:border-primary focus-visible:ring-0 data-[state=open]:border-primary"
                 data-testid="gasless-fee-asset"
               >
                 {gasless.feeAsset ? (
                   <FeeAssetLabel address={gasless.feeAsset} />
                 ) : (
-                  <span className="text-gray-400">Select</span>
+                  <span className="text-muted-foreground">Select</span>
                 )}
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -81,8 +83,8 @@ export const GaslessOptions: React.FC<GaslessOptionsProps> = ({ gasless }) => {
             </Select>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Gas fee</span>
-            <span className="font-medium text-gray-900">
+            <span className="text-muted-foreground">Gas fee</span>
+            <span className="font-medium text-foreground">
               {gasless.error
                 ? '—'
                 : gasless.isQuoting

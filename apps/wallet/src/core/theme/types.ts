@@ -10,9 +10,13 @@ export type ThemeMode = 'system' | 'light' | 'dark' | 'oled';
 
 export type ResolvedTheme = 'light' | 'dark' | 'oled';
 
+export type ColorPalette = 'violet' | 'ton' | 'emerald' | 'sunset' | 'fuchsia';
+
 export interface ThemeState {
   theme: ThemeMode;
   resolvedTheme: ResolvedTheme;
+  palette: ColorPalette;
   setTheme: (theme: ThemeMode) => void;
+  setPalette: (palette: ColorPalette) => void;
   toggleTheme: () => void;
 }

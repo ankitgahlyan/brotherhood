@@ -28,7 +28,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
     onClick={onClick}
     aria-label={ariaLabel}
     className={cn(
-      'flex size-13 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200',
+      'flex size-13 shrink-0 items-center justify-center rounded-2xl bg-secondary border border-border text-foreground transition-colors hover:bg-secondary/80',
       className,
     )}
   >

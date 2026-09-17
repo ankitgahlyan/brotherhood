@@ -24,7 +24,7 @@ const InfoRow: React.FC<{ label: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <div className="flex items-center justify-between">
-    <span className="text-gray-500">{label}</span>
+    <span className="text-muted-foreground">{label}</span>
     {children}
   </div>
 );
@@ -47,14 +47,14 @@ export const SwapInfo: React.FC<SwapInfoProps> = ({
     quote.providerId;
 
   return (
-    <div className="space-y-2 rounded-2xl bg-gray-100 p-4 text-sm">
+    <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 border border-border p-4 text-sm">
       <InfoRow label="Provider">
-        <span className="font-medium capitalize text-gray-900">
+        <span className="font-medium capitalize text-foreground">
           {providerName}
         </span>
       </InfoRow>
       <InfoRow label="Minimum received">
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-foreground">
           {Number(quote.minReceived).toFixed(6)} {toSymbol}
         </span>
       </InfoRow>
@@ -68,7 +68,9 @@ export const SwapInfo: React.FC<SwapInfoProps> = ({
         </InfoRow>
       ) : null}
       <InfoRow label="Slippage">
-        <span className="font-medium text-gray-900">{slippageBps / 100}%</span>
+        <span className="font-medium text-foreground">
+          {slippageBps / 100}%
+        </span>
       </InfoRow>
     </div>
   );

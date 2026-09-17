@@ -151,16 +151,16 @@ export const ConnectRequestModal: React.FC<ConnectRequestModalProps> = ({
       disclaimer="Only connect to trusted applications. This will give the dApp access to your wallet address and allow it to request transactions."
     >
       {permissions.length > 0 && (
-        <div className="rounded-2xl bg-gray-100 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+        <div className="rounded-2xl bg-secondary/60 border border-border p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Requested permissions
           </p>
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 flex flex-col gap-3">
             {permissions.map((permission, index) => (
               <div key={index}>
-                <p className="font-bold text-gray-900">{permission.title}</p>
+                <p className="font-bold text-foreground">{permission.title}</p>
                 {permission.description && (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {permission.description}
                   </p>
                 )}

@@ -7,16 +7,34 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
-import { settingsStorage, SettingsKeys, ThemeSchema } from '@/core/storage';
-import type { ResolvedTheme, ThemeMode, ThemeState } from './types';
+import {
+  settingsStorage,
+  SettingsKeys,
+  ThemeSchema,
+  ColorPaletteSchema,
+} from '@/core/storage';
+import type {
+  ColorPalette,
+  ResolvedTheme,
+  ThemeMode,
+  ThemeState,
+} from './types';
 
 export const THEME_STORAGE_KEY = SettingsKeys.THEME;
+export const PALETTE_STORAGE_KEY = SettingsKeys.PALETTE;
 
 export const getSystemTheme = (): ResolvedTheme => {
   if (typeof window === 'undefined') return 'light';
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'light';
+};
+
+export const applyPaletteToDom = (palette: ColorPalette): ColorPalette => {
+  if (typeof window === 'undefined') return 'violet';
+  const root = document.documentElement;
+  root.setAttribute('data-palette', palette);
+  return palette;
 };
 
 export const applyThemeToDom = (theme: ThemeMode): ResolvedTheme => {
@@ -44,6 +62,30 @@ let currentTheme: ThemeMode = settingsStorage.get(
 let currentResolved: ResolvedTheme =
   typeof window !== 'undefined' ? applyThemeToDom(currentTheme) : 'light';
 
+let currentPalette: ColorPalette = settingsStorage.get(
+  PALETTE_STORAGE_KEY,
+  ColorPaletteSchema,
+  'violet',
+);
+if (typeof window !== 'undefined') {
+  applyPaletteToDom(currentPalette);
+}
+
+interface ThemeSnapshot {
+  theme: ThemeMode;
+  palette: ColorPalette;
+}
+
+let currentSnapshot: ThemeSnapshot = {
+  theme: currentTheme,
+  palette: currentPalette,
+};
+
+const SERVER_SNAPSHOT: ThemeSnapshot = {
+  theme: 'system',
+  palette: 'violet',
+};
+
 const themeSubscribers = new Set<() => void>();
 
 function notifyThemeChange(): void {
@@ -55,7 +97,16 @@ function notifyThemeChange(): void {
 function updateTheme(theme: ThemeMode): void {
   currentTheme = theme;
   currentResolved = applyThemeToDom(theme);
+  currentSnapshot = { theme: currentTheme, palette: currentPalette };
   settingsStorage.set(THEME_STORAGE_KEY, theme);
+  notifyThemeChange();
+}
+
+function updatePalette(palette: ColorPalette): void {
+  currentPalette = palette;
+  applyPaletteToDom(palette);
+  currentSnapshot = { theme: currentTheme, palette: currentPalette };
+  settingsStorage.set(PALETTE_STORAGE_KEY, palette);
   notifyThemeChange();
 }
 
@@ -65,6 +116,21 @@ settingsStorage.subscribe(THEME_STORAGE_KEY, () => {
   if (next !== currentTheme) {
     currentTheme = next;
     currentResolved = applyThemeToDom(next);
+    currentSnapshot = { theme: currentTheme, palette: currentPalette };
+    notifyThemeChange();
+  }
+});
+
+settingsStorage.subscribe(PALETTE_STORAGE_KEY, () => {
+  const next = settingsStorage.get(
+    PALETTE_STORAGE_KEY,
+    ColorPaletteSchema,
+    'violet',
+  );
+  if (next !== currentPalette) {
+    currentPalette = next;
+    applyPaletteToDom(next);
+    currentSnapshot = { theme: currentTheme, palette: currentPalette };
     notifyThemeChange();
   }
 });
@@ -87,20 +153,24 @@ function subscribe(callback: () => void): () => void {
   };
 }
 
-function getSnapshot(): ThemeMode {
-  return currentTheme;
+function getSnapshot(): ThemeSnapshot {
+  return currentSnapshot;
 }
 
-function getServerSnapshot(): ThemeMode {
-  return 'system';
+function getServerSnapshot(): ThemeSnapshot {
+  return SERVER_SNAPSHOT;
 }
 
 export function useTheme(): ThemeState {
-  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const resolvedTheme = currentResolved;
 
   const setTheme = useCallback((nextTheme: ThemeMode) => {
     updateTheme(nextTheme);
+  }, []);
+
+  const setPalette = useCallback((nextPalette: ColorPalette) => {
+    updatePalette(nextPalette);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -114,9 +184,11 @@ export function useTheme(): ThemeState {
   }, []);
 
   return {
-    theme,
+    theme: state.theme,
     resolvedTheme,
+    palette: state.palette,
     setTheme,
+    setPalette,
     toggleTheme,
   };
 }

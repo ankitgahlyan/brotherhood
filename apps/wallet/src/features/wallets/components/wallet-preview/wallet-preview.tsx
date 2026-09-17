@@ -149,33 +149,35 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
         onClick={onClick}
         className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
           isActive
-            ? 'bg-blue-50 border border-blue-200'
-            : 'bg-gray-50 hover:bg-gray-100'
+            ? 'bg-primary/15 border border-primary/30 text-foreground'
+            : 'bg-card hover:bg-secondary/70 border border-border text-foreground'
         } ${onClick ? 'cursor-pointer' : ''} ${className}`}
       >
         <div
           className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-600'
+            isActive
+              ? 'bg-primary/20 text-primary'
+              : 'bg-secondary text-muted-foreground'
           }`}
         >
           {getWalletIcon(wallet.walletInterfaceType)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {wallet.name}
             </p>
             {isActive && (
-              <span className="text-xs text-blue-600 font-medium">Active</span>
+              <span className="text-xs text-primary font-medium">Active</span>
             )}
           </div>
-          <p className="text-xs text-gray-600 font-mono truncate">
+          <p className="text-xs text-muted-foreground font-mono truncate">
             {formatAddress(wallet.address, 12)}
           </p>
         </div>
         {balance !== undefined && (
           <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-foreground">
               {formatBalance(balance)}
             </p>
           </div>

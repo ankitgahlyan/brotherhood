@@ -31,20 +31,20 @@ export const WalletPlate: React.FC<WalletPlateProps> = ({
   const formatted = formatWalletAddress(address, true, 6);
 
   const className =
-    'flex w-full items-center gap-3 rounded-2xl border border-gray-200 p-3.5 text-left';
+    'flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left';
   const content = (
     <>
-      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
         <Wallet className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold text-gray-900">{name}</span>
-        <span className="block truncate text-sm text-gray-500 font-mono">
+        <span className="block truncate font-bold text-foreground">{name}</span>
+        <span className="block truncate text-sm text-muted-foreground font-mono">
           {formatted || address}
         </span>
       </span>
       {selectable && (
-        <ChevronsUpDown className="h-5 w-5 flex-shrink-0 text-gray-500" />
+        <ChevronsUpDown className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
       )}
     </>
   );
@@ -54,7 +54,7 @@ export const WalletPlate: React.FC<WalletPlateProps> = ({
       <button
         type="button"
         onClick={onClick}
-        className={cn(className, 'transition-colors hover:border-gray-300')}
+        className={cn(className, 'transition-colors hover:border-primary/50')}
       >
         {content}
       </button>

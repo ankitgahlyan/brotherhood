@@ -25,42 +25,6 @@
   width: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #7c3aedaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #6366f1aa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -204,6 +168,192 @@
   --sidebar-border: oklch(0.85 0.04 285 / 18%);
   --sidebar-ring: oklch(0.68 0.22 280);
   color-scheme: dark;
+}
+
+/* ==========================================================================
+   2D OKLCH Color Palettes: TON, Emerald, Sunset, Fuchsia (Violet is default)
+   ========================================================================== */
+
+/* --- TON Ocean Blue (Light) --- */
+:root[data-palette='ton'] {
+  --primary: oklch(0.55 0.22 235);
+  --ring: oklch(0.55 0.22 235);
+  --secondary: oklch(0.955 0.015 235);
+  --secondary-foreground: oklch(0.35 0.12 235);
+  --accent: oklch(0.94 0.025 235);
+  --accent-foreground: oklch(0.35 0.15 235);
+  --sidebar-primary: oklch(0.55 0.22 235);
+  --chart-1: oklch(0.55 0.22 235);
+}
+
+/* --- TON Ocean Blue (Dark / Midnight) --- */
+.dark[data-palette='ton'],
+[data-theme='dark'][data-palette='ton'] {
+  --primary: oklch(0.65 0.2 235);
+  --ring: oklch(0.65 0.2 235);
+  --secondary: oklch(0.22 0.035 235);
+  --secondary-foreground: oklch(0.95 0.015 235);
+  --accent: oklch(0.24 0.045 235);
+  --accent-foreground: oklch(0.95 0.02 235);
+  --sidebar-primary: oklch(0.65 0.2 235);
+  --chart-1: oklch(0.65 0.2 235);
+}
+
+/* --- TON Ocean Blue (OLED) --- */
+[data-theme='oled'][data-palette='ton'] {
+  --primary: oklch(0.7 0.2 235);
+  --ring: oklch(0.7 0.2 235);
+  --secondary: oklch(0.14 0.03 235);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.16 0.04 235);
+  --accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.7 0.2 235);
+  --chart-1: oklch(0.7 0.2 235);
+}
+
+/* --- Cyber Emerald (Light) --- */
+:root[data-palette='emerald'] {
+  --primary: oklch(0.52 0.2 158);
+  --ring: oklch(0.52 0.2 158);
+  --secondary: oklch(0.955 0.015 158);
+  --secondary-foreground: oklch(0.32 0.12 158);
+  --accent: oklch(0.94 0.025 158);
+  --accent-foreground: oklch(0.32 0.15 158);
+  --sidebar-primary: oklch(0.52 0.2 158);
+  --chart-1: oklch(0.52 0.2 158);
+}
+
+/* --- Cyber Emerald (Dark / Midnight) --- */
+.dark[data-palette='emerald'],
+[data-theme='dark'][data-palette='emerald'] {
+  --primary: oklch(0.65 0.19 158);
+  --ring: oklch(0.65 0.19 158);
+  --secondary: oklch(0.22 0.035 158);
+  --secondary-foreground: oklch(0.95 0.015 158);
+  --accent: oklch(0.24 0.045 158);
+  --accent-foreground: oklch(0.95 0.02 158);
+  --sidebar-primary: oklch(0.65 0.19 158);
+  --chart-1: oklch(0.65 0.19 158);
+}
+
+/* --- Cyber Emerald (OLED) --- */
+[data-theme='oled'][data-palette='emerald'] {
+  --primary: oklch(0.72 0.21 158);
+  --ring: oklch(0.72 0.21 158);
+  --secondary: oklch(0.14 0.03 158);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.16 0.04 158);
+  --accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.72 0.21 158);
+  --chart-1: oklch(0.72 0.21 158);
+}
+
+/* --- Solar Sunset (Light) --- */
+:root[data-palette='sunset'] {
+  --primary: oklch(0.58 0.21 55);
+  --ring: oklch(0.58 0.21 55);
+  --secondary: oklch(0.955 0.018 55);
+  --secondary-foreground: oklch(0.35 0.14 55);
+  --accent: oklch(0.94 0.03 55);
+  --accent-foreground: oklch(0.35 0.16 55);
+  --sidebar-primary: oklch(0.58 0.21 55);
+  --chart-1: oklch(0.58 0.21 55);
+}
+
+/* --- Solar Sunset (Dark / Midnight) --- */
+.dark[data-palette='sunset'],
+[data-theme='dark'][data-palette='sunset'] {
+  --primary: oklch(0.68 0.2 55);
+  --ring: oklch(0.68 0.2 55);
+  --secondary: oklch(0.22 0.038 55);
+  --secondary-foreground: oklch(0.95 0.015 55);
+  --accent: oklch(0.25 0.048 55);
+  --accent-foreground: oklch(0.95 0.02 55);
+  --sidebar-primary: oklch(0.68 0.2 55);
+  --chart-1: oklch(0.68 0.2 55);
+}
+
+/* --- Solar Sunset (OLED) --- */
+[data-theme='oled'][data-palette='sunset'] {
+  --primary: oklch(0.74 0.21 55);
+  --ring: oklch(0.74 0.21 55);
+  --secondary: oklch(0.15 0.032 55);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.17 0.042 55);
+  --accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.74 0.21 55);
+  --chart-1: oklch(0.74 0.21 55);
+}
+
+/* --- Neon Fuchsia (Light) --- */
+:root[data-palette='fuchsia'] {
+  --primary: oklch(0.56 0.25 325);
+  --ring: oklch(0.56 0.25 325);
+  --secondary: oklch(0.955 0.018 325);
+  --secondary-foreground: oklch(0.35 0.15 325);
+  --accent: oklch(0.94 0.03 325);
+  --accent-foreground: oklch(0.35 0.17 325);
+  --sidebar-primary: oklch(0.56 0.25 325);
+  --chart-1: oklch(0.56 0.25 325);
+}
+
+/* --- Neon Fuchsia (Dark / Midnight) --- */
+.dark[data-palette='fuchsia'],
+[data-theme='dark'][data-palette='fuchsia'] {
+  --primary: oklch(0.66 0.23 325);
+  --ring: oklch(0.66 0.23 325);
+  --secondary: oklch(0.22 0.038 325);
+  --secondary-foreground: oklch(0.95 0.015 325);
+  --accent: oklch(0.25 0.048 325);
+  --accent-foreground: oklch(0.95 0.02 325);
+  --sidebar-primary: oklch(0.66 0.23 325);
+  --chart-1: oklch(0.66 0.23 325);
+}
+
+/* --- Neon Fuchsia (OLED) --- */
+[data-theme='oled'][data-palette='fuchsia'] {
+  --primary: oklch(0.72 0.24 325);
+  --ring: oklch(0.72 0.24 325);
+  --secondary: oklch(0.15 0.032 325);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.17 0.042 325);
+  --accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.72 0.24 325);
+  --chart-1: oklch(0.72 0.24 325);
+}
+
+/* ==========================================================================
+   Jewel Action Gradients & Glass Surfaces
+   ========================================================================== */
+
+.jewel-btn-send {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.25);
+}
+
+.jewel-btn-receive {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
+}
+
+.jewel-btn-vote {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.25);
+}
+
+.jewel-btn-stake {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.25);
+}
+
+.glass-card {
+  background-color: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 @layer base {

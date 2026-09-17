@@ -58,11 +58,13 @@ export const MnemonicGrid: React.FC<MnemonicGridProps> = ({ mnemonic }) => {
         {mnemonic.map((word, index) => (
           <div
             key={index}
-            className="bg-gray-50 border border-gray-200 rounded p-1 text-center"
+            className="bg-secondary/60 border border-border rounded p-1 text-center"
             data-testid={`mnemonic-word-${index + 1}`}
           >
-            <span className="text-gray-400 text-[10px]">{index + 1}.</span>
-            <div className="font-medium text-[10px] text-gray-900 truncate">
+            <span className="text-muted-foreground text-[10px]">
+              {index + 1}.
+            </span>
+            <div className="font-medium text-[10px] text-foreground truncate">
               {word}
             </div>
           </div>
@@ -74,7 +76,7 @@ export const MnemonicGrid: React.FC<MnemonicGridProps> = ({ mnemonic }) => {
         <button
           onClick={handleCopyMnemonic}
           data-testid="copy-mnemonic"
-          className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs border border-gray-300 transition-colors"
+          className="flex items-center space-x-1 px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs border border-border transition-colors"
         >
           <svg
             className="w-3 h-3"

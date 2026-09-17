@@ -91,7 +91,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
 
         <Modal.Body className="px-2 pb-2">
           {savedWallets.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               No wallets yet
             </p>
           ) : (
@@ -112,7 +112,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-base font-semibold px-4 py-2 rounded-full hover:scale-[1.03] active:scale-[0.97] transition-transform"
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-base font-semibold px-5 py-2.5 rounded-full hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
           >
             <Plus className="w-5 h-5" strokeWidth={2.5} />
             Add wallet

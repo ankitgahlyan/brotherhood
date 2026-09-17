@@ -83,7 +83,7 @@ export const DashboardAssets: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         {tonRow ? (
           <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
         ) : (

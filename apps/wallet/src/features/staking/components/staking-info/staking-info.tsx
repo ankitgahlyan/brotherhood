@@ -27,22 +27,22 @@ export const StakingInfo: FC<StakingInfoProps> = ({ receiveTicker }) => {
     'Tonstakers';
 
   return (
-    <div className="space-y-2 rounded-2xl bg-gray-100 p-4 text-sm">
+    <div className="flex flex-col gap-2 rounded-2xl bg-secondary/60 border border-border p-4 text-sm">
       <div className="flex items-center justify-between">
-        <span className="text-gray-500">APY</span>
-        <span className="font-semibold text-green-600">
+        <span className="text-muted-foreground">APY</span>
+        <span className="font-semibold text-emerald-500">
           {providerInfo?.apy ? `${providerInfo.apy.toFixed(2)}%` : '—'}
         </span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-gray-500">Provider</span>
-        <span className="font-medium capitalize text-gray-900">
+        <span className="text-muted-foreground">Provider</span>
+        <span className="font-medium capitalize text-foreground">
           {providerName}
         </span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-gray-500">Instant unstake available</span>
-        <span className="font-medium text-gray-900 tabular-nums">
+        <span className="text-muted-foreground">Instant unstake available</span>
+        <span className="font-medium text-foreground tabular-nums">
           {providerInfo?.instantUnstakeAvailable
             ? formatLargeValue(String(providerInfo.instantUnstakeAvailable), 4)
             : '0'}{' '}
@@ -51,8 +51,8 @@ export const StakingInfo: FC<StakingInfoProps> = ({ receiveTicker }) => {
       </div>
       {currentQuote && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">You will receive</span>
-          <span className="font-semibold text-gray-900 tabular-nums">
+          <span className="text-muted-foreground">You will receive</span>
+          <span className="font-semibold text-foreground tabular-nums">
             {formatLargeValue(String(currentQuote.amountOut), 4)}
             {receiveTicker ? ` ${receiveTicker}` : ''}
           </span>

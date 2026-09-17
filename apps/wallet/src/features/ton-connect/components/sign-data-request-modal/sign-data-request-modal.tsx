@@ -35,44 +35,44 @@ const renderDataToSign = (
   switch (data.type) {
     case 'text':
       return (
-        <div className="rounded-2xl bg-gray-100 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <div className="rounded-2xl bg-secondary/60 border border-border p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data to sign
           </p>
-          <p className="mt-2 font-semibold text-gray-900">Text Message</p>
-          <p className="break-words text-sm text-gray-500">
+          <p className="mt-2 font-semibold text-foreground">Text Message</p>
+          <p className="break-words text-sm text-muted-foreground">
             {data.value.content}
           </p>
         </div>
       );
     case 'binary':
       return (
-        <div className="rounded-2xl bg-gray-100 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <div className="rounded-2xl bg-secondary/60 border border-border p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data to sign
           </p>
-          <p className="mt-2 font-semibold text-gray-900">Binary Data</p>
-          <p className="break-all text-sm text-gray-500">
+          <p className="mt-2 font-semibold text-foreground">Binary Data</p>
+          <p className="break-all text-sm text-muted-foreground">
             Content: {data.value.content}
           </p>
         </div>
       );
     case 'cell':
       return (
-        <div className="space-y-3 rounded-2xl bg-gray-100 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <div className="flex flex-col gap-3 rounded-2xl bg-secondary/60 border border-border p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data to sign
           </p>
           <div>
-            <p className="font-semibold text-gray-900">Content</p>
-            <p className="break-all text-sm text-gray-500">
+            <p className="font-semibold text-foreground">Content</p>
+            <p className="break-all text-sm text-muted-foreground">
               {data.value.content}
             </p>
           </div>
           {data.value.schema && (
             <div>
-              <p className="font-semibold text-gray-900">Schema</p>
-              <p className="break-all text-sm text-gray-500">
+              <p className="font-semibold text-foreground">Schema</p>
+              <p className="break-all text-sm text-muted-foreground">
                 {data.value.schema}
               </p>
             </div>
@@ -81,7 +81,7 @@ const renderDataToSign = (
       );
     default:
       return (
-        <div className="rounded-2xl bg-gray-100 p-4 text-sm text-gray-500">
+        <div className="rounded-2xl bg-secondary/60 border border-border p-4 text-sm text-muted-foreground">
           Unknown data format
         </div>
       );

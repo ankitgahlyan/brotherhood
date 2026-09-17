@@ -9,7 +9,6 @@
 import React from 'react';
 import { RotateCcw, Check } from 'lucide-react';
 import { useLastFetchTime } from '@/core/hooks/use-last-fetch-time';
-import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
 import { isOnline } from '@/core/lib/network-status';
 import { useThrottledRefresh } from '@/core/components/ui/refresh-button';
 
@@ -23,7 +22,6 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({
   showText = true,
 }) => {
   const { relativeTime, formattedTime } = useLastFetchTime();
-  const refreshContractQueries = useRefreshContractQueries();
 
   const { isRefreshing, isSuccess, disabled, triggerRefresh } =
     useThrottledRefresh({
@@ -35,8 +33,6 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({
             new CustomEvent('brotherhood_manual_wallet_refresh'),
           );
         }
-        // Force refresh all active queries
-        await refreshContractQueries();
       },
       cooldownMs: 3500,
       minSpinMs: 600,

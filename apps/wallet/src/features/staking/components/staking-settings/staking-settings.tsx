@@ -62,16 +62,16 @@ export const StakingSettings: React.FC<StakingSettingsProps> = ({
           <Modal.Title>Staking settings</Modal.Title>
         </Modal.Header>
         <Modal.Body className="gap-6">
-          <div className="space-y-2">
-            <span className="block text-sm font-medium text-gray-700">
+          <div className="flex flex-col gap-2">
+            <span className="block text-sm font-medium text-foreground">
               Provider
             </span>
             <Select value={tempProviderId} onValueChange={setTempProviderId}>
-              <SelectTrigger className="w-full rounded-2xl border-2 border-transparent bg-gray-100 p-3.5 text-base font-medium capitalize text-gray-900 hover:bg-gray-100 focus-visible:border-blue-500 focus-visible:ring-0 data-[state=open]:border-blue-500">
+              <SelectTrigger className="w-full rounded-2xl border border-border bg-secondary p-3.5 text-base font-medium capitalize text-foreground hover:bg-secondary/80 focus-visible:border-primary focus-visible:ring-0 data-[state=open]:border-primary">
                 {selectedProviderName ? (
                   <span className="capitalize">{selectedProviderName}</span>
                 ) : (
-                  <span className="text-gray-400">Select provider</span>
+                  <span className="text-muted-foreground">Select provider</span>
                 )}
               </SelectTrigger>
               <SelectContent className="rounded-xl">

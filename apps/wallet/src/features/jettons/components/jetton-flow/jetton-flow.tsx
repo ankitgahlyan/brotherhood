@@ -108,8 +108,8 @@ export const JettonFlow = memo(function JettonFlow({
   transfers: TransactionTraceMoneyFlowItem[];
 }) {
   return (
-    <div className="rounded-2xl bg-gray-100 p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+    <div className="rounded-2xl bg-secondary/60 border border-border p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Money flow
       </p>
       <div className="mt-3 flex flex-col gap-3">

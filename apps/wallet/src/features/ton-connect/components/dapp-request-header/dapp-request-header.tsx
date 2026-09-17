@@ -29,10 +29,10 @@ export const DappRequestHeader: React.FC<DappRequestHeaderProps> = ({
 }) => (
   <div className="flex flex-col items-center text-center">
     <div className="flex items-center gap-3">
-      <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gray-100">
+      <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-secondary border border-border">
         <img src={assetUrl('walletkit.svg')} alt="" className="h-12 w-12" />
       </span>
-      <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-gray-100">
+      <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-secondary border border-border">
         <FallbackImage
           src={dAppIconUrl}
           alt=""
@@ -48,12 +48,12 @@ export const DappRequestHeader: React.FC<DappRequestHeaderProps> = ({
 
     <h2
       data-testid="request"
-      className="mt-6 text-2xl font-bold leading-tight text-gray-900"
+      className="mt-6 text-2xl font-bold leading-tight text-foreground"
     >
       {verb}
       <br />
-      <span className="text-blue-600">{label}</span>?
+      <span className="text-primary">{label}</span>?
     </h2>
-    <p className="mt-2 text-base text-gray-500">{subtitle}</p>
+    <p className="mt-2 text-base text-muted-foreground">{subtitle}</p>
   </div>
 );

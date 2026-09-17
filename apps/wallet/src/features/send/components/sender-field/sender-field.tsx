@@ -75,13 +75,13 @@ export const SenderField: React.FC<SenderFieldProps> = ({
     <Input.Container error={Boolean(error)}>
       <Input.Header>
         <Input.Title>Sender</Input.Title>
-        <div className="flex gap-1.5 p-0.5 bg-gray-100 rounded-lg text-xs font-medium">
+        <div className="flex gap-1.5 p-0.5 bg-secondary rounded-lg text-xs font-medium border border-border/50">
           <button
             type="button"
             onClick={() => onModeChange('self')}
             className={`px-2.5 py-1 rounded-md transition-all ${
               mode === 'self'
-                ? 'bg-white shadow-sm text-foreground font-semibold'
+                ? 'bg-card shadow-xs text-foreground font-semibold border border-border/60'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             data-testid="sender-mode-self"
@@ -93,7 +93,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
             onClick={() => onModeChange('other')}
             className={`px-2.5 py-1 rounded-md transition-all ${
               mode === 'other'
-                ? 'bg-white shadow-sm text-foreground font-semibold'
+                ? 'bg-card shadow-xs text-foreground font-semibold border border-border/60'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             data-testid="sender-mode-other"
@@ -104,11 +104,11 @@ export const SenderField: React.FC<SenderFieldProps> = ({
       </Input.Header>
 
       {mode === 'self' ? (
-        <div className="flex items-center gap-2 p-3 bg-gray-50/80 border border-gray-200/60 rounded-xl text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 p-3 bg-secondary/50 border border-border/80 rounded-xl text-sm text-muted-foreground">
           <User className="w-4 h-4 text-primary shrink-0" />
           <span className="truncate">
             {userAddress
-              ? `My Account (${formatWalletAddress(userAddress, false)})`
+              ? `My Account (${formatWalletAddress(userAddress, true)})`
               : 'Connected Account'}
           </span>
         </div>
@@ -135,18 +135,18 @@ export const SenderField: React.FC<SenderFieldProps> = ({
 
             {/* Suggestions dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-40 overflow-y-auto divide-y divide-gray-100">
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl max-h-40 overflow-y-auto divide-y divide-border">
                 {suggestions.map((item) => (
                   <button
                     key={item.address}
                     type="button"
                     onMouseDown={() => handleSelectSuggestion(item)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-xs"
+                    className="w-full px-3 py-2 text-left hover:bg-secondary/70 flex items-center justify-between text-xs transition-colors"
                   >
                     <span className="font-medium text-foreground">
                       @{item.username}
                     </span>
-                    <span className="text-muted-foreground text-[11px] truncate max-w-[180px]">
+                    <span className="text-muted-foreground text-[11px] truncate max-w-45">
                       {item.address}
                     </span>
                   </button>
@@ -157,22 +157,24 @@ export const SenderField: React.FC<SenderFieldProps> = ({
 
           {/* Granter resolution & Allowance summary */}
           {resolvedGranterAddress && (
-            <div className="flex flex-col gap-1 px-3 py-2 bg-blue-50/70 border border-blue-100 rounded-xl text-xs">
-              <div className="flex items-center justify-between text-blue-900">
+            <div className="flex flex-col gap-1.5 px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-xs">
+              <div className="flex items-center justify-between text-primary">
                 <span className="font-medium flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-blue-600" />
+                  <Check className="w-3.5 h-3.5 text-primary" />
                   Granter:{' '}
                   {resolvedGranterUsername
                     ? `@${resolvedGranterUsername}`
                     : 'Valid Owner'}
                 </span>
-                <span className="text-[11px] text-blue-700 truncate max-w-[150px]">
+                <span className="text-[11px] font-mono text-primary/80 truncate max-w-37.5">
                   {formatWalletAddress(resolvedGranterAddress, false)}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-1 border-t border-blue-200/50">
-                <span className="text-blue-800">Remaining Allowance:</span>
-                <span className="font-semibold text-blue-950">
+              <div className="flex items-center justify-between pt-1.5 border-t border-primary/20">
+                <span className="text-muted-foreground">
+                  Remaining Allowance:
+                </span>
+                <span className="font-semibold text-foreground">
                   {isAllowanceLoading
                     ? 'Querying on-chain…'
                     : `${formattedAllowance} FI`}

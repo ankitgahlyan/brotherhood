@@ -231,23 +231,27 @@ export const ImportWalletScreen: React.FC = () => {
     <CenteredScreen onBack={() => navigate(-1)} footer={footer}>
       <div className="px-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Recovery phrase</h1>
-          <p className="mt-2 text-base text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">
+            Recovery phrase
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground">
             Enter the 12 or 24 words of your recovery phrase.
           </p>
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 flex flex-col gap-2">
           <NetworkSelector value={network} onChange={setNetwork} compact />
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Interface</span>
+            <span className="text-sm font-medium text-foreground">
+              Interface
+            </span>
             <Segmented
               value={interfaceType}
               onChange={setInterfaceType}
               options={INTERFACES}
             />
           </div>
-          <div className="space-y-1 text-left pt-1">
+          <div className="flex flex-col gap-1 text-left pt-1">
             <label className="text-xs font-medium text-foreground block">
               Wallet name
             </label>
@@ -256,21 +260,24 @@ export const ImportWalletScreen: React.FC = () => {
               value={walletName}
               onChange={(e) => setWalletName(e.target.value)}
               placeholder={defaultName}
-              className="w-full rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-xs"
               data-testid="wallet-name-input"
             />
           </div>
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm text-gray-500" data-testid="word-count">
+          <span
+            className="text-sm text-muted-foreground"
+            data-testid="word-count"
+          >
             {validation.nonEmptyWords.length}/24 words
           </span>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={clearAll}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               data-testid="clear-mnemonic"
             >
               Clear

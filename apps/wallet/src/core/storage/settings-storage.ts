@@ -12,6 +12,7 @@ export const SETTINGS_STORAGE_EVENT = 'brotherhood:settings-changed';
 
 export const SettingsKeys = {
   THEME: 'brotherhood-theme',
+  PALETTE: 'brotherhood-palette',
   EXPLORER: 'brotherhood-explorer',
   DEVELOPER_MODE: 'brotherhood_developer_mode_enabled',
   TESTNET_TONCENTER_KEY: 'brotherhood_api_key_testnet_toncenter',
@@ -28,6 +29,15 @@ export const SettingsKeys = {
 
 export const ThemeSchema = z.enum(['light', 'dark', 'oled', 'system']);
 export type ThemeSetting = z.infer<typeof ThemeSchema>;
+
+export const ColorPaletteSchema = z.enum([
+  'violet',
+  'ton',
+  'emerald',
+  'sunset',
+  'fuchsia',
+]);
+export type ColorPaletteSetting = z.infer<typeof ColorPaletteSchema>;
 
 export const ExplorerSchema = z.enum(['tonscan', 'tonviewer', 'actonscan']);
 export type ExplorerSetting = z.infer<typeof ExplorerSchema>;

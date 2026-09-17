@@ -327,7 +327,7 @@ export const SendTransaction: React.FC = () => {
     >
       {!currentWallet ? (
         <div className="py-10 text-center">
-          <p className="mb-3 text-sm text-gray-500">Loading wallet…</p>
+          <p className="mb-3 text-sm text-muted-foreground">Loading wallet…</p>
           <Button
             variant="secondary"
             size="sm"
@@ -337,7 +337,7 @@ export const SendTransaction: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSend} className="space-y-6">
+        <form onSubmit={handleSend} className="flex flex-col gap-6">
           <TokenSelectButton
             token={selected}
             onClick={() => setShowTokenModal(true)}
@@ -379,7 +379,7 @@ export const SendTransaction: React.FC = () => {
 
           {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Button
               type="submit"
               fullWidth

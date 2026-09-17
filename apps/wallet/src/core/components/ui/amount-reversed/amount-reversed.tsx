@@ -32,7 +32,7 @@ export const AmountReversed: FC<AmountReversedProps> = ({
   ...props
 }) => {
   const containerClass = cn(
-    'flex w-full items-center justify-center gap-2 text-base font-semibold text-gray-500',
+    'flex w-full items-center justify-center gap-2 text-base font-semibold text-muted-foreground',
     className,
   );
 
@@ -47,7 +47,7 @@ export const AmountReversed: FC<AmountReversedProps> = ({
   return (
     <div className={containerClass} {...props}>
       {isLoading ? (
-        <span className="h-5 w-[70px] animate-pulse rounded bg-gray-200" />
+        <span className="h-5 w-[70px] animate-pulse rounded bg-muted" />
       ) : (
         <span>
           {symbol}

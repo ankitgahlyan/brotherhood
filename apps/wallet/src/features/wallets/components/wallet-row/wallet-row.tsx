@@ -28,9 +28,11 @@ import { formatTonAddress, copyTonAddress } from '@/core/utils/formatters';
 import { removeTrackedAddresses } from '@/lib/brotherhood/tracked-addresses-storage';
 
 const networkBadgeClass = (network: SavedWallet['network']): string => {
-  if (network === 'mainnet') return 'bg-green-100 text-green-800';
-  if (network === 'tetra') return 'bg-purple-100 text-purple-800';
-  return 'bg-blue-100 text-blue-800';
+  if (network === 'mainnet')
+    return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+  if (network === 'tetra')
+    return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+  return 'bg-primary/10 text-primary border border-primary/20';
 };
 
 const handleCopy = async (wallet: SavedWallet, event: React.MouseEvent) => {
@@ -79,8 +81,8 @@ export const WalletRow: React.FC<WalletRowProps> = ({
   if (isEditing) {
     return (
       <div className="flex items-center gap-3 px-2 py-3">
-        <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-          <Wallet className="w-5 h-5 text-gray-500" strokeWidth={1.8} />
+        <div className="w-11 h-11 rounded-full bg-secondary text-primary flex items-center justify-center flex-shrink-0">
+          <Wallet className="w-5 h-5" strokeWidth={1.8} />
         </div>
         <input
           autoFocus
@@ -90,12 +92,12 @@ export const WalletRow: React.FC<WalletRowProps> = ({
             if (e.key === 'Enter') saveRename();
             if (e.key === 'Escape') setIsEditing(false);
           }}
-          className="flex-1 min-w-0 text-base font-bold text-gray-900 bg-gray-50 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 min-w-0 text-base font-bold text-foreground bg-secondary border border-border rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-primary"
         />
         <button
           type="button"
           onClick={saveRename}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-green-600 hover:bg-green-50 flex-shrink-0"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-500 hover:bg-emerald-500/10 flex-shrink-0 transition-colors"
           aria-label="Save name"
         >
           <Check className="w-5 h-5" />
@@ -103,7 +105,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
         <button
           type="button"
           onClick={() => setIsEditing(false)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 flex-shrink-0"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary flex-shrink-0 transition-colors"
           aria-label="Cancel"
         >
           <X className="w-5 h-5" />
@@ -124,15 +126,23 @@ export const WalletRow: React.FC<WalletRowProps> = ({
         }
       }}
       className={`flex items-center gap-3 px-2 py-3 rounded-2xl cursor-pointer transition-colors ${
-        isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
+        isActive
+          ? 'bg-secondary/90 border border-border/80 shadow-xs'
+          : 'hover:bg-secondary/60 border border-transparent'
       }`}
     >
-      <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-        <Wallet className="w-5 h-5 text-gray-500" strokeWidth={1.8} />
+      <div
+        className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${
+          isActive
+            ? 'bg-primary/15 text-primary'
+            : 'bg-secondary text-muted-foreground'
+        }`}
+      >
+        <Wallet className="w-5 h-5" strokeWidth={1.8} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base font-bold text-gray-900 truncate">
+          <span className="text-base font-bold text-foreground truncate">
             {wallet.name}
           </span>
           <span
@@ -144,7 +154,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
         <button
           type="button"
           onClick={(e) => handleCopy(wallet, e)}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors max-w-full"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors max-w-full"
           aria-label="Copy address"
         >
           <span className="font-mono truncate">
@@ -171,7 +181,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
             <button
               type="button"
               onClick={(e) => e.stopPropagation()}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
               aria-label="More actions"
             >
               <MoreHorizontal className="w-5 h-5" />
@@ -180,19 +190,19 @@ export const WalletRow: React.FC<WalletRowProps> = ({
           <PopoverContent
             align="end"
             side="bottom"
-            className="w-44 p-1"
+            className="w-44 p-1 bg-card border border-border shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {confirmingDelete ? (
               <div className="p-2">
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-muted-foreground mb-2">
                   Delete this wallet? This can’t be undone.
                 </p>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
-                    className="flex-1 text-sm font-medium text-gray-700 rounded-lg py-1.5 hover:bg-gray-100"
+                    className="flex-1 text-sm font-medium text-foreground rounded-lg py-1.5 hover:bg-secondary transition-colors"
                   >
                     Cancel
                   </button>
@@ -205,7 +215,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
                       }
                       onRemove?.(wallet.id);
                     }}
-                    className="flex-1 text-sm font-semibold text-white bg-red-500 rounded-lg py-1.5 hover:bg-red-600"
+                    className="flex-1 text-sm font-semibold text-destructive-foreground bg-destructive rounded-lg py-1.5 hover:bg-destructive/90 transition-colors"
                   >
                     Delete
                   </button>
@@ -217,9 +227,9 @@ export const WalletRow: React.FC<WalletRowProps> = ({
                   <button
                     type="button"
                     onClick={startRename}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-900 rounded-lg hover:bg-gray-100"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground rounded-lg hover:bg-secondary transition-colors"
                   >
-                    <Pencil className="w-4 h-4 text-gray-500" />
+                    <Pencil className="w-4 h-4 text-muted-foreground" />
                     Rename
                   </button>
                 )}
@@ -227,7 +237,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete

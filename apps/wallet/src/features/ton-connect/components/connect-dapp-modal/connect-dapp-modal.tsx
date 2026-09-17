@@ -54,7 +54,7 @@ export const ConnectDappModal: React.FC<ConnectDappModalProps> = ({
       <Modal.Body className="gap-4">
         <label
           htmlFor="tonconnect-url"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-foreground"
         >
           Paste TON Connect link
         </label>
@@ -62,7 +62,7 @@ export const ConnectDappModal: React.FC<ConnectDappModalProps> = ({
           id="tonconnect-url"
           data-testid="tonconnect-url"
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl resize-none text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-border bg-secondary/50 rounded-xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           placeholder="tc://… or ton://… or https://…"
           value={url}
           onChange={(e) => setUrl(e.target.value)}

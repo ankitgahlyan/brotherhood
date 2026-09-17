@@ -91,7 +91,7 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
 
   return (
     <>
-      <div className="pt-4 border-t border-gray-100 space-y-3">
+      <div className="pt-4 border-t border-border flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
             Recent Transacted Members ({recent.length})
@@ -99,7 +99,7 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
           <button
             type="button"
             onClick={handleClearAll}
-            className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+            className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors"
             data-testid="clear-all-recent-transacted"
           >
             Clear All
@@ -107,21 +107,21 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
         </div>
 
         <div
-          className="space-y-2 max-h-70 overflow-y-auto pr-0.5"
+          className="flex flex-col gap-2 max-h-70 overflow-y-auto pr-0.5"
           data-testid="recent-transacted-list"
         >
           {recent.map((item) => (
             <div
               key={item.address}
               onClick={() => onSelectMember(item)}
-              className="group flex flex-col gap-1.5 p-3 bg-white hover:bg-gray-50/80 border border-gray-200/70 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-xs"
+              className="group flex flex-col gap-1.5 p-3 bg-card hover:bg-secondary/60 border border-border/80 hover:border-primary/50 rounded-xl cursor-pointer transition-all shadow-xs"
               role="button"
               tabIndex={0}
               data-testid={`recent-member-${item.address}`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
                     <User className="w-3.5 h-3.5" />
                   </div>
                   <span className="font-semibold text-sm text-foreground">
@@ -133,7 +133,7 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleStartEdit(e, item)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                     title="Edit username"
                     aria-label="Edit username"
                     data-testid={`edit-recent-${item.address}`}
@@ -143,12 +143,12 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleCopy(e, item.address)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                     title="Copy address"
                     aria-label="Copy address"
                   >
                     {copiedAddress === item.address ? (
-                      <Check className="w-3.5 h-3.5 text-green-600" />
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -156,7 +156,7 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleDelete(e, item.address)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     title="Remove from recent"
                     aria-label="Remove from recent"
                     data-testid={`delete-recent-${item.address}`}
