@@ -10,10 +10,9 @@ import {
   init,
   isTMA,
   retrieveLaunchParams,
-  mountMiniApp,
+  mountMiniAppSync,
   mountViewport,
   mountSwipeBehavior,
-  mountThemeParams,
   mountBackButton,
   expandViewport,
   disableVerticalSwipes,
@@ -25,6 +24,7 @@ import {
   showBackButton,
   hideBackButton,
   onBackButtonClick,
+  mountThemeParamsSync,
 } from '@telegram-apps/sdk';
 
 export interface TelegramSafeAreaInset {
@@ -105,6 +105,15 @@ export interface TelegramWebApp {
   exitFullscreen?: () => void;
   disableVerticalSwipes?: () => void;
   enableVerticalSwipes?: () => void;
+  showAlert?: (message: string, callback?: () => void) => void;
+  showPopup?: (
+    params: {
+      title?: string;
+      message: string;
+      buttons?: Array<{ id?: string; type?: string; text?: string }>;
+    },
+    callback?: (buttonId: string) => void,
+  ) => void;
   openTelegramLink?: (url: string) => void;
   onEvent?: (eventType: string, eventHandler: (...args: any[]) => void) => void;
   offEvent?: (
@@ -373,7 +382,7 @@ export function initTelegramSdk(): boolean {
 
   // Mount components safely
   try {
-    if (mountMiniApp.isAvailable()) mountMiniApp();
+    if (mountMiniAppSync.isAvailable()) mountMiniAppSync();
   } catch {
     // ignore
   }
@@ -404,7 +413,7 @@ export function initTelegramSdk(): boolean {
   }
 
   try {
-    if (mountThemeParams.isAvailable()) mountThemeParams();
+    if (mountThemeParamsSync.isAvailable()) mountThemeParamsSync();
   } catch {
     // ignore
   }

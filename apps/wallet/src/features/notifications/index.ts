@@ -8,4 +8,6 @@
 
 export * from './components/streaming-status';
 export * from './components/disconnect-notifications';
+export * from './components/notification-bell/notification-bell';
+export * from './lib/native-notifications';
 export * from './hooks/use-received-toasts';

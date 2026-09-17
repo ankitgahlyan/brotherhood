@@ -7,20 +7,25 @@
  */
 
 import React from 'react';
+import { DashboardHeader } from '@/features/dashboard/components/dashboard-header';
 
 interface NewLayoutProps {
   header?: React.ReactNode;
+  hideUniversalHeader?: boolean;
   children: React.ReactNode;
 }
 
-export const NewLayout: React.FC<NewLayoutProps> = ({ header, children }) => (
+export const NewLayout: React.FC<NewLayoutProps> = ({
+  header,
+  hideUniversalHeader = false,
+  children,
+}) => (
   <div className="min-h-screen bg-background text-foreground select-none pt-[var(--tg-safe-area-top,0px)] pb-[var(--tg-safe-area-bottom,0px)]">
     <div className="max-w-md mx-auto">
-      {header && (
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md">
-          {header}
-        </div>
-      )}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md">
+        {!hideUniversalHeader && <DashboardHeader />}
+        {header}
+      </div>
       <main className="px-4 pb-6">{children}</main>
     </div>
   </div>

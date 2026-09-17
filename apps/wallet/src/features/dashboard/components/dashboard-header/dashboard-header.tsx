@@ -13,6 +13,7 @@ import { useTheme } from '@/core/theme';
 
 import { WalletSelectorModal } from '@/features/wallets';
 import { SettingsDropdown } from '@/features/settings';
+import { NotificationBell } from '@/features/notifications';
 import { ConnectDappModal } from '@/features/ton-connect';
 import { ScanIcon } from '@/core/components/ui/icons';
 import { usePasteHandler } from '@/core/hooks';
@@ -76,6 +77,7 @@ export const DashboardHeader: React.FC = () => {
             <Sun className="w-4.5 h-4.5 text-yellow-400" />
           )}
         </button>
+        <NotificationBell />
         <SettingsDropdown />
       </div>
 

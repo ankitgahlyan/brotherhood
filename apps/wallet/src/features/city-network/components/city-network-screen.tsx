@@ -164,6 +164,7 @@ export const CityNetworkScreen: React.FC = () => {
     profiles,
     formatWalletAddress,
     formatContractAddress,
+    getMemberProfile,
   ]);
 
   return (

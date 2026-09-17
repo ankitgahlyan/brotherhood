@@ -22,19 +22,19 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   onBack,
   rightElement,
 }) => (
-  <header className="flex items-center justify-between gap-3 px-4 py-5">
-    <div className="flex items-center gap-3 min-w-0">
+  <header className="flex items-center justify-between gap-3 px-4 pt-1 pb-3">
+    <div className="flex items-center gap-2.5 min-w-0">
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
+          className="w-8 h-8 rounded-full bg-secondary/80 border border-border/80 flex items-center justify-center text-foreground hover:bg-secondary transition-colors flex-shrink-0 cursor-pointer shadow-2xs"
           aria-label="Back"
         >
           <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
         </button>
       )}
-      <h1 className="text-xl font-bold text-foreground truncate">{title}</h1>
+      <h1 className="text-lg font-bold text-foreground truncate">{title}</h1>
     </div>
     {rightElement && <div className="flex-shrink-0">{rightElement}</div>}
   </header>

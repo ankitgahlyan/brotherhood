@@ -10,8 +10,47 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
-/** Global module-level cache of successfully loaded image URLs to prevent remount flicker. */
-const LOADED_IMAGE_URLS = new Set<string>();
+const IMAGE_CACHE_STORAGE_KEY = 'brotherhood_cached_token_images_v1';
+
+function getStoredLoadedUrls(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(IMAGE_CACHE_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** Global module-level cache of successfully loaded image URLs, pre-seeded from persistent storage. */
+const LOADED_IMAGE_URLS = getStoredLoadedUrls();
+
+function persistLoadedUrl(url: string): void {
+  if (typeof window === 'undefined' || !url) return;
+  try {
+    LOADED_IMAGE_URLS.add(url);
+    const urls = Array.from(LOADED_IMAGE_URLS).slice(-300);
+    localStorage.setItem(IMAGE_CACHE_STORAGE_KEY, JSON.stringify(urls));
+
+    // Also persist response in browser CacheStorage for offline reliability
+    if ('caches' in window) {
+      caches
+        .open('brotherhood-images')
+        .then((cache) => {
+          fetch(url, { mode: 'no-cors' })
+            .then((res) => {
+              if (res.status === 0 || res.ok) {
+                cache.put(url, res);
+              }
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 const toList = (src: string | string[] | undefined): string[] =>
   (Array.isArray(src) ? src : src ? [src] : []).filter((url): url is string =>
@@ -34,7 +73,7 @@ const useImageStatus = (src: string | undefined): ImageStatus => {
     if (!image) return 'idle';
     if (image.src !== src) image.src = src;
     if (image.complete && image.naturalWidth > 0) {
-      LOADED_IMAGE_URLS.add(src);
+      persistLoadedUrl(src);
       return 'loaded';
     }
     return 'loading';
@@ -50,7 +89,7 @@ const useImageStatus = (src: string | undefined): ImageStatus => {
     const image = getImage();
     if (!image || !src) return;
     const onLoad = () => {
-      LOADED_IMAGE_URLS.add(src);
+      persistLoadedUrl(src);
       setStatus('loaded');
     };
     const onError = () => setStatus('error');

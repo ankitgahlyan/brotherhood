@@ -7,7 +7,6 @@
  */
 
 import React from 'react';
-import { DashboardHeader } from '../dashboard-header';
 import { BalanceTotal } from '../balance-total';
 import { DashboardActions } from '../dashboard-actions';
 import { DashboardAssets } from '../dashboard-assets';
@@ -24,7 +23,7 @@ export const WalletDashboard: React.FC = () => {
   useTonWallet();
 
   return (
-    <NewLayout header={<DashboardHeader />}>
+    <NewLayout>
       <div className="flex flex-col gap-4">
         <BalanceTotal />
         <UpgradeBanner />

@@ -19,6 +19,7 @@ import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { formatLargeValue } from '@/core/utils';
 import { isFiJetton } from '@/features/jettons';
 import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
+import { usePersonalMinterDetails } from '@/lib/brotherhood/queries';
 import type { AssetRowData } from '../asset-row';
 import { useBurnToken, DEFAULT_BURN_GAS_TON } from '../../hooks/use-burn-token';
 
@@ -66,13 +67,43 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
 
   const isPersonal = Boolean(isPersonalToken);
 
+  const personalMinterAddress = useMemo(() => {
+    if (!asset?.id || isGram || isFi) return null;
+    try {
+      return Address.parse(asset.id);
+    } catch {
+      return null;
+    }
+  }, [asset?.id, isGram, isFi]);
+
+  const personalDetailsQuery = usePersonalMinterDetails(
+    personalMinterAddress,
+    isOpen && isPersonal,
+  );
+
+  const isUserPersonalIssuer = useMemo(() => {
+    if (!address || !personalDetailsQuery.data?.adminAddress) return false;
+    try {
+      return Address.parse(address).equals(
+        personalDetailsQuery.data.adminAddress,
+      );
+    } catch {
+      return false;
+    }
+  }, [address, personalDetailsQuery.data]);
+
+  // Burn for payback is ONLY applicable to personal tokens issued by other members.
+  // Not for self-issued personal tokens, and not for FI or GRAM (which are simple burns).
+  const canBurnForPayback =
+    isPersonal && !isUserPersonalIssuer && !isFi && !isGram;
+
   const burner = useBurnToken({
     wallet: currentWallet,
     walletKit,
     walletAddress: address,
     asset,
     amount,
-    isPayback,
+    isPayback: canBurnForPayback ? isPayback : false,
     customGasTon,
     network,
   });
@@ -165,8 +196,8 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
           </div>
         </div>
 
-        {/* Payback vs Simple Burn Checkbox (only on Personal Tokens) */}
-        {isPersonal && (
+        {/* Payback vs Simple Burn Checkbox (only on Personal Tokens issued by other members) */}
+        {canBurnForPayback && (
           <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 cursor-pointer select-none transition-colors">
             <input
               type="checkbox"
@@ -175,7 +206,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
               className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary"
               data-testid="burn-payback-checkbox"
             />
-            <div className="space-y-0.5 text-xs">
+            <div className="flex flex-col gap-0.5 text-xs">
               <div className="font-semibold text-foreground flex items-center gap-1.5">
                 <span>Burn for FI Token Payback</span>
                 <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
