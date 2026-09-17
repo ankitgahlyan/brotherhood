@@ -2,10 +2,32 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { createWalletStore } from '@demo/wallet-core';
 import type { NFT } from '@ton/walletkit';
 
+const storageMock: Record<string, string> = {};
+const mockLocalStorage = {
+  getItem: (key: string) => storageMock[key] ?? null,
+  setItem: (key: string, val: string) => {
+    storageMock[key] = val;
+  },
+  removeItem: (key: string) => {
+    delete storageMock[key];
+  },
+  clear: () => {
+    for (const k of Object.keys(storageMock)) delete storageMock[k];
+  },
+};
+
+if (typeof globalThis.localStorage === 'undefined') {
+  (globalThis as any).localStorage = mockLocalStorage;
+}
+if (typeof globalThis.window === 'undefined') {
+  (globalThis as any).window = { localStorage: mockLocalStorage };
+}
+
 describe('Wallet Scoped Assets Tracking', () => {
   let store: ReturnType<typeof createWalletStore>;
 
   beforeEach(() => {
+    mockLocalStorage.clear();
     store = createWalletStore({
       enableDevtools: false,
     });
@@ -227,17 +249,37 @@ describe('Wallet Scoped Assets Tracking', () => {
     const wallet1 = '0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC9q';
     const wallet2 = '0QBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBAC9q';
 
-    // Create 60 dummy events for wallet1
+    // Create 60 dummy events for wallet1 with BigInt values
     const dummyEventsW1 = Array.from({ length: 60 }, (_, i) => ({
       eventId: `ev-w1-${i}`,
       account: { address: wallet1 },
-      actions: [],
+      actions: [
+        {
+          type: 'TonTransfer',
+          TonTransfer: {
+            sender: { address: wallet1 },
+            recipient: { address: wallet2 },
+            amount: 1000000000n * BigInt(i + 1),
+          },
+        },
+      ],
     }));
 
     const dummyEventsW2 = Array.from({ length: 10 }, (_, i) => ({
       eventId: `ev-w2-${i}`,
       account: { address: wallet2 },
-      actions: [],
+      actions: [
+        {
+          type: 'SmartContractExec',
+          SmartContractExec: {
+            executor: { address: wallet2 },
+            contract: { address: wallet1 },
+            tonAttached: 500000000n,
+            operation: '0x1234',
+            payload: '',
+          },
+        },
+      ],
     }));
 
     (store.setState as any)((state: any) => {
@@ -288,9 +330,21 @@ describe('Wallet Scoped Assets Tracking', () => {
       rehydratedState.walletManagement.eventsByAddress[wallet1],
     ).toHaveLength(50);
     expect(
+      (rehydratedState.walletManagement.eventsByAddress[wallet1][0] as any)
+        .actions[0].TonTransfer.amount,
+    ).toBe(1000000000n);
+    expect(
+      (rehydratedState.walletManagement.eventsByAddress[wallet2][0] as any)
+        .actions[0].SmartContractExec.tonAttached,
+    ).toBe(500000000n);
+    expect(
       rehydratedState.walletManagement.eventsByAddress[wallet2],
     ).toHaveLength(10);
     expect(rehydratedState.walletManagement.events).toHaveLength(50);
+    expect(
+      (rehydratedState.walletManagement.events[0] as any).actions[0].TonTransfer
+        .amount,
+    ).toBe(1000000000n);
     expect(rehydratedState.walletManagement.confirmedTraceIds).toEqual([
       'trace-1',
       'trace-2',

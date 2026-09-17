@@ -168,9 +168,28 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
           })) as unknown as any,
           {
             name: 'demo-wallet-store',
-            storage: storage
-              ? createJSONStorage(() => storage)
-              : createJSONStorage(() => localStorage),
+            storage: createJSONStorage(
+              () => (storage ? storage : localStorage),
+              {
+                replacer: (_key, value) =>
+                  typeof value === 'bigint'
+                    ? `@bigint:${value.toString()}`
+                    : value,
+                reviver: (_key, value) => {
+                  if (
+                    typeof value === 'string' &&
+                    value.startsWith('@bigint:')
+                  ) {
+                    try {
+                      return BigInt(value.slice(8));
+                    } catch {
+                      return value;
+                    }
+                  }
+                  return value;
+                },
+              },
+            ),
             version: STORE_VERSION,
             migrate: (persistedState, fromVersion) =>
               migrate(persistedState, fromVersion, log),

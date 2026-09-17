@@ -272,7 +272,7 @@ const describeAction = (
           ? `Contract Call (${op})`
           : 'SmartContractExec';
     const val =
-      action.SmartContractExec.tonAttached > 0n
+      BigInt(action.SmartContractExec.tonAttached || 0) > 0n
         ? `${formatAmount(action.SmartContractExec.tonAttached, GRAM_DECIMALS)} GRAM`
         : '';
     return {
