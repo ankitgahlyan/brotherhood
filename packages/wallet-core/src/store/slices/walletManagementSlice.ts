@@ -959,7 +959,8 @@ export const createWalletManagementSlice =
       }
 
       if (!state.walletCore.walletKit) {
-        throw new Error('WalletKit not initialized');
+        log.warn('WalletKit not initialized to load events');
+        return;
       }
 
       const allSavedWallets = state.walletManagement.savedWallets;

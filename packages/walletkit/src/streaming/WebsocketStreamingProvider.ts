@@ -227,7 +227,7 @@ export abstract class WebsocketStreamingProvider implements StreamingProvider {
     try {
       this.ws = new WebSocket(url);
     } catch (error) {
-      log.error('WebSocket creation failed', { error });
+      log.warn('WebSocket creation failed', { error });
       this.scheduleReconnect();
       return;
     }
@@ -244,7 +244,7 @@ export abstract class WebsocketStreamingProvider implements StreamingProvider {
     this.ws.onmessage = this.onMessage.bind(this);
 
     this.ws.onerror = (error) => {
-      log.error('WebSocket error', { readyState: this.ws?.readyState, error });
+      log.warn('WebSocket error', { readyState: this.ws?.readyState, error });
     };
 
     this.ws.onclose = () => {

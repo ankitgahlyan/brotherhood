@@ -55,6 +55,10 @@ export function useTrackedAddressesSync() {
     }),
   );
 
+  const isWalletKitInitialized = useWalletStore(
+    (state) => state.walletCore.isWalletKitInitialized,
+  );
+
   const hasHydratedSessionRef = useRef(false);
 
   const hydrateAllSavedWallets = useCallback(async () => {
@@ -62,7 +66,9 @@ export function useTrackedAddressesSync() {
 
     // load userJettons for all saved wallets
     loadUserJettons();
-    void loadEvents(50, 0);
+    if (isWalletKitInitialized) {
+      void loadEvents(50, 0).catch(() => {});
+    }
 
     try {
       // Gather and format-insensitively deduplicate addresses across ALL saved wallets
@@ -200,7 +206,7 @@ export function useTrackedAddressesSync() {
         err,
       );
     }
-  }, [savedWallets]);
+  }, [savedWallets, isWalletKitInitialized, loadEvents, loadUserJettons]);
 
   // Session bootstrap: hydrate all saved wallets once
   useEffect(() => {
@@ -213,6 +219,13 @@ export function useTrackedAddressesSync() {
       void hydrateAllSavedWallets();
     }
   }, [savedWallets, hydrateAllSavedWallets]);
+
+  // When WalletKit becomes ready, load events for active wallet
+  useEffect(() => {
+    if (isWalletKitInitialized && address) {
+      void loadEvents(50, 0).catch(() => {});
+    }
+  }, [isWalletKitInitialized, address, loadEvents]);
 
   // Active wallet selection tracking (zero network refetch on switch)
   useEffect(() => {
