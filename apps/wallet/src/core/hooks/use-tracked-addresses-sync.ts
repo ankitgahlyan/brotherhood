@@ -46,10 +46,9 @@ import { Address } from '@ton/core';
 export function useTrackedAddressesSync() {
   const { address, activeWalletId, savedWallets } = useWallet();
   const { loadUserJettons } = useJettons();
-  const { events, loadEvents } = useWalletStore(
+  const { loadEvents } = useWalletStore(
     useShallow((state) => {
       return {
-        events: state.walletManagement.events,
         loadEvents: state.loadEvents,
       };
     }),

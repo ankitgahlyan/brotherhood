@@ -120,7 +120,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
                 <span className="font-medium text-foreground">
                   @{item.username}
                 </span>
-                <span className="text-muted-foreground text-[11px] truncate max-w-[180px]">
+                <span className="text-muted-foreground text-[11px] truncate max-w-45">
                   {formatWalletAddress(item.address, false)}
                 </span>
               </button>
@@ -139,7 +139,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-emerald-400/90 truncate max-w-[180px]">
+            <span className="text-[11px] font-mono text-emerald-400/90 truncate max-w-45">
               {formatWalletAddress(resolvedAddress, false)}
             </span>
             {isDirectAddress && (

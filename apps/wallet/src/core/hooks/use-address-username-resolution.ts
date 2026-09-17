@@ -12,6 +12,7 @@ import { isValidAddress } from '@ton/walletkit';
 import { useFormatAddress } from '@/core/utils/formatters';
 import {
   getFiWalletState,
+  getFiWalletStateByContractAddress,
   getFiWalletAddress,
   type Network,
 } from '@/lib/brotherhood/ton';
@@ -68,6 +69,18 @@ export interface UseAddressUsernameResolutionResult {
   net: Network;
 }
 
+function extractUsernameFromState(state: any): string | null {
+  if (!state) return null;
+  const username =
+    state.profile?.ref?.username ??
+    state.profile?.username ??
+    state.profile?.ref?.profile?.username;
+  if (typeof username === 'string' && username.trim().length > 0) {
+    return username.trim().replace(/^@+/, '');
+  }
+  return null;
+}
+
 export function useAddressUsernameResolution({
   value,
   onChange,
@@ -96,14 +109,23 @@ export function useAddressUsernameResolution({
 
       try {
         const parsed = Address.parse(trimmed);
+        // Try offchain FiWallet address cache
         const offchainFiWallet = getFiWalletAddress(parsed, net);
         const cacheKey = getNormalizedContractCacheKey(net, offchainFiWallet);
         const cachedEntry = getContractCacheSync<any>(cacheKey);
-        const uname = cachedEntry?.data?.profile?.username;
-        if (uname && typeof uname === 'string' && uname.trim().length > 0) {
-          const clean = uname.trim().replace(/^@+/, '');
-          saveUsernameAddressMapping(clean, trimmed, net);
-          return clean;
+        const uname = extractUsernameFromState(cachedEntry?.data);
+        if (uname) {
+          saveUsernameAddressMapping(uname, trimmed, net);
+          return uname;
+        }
+
+        // Also check if trimmed is already a direct FiWallet address
+        const directKey = getNormalizedContractCacheKey(net, parsed);
+        const directEntry = getContractCacheSync<any>(directKey);
+        const directUname = extractUsernameFromState(directEntry?.data);
+        if (directUname) {
+          saveUsernameAddressMapping(directUname, trimmed, net);
+          return directUname;
         }
       } catch {
         // Offchain calculation failed or not in L1 cache
@@ -184,19 +206,40 @@ export function useAddressUsernameResolution({
         return;
       }
 
+      setIsResolving(true);
+
       // Query on-chain FiWallet with debounce
       const timer = setTimeout(async () => {
         try {
-          setIsResolving(true);
           const parsed = parsedAddress || Address.parse(trimmed);
-          const fiState = await getFiWalletState(parsed, { net });
+
+          // 1. Try resolving directly as contract address
+          let uname: string | null = null;
+          try {
+            const directState = await getFiWalletStateByContractAddress(
+              parsed,
+              net,
+            );
+            uname = extractUsernameFromState(directState);
+          } catch {
+            // Not a direct FiWallet or failed
+          }
+
+          // 2. If not found, try as owner address
+          if (!uname) {
+            try {
+              const ownerFiState = await getFiWalletState(parsed, { net });
+              uname = extractUsernameFromState(ownerFiState);
+            } catch {
+              // Not an owner or failed
+            }
+          }
+
           if (isCancelled) return;
 
-          const uname = (fiState as any)?.profile?.username;
-          if (uname && typeof uname === 'string' && uname.trim().length > 0) {
-            const clean = uname.trim().replace(/^@+/, '');
-            saveUsernameAddressMapping(clean, trimmed, net);
-            setOnChainUsername(clean);
+          if (uname) {
+            saveUsernameAddressMapping(uname, trimmed, net);
+            setOnChainUsername(uname);
           } else {
             negativeUsernameCache.add(canonicalKey);
             setOnChainUsername(null);
@@ -216,6 +259,7 @@ export function useAddressUsernameResolution({
       return () => {
         isCancelled = true;
         clearTimeout(timer);
+        setIsResolving(false);
       };
     }
 
@@ -260,15 +304,33 @@ export function useAddressUsernameResolution({
 
     setIsResolving(true);
     try {
-      const fiState = await getFiWalletState(parsedAddress, {
-        net,
-        forceFresh: true,
-      });
-      const uname = (fiState as any)?.profile?.username;
-      if (uname && typeof uname === 'string' && uname.trim().length > 0) {
-        const clean = uname.trim().replace(/^@+/, '');
-        setOnChainUsername(clean);
-        saveUsernameAddressMapping(clean, targetAddress, net);
+      let uname: string | null = null;
+      try {
+        const directState = await getFiWalletStateByContractAddress(
+          parsedAddress,
+          net,
+          { forceFresh: true },
+        );
+        uname = extractUsernameFromState(directState);
+      } catch {
+        // Not a direct contract address
+      }
+
+      if (!uname) {
+        try {
+          const fiState = await getFiWalletState(parsedAddress, {
+            net,
+            forceFresh: true,
+          });
+          uname = extractUsernameFromState(fiState);
+        } catch {
+          // Failed owner lookup
+        }
+      }
+
+      if (uname) {
+        setOnChainUsername(uname);
+        saveUsernameAddressMapping(uname, targetAddress, net);
       } else {
         negativeUsernameCache.add(canonicalKey);
         setOnChainUsername(null);

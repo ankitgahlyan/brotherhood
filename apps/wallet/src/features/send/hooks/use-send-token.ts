@@ -112,48 +112,35 @@ export const useSendToken = ({
     }
 
     const senderAddress = wallet.getAddress();
-    const recipientAddress = recipient;
     const net =
       String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
 
-    setTimeout(async () => {
-      try {
-        const targets: string[] = [];
-        if (recipientAddress) {
-          targets.push(recipientAddress);
-          try {
-            const recipientFiWallet = getFiWalletAddress(
-              Address.parse(recipientAddress),
-              net,
-            );
-            targets.push(recipientFiWallet.toString());
-          } catch {
-            /* pass */
-          }
-        }
-        if (senderAddress) {
-          targets.push(senderAddress.toString());
+    if (senderAddress) {
+      setTimeout(async () => {
+        try {
+          await invalidateContractState(
+            senderAddress.toString(),
+            net,
+            queryClient,
+          );
           try {
             const userFiWallet = getFiWalletAddress(
-              Address.parse(senderAddress),
+              Address.parse(senderAddress.toString()),
               net,
             );
-            targets.push(userFiWallet.toString());
+            await invalidateContractState(
+              userFiWallet.toString(),
+              net,
+              queryClient,
+            );
           } catch {
             /* pass */
           }
+        } catch (refreshErr) {
+          console.debug('Sender refresh after send skipped:', refreshErr);
         }
-
-        await Promise.all(
-          targets.map((addr) =>
-            invalidateContractState(addr, net, queryClient),
-          ),
-        );
-        toast.info('On-chain state updated');
-      } catch (refreshErr) {
-        console.error('Targeted refresh after send failed:', refreshErr);
-      }
-    }, 4000);
+      }, 3000);
+    }
 
     return undefined;
   }, [

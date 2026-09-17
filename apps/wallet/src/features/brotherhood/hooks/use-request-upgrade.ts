@@ -13,6 +13,7 @@ import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
 import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
+import { Address } from '@ton/core';
 
 export interface UseRequestUpgradeParams {
   wallet: Wallet | null | undefined;
@@ -24,7 +25,7 @@ export interface UseRequestUpgradeParams {
 }
 
 export interface UseRequestUpgradeResult {
-  send: () => Promise<void>;
+  send: (targetAddress?: string | Address) => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
   error: string | null;
@@ -68,23 +69,34 @@ export function useRequestUpgrade({
     return null;
   }, [wallet, walletAddress, accountData, walletVersion, targetMinterVersion]);
 
-  const send = useCallback(async () => {
-    if (!walletAddress) throw new Error('No wallet address');
+  const send = useCallback(
+    async (targetAddress?: string | Address) => {
+      if (!walletAddress) throw new Error('No wallet address');
 
-    const payload = buildRequestUpgradeBody();
+      let parsedTarget: Address | undefined;
+      if (targetAddress) {
+        parsedTarget =
+          typeof targetAddress === 'string'
+            ? Address.parse(targetAddress)
+            : targetAddress;
+      }
 
-    await sendTx([
-      {
-        toAddress: FI_ADDRESS,
-        amount: GAS.REQUEST_UPGRADE,
-        payload,
-      },
-    ]);
+      const payload = buildRequestUpgradeBody(parsedTarget);
 
-    // Invalidate cached state so new version reflects on next refetch
-    queryClient.invalidateQueries({ queryKey: ['fi-wallet-state'] });
-    queryClient.invalidateQueries({ queryKey: ['fi-minter-state'] });
-  }, [walletAddress, sendTx, queryClient]);
+      await sendTx([
+        {
+          toAddress: FI_ADDRESS,
+          amount: GAS.REQUEST_UPGRADE,
+          payload,
+        },
+      ]);
+
+      // Invalidate cached state so new version reflects on next refetch
+      queryClient.invalidateQueries({ queryKey: ['fi-wallet-state'] });
+      queryClient.invalidateQueries({ queryKey: ['fi-minter-state'] });
+    },
+    [walletAddress, sendTx, queryClient],
+  );
 
   const isDisabled = Boolean(validationError) || isSending;
 

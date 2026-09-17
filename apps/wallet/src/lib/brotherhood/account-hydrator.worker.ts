@@ -21,7 +21,7 @@ import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
   fiWallet: 'd2E9uYL4vQDMtBlD8w/Yij+0oUIE18v1I8jR7uI+/ZI=',
-  fiMinter: 'HIAis4i6tJuEdZ16fNKuxoS+CiBvf33Pc+4kDOt/2kU=',
+  fiMinter: '5zeBnlGAFR5Rg5I/+ZHRxOVGFx8HinkTbBFAaUEmYNc=',
   personalMinter: 'Tvog65zMpvpaesj09SsYeyJLFVlYCG802aUZ+AqpIZs=',
   personalWallet: 'j6cSSA6AECyBf/Qb2UvajkByeAvdrNk9O9cRhkKEW4A=',
   location: 'xB9hKP2yNL+B4skAr4q26SlNqHXwsva1XFn8Ib3MjkU=',
