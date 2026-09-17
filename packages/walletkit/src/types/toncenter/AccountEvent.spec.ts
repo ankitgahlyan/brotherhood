@@ -37,6 +37,13 @@ describe('AccountEvent', () => {
     expect(actual.actions).toMatchSnapshot();
   });
 
+  it('ft received should not attribute actions to non-owner acc2', async () => {
+    const traces = loadData<ToncenterTracesResponse>('ft-received-traces');
+    const addressBook = toAddressBook(traces);
+    const actual = toEvent(traces.traces[0], acc2, addressBook);
+    expect(actual.actions).toEqual([]);
+  });
+
   it('ft sent', async () => {
     const traces = loadData<ToncenterTracesResponse>('ft-sent-traces');
     const addressBook = toAddressBook(traces);

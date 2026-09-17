@@ -176,4 +176,122 @@ describe('ApiClientToncenter', () => {
       });
     });
   });
+
+  describe('getEvents multi-account isolation', () => {
+    const ADDR_A = 'EQAvDfWFG0oYX19jwNDNBBL1rKNT9XfaGP9HyTb5nb2Eml6y';
+    const ADDR_B = 'EQBIhPuWmjT7fP-VomuTWseE8JNWv2q7QYfsVQ1IZwnMk8wL';
+    const ADDR_UNRELATED = 'EQC3dNlesgVD8YbAazcauIrJwVOtGZxujBmBE3oKyrXqcusr';
+
+    it('attributes trace only to participating account and does not leak to accounts[0]', async () => {
+      const client = new ApiClientToncenter();
+      vi.spyOn(client as ClientWithGetJson, 'getJson').mockResolvedValue({
+        traces: [
+          {
+            trace_id: 'dGVzdFRyYWNlMQ==',
+            start_utime: 1700000000,
+            start_lt: '1000',
+            is_incomplete: false,
+            transactions_order: ['tx1'],
+            transactions: {
+              tx1: {
+                account: ADDR_B,
+                hash: 'dHgx',
+                lt: '1000',
+                now: 1700000000,
+                orig_status: 'active',
+                end_status: 'active',
+                total_fees: '1000',
+                description: {
+                  type: 'ord',
+                  aborted: false,
+                  compute_ph: { success: true },
+                  action: { success: true },
+                },
+                in_msg: {
+                  source: ADDR_UNRELATED,
+                  destination: ADDR_B,
+                  value: '1000000000',
+                },
+                out_msgs: [],
+              },
+            },
+          },
+        ],
+        address_book: {},
+        metadata: {},
+      });
+
+      const res = await client.getEvents({ account: [ADDR_A, ADDR_B] });
+
+      // Only ADDR_B participated; ADDR_A (accounts[0]) should NOT have an event!
+      expect(res.events).toHaveLength(1);
+      expect(res.events[0].account.address).toBe(ADDR_B);
+    });
+
+    it('does not produce fallback events for accounts[0] when trace matches neither account', async () => {
+      const client = new ApiClientToncenter();
+      vi.spyOn(client as ClientWithGetJson, 'getJson').mockResolvedValue({
+        traces: [
+          {
+            trace_id: 'dGVzdFRyYWNlMg==',
+            start_utime: 1700000000,
+            start_lt: '2000',
+            is_incomplete: false,
+            transactions_order: ['tx2'],
+            transactions: {
+              tx2: {
+                account: ADDR_UNRELATED,
+                hash: 'dHgy',
+                lt: '2000',
+                now: 1700000000,
+                orig_status: 'active',
+                end_status: 'active',
+                total_fees: '1000',
+                description: {
+                  type: 'ord',
+                  aborted: false,
+                  compute_ph: { success: true },
+                  action: { success: true },
+                },
+                in_msg: {
+                  source:
+                    '0:0000000000000000000000000000000000000000000000000000000000000001',
+                  destination: ADDR_UNRELATED,
+                  value: '500000000',
+                },
+                out_msgs: [],
+              },
+            },
+          },
+        ],
+        address_book: {},
+        metadata: {},
+      });
+
+      const res = await client.getEvents({ account: [ADDR_A, ADDR_B] });
+
+      // Neither account participated; no events should be emitted (no accounts[0] fallback)
+      expect(res.events).toHaveLength(0);
+    });
+
+    it('correctly attributes jetton trace to the owner of the jetton wallet, not accounts[0]', async () => {
+      const client = new ApiClientToncenter();
+      const { loadData } = await import('../../../data');
+      const ftTraces = loadData<any>('ft-received-traces');
+      vi.spyOn(client as ClientWithGetJson, 'getJson').mockResolvedValue(
+        ftTraces,
+      );
+
+      const acc1 = 'UQCdqXGvONLwOr3zCNX5FjapflorB6ZsOdcdfLrjsDLt3AF4';
+      // ADDR_A is accounts[0], but acc1 is the actual recipient of the jetton
+      const res = await client.getEvents({ account: [ADDR_A, acc1] });
+
+      expect(res.events).toHaveLength(1);
+      // Must NOT be attributed to ADDR_A!
+      expect(res.events[0].account.address).not.toBe(ADDR_A);
+      // Must be attributed to acc1
+      const { compareAddress } = await import('../../utils/address');
+      expect(compareAddress(res.events[0].account.address, acc1)).toBe(true);
+    });
+  });
 });

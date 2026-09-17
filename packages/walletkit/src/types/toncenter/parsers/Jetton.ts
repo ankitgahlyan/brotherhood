@@ -19,6 +19,7 @@ import type { ToncenterTraceItem, ToncenterTransaction } from '../emulation';
 import {
   asAddressFriendly,
   asMaybeAddressFriendly,
+  compareAddress,
 } from '../../../utils/address';
 import { Base64ToHex } from '../../../utils/base64';
 import { getDecoded, extractOpFromBody, matchOpWithMap } from './body';
@@ -103,14 +104,26 @@ export function parseJettonActions(
   if (!added)
     for (const key of Object.keys(txs)) {
       const tx = txs[key];
-      if (asAddressFriendly(tx.account) === ownerFriendly) continue; // skip main wallet tx here
+      if (compareAddress(tx.account, ownerFriendly)) continue; // skip main wallet tx here
       const inMsg = tx.in_msg;
       const decoded = getDecoded(inMsg);
       if (!decoded) continue;
       if (decoded['@type'] === 'jetton_internal_transfer') {
+        const recipientWallet = asAddressFriendly(tx.account);
+        const walletOwner = addressBook[recipientWallet]?.jettonWallet?.owner;
+        const isOwner = walletOwner
+          ? compareAddress(walletOwner, ownerFriendly)
+          : (tx.out_msgs || []).some(
+              (m) =>
+                m?.destination && compareAddress(m.destination, ownerFriendly),
+            ) ||
+            Object.values(txs).some((t) =>
+              compareAddress(t.account, ownerFriendly),
+            );
+        if (!isOwner) continue;
+
         const amount = toBigInt(readAmountValue(getProp(decoded, 'amount')));
         const senderMain = toAddr(getProp(decoded, 'from'));
-        const recipientWallet = asAddressFriendly(tx.account);
         const senderWallet = asAddressFriendly(inMsg!.source!);
 
         const status = computeStatus(tx);

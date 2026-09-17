@@ -14,7 +14,11 @@ import type {
   EmulationTokenInfoWallets,
 } from './emulation';
 import type { ToncenterEmulationResponse } from '../../clients/toncenter/types/raw-emulation';
-import { asAddressFriendly, asMaybeAddressFriendly } from '../../utils/address';
+import {
+  asAddressFriendly,
+  asMaybeAddressFriendly,
+  compareAddress,
+} from '../../utils/address';
 import { Base64NormalizeUrl, Base64ToHex } from '../../utils/base64';
 import {
   computeStatus,
@@ -298,7 +302,7 @@ export function toEvent(
   // Parse GRAM transfers from owner's transactions
   for (const txHash of Object.keys(transactions)) {
     const tx = transactions[txHash];
-    if (asAddressFriendly(tx.account) !== accountFriendly) {
+    if (!compareAddress(tx.account, accountFriendly)) {
       continue;
     }
     const status = computeStatus(tx);

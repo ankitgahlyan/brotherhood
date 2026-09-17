@@ -143,7 +143,11 @@ export interface WalletManagementSlice {
 
   // Events-based history
   // addEvent: (event: unknown) => void;
-  loadEvents: (limit?: number, offset?: number) => Promise<void>;
+  loadEvents: (
+    limit?: number,
+    offset?: number,
+    force?: boolean,
+  ) => Promise<void>;
 
   // Getters
   getDecryptedMnemonic: (walletId?: string) => Promise<string[] | null>;

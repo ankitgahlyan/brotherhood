@@ -32,7 +32,7 @@ export const HistoryScreen: FC = () => {
     const nextLimit = limit + PAGE_SIZE;
     setLimit(nextLimit);
     if (address) {
-      await loadEvents(nextLimit, 0);
+      await loadEvents(nextLimit, 0, true);
     }
   };
 

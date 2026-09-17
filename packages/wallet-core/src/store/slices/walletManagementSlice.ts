@@ -38,6 +38,8 @@ let activeStreamingUnwatchers: Array<() => void> = [];
 
 let inFlightLoadEvents: Promise<void> | null = null;
 let lastLoadEventsKey = '';
+let lastLoadEventsTime = 0;
+const EVENTS_CACHE_TTL_MS = 30_000;
 
 export const createWalletManagementSlice =
   (walletKitConfig?: WalletKitConfig): WalletManagementSliceCreator =>
@@ -946,11 +948,11 @@ export const createWalletManagementSlice =
 
       // On confirmed/finalized, refresh events and balance from REST
       if (update.status === 'confirmed' || update.status === 'finalized') {
-        void get().loadEvents();
+        void get().loadEvents(50, 0, true);
       }
     },
 
-    loadEvents: async (limit = 10, offset = 0) => {
+    loadEvents: async (limit = 10, offset = 0, force = false) => {
       const state = get();
       const address = state.walletManagement.address;
       if (!address) {
@@ -976,6 +978,21 @@ export const createWalletManagementSlice =
       const key = `${allAddresses.sort().join(',')}:${limit}:${offset}`;
       if (inFlightLoadEvents && lastLoadEventsKey === key) {
         return inFlightLoadEvents;
+      }
+
+      // Cache check: If events were recently loaded for these addresses, reuse cache unless forced
+      const now = Date.now();
+      if (
+        !force &&
+        key === lastLoadEventsKey &&
+        now - lastLoadEventsTime < EVENTS_CACHE_TTL_MS
+      ) {
+        set((state) => {
+          state.walletManagement.events = (
+            state.walletManagement.eventsByAddress[address] || []
+          ).slice(0, limit);
+        });
+        return;
       }
 
       const run = async () => {
@@ -1055,25 +1072,30 @@ export const createWalletManagementSlice =
               }
             }
 
-            // Cap each address at 50 most recent events to prevent unbounded growth in state and storage
+            // Sort events descending (newest first) and cap each address at 50 to prevent unbounded growth
             for (const addr of allAddresses) {
-              if (
-                newEventsByAddress[addr] &&
-                newEventsByAddress[addr].length > 50
-              ) {
-                newEventsByAddress[addr] = newEventsByAddress[addr].slice(
-                  0,
-                  50,
-                );
+              if (newEventsByAddress[addr]) {
+                newEventsByAddress[addr].sort((a: any, b: any) => {
+                  const ltA = Number(a?.lt ?? 0);
+                  const ltB = Number(b?.lt ?? 0);
+                  if (ltA && ltB && ltA !== ltB) return ltB - ltA;
+                  const timeA = Number(a?.timestamp ?? 0);
+                  const timeB = Number(b?.timestamp ?? 0);
+                  return timeB - timeA;
+                });
+                if (newEventsByAddress[addr].length > 50) {
+                  newEventsByAddress[addr] = newEventsByAddress[addr].slice(
+                    0,
+                    50,
+                  );
+                }
               }
             }
 
             state.walletManagement.eventsByAddress = newEventsByAddress;
-            state.walletManagement.events =
-              newEventsByAddress[address] &&
-              newEventsByAddress[address].length > 0
-                ? newEventsByAddress[address].slice(0, limit)
-                : response.events.slice(0, limit);
+            state.walletManagement.events = (
+              newEventsByAddress[address] || []
+            ).slice(0, limit);
             state.walletManagement.hasNextEvents = response.hasNext;
 
             const eventTraceIds = new Set<string>();
@@ -1102,6 +1124,7 @@ export const createWalletManagementSlice =
               );
           });
 
+          lastLoadEventsTime = Date.now();
           log.info(
             `Loaded ${response.events.length} events across all wallets`,
           );

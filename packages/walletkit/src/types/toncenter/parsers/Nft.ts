@@ -14,7 +14,7 @@ import type {
 } from '../AccountEvent';
 import { toAccount } from '../AccountEvent';
 import type { ToncenterTraceItem, ToncenterTransaction } from '../emulation';
-import { asAddressFriendly } from '../../../utils/address';
+import { asAddressFriendly, compareAddress } from '../../../utils/address';
 import { Base64ToHex } from '../../../utils/base64';
 import { computeStatus } from './TonTransfer';
 import { getDecoded, extractOpFromBody, matchOpWithMap } from './body';
@@ -34,7 +34,7 @@ export function parseNftActions(
   // Sent: find out_msg with decoded '@type' === 'nft_transfer' originating from owner's main wallet
   for (const key of Object.keys(txs)) {
     const tx = txs[key];
-    if (asAddressFriendly(tx.account) !== ownerFriendly) continue;
+    if (!compareAddress(tx.account, ownerFriendly)) continue;
     for (const out of tx.out_msgs || []) {
       const decoded = getDecoded(out);
       if (decoded?.['@type'] === 'nft_transfer') {
@@ -65,12 +65,11 @@ export function parseNftActions(
   // Received: find in_msg with decoded '@type' indicates ownership assignment to ownerFriendly
   for (const key of Object.keys(txs)) {
     const tx = txs[key];
-    const acc = asAddressFriendly(tx.account);
     const decoded = getDecoded(tx.in_msg);
     if (!decoded) continue;
     const t = decoded['@type'];
     if (
-      acc === ownerFriendly &&
+      compareAddress(tx.account, ownerFriendly) &&
       (t === 'nft_ownership_assigned' || t === 'nft_owner_changed')
     ) {
       const prevOwner =

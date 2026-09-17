@@ -43,7 +43,12 @@ import { CallForSuccess } from '../../utils/retry';
 import { globalLogger } from '../../core/Logger';
 import type { DNSRecordsResponseV3 } from './types/v3/DNSRecordsResponseV3';
 import { toDnsRecords } from './types/v3/DNSRecordsResponseV3';
-import { toAddressBook, toEvent } from '../../types/toncenter/AccountEvent';
+import {
+  toAddressBook,
+  toEvent,
+  type AddressBook,
+} from '../../types/toncenter/AccountEvent';
+import type { ToncenterTraceItem } from '../../types/toncenter/emulation';
 import { Network } from '../../api/models';
 import type {
   AccountState,
@@ -607,6 +612,47 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     };
   }
 
+  private isAccountInTrace(
+    acc: string,
+    trace: ToncenterTraceItem,
+    addressBook: AddressBook,
+  ): boolean {
+    const txs = Object.values(trace.transactions || {});
+    for (const tx of txs) {
+      if (compareAddress(tx.account, acc)) return true;
+      if (tx.in_msg) {
+        if (
+          compareAddress(tx.in_msg.source, acc) ||
+          compareAddress(tx.in_msg.destination, acc)
+        ) {
+          return true;
+        }
+      }
+      if (tx.out_msgs) {
+        for (const msg of tx.out_msgs) {
+          if (
+            compareAddress(msg?.source, acc) ||
+            compareAddress(msg?.destination, acc)
+          ) {
+            return true;
+          }
+        }
+      }
+      const friendlyAccount = asMaybeAddressFriendly(tx.account);
+      if (
+        friendlyAccount &&
+        addressBook[friendlyAccount]?.jettonWallet?.owner
+      ) {
+        if (
+          compareAddress(addressBook[friendlyAccount].jettonWallet!.owner, acc)
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   async getEvents(request: GetEventsRequest): Promise<GetEventsResponse> {
     const rawAccounts = Array.isArray(request.account)
       ? request.account
@@ -637,21 +683,25 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
         out.events.push(toEvent(trace, accounts[0], addressBook));
       } else {
         // For multiple accounts, identify which of the requested accounts are part of this trace
-        const txs = Object.values(trace.transactions || {});
-        const participating = accounts.filter((acc) => {
-          const accFriendly = asAddressFriendly(acc);
-          return txs.some(
-            (tx) => asAddressFriendly(tx.account) === accFriendly,
-          );
-        });
+        const participating = accounts.filter((acc) =>
+          this.isAccountInTrace(acc, trace, addressBook),
+        );
 
         if (participating.length > 0) {
           for (const acc of participating) {
-            out.events.push(toEvent(trace, acc, addressBook));
+            const ev = toEvent(trace, acc, addressBook);
+            if (ev.actions.length > 0) {
+              out.events.push(ev);
+            }
           }
         } else {
-          // Fallback: parse relative to the first account
-          out.events.push(toEvent(trace, accounts[0], addressBook));
+          // If none matched explicitly by address/owner, check if toEvent resolves any actions for an account
+          for (const acc of accounts) {
+            const ev = toEvent(trace, acc, addressBook);
+            if (ev.actions.length > 0) {
+              out.events.push(ev);
+            }
+          }
         }
       }
     }

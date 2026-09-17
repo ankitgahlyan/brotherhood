@@ -15,7 +15,7 @@ import type {
 } from '../AccountEvent';
 import { toAccount } from '../AccountEvent';
 import type { EmulationMessage, ToncenterTransaction } from '../emulation';
-import { asAddressFriendly } from '../../../utils/address';
+import { asAddressFriendly, compareAddress } from '../../../utils/address';
 import { Base64ToHex } from '../../../utils/base64';
 import { computeStatus } from './TonTransfer';
 import type { Hex } from '../../../api/models';
@@ -31,7 +31,7 @@ export function parseContractActions(
   const actions: SmartContractAction[] = [];
   for (const hash of Object.keys(transactions)) {
     const tx = transactions[hash];
-    if (asAddressFriendly(tx.account) !== ownerFriendly) continue;
+    if (!compareAddress(tx.account, ownerFriendly)) continue;
     const status = computeStatus(tx);
 
     for (const msg of tx.out_msgs || []) {

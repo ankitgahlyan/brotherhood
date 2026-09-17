@@ -60,152 +60,158 @@ export function useTrackedAddressesSync() {
 
   const hasHydratedSessionRef = useRef(false);
 
-  const hydrateAllSavedWallets = useCallback(async () => {
-    if (!isOnline() || !savedWallets || savedWallets.length === 0) return;
+  const hydrateAllSavedWallets = useCallback(
+    async (force = false) => {
+      if (!isOnline() || !savedWallets || savedWallets.length === 0) return;
 
-    // load userJettons for all saved wallets
-    loadUserJettons();
-    if (isWalletKitInitialized) {
-      void loadEvents(50, 0).catch(() => {});
-    }
+      // load userJettons for all saved wallets
+      loadUserJettons();
+      if (isWalletKitInitialized) {
+        void loadEvents(50, 0, force).catch(() => {});
+      }
 
-    try {
-      // Gather and format-insensitively deduplicate addresses across ALL saved wallets
-      const allTrackedAddresses = getAllSavedWalletsTrackedAddresses(
-        savedWallets,
-        defaultNetwork,
-      );
-
-      if (allTrackedAddresses.length > 0) {
-        const res = await batchHydrateUniversal(
-          allTrackedAddresses,
+      try {
+        // Gather and format-insensitively deduplicate addresses across ALL saved wallets
+        const allTrackedAddresses = getAllSavedWalletsTrackedAddresses(
+          savedWallets,
           defaultNetwork,
         );
 
-        if (res?.decodedStores) {
-          const freshAddressesSet = new Set<string>();
+        if (allTrackedAddresses.length > 0) {
+          const res = await batchHydrateUniversal(
+            allTrackedAddresses,
+            defaultNetwork,
+          );
 
-          for (const wallet of savedWallets) {
-            if (!wallet.address) continue;
-            const walletAddrStr = normalizeAddressString(wallet.address);
-            if (!walletAddrStr) continue;
+          if (res?.decodedStores) {
+            const freshAddressesSet = new Set<string>();
 
-            const currentData = loadTrackedAddresses(walletAddrStr);
-            if (!currentData) continue;
+            for (const wallet of savedWallets) {
+              if (!wallet.address) continue;
+              const walletAddrStr = normalizeAddressString(wallet.address);
+              if (!walletAddrStr) continue;
 
-            const existingBefore = new Set(
-              getAllTrackedAddressesList(currentData)
-                .map(normalizeAddressString)
-                .filter(Boolean),
-            );
+              const currentData = loadTrackedAddresses(walletAddrStr);
+              if (!currentData) continue;
 
-            // 1. Check owner's FiWallet for new Circle invites and Location
-            let updatedData = currentData;
-            const fiWalletStr = currentData.base.fiWallet;
-            const fiWalletStore = fiWalletStr
-              ? res.decodedStores[fiWalletStr] ||
-                res.decodedStores[normalizeAddressString(fiWalletStr)]
-              : null;
-
-            if (fiWalletStore) {
-              const { invited, h3Cell } =
-                extractInvitedAndLocationFromFiWallet(fiWalletStore);
-              const existingCircle = new Set(
-                (currentData.circle.invited || []).map(normalizeAddressString),
-              );
-              const freshInvites = invited.filter(
-                (i) => !existingCircle.has(normalizeAddressString(i)),
+              const existingBefore = new Set(
+                getAllTrackedAddressesList(currentData)
+                  .map(normalizeAddressString)
+                  .filter(Boolean),
               );
 
-              if (
-                freshInvites.length > 0 ||
-                (h3Cell && !currentData.circle.location)
-              ) {
-                updatedData = addInvitedToCircle(
-                  walletAddrStr,
-                  invited,
-                  h3Cell,
+              // 1. Check owner's FiWallet for new Circle invites and Location
+              let updatedData = currentData;
+              const fiWalletStr = currentData.base.fiWallet;
+              const fiWalletStore = fiWalletStr
+                ? res.decodedStores[fiWalletStr] ||
+                  res.decodedStores[normalizeAddressString(fiWalletStr)]
+                : null;
+
+              if (fiWalletStore) {
+                const { invited, h3Cell } =
+                  extractInvitedAndLocationFromFiWallet(fiWalletStore);
+                const existingCircle = new Set(
+                  (currentData.circle.invited || []).map(
+                    normalizeAddressString,
+                  ),
                 );
+                const freshInvites = invited.filter(
+                  (i) => !existingCircle.has(normalizeAddressString(i)),
+                );
+
+                if (
+                  freshInvites.length > 0 ||
+                  (h3Cell && !currentData.circle.location)
+                ) {
+                  updatedData = addInvitedToCircle(
+                    walletAddrStr,
+                    invited,
+                    h3Cell,
+                  );
+                }
               }
-            }
 
-            // 2. From any Circle FiWallets that are already decoded in decodedStores, extract Ring invites
-            const ringInvites: string[] = [];
-            for (const cAddr of updatedData.circle.invited) {
-              const norm = normalizeAddressString(cAddr);
-              const cStore =
-                res.decodedStores[cAddr] || res.decodedStores[norm];
-              if (cStore) {
-                const { invited } =
-                  extractInvitedAndLocationFromFiWallet(cStore);
-                ringInvites.push(...invited);
+              // 2. From any Circle FiWallets that are already decoded in decodedStores, extract Ring invites
+              const ringInvites: string[] = [];
+              for (const cAddr of updatedData.circle.invited) {
+                const norm = normalizeAddressString(cAddr);
+                const cStore =
+                  res.decodedStores[cAddr] || res.decodedStores[norm];
+                if (cStore) {
+                  const { invited } =
+                    extractInvitedAndLocationFromFiWallet(cStore);
+                  ringInvites.push(...invited);
+                }
               }
-            }
 
-            if (ringInvites.length > 0) {
-              updatedData = addInvitedToRing(walletAddrStr, ringInvites);
-            }
+              if (ringInvites.length > 0) {
+                updatedData = addInvitedToRing(walletAddrStr, ringInvites);
+              }
 
-            // 3. For any personal minters in decodedStores, compute owner's personal wallet and track it
-            const newWallets: string[] = [];
-            let parsedOwner: Address | null = null;
-            try {
-              parsedOwner = Address.parse(walletAddrStr);
-            } catch {
-              parsedOwner = null;
-            }
+              // 3. For any personal minters in decodedStores, compute owner's personal wallet and track it
+              const newWallets: string[] = [];
+              let parsedOwner: Address | null = null;
+              try {
+                parsedOwner = Address.parse(walletAddrStr);
+              } catch {
+                parsedOwner = null;
+              }
 
-            if (parsedOwner) {
-              for (const minterStr of updatedData.personalJettons || []) {
-                const normMinter = normalizeAddressString(minterStr);
-                const minterStore =
-                  res.decodedStores[minterStr] || res.decodedStores[normMinter];
-                const admin = minterStore?.adminAddress;
-                if (admin) {
-                  try {
-                    const computed = computePersonalWalletAddress(
-                      Address.parse(minterStr),
-                      parsedOwner,
-                      admin,
-                    );
-                    newWallets.push(computed.toString());
-                  } catch {
-                    /* ignore derivation error */
+              if (parsedOwner) {
+                for (const minterStr of updatedData.personalJettons || []) {
+                  const normMinter = normalizeAddressString(minterStr);
+                  const minterStore =
+                    res.decodedStores[minterStr] ||
+                    res.decodedStores[normMinter];
+                  const admin = minterStore?.adminAddress;
+                  if (admin) {
+                    try {
+                      const computed = computePersonalWalletAddress(
+                        Address.parse(minterStr),
+                        parsedOwner,
+                        admin,
+                      );
+                      newWallets.push(computed.toString());
+                    } catch {
+                      /* ignore derivation error */
+                    }
                   }
+                }
+              }
+
+              if (newWallets.length > 0) {
+                updatedData = addPersonalWallets(walletAddrStr, newWallets);
+              }
+
+              // Detect fresh addresses for this wallet (not in storage before this discovery run)
+              const afterList = getAllTrackedAddressesList(updatedData);
+              for (const addr of afterList) {
+                const norm = normalizeAddressString(addr);
+                if (norm && !existingBefore.has(norm)) {
+                  freshAddressesSet.add(norm);
                 }
               }
             }
 
-            if (newWallets.length > 0) {
-              updatedData = addPersonalWallets(walletAddrStr, newWallets);
+            // If fresh addresses were found across any saved wallets, batch fetch them immediately in a single combined call
+            if (freshAddressesSet.size > 0) {
+              await batchHydrateUniversal(
+                Array.from(freshAddressesSet),
+                defaultNetwork,
+              );
             }
-
-            // Detect fresh addresses for this wallet (not in storage before this discovery run)
-            const afterList = getAllTrackedAddressesList(updatedData);
-            for (const addr of afterList) {
-              const norm = normalizeAddressString(addr);
-              if (norm && !existingBefore.has(norm)) {
-                freshAddressesSet.add(norm);
-              }
-            }
-          }
-
-          // If fresh addresses were found across any saved wallets, batch fetch them immediately in a single combined call
-          if (freshAddressesSet.size > 0) {
-            await batchHydrateUniversal(
-              Array.from(freshAddressesSet),
-              defaultNetwork,
-            );
           }
         }
+      } catch (err) {
+        console.error(
+          '[useTrackedAddressesSync] Background universal hydration error across all wallets:',
+          err,
+        );
       }
-    } catch (err) {
-      console.error(
-        '[useTrackedAddressesSync] Background universal hydration error across all wallets:',
-        err,
-      );
-    }
-  }, [savedWallets, isWalletKitInitialized, loadEvents, loadUserJettons]);
+    },
+    [savedWallets, isWalletKitInitialized, loadEvents, loadUserJettons],
+  );
 
   // Session bootstrap: hydrate all saved wallets once
   useEffect(() => {
@@ -219,9 +225,11 @@ export function useTrackedAddressesSync() {
     }
   }, [savedWallets, hydrateAllSavedWallets]);
 
-  // When WalletKit becomes ready, load events for active wallet
+  // When WalletKit becomes ready, load initial events once across all saved wallets
+  const initialEventsLoadedRef = useRef(false);
   useEffect(() => {
-    if (isWalletKitInitialized && address) {
+    if (isWalletKitInitialized && address && !initialEventsLoadedRef.current) {
+      initialEventsLoadedRef.current = true;
       void loadEvents(50, 0).catch(() => {});
     }
   }, [isWalletKitInitialized, address, loadEvents]);
@@ -240,7 +248,7 @@ export function useTrackedAddressesSync() {
   // Listen for manual dashboard refresh events to re-hydrate all saved wallets
   useEffect(() => {
     const handleManualRefresh = () => {
-      void hydrateAllSavedWallets();
+      void hydrateAllSavedWallets(true);
     };
 
     window.addEventListener(
