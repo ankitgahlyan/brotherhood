@@ -97,6 +97,12 @@ export class WalletV5R1Adapter implements WalletAdapter {
   public readonly publicKey: Hex;
   public readonly version = 'v5r1';
 
+  private cachedSeqno: { value: number; timestamp: number } | null = null;
+
+  public clearCachedSeqno(): void {
+    this.cachedSeqno = null;
+  }
+
   /**
    * Static factory method to create a WalletV5R1Adapter
    * @param signer - Signer function with publicKey property (from Signer utility)
@@ -259,9 +265,16 @@ export class WalletV5R1Adapter implements WalletAdapter {
   /**
    * Get current sequence number
    */
-  async getSeqno(): Promise<number> {
+  async getSeqno(forceFresh = false): Promise<number> {
+    const now = Date.now();
+    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 5000) {
+      return this.cachedSeqno.value;
+    }
+
     try {
-      return await this.walletContract.seqno;
+      const seq = await this.walletContract.seqno;
+      this.cachedSeqno = { value: seq, timestamp: Date.now() };
+      return seq;
     } catch (error) {
       log.warn('Failed to get seqno', { error });
       // return 0;

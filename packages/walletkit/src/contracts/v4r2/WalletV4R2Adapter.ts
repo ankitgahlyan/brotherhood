@@ -62,6 +62,11 @@ export class WalletV4R2Adapter implements WalletAdapter {
   readonly walletContract: WalletV4R2;
   readonly client: ApiClient;
   public readonly publicKey: Hex;
+  private cachedSeqno: { value: number; timestamp: number } | null = null;
+
+  public clearCachedSeqno(): void {
+    this.cachedSeqno = null;
+  }
   public readonly version = 'v4r2';
 
   /**
@@ -265,9 +270,16 @@ export class WalletV4R2Adapter implements WalletAdapter {
   /**
    * Get current sequence number
    */
-  async getSeqno(): Promise<number> {
+  async getSeqno(forceFresh = false): Promise<number> {
+    const now = Date.now();
+    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 5000) {
+      return this.cachedSeqno.value;
+    }
+
     try {
-      return await this.walletContract.getSeqno();
+      const seq = await this.walletContract.getSeqno();
+      this.cachedSeqno = { value: seq, timestamp: Date.now() };
+      return seq;
     } catch (error) {
       log.warn('Failed to get seqno', { error });
       throw error;
