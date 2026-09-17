@@ -454,13 +454,14 @@ fun FossFiWallet.sendRequestState(self, from: address, config: SendParams = {}):
 fun FossFiWallet.sendRequestUpgradeCode(
     self,
     from: address,
+    targetAddress: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: RequestUpgradeCode {},
+        body: RequestUpgradeCode { targetAddress },
     });
     return net.send(from, genericMsg);
 }

@@ -253,28 +253,17 @@ fun FossFi.sendInformMinterChangeLocation(
     return net.send(from, genericMsg);
 }
 
-fun FossFi.sendRequestUpgradeCode(self, from: address, config: SendParams = {}): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: RequestUpgradeCode {},
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFi.sendPushUpgradeCode(
+fun FossFi.sendRequestUpgradeCode(
     self,
     from: address,
-    queryId: uint64,
-    targetAddress: address,
+    targetAddress: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: PushUpgradeCode { queryId, targetAddress },
+        body: RequestUpgradeCode { targetAddress },
     });
     return net.send(from, genericMsg);
 }

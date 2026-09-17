@@ -150,7 +150,9 @@ struct (0x00001006) Upgrade {
 
 struct (0x00001007) TopUpTons
 
-struct (0x00001008) RequestUpgradeCode {}
+struct (0x00001008) RequestUpgradeCode {
+    targetAddress: address? = null
+}
 
 struct (0x00001009) ApproveUpgrade {}
 
@@ -185,11 +187,6 @@ struct (0x0000100f) ResponseTotalAccounts {
 }
 
 struct (0x00001010) InitDaoProxy {
-    queryId: uint64 = 0
-    targetAddress: address
-}
-
-struct (0x00001011) PushUpgradeCode {
     queryId: uint64 = 0
     targetAddress: address
 }

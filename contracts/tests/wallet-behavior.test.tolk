@@ -920,6 +920,7 @@ get fun `test : direct minter upgrade request from owner`() {
     // Send RequestUpgradeCode directly from deployer (Owner / W5) to minter
     val reqUpgradeRes = minter.sendRequestUpgradeCode(
         deployer.address,
+        null,
         { value: ton("0.08") },
     );
 
@@ -939,23 +940,24 @@ get fun `test : direct minter upgrade request from owner`() {
     });
 }
 
-get fun `test : push upgrade code to target address via minter`() {
+get fun `test : request upgrade for another target address via minter`() {
     val (minter, deployer, notDeployer) = setupTest();
     val senderWallet = userWallet(minter, deployer.address);
     val targetWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
 
-    val pushRes = minter.sendPushUpgradeCode(
+    // Deployer sends RequestUpgradeCode specifying notDeployer.address as target
+    val reqRes = minter.sendRequestUpgradeCode(
         deployer.address,
-        0,
         notDeployer.address,
-        { value: ton("0.1") },
+        { value: ton("0.08") },
     );
 
-    expect(pushRes).toHaveSuccessfulTx<PushUpgradeCode>({
+    // Verify minter receives RequestUpgradeCode and forwards Upgrade to targetWallet
+    expect(reqRes).toHaveSuccessfulTx<RequestUpgradeCode>({
         from: deployer.address,
         to: minter.address,
     });
-    expect(pushRes).toHaveSuccessfulTx<Upgrade>({
+    expect(reqRes).toHaveSuccessfulTx<Upgrade>({
         from: minter.address,
         to: targetWallet.address,
     });

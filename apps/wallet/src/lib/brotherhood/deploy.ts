@@ -344,8 +344,10 @@ export function buildDestroyBody(): Cell {
   return Destroy.toCell(Destroy.create());
 }
 
-export function buildRequestUpgradeBody(): Cell {
-  return RequestUpgradeCode.toCell(RequestUpgradeCode.create());
+export function buildRequestUpgradeBody(targetAddress?: Address): Cell {
+  return RequestUpgradeCode.toCell(
+    RequestUpgradeCode.create({ targetAddress: targetAddress ?? null }),
+  );
 }
 
 export function buildTopUpTonsBody(): Cell {

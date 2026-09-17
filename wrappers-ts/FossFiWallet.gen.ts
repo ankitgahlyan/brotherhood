@@ -822,28 +822,36 @@ export const TopUpTons = {
 
 /**
  > struct (0x00001008) RequestUpgradeCode {
+ >     targetAddress: address?
  > }
  */
 export interface RequestUpgradeCode {
     readonly $: 'RequestUpgradeCode'
+    targetAddress: c.Address | null /* = null */
 }
 
 export const RequestUpgradeCode = {
     PREFIX: 0x00001008,
 
-    create(): RequestUpgradeCode {
+    create(args: {
+        targetAddress?: c.Address | null /* = null */
+    }): RequestUpgradeCode {
         return {
             $: 'RequestUpgradeCode',
+            targetAddress: null,
+            ...args
         }
     },
     fromSlice(s: c.Slice): RequestUpgradeCode {
         loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
         return {
             $: 'RequestUpgradeCode',
+            targetAddress: s.loadMaybeAddress(),
         }
     },
     store(self: RequestUpgradeCode, b: c.Builder): void {
         b.storeUint(0x00001008, 32);
+        b.storeAddress(self.targetAddress);
     },
     toCell(self: RequestUpgradeCode): c.Cell {
         return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
@@ -3961,8 +3969,9 @@ export class FossFiWallet implements c.Contract {
     }
 
     static createCellOfRequestUpgradeCode(body: {
+        targetAddress?: c.Address | null /* = null */
     }) {
-        return RequestUpgradeCode.toCell(RequestUpgradeCode.create());
+        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
     }
 
     static createCellOfSetStatus(body: {
@@ -4441,10 +4450,11 @@ export class FossFiWallet implements c.Contract {
     }
 
     async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        targetAddress?: c.Address | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create()),
+            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
             ...extraOptions
         });
     }
