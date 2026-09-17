@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { sanitizeBocFields, safeStringifyJson } from './json-boc-sanitizer';
 
 export interface CallInvocation {
   id: string;
@@ -83,7 +84,7 @@ export interface ComponentStat {
 }
 
 const MAX_BUFFER_SIZE = 1000;
-const MAX_PREVIEW_LENGTH = 4000;
+const MAX_PREVIEW_LENGTH = 65536;
 
 let last429ToastTime = 0;
 const COOLDOWN_429_MS = 3000;
@@ -452,7 +453,13 @@ class DevTelemetryManager {
       let requestBody: string | null = null;
       if (init?.body) {
         if (typeof init.body === 'string') {
-          requestBody = init.body.slice(0, MAX_PREVIEW_LENGTH);
+          try {
+            const parsedReq = JSON.parse(init.body);
+            const sanitizedReq = sanitizeBocFields(parsedReq);
+            requestBody = safeStringifyJson(sanitizedReq, MAX_PREVIEW_LENGTH);
+          } catch {
+            requestBody = init.body.slice(0, MAX_PREVIEW_LENGTH);
+          }
         } else {
           try {
             requestBody = String(init.body).slice(0, MAX_PREVIEW_LENGTH);
@@ -571,10 +578,22 @@ class DevTelemetryManager {
             .text()
             .then((text) => {
               const byteSize = text ? new Blob([text]).size : 0;
+              let responsePreview: string;
+              try {
+                const parsed = JSON.parse(text);
+                const sanitized = sanitizeBocFields(parsed);
+                responsePreview = safeStringifyJson(
+                  sanitized,
+                  MAX_PREVIEW_LENGTH,
+                );
+              } catch {
+                responsePreview = text.slice(0, MAX_PREVIEW_LENGTH);
+              }
+
               this.updateApiCall(
                 callId,
                 {
-                  responsePreview: text.slice(0, MAX_PREVIEW_LENGTH),
+                  responsePreview,
                   responseSize: byteSize,
                 },
                 signature,

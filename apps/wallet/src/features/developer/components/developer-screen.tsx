@@ -16,8 +16,17 @@ import {
   Database,
   BarChart3,
   Layers,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '@demo/wallet-core';
+import type { NetworkType } from '@demo/wallet-core';
+import {
+  useExplorer,
+  getExplorerAddressUrl,
+  type ExplorerChoice,
+} from '@/core/explorer/use-explorer';
 import {
   devTelemetry,
   type TelemetryItem,
@@ -29,9 +38,10 @@ import { useDeveloperMode } from '@/core/lib/developer-mode';
 import { cn } from '@/core/lib/utils';
 import { Button } from '@/core/components/ui/button';
 import { HeadersViewer } from './headers-viewer';
-import { PayloadViewer } from './payload-viewer';
+import { PayloadViewer, isTonAddress, isAddressKey } from './payload-viewer';
 import { DbStateExplorer } from './db-state-explorer';
 import { ComponentAnalyticsView } from './component-analytics-view';
+import { NetworkSettingsPanel } from './network-settings-panel';
 
 export interface DeveloperScreenProps {
   onClose?: () => void;
@@ -54,7 +64,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
   );
 
   const [activeSection, setActiveSection] = useState<
-    'telemetry' | 'analytics' | 'storage'
+    'telemetry' | 'analytics' | 'storage' | 'network'
   >('telemetry');
   const [activeTab, setActiveTab] = useState<'all' | 'api' | 'console'>('api');
   const [searchQuery, setSearchQuery] = useState('');
@@ -297,9 +307,23 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
             <Database className="w-3.5 h-3.5" />
             <span>DB / State Explorer</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('network')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeSection === 'network'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Network & RPC</span>
+          </button>
         </div>
 
-        {activeSection === 'storage' ? (
+        {activeSection === 'network' ? (
+          <NetworkSettingsPanel />
+        ) : activeSection === 'storage' ? (
           <DbStateExplorer />
         ) : activeSection === 'analytics' ? (
           <ComponentAnalyticsView />
@@ -586,6 +610,13 @@ const ApiCard: React.FC<{
 
   const timeStr = new Date(item.timestamp).toLocaleTimeString();
 
+  const { currentWallet } = useWallet();
+  const { explorer } = useExplorer();
+  const network: NetworkType =
+    String(currentWallet?.getNetwork()?.chainId) === '-239'
+      ? 'mainnet'
+      : 'testnet';
+
   const rpcMethod = useMemo(() => {
     if (!item.requestBody) return null;
     try {
@@ -595,6 +626,46 @@ const ApiCard: React.FC<{
       return null;
     }
   }, [item.requestBody]);
+
+  const renderAddressLink = (addr: string, truncate = true) => {
+    const url = getExplorerAddressUrl(network, addr, explorer);
+    const display =
+      truncate && addr.length > 20
+        ? `${addr.slice(0, 6)}…${addr.slice(-6)}`
+        : addr;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-blue-500 hover:text-blue-400 underline decoration-blue-500/40 hover:decoration-blue-400 inline-flex items-center gap-0.5 font-mono cursor-pointer"
+        title={`Open ${addr} on ${explorer}`}
+      >
+        <span>{display}</span>
+        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-70" />
+      </a>
+    );
+  };
+
+  const renderPathSegments = (pathStr: string) => {
+    const segments = pathStr.split('/');
+    return segments.map((seg, idx) => {
+      const isLast = idx === segments.length - 1;
+      const cleanSeg = seg.trim();
+      const isAddr = isTonAddress(cleanSeg);
+      return (
+        <React.Fragment key={idx}>
+          {idx > 0 && <span className="text-muted-foreground/60">/</span>}
+          {isAddr ? (
+            renderAddressLink(cleanSeg, true)
+          ) : (
+            <span className="text-foreground font-semibold">{seg}</span>
+          )}
+        </React.Fragment>
+      );
+    });
+  };
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden transition-all shadow-xs">
@@ -676,12 +747,12 @@ const ApiCard: React.FC<{
           {(() => {
             const { baseUrl, path, params } = parseUrl(item.url);
             return (
-              <div className="mt-1.5 font-mono text-[11px] select-text leading-relaxed space-y-0.5">
+              <div className="mt-1.5 font-mono text-[11px] select-text leading-relaxed flex flex-col gap-0.5">
                 <div className="flex flex-wrap items-baseline gap-0.5">
                   <span className="text-muted-foreground">{baseUrl}</span>
                   {path && (
-                    <span className="text-foreground font-semibold">
-                      {path}
+                    <span className="inline-flex flex-wrap items-baseline gap-0.5">
+                      {renderPathSegments(path)}
                     </span>
                   )}
                 </div>
@@ -696,9 +767,13 @@ const ApiCard: React.FC<{
                           {k}
                         </span>
                         <span className="text-muted-foreground">=</span>
-                        <span className="text-amber-600 dark:text-amber-400 break-all">
-                          {v.length > 40 ? `${v.slice(0, 40)}…` : v}
-                        </span>
+                        {isTonAddress(v) || isAddressKey(k) ? (
+                          renderAddressLink(v, true)
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 break-all">
+                            {v.length > 40 ? `${v.slice(0, 40)}…` : v}
+                          </span>
+                        )}
                       </span>
                     ))}
                   </div>

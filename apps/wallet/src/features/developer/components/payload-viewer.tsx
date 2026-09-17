@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Copy,
-  Check,
-  ChevronRight,
-  ChevronDown,
-  ExternalLink,
-} from 'lucide-react';
+import { Copy, Check, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
@@ -15,6 +9,12 @@ import {
   type ExplorerChoice,
 } from '@/core/explorer/use-explorer';
 import { decodeGetterResponse } from '../../../core/lib/getter-decoder';
+import {
+  isBocString,
+  truncateBocString,
+  sanitizeBocFields,
+  tryParseOrRepairJson,
+} from '@/core/lib/json-boc-sanitizer';
 
 interface PayloadViewerProps {
   title: string;
@@ -24,11 +24,11 @@ interface PayloadViewerProps {
 }
 
 /** Matches TON friendly-format addresses (48 chars) and raw hex format (-1:... or 0:...) */
-const TON_ADDRESS_RE =
+export const TON_ADDRESS_RE =
   /^(?:(?:EQ|UQ|kQ|0Q|Ef|Uf|kf|0f|k0|00)[A-Za-z0-9_\-+/]{46}|-?[0-1]:[0-9a-fA-F]{64})$/;
 
 /** Key names that strongly hint the value is an address */
-const ADDRESS_KEY_HINTS = new Set([
+export const ADDRESS_KEY_HINTS = new Set([
   'address',
   'owner',
   'wallet',
@@ -44,13 +44,13 @@ const ADDRESS_KEY_HINTS = new Set([
   'account',
 ]);
 
-function isTonAddress(value: unknown): boolean {
+export function isTonAddress(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const trimmed = value.trim();
   return TON_ADDRESS_RE.test(trimmed);
 }
 
-function isAddressKey(key: string): boolean {
+export function isAddressKey(key: string): boolean {
   const norm = key.toLowerCase().replace(/[^a-z_]/g, '');
   if (ADDRESS_KEY_HINTS.has(norm)) return true;
   return (
@@ -63,15 +63,6 @@ export interface RenderCtx {
   explorer: ExplorerChoice;
   /** parent key name for key-name hinting */
   parentKey?: string;
-}
-
-// Helper to detect if a string looks like a large BoC or base64 blob
-function isLargeBase64Blob(str: string): boolean {
-  if (typeof str !== 'string' || str.length < 100) return false;
-  // Common BoC prefix in TON is te6cc...
-  if (str.startsWith('te6cc')) return true;
-  // Generic base64 pattern (alphanumeric + '+' + '/' with optional '=' padding)
-  return /^[A-Za-z0-9+/]+={0,2}$/.test(str);
 }
 
 function formatBytes(bytes: number): string {
@@ -125,44 +116,26 @@ function cleanJsonRpcPayload(data: unknown, isRequest?: boolean): unknown {
   return cleaned;
 }
 
-// Component to render a collapsible long base64/BoC blob
-const CollapsibleBlob: React.FC<{ value: string }> = ({ value }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const approxBytes = Math.round((value.length * 3) / 4);
-  const isBoc = value.startsWith('te6cc');
+// Component to render a short 2-3 char BoC field
+const ShortBocValue: React.FC<{ value: string }> = ({ value }) => {
+  const shortBoc =
+    value.length <= 6 && value.endsWith('...')
+      ? value
+      : truncateBocString(value);
 
-  if (isExpanded) {
-    return (
-      <span className="inline">
-        <button
-          type="button"
-          onClick={() => setIsExpanded(false)}
-          className="inline-flex items-center gap-0.5 text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1 py-0.2 rounded border border-amber-500/20 font-sans cursor-pointer hover:bg-amber-500/20 mr-1 select-none"
-        >
-          <ChevronDown className="w-2.5 h-2.5" /> Collapse
-        </button>
-        <span className="text-emerald-600 dark:text-emerald-400 break-all select-all">
-          &quot;{value}&quot;
-        </span>
-      </span>
-    );
-  }
+  const approxBytes = Math.round((value.length * 3) / 4);
 
   return (
-    <button
-      type="button"
-      onClick={() => setIsExpanded(true)}
-      className="inline-flex items-center gap-1 text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 font-mono cursor-pointer transition-colors"
-      title="Click to view full blob"
+    <span
+      className="text-amber-600 dark:text-amber-400 font-mono select-all inline-flex items-center"
+      title={
+        value.length > 6
+          ? `BoC Cell (~${formatBytes(approxBytes)})`
+          : 'BoC Cell'
+      }
     >
-      <ChevronRight className="w-3 h-3" />
-      <span>
-        {isBoc ? 'BoC Cell' : 'Base64 Blob'} ({formatBytes(approxBytes)})
-      </span>
-      <span className="text-muted-foreground opacity-70">
-        [{value.slice(0, 8)}...{value.slice(-6)}]
-      </span>
-    </button>
+      &quot;{shortBoc}&quot;
+    </span>
   );
 };
 
@@ -190,10 +163,10 @@ export const FormattedValue: React.FC<{
     );
   }
   if (typeof value === 'string') {
-    if (isLargeBase64Blob(value)) {
-      return <CollapsibleBlob value={value} />;
-    }
     const strVal = value;
+    if (isBocString(strVal, ctx.parentKey)) {
+      return <ShortBocValue value={strVal} />;
+    }
     // Address detection: pattern match OR parent key hint
     const isAddr =
       isTonAddress(strVal) ||
@@ -312,15 +285,14 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
       : 'testnet';
   const ctx: RenderCtx = { network, explorer };
 
-  // Parse JSON if possible
+  // Parse JSON if possible (with automatic recovery for truncated payloads)
   const { parsedJson } = useMemo(() => {
     if (!payload) return { parsedJson: null };
-    try {
-      const parsed = JSON.parse(payload);
-      return { parsedJson: parsed };
-    } catch {
-      return { parsedJson: null };
+    const parsed = tryParseOrRepairJson(payload);
+    if (parsed !== null && parsed !== undefined) {
+      return { parsedJson: sanitizeBocFields(parsed) };
     }
+    return { parsedJson: null };
   }, [payload]);
 
   // Try decoding contract getter responses

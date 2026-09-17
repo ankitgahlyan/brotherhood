@@ -21,7 +21,6 @@ import {
   Sparkles,
   Trash2,
   Check,
-  Globe,
   RefreshCw,
   X,
 } from 'lucide-react';
@@ -41,13 +40,8 @@ import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
-import {
-  getTestnetRpcRouting,
-  isCustomEndpointActive,
-} from '@/core/lib/network-api-keys';
 
 import { ToggleRow } from '../toggle-row';
-import { SettingsApiKeysModal } from '../network-api-keys';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -178,17 +172,6 @@ export const SettingsDropdown: React.FC = () => {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
-  const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
-
-  const rpcRouting = getTestnetRpcRouting();
-  const hasCustom =
-    isCustomEndpointActive('toncenter') || isCustomEndpointActive('tonapi');
-  const networkSubtitle =
-    rpcRouting === 'orbs'
-      ? 'Orbs Network'
-      : hasCustom
-        ? 'Custom RPC Active'
-        : 'Direct (Official)';
 
   const [, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
@@ -547,12 +530,6 @@ export const SettingsDropdown: React.FC = () => {
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
-                  icon={<Globe className="w-5 h-5" />}
-                  label="Network & API Keys"
-                  subtitle={networkSubtitle}
-                  onClick={() => setIsApiKeysModalOpen(true)}
-                />
-                <ActionRow
                   icon={<Download className="w-5 h-5" />}
                   label="Install App / Add Shortcut"
                   onClick={() => {
@@ -713,11 +690,6 @@ export const SettingsDropdown: React.FC = () => {
       <InstallPromptDialog
         open={isInstallOpen}
         onOpenChange={setIsInstallOpen}
-      />
-
-      <SettingsApiKeysModal
-        isOpen={isApiKeysModalOpen}
-        onClose={() => setIsApiKeysModalOpen(false)}
       />
     </>
   );
