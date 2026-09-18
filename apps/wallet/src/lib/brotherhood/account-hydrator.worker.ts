@@ -20,7 +20,7 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'd2E9uYL4vQDMtBlD8w/Yij+0oUIE18v1I8jR7uI+/ZI=',
+  fiWallet: 'klses7vQKfM23xNx1HK1MsiQcv9WD9pD0Mg+u3KcFOE=',
   fiMinter: '5zeBnlGAFR5Rg5I/+ZHRxOVGFx8HinkTbBFAaUEmYNc=',
   personalMinter: 'Tvog65zMpvpaesj09SsYeyJLFVlYCG802aUZ+AqpIZs=',
   personalWallet: 'j6cSSA6AECyBf/Qb2UvajkByeAvdrNk9O9cRhkKEW4A=',

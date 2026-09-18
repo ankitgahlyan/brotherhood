@@ -170,4 +170,5 @@ export const GAS = {
   REQUEST_UPGRADE: toNano('0.08'),
   SET_PERSONAL: toNano('0.6'),
   PAY_EMI: toNano('0.2'),
+  DEFERRED_PAYMENT: toNano('0.4'),
 } as const;

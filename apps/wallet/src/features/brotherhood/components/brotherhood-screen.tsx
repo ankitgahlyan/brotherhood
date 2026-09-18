@@ -56,6 +56,7 @@ import { useAuthorityActions } from '../hooks/use-authority-actions';
 import { useRequestUpgrade } from '../hooks/use-request-upgrade';
 import { usePushUpgrade } from '../hooks/use-push-upgrade';
 import { NetworkTab } from './network';
+import { DeferredPaymentTab } from './deferred-payment-tab';
 import {
   CircleCreditList,
   RingCreditList,
@@ -76,7 +77,8 @@ type Tab =
   | 'allowance'
   | 'gold'
   | 'profile'
-  | 'authority';
+  | 'authority'
+  | 'deferred';
 
 function formatFi(amountNano: bigint | undefined | null): string {
   if (amountNano === undefined || amountNano === null) return '0.0000';
@@ -132,6 +134,7 @@ export const BrotherhoodScreen: React.FC = () => {
       'gold',
       'profile',
       'authority',
+      'deferred',
     ];
     if (requestedTab && validTabs.includes(requestedTab)) {
       return requestedTab;
@@ -606,6 +609,7 @@ export const BrotherhoodScreen: React.FC = () => {
               'allowance',
               'gold',
               'profile',
+              'deferred',
               ...(isAuthority ? ['authority'] : []),
             ] as Tab[]
           ).map((tab) => (
@@ -3168,6 +3172,11 @@ export const BrotherhoodScreen: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Deferred Payment Tab */}
+        {activeTab === 'deferred' && (
+          <DeferredPaymentTab network={network} accountData={account.data} />
         )}
 
         {/* Push Upgrade Modal */}

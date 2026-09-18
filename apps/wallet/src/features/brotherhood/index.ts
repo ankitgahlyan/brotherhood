@@ -31,4 +31,6 @@ export * from './hooks/use-member-detail';
 export * from './hooks/use-ring-invitees';
 export * from './hooks/use-set-credit-terms';
 export * from './hooks/use-push-upgrade';
+export * from './hooks/use-deferred-payment';
+export * from './components/deferred-payment-tab';
 export * from './components/network';

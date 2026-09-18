@@ -8,6 +8,7 @@ export * as PersonalContract from './Personal.gen';
 export * as PersonalWalletContract from './PersonalWallet.gen';
 export * as PollContract from './Poll.gen';
 export * as VoterContract from './Voter.gen';
+export * as HoldingContract from './Holding.gen';
 
 export { DaoProxy } from './DaoProxy.gen';
 export { Following, Following as Followers } from './Followers.gen';
@@ -19,3 +20,4 @@ export { PersonalMinter } from './Personal.gen';
 export { PersonalWallet } from './PersonalWallet.gen';
 export { Poll } from './Poll.gen';
 export { Voter } from './Voter.gen';
+export { Holding } from './Holding.gen';

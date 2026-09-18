@@ -24,6 +24,10 @@ import {
   Destroy,
   SetAllowance,
   SpendAllowance,
+  RequestDeferredPayment,
+  ActCancelDeferredPayment,
+  ActClaimDeferredPayment,
+  ActFallbackReclaim,
 } from '@wrappers/FossFiWallet.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
@@ -380,5 +384,46 @@ export function buildSpendAllowanceBody(params: {
   const { amount, receiver, sendExcessesTo, queryId = 0n } = params;
   return SpendAllowance.toCell(
     SpendAllowance.create({ queryId, amount, receiver, sendExcessesTo }),
+  );
+}
+
+export function buildRequestDeferredPaymentBody(params: {
+  payer: Address;
+  amount: bigint;
+  queryId?: bigint;
+}): Cell {
+  const { payer, amount, queryId = 0n } = params;
+  return RequestDeferredPayment.toCell(
+    RequestDeferredPayment.create({ queryId, payer, amount }),
+  );
+}
+
+export function buildCancelDeferredPaymentBody(params: {
+  holdingAddress: Address;
+  queryId?: bigint;
+}): Cell {
+  const { holdingAddress, queryId = 0n } = params;
+  return ActCancelDeferredPayment.toCell(
+    ActCancelDeferredPayment.create({ queryId, holdingAddress }),
+  );
+}
+
+export function buildClaimDeferredPaymentBody(params: {
+  holdingAddress: Address;
+  queryId?: bigint;
+}): Cell {
+  const { holdingAddress, queryId = 0n } = params;
+  return ActClaimDeferredPayment.toCell(
+    ActClaimDeferredPayment.create({ queryId, holdingAddress }),
+  );
+}
+
+export function buildFallbackReclaimBody(params: {
+  holdingAddress: Address;
+  queryId?: bigint;
+}): Cell {
+  const { holdingAddress, queryId = 0n } = params;
+  return ActFallbackReclaim.toCell(
+    ActFallbackReclaim.create({ queryId, holdingAddress }),
   );
 }

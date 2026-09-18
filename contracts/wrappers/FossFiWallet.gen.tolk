@@ -10,6 +10,7 @@ import "@acton/testing/assert"
 import "@contracts/common/messages"
 import "@contracts/followers/messages"
 import "@contracts/fossFi/storage"
+import "@contracts/holding/messages"
 import "@contracts/lottery/messages"
 
 /// Storage `FiWalletStore` is defined in `@contracts/fossFi/storage`
@@ -898,6 +899,143 @@ fun FossFiWallet.sendAuthorityCloseAccount(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendRequestDeferredPayment(
+    self,
+    from: address,
+    queryId: uint64,
+    payer: address,
+    amount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestDeferredPayment { queryId, payer, amount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendPullDeferredFunds(
+    self,
+    from: address,
+    queryId: uint64,
+    payee: address,
+    amount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: PullDeferredFunds { queryId, payee, amount },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendDeferredPaymentInitiated(
+    self,
+    from: address,
+    queryId: uint64,
+    holdingAddress: address,
+    amount: coins,
+    createdAt: uint32,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DeferredPaymentInitiated { queryId, holdingAddress, amount, createdAt },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendPenalizeDeferredRequester(
+    self,
+    from: address,
+    queryId: uint64,
+    payer: address,
+    amount: coins,
+    createdAt: uint32,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: PenalizeDeferredRequester { queryId, payer, amount, createdAt },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActCancelDeferredPayment(
+    self,
+    from: address,
+    queryId: uint64,
+    holdingAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActCancelDeferredPayment { queryId, holdingAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActClaimDeferredPayment(
+    self,
+    from: address,
+    queryId: uint64,
+    holdingAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActClaimDeferredPayment { queryId, holdingAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendActFallbackReclaim(
+    self,
+    from: address,
+    queryId: uint64,
+    holdingAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ActFallbackReclaim { queryId, holdingAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendAcceptDeferredTransfer(
+    self,
+    from: address,
+    queryId: uint64,
+    payer: address,
+    payee: address,
+    amount: coins,
+    createdAt: uint32,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AcceptDeferredTransfer { queryId, payer, payee, amount, createdAt },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun FossFiWallet.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({
@@ -907,6 +1045,10 @@ fun FossFiWallet.sendAny(self, from: address, body: cell, config: SendParams = {
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.getHoldingCode(self): cell {
+    return net.runGetMethod(self.address, "get_holding_code");
 }
 
 fun FossFiWallet.getWalletData(self): JettonWalletDataReply {

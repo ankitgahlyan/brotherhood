@@ -60,6 +60,12 @@ _Avoid_: Points, credits
 **Allowance** — a spending permission an Account grants to a friend, letting them spend a limited amount of the Account's balance (pocket money).
 _Avoid_: Spending limit, delegation
 
+**Deferred Payment** — a timelocked pull payment allowing a Member to pay a counterparty without carrying their wallet device. Funds are escrowed in a temporary child contract for a 72-hour challenge window before release.
+_Avoid_: Offline payment, pull transfer, async payment
+
+**Holding Contract** — an ephemeral child contract deployed per Deferred Payment, locking the transferred FI until the 72-hour challenge window expires, or self-destructing early if cancelled by the Payer.
+_Avoid_: Holding wallet, storage patch contract, escrow wallet
+
 **Loan Requirement** — an Account's recorded terms for borrowing FI credit, combining the needed FI amount (Credit Need), loan maturity timestamp, and Personal Token mint ratio (Credit Multiplier). Can only be configured when the Account has a registered Personal Token.
 _Avoid_: Borrow terms, credit profile, loan application
 

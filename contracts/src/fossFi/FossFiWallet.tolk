@@ -1,6 +1,7 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/Following.code"
+import "@gen/Holding.code"
 import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
@@ -14,6 +15,8 @@ import "@contracts/followers/messages"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+import "@contracts/holding/holding-utils"
+import "@contracts/holding/messages"
 import "@contracts/lottery/messages"
 
 import "fees-management"
@@ -68,6 +71,14 @@ type AllowedMessageToWallet =
     | RepayDebt
     | ActCloseAccount
     | AuthorityCloseAccount
+    | RequestDeferredPayment
+    | PullDeferredFunds
+    | DeferredPaymentInitiated
+    | PenalizeDeferredRequester
+    | ActCancelDeferredPayment
+    | ActClaimDeferredPayment
+    | ActFallbackReclaim
+    | AcceptDeferredTransfer
 
 type BounceOpToHandle =
     | EnterLottery
@@ -1638,6 +1649,155 @@ fun onInternalMessage(in: InMessage): void {
             time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
         }
 
+        RequestDeferredPayment => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            assert (msg.amount > 0) throw Errors.InvalidMessage;
+
+            val pullMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.payer.getAddrFiWallet(),
+                value: 0,
+                body: PullDeferredFunds {
+                    queryId: msg.queryId,
+                    payee: contract.getAddress(),
+                    amount: msg.amount,
+                },
+            });
+            pullMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        PullDeferredFunds => {
+            assert (store.active) throw Errors.AccountInactive;
+            checkDebts(store);
+            assert (store.jettonBalance >= msg.amount) throw Errors.InsufficientBalance;
+
+            store.jettonBalance -= msg.amount;
+            val createdAt = blockchain.now();
+
+            val holdingChild = calcDeployHolding(
+                contract.getAddress(),
+                msg.payee,
+                getHoldingCode(),
+                msg.amount,
+                createdAt,
+            );
+            val holdingAddr = holdingChild.calculateAddress();
+
+            val deployMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: holdingChild,
+                value: ton("0.05"),
+                body: createEmptySlice(),
+            });
+            deployMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
+
+            val notifyMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: msg.payee,
+                value: 0,
+                body: DeferredPaymentInitiated {
+                    queryId: msg.queryId,
+                    holdingAddress: holdingAddr,
+                    amount: msg.amount,
+                    createdAt,
+                },
+            });
+            notifyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        DeferredPaymentInitiated => {
+            // Notification accepted by Payee account
+        }
+
+        PenalizeDeferredRequester => {
+            val expectedHoldingAddr = calculateHoldingAddress(
+                msg.payer,
+                contract.getAddress(),
+                getHoldingCode(),
+                msg.amount,
+                msg.createdAt,
+            );
+            assert (in.senderAddress == expectedHoldingAddr) throw Errors.IncorrectSender;
+
+            var actualBurn: coins = 0;
+            if (store.jettonBalance >= msg.amount) {
+                store.jettonBalance -= msg.amount;
+                actualBurn = msg.amount;
+            } else {
+                val available = store.jettonBalance;
+                val deficit = msg.amount - available;
+                store.debt += deficit;
+                store.debts = true;
+                store.jettonBalance = 0;
+                actualBurn = available;
+            }
+
+            if (actualBurn > 0) {
+                val burnMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: trustedAddrs.minterAddr,
+                    value: ton("0.05"),
+                    body: NotifyMinter {
+                        queryId: 0,
+                        jettonAmount: actualBurn,
+                        burnInitiator: addrs.owner,
+                        sendExcessesTo: addrs.owner,
+                    },
+                });
+                burnMsg.send(SEND_MODE_IGNORE_ERRORS);
+            }
+        }
+
+        ActCancelDeferredPayment => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+
+            val cancelMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: msg.holdingAddress,
+                value: 0,
+                body: CancelDeferredPayment { queryId: msg.queryId },
+            });
+            cancelMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        ActClaimDeferredPayment => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+
+            val claimMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: msg.holdingAddress,
+                value: 0,
+                body: ClaimDeferredPayment { queryId: msg.queryId },
+            });
+            claimMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        ActFallbackReclaim => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+
+            val fallbackMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: msg.holdingAddress,
+                value: 0,
+                body: FallbackReclaim { queryId: msg.queryId },
+            });
+            fallbackMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        AcceptDeferredTransfer => {
+            val expectedHoldingAddr = calculateHoldingAddress(
+                msg.payer,
+                msg.payee,
+                getHoldingCode(),
+                msg.amount,
+                msg.createdAt,
+            );
+            assert (in.senderAddress == expectedHoldingAddr) throw Errors.IncorrectSender;
+            store.jettonBalance += msg.amount;
+        }
+
         // for migration to other network states
         RequestState => {
             assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
@@ -1671,6 +1831,14 @@ fun onInternalMessage(in: InMessage): void {
 
 fun getFollowingCode(): cell {
     return followingCompiledCodeLibraryRef();
+}
+
+fun getHoldingCode(): cell {
+    return holdingCompiledCodeLibraryRef();
+}
+
+get fun get_holding_code(): cell {
+    return getHoldingCode();
 }
 
 get fun get_wallet_data(): JettonWalletDataReply {

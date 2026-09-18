@@ -21,11 +21,17 @@ display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
     { name = "Following", kind = "embed_code", function = "followingCompiledCodeLibraryRef" },
+    { name = "Holding", kind = "embed_code", function = "holdingCompiledCodeLibraryRef" },
 ]
 
 [contracts.Following]
 display-name = "Following Child"
 src = "contracts/src/followers/followers.tolk"
+depends = []
+
+[contracts.Holding]
+display-name = "Holding Child"
+src = "contracts/src/holding/holding.tolk"
 depends = []
 
 
