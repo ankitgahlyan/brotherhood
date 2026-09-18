@@ -15,6 +15,11 @@ import {
   removeUsernameAddressMapping,
   normalizeUsername,
   normalizeContactAddress,
+  setCustomAddressName,
+  removeCustomAddressName,
+  getCustomAddressName,
+  hasCustomAddressName,
+  getEffectiveUsername,
 } from './contact-storage';
 import {
   clearNegativeUsernameCacheForAddress,
@@ -39,15 +44,18 @@ describe('contact-storage bidirectional mappings', () => {
     },
   };
 
-  if (typeof globalThis.localStorage === 'undefined') {
-    (globalThis as any).localStorage = mockLocalStorage;
-  }
+  (globalThis as any).localStorage = mockLocalStorage;
   if (typeof globalThis.window === 'undefined') {
     (globalThis as any).window = { localStorage: mockLocalStorage };
+  } else {
+    (globalThis as any).window.localStorage = mockLocalStorage;
   }
 
   beforeEach(() => {
     mockLocalStorage.clear();
+    if (typeof globalThis.localStorage?.clear === 'function') {
+      globalThis.localStorage.clear();
+    }
     getNegativeUsernameCache().clear();
   });
 
@@ -105,5 +113,59 @@ describe('contact-storage bidirectional mappings', () => {
 
     clearNegativeUsernameCacheForAddress(testAddress, network);
     expect(cache.has(`${network}:${testAddress}`)).toBe(false);
+  });
+
+  describe('custom address renaming and global override', () => {
+    it('sets a custom name for an address without on-chain username', () => {
+      expect(getCachedUsername(testAddress, network)).toBeNull();
+      setCustomAddressName(testAddress, 'Alice Work', network);
+
+      expect(hasCustomAddressName(testAddress, network)).toBe(true);
+      expect(getCustomAddressName(testAddress, network)).toBe('Alice Work');
+      // getCachedUsername returns custom name
+      expect(getCachedUsername(testAddress, network)).toBe('Alice Work');
+      // reverse lookup finds address by custom name
+      expect(getCachedAddressByUsername('Alice Work', network)).toBe(
+        testAddress,
+      );
+      expect(getCachedAddressByUsername('@Alice Work', network)).toBe(
+        testAddress,
+      );
+    });
+
+    it('custom name overrides existing on-chain username and restoring restores on-chain name', () => {
+      saveUsernameAddressMapping('alice_crypto', testAddress, network);
+      expect(getCachedUsername(testAddress, network)).toBe('alice_crypto');
+
+      // Set custom nickname
+      setCustomAddressName(testAddress, 'Binance Cold Wallet', network);
+
+      // getCachedUsername is overridden everywhere
+      expect(getCachedUsername(testAddress, network)).toBe(
+        'Binance Cold Wallet',
+      );
+
+      // Effective username inspection
+      const effective = getEffectiveUsername(testAddress, network);
+      expect(effective?.isCustom).toBe(true);
+      expect(effective?.name).toBe('Binance Cold Wallet');
+      expect(effective?.onChainName).toBe('alice_crypto');
+
+      // Both names resolve to the address in reverse lookup (custom takes precedence)
+      expect(getCachedAddressByUsername('Binance Cold Wallet', network)).toBe(
+        testAddress,
+      );
+      expect(getCachedAddressByUsername('alice_crypto', network)).toBe(
+        testAddress,
+      );
+
+      // Removing custom nickname restores on-chain username
+      removeCustomAddressName(testAddress, network);
+      expect(hasCustomAddressName(testAddress, network)).toBe(false);
+      expect(getCachedUsername(testAddress, network)).toBe('alice_crypto');
+      const restored = getEffectiveUsername(testAddress, network);
+      expect(restored?.isCustom).toBe(false);
+      expect(restored?.name).toBe('alice_crypto');
+    });
   });
 });

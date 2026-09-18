@@ -21,11 +21,20 @@ import {
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
 import {
-  getCachedUsername,
   getCachedAddressByUsername,
   getAllUsernames,
   saveUsernameAddressMapping,
+  getEffectiveUsername,
+  setCustomAddressName,
+  removeCustomAddressName,
+  hasCustomAddressName,
 } from '@/core/lib/contact-storage';
+import {
+  deriveTokenWalletAddressOffchain,
+  detectAndResolveOwnerFromChildContract,
+  type TokenContractContext,
+  type ChildContractCorrection,
+} from '@/features/send/lib/token-contract-resolution';
 
 // In-memory negative cache for addresses without usernames to avoid redundant on-chain calls
 const negativeUsernameCache = new Set<string>();
@@ -34,24 +43,33 @@ export function getNegativeUsernameCache(): Set<string> {
   return negativeUsernameCache;
 }
 
-export function clearNegativeUsernameCacheForAddress(
+/**
+ * Clear the in-memory negative cache (useful for tests or hard resets).
+ */
+export function clearNegativeUsernameCache(): void {
+  negativeUsernameCache.clear();
+}
+
+/**
+ * Invalidate an address from negative cache so the next resolution refetches on-chain.
+ */
+export function invalidateNegativeUsernameCache(
   address: string,
   network: string,
 ): void {
-  try {
-    const parsed = Address.parse(address);
-    negativeUsernameCache.delete(`${network}:${parsed.toString()}`);
-  } catch {
-    // ignore
-  }
+  if (!address) return;
   negativeUsernameCache.delete(`${network}:${address.trim()}`);
 }
+
+export const clearNegativeUsernameCacheForAddress =
+  invalidateNegativeUsernameCache;
 
 export interface UseAddressUsernameResolutionOptions {
   value: string;
   onChange: (value: string) => void;
   onResolvedAddressChange?: (address: string | null) => void;
   enabled?: boolean;
+  tokenContext?: TokenContractContext;
 }
 
 export interface UseAddressUsernameResolutionResult {
@@ -60,13 +78,20 @@ export interface UseAddressUsernameResolutionResult {
   isUsernameInput: boolean;
   resolvedAddress: string | null;
   resolvedUsername: string | null;
+  isCustomName: boolean;
+  onChainUsername: string | null;
   isResolving: boolean;
-  suggestions: { username: string; address: string }[];
+  suggestions: { username: string; address: string; isCustom?: boolean }[];
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   handleSelectSuggestion: (item: { username: string; address: string }) => void;
   refetchProfile: () => Promise<void>;
+  setCustomName: (name: string) => void;
+  removeCustomName: () => void;
   net: Network;
+  derivedTokenWalletAddress: string | null;
+  childContractCorrection: ChildContractCorrection | null;
+  applyChildContractCorrection: () => void;
 }
 
 function extractUsernameFromState(state: any): string | null {
@@ -86,6 +111,7 @@ export function useAddressUsernameResolution({
   onChange,
   onResolvedAddressChange,
   enabled = true,
+  tokenContext,
 }: UseAddressUsernameResolutionOptions): UseAddressUsernameResolutionResult {
   const { network } = useFormatAddress();
   const net: Network = network === 'mainnet' ? 'mainnet' : 'testnet';
@@ -96,16 +122,35 @@ export function useAddressUsernameResolution({
     [enabled, trimmed],
   );
 
+  const [, setCustomNameVersion] = useState(0);
+  const [derivedTokenWalletAddress, setDerivedTokenWalletAddress] = useState<
+    string | null
+  >(null);
+  const [childContractCorrection, setChildContractCorrection] =
+    useState<ChildContractCorrection | null>(null);
+
+  const applyChildContractCorrection = useCallback(() => {
+    if (childContractCorrection?.ownerAddress) {
+      onChange(childContractCorrection.ownerAddress);
+      onResolvedAddressChange?.(childContractCorrection.ownerAddress);
+      setChildContractCorrection(null);
+    }
+  }, [childContractCorrection, onChange, onResolvedAddressChange]);
+
   const isUsernameInput = useMemo(() => {
     if (!enabled || !trimmed || isDirectAddress) return false;
-    return trimmed.startsWith('@') || /^[a-zA-Z0-9_]{3,32}$/.test(trimmed);
+    return trimmed.startsWith('@') || /^[a-zA-Z0-9_\- ]{2,40}$/.test(trimmed);
   }, [enabled, trimmed, isDirectAddress]);
 
-  const cachedUsername = useMemo(() => {
+  if (isUsernameInput && childContractCorrection !== null) {
+    setChildContractCorrection(null);
+  }
+
+  const effectiveInfo = useMemo(() => {
     if (!enabled || !trimmed) return null;
     if (isDirectAddress) {
-      const fromStorage = getCachedUsername(trimmed, net);
-      if (fromStorage) return fromStorage;
+      const effective = getEffectiveUsername(trimmed, net);
+      if (effective) return effective;
 
       try {
         const parsed = Address.parse(trimmed);
@@ -116,7 +161,7 @@ export function useAddressUsernameResolution({
         const uname = extractUsernameFromState(cachedEntry?.data);
         if (uname) {
           saveUsernameAddressMapping(uname, trimmed, net);
-          return uname;
+          return { name: uname, isCustom: false, onChainName: uname };
         }
 
         // Also check if trimmed is already a direct FiWallet address
@@ -125,7 +170,11 @@ export function useAddressUsernameResolution({
         const directUname = extractUsernameFromState(directEntry?.data);
         if (directUname) {
           saveUsernameAddressMapping(directUname, trimmed, net);
-          return directUname;
+          return {
+            name: directUname,
+            isCustom: false,
+            onChainName: directUname,
+          };
         }
       } catch {
         // Offchain calculation failed or not in L1 cache
@@ -135,8 +184,12 @@ export function useAddressUsernameResolution({
     }
     if (isUsernameInput) {
       const clean = trimmed.replace(/^@+/, '');
-      const cached = getCachedAddressByUsername(clean, net);
-      return cached ? clean : null;
+      const cachedAddr = getCachedAddressByUsername(clean, net);
+      if (cachedAddr) {
+        const eff = getEffectiveUsername(cachedAddr, net);
+        return eff || { name: clean, isCustom: false };
+      }
+      return null;
     }
     return null;
   }, [enabled, trimmed, isDirectAddress, isUsernameInput, net]);
@@ -145,7 +198,10 @@ export function useAddressUsernameResolution({
   const [onChainUsername, setOnChainUsername] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const resolvedUsername = cachedUsername || onChainUsername;
+  const resolvedUsername = effectiveInfo?.name || onChainUsername;
+  const isCustomName = effectiveInfo?.isCustom ?? false;
+  const effectiveOnChainUsername =
+    effectiveInfo?.onChainName ?? onChainUsername;
 
   // Suggestions from localStorage
   const suggestions = useMemo(() => {
@@ -156,8 +212,14 @@ export function useAddressUsernameResolution({
       const mapping = getAllUsernames(net);
       const query = trimmed.replace(/^@+/, '').toLowerCase();
       return Object.entries(mapping)
-        .filter(([uname]) => (query ? uname.includes(query) : true))
-        .map(([uname, addr]) => ({ username: uname, address: addr }));
+        .filter(([uname]) =>
+          query ? uname.toLowerCase().includes(query) : true,
+        )
+        .map(([uname, addr]) => ({
+          username: uname,
+          address: addr,
+          isCustom: hasCustomAddressName(addr, net),
+        }));
     } catch {
       return [];
     }
@@ -184,10 +246,20 @@ export function useAddressUsernameResolution({
     let isCancelled = false;
 
     if (isDirectAddress) {
-      onResolvedAddressChange?.(trimmed);
+      // 1. Detect if this is a child contract (FiWallet / PersonalWallet)
+      void detectAndResolveOwnerFromChildContract(trimmed, net).then((corr) => {
+        if (isCancelled) return;
+        if (corr?.isChildContract && corr.ownerAddress) {
+          setChildContractCorrection(corr);
+          onResolvedAddressChange?.(corr.ownerAddress);
+        } else {
+          setChildContractCorrection(null);
+          onResolvedAddressChange?.(trimmed);
+        }
+      });
 
       // If already cached in localStorage or L1 ContractCache, skip network call
-      if (cachedUsername) {
+      if (effectiveInfo?.onChainName || (effectiveInfo && !isCustomName)) {
         return;
       }
 
@@ -206,10 +278,9 @@ export function useAddressUsernameResolution({
         return;
       }
 
-      setIsResolving(true);
-
       // Query on-chain FiWallet with debounce
       const timer = setTimeout(async () => {
+        setIsResolving(true);
         try {
           const parsed = parsedAddress || Address.parse(trimmed);
 
@@ -271,11 +342,46 @@ export function useAddressUsernameResolution({
     trimmed,
     isDirectAddress,
     isUsernameInput,
-    cachedUsername,
+    effectiveInfo,
+    isCustomName,
     resolvedAddress,
     net,
     onResolvedAddressChange,
   ]);
+
+  const effectiveTargetOwner =
+    childContractCorrection?.ownerAddress ||
+    resolvedAddress ||
+    (isDirectAddress ? trimmed : null);
+
+  const canDeriveTokenWallet = Boolean(
+    enabled && effectiveTargetOwner && tokenContext,
+  );
+  if (!canDeriveTokenWallet && derivedTokenWalletAddress !== null) {
+    setDerivedTokenWalletAddress(null);
+  }
+
+  useEffect(() => {
+    if (!enabled || !effectiveTargetOwner || !tokenContext) {
+      return;
+    }
+    let isCancelled = false;
+    void deriveTokenWalletAddressOffchain({
+      minterAddress: tokenContext.minterAddress,
+      ownerAddress: effectiveTargetOwner,
+      network: net,
+      tokenSymbol: tokenContext.symbol,
+      adminAddress: tokenContext.adminAddress,
+    }).then((derived) => {
+      if (!isCancelled) {
+        setDerivedTokenWalletAddress(derived);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [enabled, effectiveTargetOwner, tokenContext, net]);
 
   const handleSelectSuggestion = useCallback(
     (item: { username: string; address: string }) => {
@@ -343,18 +449,43 @@ export function useAddressUsernameResolution({
     }
   }, [resolvedAddress, isDirectAddress, trimmed, net]);
 
+  const setCustomName = useCallback(
+    (name: string) => {
+      const targetAddress =
+        resolvedAddress || (isDirectAddress ? trimmed : null);
+      if (!targetAddress) return;
+      setCustomAddressName(targetAddress, name, net);
+      setCustomNameVersion((v) => v + 1);
+    },
+    [resolvedAddress, isDirectAddress, trimmed, net],
+  );
+
+  const removeCustomName = useCallback(() => {
+    const targetAddress = resolvedAddress || (isDirectAddress ? trimmed : null);
+    if (!targetAddress) return;
+    removeCustomAddressName(targetAddress, net);
+    setCustomNameVersion((v) => v + 1);
+  }, [resolvedAddress, isDirectAddress, trimmed, net]);
+
   return {
     trimmed,
     isDirectAddress,
     isUsernameInput,
     resolvedAddress,
     resolvedUsername,
+    isCustomName,
+    onChainUsername: effectiveOnChainUsername,
     isResolving,
     suggestions,
     showSuggestions,
     setShowSuggestions,
     handleSelectSuggestion,
     refetchProfile,
+    setCustomName,
+    removeCustomName,
     net,
+    derivedTokenWalletAddress,
+    childContractCorrection,
+    applyChildContractCorrection,
   };
 }

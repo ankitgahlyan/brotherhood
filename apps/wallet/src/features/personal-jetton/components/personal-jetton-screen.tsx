@@ -123,17 +123,19 @@ export const PersonalJettonScreen: React.FC = () => {
   const activePersonalWallet =
     info.personalWalletAddress || info.expectedPersonalWalletAddress || '';
 
+  const minterAdminAddress = info.minterDetails?.adminAddress;
+  const detMinterAddress = info.deterministicMinterAddress;
   const isMinterAdmin = useMemo(() => {
     if (!address) return false;
     try {
       const userAddr = Address.parse(address);
-      if (info.minterDetails?.adminAddress) {
-        return userAddr.equals(info.minterDetails.adminAddress);
+      if (minterAdminAddress) {
+        return userAddr.equals(minterAdminAddress);
       }
       // Fallback: If deterministic minter is defined and matches activeMinter,
       // the connected user is the default admin for their own deterministic minter
-      if (info.deterministicMinterAddress && activeMinter) {
-        const detMinter = Address.parse(info.deterministicMinterAddress);
+      if (detMinterAddress && activeMinter) {
+        const detMinter = Address.parse(detMinterAddress);
         if (Address.parse(activeMinter).equals(detMinter)) {
           return true;
         }
@@ -142,12 +144,7 @@ export const PersonalJettonScreen: React.FC = () => {
     } catch {
       return false;
     }
-  }, [
-    address,
-    info.minterDetails?.adminAddress,
-    info.deterministicMinterAddress,
-    activeMinter,
-  ]);
+  }, [address, minterAdminAddress, detMinterAddress, activeMinter]);
 
   // Deploy tab initial mint amount
   const [initialMintAmount, setInitialMintAmount] = useState('1000');
@@ -181,7 +178,18 @@ export const PersonalJettonScreen: React.FC = () => {
         ];
 
   // If already deployed on-chain and not in post-deploy success state, switch to info
-  React.useEffect(() => {
+  const [prevDeployState, setPrevDeployState] = useState({
+    isDeployedOnChain: info.isDeployedOnChain,
+    hasDeployedAddresses: Boolean(deployer.deployedAddresses),
+  });
+  if (
+    info.isDeployedOnChain !== prevDeployState.isDeployedOnChain ||
+    Boolean(deployer.deployedAddresses) !== prevDeployState.hasDeployedAddresses
+  ) {
+    setPrevDeployState({
+      isDeployedOnChain: info.isDeployedOnChain,
+      hasDeployedAddresses: Boolean(deployer.deployedAddresses),
+    });
     if (
       info.isDeployedOnChain &&
       !deployer.deployedAddresses &&
@@ -189,7 +197,7 @@ export const PersonalJettonScreen: React.FC = () => {
     ) {
       setActiveTab('info');
     }
-  }, [info.isDeployedOnChain, deployer.deployedAddresses, activeTab]);
+  }
 
   // Effective addresses to register
   const targetRegisterMinter =
@@ -827,6 +835,12 @@ export const PersonalJettonScreen: React.FC = () => {
                     onChange={setRecipient}
                     placeholder={`Recipient Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="personal-mint-recipient"
+                    tokenContext={{
+                      tokenType: 'JETTON',
+                      minterAddress:
+                        activeMinter || info.personalMinterAddress || undefined,
+                      adminAddress: address || undefined,
+                    }}
                   />
                 </div>
                 <div>

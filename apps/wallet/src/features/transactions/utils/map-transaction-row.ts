@@ -36,6 +36,22 @@ export interface TransactionRowModel {
   subtitleId: string;
   /** Counterparty address (recipient for outgoing, sender for incoming, or contract address). */
   counterpartyAddress?: string;
+  /** Explicit sender address. */
+  senderAddress?: string;
+  /** Explicit recipient address. */
+  recipientAddress?: string;
+  /** Attached comment/memo if any. */
+  comment?: string;
+  /** Estimated or actual network fee. */
+  fee?: string;
+  /** Action / operation raw type (e.g. 'TonTransfer', 'JettonTransfer', 'SmartContractExec', etc.). */
+  rawType?: string;
+  /** Clean amount without direction sign, e.g. "5 GRAM". */
+  cleanAmount?: string;
+  /** Extracted symbol (e.g. "GRAM", "USDT", "TON"). */
+  symbol?: string;
+  /** Unix timestamp in seconds. */
+  timestamp: number;
   /** Decoded failure reason if transaction failed. */
   failureReason?: string;
   /** Signed crypto amount, e.g. "+5 GRAM" / "-1 USDT". */
@@ -234,6 +250,66 @@ const getCounterpartyAddress = (
   return accounts?.[0]?.address;
 };
 
+const getSenderAddress = (
+  action: Action,
+  isOutgoing: boolean,
+  myAddress: string,
+): string | undefined => {
+  if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
+    return action.TonTransfer?.sender?.address;
+  }
+  if (action.type === 'JettonTransfer' && 'JettonTransfer' in action) {
+    return action.JettonTransfer?.sender?.address;
+  }
+  if (action.type === 'NftItemTransfer' && 'NftItemTransfer' in action) {
+    return action.NftItemTransfer?.sender?.address;
+  }
+  if (isOutgoing) return myAddress;
+  return getCounterpartyAddress(action, isOutgoing, myAddress);
+};
+
+const getRecipientAddress = (
+  action: Action,
+  isOutgoing: boolean,
+  myAddress: string,
+): string | undefined => {
+  if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
+    return action.TonTransfer?.recipient?.address;
+  }
+  if (action.type === 'JettonTransfer' && 'JettonTransfer' in action) {
+    return action.JettonTransfer?.recipient?.address;
+  }
+  if (action.type === 'NftItemTransfer' && 'NftItemTransfer' in action) {
+    return action.NftItemTransfer?.recipient?.address;
+  }
+  if (!isOutgoing) return myAddress;
+  return getCounterpartyAddress(action, isOutgoing, myAddress);
+};
+
+const getCommentFromAction = (action?: Action): string | undefined => {
+  if (!action) return undefined;
+  if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
+    return action.TonTransfer?.comment;
+  }
+  if (action.type === 'JettonTransfer' && 'JettonTransfer' in action) {
+    return action.JettonTransfer?.comment;
+  }
+  return undefined;
+};
+
+const extractFee = (event: Event): string | undefined => {
+  if (!event.transactions) return undefined;
+  let totalFee = 0n;
+  for (const tx of Object.values(event.transactions)) {
+    if (tx.total_fees) {
+      totalFee += BigInt(tx.total_fees);
+    }
+  }
+  return totalFee > 0n
+    ? `${formatAmount(totalFee, GRAM_DECIMALS)} GRAM`
+    : undefined;
+};
+
 /** Action name + transfer detail + value (no sign), derived from the typed action fields. */
 const describeAction = (
   action: Action,
@@ -353,6 +429,11 @@ export const mapEventToRow = (
     : undefined;
 
   const counterparty = getCounterpartyAddress(action, isOutgoing, myAddress);
+  const sender = getSenderAddress(action, isOutgoing, myAddress);
+  const recipient = getRecipientAddress(action, isOutgoing, myAddress);
+  const comment = getCommentFromAction(action);
+  const symbol = value ? value.split(' ').pop() : undefined;
+  const fee = extractFee(event);
 
   return {
     id: eventId,
@@ -362,6 +443,14 @@ export const mapEventToRow = (
     title: actionName,
     subtitleId: transferDetail || truncateMiddle(eventId),
     counterpartyAddress: counterparty,
+    senderAddress: sender,
+    recipientAddress: recipient,
+    comment,
+    fee,
+    rawType: action.type,
+    cleanAmount: value,
+    symbol,
+    timestamp: event.timestamp,
     failureReason,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
@@ -402,6 +491,7 @@ export const mapPendingToRow = (
     explorerUrl,
     subtitleId: truncateMiddle(pending.traceId),
     status,
+    timestamp,
     date: formatTxDate(timestamp),
   };
 
@@ -416,11 +506,26 @@ export const mapPendingToRow = (
       isOutgoing,
       myAddress,
     );
+    const sender = getSenderAddress(pending.action, isOutgoing, myAddress);
+    const recipient = getRecipientAddress(
+      pending.action,
+      isOutgoing,
+      myAddress,
+    );
+    const comment = getCommentFromAction(pending.action);
+    const symbol = value ? value.split(' ').pop() : undefined;
+
     return {
       ...base,
       title: actionName,
       subtitleId: transferDetail || truncateMiddle(pending.traceId),
       counterpartyAddress: counterparty,
+      senderAddress: sender,
+      recipientAddress: recipient,
+      comment,
+      rawType: pending.action.type,
+      cleanAmount: value,
+      symbol,
       amount: signedAmount(value, isOutgoing),
       isOutgoing,
     };
@@ -434,11 +539,17 @@ export const mapPendingToRow = (
   const transferDetail = pending.preview
     ? `${isOutgoing ? 'Sent' : 'Received'} ${value}`
     : 'Processing';
+  const counterparty = pending.preview?.recipient;
   return {
     ...base,
     title,
     subtitleId: transferDetail,
-    counterpartyAddress: pending.preview?.recipient,
+    counterpartyAddress: counterparty,
+    senderAddress: isOutgoing ? myAddress : counterparty,
+    recipientAddress: isOutgoing ? counterparty : myAddress,
+    rawType: 'TonTransfer',
+    cleanAmount: value,
+    symbol: 'GRAM',
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
   };

@@ -8,6 +8,9 @@
 
 export * from './components/transaction-row';
 export * from './components/transaction-history';
-export * from './utils/map-transaction-row';
 export * from './components/history-screen';
+export * from './components/date-header';
+export * from './components/transaction-info-modal';
+export * from './components/inline-explorer-modal';
+export * from './utils/map-transaction-row';
 export * from './hooks/use-transaction-rows';

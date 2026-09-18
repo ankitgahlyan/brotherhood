@@ -21,7 +21,10 @@ mock.module('@demo/wallet-core', () => ({
 }));
 
 import { InputScan } from './input-scan';
-import { saveUsernameAddressMapping } from '@/core/lib/contact-storage';
+import {
+  saveUsernameAddressMapping,
+  setCustomAddressName,
+} from '@/core/lib/contact-storage';
 
 describe('InputScan component', () => {
   const testAddress = '0QAREREREREREREREREREREREREREREREREREREREREREQBc';
@@ -41,15 +44,18 @@ describe('InputScan component', () => {
     },
   };
 
-  if (typeof globalThis.localStorage === 'undefined') {
-    (globalThis as any).localStorage = mockLocalStorage;
-  }
+  (globalThis as any).localStorage = mockLocalStorage;
   if (typeof globalThis.window === 'undefined') {
     (globalThis as any).window = { localStorage: mockLocalStorage };
+  } else {
+    (globalThis as any).window.localStorage = mockLocalStorage;
   }
 
   beforeEach(() => {
     mockLocalStorage.clear();
+    if (typeof globalThis.localStorage?.clear === 'function') {
+      globalThis.localStorage.clear();
+    }
   });
 
   it('renders input field with scanner button and default placeholder', () => {
@@ -87,13 +93,44 @@ describe('InputScan component', () => {
     );
   });
 
-  it('displays no username set with check again option for valid unmapped address', () => {
+  it('displays no username set with check again and set name options for valid unmapped address', () => {
     const html = renderToString(
       React.createElement(InputScan, {
         value: testAddress,
         onChange: () => {},
       }),
     );
-    expect(html).toContain(testAddress);
+    expect(html).toContain('No username set for this address');
+    expect(html).toContain('Set name');
+    expect(html).toContain('Check again');
+  });
+
+  it('displays custom name badge with Custom tag when custom nickname is set', () => {
+    setCustomAddressName(testAddress, 'Alice Vault', network);
+
+    const html = renderToString(
+      React.createElement(InputScan, {
+        value: testAddress,
+        onChange: () => {},
+      }),
+    );
+    expect(html).toContain('@Alice Vault');
+    expect(html).toContain('Custom');
+  });
+
+  it('custom name overrides on-chain mapped username with Custom tag', () => {
+    saveUsernameAddressMapping('alice_brotherhood', testAddress, network);
+    setCustomAddressName(testAddress, 'My Alice', network);
+
+    const html = renderToString(
+      React.createElement(InputScan, {
+        value: testAddress,
+        onChange: () => {},
+      }),
+    );
+    expect(html).toContain('<span>@My Alice</span>');
+    expect(html).not.toContain('<span>@alice_brotherhood</span>');
+    expect(html).toContain('title="Revert to @alice_brotherhood"');
+    expect(html).toContain('Custom');
   });
 });

@@ -6,13 +6,7 @@
  *
  */
 
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-  useEffect,
-} from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -20,6 +14,14 @@ import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
+import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
+
+const FI_TOKEN_CONTEXT: TokenContractContext = {
+  tokenType: 'JETTON',
+  symbol: 'FI',
+  minterAddress: FI_ADDRESS,
+};
 import { Modal } from '@/core/components/ui/modal';
 import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
@@ -139,7 +141,9 @@ export const BrotherhoodScreen: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
-  useEffect(() => {
+  const [prevSearch, setPrevSearch] = useState(location.search);
+  if (location.search !== prevSearch) {
+    setPrevSearch(location.search);
     const searchParams = new URLSearchParams(location.search as any);
     const requestedTab = searchParams.get('tab') as Tab;
     const validTabs: Tab[] = [
@@ -158,7 +162,7 @@ export const BrotherhoodScreen: React.FC = () => {
     if (requestedTab && validTabs.includes(requestedTab)) {
       setActiveTab(requestedTab);
     }
-  }, [location.search]);
+  }
 
   // Forms state
   const [recipient, setRecipient] = useState('');
@@ -207,16 +211,17 @@ export const BrotherhoodScreen: React.FC = () => {
   const account = useFiAccount(address ?? null);
 
   // Sync candidate defaults when on-chain account data loads
-  useEffect(() => {
-    if (account.data) {
-      if (
-        account.data.votedFor.length === 0 &&
-        account.data.invited.length > 0
-      ) {
-        setCandidateSourceTab('circle');
-      }
+  const [prevAccountData, setPrevAccountData] = useState(account.data);
+  if (account.data !== prevAccountData) {
+    setPrevAccountData(account.data);
+    if (
+      account.data &&
+      account.data.votedFor.length === 0 &&
+      account.data.invited.length > 0
+    ) {
+      setCandidateSourceTab('circle');
     }
-  }, [account.data]);
+  }
 
   // Address batch resolver for voted candidates & invitees
   const addressesToResolve = useMemo(() => {
@@ -292,10 +297,12 @@ export const BrotherhoodScreen: React.FC = () => {
     [],
   );
 
+  const accountInvited = account.data?.invited;
+  const resolvedProfilesData = resolvedProfiles.data;
   const circleSelectableMembers: SelectableMemberOption[] = useMemo(() => {
-    if (!account.data?.invited) return [];
-    return account.data.invited.map((m) => {
-      const prof = resolvedProfiles.data?.[m.addressString];
+    if (!accountInvited) return [];
+    return accountInvited.map((m) => {
+      const prof = resolvedProfilesData?.[m.addressString];
       return {
         contractAddress: m.addressString,
         ownerAddress: prof?.ownerAddress || '',
@@ -305,7 +312,7 @@ export const BrotherhoodScreen: React.FC = () => {
         multiplier: prof?.multiplier,
       };
     });
-  }, [account.data?.invited, resolvedProfiles.data]);
+  }, [accountInvited, resolvedProfilesData]);
 
   const ringSelectableMembers: SelectableMemberOption[] = useMemo(() => {
     return Object.values(discoveredRingProfiles).map((prof) => ({
@@ -2614,6 +2621,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     onChange={setGrantee}
                     placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="brotherhood-grantee-address"
+                    tokenContext={FI_TOKEN_CONTEXT}
                   />
                   <input
                     type="number"
@@ -2658,12 +2666,14 @@ export const BrotherhoodScreen: React.FC = () => {
                     onChange={setGranter}
                     placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="brotherhood-granter-address"
+                    tokenContext={FI_TOKEN_CONTEXT}
                   />
                   <InputScan
                     value={recipient}
                     onChange={setRecipient}
                     placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="brotherhood-spend-receiver"
+                    tokenContext={FI_TOKEN_CONTEXT}
                   />
                   <input
                     type="number"
@@ -2717,6 +2727,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 onChange={setGoldRecipient}
                 placeholder={network === 'mainnet' ? 'UQ...' : '0Q...'}
                 data-testid="brotherhood-gold-recipient"
+                tokenContext={FI_TOKEN_CONTEXT}
               />
             </div>
 

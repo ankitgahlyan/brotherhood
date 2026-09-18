@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from '@/core/routing';
 import { isValidAddress } from '@ton/walletkit';
 import type { TONTransferRequest } from '@ton/walletkit';
@@ -39,6 +39,12 @@ import {
 import { isFiJetton } from '@/features/jettons';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
 import type { TokenOption } from '../../types';
+import {
+  deriveTokenWalletAddressOffchain,
+  type TokenContractContext,
+} from '../../lib/token-contract-resolution';
+import { Layers, ChevronDown } from 'lucide-react';
+import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/core/components/ui/button';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -55,12 +61,23 @@ export const SendTransaction: React.FC = () => {
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
 
+  const initialParams = useMemo(() => {
+    if (typeof window === 'undefined')
+      return { recipient: '', amount: '', token: '' };
+    const sp = new URLSearchParams(window.location.search);
+    return {
+      recipient: sp.get('recipient') || '',
+      amount: sp.get('amount') || '',
+      token: sp.get('token') || '',
+    };
+  }, []);
+
   const [selectedId, setSelectedId] = useState('HD');
-  const [recipient, setRecipient] = useState('');
+  const [recipient, setRecipient] = useState(initialParams.recipient);
   const [effectiveRecipientAddress, setEffectiveRecipientAddress] = useState<
     string | null
-  >(null);
-  const [amount, setAmount] = useState('');
+  >(initialParams.recipient ? initialParams.recipient : null);
+  const [amount, setAmount] = useState(initialParams.amount);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -69,6 +86,20 @@ export const SendTransaction: React.FC = () => {
   const [granterInput, setGranterInput] = useState('');
 
   const options = useSendTokens();
+
+  const [hasAppliedInitialToken, setHasAppliedInitialToken] = useState(false);
+  if (!hasAppliedInitialToken && initialParams.token && options.length > 0) {
+    const match = options.find(
+      (o) =>
+        o.symbol?.toLowerCase() === initialParams.token.toLowerCase() ||
+        o.id.toLowerCase() === initialParams.token.toLowerCase(),
+    );
+    if (match) {
+      setHasAppliedInitialToken(true);
+      setSelectedId(match.id);
+    }
+  }
+
   const selected =
     options.find((option) => option.id === selectedId) ?? options[0];
 
@@ -77,6 +108,57 @@ export const SendTransaction: React.FC = () => {
     selected.id === FI_ADDRESS ||
     selected.symbol === 'FI' ||
     (selected.token.type === 'JETTON' && isFiJetton(selected.token.data));
+
+  const tokenContext = useMemo<TokenContractContext>(() => {
+    if (selected.token.type === 'TON') {
+      return { tokenType: 'TON' };
+    }
+    const minterAddr =
+      selected.token.data?.address || (isFiToken ? FI_ADDRESS : selected.id);
+    return {
+      tokenType: 'JETTON',
+      minterAddress: minterAddr,
+      symbol: selected.symbol,
+      adminAddress: (selected.token.data as any)?.adminAddress,
+    };
+  }, [selected, isFiToken]);
+
+  const [derivedRecipientTokenWallet, setDerivedRecipientTokenWallet] =
+    useState<string | null>(null);
+  const [derivedSenderTokenWallet, setDerivedSenderTokenWallet] = useState<
+    string | null
+  >(null);
+  const [showRoutingDetails, setShowRoutingDetails] = useState(false);
+
+  const tokenContextKey = `${address}:${tokenContext.tokenType}:${tokenContext.minterAddress ?? ''}:${network}`;
+  const [prevContextKey, setPrevContextKey] = useState(tokenContextKey);
+  if (tokenContextKey !== prevContextKey) {
+    setPrevContextKey(tokenContextKey);
+    if (!address || tokenContext.tokenType !== 'JETTON') {
+      setDerivedSenderTokenWallet(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!address || tokenContext.tokenType !== 'JETTON') return;
+
+    let isCancelled = false;
+    void deriveTokenWalletAddressOffchain({
+      minterAddress: tokenContext.minterAddress,
+      ownerAddress: address,
+      network: network === 'mainnet' ? 'mainnet' : 'testnet',
+      tokenSymbol: tokenContext.symbol,
+      adminAddress: tokenContext.adminAddress,
+    }).then((wallet) => {
+      if (!isCancelled) {
+        setDerivedSenderTokenWallet(wallet);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [address, tokenContext, network]);
 
   const resolvedGranterAddress = useMemo(() => {
     if (senderMode !== 'other') return null;
@@ -206,6 +288,16 @@ export const SendTransaction: React.FC = () => {
       if (senderMode === 'self') {
         if (inputAmount > selected.balance) {
           throw new Error('Insufficient balance');
+        }
+
+        if (tokenContext.tokenType === 'JETTON' && address) {
+          await deriveTokenWalletAddressOffchain({
+            minterAddress: tokenContext.minterAddress,
+            ownerAddress: address,
+            network: network === 'mainnet' ? 'mainnet' : 'testnet',
+            tokenSymbol: tokenContext.symbol,
+            adminAddress: tokenContext.adminAddress,
+          });
         }
 
         const result = await sender.send();
@@ -372,7 +464,77 @@ export const SendTransaction: React.FC = () => {
             onResolvedAddressChange={setEffectiveRecipientAddress}
             error={recipientError}
             onUseMyAddress={address ? handleSendToSelf : undefined}
+            tokenContext={tokenContext}
+            onDerivedTokenWalletChange={setDerivedRecipientTokenWallet}
           />
+
+          {/* Expandable Contract Routing Details for Jetton / FI / Personal Tokens */}
+          {tokenContext.tokenType === 'JETTON' && (
+            <div className="border border-border/60 bg-card/50 rounded-xl p-3 text-xs space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowRoutingDetails((prev) => !prev)}
+                className="w-full flex items-center justify-between font-medium text-foreground hover:text-primary transition-colors text-left"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-primary" />
+                  <span>Contract Routing Details</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    0 RPC Calls (Off-Chain)
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'w-3.5 h-3.5 transition-transform duration-200',
+                      showRoutingDetails && 'rotate-180',
+                    )}
+                  />
+                </div>
+              </button>
+
+              {showRoutingDetails && (
+                <div className="pt-2 border-t border-border/40 space-y-2 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Token Minter:</span>
+                    <span className="font-mono text-foreground">
+                      {formatWalletAddress(
+                        tokenContext.minterAddress || selected.id,
+                        false,
+                      )}
+                    </span>
+                  </div>
+                  {derivedSenderTokenWallet && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        Sender Token Wallet:
+                      </span>
+                      <span className="font-mono text-emerald-500">
+                        {formatWalletAddress(derivedSenderTokenWallet, false)}
+                      </span>
+                    </div>
+                  )}
+                  {derivedRecipientTokenWallet && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        Recipient Token Wallet:
+                      </span>
+                      <span className="font-mono text-emerald-500">
+                        {formatWalletAddress(
+                          derivedRecipientTokenWallet,
+                          false,
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-muted-foreground text-[10px]">
+                    <span>Routing Mode:</span>
+                    <span>Deterministic Off-Chain Derivation</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Gasless fees feature - hidden for now, will be re-enabled in future */}
           {/* <GaslessOptions gasless={gasless} /> */}

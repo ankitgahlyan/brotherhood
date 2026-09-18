@@ -6,13 +6,14 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QrCode, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 import { Input } from '@/core/components/ui/input';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
+import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
 
 interface RecipientFieldProps {
   value: string;
@@ -21,6 +22,8 @@ interface RecipientFieldProps {
   error?: string;
   /** When provided, renders a "Use my address" shortcut in the header. */
   onUseMyAddress?: () => void;
+  tokenContext?: TokenContractContext;
+  onDerivedTokenWalletChange?: (walletAddress: string | null) => void;
 }
 
 /**
@@ -33,6 +36,8 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
   onResolvedAddressChange,
   error,
   onUseMyAddress,
+  tokenContext,
+  onDerivedTokenWalletChange,
 }) => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const { formatWalletAddress } = useFormatAddress();
@@ -49,12 +54,20 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
     handleSelectSuggestion,
     refetchProfile,
     net,
+    derivedTokenWalletAddress,
+    childContractCorrection,
+    applyChildContractCorrection,
   } = useAddressUsernameResolution({
     value,
     onChange,
     onResolvedAddressChange,
     enabled: true,
+    tokenContext,
   });
+
+  useEffect(() => {
+    onDerivedTokenWalletChange?.(derivedTokenWalletAddress);
+  }, [derivedTokenWalletAddress, onDerivedTokenWalletChange]);
 
   return (
     <Input.Container error={Boolean(error)}>
@@ -128,6 +141,26 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
           </div>
         )}
       </div>
+
+      {/* Auto-correction notice if a child contract address was entered */}
+      {childContractCorrection && childContractCorrection.ownerAddress && (
+        <div className="flex items-center justify-between mt-1 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-600 dark:text-amber-400">
+          <div className="flex items-center gap-1.5 font-medium">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              Child {childContractCorrection.contractType} detected.
+              Auto-corrected to Owner address.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={applyChildContractCorrection}
+            className="text-[11px] font-semibold underline hover:opacity-80 transition-opacity ml-2 shrink-0"
+          >
+            Use Owner
+          </button>
+        </div>
+      )}
 
       {/* Resolved identity pill */}
       {resolvedAddress && (

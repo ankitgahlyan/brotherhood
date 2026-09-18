@@ -14,11 +14,16 @@ import {
   Loader2,
   RefreshCw,
   User,
+  Pencil,
+  RotateCcw,
+  X,
+  Tag,
 } from 'lucide-react';
 import { QrScanner } from '../qr-scanner/qr-scanner';
 import { cn } from '@/core/lib/utils';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
 import { useFormatAddress } from '@/core/utils/formatters';
+import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
 
 export interface InputScanProps {
   value: string;
@@ -32,6 +37,7 @@ export interface InputScanProps {
   enableUsernameResolution?: boolean;
   onResolvedAddressChange?: (address: string | null) => void;
   showResolvedBadge?: boolean;
+  tokenContext?: TokenContractContext;
 }
 
 export const InputScan: React.FC<InputScanProps> = ({
@@ -46,8 +52,11 @@ export const InputScan: React.FC<InputScanProps> = ({
   enableUsernameResolution = true,
   onResolvedAddressChange,
   showResolvedBadge = true,
+  tokenContext,
 }) => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [isEditingCustomName, setIsEditingCustomName] = useState(false);
+  const [customNameDraft, setCustomNameDraft] = useState('');
   const { formatWalletAddress } = useFormatAddress();
 
   const {
@@ -55,18 +64,50 @@ export const InputScan: React.FC<InputScanProps> = ({
     isUsernameInput,
     resolvedAddress,
     resolvedUsername,
+    isCustomName,
+    onChainUsername,
     isResolving,
     suggestions,
     showSuggestions,
     setShowSuggestions,
     handleSelectSuggestion,
     refetchProfile,
+    setCustomName,
+    removeCustomName,
+    childContractCorrection,
+    applyChildContractCorrection,
   } = useAddressUsernameResolution({
     value,
     onChange,
     onResolvedAddressChange,
     enabled: enableUsernameResolution,
+    tokenContext,
   });
+
+  const handleStartEdit = () => {
+    setCustomNameDraft(resolvedUsername || '');
+    setIsEditingCustomName(true);
+  };
+
+  const handleSaveCustomName = () => {
+    const trimmedDraft = customNameDraft.trim().replace(/^@+/, '');
+    if (trimmedDraft) {
+      setCustomName(trimmedDraft);
+    } else {
+      removeCustomName();
+    }
+    setIsEditingCustomName(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingCustomName(false);
+    setCustomNameDraft('');
+  };
+
+  const handleRevertToOnChain = () => {
+    removeCustomName();
+    setIsEditingCustomName(false);
+  };
 
   const handleScan = (data: string) => {
     if (!data) return;
@@ -124,8 +165,13 @@ export const InputScan: React.FC<InputScanProps> = ({
                       <span className="font-semibold text-foreground">
                         @{item.username}
                       </span>
+                      {item.isCustom && (
+                        <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
+                          Custom
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[160px]">
+                    <span className="text-[11px] font-mono text-muted-foreground truncate max-w-40">
                       {formatWalletAddress(item.address, false)}
                     </span>
                   </button>
@@ -146,27 +192,126 @@ export const InputScan: React.FC<InputScanProps> = ({
         </button>
       </div>
 
+      {/* Auto-correction notice if a child contract address was entered */}
+      {childContractCorrection && childContractCorrection.ownerAddress && (
+        <div className="flex items-center justify-between px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs text-amber-600 dark:text-amber-400">
+          <div className="flex items-center gap-1.5 font-medium">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              Child {childContractCorrection.contractType} detected.
+              Auto-corrected to Owner address.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={applyChildContractCorrection}
+            className="text-[11px] font-semibold underline hover:opacity-80 transition-opacity ml-2 shrink-0"
+          >
+            Use Owner
+          </button>
+        </div>
+      )}
+
       {/* Identity badge / Status info below input */}
       {enableUsernameResolution &&
         showResolvedBadge &&
         value.trim().length > 0 && (
           <div className="flex items-center justify-between px-2 py-1 rounded-md text-xs">
             {/* Resolving spinner */}
-            {isResolving && (
+            {isResolving && !isEditingCustomName && (
               <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
                 <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
                 <span>Checking username...</span>
               </div>
             )}
 
+            {/* Inline custom name editing mode */}
+            {isEditingCustomName && (
+              <div className="flex items-center gap-1.5 w-full bg-card border border-primary/40 px-2 py-1 rounded shadow-sm">
+                <Tag className="w-3.5 h-3.5 text-primary shrink-0" />
+                <input
+                  type="text"
+                  value={customNameDraft}
+                  onChange={(e) => setCustomNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCustomName();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      handleCancelEdit();
+                    }
+                  }}
+                  placeholder="Enter custom name..."
+                  autoFocus
+                  className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveCustomName}
+                  className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded transition-colors"
+                  title="Save name (Enter)"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                {isCustomName && onChainUsername && (
+                  <button
+                    type="button"
+                    onClick={handleRevertToOnChain}
+                    className="p-1 text-amber-500 hover:bg-amber-500/10 rounded transition-colors"
+                    title={`Revert to on-chain (@${onChainUsername})`}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="p-1 text-muted-foreground hover:bg-muted rounded transition-colors"
+                  title="Cancel (Esc)"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Resolved username display */}
-            {!isResolving && resolvedUsername && (
+            {!isResolving && !isEditingCustomName && resolvedUsername && (
               <div className="flex items-center justify-between w-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded text-emerald-500">
                 <div className="flex items-center gap-1.5 font-medium">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span>{`@${resolvedUsername}`}</span>
+                  {isCustomName && (
+                    <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
+                      Custom
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleStartEdit}
+                    className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500"
+                    title={
+                      isCustomName ? 'Edit custom name' : 'Set custom name'
+                    }
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  {isCustomName && (
+                    <button
+                      type="button"
+                      onClick={handleRevertToOnChain}
+                      className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500/80 hover:text-emerald-500"
+                      title={
+                        onChainUsername
+                          ? `Revert to @${onChainUsername}`
+                          : 'Remove custom name'
+                      }
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  )}
                   {resolvedAddress && isUsernameInput && (
                     <button
                       type="button"
@@ -192,31 +337,49 @@ export const InputScan: React.FC<InputScanProps> = ({
             )}
 
             {/* Valid direct address with no username found */}
-            {!isResolving && isDirectAddress && !resolvedUsername && (
-              <div className="flex items-center justify-between w-full text-muted-foreground text-[11px]">
-                <span>No username set for this address</span>
-                <button
-                  type="button"
-                  onClick={() => void refetchProfile()}
-                  className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors"
-                  title="Force refetch on-chain state"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Check again</span>
-                </button>
-              </div>
-            )}
+            {!isResolving &&
+              !isEditingCustomName &&
+              isDirectAddress &&
+              !resolvedUsername && (
+                <div className="flex items-center justify-between w-full text-muted-foreground text-[11px]">
+                  <span>No username set for this address</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleStartEdit}
+                      className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors font-medium"
+                      title="Set custom nickname"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Set name</span>
+                    </button>
+                    <span className="text-border">|</span>
+                    <button
+                      type="button"
+                      onClick={() => void refetchProfile()}
+                      className="flex items-center gap-1 text-muted-foreground hover:underline hover:text-foreground transition-colors"
+                      title="Force refetch on-chain state"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Check again</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
             {/* Unresolved username warning */}
-            {!isResolving && isUsernameInput && !resolvedAddress && (
-              <div className="flex items-center gap-1.5 text-amber-500 text-[11px]">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Username not in local address book. Enter TON address
-                  directly.
-                </span>
-              </div>
-            )}
+            {!isResolving &&
+              !isEditingCustomName &&
+              isUsernameInput &&
+              !resolvedAddress && (
+                <div className="flex items-center gap-1.5 text-amber-500 text-[11px]">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Username not in local address book. Enter TON address
+                    directly.
+                  </span>
+                </div>
+              )}
           </div>
         )}
 

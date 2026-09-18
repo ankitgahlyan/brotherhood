@@ -42,7 +42,7 @@ export const TransactionHistory: React.FC = () => {
         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </button>
 
-      <div className="flex flex-col gap-1">
+      <div className="bg-card/60 backdrop-blur-xs rounded-2xl border border-border/60 divide-y divide-border/40 overflow-hidden shadow-2xs">
         {preview.map((row) => (
           <TransactionRow key={row.id} {...row} />
         ))}
