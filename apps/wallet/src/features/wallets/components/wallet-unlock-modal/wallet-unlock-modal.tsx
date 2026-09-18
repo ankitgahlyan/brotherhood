@@ -27,11 +27,19 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
   const { isSupported, isEnabled, authenticate } = useBiometrics();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setPassword('');
       setError('');
-      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 150);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 

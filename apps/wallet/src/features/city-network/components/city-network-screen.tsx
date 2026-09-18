@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet } from '@demo/wallet-core';
 import { Address } from '@ton/core';
@@ -15,13 +15,8 @@ import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
-import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
-import {
-  useFormatAddress,
-  formatTonAddress,
-  sameAddress,
-} from '@/core/utils/formatters';
+import { useFormatAddress } from '@/core/utils/formatters';
 import {
   getH3ViewerUrl,
   isValidH3Cell,
@@ -60,7 +55,9 @@ export const CityNetworkScreen: React.FC = () => {
   const [memberSearch, setMemberSearch] = useState('');
 
   // Prefill H3 cell with connected wallet's cell once loaded
-  useEffect(() => {
+  const [prevMyH3Cell, setPrevMyH3Cell] = useState(myH3Cell);
+  if (myH3Cell !== prevMyH3Cell) {
+    setPrevMyH3Cell(myH3Cell);
     if (myH3Cell && !hasInitializedH3) {
       const normalized = normalizeH3Cell(myH3Cell);
       setH3CellInput(normalized);
@@ -69,7 +66,7 @@ export const CityNetworkScreen: React.FC = () => {
       }
       setHasInitializedH3(true);
     }
-  }, [myH3Cell, hasInitializedH3]);
+  }
 
   // Queries - only executed for confirmed valid H3 cells
   const locationByH3Query = useLocationByH3Cell(queriedH3Cell);
@@ -92,11 +89,15 @@ export const CityNetworkScreen: React.FC = () => {
   };
 
   // Auto-populate verify location address with current calculated location if empty
-  useEffect(() => {
+  const [prevCalculatedAddr, setPrevCalculatedAddr] = useState(
+    locationByH3Query.calculatedAddress,
+  );
+  if (locationByH3Query.calculatedAddress !== prevCalculatedAddr) {
+    setPrevCalculatedAddr(locationByH3Query.calculatedAddress);
     if (locationByH3Query.calculatedAddress && !verifyLocationAddr) {
       setVerifyLocationAddr(locationByH3Query.calculatedAddress);
     }
-  }, [locationByH3Query.calculatedAddress, verifyLocationAddr]);
+  }
 
   const locationMembersQuery = useLocationMembers(
     verifyLocationAddr || locationByH3Query.calculatedAddress || '',
@@ -105,7 +106,10 @@ export const CityNetworkScreen: React.FC = () => {
 
   // Member profiles hydration: Location stores member owner addresses.
   // Derive both owner and deterministic FiWallet contract addresses so profiles are resolved.
-  const rawMembers = locationByH3Query.data?.members || [];
+  const rawMembers = useMemo(
+    () => locationByH3Query.data?.members || [],
+    [locationByH3Query.data?.members],
+  );
   const memberLookupAddresses = useMemo(() => {
     const net = network === 'mainnet' ? 'mainnet' : 'testnet';
     const list: string[] = [];
@@ -122,24 +126,30 @@ export const CityNetworkScreen: React.FC = () => {
   }, [rawMembers, network]);
 
   const memberProfilesQuery = useMemberProfiles(memberLookupAddresses, network);
-  const profiles = memberProfilesQuery.data || {};
+  const profiles = useMemo(
+    () => memberProfilesQuery.data || {},
+    [memberProfilesQuery.data],
+  );
 
   // Helper to retrieve profile username for a given member address
-  const getMemberProfile = (memberAddr: string) => {
-    let p = profiles[memberAddr];
-    if (p?.username) return p;
-    try {
-      const net = network === 'mainnet' ? 'mainnet' : 'testnet';
-      const fiAddr = getFiWalletAddress(
-        Address.parse(memberAddr),
-        net,
-      ).toString();
-      p = profiles[fiAddr] || p;
-    } catch {
-      /* ignore */
-    }
-    return p;
-  };
+  const getMemberProfile = useCallback(
+    (memberAddr: string) => {
+      let p = profiles[memberAddr];
+      if (p?.username) return p;
+      try {
+        const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+        const fiAddr = getFiWalletAddress(
+          Address.parse(memberAddr),
+          net,
+        ).toString();
+        p = profiles[fiAddr] || p;
+      } catch {
+        /* ignore */
+      }
+      return p;
+    },
+    [profiles, network],
+  );
 
   // Filter members by search input (matching username or address)
   const filteredMembers = useMemo(() => {
@@ -161,7 +171,6 @@ export const CityNetworkScreen: React.FC = () => {
   }, [
     rawMembers,
     memberSearch,
-    profiles,
     formatWalletAddress,
     formatContractAddress,
     getMemberProfile,

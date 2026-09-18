@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import { useStakingProviders } from '../../hooks/use-staking-providers';
 
@@ -35,9 +35,13 @@ export const StakingSettings: React.FC<StakingSettingsProps> = ({
   const [open, setOpen] = useState(false);
   const [tempProviderId, setTempProviderId] = useState(providerId);
 
-  useEffect(() => {
-    if (open) setTempProviderId(providerId);
-  }, [open, providerId]);
+  const [prevOpenState, setPrevOpenState] = useState({ open, providerId });
+  if (open !== prevOpenState.open || providerId !== prevOpenState.providerId) {
+    setPrevOpenState({ open, providerId });
+    if (open) {
+      setTempProviderId(providerId);
+    }
+  }
 
   const handleSave = () => {
     if (tempProviderId !== providerId) {

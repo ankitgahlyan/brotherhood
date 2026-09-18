@@ -93,14 +93,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   const fiTotalAccountsQuery = useFiTotalAccounts(isOpen && isFi);
 
   // Personal minter contract queries
+  const assetId = asset?.id;
   const personalMinterAddress = useMemo(() => {
-    if (!isPersonal || !asset?.id) return null;
+    if (!isPersonal || !assetId) return null;
     try {
-      return Address.parse(asset.id);
+      return Address.parse(assetId);
     } catch {
       return null;
     }
-  }, [isPersonal, asset?.id]);
+  }, [isPersonal, assetId]);
 
   const personalDetailsQuery = usePersonalMinterDetails(
     personalMinterAddress,

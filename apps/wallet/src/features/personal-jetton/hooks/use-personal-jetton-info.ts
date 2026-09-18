@@ -6,7 +6,7 @@
  *
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import {
   useFiWalletState,
@@ -53,19 +53,13 @@ export function usePersonalJettonInfo(
     }
   }, [walletAddress]);
 
-  const [fiWalletAddr, setFiWalletAddr] = useState<Address | null>(null);
-
-  useEffect(() => {
-    if (!ownerAddress) {
-      setFiWalletAddr(null);
-      return;
+  const fiWalletAddr = useMemo(() => {
+    if (!ownerAddress) return null;
+    try {
+      return getFiWalletAddress(ownerAddress);
+    } catch {
+      return null;
     }
-    let cancelled = false;
-    const addr = getFiWalletAddress(ownerAddress);
-    if (!cancelled) setFiWalletAddr(addr);
-    return () => {
-      cancelled = true;
-    };
   }, [ownerAddress]);
 
   const deterministicMinterAddrObj = useMemo(() => {

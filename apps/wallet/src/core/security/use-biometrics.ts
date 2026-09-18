@@ -50,7 +50,9 @@ export function useBiometrics(): UseBiometricsResult {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    void Promise.resolve().then(() => {
+      void refresh();
+    });
   }, [refresh]);
 
   const register = useCallback(async (password: string) => {

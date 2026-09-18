@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Copy, Trash2, Check, User, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -29,7 +29,14 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
   network,
   onSelectMember,
 }) => {
-  const [recent, setRecent] = useState<RecentTransactedMember[]>([]);
+  const [recent, setRecent] = useState<RecentTransactedMember[]>(() =>
+    getRecentTransacted(network),
+  );
+  const [prevNetwork, setPrevNetwork] = useState(network);
+  if (network !== prevNetwork) {
+    setPrevNetwork(network);
+    setRecent(getRecentTransacted(network));
+  }
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [editingMember, setEditingMember] =
     useState<RecentTransactedMember | null>(null);
@@ -38,10 +45,6 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
   const reload = useCallback(() => {
     setRecent(getRecentTransacted(network));
   }, [network]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
 
   const handleCopy = (e: React.MouseEvent, address: string) => {
     e.stopPropagation();

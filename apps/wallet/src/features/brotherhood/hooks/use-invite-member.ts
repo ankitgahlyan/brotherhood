@@ -15,6 +15,7 @@ import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { cleanTelegramUsername } from '@/core/utils/telegram';
+import { useNowSeconds } from '@/core/hooks';
 
 export interface UseInviteMemberParams {
   wallet: Wallet | null | undefined;
@@ -57,9 +58,10 @@ export function useInviteMember({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const now = useNowSeconds();
+
   const cooldownSeconds = useMemo<number>(() => {
     if (!accountData || accountData.isPrevilegedAccount) return 0;
-    const now = Math.floor(Date.now() / 1000);
 
     // Initial activation wait check
     if (accountData.accountInit > 0) {
@@ -79,7 +81,7 @@ export function useInviteMember({
     }
 
     return 0;
-  }, [accountData]);
+  }, [accountData, now]);
 
   const validationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';

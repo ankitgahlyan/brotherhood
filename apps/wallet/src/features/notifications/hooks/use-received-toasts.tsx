@@ -61,7 +61,9 @@ export const useReceivedToasts = (): void => {
 
   // Always read the latest rates without making them an effect dependency.
   const ratesRef = useRef<Record<string, RateEntry>>(rates);
-  ratesRef.current = rates;
+  useEffect(() => {
+    ratesRef.current = rates;
+  }, [rates]);
 
   // New wallet → reset the baseline so cross-wallet diffs never toast.
   useEffect(() => {

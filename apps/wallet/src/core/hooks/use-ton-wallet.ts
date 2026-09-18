@@ -38,8 +38,8 @@ interface UseTonWalletReturn {
 }
 
 export const useTonWallet = (): UseTonWalletReturn => {
-  const [tonKit, setTonKit] = useState<MockTonKit | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [tonKit] = useState<MockTonKit | null>(() => ({ initialized: true }));
+  const [isInitialized] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const walletStore = useWallet();
@@ -47,17 +47,6 @@ export const useTonWallet = (): UseTonWalletReturn => {
 
   const initializeWallet = useCallback(async () => {
     try {
-      setError(null);
-
-      // Mock TON Kit initialization
-      const kit = {
-        // Mock implementation for demo purposes
-        initialized: true,
-      };
-
-      setTonKit(kit);
-      setIsInitialized(true);
-
       // Load existing wallet if available
       if (
         walletStore.hasWallet &&
@@ -151,10 +140,10 @@ export const useTonWallet = (): UseTonWalletReturn => {
 
   // Auto-initialize when component mounts
   useEffect(() => {
-    if (!isInitialized) {
+    void Promise.resolve().then(() => {
       initializeWallet();
-    }
-  }, [initializeWallet, isInitialized]);
+    });
+  }, [initializeWallet]);
 
   return {
     tonKit,

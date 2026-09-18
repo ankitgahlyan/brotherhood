@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
@@ -65,31 +65,27 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
   const { data, isLoading, error, refetch } = useMemberDetail(memberAddress);
   const { data: viewerAccount } = useFiAccount(address ?? null);
 
-  const [viewerFiWallet, setViewerFiWallet] = useState<Address | null>(null);
-
-  useEffect(() => {
-    if (!address) {
-      setViewerFiWallet(null);
-      return;
-    }
+  const viewerFiWallet = useMemo<Address | null>(() => {
+    if (!address) return null;
     try {
       const ownerAddr = Address.parse(address);
-      const fiAddr = getFiWalletAddress(ownerAddr, network);
-      setViewerFiWallet(fiAddr);
+      return getFiWalletAddress(ownerAddr, network);
     } catch {
-      setViewerFiWallet(null);
+      return null;
     }
   }, [address, network]);
 
+  const invitor = data?.invitor;
   const isDirectInviter = useMemo(() => {
-    if (!viewerFiWallet || !data?.invitor) return false;
-    return viewerFiWallet.equals(data.invitor);
-  }, [viewerFiWallet, data?.invitor]);
+    if (!viewerFiWallet || !invitor) return false;
+    return viewerFiWallet.equals(invitor);
+  }, [viewerFiWallet, invitor]);
 
+  const invitor0 = data?.invitor0;
   const isUpstreamInviter = useMemo(() => {
-    if (!viewerFiWallet || !data?.invitor0) return false;
-    return viewerFiWallet.equals(data.invitor0);
-  }, [viewerFiWallet, data?.invitor0]);
+    if (!viewerFiWallet || !invitor0) return false;
+    return viewerFiWallet.equals(invitor0);
+  }, [viewerFiWallet, invitor0]);
 
   const canManageMember = isDirectInviter || isUpstreamInviter;
 

@@ -10,6 +10,7 @@ import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
 import type { LotteryStorage } from '@wrappers/Lottery.gen';
 import { network } from '@/lib/brotherhood/config';
+import { useNowSeconds } from '@/core/hooks';
 import {
   useContractState,
   getContractCache,
@@ -62,6 +63,8 @@ export function useLotteryState(
     network,
   );
 
+  const now = useNowSeconds();
+
   const result = useMemo(() => {
     if (!store) {
       return {
@@ -88,7 +91,6 @@ export function useLotteryState(
     }
 
     const deadlineNum = store.revealDeadline ? Number(store.revealDeadline) : 0;
-    const now = Math.floor(Date.now() / 1000);
     const phase = deadlineNum > 0 && now > deadlineNum ? 1 : 0;
 
     return {
@@ -101,7 +103,7 @@ export function useLotteryState(
       deadline: deadlineNum || null,
       isParticipant,
     };
-  }, [store, userAddressString]);
+  }, [store, userAddressString, now]);
 
   return {
     ...result,

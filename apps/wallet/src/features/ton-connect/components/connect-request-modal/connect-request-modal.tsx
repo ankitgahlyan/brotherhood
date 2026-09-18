@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ConnectionRequestEvent, Wallet } from '@ton/walletkit';
 import type { SavedWallet } from '@demo/wallet-core';
 import { toast } from 'sonner';
@@ -39,17 +39,17 @@ export const ConnectRequestModal: React.FC<ConnectRequestModalProps> = ({
   onApprove,
   onReject,
 }) => {
+  const fallbackWallet = currentWallet ?? availableWallets[0] ?? null;
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(
-    currentWallet ?? null,
+    () => fallbackWallet,
   );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fall back to the active or first available wallet until one is picked.
-  useEffect(() => {
-    if (selectedWallet === null)
-      setSelectedWallet(currentWallet ?? availableWallets[0] ?? null);
-  }, [selectedWallet, currentWallet, availableWallets]);
+  if (selectedWallet === null && fallbackWallet !== null) {
+    setSelectedWallet(fallbackWallet);
+  }
 
   // SavedWallet records keyed by the WalletKit id (savedWallet.id is a separate store id).
   const savedByKitId = useMemo(() => {

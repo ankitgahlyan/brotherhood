@@ -23,6 +23,7 @@ import { Button } from '@/core/components/ui/button';
 import { HoldToSignButton } from '@/core/components/ui/hold-to-sign-button';
 import { JettonFlow } from '@/features/jettons';
 import { createComponentLogger } from '@/core/lib/logger';
+import { useNowSeconds } from '@/core/hooks';
 
 type RequestEvent = SendTransactionRequestEvent | SignMessageRequestEvent;
 
@@ -67,7 +68,18 @@ export const RequestModal: React.FC<RequestModalProps> = ({
   );
   const { holdToSign } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [isExpired, setIsExpired] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) {
+      setIsLoading(false);
+    }
+  }
+
+  const now = useNowSeconds();
+  const validUntil = request.request?.validUntil;
+  const isExpired = Boolean(validUntil && validUntil < now);
+
   const [localPreview, setLocalPreview] = useState<
     TransactionEmulatedPreview | undefined
   >(undefined);
@@ -83,28 +95,22 @@ export const RequestModal: React.FC<RequestModalProps> = ({
   );
 
   useEffect(() => {
-    const check = () => {
-      const validUntil = request.request?.validUntil;
-      setIsExpired(
-        validUntil ? validUntil < Math.floor(Date.now() / 1000) : false,
-      );
-    };
-    check();
-    const interval = setInterval(check, 1000);
-    return () => clearInterval(interval);
-  }, [request.request?.validUntil]);
-
-  useEffect(() => {
     if (!isAuthenticated) return;
+    let cancelled = false;
     async function updatePreview() {
       if (request.preview.data) return;
       await walletKit?.ensureInitialized();
       const preview = await walletKit
         ?.getWallet(request.walletId ?? '')
         ?.getTransactionPreview(request.request, { mode: previewMode });
-      setLocalPreview(preview);
+      if (!cancelled) {
+        setLocalPreview(preview);
+      }
     }
     updatePreview();
+    return () => {
+      cancelled = true;
+    };
   }, [
     request.walletId,
     request.request,
@@ -118,13 +124,6 @@ export const RequestModal: React.FC<RequestModalProps> = ({
     () => localPreview ?? request.preview.data,
     [request, localPreview],
   );
-
-  useEffect(() => {
-    if (!isOpen) {
-      setIsLoading(false);
-      setIsExpired(false);
-    }
-  }, [isOpen]);
 
   const handleApprove = async () => {
     setIsLoading(true);

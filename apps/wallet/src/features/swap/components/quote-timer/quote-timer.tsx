@@ -7,9 +7,9 @@
  */
 
 import type { FC } from 'react';
-import { useEffect, useState } from 'react';
 
 import { Button } from '@/core/components/ui/button';
+import { useNowSeconds } from '@/core/hooks';
 
 interface QuoteTimerProps {
   expiresAt?: number; // Unix timestamp in seconds
@@ -22,30 +22,11 @@ export const QuoteTimer: FC<QuoteTimerProps> = ({
   onRefresh,
   loading = false,
 }) => {
-  const [timeLeft, setTimeLeft] = useState(0);
-
-  useEffect(() => {
-    if (!expiresAt) {
-      setTimeLeft(0);
-      return;
-    }
-
-    const updateTimer = () => {
-      const now = Math.floor(Date.now() / 1000); // Current time in seconds
-      const remaining = Math.max(0, expiresAt - now);
-      setTimeLeft(remaining * 1000); // Convert to milliseconds for display
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 100);
-
-    return () => clearInterval(interval);
-  }, [expiresAt]);
-
-  const totalSeconds = Math.ceil(timeLeft / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const isExpired = !expiresAt || timeLeft === 0;
+  const now = useNowSeconds();
+  const remainingSeconds = expiresAt ? Math.max(0, expiresAt - now) : 0;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  const isExpired = !expiresAt || remainingSeconds === 0;
 
   if (!expiresAt) {
     return null;

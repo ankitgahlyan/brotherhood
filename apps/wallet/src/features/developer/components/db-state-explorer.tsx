@@ -175,9 +175,11 @@ export const DbStateExplorer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadLocalStorage();
-    loadIndexedDb();
-    loadQueryCache();
+    void Promise.resolve().then(() => {
+      loadLocalStorage();
+      loadQueryCache();
+      void loadIndexedDb();
+    });
   }, [loadLocalStorage, loadIndexedDb, loadQueryCache]);
 
   const toggleExpand = (key: string) => {

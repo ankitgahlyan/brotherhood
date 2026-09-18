@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import { useSwapProviders } from '../../hooks/use-swap-providers';
 
@@ -43,12 +43,22 @@ export const SwapSettings: React.FC<SwapSettingsProps> = ({
   const [tempSlippageBps, setTempSlippageBps] = useState(slippageBps);
   const [tempProviderId, setTempProviderId] = useState(providerId);
 
-  useEffect(() => {
+  const [prevOpenState, setPrevOpenState] = useState({
+    open,
+    slippageBps,
+    providerId,
+  });
+  if (
+    open !== prevOpenState.open ||
+    slippageBps !== prevOpenState.slippageBps ||
+    providerId !== prevOpenState.providerId
+  ) {
+    setPrevOpenState({ open, slippageBps, providerId });
     if (open) {
       setTempSlippageBps(slippageBps);
       setTempProviderId(providerId);
     }
-  }, [open, slippageBps, providerId]);
+  }
 
   const handleSave = () => {
     if (tempSlippageBps >= 10 && tempSlippageBps <= 5000) {

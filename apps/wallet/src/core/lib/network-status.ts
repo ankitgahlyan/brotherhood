@@ -6,7 +6,7 @@
  *
  */
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 
 export class OfflineError extends Error {
   constructor(message = 'Network is offline. Serving from local cache.') {
@@ -64,19 +64,10 @@ export function onNetworkStatusChange(
   };
 }
 
+const subscribeNetwork = (callback: () => void) => {
+  return onNetworkStatusChange(callback);
+};
+
 export function useIsOnline(): boolean {
-  const [online, setOnline] = useState<boolean>(() => isOnline());
-
-  useEffect(() => {
-    const handleStatus = (status: boolean) => {
-      setOnline(status);
-    };
-
-    // Ensure we sync with current navigator state on mount
-    setOnline(isOnline());
-
-    return onNetworkStatusChange(handleStatus);
-  }, []);
-
-  return online;
+  return useSyncExternalStore(subscribeNetwork, isOnline, () => true);
 }

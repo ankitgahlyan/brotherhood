@@ -45,7 +45,12 @@ export function useLastFetchTime(keys?: string[]) {
   }, [keysList]);
 
   useEffect(() => {
-    void updateTimestamp();
+    let isCancelled = false;
+    void Promise.resolve().then(() => {
+      if (!isCancelled) {
+        void updateTimestamp();
+      }
+    });
 
     const handleCacheUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<{ key: string; timestamp: number }>;
@@ -74,6 +79,7 @@ export function useLastFetchTime(keys?: string[]) {
     }, 10_000);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener(CACHE_UPDATED_EVENT, handleCacheUpdated);
       clearInterval(ticker);
     };

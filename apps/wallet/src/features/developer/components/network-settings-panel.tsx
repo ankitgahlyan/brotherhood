@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -75,16 +75,6 @@ export const NetworkSettingsPanel: React.FC<NetworkSettingsPanelProps> = ({
 
   const [tonapiPing, setTonapiPing] = useState<PingResult | null>(null);
   const [isTestingTonapi, setIsTestingTonapi] = useState(false);
-
-  useEffect(() => {
-    setRoutingMode(getTestnetRpcRouting());
-    setIsCustomToncenter(isCustomEndpointActive('toncenter'));
-    setToncenterUrl(getCustomApiUrl('toncenter') || '');
-    setToncenterKey(getCustomApiKey('toncenter', 'testnet') || '');
-    setIsCustomTonapi(isCustomEndpointActive('tonapi'));
-    setTonapiUrl(getCustomApiUrl('tonapi') || '');
-    setTonapiKey(getCustomApiKey('tonapi', 'testnet') || '');
-  }, []);
 
   const handleTestToncenter = async () => {
     setIsTestingToncenter(true);

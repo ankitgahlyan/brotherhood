@@ -14,3 +14,4 @@ export * from './use-wallet-data-updater';
 export * from './use-pwa-install';
 export * from './use-history-back';
 export * from './use-twa';
+export * from './use-now-seconds';

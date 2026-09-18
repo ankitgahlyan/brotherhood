@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,13 +31,23 @@ export const StorageEditorDialog: React.FC<StorageEditorDialogProps> = ({
   const [value, setValue] = useState(initialValue);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevOpenState, setPrevOpenState] = useState({
+    isOpen,
+    initialKey,
+    initialValue,
+  });
+  if (
+    isOpen !== prevOpenState.isOpen ||
+    initialKey !== prevOpenState.initialKey ||
+    initialValue !== prevOpenState.initialValue
+  ) {
+    setPrevOpenState({ isOpen, initialKey, initialValue });
     if (isOpen) {
       setKey(initialKey);
       setValue(initialValue);
       setJsonError(null);
     }
-  }, [isOpen, initialKey, initialValue]);
+  }
 
   const validateJson = (text: string) => {
     if (!text.trim()) {

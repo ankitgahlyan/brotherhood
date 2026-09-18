@@ -50,14 +50,18 @@ export function useTrackedPersonalTokens() {
     return trackedData?.personalJettons || [];
   });
 
-  // Keep tracked minters synced when wallet changes or storage updates
-  useEffect(() => {
-    if (!walletAddress) {
-      setTrackedMinters([]);
-      return;
-    }
-    const trackedData = loadTrackedAddresses(walletAddress);
+  const [prevWalletAddress, setPrevWalletAddress] = useState(walletAddress);
+  if (walletAddress !== prevWalletAddress) {
+    setPrevWalletAddress(walletAddress);
+    const trackedData = walletAddress
+      ? loadTrackedAddresses(walletAddress)
+      : null;
     setTrackedMinters(trackedData?.personalJettons || []);
+  }
+
+  // Keep tracked minters synced when storage updates across tabs
+  useEffect(() => {
+    if (!walletAddress) return;
 
     const storageKey = getTrackedAddressesKey(walletAddress);
     const handleStorage = (e: StorageEvent) => {
@@ -106,11 +110,17 @@ export function useTrackedPersonalTokens() {
     [],
   );
 
-  useEffect(() => {
+  const [prevSummaryCacheKey, setPrevSummaryCacheKey] =
+    useState(summaryCacheKey);
+  if (summaryCacheKey !== prevSummaryCacheKey) {
+    setPrevSummaryCacheKey(summaryCacheKey);
     if (!summaryCacheKey) {
       setCachedTokens([]);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!summaryCacheKey) return;
     let isCancelled = false;
     getContractCache<DiscoveredPersonalToken[]>(summaryCacheKey).then(
       (cached) => {

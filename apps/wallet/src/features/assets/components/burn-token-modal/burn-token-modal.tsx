@@ -14,7 +14,6 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
-import { Input } from '@/core/components/ui/input';
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { formatLargeValue } from '@/core/utils';
 import { isFiJetton } from '@/features/jettons';
@@ -66,15 +65,16 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
   });
 
   const isPersonal = Boolean(isPersonalToken);
+  const assetId = asset?.id;
 
   const personalMinterAddress = useMemo(() => {
-    if (!asset?.id || isGram || isFi) return null;
+    if (!assetId || isGram || isFi) return null;
     try {
-      return Address.parse(asset.id);
+      return Address.parse(assetId);
     } catch {
       return null;
     }
-  }, [asset?.id, isGram, isFi]);
+  }, [assetId, isGram, isFi]);
 
   const personalDetailsQuery = usePersonalMinterDetails(
     personalMinterAddress,

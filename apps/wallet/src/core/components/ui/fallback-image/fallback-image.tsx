@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -57,49 +57,55 @@ const toList = (src: string | string[] | undefined): string[] =>
     Boolean(url),
   );
 
+const getInitialImageStatus = (src: string | undefined): ImageStatus => {
+  if (!src) return 'idle';
+  if (LOADED_IMAGE_URLS.has(src)) return 'loaded';
+  return 'loading';
+};
+
 const useImageStatus = (src: string | undefined): ImageStatus => {
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [prevSrc, setPrevSrc] = useState(src);
+  const [status, setStatus] = useState<ImageStatus>(() =>
+    getInitialImageStatus(src),
+  );
 
-  const getImage = useCallback((): HTMLImageElement | null => {
-    if (typeof window === 'undefined') return null;
-    if (!imageRef.current) imageRef.current = new window.Image();
-    return imageRef.current;
-  }, []);
+  if (prevSrc !== src) {
+    setPrevSrc(src);
+    setStatus(getInitialImageStatus(src));
+  }
 
-  const resolve = useCallback((): ImageStatus => {
-    if (!src) return 'idle';
-    if (LOADED_IMAGE_URLS.has(src)) return 'loaded';
-    const image = getImage();
-    if (!image) return 'idle';
-    if (image.src !== src) image.src = src;
+  useEffect(() => {
+    if (!src || LOADED_IMAGE_URLS.has(src)) return;
+
+    let cancelled = false;
+    const image = new window.Image();
+    image.src = src;
+
     if (image.complete && image.naturalWidth > 0) {
       persistLoadedUrl(src);
-      return 'loaded';
+      void Promise.resolve().then(() => {
+        if (!cancelled) setStatus('loaded');
+      });
+      return;
     }
-    return 'loading';
-  }, [getImage, src]);
 
-  const [status, setStatus] = useState<ImageStatus>(resolve);
-
-  useLayoutEffect(() => {
-    const currentStatus = resolve();
-    setStatus(currentStatus);
-    if (currentStatus === 'loaded') return;
-
-    const image = getImage();
-    if (!image || !src) return;
     const onLoad = () => {
+      if (cancelled) return;
       persistLoadedUrl(src);
       setStatus('loaded');
     };
-    const onError = () => setStatus('error');
+    const onError = () => {
+      if (cancelled) return;
+      setStatus('error');
+    };
     image.addEventListener('load', onLoad);
     image.addEventListener('error', onError);
     return () => {
+      cancelled = true;
       image.removeEventListener('load', onLoad);
       image.removeEventListener('error', onError);
     };
-  }, [getImage, resolve, src]);
+  }, [src]);
 
   return status;
 };
@@ -128,17 +134,27 @@ export const FallbackImage: React.FC<FallbackImageProps> = ({
   const sources = toList(src);
   const key = sources.join(' ');
 
+  const [prevKey, setPrevKey] = useState(key);
   const [index, setIndex] = useState(0);
-  useLayoutEffect(() => setIndex(0), [key]);
+  const [lastHandledErrorIndex, setLastHandledErrorIndex] = useState(-1);
+
+  if (prevKey !== key) {
+    setPrevKey(key);
+    setIndex(0);
+    setLastHandledErrorIndex(-1);
+  }
 
   const current = sources[index];
   const status = useImageStatus(current);
 
-  useLayoutEffect(() => {
-    if (status === 'error' && index < sources.length - 1) {
-      setIndex((value) => value + 1);
-    }
-  }, [status, index, sources.length]);
+  if (
+    status === 'error' &&
+    index < sources.length - 1 &&
+    lastHandledErrorIndex !== index
+  ) {
+    setLastHandledErrorIndex(index);
+    setIndex(index + 1);
+  }
 
   if (status === 'loaded' && current) {
     return <img src={current} alt={alt} {...props} />;

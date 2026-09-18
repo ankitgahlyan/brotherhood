@@ -27,7 +27,9 @@ export function useHistoryBack({
   syncHistory = true,
 }: UseHistoryBackOptions): void {
   const onBackRef = useRef(onBack);
-  onBackRef.current = onBack;
+  useEffect(() => {
+    onBackRef.current = onBack;
+  });
 
   const idRef = useRef<number | undefined>(undefined);
 

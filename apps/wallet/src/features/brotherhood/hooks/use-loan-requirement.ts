@@ -18,6 +18,7 @@ import { useBrotherhoodTransaction } from './use-brotherhood-transaction';
 import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
 import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 import type { FiAccountData } from './use-fi-account';
+import { useNowSeconds } from '@/core/hooks';
 import { getAccountActionError } from './use-is-network-member';
 
 export interface UseLoanRequirementParams {
@@ -80,6 +81,9 @@ export function useLoanRequirement({
 
   const isDirty = isAmountDirty || isMaturityDirty || isMultiplierDirty;
 
+  const nowSec = useNowSeconds();
+  const creditMaturity = accountData?.creditMaturity;
+
   const amountValidationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
@@ -96,11 +100,7 @@ export function useLoanRequirement({
             return 'Maturity must be at least 1 day when borrowing';
           }
         } else {
-          const nowSec = Math.floor(Date.now() / 1000);
-          if (
-            !accountData?.creditMaturity ||
-            accountData.creditMaturity <= nowSec
-          ) {
+          if (!creditMaturity || creditMaturity <= nowSec) {
             return 'Maturity date is required when requesting a loan';
           }
         }
@@ -116,6 +116,8 @@ export function useLoanRequirement({
     trimmedAmount,
     isMaturityDirty,
     trimmedMaturityDays,
+    creditMaturity,
+    nowSec,
   ]);
 
   const maturityValidationError = useMemo<string | null>(() => {
@@ -123,18 +125,17 @@ export function useLoanRequirement({
     const days = parseInt(trimmedMaturityDays, 10);
     if (isNaN(days) || days <= 0) return 'Maturity must be at least 1 day';
 
-    const nowSec = Math.floor(Date.now() / 1000);
     const targetMaturity = nowSec + days * 86400;
     if (
-      accountData?.creditMaturity &&
-      accountData.creditMaturity > nowSec &&
-      targetMaturity < accountData.creditMaturity
+      creditMaturity &&
+      creditMaturity > nowSec &&
+      targetMaturity < creditMaturity
     ) {
       return 'Cannot shorten an active maturity date';
     }
 
     return null;
-  }, [isMaturityDirty, trimmedMaturityDays, accountData?.creditMaturity]);
+  }, [isMaturityDirty, trimmedMaturityDays, creditMaturity, nowSec]);
 
   const multiplierValidationError = useMemo<string | null>(() => {
     if (!isMultiplierDirty) return null;

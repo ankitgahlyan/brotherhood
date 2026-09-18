@@ -14,6 +14,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
+import { useNowSeconds } from '@/core/hooks';
 
 export interface UsePayEmiParams {
   wallet: Wallet | null | undefined;
@@ -54,6 +55,8 @@ export function usePayEmi({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
+  const now = useNowSeconds();
+
   const {
     isDue,
     isInGrace,
@@ -93,7 +96,6 @@ export function usePayEmi({
       };
     }
 
-    const now = Math.floor(Date.now() / 1000);
     const baseTime =
       accountData.lastDecay > 0
         ? accountData.lastDecay
@@ -128,7 +130,7 @@ export function usePayEmi({
       secondsUntilGraceExpiry: secsUntilGrace,
       validationError: err,
     };
-  }, [wallet, walletAddress, accountData]);
+  }, [wallet, walletAddress, accountData, now]);
 
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');

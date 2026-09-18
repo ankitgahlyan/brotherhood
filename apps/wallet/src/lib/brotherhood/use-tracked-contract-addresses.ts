@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { Address } from '@ton/core';
 import { FI_ADDRESS, network as defaultNetwork, type Network } from './config';
 import {
@@ -136,15 +136,15 @@ export function useTrackedContractAddresses(
     },
   );
 
-  // Keep trackedData synced when ownerStr changes
-  useEffect(() => {
-    if (!ownerStr) {
-      setTrackedData(null);
-      return;
-    }
-    const data = initializeOrGetTrackedAddresses(ownerStr, net);
-    setTrackedData(data);
-  }, [ownerStr, net]);
+  const [prevOwnerKey, setPrevOwnerKey] = useState(`${net}:${ownerStr}`);
+  const currentOwnerKey = `${net}:${ownerStr}`;
+
+  if (currentOwnerKey !== prevOwnerKey) {
+    setPrevOwnerKey(currentOwnerKey);
+    setTrackedData(
+      ownerStr ? initializeOrGetTrackedAddresses(ownerStr, net) : null,
+    );
+  }
 
   // Consolidate tracked addresses list
   const trackedAddresses = useMemo(() => {

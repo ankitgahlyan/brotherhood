@@ -57,37 +57,66 @@ export function useJettonInfo(
 ) {
   const walletKit = useWalletKit();
   const network = useActiveWalletNetwork();
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(() => {
+    if (!tokenAddress) return null;
+    if (
+      typeof tokenAddress === 'string' &&
+      tokenAddress.toUpperCase() === 'TON'
+    ) {
+      return GRAM_INFO;
+    }
+    return null;
+  });
   const chainNetwork = useMemo(() => getChainNetwork(network), [network]);
 
-  useEffect(() => {
+  const [prevTokenAddress, setPrevTokenAddress] = useState(tokenAddress);
+  if (tokenAddress !== prevTokenAddress) {
+    setPrevTokenAddress(tokenAddress);
     if (!tokenAddress) {
       setTokenInfo(null);
-      return;
+    } else if (
+      typeof tokenAddress === 'string' &&
+      tokenAddress.toUpperCase() === 'TON'
+    ) {
+      setTokenInfo(GRAM_INFO);
     }
+  }
+
+  useEffect(() => {
+    if (!tokenAddress) return;
 
     if (
       typeof tokenAddress === 'string' &&
       tokenAddress.toUpperCase() === 'TON'
     ) {
-      setTokenInfo(GRAM_INFO);
       return;
     }
 
+    let isCancelled = false;
     async function updateTokenInfo() {
       if (!tokenAddress) return;
       const info = await walletKit?.jettons?.getJettonInfo(
         tokenAddress.toString(),
         chainNetwork,
       );
-      setTokenInfo(
-        info
-          ? { ...info, images: info.image ? [info.image] : undefined }
-          : null,
-      );
+      if (!isCancelled) {
+        setTokenInfo(
+          info
+            ? { ...info, images: info.image ? [info.image] : undefined }
+            : null,
+        );
+      }
     }
 
-    updateTokenInfo();
+    updateTokenInfo().catch(() => {
+      if (!isCancelled) {
+        setTokenInfo(null);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [tokenAddress, walletKit, chainNetwork]);
 
   return tokenInfo;

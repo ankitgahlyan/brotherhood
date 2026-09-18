@@ -60,14 +60,21 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) {
+      setSearch('');
+    }
+  }
+
   // Focus search when opened
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         searchInputRef.current?.focus();
       }, 50);
-    } else {
-      setSearch('');
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 

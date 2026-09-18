@@ -17,12 +17,40 @@ export interface BrowserInstruction {
   steps: string[];
 }
 
+function getInitialDismissed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const dismissedTimestamp = localStorage.getItem(STORAGE_KEY_DISMISSED);
+    if (dismissedTimestamp) {
+      const timestamp = parseInt(dismissedTimestamp, 10);
+      if (Date.now() - timestamp < DISMISSAL_EXPIRY_MS) {
+        return true;
+      }
+      localStorage.removeItem(STORAGE_KEY_DISMISSED);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return false;
+}
+
+function getInitialStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isStandaloneMedia = window.matchMedia(
+    '(display-mode: standalone)',
+  ).matches;
+  const isIosStandalone =
+    (navigator as unknown as { standalone?: boolean }).standalone === true;
+  return isStandaloneMedia || isIosStandalone;
+}
+
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [isStandalone, setIsStandalone] = useState<boolean>(false);
-  const [isDismissed, setIsDismissed] = useState<boolean>(false);
-  const [isInstalled, setIsInstalled] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] =
+    useState<boolean>(getInitialStandalone);
+  const [isDismissed, setIsDismissed] = useState<boolean>(getInitialDismissed);
+  const [isInstalled, setIsInstalled] = useState<boolean>(getInitialStandalone);
   const [activeMode, setActiveMode] = useState<'standalone' | 'browser'>(
     'standalone',
   );
@@ -38,37 +66,14 @@ export function usePwaInstall() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check if running as standalone
-    const checkStandalone = () => {
-      const isStandaloneMedia = window.matchMedia(
-        '(display-mode: standalone)',
-      ).matches;
-      const isIosStandalone =
-        (navigator as unknown as { standalone?: boolean }).standalone === true;
-      const isDisplayStandalone = isStandaloneMedia || isIosStandalone;
-      setIsStandalone(isDisplayStandalone);
-      if (isDisplayStandalone) {
+    const mql = window.matchMedia('(display-mode: standalone)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setIsStandalone(true);
         setIsInstalled(true);
       }
     };
-
-    checkStandalone();
-
-    // Check dismissal status
-    try {
-      const dismissedTimestamp = localStorage.getItem(STORAGE_KEY_DISMISSED);
-      if (dismissedTimestamp) {
-        const timestamp = parseInt(dismissedTimestamp, 10);
-        if (Date.now() - timestamp < DISMISSAL_EXPIRY_MS) {
-          setIsDismissed(true);
-        } else {
-          localStorage.removeItem(STORAGE_KEY_DISMISSED);
-          setIsDismissed(false);
-        }
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
+    mql.addEventListener('change', handleMediaChange);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -85,6 +90,7 @@ export function usePwaInstall() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      mql.removeEventListener('change', handleMediaChange);
       window.removeEventListener(
         'beforeinstallprompt',
         handleBeforeInstallPrompt,

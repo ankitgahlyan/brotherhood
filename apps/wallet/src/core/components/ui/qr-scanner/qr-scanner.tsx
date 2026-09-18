@@ -96,16 +96,24 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     [safeStopScanner],
   );
 
+  const [prevIsVisible, setPrevIsVisible] = useState(isVisible);
+  if (prevIsVisible !== isVisible) {
+    setPrevIsVisible(isVisible);
+    if (!isVisible) {
+      setErrorMessage(null);
+    } else {
+      setIsLoading(true);
+      setErrorMessage(null);
+    }
+  }
+
   useEffect(() => {
     if (!isVisible) {
       scanLockRef.current = false;
-      setErrorMessage(null);
       return;
     }
 
     let isCancelled = false;
-    setIsLoading(true);
-    setErrorMessage(null);
 
     const initialize = async () => {
       // Clean up previous scanner if still attached
