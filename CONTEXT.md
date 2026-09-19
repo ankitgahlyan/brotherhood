@@ -60,7 +60,7 @@ _Avoid_: Points, credits
 **Allowance** — a spending permission an Account grants to a friend, letting them spend a limited amount of the Account's balance (pocket money).
 _Avoid_: Spending limit, delegation
 
-**Deferred Payment** — a timelocked pull payment allowing a Member to pay a counterparty without carrying their wallet device. Funds are escrowed in a temporary child contract for a 72-hour challenge window before release.
+**Deferred Payment** — a timelocked pull payment allowing a Member to pay a counterparty without carrying their wallet device. Disabled by default via the `allowDeferred` account flag, and enabled through an explicit owner toggle. Funds are escrowed in a temporary child contract for a 72-hour challenge window before release.
 _Avoid_: Offline payment, pull transfer, async payment
 
 **Holding Contract** — an ephemeral child contract deployed per Deferred Payment, locking the transferred FI until the 72-hour challenge window expires, or self-destructing early if cancelled by the Payer.

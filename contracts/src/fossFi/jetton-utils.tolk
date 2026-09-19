@@ -74,12 +74,10 @@ fun idActionChecks(store: FiWalletStore) {
     assert (
         reportInfo.reporterCount < 1
     ) throw Errors.AlreadyReported;                                                  // reported IDs can't act
-    assert (!store.debts) throw Errors.AccountInDebt;
     assert (store.debt == 0) throw Errors.AccountInDebt;
 }
 
 fun checkDebts(store: FiWalletStore) {
-    assert (!store.debts) throw Errors.AccountInDebt;
     assert (store.debt == 0) throw Errors.AccountInDebt;
 }
 

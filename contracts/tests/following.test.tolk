@@ -305,7 +305,7 @@ get fun `test follow: survivor settlement with insufficient balance creates debt
     val walletData = followeeWallet.getWalletDataAll();
     expect(walletData.jettonBalance).toEqual(0);
     expect(walletData.debt).toEqual(ton("900"));
-    expect(walletData.debts).toBeTrue();
+    expect(walletData.debt > 0).toBeTrue();
 }
 
 get fun `test follow: unauthorized sender cannot trigger unfollow`() {
@@ -348,5 +348,5 @@ get fun `test deactivate: transfer funds and set deficit as debt`() {
     expect(followeeData.active).toBeTrue();        // active remains true
     expect(followeeData.jettonBalance).toEqual(0); // all 1 transferred
     expect(followeeData.debt).toEqual(ton("4"));   // 4 deficit set as debt
-    expect(followeeData.debts).toBeTrue();
+    expect(followeeData.debt > 0).toBeTrue();
 }

@@ -58,3 +58,8 @@ struct (0x6d92e541) ActFallbackReclaim {
     queryId: uint64 = 0
     holdingAddress: address
 }
+
+struct (0x576f30a1) ToggleDeferredPayment {
+    queryId: uint64 = 0
+    enabled: bool
+}

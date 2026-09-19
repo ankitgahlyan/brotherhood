@@ -26,6 +26,7 @@ import {
   useCancelDeferredPayment,
   useClaimDeferredPayment,
   useFallbackReclaim,
+  useToggleDeferredPayment,
 } from '../hooks/use-deferred-payment';
 
 interface DeferredPaymentTabProps {
@@ -87,8 +88,61 @@ export const DeferredPaymentTab: React.FC<DeferredPaymentTabProps> = ({
     accountData,
   });
 
+  const isEnabled = Boolean(accountData?.allowDeferred);
+  const toggleHook = useToggleDeferredPayment({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    enabled: !isEnabled,
+    network,
+    accountData,
+  });
+
   return (
     <div className="space-y-6">
+      {/* Feature Toggle / Permission Card */}
+      <Card className="p-4 border space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">
+                Offline Pay Permission
+              </span>
+              <span
+                className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                  isEnabled
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-muted text-muted-foreground border'
+                }`}
+              >
+                {isEnabled ? 'Enabled' : 'Disabled (Default)'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isEnabled
+                ? 'Your wallet allows other members to pull deferred payments from you.'
+                : 'Deferred fund pulls from your wallet are blocked. Enable to allow offline payments.'}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant={isEnabled ? 'gray' : 'primary'}
+            onClick={() => toggleHook.send()}
+            disabled={toggleHook.isDisabled}
+            className="text-xs shrink-0"
+          >
+            {toggleHook.isSending
+              ? 'Updating...'
+              : isEnabled
+                ? 'Disable'
+                : 'Enable'}
+          </Button>
+        </div>
+        {toggleHook.error && (
+          <p className="text-xs text-destructive">{toggleHook.error}</p>
+        )}
+      </Card>
+
       <Card className="p-4 bg-muted/40 border space-y-3">
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-primary" />

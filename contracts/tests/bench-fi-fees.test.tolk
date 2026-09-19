@@ -87,7 +87,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
         creditNeed: ton("100"),
         accumulatedFees: ton("50"),
         debt: ton("10"),
-        debts: true,
+        allowDeferred: false,
         votes: 10,
         receivedVotes: 1000000,
         connections: 10,

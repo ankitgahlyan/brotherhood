@@ -79,6 +79,7 @@ type AllowedMessageToWallet =
     | ActClaimDeferredPayment
     | ActFallbackReclaim
     | AcceptDeferredTransfer
+    | ToggleDeferredPayment
 
 type BounceOpToHandle =
     | EnterLottery
@@ -212,9 +213,6 @@ fun onBouncedMessage(in: InMessageBounced): void {
 
             val debtReduction = min(store.debt, FOLLOW_MINT_AMOUNT);
             store.debt -= debtReduction;
-            if (store.debt == 0) {
-                store.debts = false;
-            }
             restoreAmount = FOLLOW_MINT_AMOUNT - debtReduction;
 
             val mintedBack = FOLLOW_MINT_AMOUNT - debtReduction;
@@ -331,9 +329,6 @@ fun onInternalMessage(in: InMessage): void {
             if (store.debt > 0) {
                 val debtReduction = min(store.debt, totalClaimAmount);
                 store.debt -= debtReduction;
-                if (store.debt == 0) {
-                    store.debts = false;
-                }
                 val netCredited = totalClaimAmount - debtReduction;
                 store.jettonBalance += netCredited;
             } else {
@@ -797,7 +792,6 @@ fun onInternalMessage(in: InMessage): void {
                     val available = store.jettonBalance;
                     val deficit = msg.amount - available;
                     store.debt += deficit;
-                    store.debts = true;
                     store.jettonBalance = 0;
                     actualTransfer = available;
                 }
@@ -850,7 +844,6 @@ fun onInternalMessage(in: InMessage): void {
                     val available = store.jettonBalance;
                     val deficit = targetAmount - available;
                     store.debt += deficit;
-                    store.debts = true;
                     store.jettonBalance = 0;
                     actualTransfer = available;
                 }
@@ -1150,7 +1143,6 @@ fun onInternalMessage(in: InMessage): void {
             } else {
                 val available = store.jettonBalance;
                 store.debt += (msg.burnAmount - available);
-                store.debts = true;
                 store.jettonBalance = 0;
                 actualBurn = available;
             }
@@ -1225,9 +1217,6 @@ fun onInternalMessage(in: InMessage): void {
                 social.followersCount += 1;
                 val debtReduction = min(store.debt, FOLLOW_MINT_AMOUNT);
                 store.debt -= debtReduction;
-                if (store.debt == 0) {
-                    store.debts = false;
-                }
                 val restoreAmount = FOLLOW_MINT_AMOUNT - debtReduction;
                 store.jettonBalance += restoreAmount;
 
@@ -1265,7 +1254,6 @@ fun onInternalMessage(in: InMessage): void {
             } else {
                 val available = store.jettonBalance;
                 store.debt += (FOLLOW_MINT_AMOUNT - available);
-                store.debts = true;
                 store.jettonBalance = 0;
                 actualBurn = available;
             }
@@ -1424,9 +1412,6 @@ fun onInternalMessage(in: InMessage): void {
                 val pay = min(msg.amount, store.debt);
                 store.debt -= pay;
                 store.jettonBalance -= pay;
-                if (store.debt == 0) {
-                    store.debts = false;
-                }
             }
         }
 
@@ -1594,14 +1579,12 @@ fun onInternalMessage(in: InMessage): void {
             val unpaid = EMI_AMOUNT - burnAmount;
             if (unpaid > 0) {
                 store.debt += unpaid;
-                store.debts = true;
             }
 
             // apply 5% penalty of all debt
             if (store.debt > 0) {
                 val penalty = store.debt * EMI_PENALTY_PERCENT / 100;
                 store.debt += penalty;
-                store.debts = true;
             }
 
             time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
@@ -1639,12 +1622,10 @@ fun onInternalMessage(in: InMessage): void {
             val unpaid = EMI_AMOUNT - burnAmount;
             if (unpaid > 0) {
                 store.debt += unpaid;
-                store.debts = true;
             }
             if (now > baseTime + DECAY_MONTH_SECONDS + EMI_GRACE_PERIOD && store.debt > 0) {
                 val penalty = store.debt * EMI_PENALTY_PERCENT / 100;
                 store.debt += penalty;
-                store.debts = true;
             }
             time.lastDecay = baseTime + DECAY_MONTH_SECONDS;
         }
@@ -1654,7 +1635,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (msg.amount > 0) throw Errors.InvalidMessage;
 
             val pullMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.NoBounce,
                 dest: msg.payer.getAddrFiWallet(),
                 value: 0,
                 body: PullDeferredFunds {
@@ -1664,12 +1645,13 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             pullMsg.send(
-                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
             );
         }
 
         PullDeferredFunds => {
             assert (store.active) throw Errors.AccountInactive;
+            assert (store.allowDeferred) throw Errors.DeferredPaymentDisabled;
             checkDebts(store);
             assert (store.jettonBalance >= msg.amount) throw Errors.InsufficientBalance;
 
@@ -1729,7 +1711,6 @@ fun onInternalMessage(in: InMessage): void {
                 val available = store.jettonBalance;
                 val deficit = msg.amount - available;
                 store.debt += deficit;
-                store.debts = true;
                 store.jettonBalance = 0;
                 actualBurn = available;
             }
@@ -1796,6 +1777,12 @@ fun onInternalMessage(in: InMessage): void {
             );
             assert (in.senderAddress == expectedHoldingAddr) throw Errors.IncorrectSender;
             store.jettonBalance += msg.amount;
+        }
+
+        ToggleDeferredPayment => {
+            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
+            store.allowDeferred = msg.enabled;
+            returnExcessesBack(msg.queryId, addrs.owner);
         }
 
         // for migration to other network states

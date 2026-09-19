@@ -574,7 +574,7 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Activation & Status Banner */}
         <ActivationBanner />
 
-        {account.data && account.data.debts && (
+        {account.data && account.data.debt > 0n && (
           <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex justify-between items-center">
             <div>
               <span className="font-semibold block">Outstanding Debt</span>
@@ -1094,11 +1094,14 @@ export const BrotherhoodScreen: React.FC = () => {
                           : 'Up to date'}
                   </span>
                 </div>
-                {account.data?.debts && (
+                {Boolean(account.data && account.data.debt > 0n) && (
                   <div className="flex justify-between items-center text-destructive font-medium border-t border-destructive/20 pt-2">
                     <span>Outstanding Debt</span>
                     <span>
-                      {(Number(account.data.debt) / 1e9).toLocaleString()} FI
+                      {(
+                        Number(account.data?.debt ?? 0n) / 1e9
+                      ).toLocaleString()}{' '}
+                      FI
                     </span>
                   </div>
                 )}

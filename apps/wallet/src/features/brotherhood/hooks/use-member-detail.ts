@@ -32,7 +32,7 @@ export interface MemberDetailData {
   multiplier: number;
   accumulatedFees: bigint;
   debt: bigint;
-  debts: boolean;
+  allowDeferred: boolean;
   votes: number;
   receivedVotes: bigint;
   connections: number;
@@ -192,7 +192,7 @@ export function useMemberDetail(
         multiplier: Number(rawData.multiplier ?? 1),
         accumulatedFees: rawData.accumulatedFees ?? 0n,
         debt: rawData.debt ?? 0n,
-        debts: Boolean(rawData.debts),
+        allowDeferred: Boolean(rawData.allowDeferred),
         votes: Number(rawData.votes ?? 10),
         receivedVotes: rawData.receivedVotes ?? 0n,
         connections: Number(rawData.connections ?? 0),

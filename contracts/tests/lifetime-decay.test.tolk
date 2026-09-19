@@ -104,7 +104,7 @@ get fun `test overdue EMI: keeper triggers default, burns balance, adds shortfal
     val expectedTotalDebt = expectedShortfall + expectedPenalty;
 
     expect(walletData.debt).toEqual(expectedTotalDebt);
-    expect(walletData.debts).toEqual(true);
+    expect(walletData.debt > 0).toEqual(true);
 }
 
 get fun `test legacy TriggerDecay: works as keeper trigger for backward compatibility`() {

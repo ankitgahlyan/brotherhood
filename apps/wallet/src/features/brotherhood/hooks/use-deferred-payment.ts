@@ -14,6 +14,7 @@ import {
   buildCancelDeferredPaymentBody,
   buildClaimDeferredPaymentBody,
   buildFallbackReclaimBody,
+  buildToggleDeferredPaymentBody,
   parseUnits,
 } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
@@ -249,6 +250,58 @@ export function useFallbackReclaim({
       },
     ]);
   }, [walletAddress, holdingAddress, network, sendTx]);
+
+  const isDisabled = Boolean(validationError) || isSending;
+  return { send, isDisabled, isSending, error, validationError };
+}
+
+export interface UseToggleDeferredPaymentParams {
+  wallet: Wallet | null | undefined;
+  walletKit: ITonWalletKit | null;
+  walletAddress: string | null;
+  enabled: boolean;
+  network: Network;
+  accountData?: FiAccountData | null;
+}
+
+export function useToggleDeferredPayment({
+  wallet,
+  walletKit,
+  walletAddress,
+  enabled,
+  network,
+  accountData,
+}: UseToggleDeferredPaymentParams) {
+  const {
+    send: sendTx,
+    isSending,
+    error,
+  } = useBrotherhoodTransaction(wallet, walletKit);
+
+  const validationError = useMemo<string | null>(() => {
+    if (!wallet || !walletAddress) return 'Connect wallet first';
+    const actionErr = getAccountActionError(accountData);
+    if (actionErr) return actionErr;
+    return null;
+  }, [wallet, walletAddress, accountData]);
+
+  const send = useCallback(async () => {
+    if (!walletAddress) throw new Error('No wallet address');
+    const myOwnerAddr = Address.parse(walletAddress);
+    const myFiWalletAddr = await getFiWalletAddress(myOwnerAddr, network);
+
+    const payload = buildToggleDeferredPaymentBody({
+      enabled,
+    });
+
+    await sendTx([
+      {
+        toAddress: myFiWalletAddr.toString(),
+        amount: GAS.DEFERRED_PAYMENT,
+        payload,
+      },
+    ]);
+  }, [walletAddress, enabled, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
   return { send, isDisabled, isSending, error, validationError };

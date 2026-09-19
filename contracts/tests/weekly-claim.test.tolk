@@ -211,7 +211,7 @@ get fun `test weekly claim: debt is automatically repaid first before crediting 
         { value: ton("0.6") },
     );
     expect(followeeWallet.getWalletDataAll().debt).toEqual(FOLLOW_MINT_AMOUNT);
-    expect(followeeWallet.getWalletDataAll().debts).toEqual(true);
+    expect(followeeWallet.getWalletDataAll().debt > 0).toEqual(true);
 
     // Advance time past activation wait (1 day)
     testing.setNow(1_800_000_000 + ACTIVATION_WAIT + 100);
@@ -231,6 +231,6 @@ get fun `test weekly claim: debt is automatically repaid first before crediting 
 
     val walletData = followeeWallet.getWalletDataAll();
     expect(walletData.debt).toEqual(0);
-    expect(walletData.debts).toEqual(false);
+    expect(walletData.debt == 0).toEqual(true);
     expect(walletData.jettonBalance).toEqual(WEEKLY_CLAIM_AMOUNT - FOLLOW_MINT_AMOUNT);
 }

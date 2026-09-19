@@ -54,7 +54,7 @@ export function useBuyCredit({
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
     if (accountData) {
-      if (accountData.debts || accountData.debt > 0n) {
+      if (accountData.debt > 0n) {
         return 'Cannot buy credit while having outstanding debt';
       }
     }

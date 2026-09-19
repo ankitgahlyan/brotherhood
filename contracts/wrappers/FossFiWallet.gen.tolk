@@ -1036,6 +1036,22 @@ fun FossFiWallet.sendAcceptDeferredTransfer(
     return net.send(from, genericMsg);
 }
 
+fun FossFiWallet.sendToggleDeferredPayment(
+    self,
+    from: address,
+    queryId: uint64,
+    enabled: bool,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: ToggleDeferredPayment { queryId, enabled },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun FossFiWallet.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
     val genericMsg = createMessage({

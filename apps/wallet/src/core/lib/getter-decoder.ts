@@ -387,7 +387,7 @@ export function decodeContractGetter(
               multiplier: r.readBigInt(),
               accumulatedFees: r.readBigInt(),
               debt: r.readBigInt(),
-              debts: r.readBoolean(),
+              allowDeferred: r.readBoolean(),
               votes: r.readBigInt(),
               receivedVotes: r.readBigInt(),
               connections: r.readBigInt(),

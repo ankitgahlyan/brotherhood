@@ -49,7 +49,7 @@ get fun `test unfollow shortfall: followee with insufficient balance incurs debt
     val followeeData = followeeWallet.getWalletDataAll();
     expect(followeeData.jettonBalance).toEqual(0);
     expect(followeeData.debt).toEqual(FOLLOW_MINT_AMOUNT);
-    expect(followeeData.debts).toBeTrue();
+    expect(followeeData.debt > 0).toBeTrue();
 }
 
 get fun `test closure: closes account and transfers remaining assets to nominee`() {

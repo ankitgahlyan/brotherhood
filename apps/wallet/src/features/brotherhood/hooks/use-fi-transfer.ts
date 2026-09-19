@@ -54,7 +54,7 @@ export function useFiTransfer({
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
     if (accountData) {
-      if (accountData.debts || accountData.debt > 0n) {
+      if (accountData.debt > 0n) {
         return 'Transfers blocked: Account has outstanding debt that must be repaid';
       }
     }

@@ -28,6 +28,7 @@ import {
   ActCancelDeferredPayment,
   ActClaimDeferredPayment,
   ActFallbackReclaim,
+  ToggleDeferredPayment,
 } from '@wrappers/FossFiWallet.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
@@ -425,5 +426,15 @@ export function buildFallbackReclaimBody(params: {
   const { holdingAddress, queryId = 0n } = params;
   return ActFallbackReclaim.toCell(
     ActFallbackReclaim.create({ queryId, holdingAddress }),
+  );
+}
+
+export function buildToggleDeferredPaymentBody(params: {
+  enabled: boolean;
+  queryId?: bigint;
+}): Cell {
+  const { enabled, queryId = 0n } = params;
+  return ToggleDeferredPayment.toCell(
+    ToggleDeferredPayment.create({ queryId, enabled }),
   );
 }

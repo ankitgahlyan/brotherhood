@@ -9,7 +9,7 @@
 import { useCallback, useState } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { PushUpgradeCode } from '@wrappers/FossFi.gen';
+import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import { toast } from 'sonner';
@@ -43,12 +43,7 @@ export function usePushUpgrade({ wallet, walletKit }: UsePushUpgradeParams) {
         return;
       }
 
-      const payload = PushUpgradeCode.toCell(
-        PushUpgradeCode.create({
-          queryId: 0n,
-          targetAddress: parsedTarget,
-        }),
-      );
+      const payload = buildRequestUpgradeBody(parsedTarget);
 
       await sendTx([
         {

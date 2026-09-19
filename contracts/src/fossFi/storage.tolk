@@ -84,7 +84,7 @@ struct FiWalletStore {
     multiplier: uint16 = 1
     accumulatedFees: coins = 0        // todo: use fixed no of txnCount instead
     debt: coins = 0                   // or directly set balance -ve (ton supports this?)
-    debts: bool = false               // todo use this pattern of external informer about state before expensive loading cells
+    allowDeferred: bool = false       // opt-in toggle for deferred offline payments
     votes: uint4 = 10                 // granular voting power
     receivedVotes: uint20 = 0         // 1,048,576 for upgrading account to authority after threshold(1 million) is passed
     connections: uint8 = 0            // 250 max msgSending constraints

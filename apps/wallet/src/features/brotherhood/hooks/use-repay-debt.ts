@@ -53,7 +53,7 @@ export function useRepayDebt({
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
     if (accountData) {
-      if (accountData.debt === 0n && !accountData.debts) {
+      if (accountData.debt === 0n) {
         return 'No outstanding debt on this account';
       }
     }

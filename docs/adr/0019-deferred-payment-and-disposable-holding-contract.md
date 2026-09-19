@@ -20,7 +20,8 @@ Furthermore, `FiWalletStore` in [`contracts/src/fossFi/storage.tolk`](../../cont
    - The Payee (merchant or peer) dispatches `RequestDeferredPayment` to their own Account, which forwards `PullDeferredFunds` to the Payer's Account.
    - The Payer's Account validates fail-fast preconditions:
      - `store.active == true`
-     - `store.debts == false`
+     - `store.allowDeferred == true` (explicit opt-in toggle repurposing redundant `debts: bool`, disabled by default, toggled via `ToggleDeferredPayment`)
+     - `store.debt == 0` (unified debt checking across all operations)
      - `store.jettonBalance >= amount`
    - Upon validation, the Payer's Account deducts `amount`, records `createdAt = now()`, deploys a disposable `Holding` contract carrying the escrowed tokens, and notifies the Payee's Account with `DeferredPaymentInitiated`.
 
@@ -37,7 +38,7 @@ Furthermore, `FiWalletStore` in [`contracts/src/fossFi/storage.tolk`](../../cont
      - `Holding` refunds the 1x `amount` of principal back to the Payer's Account.
      - `Holding` dispatches `PenalizeDeferredRequester { payer, amount, createdAt }` to the Payee's Account.
      - The Payee's Account verifies that the sender is the deterministically derived `Holding` contract.
-     - The Payee's Account deducts 1x `amount` from its liquid balance and burns it via `NotifyMinter`. If the balance is insufficient, the deficit converts to `Debt` (`store.debt += deficit; store.debts = true;`), blocking account activities and garnishing Weekly Claims.
+     - The Payee's Account deducts 1x `amount` from its liquid balance and burns it via `NotifyMinter`. If the balance is insufficient, the deficit converts to `Debt` (`store.debt += deficit;`), blocking account activities and garnishing Weekly Claims.
    - **Counter-Dispute (Authority Adjudication)**: If a dishonest Payer consumes goods and fraudulently cancels to inflict the penalty on an honest merchant, the merchant petitions an **Authority** off-chain with proof. The Authority utilizes existing `AuthorityAction` (`ActDispatchAuthorityAction`) to confiscate 3x `amount` from the abusive Payer and award it to the Payee.
    - **Abandoned Fallback**: If the Payee fails to claim within 30 days (`now() >= createdAt + 30 * 86400`), the Payer can execute `FallbackReclaim` to recover their tokens and gas without penalty.
 
