@@ -14,7 +14,12 @@ interface DateHeaderProps {
 }
 
 export function formatHumanDay(timestampSeconds: number): string {
-  const date = new Date(timestampSeconds * 1000);
+  const ts = !timestampSeconds
+    ? Date.now()
+    : timestampSeconds > 1e11
+      ? timestampSeconds
+      : timestampSeconds * 1000;
+  const date = new Date(ts);
   const now = new Date();
 
   const isToday =
@@ -41,6 +46,14 @@ export function formatHumanDay(timestampSeconds: number): string {
   });
 }
 
+export function getDayStartSeconds(tsSeconds: number): number {
+  if (!tsSeconds) return Math.floor(Date.now() / 1000);
+  const ms = tsSeconds > 1e11 ? tsSeconds : tsSeconds * 1000;
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return Math.floor(d.getTime() / 1000);
+}
+
 export const DateHeader: React.FC<DateHeaderProps> = ({
   timestamp,
   isUpdating,
@@ -48,8 +61,8 @@ export const DateHeader: React.FC<DateHeaderProps> = ({
   const label = formatHumanDay(timestamp);
 
   return (
-    <div className="flex justify-center my-2.5 select-none pointer-events-none sticky top-1 z-10">
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-muted-foreground bg-secondary/80 backdrop-blur-md shadow-xs border border-border/40 transition-all">
+    <div className="flex justify-center my-2 select-none pointer-events-none sticky top-1 z-10">
+      <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold text-muted-foreground bg-secondary/80 backdrop-blur-md shadow-xs border border-border/40 transition-all">
         <span>{label}</span>
         {isUpdating && (
           <span

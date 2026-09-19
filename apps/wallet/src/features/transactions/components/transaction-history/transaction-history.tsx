@@ -8,9 +8,10 @@
 
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 
-import { TransactionRow } from '../transaction-row';
+import { ActivityList } from '../activity-list';
 import { useTransactionRows } from '../../hooks/use-transaction-rows';
 
 const PREVIEW_COUNT = 10;
@@ -18,12 +19,15 @@ const PREVIEW_COUNT = 10;
 const PREVIEW_LOAD = 20;
 
 /**
- * Dashboard "History" block: the latest transactions. Like NftsCard, renders nothing
- * while loading or when empty; the header navigates to the full history page.
+ * Dashboard "History" block: the latest transactions with wallet-v2 date separators and pill badges.
  */
 export const TransactionHistory: React.FC = () => {
   const navigate = useNavigate();
   const { rows } = useTransactionRows(PREVIEW_LOAD);
+  const pendingTransactions = useWalletStore(
+    (state) => state.walletManagement.pendingTransactions,
+  );
+  const isSyncing = pendingTransactions.length > 0;
   const preview = rows.slice(0, PREVIEW_COUNT);
 
   if (preview.length === 0) {
@@ -42,11 +46,7 @@ export const TransactionHistory: React.FC = () => {
         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </button>
 
-      <div className="bg-card/60 backdrop-blur-xs rounded-2xl border border-border/60 divide-y divide-border/40 overflow-hidden shadow-2xs">
-        {preview.map((row) => (
-          <TransactionRow key={row.id} {...row} />
-        ))}
-      </div>
+      <ActivityList rows={preview} isSyncing={isSyncing} />
     </section>
   );
 };

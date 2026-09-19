@@ -45,6 +45,99 @@ let inFlightLoadAllWallets: Promise<void> | null = null;
 let inFlightSwitchWalletId: string | null = null;
 let inFlightSwitchWalletPromise: Promise<void> | null = null;
 
+function isAccountInEvent(ev: any, targetAddr: string): boolean {
+  if (!ev || !targetAddr) return false;
+
+  const matches = (addrCandidate?: unknown): boolean => {
+    if (!addrCandidate) return false;
+    const str =
+      typeof addrCandidate === 'string'
+        ? addrCandidate
+        : (addrCandidate as any)?.address;
+    if (!str || typeof str !== 'string') return false;
+    try {
+      return compareAddress(str, targetAddr);
+    } catch {
+      return str === targetAddr;
+    }
+  };
+
+  // 1. Primary event account
+  if (matches(ev.account)) return true;
+
+  // 2. Parsed actions
+  if (Array.isArray(ev.actions)) {
+    for (const action of ev.actions) {
+      if (!action) continue;
+
+      // TonTransfer
+      if (action.TonTransfer) {
+        if (matches(action.TonTransfer.sender)) return true;
+        if (matches(action.TonTransfer.recipient)) return true;
+      }
+
+      // JettonTransfer
+      if (action.JettonTransfer) {
+        if (matches(action.JettonTransfer.sender)) return true;
+        if (matches(action.JettonTransfer.recipient)) return true;
+      }
+
+      // JettonSwap
+      if (action.JettonSwap) {
+        if (matches(action.JettonSwap.userWallet)) return true;
+      }
+
+      // NftItemTransfer
+      if (action.NftItemTransfer) {
+        if (matches(action.NftItemTransfer.sender)) return true;
+        if (matches(action.NftItemTransfer.recipient)) return true;
+      }
+
+      // SmartContractExec
+      if (action.SmartContractExec) {
+        if (matches(action.SmartContractExec.executor)) return true;
+        if (matches(action.SmartContractExec.contract)) return true;
+      }
+
+      // ContractDeploy
+      if (action.ContractDeploy) {
+        if (matches(action.ContractDeploy.address)) return true;
+      }
+
+      // SimplePreview accounts
+      if (Array.isArray(action.simplePreview?.accounts)) {
+        for (const previewAcc of action.simplePreview.accounts) {
+          if (matches(previewAcc)) return true;
+        }
+      }
+    }
+  }
+
+  // 3. Transactions / messages
+  if (ev.transactions) {
+    const txList = Array.isArray(ev.transactions)
+      ? ev.transactions
+      : Object.values(ev.transactions);
+    for (const tx of txList as any[]) {
+      if (!tx) continue;
+      if (matches(tx.account)) return true;
+      if (tx.in_msg) {
+        if (matches(tx.in_msg.source)) return true;
+        if (matches(tx.in_msg.destination)) return true;
+      }
+      if (Array.isArray(tx.out_msgs)) {
+        for (const msg of tx.out_msgs) {
+          if (!msg) continue;
+          if (matches(msg.source)) return true;
+          if (matches(msg.destination)) return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 export const createWalletManagementSlice =
   (walletKitConfig?: WalletKitConfig): WalletManagementSliceCreator =>
   (set: SetState, get) => ({
@@ -1087,44 +1180,37 @@ export const createWalletManagementSlice =
               }
             }
 
-            for (const ev of response.events as Array<{
-              account?: { address?: string };
-              actions?: Array<{
-                TonTransfer?: {
-                  sender?: { address?: string };
-                  recipient?: { address?: string };
-                };
-              }>;
-            }>) {
-              const evAccount = ev.account?.address;
-              if (evAccount) {
-                for (const addr of allAddresses) {
-                  try {
-                    if (compareAddress(evAccount, addr)) {
-                      if (
-                        !newEventsByAddress[addr].some(
-                          (e: any) => e.eventId === (ev as any).eventId,
-                        )
-                      ) {
-                        newEventsByAddress[addr].push(ev);
-                      }
-                    }
-                  } catch {
-                    if (evAccount === addr) {
-                      if (
-                        !newEventsByAddress[addr].some(
-                          (e: any) => e.eventId === (ev as any).eventId,
-                        )
-                      ) {
-                        newEventsByAddress[addr].push(ev);
-                      }
-                    }
+            for (const ev of (response.events || []) as any[]) {
+              let matched = false;
+              for (const addr of allAddresses) {
+                const belongs =
+                  allAddresses.length === 1 || isAccountInEvent(ev, addr);
+                if (belongs) {
+                  matched = true;
+                  if (
+                    !newEventsByAddress[addr].some(
+                      (e: any) => e.eventId === ev.eventId,
+                    )
+                  ) {
+                    newEventsByAddress[addr].push(ev);
                   }
+                }
+              }
+              // If none matched explicitly but it was returned by the indexer during an active wallet query,
+              // attribute it to the active wallet address so that unparsed or unusual transactions are not dropped.
+              if (!matched && address) {
+                if (
+                  !newEventsByAddress[address].some(
+                    (e: any) => e.eventId === ev.eventId,
+                  )
+                ) {
+                  newEventsByAddress[address].push(ev);
                 }
               }
             }
 
-            // Sort events descending (newest first) and cap each address at 50 to prevent unbounded growth
+            // Sort events descending (newest first) and cap to prevent unbounded growth while supporting pagination
+            const maxCap = Math.max(limit * 2, 250);
             for (const addr of allAddresses) {
               if (newEventsByAddress[addr]) {
                 newEventsByAddress[addr].sort((a: any, b: any) => {
@@ -1135,10 +1221,10 @@ export const createWalletManagementSlice =
                   const timeB = Number(b?.timestamp ?? 0);
                   return timeB - timeA;
                 });
-                if (newEventsByAddress[addr].length > 50) {
+                if (newEventsByAddress[addr].length > maxCap) {
                   newEventsByAddress[addr] = newEventsByAddress[addr].slice(
                     0,
-                    50,
+                    maxCap,
                   );
                 }
               }
@@ -1148,7 +1234,9 @@ export const createWalletManagementSlice =
             state.walletManagement.events = (
               newEventsByAddress[address] || []
             ).slice(0, limit);
-            state.walletManagement.hasNextEvents = response.hasNext;
+            state.walletManagement.hasNextEvents =
+              Boolean(response.hasNext) ||
+              (newEventsByAddress[address]?.length ?? 0) >= limit;
 
             const eventTraceIds = new Set<string>();
             const eventExtHashes = new Set<string>();

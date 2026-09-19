@@ -6,33 +6,20 @@
  *
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { RotateCw, AlertCircle, Inbox } from 'lucide-react';
 import { useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 
-import { TransactionRow } from '../transaction-row';
-import { DateHeader } from '../date-header';
+import { ActivityList } from '../activity-list';
 import { useTransactionRows } from '../../hooks/use-transaction-rows';
-import type { TransactionRowModel } from '../../utils/map-transaction-row';
 
 import { Button } from '@/core/components/ui/button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
 const PAGE_SIZE = 25;
-
-interface DayGroup {
-  dayStart: number;
-  rows: TransactionRowModel[];
-}
-
-function getDayStartSeconds(tsSeconds: number): number {
-  const d = new Date(tsSeconds * 1000);
-  d.setHours(0, 0, 0, 0);
-  return Math.floor(d.getTime() / 1000);
-}
 
 /** Full transaction history page: wallet-v2 Activity Feed with date pills, status badges, and inline navigation. */
 export const HistoryScreen: FC = () => {
@@ -52,14 +39,12 @@ export const HistoryScreen: FC = () => {
 
   const isSyncing = pendingTransactions.length > 0;
   const isInitialLoading =
-    (rawEvents === undefined || isRetrying) && !hasLoadError;
+    isRetrying || (!hasLoadError && rawEvents === undefined);
 
   // On mount, load events if not yet fetched
   useEffect(() => {
-    if (!address) return;
-    if (rawEvents === undefined) {
-      loadEvents(limit, 0, true).catch(() => setHasLoadError(true));
-    }
+    if (!address || rawEvents !== undefined) return;
+    loadEvents(limit, 0, true).catch(() => setHasLoadError(true));
   }, [address, loadEvents, limit, rawEvents]);
 
   const handleRetry = async () => {
@@ -88,25 +73,6 @@ export const HistoryScreen: FC = () => {
       }
     }
   };
-
-  // Group rows chronologically by day
-  const dayGroups = useMemo<DayGroup[]>(() => {
-    if (!rows || rows.length === 0) return [];
-
-    const groups: DayGroup[] = [];
-    let currentGroup: DayGroup | null = null;
-
-    for (const row of rows) {
-      const dayStart = getDayStartSeconds(row.timestamp || 0);
-      if (!currentGroup || currentGroup.dayStart !== dayStart) {
-        currentGroup = { dayStart, rows: [] };
-        groups.push(currentGroup);
-      }
-      currentGroup.rows.push(row);
-    }
-
-    return groups;
-  }, [rows]);
 
   const renderContent = () => {
     if (isInitialLoading && (!rows || rows.length === 0)) {
@@ -162,19 +128,7 @@ export const HistoryScreen: FC = () => {
 
     return (
       <div className="space-y-4 pb-6">
-        {dayGroups.map((group, groupIndex) => (
-          <div key={group.dayStart} className="space-y-1.5">
-            <DateHeader
-              timestamp={group.dayStart}
-              isUpdating={groupIndex === 0 && isSyncing}
-            />
-            <div className="bg-card/60 backdrop-blur-xs rounded-2xl border border-border/60 divide-y divide-border/40 overflow-hidden shadow-2xs">
-              {group.rows.map((row) => (
-                <TransactionRow key={row.id} {...row} />
-              ))}
-            </div>
-          </div>
-        ))}
+        <ActivityList rows={rows} isSyncing={isSyncing} />
 
         {hasMore && (
           <div className="mt-6 flex justify-center pb-4">

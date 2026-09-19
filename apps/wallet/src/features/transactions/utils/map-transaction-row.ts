@@ -412,17 +412,93 @@ export const mapEventToRow = (
   network: ExplorerNetwork,
   explorer: ExplorerChoice = 'tonscan',
 ): TransactionRowModel | null => {
-  if (!event.actions || event.actions.length === 0) return null;
+  const eventId = String(event.eventId);
+  const hash =
+    eventId ||
+    (event.traceExternalHash ? Base64ToHex(event.traceExternalHash) : '');
+  const fee = extractFee(event);
+
+  if (!event.actions || event.actions.length === 0) {
+    let isOutgoing = false;
+    let value = '';
+    let counterparty: string | undefined;
+    let actionName = 'Transaction';
+    let isFailed = false;
+
+    if (event.transactions && typeof event.transactions === 'object') {
+      for (const tx of Object.values(event.transactions) as any[]) {
+        if (sameAddress(tx.account, myAddress)) {
+          if (
+            tx.description?.compute_ph?.success === false ||
+            tx.description?.action?.success === false
+          ) {
+            isFailed = true;
+          }
+          if (tx.in_msg) {
+            if (tx.in_msg.source) {
+              counterparty = tx.in_msg.source;
+              isOutgoing = false;
+              actionName = 'Received';
+            }
+            if (tx.in_msg.value && BigInt(tx.in_msg.value) > 0n) {
+              value = `${formatAmount(tx.in_msg.value, GRAM_DECIMALS)} GRAM`;
+            }
+          }
+          if (tx.out_msgs && tx.out_msgs.length > 0) {
+            const out = tx.out_msgs[0];
+            if (out?.destination) {
+              counterparty = out.destination;
+              isOutgoing = true;
+              actionName = 'Sent';
+            }
+            if (out?.value && BigInt(out.value) > 0n) {
+              value = `${formatAmount(out.value, GRAM_DECIMALS)} GRAM`;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    const failureReason = isFailed
+      ? (extractFailureReason(event) ?? 'Transaction Failed')
+      : undefined;
+    const symbol = value ? value.split(' ').pop() : undefined;
+
+    return {
+      id: eventId,
+      txHash: hash,
+      network,
+      explorerUrl: getExplorerTxUrl(network, hash, explorer),
+      title: actionName,
+      subtitleId: counterparty
+        ? isOutgoing
+          ? `to ${truncateMiddle(counterparty)}`
+          : `from ${truncateMiddle(counterparty)}`
+        : truncateMiddle(eventId),
+      counterpartyAddress: counterparty,
+      senderAddress: isOutgoing ? myAddress : counterparty,
+      recipientAddress: isOutgoing ? counterparty : myAddress,
+      comment: undefined,
+      fee,
+      rawType: 'Transaction',
+      cleanAmount: value,
+      symbol,
+      timestamp: event.timestamp,
+      failureReason,
+      amount: signedAmount(value, isOutgoing),
+      isOutgoing,
+      status: isFailed ? 'failed' : 'success',
+      date: formatTxDate(event.timestamp),
+    };
+  }
+
   const action = selectRelevantAction(event.actions, myAddress);
   const isOutgoing = isOutgoingFromAction(action, myAddress);
   const { actionName, transferDetail, value } = describeAction(
     action,
     isOutgoing,
   );
-  const eventId = String(event.eventId);
-  const hash =
-    eventId ||
-    (event.traceExternalHash ? Base64ToHex(event.traceExternalHash) : '');
   const isFailed = action.status === 'failure';
   const failureReason = isFailed
     ? (extractFailureReason(event) ?? 'Transaction Failed')
@@ -433,7 +509,6 @@ export const mapEventToRow = (
   const recipient = getRecipientAddress(action, isOutgoing, myAddress);
   const comment = getCommentFromAction(action);
   const symbol = value ? value.split(' ').pop() : undefined;
-  const fee = extractFee(event);
 
   return {
     id: eventId,

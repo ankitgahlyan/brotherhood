@@ -6,7 +6,7 @@
  *
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useWalletStore, useShallow } from '@demo/wallet-core';
 import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
@@ -28,19 +28,25 @@ interface TransactionRows {
  */
 export const useTransactionRows = (limit: number): TransactionRows => {
   const { explorer } = useExplorer();
-  const { events, loadEvents, address, pendingTransactions, network, hasMore } =
+  const { events, address, pendingTransactions, network, hasMore } =
     useWalletStore(
       useShallow((state) => {
         const activeWallet = state.walletManagement.savedWallets.find(
           (w) => w.id === state.walletManagement.activeWalletId,
         );
+        const currentAddress = state.walletManagement.address ?? '';
+        const cachedCount =
+          state.walletManagement.eventsByAddress[currentAddress]?.length ?? 0;
+        const currentCount = state.walletManagement.events?.length ?? 0;
         return {
           events: state.walletManagement.events,
-          loadEvents: state.loadEvents,
           address: state.walletManagement.address,
           pendingTransactions: state.walletManagement.pendingTransactions,
           network: activeWallet?.network ?? 'testnet',
-          hasMore: state.walletManagement.hasNextEvents,
+          hasMore:
+            state.walletManagement.hasNextEvents ||
+            cachedCount > limit ||
+            currentCount >= limit,
         };
       }),
     );

@@ -9,6 +9,7 @@
 export * from './components/transaction-row';
 export * from './components/transaction-history';
 export * from './components/history-screen';
+export * from './components/activity-list';
 export * from './components/date-header';
 export * from './components/transaction-info-modal';
 export * from './components/inline-explorer-modal';

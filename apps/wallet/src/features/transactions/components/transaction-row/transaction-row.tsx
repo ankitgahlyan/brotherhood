@@ -13,7 +13,6 @@ import {
   ArrowDownLeft,
   X,
   Pencil,
-  FileCode2,
   ArrowLeftRight,
   Flame,
   Wand2,

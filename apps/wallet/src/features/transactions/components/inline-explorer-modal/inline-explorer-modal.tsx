@@ -158,6 +158,26 @@ export const InlineExplorerModal: React.FC<InlineExplorerModalProps> = ({
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
           onError={() => setHasIframeError(true)}
         />
+        {hasIframeError && (
+          <div className="absolute inset-0 bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3 z-10">
+            <AlertCircle className="w-10 h-10 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">
+              Explorer preview unavailable
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              This explorer does not permit inline embedding. You can view the
+              full transaction details in your browser.
+            </p>
+            <button
+              type="button"
+              onClick={handleExternalOpen}
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Open in Browser</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Fallback & Helper Notice */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-md w-[92%] px-3 py-2 rounded-xl bg-background/95 backdrop-blur-md border border-border shadow-lg flex items-center justify-between gap-3 text-xs pointer-events-auto">

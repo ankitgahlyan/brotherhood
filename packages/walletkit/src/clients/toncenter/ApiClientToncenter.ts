@@ -689,10 +689,7 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
 
         if (participating.length > 0) {
           for (const acc of participating) {
-            const ev = toEvent(trace, acc, addressBook);
-            if (ev.actions.length > 0) {
-              out.events.push(ev);
-            }
+            out.events.push(toEvent(trace, acc, addressBook));
           }
         } else {
           // If none matched explicitly by address/owner, check if toEvent resolves any actions for an account

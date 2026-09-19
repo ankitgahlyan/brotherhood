@@ -9,7 +9,6 @@
 import React, { useState } from 'react';
 import {
   Copy,
-  ExternalLink,
   Check,
   X,
   Repeat,
@@ -19,7 +18,6 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from '@/core/routing';
@@ -61,7 +59,6 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   const {
     txHash,
     network = 'testnet',
-    title,
     counterpartyAddress,
     senderAddress,
     recipientAddress,
