@@ -31,9 +31,13 @@ export const useWalletDataUpdater = () => {
   const { loadRates } = useRates();
 
   // Load wallets when hasWallet but currentWallet missing (e.g. refresh on /send before rehydration)
+  const isLoadingRef = useRef(false);
   useEffect(() => {
-    if (hasWallet && isUnlocked && !currentWallet) {
-      void loadAllWallets();
+    if (hasWallet && isUnlocked && !currentWallet && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      void loadAllWallets().finally(() => {
+        isLoadingRef.current = false;
+      });
     }
   }, [hasWallet, isUnlocked, currentWallet, loadAllWallets]);
 

@@ -41,6 +41,10 @@ let lastLoadEventsKey = '';
 let lastLoadEventsTime = 0;
 const EVENTS_CACHE_TTL_MS = 30_000;
 
+let inFlightLoadAllWallets: Promise<void> | null = null;
+let inFlightSwitchWalletId: string | null = null;
+let inFlightSwitchWalletPromise: Promise<void> | null = null;
+
 export const createWalletManagementSlice =
   (walletKitConfig?: WalletKitConfig): WalletManagementSliceCreator =>
   (set: SetState, get) => ({
@@ -348,83 +352,107 @@ export const createWalletManagementSlice =
     },
 
     switchWallet: async (walletId: string) => {
-      const state = get();
-
-      if (!state.walletCore.walletKit) {
-        throw new Error('WalletKit not initialized');
+      if (inFlightSwitchWalletId === walletId && inFlightSwitchWalletPromise) {
+        return inFlightSwitchWalletPromise;
       }
 
-      const savedWallet = state.walletManagement.savedWallets.find(
-        (w) => w.id === walletId,
-      );
-      if (!savedWallet) {
-        throw new Error('Wallet not found');
-      }
+      const runSwitch = async () => {
+        const state = get();
 
-      try {
-        if (
-          state.walletManagement.activeWalletId === walletId &&
-          state.walletManagement.currentWallet
-        ) {
-          log.info(`Wallet ${walletId} is already active, skipping switch`);
-          if (!state.walletManagement.isStreamingConnected) {
-            await get().startWebSocketStreaming();
-          }
-          return;
+        if (!state.walletCore.walletKit) {
+          throw new Error('WalletKit not initialized');
         }
 
-        log.info(`Switching to wallet ${walletId} (${savedWallet.name})`);
-
-        await get().stopWebSocketStreaming();
-
-        let wallet = savedWallet.kitWalletId
-          ? state.walletCore.walletKit.getWallet(savedWallet.kitWalletId)
-          : undefined;
-
-        // Fallback: check if the wallet was already registered under a matching address
-        if (!wallet && savedWallet.address) {
-          const loadedWallets = state.walletCore.walletKit.getWallets();
-          wallet = loadedWallets.find((w) => {
-            try {
-              return compareAddress(w.getAddress(), savedWallet.address);
-            } catch {
-              return w.getAddress() === savedWallet.address;
-            }
-          });
-          if (wallet) {
-            const matchedKitWalletId = wallet.getWalletId();
-            if (matchedKitWalletId !== savedWallet.kitWalletId) {
-              set((state) => {
-                const sw = state.walletManagement.savedWallets.find(
-                  (w) => w.id === walletId,
-                );
-                if (sw) sw.kitWalletId = matchedKitWalletId;
-              });
-            }
-          }
+        const savedWallet = state.walletManagement.savedWallets.find(
+          (w) => w.id === walletId,
+        );
+        if (!savedWallet) {
+          throw new Error('Wallet not found');
         }
 
-        // Wallet is not in WalletKit yet — decrypt mnemonic and create adapter
-        if (!wallet) {
-          if (!state.auth.currentPassword) {
-            throw new Error('User not authenticated');
+        try {
+          if (
+            state.walletManagement.activeWalletId === walletId &&
+            state.walletManagement.currentWallet
+          ) {
+            log.info(`Wallet ${walletId} is already active, skipping switch`);
+            if (!state.walletManagement.isStreamingConnected) {
+              await get().startWebSocketStreaming();
+            }
+            return;
           }
 
-          const walletAdapter = await state.createAdapterFromSavedWallet(
-            state.walletCore.walletKit,
-            savedWallet,
-          );
+          log.info(`Switching to wallet ${walletId} (${savedWallet.name})`);
 
-          if (!walletAdapter) {
-            throw new Error(
-              `Failed to create adapter for wallet ${savedWallet.name}`,
+          await get().stopWebSocketStreaming();
+
+          let wallet = savedWallet.kitWalletId
+            ? state.walletCore.walletKit.getWallet(savedWallet.kitWalletId)
+            : undefined;
+
+          let newlyAssignedKitId: string | undefined;
+
+          // Fallback: check if the wallet was already registered under a matching address
+          if (!wallet && savedWallet.address) {
+            const loadedWallets = state.walletCore.walletKit.getWallets();
+            wallet = loadedWallets.find((w) => {
+              try {
+                return compareAddress(w.getAddress(), savedWallet.address);
+              } catch {
+                return w.getAddress() === savedWallet.address;
+              }
+            });
+            if (wallet) {
+              const matchedKitWalletId = wallet.getWalletId();
+              if (matchedKitWalletId !== savedWallet.kitWalletId) {
+                newlyAssignedKitId = matchedKitWalletId;
+              }
+            }
+          }
+
+          // Wallet is not in WalletKit yet — decrypt mnemonic and create adapter
+          if (!wallet) {
+            if (!state.auth.currentPassword) {
+              throw new Error('User not authenticated');
+            }
+
+            const walletAdapter = await state.createAdapterFromSavedWallet(
+              state.walletCore.walletKit,
+              savedWallet,
             );
+
+            if (!walletAdapter) {
+              throw new Error(
+                `Failed to create adapter for wallet ${savedWallet.name}`,
+              );
+            }
+
+            wallet = await state.walletCore.walletKit.addWallet(walletAdapter);
           }
 
-          wallet = await state.walletCore.walletKit.addWallet(walletAdapter);
-          if (wallet && wallet.getWalletId() !== savedWallet.kitWalletId) {
-            const newKitWalletId = wallet.getWalletId();
-            set((state) => {
+          if (!wallet) {
+            throw new Error('Failed to load wallet');
+          }
+
+          if (
+            !newlyAssignedKitId &&
+            wallet.getWalletId() !== savedWallet.kitWalletId
+          ) {
+            newlyAssignedKitId = wallet.getWalletId();
+          }
+
+          // Activate the wallet immediately using cached balance if available
+          const cachedBalance = savedWallet.address
+            ? (state.walletManagement.balancesByAddress?.[
+                savedWallet.address
+              ] ??
+              (state.walletManagement.activeWalletId === walletId
+                ? state.walletManagement.balance
+                : undefined))
+            : undefined;
+
+          set((state) => {
+            if (newlyAssignedKitId) {
               const savedWalletIndex =
                 state.walletManagement.savedWallets.findIndex(
                   (w) => w.id === walletId,
@@ -432,60 +460,59 @@ export const createWalletManagementSlice =
               if (savedWalletIndex !== -1) {
                 state.walletManagement.savedWallets[
                   savedWalletIndex
-                ].kitWalletId = newKitWalletId;
+                ].kitWalletId = newlyAssignedKitId;
               }
-            });
-          }
+            }
+
+            state.walletManagement.activeWalletId = walletId;
+            state.walletManagement.address = savedWallet.address;
+            state.walletManagement.publicKey = savedWallet.publicKey;
+            state.walletManagement.balance = cachedBalance;
+            if (savedWallet.address && cachedBalance !== undefined) {
+              state.walletManagement.balancesByAddress[savedWallet.address] =
+                cachedBalance;
+            }
+            state.walletManagement.currentWallet = wallet;
+            state.walletManagement.events =
+              (savedWallet.address &&
+                state.walletManagement.eventsByAddress[savedWallet.address]) ||
+              [];
+
+            // Restore cached jettons and nfts for the newly active wallet (or reset to empty if not yet loaded)
+            const cachedJettons = savedWallet.address
+              ? state.jettons.jettonsByAddress[savedWallet.address]
+              : undefined;
+            state.jettons.userJettons = cachedJettons ?? [];
+
+            const cachedNfts = savedWallet.address
+              ? state.nfts.nftsByAddress[savedWallet.address]
+              : undefined;
+            state.nfts.userNfts = cachedNfts ?? [];
+          });
+
+          await get().startWebSocketStreaming();
+
+          log.info(`Switched to wallet ${walletId} successfully`);
+        } catch (error) {
+          log.error('Error switching wallet:', error);
+          throw error instanceof Error
+            ? error
+            : new Error('Failed to switch wallet');
         }
+      };
 
-        if (!wallet) {
-          throw new Error('Failed to load wallet');
-        }
-
-        // Activate the wallet immediately using cached balance if available
-        const cachedBalance = savedWallet.address
-          ? (state.walletManagement.balancesByAddress?.[savedWallet.address] ??
-            (state.walletManagement.activeWalletId === walletId
-              ? state.walletManagement.balance
-              : undefined))
-          : undefined;
-
-        set((state) => {
-          state.walletManagement.activeWalletId = walletId;
-          state.walletManagement.address = savedWallet.address;
-          state.walletManagement.publicKey = savedWallet.publicKey;
-          state.walletManagement.balance = cachedBalance;
-          if (savedWallet.address && cachedBalance !== undefined) {
-            state.walletManagement.balancesByAddress[savedWallet.address] =
-              cachedBalance;
+      inFlightSwitchWalletId = walletId;
+      const switchPromise = runSwitch();
+      inFlightSwitchWalletPromise = switchPromise;
+      switchPromise
+        .catch(() => {})
+        .finally(() => {
+          if (inFlightSwitchWalletPromise === switchPromise) {
+            inFlightSwitchWalletId = null;
+            inFlightSwitchWalletPromise = null;
           }
-          state.walletManagement.currentWallet = wallet;
-          state.walletManagement.events =
-            (savedWallet.address &&
-              state.walletManagement.eventsByAddress[savedWallet.address]) ||
-            [];
-
-          // Restore cached jettons and nfts for the newly active wallet (or reset to empty if not yet loaded)
-          const cachedJettons = savedWallet.address
-            ? state.jettons.jettonsByAddress[savedWallet.address]
-            : undefined;
-          state.jettons.userJettons = cachedJettons ?? [];
-
-          const cachedNfts = savedWallet.address
-            ? state.nfts.nftsByAddress[savedWallet.address]
-            : undefined;
-          state.nfts.userNfts = cachedNfts ?? [];
         });
-
-        await get().startWebSocketStreaming();
-
-        log.info(`Switched to wallet ${walletId} successfully`);
-      } catch (error) {
-        log.error('Error switching wallet:', error);
-        throw error instanceof Error
-          ? error
-          : new Error('Failed to switch wallet');
-      }
+      return switchPromise;
     },
 
     removeWallet: (walletId: string) => {
@@ -570,60 +597,85 @@ export const createWalletManagementSlice =
     },
 
     loadAllWallets: async () => {
-      const state = get();
-      if (!state.auth.currentPassword) {
-        log.info(
-          'Skipping loadAllWallets: session password not set or user not authenticated',
-        );
-        return;
+      if (inFlightLoadAllWallets) {
+        return inFlightLoadAllWallets;
       }
 
-      if (!state.walletCore.walletKit) {
-        log.info('Skipping loadAllWallets: WalletKit not initialized');
-        return;
-      }
+      const runLoad = async () => {
+        try {
+          const state = get();
+          if (!state.auth.currentPassword) {
+            log.info(
+              'Skipping loadAllWallets: session password not set or user not authenticated',
+            );
+            return;
+          }
 
-      const savedWallets = state.walletManagement.savedWallets;
-      if (!savedWallets || savedWallets.length === 0) {
-        return;
-      }
+          if (!state.walletCore.walletKit) {
+            log.info('Skipping loadAllWallets: WalletKit not initialized');
+            return;
+          }
 
-      try {
-        const targetWallet =
-          savedWallets.find(
-            (w) => w.id === state.walletManagement.activeWalletId,
-          ) ?? savedWallets[0];
+          const savedWallets = state.walletManagement.savedWallets;
+          if (!savedWallets || savedWallets.length === 0) {
+            return;
+          }
 
-        if (!targetWallet) {
-          return;
+          const targetWallet =
+            savedWallets.find(
+              (w) => w.id === state.walletManagement.activeWalletId,
+            ) ?? savedWallets[0];
+
+          if (!targetWallet) {
+            return;
+          }
+
+          log.info(
+            `Loading active wallet ${targetWallet.name} (${targetWallet.id})`,
+          );
+
+          // Switch to active wallet — lazily instantiates adapter if not yet in kit and activates it
+          await get().switchWallet(targetWallet.id);
+
+          set((state) => {
+            const hasWallet = state.walletManagement.savedWallets.length > 0;
+            if (
+              state.walletManagement.hasWallet !== hasWallet ||
+              state.walletManagement.isAuthenticated !== hasWallet
+            ) {
+              state.walletManagement.hasWallet = hasWallet;
+              state.walletManagement.isAuthenticated = hasWallet;
+            }
+          });
+
+          log.info('Active wallet loaded successfully');
+        } catch (error) {
+          log.error('Error loading active wallet:', error);
+          // Still mark as authenticated if we have saved wallets —
+          // the user should be able to enter the app even if API is down
+          set((state) => {
+            const hasWallet = state.walletManagement.savedWallets.length > 0;
+            if (
+              state.walletManagement.hasWallet !== hasWallet ||
+              state.walletManagement.isAuthenticated !== hasWallet
+            ) {
+              state.walletManagement.hasWallet = hasWallet;
+              state.walletManagement.isAuthenticated = hasWallet;
+            }
+          });
         }
+      };
 
-        log.info(
-          `Loading active wallet ${targetWallet.name} (${targetWallet.id})`,
-        );
-
-        // Switch to active wallet — lazily instantiates adapter if not yet in kit and activates it
-        await get().switchWallet(targetWallet.id);
-
-        set((state) => {
-          state.walletManagement.hasWallet =
-            state.walletManagement.savedWallets.length > 0;
-          state.walletManagement.isAuthenticated =
-            state.walletManagement.savedWallets.length > 0;
+      const loadPromise = runLoad();
+      inFlightLoadAllWallets = loadPromise;
+      loadPromise
+        .catch(() => {})
+        .finally(() => {
+          if (inFlightLoadAllWallets === loadPromise) {
+            inFlightLoadAllWallets = null;
+          }
         });
-
-        log.info('Active wallet loaded successfully');
-      } catch (error) {
-        log.error('Error loading active wallet:', error);
-        // Still mark as authenticated if we have saved wallets —
-        // the user should be able to enter the app even if API is down
-        set((state) => {
-          state.walletManagement.hasWallet =
-            state.walletManagement.savedWallets.length > 0;
-          state.walletManagement.isAuthenticated =
-            state.walletManagement.savedWallets.length > 0;
-        });
-      }
+      return loadPromise;
     },
 
     getDecryptedMnemonic: async (

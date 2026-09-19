@@ -6,7 +6,7 @@
  *
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { CreateTonMnemonic } from '@ton/walletkit';
 import { useWallet, useAuth } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
@@ -39,28 +39,32 @@ interface UseTonWalletReturn {
 
 export const useTonWallet = (): UseTonWalletReturn => {
   const [tonKit] = useState<MockTonKit | null>(() => ({ initialized: true }));
-  const [isInitialized] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const walletStore = useWallet();
-  const authStore = useAuth();
+  const {
+    hasWallet,
+    loadAllWallets,
+    createWallet,
+    createLedgerWallet: storeCreateLedgerWallet,
+    importWallet: storeImportWallet,
+  } = useWallet();
+  const { isUnlocked, currentPassword } = useAuth();
 
   const initializeWallet = useCallback(async () => {
     try {
       // Load existing wallet if available
-      if (
-        walletStore.hasWallet &&
-        authStore.isUnlocked &&
-        authStore.currentPassword
-      ) {
-        await walletStore.loadAllWallets();
+      if (hasWallet && isUnlocked && currentPassword) {
+        await loadAllWallets();
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       log.error('Error initializing TON wallet:', err);
+    } finally {
+      setIsInitialized(true);
     }
-  }, [walletStore, authStore.isUnlocked, authStore.currentPassword]);
+  }, [hasWallet, isUnlocked, currentPassword, loadAllWallets]);
 
   const createNewWallet = useCallback(async (): Promise<string[]> => {
     if (!tonKit) throw new Error('TON Kit not initialized');
@@ -70,7 +74,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
       const mnemonic = await CreateTonMnemonic();
 
       // Create wallet with mnemonic
-      await walletStore.createWallet(mnemonic);
+      await createWallet(mnemonic);
 
       return mnemonic;
     } catch (err) {
@@ -79,7 +83,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
       setError(errorMessage);
       throw new Error(errorMessage);
     }
-  }, [tonKit, walletStore]);
+  }, [tonKit, createWallet]);
 
   const createLedgerWallet = useCallback(
     async (network?: NetworkType, name?: string): Promise<void> => {
@@ -89,7 +93,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
         setError(null);
 
         // Create Ledger wallet
-        await walletStore.createLedgerWallet(name, network);
+        await storeCreateLedgerWallet(name, network);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to create Ledger wallet';
@@ -97,7 +101,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
         throw new Error(errorMessage);
       }
     },
-    [tonKit, walletStore],
+    [tonKit, storeCreateLedgerWallet],
   );
 
   const importWallet = useCallback(
@@ -121,13 +125,7 @@ export const useTonWallet = (): UseTonWalletReturn => {
         }
 
         // Import wallet
-        await walletStore.importWallet(
-          mnemonic,
-          name,
-          version,
-          network,
-          subwalletId,
-        );
+        await storeImportWallet(mnemonic, name, version, network, subwalletId);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to import wallet';
@@ -135,15 +133,22 @@ export const useTonWallet = (): UseTonWalletReturn => {
         throw new Error(errorMessage);
       }
     },
-    [tonKit, walletStore],
+    [tonKit, storeImportWallet],
   );
 
-  // Auto-initialize when component mounts
+  // Auto-initialize once when component mounts and wallet is unlocked
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
-    void Promise.resolve().then(() => {
-      initializeWallet();
-    });
-  }, [initializeWallet]);
+    if (
+      !hasInitializedRef.current &&
+      hasWallet &&
+      isUnlocked &&
+      currentPassword
+    ) {
+      hasInitializedRef.current = true;
+      void initializeWallet();
+    }
+  }, [hasWallet, isUnlocked, currentPassword, initializeWallet]);
 
   return {
     tonKit,

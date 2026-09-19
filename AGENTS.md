@@ -34,9 +34,9 @@ This repository uses a single-context layout for domain documentation. The gloss
 
 ### Frontend (TanStack Start)
 
-**Skill loading.** Before substantial frontend edits, run `bunx @tanstack/intent@latest list` from the workspace root; if a listed skill matches, run `bunx @tanstack/intent@latest load <package>#<skill>` and follow its `SKILL.md` (they also live under `node_modules/@tanstack/*/skills/*/SKILL.md`).
+**Skill loading.** Before substantial frontend edits, run `bunx @tanstack/intent@latest list` from the workspace root; if a listed skill matches, run `bunx @tanstack/intent@latest load <package>#<skill>` and follow its `SKILL.md`.
 
-**Stack & integrations:** React, TanStack Start + Router + Query + Store, Tailwind v4, shadcn/ui (Radix), `@tanstack/ai` + `@tanstack/ai-openai`, TonConnect + `@ton/ton`, PWA (`vite-plugin-pwa` manifest-only). The scaffold's `better-auth` and `prisma` add-ons were intentionally **not** ported — no server DB/auth backend yet; revisit when one lands.
+**Stack & integrations:** React, TanStack Start + Router + Query, Tailwind v4, shadcn/ui (Radix), `@tanstack/ai` + `@tanstack/ai-openai`, TonConnect + `@ton/ton`, PWA (`vite-plugin-pwa` manifest-only).
 
 **Routes:** `/` → `src/pages/manage/ManagePage` (tab in URL as a zod-validated `?tab=` search param), `/deploy` → `src/pages/DeployPage` deep-linkable state lives in the URL, not React state.
 

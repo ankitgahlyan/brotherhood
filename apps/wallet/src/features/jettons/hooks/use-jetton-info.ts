@@ -57,46 +57,41 @@ export function useJettonInfo(
 ) {
   const walletKit = useWalletKit();
   const network = useActiveWalletNetwork();
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(() => {
+  const chainNetwork = useMemo(() => getChainNetwork(network), [network]);
+
+  const rawAddressStr = useMemo(() => {
     if (!tokenAddress) return null;
-    if (
-      typeof tokenAddress === 'string' &&
-      tokenAddress.toUpperCase() === 'TON'
-    ) {
+    return tokenAddress.toString();
+  }, [tokenAddress]);
+
+  const isTon = Boolean(rawAddressStr && rawAddressStr.toUpperCase() === 'TON');
+
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(() => {
+    if (!rawAddressStr) return null;
+    if (isTon) {
       return GRAM_INFO;
     }
     return null;
   });
-  const chainNetwork = useMemo(() => getChainNetwork(network), [network]);
 
-  const [prevTokenAddress, setPrevTokenAddress] = useState(tokenAddress);
-  if (tokenAddress !== prevTokenAddress) {
-    setPrevTokenAddress(tokenAddress);
-    if (!tokenAddress) {
+  const [prevAddressStr, setPrevAddressStr] = useState(rawAddressStr);
+  if (rawAddressStr !== prevAddressStr) {
+    setPrevAddressStr(rawAddressStr);
+    if (!rawAddressStr) {
       setTokenInfo(null);
-    } else if (
-      typeof tokenAddress === 'string' &&
-      tokenAddress.toUpperCase() === 'TON'
-    ) {
+    } else if (isTon) {
       setTokenInfo(GRAM_INFO);
     }
   }
 
   useEffect(() => {
-    if (!tokenAddress) return;
-
-    if (
-      typeof tokenAddress === 'string' &&
-      tokenAddress.toUpperCase() === 'TON'
-    ) {
-      return;
-    }
+    if (!rawAddressStr || isTon) return;
 
     let isCancelled = false;
     async function updateTokenInfo() {
-      if (!tokenAddress) return;
+      if (!rawAddressStr) return;
       const info = await walletKit?.jettons?.getJettonInfo(
-        tokenAddress.toString(),
+        rawAddressStr,
         chainNetwork,
       );
       if (!isCancelled) {
@@ -117,7 +112,7 @@ export function useJettonInfo(
     return () => {
       isCancelled = true;
     };
-  }, [tokenAddress, walletKit, chainNetwork]);
+  }, [rawAddressStr, isTon, walletKit, chainNetwork]);
 
   return tokenInfo;
 }
