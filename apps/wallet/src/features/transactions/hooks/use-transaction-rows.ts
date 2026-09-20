@@ -26,7 +26,10 @@ interface TransactionRows {
  * Loads the latest events (first `limit`, newest first), merges pending transactions
  * and maps everything to rows. Shared by the dashboard preview and the full history page.
  */
-export const useTransactionRows = (limit: number): TransactionRows => {
+export const useTransactionRows = (
+  limit: number,
+  tokenFilter?: string,
+): TransactionRows => {
   const { explorer } = useExplorer();
   const { events, address, pendingTransactions, network, hasMore } =
     useWalletStore(
@@ -50,15 +53,6 @@ export const useTransactionRows = (limit: number): TransactionRows => {
         };
       }),
     );
-
-  // useEffect(() => {
-  //   if (!address) return;
-  //   // Only fetch from API on mount if events have not yet been loaded for this wallet.
-  //   // When returning to dashboard with events already loaded, rely on cache and WebSocket streaming.
-  //   if (!events || events.length === 0) {
-  //     void loadEvents(limit, 0);
-  //   }
-  // }, [address, loadEvents, limit, events]);
 
   const rows = useMemo<TransactionRowModel[]>(() => {
     const eventItems = (events ?? []) as Event[];
@@ -101,10 +95,30 @@ export const useTransactionRows = (limit: number): TransactionRows => {
           item.row !== null,
       );
 
-    return [...pendingRows, ...eventRows]
+    const allRows = [...pendingRows, ...eventRows]
       .sort((a, b) => b.timestamp - a.timestamp)
       .map((item) => item.row);
-  }, [events, pendingTransactions, address, network, explorer]);
+
+    if (!tokenFilter || tokenFilter.toUpperCase() === 'ALL') {
+      return allRows;
+    }
+
+    const filterNormalized = tokenFilter.toUpperCase();
+    return allRows.filter((row) => {
+      if (filterNormalized === 'TON' || filterNormalized === 'GRAM') {
+        return (
+          row.symbol === 'TON' ||
+          row.symbol === 'GRAM' ||
+          row.rawType === 'TonTransfer'
+        );
+      }
+      return (
+        row.symbol?.toUpperCase() === filterNormalized ||
+        row.title?.toUpperCase().includes(filterNormalized) ||
+        row.subtitleId?.toUpperCase().includes(filterNormalized)
+      );
+    });
+  }, [events, pendingTransactions, address, network, explorer, tokenFilter]);
 
   return { rows, hasMore };
 };

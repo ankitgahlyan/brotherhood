@@ -23,7 +23,7 @@
         "typescript": "^6.0.3",
         "typescript-7": "npm:typescript@^7.0.2",
         "typescript-eslint": "^8.70.0",
-        "zod-validation-error": "^4.0.2",
+        "zod-validation-error": "4.0.2",
       },
     },
     "apps/wallet": {

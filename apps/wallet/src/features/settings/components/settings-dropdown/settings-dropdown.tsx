@@ -502,7 +502,7 @@ export const SettingsDropdown: React.FC = () => {
                 <ToggleRow
                   testId="hold-to-sign"
                   label="Hold to Sign"
-                  description="Hold the button for 3 seconds to approve transactions"
+                  description="Require holding buttons to approve transactions or broadcast fast sends. Prevents accidental touches."
                   checked={holdToSign ?? true}
                   onChange={setHoldToSign}
                   info={
@@ -515,8 +515,8 @@ export const SettingsDropdown: React.FC = () => {
                 />
                 <ToggleRow
                   testId="show-fast-send"
-                  label="Show fast send"
-                  description="Show “Send Fast” button (1 nano, no confirmation)"
+                  label="Fast send"
+                  description="Automatically sign and broadcast transactions without confirmation dialogs"
                   checked={showFastSend ?? false}
                   onChange={setShowFastSend}
                 />

@@ -1097,7 +1097,12 @@ export const createWalletManagementSlice =
       }
     },
 
-    loadEvents: async (limit = 10, offset = 0, force = false) => {
+    loadEvents: async (
+      limit = 10,
+      offset = 0,
+      force = false,
+      tokenFilter?: string,
+    ) => {
       const state = get();
       const address = state.walletManagement.address;
       if (!address) {
@@ -1120,7 +1125,7 @@ export const createWalletManagementSlice =
         ),
       );
 
-      const key = `${allAddresses.sort().join(',')}:${limit}:${offset}`;
+      const key = `${allAddresses.sort().join(',')}:${limit}:${offset}:${tokenFilter || ''}`;
       if (inFlightLoadEvents && lastLoadEventsKey === key) {
         return inFlightLoadEvents;
       }
@@ -1149,6 +1154,8 @@ export const createWalletManagementSlice =
             limit,
             'offset:',
             offset,
+            'tokenFilter:',
+            tokenFilter,
           );
 
           const activeWallet = state.walletManagement.savedWallets.find(
@@ -1164,6 +1171,7 @@ export const createWalletManagementSlice =
                 allAddresses.length === 1 ? allAddresses[0] : allAddresses,
               limit: Math.max(limit, 50),
               offset,
+              tokenFilter,
             });
 
           if (!response) return;

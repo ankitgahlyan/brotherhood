@@ -9,15 +9,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from '@/core/routing';
 import { isValidAddress } from '@ton/walletkit';
-import type { TONTransferRequest } from '@ton/walletkit';
-import {
-  useAuth,
-  useWallet,
-  useWalletKit,
-  getTransactionExplorerUrls,
-} from '@demo/wallet-core';
+import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
+import { notifyTransactionSent } from '@/core/utils/transaction-toast';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { isOnline } from '@/core/lib/network-status';
 import { parseUnits } from '@/core/utils/units';
@@ -47,6 +42,7 @@ import { Layers, ChevronDown } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/core/components/ui/button';
+import { TxButton } from '@/core/components/ui/tx-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -57,7 +53,6 @@ export const SendTransaction: React.FC = () => {
   const navigate = useNavigate();
   const walletKit = useWalletKit();
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
-  const { showFastSend } = useAuth();
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
 
@@ -205,37 +200,7 @@ export const SendTransaction: React.FC = () => {
   // immediately (gasless send, fast send).
   const { explorer } = useExplorer();
   const notifySent = (normalizedHash: string) => {
-    const { tonScan, tonViewer } = getTransactionExplorerUrls(
-      normalizedHash,
-      network,
-    );
-    const primaryUrl = explorer === 'tonviewer' ? tonViewer : tonScan;
-    const primaryLabel = explorer === 'tonviewer' ? 'TonViewer' : 'TonScan';
-    const secondaryUrl = explorer === 'tonviewer' ? tonScan : tonViewer;
-    const secondaryLabel = explorer === 'tonviewer' ? 'TonScan' : 'TonViewer';
-
-    toast.success('Transaction is sent to the network', {
-      description: (
-        <span className="flex gap-3 mt-1 text-xs">
-          <a
-            href={primaryUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary font-semibold underline"
-          >
-            {primaryLabel} (Preferred)
-          </a>
-          <a
-            href={secondaryUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline"
-          >
-            {secondaryLabel}
-          </a>
-        </span>
-      ),
-    });
+    notifyTransactionSent(normalizedHash, network, explorer);
   };
 
   const handleSelectToken = (option: TokenOption) => {
@@ -343,46 +308,6 @@ export const SendTransaction: React.FC = () => {
     }
   };
 
-  const handleFastSend = async () => {
-    if (!currentWallet) return;
-    const recipientAddress =
-      (effectiveRecipientAddress || recipient).trim() || address;
-    if (!recipientAddress) return;
-    if (!isValidAddress(recipientAddress)) {
-      setError('Invalid recipient address');
-      return;
-    }
-    setError('');
-    setIsLoading(true);
-    try {
-      let result;
-      if (selected.token.type === 'TON') {
-        const params: TONTransferRequest = {
-          recipientAddress,
-          transferAmount: '1000000',
-        };
-        const tx = await currentWallet.createTransferTonTransaction(params);
-        result = await currentWallet.sendTransaction(tx);
-      } else if (selected.token.data) {
-        const tx = await currentWallet.createTransferJettonTransaction({
-          recipientAddress,
-          jettonAddress: selected.token.data.address,
-          transferAmount: '1',
-        });
-        result = await currentWallet.sendTransaction(tx);
-      }
-      if (result?.normalizedHash) {
-        addRecentTransacted({ address: recipientAddress }, network);
-        notifySent(result.normalizedHash);
-      }
-    } catch (err) {
-      log.error('Fast send error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const targetRecipient = (effectiveRecipientAddress || recipient).trim();
   const recipientError =
     targetRecipient.length > 0 && !isValidAddress(targetRecipient)
@@ -409,9 +334,6 @@ export const SendTransaction: React.FC = () => {
     senderMode === 'other'
       ? isSpendAllowanceDisabled
       : sender.isDisabled || Boolean(recipientError);
-
-  const isSendFastDisabled =
-    !currentWallet || !address || senderMode === 'other';
 
   return (
     <NewLayout
@@ -542,7 +464,7 @@ export const SendTransaction: React.FC = () => {
           {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
           <div className="flex flex-col gap-2">
-            <Button
+            <TxButton
               type="submit"
               fullWidth
               loading={
@@ -553,6 +475,19 @@ export const SendTransaction: React.FC = () => {
               }
               disabled={isSendDisabled}
               data-testid="send-submit"
+              actionLabel={
+                senderMode === 'other'
+                  ? 'Spend Allowance'
+                  : effectiveGasless
+                    ? 'Send Gasless'
+                    : `Send ${selected.symbol}`
+              }
+              onAction={() => {
+                const syntheticEvent = {
+                  preventDefault: () => {},
+                } as unknown as React.FormEvent;
+                void handleSend(syntheticEvent);
+              }}
             >
               {senderMode === 'other'
                 ? spendAllowance.isSending
@@ -569,20 +504,7 @@ export const SendTransaction: React.FC = () => {
                   : isLoading
                     ? 'Sending…'
                     : `Send ${selected.symbol}`}
-            </Button>
-            {showFastSend && !effectiveGasless && senderMode === 'self' && (
-              <Button
-                type="button"
-                variant="secondary"
-                fullWidth
-                onClick={handleFastSend}
-                loading={isLoading}
-                disabled={isSendFastDisabled}
-                data-testid="send-fast"
-              >
-                Send Fast
-              </Button>
-            )}
+            </TxButton>
           </div>
 
           {/* Vertical list of recent transacted members */}

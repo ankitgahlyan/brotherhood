@@ -53,6 +53,11 @@ export type {
 } from './core/EventEmitter';
 export type { SharedKitEvents } from './types/emitter';
 export { ApiClientToncenter } from './clients/toncenter';
+export { parseTraceDag } from './clients/toncenter/traceDag';
+export type {
+  TraceExecutionHop,
+  TraceDagAnalysis,
+} from './clients/toncenter/traceDag';
 export { ApiClientTonApi } from './clients/tonapi';
 export type { NetworkManager } from './core/NetworkManager';
 export { KitNetworkManager } from './core/NetworkManager';

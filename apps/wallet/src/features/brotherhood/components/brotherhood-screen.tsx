@@ -12,6 +12,7 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
+import { TxButton } from '@/core/components/ui/tx-button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
@@ -938,15 +939,15 @@ export const BrotherhoodScreen: React.FC = () => {
               </p>
             )}
 
-            <Button
-              onClick={() => burn.send()}
+            <TxButton
+              onAction={() => burn.send()}
               disabled={burn.isDisabled}
               loading={burn.isSending}
               fullWidth
-              data-testid="brotherhood-burn-submit"
+              testId="brotherhood-burn-submit"
             >
               Burn FI
-            </Button>
+            </TxButton>
           </div>
         )}
 
@@ -1043,15 +1044,15 @@ export const BrotherhoodScreen: React.FC = () => {
                 </div>
               )}
 
-              <Button
-                onClick={() => claim.send()}
+              <TxButton
+                onAction={() => claim.send()}
                 disabled={claim.isDisabled}
                 loading={claim.isSending}
                 fullWidth
-                data-testid="brotherhood-claim-submit"
+                testId="brotherhood-claim-submit"
               >
                 Claim Weekly Grant
-              </Button>
+              </TxButton>
             </div>
 
             {/* Monthly Due (EMI) Card */}
@@ -1113,16 +1114,16 @@ export const BrotherhoodScreen: React.FC = () => {
                 </div>
               )}
 
-              <Button
-                onClick={() => emi.send()}
+              <TxButton
+                onAction={() => emi.send()}
                 disabled={emi.isDisabled}
                 loading={emi.isSending}
                 variant={emi.isDue ? 'primary' : 'ghost'}
                 fullWidth
-                data-testid="brotherhood-pay-emi-submit"
+                testId="brotherhood-pay-emi-submit"
               >
                 Pay Monthly Due ({emi.emiAmountFi} FI)
-              </Button>
+              </TxButton>
             </div>
           </div>
         )}
@@ -1217,15 +1218,15 @@ export const BrotherhoodScreen: React.FC = () => {
                 </p>
               )}
 
-              <Button
-                onClick={() => invite.send()}
+              <TxButton
+                onAction={() => invite.send()}
                 disabled={invite.isDisabled}
                 loading={invite.isSending}
                 fullWidth
-                data-testid="brotherhood-invite-submit"
+                testId="brotherhood-invite-submit"
               >
                 Send Invite
-              </Button>
+              </TxButton>
             </div>
 
             {/* List of Previously Invited Members */}
@@ -2086,17 +2087,17 @@ export const BrotherhoodScreen: React.FC = () => {
                 </p>
               )}
 
-              <Button
-                onClick={() => vote.send()}
+              <TxButton
+                onAction={() => vote.send()}
                 disabled={vote.isDisabled}
                 loading={vote.isSending}
                 fullWidth
-                data-testid="brotherhood-vote-submit"
+                testId="brotherhood-vote-submit"
               >
                 {isUnvote
                   ? `Unvote Candidate (${voteCount} ${voteCount === 1 ? 'Vote' : 'Votes'})`
                   : `Cast ${voteCount} ${voteCount === 1 ? 'Vote' : 'Votes'}`}
-              </Button>
+              </TxButton>
             </div>
           </div>
         )}
@@ -2213,15 +2214,15 @@ export const BrotherhoodScreen: React.FC = () => {
                   </p>
                 )}
 
-                <Button
-                  onClick={() => credit.send()}
+                <TxButton
+                  onAction={() => credit.send()}
                   disabled={credit.isDisabled}
                   loading={credit.isSending}
                   fullWidth
-                  data-testid="brotherhood-credit-submit"
+                  testId="brotherhood-credit-submit"
                 >
                   Buy Credit
-                </Button>
+                </TxButton>
               </div>
             )}
 
@@ -2451,15 +2452,15 @@ export const BrotherhoodScreen: React.FC = () => {
                     </p>
                   )}
 
-                  <Button
-                    onClick={() => repay.send()}
+                  <TxButton
+                    onAction={() => repay.send()}
                     disabled={repay.isDisabled}
                     loading={repay.isSending}
                     fullWidth
-                    data-testid="brotherhood-repay-submit"
+                    testId="brotherhood-repay-submit"
                   >
                     Repay Debt
-                  </Button>
+                  </TxButton>
                 </div>
               </div>
             )}
@@ -2645,15 +2646,15 @@ export const BrotherhoodScreen: React.FC = () => {
                     </p>
                   )}
 
-                  <Button
-                    onClick={() => setAllowance.send()}
+                  <TxButton
+                    onAction={() => setAllowance.send()}
                     disabled={setAllowance.isDisabled}
                     loading={setAllowance.isSending}
                     fullWidth
-                    data-testid="brotherhood-grant-allowance-submit"
+                    testId="brotherhood-grant-allowance-submit"
                   >
                     Grant Allowance
-                  </Button>
+                  </TxButton>
                 </div>
               </div>
             )}
@@ -2697,15 +2698,15 @@ export const BrotherhoodScreen: React.FC = () => {
                     </p>
                   )}
 
-                  <Button
-                    onClick={() => spendAllowance.send()}
+                  <TxButton
+                    onAction={() => spendAllowance.send()}
                     disabled={spendAllowance.isDisabled}
                     loading={spendAllowance.isSending}
                     fullWidth
-                    data-testid="brotherhood-spend-allowance-submit"
+                    testId="brotherhood-spend-allowance-submit"
                   >
                     Spend Allowance
-                  </Button>
+                  </TxButton>
                 </div>
               </div>
             )}
@@ -2758,15 +2759,15 @@ export const BrotherhoodScreen: React.FC = () => {
               </p>
             )}
 
-            <Button
-              onClick={() => gold.send()}
+            <TxButton
+              onAction={() => gold.send()}
               disabled={gold.isDisabled}
               loading={gold.isSending}
               fullWidth
-              data-testid="brotherhood-gold-submit"
+              testId="brotherhood-gold-submit"
             >
               Transfer Gold Coins
-            </Button>
+            </TxButton>
           </div>
         )}
 

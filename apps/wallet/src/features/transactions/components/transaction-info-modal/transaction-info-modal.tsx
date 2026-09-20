@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Copy,
   Check,
@@ -18,16 +18,23 @@ import {
   Clock,
   AlertCircle,
   FileText,
+  Route,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from '@/core/routing';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
+import { formatUnits } from '@/core/utils';
+import { cn } from '@/core/lib/utils';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '@/features/send/lib/contact-storage';
-import { useWalletStore } from '@demo/wallet-core';
+import { useWalletStore, getChainNetwork } from '@demo/wallet-core';
+import type { TraceDagAnalysis } from '@ton/walletkit';
 
 import type { TransactionRowModel } from '../../utils/map-transaction-row';
+import { decodeExitCode } from '../../utils/map-transaction-row';
 import { InlineExplorerModal } from '../inline-explorer-modal';
 
 interface TransactionInfoModalProps {
@@ -43,6 +50,9 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isInlineExplorerOpen, setIsInlineExplorerOpen] = useState(false);
+  const [traceDag, setTraceDag] = useState<TraceDagAnalysis | null>(null);
+  const [isLoadingTrace, setIsLoadingTrace] = useState(false);
+  const [isRouteExpanded, setIsRouteExpanded] = useState(false);
 
   const { formatWalletAddress } = useFormatAddress();
   const savedWallets = useWalletStore(
@@ -51,14 +61,56 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   const activeWalletId = useWalletStore(
     (state) => state.walletManagement.activeWalletId,
   );
+  const walletKit = useWalletStore((state) => state.walletCore.walletKit);
   const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
   const myAddress = activeWallet?.address;
+
+  const hashForExplorer =
+    transaction?.txHash ||
+    (transaction?.id.startsWith('pending-')
+      ? transaction.id.replace('pending-', '')
+      : transaction?.id);
+  const network = transaction?.network ?? 'testnet';
+
+  useEffect(() => {
+    if (!isOpen || !hashForExplorer || !walletKit) return;
+
+    let isMounted = true;
+    const client = walletKit.getApiClient(getChainNetwork(network));
+    if (!client || typeof client.getTraceDetails !== 'function') return;
+
+    client
+      .getTraceDetails({ txHash: hashForExplorer, walletAddress: myAddress })
+      .then((dag) => {
+        if (isMounted) {
+          setTraceDag(dag ?? null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setTraceDag(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingTrace(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, hashForExplorer, walletKit, network, myAddress]);
+
+  const handleClose = () => {
+    setTraceDag(null);
+    setIsRouteExpanded(false);
+    onClose();
+  };
 
   if (!transaction) return null;
 
   const {
-    txHash,
-    network = 'testnet',
     counterpartyAddress,
     senderAddress,
     recipientAddress,
@@ -83,7 +135,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   };
 
   const handleRepeat = () => {
-    onClose();
+    handleClose();
     const targetAddress = counterpartyAddress || recipientAddress || '';
     // Extract raw numeric value from cleanAmount or amount
     const numericAmount = cleanAmount
@@ -120,20 +172,14 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     return formatWalletAddress(addr, true);
   };
 
-  const hashForExplorer =
-    txHash ||
-    (transaction.id.startsWith('pending-')
-      ? transaction.id.replace('pending-', '')
-      : transaction.id);
-
   return (
     <>
       <Modal.Container
         isOpened={isOpen}
-        onOpenChange={(open) => !open && onClose()}
+        onOpenChange={(open) => !open && handleClose()}
         className="max-w-md w-full p-0 overflow-hidden rounded-3xl bg-card border border-border"
       >
-        <Modal.Header onClose={onClose} className="px-5 pt-4 pb-2">
+        <Modal.Header onClose={handleClose} className="px-5 pt-4 pb-2">
           <Modal.Title className="text-base font-semibold text-center w-full">
             Transaction
           </Modal.Title>
@@ -339,6 +385,124 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Multi-Hop Execution Route Timeline */}
+          {((traceDag && traceDag.hops.length > 0) || isLoadingTrace) && (
+            <div className="rounded-2xl bg-secondary/50 border border-border/80 overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => setIsRouteExpanded(!isRouteExpanded)}
+                className="w-full flex items-center justify-between p-3 cursor-pointer hover:bg-secondary/70 transition-colors"
+              >
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Route className="w-4 h-4 text-primary" />
+                  <span>Execution Route</span>
+                  {traceDag && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                      {traceDag.hops.length}{' '}
+                      {traceDag.hops.length === 1 ? 'hop' : 'hops'}
+                    </span>
+                  )}
+                  {isLoadingTrace && (
+                    <span className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+                  )}
+                </div>
+                {isRouteExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+
+              {isRouteExpanded && traceDag && (
+                <div className="p-3 pt-0 space-y-2.5 border-t border-border/60">
+                  <div className="relative pl-4 space-y-3 pt-2 before:absolute before:left-1.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-border">
+                    {traceDag.hops.map((hop, index) => {
+                      const hopAmount =
+                        hop.amount && hop.amount > 0n
+                          ? `${formatUnits(hop.amount, 9)} GRAM`
+                          : null;
+                      const hopFee =
+                        hop.fee && hop.fee > 0n
+                          ? `${formatUnits(hop.fee, 9)} GRAM`
+                          : null;
+
+                      return (
+                        <div key={hop.hash || index} className="relative group">
+                          {/* Dot / Indicator */}
+                          <div
+                            className={cn(
+                              'absolute -left-4 top-1 w-2.5 h-2.5 rounded-full ring-2 ring-background',
+                              hop.isSuccess ? 'bg-emerald-500' : 'bg-rose-500',
+                            )}
+                          />
+
+                          <div className="bg-background/80 rounded-xl p-2.5 border border-border/60 space-y-1">
+                            {/* Route hop title */}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-semibold text-foreground truncate">
+                                {hop.source
+                                  ? resolveAddressLabel(hop.source)
+                                  : 'External'}
+                                {' → '}
+                                {hop.destination
+                                  ? resolveAddressLabel(hop.destination)
+                                  : 'Internal'}
+                              </span>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold shrink-0',
+                                  hop.isSuccess
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                                )}
+                              >
+                                {hop.isSuccess
+                                  ? 'OK'
+                                  : decodeExitCode(hop.computeExitCode ?? 0)}
+                              </span>
+                            </div>
+
+                            {/* Op / Comment */}
+                            {(hop.opCode || hop.comment) && (
+                              <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                                {hop.opCode && (
+                                  <span className="font-mono bg-muted/60 px-1 py-0.5 rounded">
+                                    Op: {hop.opCode}
+                                  </span>
+                                )}
+                                {hop.comment && (
+                                  <span className="truncate italic">
+                                    "{hop.comment}"
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Amount & Fee */}
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+                              {hopAmount ? (
+                                <span className="font-medium text-foreground">
+                                  {hopAmount}
+                                </span>
+                              ) : (
+                                <span />
+                              )}
+                              {hopFee && (
+                                <span className="font-mono text-[10px]">
+                                  Fee: {hopFee}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 pt-1">

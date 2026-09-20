@@ -6,13 +6,10 @@
  *
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { SendTransactionRequestEvent } from '@ton/walletkit';
 import { getNormalizedExtMessageHash } from '@ton/walletkit';
-import {
-  getTransactionExplorerUrls,
-  useTransactionRequests,
-} from '@demo/wallet-core';
+import { useTransactionRequests, useAuth } from '@demo/wallet-core';
 import type { SavedWallet } from '@demo/wallet-core';
 import { toast } from 'sonner';
 
@@ -21,6 +18,7 @@ import { TransactionRequestDetails } from '../transaction-request-details';
 
 import { useActiveWalletNetwork } from '@/features/jettons';
 import { useExplorer } from '@/core/explorer';
+import { notifyTransactionSent } from '@/core/utils/transaction-toast';
 
 interface TransactionRequestModalProps {
   request: SendTransactionRequestEvent;
@@ -35,41 +33,33 @@ export const TransactionRequestModal: React.FC<
   const { explorer } = useExplorer();
   const { approveTransactionRequest, rejectTransactionRequest } =
     useTransactionRequests();
+  const { showFastSend, isUnlocked } = useAuth();
+  const isAutoApprovingRef = useRef(false);
 
-  const handleApprove = async () => {
-    const result = await approveTransactionRequest();
-    if (result?.signedBoc) {
-      const { hash } = getNormalizedExtMessageHash(result.signedBoc);
-      const { tonScan, tonViewer } = getTransactionExplorerUrls(hash, network);
-      const primaryUrl = explorer === 'tonviewer' ? tonViewer : tonScan;
-      const primaryLabel = explorer === 'tonviewer' ? 'TonViewer' : 'TonScan';
-      const secondaryUrl = explorer === 'tonviewer' ? tonScan : tonViewer;
-      const secondaryLabel = explorer === 'tonviewer' ? 'TonScan' : 'TonViewer';
+  const isFastSendActive = Boolean(showFastSend && isUnlocked);
 
-      toast.success('Transaction is sent to the network', {
-        description: (
-          <span className="flex gap-3 mt-1 text-xs">
-            <a
-              href={primaryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-semibold underline"
-            >
-              {primaryLabel} (Preferred)
-            </a>
-            <a
-              href={secondaryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground underline"
-            >
-              {secondaryLabel}
-            </a>
-          </span>
-        ),
+  const handleApprove = useCallback(async () => {
+    try {
+      const result = await approveTransactionRequest();
+      if (result?.signedBoc) {
+        const { hash } = getNormalizedExtMessageHash(result.signedBoc);
+        notifyTransactionSent(hash, network, explorer);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      toast.error('Transaction failed', { description: msg });
+      rejectTransactionRequest(msg);
+    }
+  }, [approveTransactionRequest, network, explorer, rejectTransactionRequest]);
+
+  useEffect(() => {
+    if (isOpen && isFastSendActive && !isAutoApprovingRef.current) {
+      isAutoApprovingRef.current = true;
+      handleApprove().finally(() => {
+        isAutoApprovingRef.current = false;
       });
     }
-  };
+  }, [isOpen, isFastSendActive, handleApprove]);
 
   const handleReject = () => {
     rejectTransactionRequest('User rejected the transaction');
@@ -79,7 +69,7 @@ export const TransactionRequestModal: React.FC<
     <RequestModal
       request={request}
       savedWallets={savedWallets}
-      isOpen={isOpen}
+      isOpen={isOpen && !isFastSendActive}
       verb="Confirm transaction for"
       subtitle="A dApp wants to send a transaction from your wallet:"
       details={<TransactionRequestDetails request={request.request} />}

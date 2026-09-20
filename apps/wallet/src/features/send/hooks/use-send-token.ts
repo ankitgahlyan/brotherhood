@@ -23,6 +23,7 @@ import { useGaslessJettonSend } from './use-gasless-jetton-send';
 import type { UseGaslessJettonSendResult } from './use-gasless-jetton-send';
 
 import { parseUnits } from '@/core/utils/units';
+import { useAuth } from '@demo/wallet-core';
 
 const GRAM_DECIMALS = 9;
 
@@ -64,6 +65,7 @@ export const useSendToken = ({
   amount,
 }: UseSendTokenParams): UseSendTokenResult => {
   const queryClient = useQueryClient();
+  const { showFastSend, isUnlocked } = useAuth();
   const gasless = useGaslessJettonSend({
     wallet,
     jetton: tokenType === 'JETTON' ? jetton : undefined,
@@ -78,37 +80,59 @@ export const useSendToken = ({
   > => {
     if (!wallet) throw new Error('No wallet available');
 
-    // The regular flow routes the built tx through the kit's transaction queue;
-    // without the kit it would silently no-op and the page would still report
-    // success. Surface it instead of pretending the transfer went through.
-    if (!walletKit) {
-      toast.error('Cannot send transaction', {
-        description: 'WalletKit is not initialized yet.',
-      });
-      throw new Error('WalletKit is not initialized');
-    }
-
     // Gasless jetton transfer: relay the already-fetched, locally-signed quote.
     if (gaslessEffective && jetton) {
       return gaslessSend();
     }
 
-    if (tokenType === 'TON') {
-      const tx = await wallet.createTransferTonTransaction({
-        recipientAddress: recipient,
-        transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
-      });
-      await walletKit.handleNewTransaction(wallet, tx);
-    } else if (jetton) {
-      const decimals = jetton.decimalsNumber;
-      if (decimals == null) throw new Error('Jetton decimals not found');
+    let sendResult: SendTransactionResponse | undefined;
 
-      const tx = await wallet.createTransferJettonTransaction({
-        recipientAddress: recipient,
-        jettonAddress: jetton.address,
-        transferAmount: parseUnits(amount, decimals).toString(),
-      });
-      await walletKit.handleNewTransaction(wallet, tx);
+    if (showFastSend && isUnlocked) {
+      if (tokenType === 'TON') {
+        const tx = await wallet.createTransferTonTransaction({
+          recipientAddress: recipient,
+          transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+        });
+        sendResult = await wallet.sendTransaction(tx);
+      } else if (jetton) {
+        const decimals = jetton.decimalsNumber;
+        if (decimals == null) throw new Error('Jetton decimals not found');
+
+        const tx = await wallet.createTransferJettonTransaction({
+          recipientAddress: recipient,
+          jettonAddress: jetton.address,
+          transferAmount: parseUnits(amount, decimals).toString(),
+        });
+        sendResult = await wallet.sendTransaction(tx);
+      }
+    } else {
+      // The regular flow routes the built tx through the kit's transaction queue;
+      // without the kit it would silently no-op and the page would still report
+      // success. Surface it instead of pretending the transfer went through.
+      if (!walletKit) {
+        toast.error('Cannot send transaction', {
+          description: 'WalletKit is not initialized yet.',
+        });
+        throw new Error('WalletKit is not initialized');
+      }
+
+      if (tokenType === 'TON') {
+        const tx = await wallet.createTransferTonTransaction({
+          recipientAddress: recipient,
+          transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+        });
+        await walletKit.handleNewTransaction(wallet, tx);
+      } else if (jetton) {
+        const decimals = jetton.decimalsNumber;
+        if (decimals == null) throw new Error('Jetton decimals not found');
+
+        const tx = await wallet.createTransferJettonTransaction({
+          recipientAddress: recipient,
+          jettonAddress: jetton.address,
+          transferAmount: parseUnits(amount, decimals).toString(),
+        });
+        await walletKit.handleNewTransaction(wallet, tx);
+      }
     }
 
     const senderAddress = wallet.getAddress();
@@ -142,7 +166,7 @@ export const useSendToken = ({
       }, 3000);
     }
 
-    return undefined;
+    return sendResult;
   }, [
     wallet,
     walletKit,
@@ -152,6 +176,8 @@ export const useSendToken = ({
     amount,
     gaslessEffective,
     gaslessSend,
+    showFastSend,
+    isUnlocked,
     queryClient,
   ]);
 

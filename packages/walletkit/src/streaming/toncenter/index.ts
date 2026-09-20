@@ -8,5 +8,6 @@
 
 export { TonCenterStreamingProvider } from './provider';
 export { createTonCenterStreamingProvider } from './factory';
+export { ActivityStream, type ActivityUpdateCallback } from './ActivityStream';
 
 export type { TonCenterStreamingProviderConfig } from './models';

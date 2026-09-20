@@ -461,3 +461,258 @@ export function toAccount(address: string, addressBook: AddressBook): Account {
   }
   return out;
 }
+
+export const KNOWN_PROJECT_OPCODES: Record<number, string> = {
+  // Standard Jetton & NFT Opcodes
+  0x0f8a7ea5: 'AskToTransfer',
+  0x7362d09c: 'TransferNotificationForRecipient',
+  0x178d4519: 'InternalTransferStep',
+  0xd53276db: 'ReturnExcessesBack',
+  0x595f07bc: 'AskToBurn',
+  0x7bdd97de: 'NotifyMinter',
+  0x2c76b972: 'RequestWalletAddress',
+  0xd1735466: 'ResponseWalletAddress',
+  0x5fcc3d14: 'NftTransfer',
+  0x05138d91: 'OwnershipAssigned',
+
+  // Personal Token & Brotherhood Project Opcodes
+  0x1674b0a0: 'Personal Token Mint',
+  0x00001001: 'MintNewJettons',
+  0x00001002: 'ChangeMinterAdmin',
+  0x00001006: 'UpgradeContract',
+  0x00001051: 'InviteMember',
+  0x000010a1: 'ChangeProfile',
+  0x000010a2: 'ChangeLocation',
+  0x000010a4: 'LocationAddMember',
+  0x000010f1: 'VoteProposal',
+  0x00001141: 'ClaimGrant',
+  0x00001147: 'BuyCredit',
+  0x00001148: 'PaybackLoan',
+  0x00001191: 'JoinLottery',
+  0x00001198: 'EnterLottery',
+  0x00001205: 'FollowMember',
+  0x00001200: 'UnfollowMember',
+};
+
+export function enrichProjectAction(action: Action): Action {
+  if (action.type === 'SmartContractExec' && 'SmartContractExec' in action) {
+    const opRaw = action.SmartContractExec.operation;
+    let opNum = Number(opRaw);
+    if (
+      Number.isNaN(opNum) &&
+      typeof opRaw === 'string' &&
+      opRaw.startsWith('0x')
+    ) {
+      opNum = parseInt(opRaw, 16);
+    }
+    if (!Number.isNaN(opNum) && KNOWN_PROJECT_OPCODES[opNum]) {
+      const decodedName = KNOWN_PROJECT_OPCODES[opNum];
+      action.simplePreview.name = decodedName;
+      action.simplePreview.description = `${decodedName} executed on contract`;
+    }
+  }
+  return action;
+}
+
+export function mapToncenterActionToEvent(
+  rawAction: any,
+  account: string,
+  addressBook: AddressBook = {},
+  metadata: Record<string, any> = {},
+): Event {
+  const eventId = rawAction.trace_id
+    ? Base64ToHex(rawAction.trace_id)
+    : rawAction.action_id || String(Date.now());
+  const extHash =
+    rawAction.trace_external_hash_norm || rawAction.trace_external_hash;
+  const timestamp =
+    rawAction.start_utime ||
+    rawAction.trace_end_utime ||
+    Math.floor(Date.now() / 1000);
+  const status: StatusAction =
+    rawAction.success === false ? 'failure' : 'success';
+  const myAccount = toAccount(account, addressBook);
+
+  const actionType = rawAction.type;
+  let typedAction: Action;
+
+  if (actionType === 'ton_transfer') {
+    const sender = toAccount(rawAction.sender, addressBook);
+    const recipient = toAccount(rawAction.recipient, addressBook);
+    const amount = BigInt(rawAction.amount || '0');
+    typedAction = {
+      type: 'TonTransfer',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: 'TonTransfer',
+        description: rawAction.comment
+          ? `Comment: "${rawAction.comment}"`
+          : 'TON Transfer',
+        value: `${amount} GRAM`,
+        accounts: [sender, recipient],
+      },
+      baseTransactions: rawAction.transactions || [],
+      TonTransfer: {
+        sender,
+        recipient,
+        amount,
+        comment: rawAction.comment || undefined,
+      },
+    };
+  } else if (actionType === 'jetton_transfer') {
+    const sender = toAccount(rawAction.sender, addressBook);
+    const recipient = toAccount(rawAction.recipient, addressBook);
+    const amount = BigInt(rawAction.amount || '0');
+    const masterAddr =
+      asMaybeAddressFriendly(rawAction.jetton_master) ||
+      rawAction.jetton_master ||
+      '';
+    const tokenInfo = metadata?.[masterAddr]?.token_info?.[0] as
+      EmulationTokenInfoMasters | undefined;
+    const symbol =
+      tokenInfo?.symbol || addressBook[masterAddr]?.jetton?.symbol || 'JETTON';
+    const decimals = tokenInfo?.extra?.decimals
+      ? parseInt(tokenInfo.extra.decimals, 10)
+      : (addressBook[masterAddr]?.jetton?.decimals ?? 9);
+    const name =
+      tokenInfo?.name || addressBook[masterAddr]?.jetton?.name || symbol;
+
+    typedAction = {
+      type: 'JettonTransfer',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: rawAction.comment
+          ? `JettonTransfer: "${rawAction.comment}"`
+          : 'Jetton Transfer',
+        description: `${name} transfer`,
+        value: `${amount} ${symbol}`,
+        accounts: [sender, recipient],
+      },
+      baseTransactions: rawAction.transactions || [],
+      JettonTransfer: {
+        sender,
+        recipient,
+        sendersWallet: rawAction.senders_wallet || '',
+        recipientsWallet: rawAction.recipients_wallet || '',
+        amount,
+        comment: rawAction.comment || undefined,
+        jetton: {
+          address: masterAddr,
+          name,
+          symbol,
+          decimals,
+          image:
+            tokenInfo?.image || addressBook[masterAddr]?.jetton?.image || '',
+          verification: 'whitelist',
+          score: 100,
+        },
+      },
+    };
+  } else if (actionType === 'call_contract') {
+    const contract = toAccount(rawAction.contract, addressBook);
+    const executor = toAccount(rawAction.executor, addressBook);
+    const op = String(rawAction.operation || '');
+    typedAction = {
+      type: 'SmartContractExec',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: op ? `Contract Call (${op})` : 'SmartContractExec',
+        description: 'Contract execution',
+        value: '',
+        accounts: [executor, contract],
+      },
+      baseTransactions: rawAction.transactions || [],
+      SmartContractExec: {
+        executor,
+        contract,
+        tonAttached: 0n,
+        operation: op,
+        payload: rawAction.input?.body || '',
+      },
+    };
+  } else if (actionType === 'jetton_swap') {
+    const userWallet = toAccount(rawAction.user_wallet, addressBook);
+    typedAction = {
+      type: 'JettonSwap',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: 'Jetton Swap',
+        description: `Swap via ${rawAction.dex || 'DEX'}`,
+        value: '',
+        accounts: [userWallet],
+      },
+      baseTransactions: rawAction.transactions || [],
+      JettonSwap: {
+        dex: rawAction.dex || 'DEX',
+        amountIn: String(rawAction.amount_in || ''),
+        amountOut: String(rawAction.amount_out || ''),
+        tonIn: 0,
+        userWallet,
+        router: toAccount(rawAction.router || rawAction.dex || '', addressBook),
+        jettonMasterOut: {
+          address: rawAction.jetton_master_out || '',
+          name: '',
+          symbol: '',
+          decimals: 9,
+          image: '',
+          verification: 'whitelist',
+          score: 100,
+        },
+      },
+    };
+  } else if (actionType === 'contract_deploy') {
+    const contract = toAccount(rawAction.contract, addressBook);
+    typedAction = {
+      type: 'ContractDeploy',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: 'Contract Deploy',
+        description: 'Deployed new smart contract',
+        value: '',
+        accounts: [contract],
+      },
+      baseTransactions: rawAction.transactions || [],
+      ContractDeploy: {
+        address: contract.address,
+        interfaces: rawAction.interfaces || [],
+      },
+    };
+  } else {
+    typedAction = {
+      type: actionType || 'Unknown',
+      id: rawAction.action_id || eventId,
+      status,
+      simplePreview: {
+        name: actionType || 'Transaction',
+        description: actionType || 'Transaction',
+        value: '',
+        accounts: [myAccount],
+      },
+      baseTransactions: rawAction.transactions || [],
+    };
+  }
+
+  typedAction = enrichProjectAction(typedAction);
+
+  return {
+    eventId,
+    traceExternalHash: extHash ? Base64NormalizeUrl(extHash) : undefined,
+    account: myAccount,
+    timestamp,
+    actions: [typedAction],
+    isScam: false,
+    lt: Number(rawAction.start_lt || rawAction.trace_end_lt || 0),
+    inProgress: Boolean(rawAction.is_pending),
+    trace: {
+      tx_hash: rawAction.transactions?.[0] || '',
+      in_msg_hash: null,
+      children: [],
+    },
+    transactions: {},
+  };
+}

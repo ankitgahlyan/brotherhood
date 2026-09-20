@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 import { Address, toNano, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { isOnline } from '@/core/lib/network-status';
+import { useAuth } from '@demo/wallet-core';
+import { useExplorer } from '@/core/explorer';
+import { notifyTransactionSent } from '@/core/utils/transaction-toast';
 
 export interface BrotherhoodMessage {
   toAddress: string;
@@ -41,8 +44,21 @@ export function useBrotherhoodTransaction(
   walletKit: ITonWalletKit | null,
 ): UseBrotherhoodTransactionResult {
   const queryClient = useQueryClient();
+  const { showFastSend, isUnlocked } = useAuth();
+  const { explorer } = useExplorer();
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const notifySent = useCallback(
+    (normalizedHash: string) => {
+      const net =
+        String(wallet?.getNetwork()?.chainId) === '-239'
+          ? 'mainnet'
+          : 'testnet';
+      notifyTransactionSent(normalizedHash, net, explorer);
+    },
+    [wallet, explorer],
+  );
 
   const send = useCallback(
     async (
@@ -53,32 +69,23 @@ export function useBrotherhoodTransaction(
         toast.error('No wallet connected');
         throw new Error('No wallet available');
       }
-      if (!walletKit) {
-        toast.error('WalletKit not initialized');
-        throw new Error('WalletKit not initialized');
-      }
 
       if (!isOnline()) {
         toast.error('Cannot send transactions while offline');
         throw new Error('Cannot send transactions while offline');
       }
 
+      const isFastSendActive = Boolean(showFastSend && isUnlocked);
+      if (!isFastSendActive && !walletKit) {
+        toast.error('WalletKit not initialized');
+        throw new Error('WalletKit not initialized');
+      }
+
       setIsSending(true);
       setError(null);
 
       try {
-        if (messages.length === 1) {
-          const msg = messages[0];
-          const tx = await wallet.createTransferTonTransaction({
-            recipientAddress: msg.toAddress,
-            transferAmount: msg.amount.toString(),
-            payload: msg.payload.toBoc().toString('base64'),
-            stateInit: msg.stateInit
-              ? msg.stateInit.toBoc().toString('base64')
-              : undefined,
-          });
-          await walletKit.handleNewTransaction(wallet, tx);
-        } else {
+        if (isFastSendActive) {
           for (const msg of messages) {
             const tx = await wallet.createTransferTonTransaction({
               recipientAddress: msg.toAddress,
@@ -88,7 +95,35 @@ export function useBrotherhoodTransaction(
                 ? msg.stateInit.toBoc().toString('base64')
                 : undefined,
             });
-            await walletKit.handleNewTransaction(wallet, tx);
+            const result = await wallet.sendTransaction(tx);
+            if (result?.normalizedHash) {
+              notifySent(result.normalizedHash);
+            }
+          }
+        } else {
+          if (messages.length === 1) {
+            const msg = messages[0];
+            const tx = await wallet.createTransferTonTransaction({
+              recipientAddress: msg.toAddress,
+              transferAmount: msg.amount.toString(),
+              payload: msg.payload.toBoc().toString('base64'),
+              stateInit: msg.stateInit
+                ? msg.stateInit.toBoc().toString('base64')
+                : undefined,
+            });
+            await walletKit!.handleNewTransaction(wallet, tx);
+          } else {
+            for (const msg of messages) {
+              const tx = await wallet.createTransferTonTransaction({
+                recipientAddress: msg.toAddress,
+                transferAmount: msg.amount.toString(),
+                payload: msg.payload.toBoc().toString('base64'),
+                stateInit: msg.stateInit
+                  ? msg.stateInit.toBoc().toString('base64')
+                  : undefined,
+              });
+              await walletKit!.handleNewTransaction(wallet, tx);
+            }
           }
         }
 
@@ -143,7 +178,7 @@ export function useBrotherhoodTransaction(
         setIsSending(false);
       }
     },
-    [wallet, walletKit, queryClient],
+    [wallet, walletKit, showFastSend, isUnlocked, notifySent, queryClient],
   );
 
   return { send, isSending, error };

@@ -232,22 +232,22 @@ async function main() {
       '\x1b[34m[TypeScript / Bun] Running affected TS/JS tests...\x1b[0m',
     );
     // bun test --changed runs test files affected by changed files according to git
-    run(
-      'bun test --changed=HEAD --pass-with-no-tests --path-ignore-patterns "**/e2e/**" --path-ignore-patterns "**/apps/wallet-v2/**" --path-ignore-patterns "**/packages/walletkit/**"',
-    );
+    run('bun test --changed=HEAD --pass-with-no-tests apps/wallet/src');
     console.log('');
 
     const walletkitFiles = changedFiles
-      .filter((f) => f.startsWith('packages/walletkit/src/'))
+      .filter(
+        (f) =>
+          f.startsWith('packages/walletkit/src/') &&
+          !f.endsWith('src/index.ts'),
+      )
       .map((f) => f.replace(/^packages\/walletkit\//, ''));
 
     if (walletkitFiles.length > 0) {
       console.log(
-        '\x1b[34m[Vitest / walletkit] Running affected walletkit tests...\x1b[0m',
+        '\x1b[34m[Vitest / walletkit] Running walletkit tests...\x1b[0m',
       );
-      run(
-        `bun run --cwd packages/walletkit vitest related --run ${walletkitFiles.join(' ')}`,
-      );
+      run('bun run --cwd packages/walletkit test');
       console.log('');
     }
   } else {

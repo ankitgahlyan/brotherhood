@@ -147,6 +147,7 @@ export interface WalletManagementSlice {
     limit?: number,
     offset?: number,
     force?: boolean,
+    tokenFilter?: string,
   ) => Promise<void>;
 
   // Getters

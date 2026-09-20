@@ -46,8 +46,10 @@ import { toDnsRecords } from './types/v3/DNSRecordsResponseV3';
 import {
   toAddressBook,
   toEvent,
+  mapToncenterActionToEvent,
   type AddressBook,
 } from '../../types/toncenter/AccountEvent';
+import { parseTraceDag, type TraceDagAnalysis } from './traceDag';
 import type { ToncenterTraceItem } from '../../types/toncenter/emulation';
 import { Network } from '../../api/models';
 import type {
@@ -662,6 +664,49 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     );
     const limit = request.limit ?? 20;
     const offset = request.offset ?? 0;
+
+    // 1. First attempt: Toncenter v3 /api/v3/actions (lightweight, server-parsed, supports token scoping)
+    try {
+      const actionsQuery: Record<string, unknown> = {
+        account: accounts.length === 1 ? accounts[0] : accounts,
+        limit,
+        offset,
+        sort: 'desc',
+      };
+      if (request.tokenFilter) {
+        actionsQuery.token_wallet = request.tokenFilter;
+      }
+
+      const actionsResp = await this.getJson<{
+        actions: any[];
+        address_book: Record<string, any>;
+        metadata?: Record<string, any>;
+      }>('/api/v3/actions', actionsQuery);
+
+      if (actionsResp && Array.isArray(actionsResp.actions)) {
+        const addressBook = toAddressBook(actionsResp as any);
+        const metadata = actionsResp.metadata || {};
+        const events = actionsResp.actions.map((act) =>
+          mapToncenterActionToEvent(
+            act,
+            accounts[0] || '',
+            addressBook,
+            metadata,
+          ),
+        );
+
+        return {
+          events,
+          limit,
+          offset,
+          hasNext: actionsResp.actions.length >= limit,
+        };
+      }
+    } catch {
+      // Fallback cleanly to /traces if /actions encounters any network or endpoint failure
+    }
+
+    // 2. Fallback: Toncenter v3 /api/v3/traces
     const query: Record<string, unknown> = {
       account: accounts.length === 1 ? accounts[0] : accounts,
       limit,
@@ -682,7 +727,6 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       if (accounts.length === 1) {
         out.events.push(toEvent(trace, accounts[0], addressBook));
       } else {
-        // For multiple accounts, identify which of the requested accounts are part of this trace
         const participating = accounts.filter((acc) =>
           this.isAccountInTrace(acc, trace, addressBook),
         );
@@ -692,7 +736,6 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
             out.events.push(toEvent(trace, acc, addressBook));
           }
         } else {
-          // If none matched explicitly by address/owner, check if toEvent resolves any actions for an account
           for (const acc of accounts) {
             const ev = toEvent(trace, acc, addressBook);
             if (ev.actions.length > 0) {
@@ -703,6 +746,37 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       }
     }
     return out;
+  }
+
+  async getTraceDetails(request: {
+    txHash: string;
+    walletAddress?: string;
+  }): Promise<TraceDagAnalysis | undefined> {
+    try {
+      const response = await this.getJson<ToncenterTracesResponse>(
+        '/api/v3/traces',
+        {
+          msg_hash: request.txHash,
+          include_actions: true,
+        },
+      );
+      if (response?.traces?.length) {
+        return parseTraceDag(response.traces[0], request.walletAddress);
+      }
+      const byTraceId = await this.getJson<ToncenterTracesResponse>(
+        '/api/v3/traces',
+        {
+          trace_id: request.txHash,
+          include_actions: true,
+        },
+      );
+      if (byTraceId?.traces?.length) {
+        return parseTraceDag(byTraceId.traces[0], request.walletAddress);
+      }
+    } catch {
+      return undefined;
+    }
+    return undefined;
   }
 
   async getMasterchainInfo(): Promise<MasterchainInfo> {

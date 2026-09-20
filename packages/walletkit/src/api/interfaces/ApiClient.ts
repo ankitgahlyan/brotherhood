@@ -13,6 +13,7 @@ import type {
   ToncenterTracesResponse,
 } from '../../types/toncenter/emulation';
 import type { Event } from '../../types/toncenter/AccountEvent';
+import type { TraceDagAnalysis } from '../../clients/toncenter/traceDag';
 import type {
   AccountState,
   AccountStates,
@@ -90,6 +91,7 @@ export interface GetEventsRequest {
   account: Address | string | Array<Address | string>;
   offset?: number;
   limit?: number;
+  tokenFilter?: string;
 }
 
 export interface GetEventsResponse {
@@ -168,6 +170,11 @@ export interface ApiClient {
   ): Promise<JettonsResponse>;
 
   getEvents(request: GetEventsRequest): Promise<GetEventsResponse>;
+
+  getTraceDetails?(request: {
+    txHash: string;
+    walletAddress?: string;
+  }): Promise<TraceDagAnalysis | undefined>;
 
   getMasterchainInfo(): Promise<MasterchainInfo>;
 }
