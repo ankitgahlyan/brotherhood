@@ -67,15 +67,15 @@ fun onInternalMessage(in: InMessage): void {
 
             reserveDaoStorageFee();
 
-            val rewardAmount = ton("10000"); // 10x proposal fee reward (10 * 1000 FI)
+            val rewardAmount = grams("10000"); // 10x proposal fee reward (10 * 1000 FI)
             val rewardMsg = createMessage({
                 bounce: BounceMode.NoBounce,
-                value: ton("0.1"),
+                value: grams("0.1"),
                 dest: store.targetAddress,
                 body: MintNewJettons {
                     queryId: msg.proposalId,
                     mintRecipient: msg.proposerOwner,
-                    tonAmount: ton("0.05"),
+                    tonAmount: grams("0.05"),
                     internalTransferMsg: makeInternalTransferStep(
                         msg.proposalId,
                         rewardAmount,

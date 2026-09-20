@@ -10,7 +10,7 @@ import "@contracts/common/messages"
 import "test-utils"
 
 get fun `test gold coins: transfers gold coins between accounts`() {
-    val (wallet, owner, _minter, receiver) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, receiver) = setupDirectWallet(grams("10"));
 
     val transferTx = wallet.sendAskGoldCoinsTransfer(
         owner.address,
@@ -18,7 +18,7 @@ get fun `test gold coins: transfers gold coins between accounts`() {
         1,
         receiver.address,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(transferTx).toHaveSuccessfulTx<AskGoldCoinsTransfer>({
@@ -28,7 +28,7 @@ get fun `test gold coins: transfers gold coins between accounts`() {
 }
 
 get fun `test gold coins: non-owner transfer fails with NotOwner`() {
-    val (wallet, _owner, _minter, receiver) = setupDirectWallet(ton("10"));
+    val (wallet, _owner, _minter, receiver) = setupDirectWallet(grams("10"));
 
     val transferTx = wallet.sendAskGoldCoinsTransfer(
         receiver.address, // wrong sender
@@ -36,7 +36,7 @@ get fun `test gold coins: non-owner transfer fails with NotOwner`() {
         1,
         receiver.address,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(transferTx).toHaveFailedTx({
@@ -46,7 +46,7 @@ get fun `test gold coins: non-owner transfer fails with NotOwner`() {
 }
 
 get fun `test gold coins: transfer exceeding balance fails with BalanceError`() {
-    val (wallet, owner, _minter, receiver) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, receiver) = setupDirectWallet(grams("10"));
 
     // Default wallet has 1 gold coin; trying to transfer 5 fails
     val transferTx = wallet.sendAskGoldCoinsTransfer(
@@ -55,7 +55,7 @@ get fun `test gold coins: transfer exceeding balance fails with BalanceError`() 
         5,
         receiver.address,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(transferTx).toHaveFailedTx({

@@ -57,7 +57,7 @@ fun calculateMinterMinStorageFee(): coins {
 // the contract still keeps enough to cover its storage
 fun reserveForWalletBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateWalletMinStorageFee()),
         RESERVE_MODE_AT_MOST,
@@ -71,7 +71,7 @@ fun reserveForBalance(inValue: coins): void {
 
 fun reserveForMinterBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateMinterMinStorageFee()),
         RESERVE_MODE_AT_MOST,
@@ -108,14 +108,14 @@ fun calcMinimalTransferAmount(forwardTonAmount: int, fwdFee: int): int {
         : jettonWalletGasConsumption;
 
     return forwardTonAmount +
-    // 3 messages: wal1->wal2, wal2->owner, wal2->response
-    // but last one is optional (it is ok if it fails)
-    fwdCount * fwdFee +
-    forwardInitStateOverhead() +
-    // additional fwd fees related to initstate in internal_transfer
-    calculateGasFee(MY_WORKCHAIN, sendTransferGasConsumption) +
-    calculateGasFee(MY_WORKCHAIN, receiveTransferGasConsumption) +
-    calculateWalletMinStorageFee();
+        // 3 messages: wal1->wal2, wal2->owner, wal2->response
+        // but last one is optional (it is ok if it fails)
+        fwdCount * fwdFee +
+        forwardInitStateOverhead() +
+        // additional fwd fees related to initstate in internal_transfer
+        calculateGasFee(MY_WORKCHAIN, sendTransferGasConsumption) +
+        calculateGasFee(MY_WORKCHAIN, receiveTransferGasConsumption) +
+        calculateWalletMinStorageFee();
 }
 
 fun checkAmountIsEnoughToTransfer(msgValue: int, forwardTonAmount: int, fwdFee: int) {
@@ -134,8 +134,8 @@ fun calcMinimalBurnAmount(): coins {
         MESSAGE_SIZE_BURN_NOTIFICATION_BITS,
         MESSAGE_SIZE_BURN_NOTIFICATION_CELLS,
     ) +
-    calculateGasFee(MY_WORKCHAIN, sendBurnGasConsumption) +
-    calculateGasFee(MY_WORKCHAIN, GAS_CONSUMPTION_BURN_NOTIFICATION);
+        calculateGasFee(MY_WORKCHAIN, sendBurnGasConsumption) +
+        calculateGasFee(MY_WORKCHAIN, GAS_CONSUMPTION_BURN_NOTIFICATION);
 }
 
 fun checkAmountIsEnoughToBurn(msgValue: int) {

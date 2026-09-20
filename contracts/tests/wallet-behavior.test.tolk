@@ -18,11 +18,11 @@ import "test-utils"
 
 get fun `test wallet: kitchenSink`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val transferAmount = ton("100");
+    val transferAmount = grams("100");
     val senderWallet = userWallet(minter, deployer.address);
     val receiverWallet = userWallet(minter, notDeployer.address);
 
-    expect(senderWallet.getJettonBalance()).toEqual(ton("1"));
+    expect(senderWallet.getJettonBalance()).toEqual(grams("1"));
 
     val invite = senderWallet.sendActInvite(
         deployer.address,
@@ -31,7 +31,7 @@ get fun `test wallet: kitchenSink`() {
         "alice",
         "8828308281fffff",
         0,
-        { value: ton("1") }, // todo: bounce?
+        { value: grams("1") }, // todo: bounce?
     );
     invite.giveName("inviteMsg");
 
@@ -41,8 +41,8 @@ get fun `test wallet: kitchenSink`() {
     });
     expect(invite).toHaveAllSuccessfulTxs();
 
-    expect(senderWallet.getJettonBalance()).toEqual(ton("1000"));
-    expect(receiverWallet.getJettonBalance()).toEqual(ton("1"));
+    expect(senderWallet.getJettonBalance()).toEqual(grams("1000"));
+    expect(receiverWallet.getJettonBalance()).toEqual(grams("1"));
 
     val res = senderWallet.sendTransferPayloadInline(
         deployer.address,
@@ -60,8 +60,8 @@ get fun `test wallet: kitchenSink`() {
         to: senderWallet.address,
     });
 
-    expect(senderWallet.getJettonBalance()).toEqual(ton("900"));
-    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount + ton("1"));
+    expect(senderWallet.getJettonBalance()).toEqual(grams("900"));
+    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount + grams("1"));
 
     // upgrades test
     val newCode = build("FossFiWallet");
@@ -105,7 +105,7 @@ get fun `test wallet: kitchenSink`() {
     sendHotUpgrade.waitForTrace();
 
     val minterData = minter.getJettonData();
-    expect(minterData.totalSupply).toEqual(ton("12112"));
+    expect(minterData.totalSupply).toEqual(grams("12112"));
 }
 
 get fun `test : hotUpgrade`() {
@@ -121,7 +121,7 @@ get fun `test : hotUpgrade`() {
 
     // println(sendHotUpgrade);
     val minterData = minter.getJettonData();
-    expect(minterData.totalSupply).toEqual(ton("11112"));
+    expect(minterData.totalSupply).toEqual(grams("11112"));
 }
 
 get fun `test : addrs r same`() {
@@ -158,12 +158,12 @@ get fun `test : addrs r same`() {
 
 get fun `test wallet: owner can send jettons`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val transferAmount = ton("5");
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("20"));
+    val transferAmount = grams("5");
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("20"));
     // minted 20 on top of the 1 baseline => 21; activate receiver via invite (mints 999 to inviter)
     val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
     // sender: 21 + 999 = 1020; receiver active with 1
-    expect(senderWallet.getJettonBalance()).toEqual(ton("1020"));
+    expect(senderWallet.getJettonBalance()).toEqual(grams("1020"));
 
     val res = senderWallet.sendTransfer(
         deployer.address,
@@ -180,19 +180,19 @@ get fun `test wallet: owner can send jettons`() {
         to: senderWallet.address,
     });
 
-    expect(senderWallet.getJettonBalance()).toEqual(ton("1015"));
-    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount + ton("1"));
+    expect(senderWallet.getJettonBalance()).toEqual(grams("1015"));
+    expect(receiverWallet.getJettonBalance()).toEqual(transferAmount + grams("1"));
 }
 
 get fun `test wallet: non-owner cannot send jettons`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("7"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("7"));
     val balanceBefore = wallet.getJettonBalance();
 
     val res = wallet.sendTransfer(
         notDeployer.address,
         DEFAULT_TRANSFER_MSG_VALUE,
-        ton("3"),
+        grams("3"),
         notDeployer.address,
         deployer.address,
         null,
@@ -210,13 +210,13 @@ get fun `test wallet: non-owner cannot send jettons`() {
 
 get fun `test wallet: cannot send more jettons than balance`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("2"));
     val balanceBefore = wallet.getJettonBalance();
 
     val res = wallet.sendTransfer(
         deployer.address,
         DEFAULT_TRANSFER_MSG_VALUE,
-        ton("5"),
+        grams("5"),
         notDeployer.address,
         deployer.address,
         null,
@@ -234,13 +234,13 @@ get fun `test wallet: cannot send more jettons than balance`() {
 
 get fun `test wallet: zero forward ton means no transfer notification`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("2"));
     val receiverWallet = userWallet(minter, notDeployer.address);
 
     val res = senderWallet.sendTransfer(
         deployer.address,
         DEFAULT_TRANSFER_MSG_VALUE,
-        ton("1"),
+        grams("1"),
         notDeployer.address,
         deployer.address,
         null,
@@ -259,9 +259,9 @@ get fun `test wallet: zero forward ton means no transfer notification`() {
 
 get fun `test wallet: transfer notification should preserve forward payload`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("2"));
     val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
-    val sentAmount = ton("0.5");
+    val sentAmount = grams("0.5");
     val forwardPayload = beginCell().storeUint(0x1234567890abcdef, 128).endCell();
 
     val res = senderWallet.sendTransfer(
@@ -309,11 +309,11 @@ get fun `test wallet: transfer notification should preserve forward payload`() {
 
 get fun `test wallet: transfer to inactive recipient bounces and restores sender`() {
     val (minter, deployer, _) = setupTest();
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("2"));
     val balanceBefore = senderWallet.getJettonBalance();
     val recipientOwner = randomAddress();
     val recipientWallet = userWallet(minter, recipientOwner);
-    val sentAmount = ton("0.5");
+    val sentAmount = grams("0.5");
 
     val res = senderWallet.sendTransfer(
         deployer.address,
@@ -336,8 +336,8 @@ get fun `test wallet: transfer to inactive recipient bounces and restores sender
 
 get fun `test wallet: owner can burn jettons`() {
     val (minter, deployer, _) = setupTest();
-    val burnAmount = ton("3");
-    val wallet = mintTo(minter, deployer, deployer.address, ton("10"));
+    val burnAmount = grams("3");
+    val wallet = mintTo(minter, deployer, deployer.address, grams("10"));
     val balanceBefore = wallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
@@ -360,14 +360,14 @@ get fun `test wallet: owner can burn jettons`() {
 
 get fun `test wallet: non-owner cannot burn jettons`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("6"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("6"));
     val balanceBefore = wallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
     val res = wallet.sendAskToBurn(
         notDeployer.address,
         0,
-        ton("2"),
+        grams("2"),
         deployer.address,
         null,
         { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
@@ -384,14 +384,14 @@ get fun `test wallet: non-owner cannot burn jettons`() {
 
 get fun `test wallet: cannot burn more than balance`() {
     val (minter, deployer, _) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("1"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("1"));
     val balanceBefore = wallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
 
     val res = wallet.sendAskToBurn(
         deployer.address,
         0,
-        ton("5"),
+        grams("5"),
         deployer.address,
         null,
         { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
@@ -419,7 +419,7 @@ get fun `test wallet: profile country and get_profile getter`() {
         "bob",
         "8828308281fffff",
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
         from: senderWallet.address,
@@ -445,7 +445,7 @@ get fun `test wallet: change country succeeds when no active votes`() {
         "charlie",
         "8828308281fffff",
         250,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val changeRes = userWallet2.sendChangeProfile(
@@ -455,7 +455,7 @@ get fun `test wallet: change country succeeds when no active votes`() {
         null,
         356,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(changeRes).toHaveSuccessfulTx<ChangeProfile>({
         from: user.address,
@@ -482,7 +482,7 @@ get fun `test wallet: voting succeeds between accounts with matching country`() 
         "voter1",
         "8828308281fffff",
         826,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -491,14 +491,14 @@ get fun `test wallet: voting succeeds between accounts with matching country`() 
         "cand1",
         "8828308281fffff",
         826,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val voteRes = voterWallet.sendActVote(
         voter.address,
         candidate.address,
         10,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(voteRes).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
@@ -527,7 +527,7 @@ get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
         "voterG",
         "8828308281fffff",
         0,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -536,14 +536,14 @@ get fun `test wallet: voting succeeds for globalist accounts with country 0`() {
         "candG",
         "8828308281fffff",
         0,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val voteRes = voterWallet.sendActVote(
         voter.address,
         candidate.address,
         10,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(voteRes).toHaveSuccessfulTx<VotingAction>({
         from: voterWallet.address,
@@ -570,7 +570,7 @@ get fun `test wallet: voting fails and bounces when country mismatches, restorin
         "voterUS",
         "8828308281fffff",
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -579,14 +579,14 @@ get fun `test wallet: voting fails and bounces when country mismatches, restorin
         "candIN",
         "8828308281fffff",
         356,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val voteRes = voterWallet.sendActVote(
         voter.address,
         candidate.address,
         10,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(voteRes).toHaveFailedTx<VotingAction>({
         from: voterWallet.address,
@@ -618,7 +618,7 @@ get fun `test wallet: change country fails when active votes exist`() {
         "voterA",
         "8828308281fffff",
         392,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -627,10 +627,10 @@ get fun `test wallet: change country fails when active votes exist`() {
         "candA",
         "8828308281fffff",
         392,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
-    voterWallet.sendActVote(voter.address, candidate.address, 10, { value: ton("0.2") });
+    voterWallet.sendActVote(voter.address, candidate.address, 10, { value: grams("0.2") });
 
     val failChange = voterWallet.sendChangeProfile(
         voter.address,
@@ -639,7 +639,7 @@ get fun `test wallet: change country fails when active votes exist`() {
         null,
         840,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(failChange).toHaveFailedTx<ChangeProfile>({
         from: voter.address,
@@ -667,7 +667,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         "voterM",
         "8828308281fffff",
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -676,7 +676,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         "candA",
         "8828308281fffff",
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     rootWallet.sendActInvite(
         deployer.address,
@@ -685,7 +685,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         "candB",
         "8828308281fffff",
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     // 1. Granular initial vote: 3 votes for candA, 4 votes for candB
@@ -707,7 +707,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         3,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     // println(voteA1);
     expect(voteA1).toHaveSuccessfulTx<VotingAction>({
@@ -723,7 +723,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateB.address,
         4,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     // println(voteB1);
     expect(voteB1).toHaveSuccessfulTx<VotingAction>({
@@ -742,7 +742,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         2,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(
         voteA2,
@@ -757,7 +757,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         2,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(
         unvoteA1,
@@ -772,7 +772,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         5,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(failOverUnvote).toHaveFailedTx<ActUnvote>({
         from: voter.address,
@@ -785,7 +785,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         3,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(
         unvoteA2,
@@ -800,7 +800,7 @@ get fun `test wallet: granular voting, additive endorsements, and partial unvoti
         voter.address,
         candidateA.address,
         1,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(failUnvoteNonEndorsed).toHaveFailedTx<ActUnvote>({
         from: voter.address,
@@ -823,7 +823,7 @@ get fun `test wallet: change profile multi-field update succeeds`() {
         "initial_user",
         "8828308281fffff",
         250,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val res = userW.sendChangeProfile(
@@ -833,7 +833,7 @@ get fun `test wallet: change profile multi-field update succeeds`() {
         null,
         356,
         nomineeAcc.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(res).toHaveSuccessfulTx<ChangeProfile>({
         from: user.address,
@@ -862,7 +862,7 @@ get fun `test wallet: change profile fails when all fields are null`() {
         "user_empty",
         "8828308281fffff",
         250,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val failRes = userW.sendChangeProfile(
@@ -872,7 +872,7 @@ get fun `test wallet: change profile fails when all fields are null`() {
         null,
         null,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(failRes).toHaveFailedTx<ChangeProfile>({
         from: user.address,
@@ -894,7 +894,7 @@ get fun `test wallet: change profile fails when gas is below 1 ton`() {
         "user_gas",
         "8828308281fffff",
         250,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val failGas = userW.sendChangeProfile(
@@ -904,7 +904,7 @@ get fun `test wallet: change profile fails when gas is below 1 ton`() {
         null,
         null,
         null,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(failGas).toHaveFailedTx<ChangeProfile>({
         from: user.address,
@@ -921,7 +921,7 @@ get fun `test : direct minter upgrade request from owner`() {
     val reqUpgradeRes = minter.sendRequestUpgradeCode(
         deployer.address,
         null,
-        { value: ton("0.08") },
+        { value: grams("0.08") },
     );
 
     // Verify minter receives RequestUpgradeCode and forwards Upgrade to wallet
@@ -949,7 +949,7 @@ get fun `test : request upgrade for another target address via minter`() {
     val reqRes = minter.sendRequestUpgradeCode(
         deployer.address,
         notDeployer.address,
-        { value: ton("0.08") },
+        { value: grams("0.08") },
     );
 
     // Verify minter receives RequestUpgradeCode and forwards Upgrade to targetWallet
@@ -965,13 +965,13 @@ get fun `test : request upgrade for another target address via minter`() {
 
 get fun `test : version mismatch between fiwallets throws VersionMismatch`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("20"));
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("20"));
     val receiverWallet = activateUser(minter, senderWallet, deployer, notDeployer.address);
 
     // Send an internal transfer message directly with a mismatched version (e.g. version 99)
     val mismatchedBody = makeInternalTransferStep(
         0,
-        ton("1"),
+        grams("1"),
         deployer.address,
         deployer.address,
         0,
@@ -983,7 +983,7 @@ get fun `test : version mismatch between fiwallets throws VersionMismatch`() {
         senderWallet.address,
         receiverWallet.address,
         mismatchedBody,
-        ton("0.2"),
+        grams("0.2"),
     );
 
     expect(res).toHaveFailedTx<InternalTransferStep>({

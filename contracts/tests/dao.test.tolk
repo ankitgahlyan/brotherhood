@@ -53,11 +53,11 @@ fun setupDaoTest(): TestSetup {
             latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
         }.toCell(),
     });
-    minter.sendDeploy(deployer.address, { value: ton("10") });
+    minter.sendDeploy(deployer.address, { value: grams("10") });
 
     val deployerWallet = userWallet(minter, deployer.address);
 
-    daoProxy.deploy(deployer.address, { value: ton("10") });
+    daoProxy.deploy(deployer.address, { value: grams("10") });
     daoProxy.sendInitDaoProxy(deployer.address, 0, minter.address);
 
     return {
@@ -76,7 +76,7 @@ fun createMemberWallet(
     member: address,
 ): FossFiWallet {
     val w = activateUser(setup.minter, setup.deployerWallet, setup.deployer, member);
-    mintTo(setup.minter, setup.deployer, member, ton("2000"));
+    mintTo(setup.minter, setup.deployer, member, grams("2000"));
     return w;
 }
 
@@ -86,13 +86,13 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
     val wallet1 = createMemberWallet(setup, member1.address);
 
     val initialBal = wallet1.getJettonBalance();
-    expect(initialBal >= ton("1000")).toBeTrue();
+    expect(initialBal >= grams("1000")).toBeTrue();
 
     val targetMsg = MintNewJettons {
         queryId: 100,
         mintRecipient: setup.deployer.address,
-        tonAmount: ton("1"),
-        internalTransferMsg: makeInternalTransferStep(100, ton("50"), setup.deployer.address),
+        tonAmount: grams("1"),
+        internalTransferMsg: makeInternalTransferStep(100, grams("50"), setup.deployer.address),
     }.toCell();
 
     val expiresAt = blockchain.now() + 604800;
@@ -102,12 +102,12 @@ get fun `test dao: member proposal submission deducts 1000 FI fee and deploys Po
         setup.daoProxy.address,
         targetMsg,
         setup.pollCodeLibRef,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(res).toHaveAllSuccessfulTxs();
 
     val newBal = wallet1.getJettonBalance();
-    expect(newBal).toEqual(initialBal - ton("1000"));
+    expect(newBal).toEqual(initialBal - grams("1000"));
 
     val expectedPollAddr = calcDeployPoll(
         1,
@@ -141,8 +141,8 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
     val targetMsg1 = MintNewJettons {
         queryId: 200,
         mintRecipient: member1.address,
-        tonAmount: ton("1"),
-        internalTransferMsg: makeInternalTransferStep(200, ton("100"), member1.address),
+        tonAmount: grams("1"),
+        internalTransferMsg: makeInternalTransferStep(200, grams("100"), member1.address),
     }.toCell();
 
     val expiresAt = blockchain.now() + 604800;
@@ -152,7 +152,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         setup.daoProxy.address,
         targetMsg1,
         setup.pollCodeLibRef,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(submitRes).toHaveAllSuccessfulTxs();
 
@@ -178,7 +178,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         true,
         null,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(vote1Res).toHaveAllSuccessfulTxs();
 
@@ -194,7 +194,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         false,
         true,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(voteSwitchRes).toHaveAllSuccessfulTxs();
 
@@ -210,7 +210,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         true,
         false,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(voteSwitchBackRes).toHaveAllSuccessfulTxs();
 
@@ -226,7 +226,7 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         true,
         null,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(vote2Res).toHaveAllSuccessfulTxs();
 
@@ -241,12 +241,12 @@ get fun `test dao: voting on Poll with Voter child, vote switching, and threshol
         200,
         true,
         null,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(vote3Res).toHaveAllSuccessfulTxs();
 
     // Proposer (member1) gets 10x proposal fee (10,000 FI) reward: initial 2001 FI - 1000 fee + 100 targetMsg + 10000 reward = 11101 FI
-    expect(wallet1.getJettonBalance()).toEqual(ton("11101"));
+    expect(wallet1.getJettonBalance()).toEqual(grams("11101"));
 }
 
 get fun `test dao: duplicate vote on same option is rejected and bounces back`() {
@@ -264,8 +264,8 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
     val targetMsg = MintNewJettons {
         queryId: 300,
         mintRecipient: member1.address,
-        tonAmount: ton("1"),
-        internalTransferMsg: makeInternalTransferStep(300, ton("50"), member1.address),
+        tonAmount: grams("1"),
+        internalTransferMsg: makeInternalTransferStep(300, grams("50"), member1.address),
     }.toCell();
 
     val expiresAt = blockchain.now() + 604800;
@@ -275,7 +275,7 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         setup.daoProxy.address,
         targetMsg,
         setup.pollCodeLibRef,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(submitRes).toHaveAllSuccessfulTxs();
 
@@ -298,7 +298,7 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         300,
         true,
         null,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(firstVoteRes).toHaveAllSuccessfulTxs();
     expect(poll.getPollData().yesVotes).toEqual(1);
@@ -311,7 +311,7 @@ get fun `test dao: duplicate vote on same option is rejected and bounces back`()
         300,
         true,
         null,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(res2).toHaveTx({
         exitCode: Errors.DuplicateVote,
@@ -330,7 +330,7 @@ get fun `test dao: DaoProxy initialization and HotUpgrade by admin`() {
         adminAddress: deployer.address,
         targetAddress: RAW_ZERO_ADDRESS,
     });
-    daoProxy.deploy(deployer.address, { value: ton("10") });
+    daoProxy.deploy(deployer.address, { value: grams("10") });
 
     expect(daoProxy.getAdminAddress()).toEqual(deployer.address);
     expect(daoProxy.getTargetAddress()).toBeNull();

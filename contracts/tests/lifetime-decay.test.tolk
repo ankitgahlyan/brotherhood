@@ -13,7 +13,7 @@ import "test-utils"
 
 get fun `test monthly due: owner pays 2500 FI on time after 30 days`() {
     testing.setNow(1_800_000_000);
-    val (wallet, owner, _minter, _outsider) = setupDirectWallet(ton("5000"));
+    val (wallet, owner, _minter, _outsider) = setupDirectWallet(grams("5000"));
     val balanceBefore = wallet.getJettonBalance();
 
     // Advance time by 30 days (1 month)
@@ -23,7 +23,7 @@ get fun `test monthly due: owner pays 2500 FI on time after 30 days`() {
         owner.address,
         0,
         owner.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(payTx).toHaveSuccessfulTx<ActPayEmi>({
@@ -37,7 +37,7 @@ get fun `test monthly due: owner pays 2500 FI on time after 30 days`() {
 
 get fun `test monthly due: paying before 30 days fails with WaitMore`() {
     testing.setNow(1_800_000_000);
-    val (wallet, owner, _minter, _outsider) = setupDirectWallet(ton("5000"));
+    val (wallet, owner, _minter, _outsider) = setupDirectWallet(grams("5000"));
 
     // Advance time by only 15 days
     testing.setNow(1_800_000_000 + (DECAY_MONTH_SECONDS / 2));
@@ -46,7 +46,7 @@ get fun `test monthly due: paying before 30 days fails with WaitMore`() {
         owner.address,
         0,
         owner.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(payTx).toHaveFailedTx({
@@ -57,7 +57,7 @@ get fun `test monthly due: paying before 30 days fails with WaitMore`() {
 
 get fun `test monthly due: paying with insufficient balance fails with InsufficientBalance`() {
     testing.setNow(1_800_000_000);
-    val (wallet, owner, _minter, _outsider) = setupDirectWallet(ton("1000"));
+    val (wallet, owner, _minter, _outsider) = setupDirectWallet(grams("1000"));
 
     // Advance time by 30 days
     testing.setNow(1_800_000_000 + DECAY_MONTH_SECONDS + 10);
@@ -66,7 +66,7 @@ get fun `test monthly due: paying with insufficient balance fails with Insuffici
         owner.address,
         0,
         owner.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(payTx).toHaveFailedTx({
@@ -77,7 +77,7 @@ get fun `test monthly due: paying with insufficient balance fails with Insuffici
 
 get fun `test overdue EMI: keeper triggers default, burns balance, adds shortfall to debt with 5 percent penalty`() {
     testing.setNow(1_800_000_000);
-    val (wallet, _owner, _minter, outsider) = setupDirectWallet(ton("1000"));
+    val (wallet, _owner, _minter, outsider) = setupDirectWallet(grams("1000"));
     val balanceBefore = wallet.getJettonBalance();
 
     // Advance time past 30 days + 24 hours grace (e.g. +30 hours)
@@ -87,7 +87,7 @@ get fun `test overdue EMI: keeper triggers default, burns balance, adds shortfal
         outsider.address,
         0,
         outsider.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(defaultTx).toHaveSuccessfulTx<TriggerDefaultEmi>({
@@ -109,7 +109,7 @@ get fun `test overdue EMI: keeper triggers default, burns balance, adds shortfal
 
 get fun `test legacy TriggerDecay: works as keeper trigger for backward compatibility`() {
     testing.setNow(1_800_000_000);
-    val (wallet, _owner, _minter, outsider) = setupDirectWallet(ton("5000"));
+    val (wallet, _owner, _minter, outsider) = setupDirectWallet(grams("5000"));
     val balanceBefore = wallet.getJettonBalance();
 
     // Advance time by 30 days
@@ -118,7 +118,7 @@ get fun `test legacy TriggerDecay: works as keeper trigger for backward compatib
     val triggerTx = wallet.sendTriggerDecay(
         outsider.address,
         outsider.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(triggerTx).toHaveSuccessfulTx<TriggerDecay>({

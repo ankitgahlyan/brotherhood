@@ -34,7 +34,7 @@ fun onInternalMessage(in: InMessage) {
                 val revFollower = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: store.follower,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: FollowRevertedNotification {
                         queryId: msg.queryId,
                         reason: 750,
@@ -80,7 +80,7 @@ fun onInternalMessage(in: InMessage) {
                 val revFollower = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: store.follower,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: UnfollowRevertedNotification {
                         queryId: msg.queryId,
                         reason: 751,

@@ -37,7 +37,7 @@ get fun `test location: lazy deploy on invite and membership tracking`() {
         "alice",
         H3_NYC,
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(inviteAlice).toHaveSuccessfulDeploy<InternalInvite>({
         from: rootWallet.address,
@@ -64,7 +64,7 @@ get fun `test location: lazy deploy on invite and membership tracking`() {
         "bob",
         H3_NYC,
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(inviteBob).toHaveSuccessfulTx<LocationAddMember>({
         from: minter.address,
@@ -90,7 +90,7 @@ get fun `test location: change location migrates between H3 cells`() {
         "alice",
         H3_NYC,
         840,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     val locationNyc = getLocationContract(minter.address, H3_NYC);
@@ -107,7 +107,7 @@ get fun `test location: change location migrates between H3 cells`() {
         H3_SF,
         null,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(moveRes).toHaveSuccessfulTx<ChangeProfile>({
         from: alice.address,
@@ -144,14 +144,14 @@ get fun `test location: reject direct unauthorized member addition`() {
             version: 0,
         },
     );
-    locationNyc.deploy(deployer.address, { value: ton("0.5") });
+    locationNyc.deploy(deployer.address, { value: grams("0.5") });
 
     val unauthorizedRes = locationNyc.sendLocationAddMember(
         imposter.address,
         1,
         targetUser.address,
         imposter.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(unauthorizedRes).toHaveFailedTx<LocationAddMember>({
         from: imposter.address,

@@ -57,7 +57,7 @@ fun checkCorrectSenderInternal(sender: address, owner: address) {
 // shared guard for all owner-initiated "Act*" actions
 fun checkOwnerAction(senderAddress: address, valueCoins: coins, owner: address) {
     assert (senderAddress == owner) throw Errors.NotOwner;
-    assert (valueCoins >= ton("0.05")) throw Errors.NotEnoughGas;
+    assert (valueCoins >= grams("0.05")) throw Errors.NotEnoughGas;
     // todo: assert (store.Active) throw Errors.AccountInactive;
 }
 
@@ -86,7 +86,7 @@ fun requestUpgrade(dest: address) {
     val outMsg = createMessage({
         dest,
         bounce: BounceMode.NoBounce,
-        value: ton("0.1"),
+        value: grams("0.1"),
         body: RequestUpgradeCode {},
     });
     outMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
@@ -96,7 +96,7 @@ fun requestUpgrade(dest: address) {
 fun sendUpgrade(to: address, sender: address, walletVersion: uint10) {
     val outMsg = createMessage({
         dest: to,
-        value: ton("0.1"),
+        value: grams("0.1"),
         bounce: false,
         body: Upgrade {
             walletVersion,
@@ -153,7 +153,7 @@ fun notifyOwner(
     val outMsg = createMessage({
         bounce: BounceMode.NoBounce, // cause receiver can have uninitialized contract
         dest,                        // notify current owner
-        value: ton("0.001"),
+        value: grams("0.001"),
         body: TransferNotificationForRecipient {
             queryId,
             jettonAmount,

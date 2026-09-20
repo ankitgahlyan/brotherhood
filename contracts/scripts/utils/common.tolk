@@ -159,7 +159,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
 
 fun deployJettonMinter(deployer: ActonWallet, storage: FiStore): FossFi {
     val minter = FossFi.fromStorage(storage);
-    val res = minter.sendDeploy(deployer.address, { value: ton("0.55") });
+    val res = minter.sendDeploy(deployer.address, { value: grams("0.55") });
     res.waitForFirstTransaction();
     return minter;
 }
@@ -169,7 +169,7 @@ fun deployDaoProxy(deployer: ActonWallet, admin: address, target: address): DaoP
         adminAddress: admin,
         targetAddress: RAW_ZERO_ADDRESS,
     });
-    val res = daoProxy.deploy(deployer.address, { value: ton("0.1") });
+    val res = daoProxy.deploy(deployer.address, { value: grams("0.1") });
     res.waitForFirstTransaction();
     val initRes = daoProxy.sendInitDaoProxy(deployer.address, 0, target);
     initRes.waitForFirstTransaction();

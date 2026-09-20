@@ -17,7 +17,7 @@ fun calculateDaoMinStorageFee(): coins {
 
 fun reserveForDaoBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateDaoMinStorageFee()),
         RESERVE_MODE_AT_MOST,

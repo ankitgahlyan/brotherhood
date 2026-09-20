@@ -56,7 +56,7 @@ fun onInternalMessage(in: InMessage) {
             val penaltyMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: store.payee,
-                value: ton("0.05"),
+                value: grams("0.05"),
                 body: PenalizeDeferredRequester {
                     queryId: msg.queryId,
                     payer: store.payer,

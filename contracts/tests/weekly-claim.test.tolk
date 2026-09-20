@@ -25,7 +25,7 @@ get fun `test weekly claim: before activation wait fails with WaitMore`() {
         user.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx).toHaveFailedTx({
@@ -50,7 +50,7 @@ get fun `test weekly claim: after activation wait mints fixed 11111 FI when rece
         user.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx).toHaveSuccessfulTx<ActClaimWeeklyGrant>({
@@ -78,7 +78,7 @@ get fun `test weekly claim: within 2 years mints 11111 FI plus 10 FI per receive
         voter.address,
         candidate.address,
         5,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(candidateWallet.getWalletDataAll().receivedVotes).toEqual(5);
 
@@ -91,7 +91,7 @@ get fun `test weekly claim: within 2 years mints 11111 FI plus 10 FI per receive
         candidate.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx).toHaveSuccessfulTx<ActClaimWeeklyGrant>({
@@ -121,7 +121,7 @@ get fun `test weekly claim: post 2-years mints 500 FI baseline floor plus reputa
         voter.address,
         candidate.address,
         8,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(candidateWallet.getWalletDataAll().receivedVotes).toEqual(8);
 
@@ -134,7 +134,7 @@ get fun `test weekly claim: post 2-years mints 500 FI baseline floor plus reputa
         candidate.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx).toHaveSuccessfulTx<ActClaimWeeklyGrant>({
@@ -161,7 +161,7 @@ get fun `test weekly claim: claiming twice in same period fails with WaitMore`()
         user.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     // Attempt second claim 1 day later (less than 7 days CLAIM_INTERVAL)
@@ -171,7 +171,7 @@ get fun `test weekly claim: claiming twice in same period fails with WaitMore`()
         user.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx2).toHaveFailedTx({
@@ -187,7 +187,7 @@ get fun `test weekly claim: debt is automatically repaid first before crediting 
     val followeeWallet = activateUser(minter, followerWallet, deployer, notDeployer.address);
 
     // Follower follows followee -> followee receives 1000 FI
-    followerWallet.sendFollow(deployer.address, 1, followeeWallet.address, { value: ton("0.6") });
+    followerWallet.sendFollow(deployer.address, 1, followeeWallet.address, { value: grams("0.6") });
     expect(followeeWallet.getFollowersCount()).toEqual(1);
 
     // Followee burns all balance to reach 0
@@ -208,7 +208,7 @@ get fun `test weekly claim: debt is automatically repaid first before crediting 
         0,
         deployer.address,
         followeeWallet.address,
-        { value: ton("0.6") },
+        { value: grams("0.6") },
     );
     expect(followeeWallet.getWalletDataAll().debt).toEqual(FOLLOW_MINT_AMOUNT);
     expect(followeeWallet.getWalletDataAll().debt > 0).toEqual(true);
@@ -221,7 +221,7 @@ get fun `test weekly claim: debt is automatically repaid first before crediting 
         notDeployer.address,
         0,
         null,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(claimTx).toHaveSuccessfulTx<ActClaimWeeklyGrant>({

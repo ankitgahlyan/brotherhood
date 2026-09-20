@@ -26,7 +26,7 @@ fun sendSetAllowance(
     amount: coins,
     queryId: uint64 = 1,
 ): SendResultList {
-    return wallet.sendSetAllowance(from, queryId, grantee, amount, { value: ton("0.3") });
+    return wallet.sendSetAllowance(from, queryId, grantee, amount, { value: grams("0.3") });
 }
 
 fun sendSpend(
@@ -43,7 +43,7 @@ fun sendSpend(
         amount,
         receiver,
         sendExcessesTo,
-        { value: ton("0.3") },
+        { value: grams("0.3") },
     );
 }
 
@@ -51,7 +51,7 @@ get fun `test allowance: only the owner can grant an allowance`() {
     val (minter, deployer, notDeployer) = setupTest();
     val wallet = userWallet(minter, deployer.address);
 
-    val res = sendSetAllowance(wallet, notDeployer.address, notDeployer.address, ton("5"));
+    val res = sendSetAllowance(wallet, notDeployer.address, notDeployer.address, grams("5"));
     expect(res).toHaveFailedTx<SetAllowance>({
         from: notDeployer.address,
         to: wallet.address,
@@ -64,19 +64,19 @@ get fun `test allowance: grant records the spendable amount`() {
     val (minter, deployer, notDeployer) = setupTest();
     val wallet = userWallet(minter, deployer.address);
 
-    val res = sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
+    val res = sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
     expect(res).toHaveSuccessfulTx<SetAllowance>({
         from: deployer.address,
         to: wallet.address,
     });
-    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("10")));
+    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, grams("10")));
 }
 
 get fun `test allowance: revoke with amount zero removes the grant`() {
     val (minter, deployer, notDeployer) = setupTest();
     val wallet = userWallet(minter, deployer.address);
 
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
     val (exists, _) = allowanceEntryOf(wallet, notDeployer.address);
     expect(exists).toBeTrue();
 
@@ -92,22 +92,22 @@ get fun `test allowance: re-grant overwrites the previous amount`() {
     val (minter, deployer, notDeployer) = setupTest();
     val wallet = userWallet(minter, deployer.address);
 
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("25"));
-    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("25")));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("25"));
+    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, grams("25")));
 }
 
 get fun `test allowance: grantee can spend and the allowance decrements`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val grantor = mintTo(minter, deployer, deployer.address, ton("100"));
+    val grantor = mintTo(minter, deployer, deployer.address, grams("100"));
     val grantee = activateUser(minter, grantor, deployer, notDeployer.address);
     val balanceBefore = grantor.getJettonBalance();
-    sendSetAllowance(grantor, deployer.address, notDeployer.address, ton("10"));
+    sendSetAllowance(grantor, deployer.address, notDeployer.address, grams("10"));
 
     val res = sendSpend(
         grantor,
         notDeployer.address,
-        ton("4"),
+        grams("4"),
         notDeployer.address,
         notDeployer.address,
     );
@@ -116,21 +116,21 @@ get fun `test allowance: grantee can spend and the allowance decrements`() {
         to: grantor.address,
     });
 
-    expect(grantor.getJettonBalance()).toEqual(balanceBefore - ton("4"));
-    expect(grantee.getJettonBalance()).toEqual(ton("1") + ton("4"));
-    expect(allowanceEntryOf(grantor, notDeployer.address)).toEqual((true, ton("6")));
+    expect(grantor.getJettonBalance()).toEqual(balanceBefore - grams("4"));
+    expect(grantee.getJettonBalance()).toEqual(grams("1") + grams("4"));
+    expect(allowanceEntryOf(grantor, notDeployer.address)).toEqual((true, grams("6")));
 }
 
 get fun `test allowance: spending exactly the full amount clears the entry`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val grantor = mintTo(minter, deployer, deployer.address, ton("100"));
+    val grantor = mintTo(minter, deployer, deployer.address, grams("100"));
     activateUser(minter, grantor, deployer, notDeployer.address);
-    sendSetAllowance(grantor, deployer.address, notDeployer.address, ton("7"));
+    sendSetAllowance(grantor, deployer.address, notDeployer.address, grams("7"));
 
     val res = sendSpend(
         grantor,
         notDeployer.address,
-        ton("7"),
+        grams("7"),
         notDeployer.address,
         deployer.address,
     );
@@ -143,30 +143,30 @@ get fun `test allowance: spending exactly the full amount clears the entry`() {
 
 get fun `test allowance: non-grantee cannot spend`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("100"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("100"));
     val balanceBefore = wallet.getJettonBalance();
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
 
     val stranger = testing.treasury("stranger");
-    val res = sendSpend(wallet, stranger.address, ton("1"), stranger.address, deployer.address);
+    val res = sendSpend(wallet, stranger.address, grams("1"), stranger.address, deployer.address);
     expect(res).toHaveFailedTx<SpendAllowance>({
         from: stranger.address,
         to: wallet.address,
         exitCode: FollowingErrors.NotFollowing,
     });
     expect(wallet.getJettonBalance()).toEqual(balanceBefore);
-    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("10")));
+    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, grams("10")));
 }
 
 get fun `test allowance: cannot spend more than the granted amount`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("100"));
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("100"));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
 
     val res = sendSpend(
         wallet,
         notDeployer.address,
-        ton("11"),
+        grams("11"),
         notDeployer.address,
         deployer.address,
     );
@@ -175,18 +175,18 @@ get fun `test allowance: cannot spend more than the granted amount`() {
         to: wallet.address,
         exitCode: Errors.InsufficientBalance,
     });
-    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("10")));
+    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, grams("10")));
 }
 
 get fun `test allowance: cannot spend more than the wallet balance`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("3"));
-    sendSetAllowance(wallet, deployer.address, notDeployer.address, ton("10"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("3"));
+    sendSetAllowance(wallet, deployer.address, notDeployer.address, grams("10"));
 
     val res = sendSpend(
         wallet,
         notDeployer.address,
-        ton("5"),
+        grams("5"),
         notDeployer.address,
         deployer.address,
     );
@@ -195,5 +195,5 @@ get fun `test allowance: cannot spend more than the wallet balance`() {
         to: wallet.address,
         exitCode: Errors.BalanceError,
     });
-    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, ton("10")));
+    expect(allowanceEntryOf(wallet, notDeployer.address)).toEqual((true, grams("10")));
 }

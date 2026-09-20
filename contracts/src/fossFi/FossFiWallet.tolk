@@ -133,7 +133,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
         InternalInvite => {
             var maps = store.maps.load();
 
-            restoreAmount = -MBRP_AMOUNT + ton("1"); // 
+            restoreAmount = -MBRP_AMOUNT + grams("1"); // 
             maps.invited.delete(in.senderAddress);
             store.connections -= 1;
         }
@@ -193,7 +193,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
             val notifyMinterMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: trustedAddrs.minterAddr,
-                value: ton("0.05"),
+                value: grams("0.05"),
                 body: NotifyMinter {
                     queryId: 0, // zero = BURN in minter
                     jettonAmount: FOLLOW_MINT_AMOUNT,
@@ -220,7 +220,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
                 val notifyMinterMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: NotifyMinter {
                         queryId: 1, // nonzero = MINT in minter
                         jettonAmount: mintedBack,
@@ -262,7 +262,7 @@ fun onInternalMessage(in: InMessage): void {
             if (in.senderAddress != addrs.owner) {
                 throw Errors.IncorrectSender;
             }
-            assert (in.valueCoins >= ton("1")) throw Errors.NotEnoughGas;
+            assert (in.valueCoins >= grams("1")) throw Errors.NotEnoughGas;
             assert (
                 msg.username != null || msg.h3Cell != null || msg.country != null ||
                 msg.nominee != null
@@ -344,8 +344,8 @@ fun onInternalMessage(in: InMessage): void {
                 body: NotifyMinter {
                     queryId: msg.queryId != 0 ? msg.queryId : 1, // to inform about MINT
                     jettonAmount: totalClaimAmount,
-                    burnInitiator: in.senderAddress,
-                    sendExcessesTo: in.senderAddress,
+                    burnInitiator: addrs.owner,
+                    sendExcessesTo: in.senderAddress,            // anyone can claim for this contract
                 },
             });
             notifyMinterMsg.send(
@@ -367,7 +367,7 @@ fun onInternalMessage(in: InMessage): void {
             // every 4 hours, spam protection
             assert (
                 ((now > (time.lastInvite + INVITE_WAIT)) &
-                (now > (time.accountInit + ACTIVATION_WAIT))) |
+                    (now > (time.accountInit + ACTIVATION_WAIT))) |
                 (store.isPrevilegedAccount)
             ) throw Errors.WaitMore;
             assert (store.connections < 11) throw Errors.MaxConnections;
@@ -377,9 +377,9 @@ fun onInternalMessage(in: InMessage): void {
             // assert (in.valueCoins >= ton("10")) throw Errors.InsufficientGasSent;
 
             // jettonAddrs are saved for easy bounceHandling 
-            maps.invited.set(msg.transferRecipient.getAddrFiWallet(), ton("999"));
+            maps.invited.set(msg.transferRecipient.getAddrFiWallet(), grams("999"));
             // 1 goes to invitee
-            store.jettonBalance += MBRP_AMOUNT - ton("1");
+            store.jettonBalance += MBRP_AMOUNT - grams("1");
 
             val inviteInternal = createMessage({
                 bounce: BounceMode.Only256BitsOfBody, // 
@@ -575,7 +575,7 @@ fun onInternalMessage(in: InMessage): void {
                     val refundMsg = createMessage({
                         bounce: BounceMode.Only256BitsOfBody,
                         dest: msg.transferInitiator.getAddrFiWallet(),
-                        value: ton("0.05"),
+                        value: grams("0.05"),
                         body: makeInternalTransferStep(
                             msg.queryId,
                             refundAmount,
@@ -595,13 +595,13 @@ fun onInternalMessage(in: InMessage): void {
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
                     mintRecipient: msg.transferInitiator,
-                    tonAmount: ton("0.7"),
+                    tonAmount: grams("0.7"),
                     internalTransferMsg: makeInternalTransferStep(
                         msg.queryId,
                         mintPersonalAmount,
                         msg.transferInitiator, // the buyer
                         null,                  // sendExcessesTo,
-                        ton("0.0001"),
+                        grams("0.0001"),
                         beginCell().storeMaybeRef(null).endCell().beginParse(),
                         0,                     // version
                         true,                  // transferredAsCredit
@@ -609,7 +609,7 @@ fun onInternalMessage(in: InMessage): void {
                 };
                 val mintMsg = createMessage({
                     bounce: BounceMode.NoBounce,
-                    value: ton("0.75"),
+                    value: grams("0.75"),
                     dest: trustedAddrs.personalJettonMinter, // fails if not set
                     body: mintBody.toCell(),
                 });
@@ -732,7 +732,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (in.senderAddress == msg.sender.getAddrFiWallet()) throw Errors.IncorrectSender;
 
             store.active = true;
-            store.jettonBalance = ton("1");
+            store.jettonBalance = grams("1");
             time.accountInit = blockchain.now();
             nomins.nominee = msg.sender;       // must be null at init
             profile.username = msg.username;
@@ -813,7 +813,7 @@ fun onInternalMessage(in: InMessage): void {
                     });
                     transferMsg.send(
                         SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                            SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                     );
                 }
             }
@@ -865,7 +865,7 @@ fun onInternalMessage(in: InMessage): void {
                     });
                     transferMsg.send(
                         SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                        SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                            SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                     );
                 }
             }
@@ -936,7 +936,7 @@ fun onInternalMessage(in: InMessage): void {
         ActSubmitProposal => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
             assert (store.active) throw Errors.AccountInactive;
-            val proposalFee = ton("1000");
+            val proposalFee = grams("1000");
             assert (store.jettonBalance >= proposalFee) throw Errors.ProposalFeeInsufficient;
 
             store.jettonBalance -= proposalFee;
@@ -1012,7 +1012,7 @@ fun onInternalMessage(in: InMessage): void {
             if (time.accountInit == 0 && (in.senderAddress == trustedAddrs.minterAddr)) {
                 // todo: set profile
                 store.active = true;
-                store.jettonBalance += ton("1");
+                store.jettonBalance += grams("1");
                 store.isAuthorityAccount = true;
                 store.isPrevilegedAccount = true;
                 time.accountInit = blockchain.now();
@@ -1072,7 +1072,7 @@ fun onInternalMessage(in: InMessage): void {
             val mintMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: trustedAddrs.minterAddr,
-                value: ton("0.05"),
+                value: grams("0.05"),
                 body: NotifyMinter {
                     queryId: 1, // nonzero = MINT in minter
                     jettonAmount: msg.mintAmount,
@@ -1151,7 +1151,7 @@ fun onInternalMessage(in: InMessage): void {
                 val burnMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: NotifyMinter {
                         queryId: 0, // zero = BURN in minter
                         jettonAmount: actualBurn,
@@ -1198,7 +1198,7 @@ fun onInternalMessage(in: InMessage): void {
                 val notifyMinterMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: NotifyMinter {
                         queryId: 0, // zero = BURN in minter
                         jettonAmount: FOLLOW_MINT_AMOUNT,
@@ -1224,7 +1224,7 @@ fun onInternalMessage(in: InMessage): void {
                     val notifyMinterMsg = createMessage({
                         bounce: BounceMode.NoBounce,
                         dest: trustedAddrs.minterAddr,
-                        value: ton("0.05"),
+                        value: grams("0.05"),
                         body: NotifyMinter {
                             queryId: 1, // nonzero = MINT in minter
                             jettonAmount: restoreAmount,
@@ -1262,7 +1262,7 @@ fun onInternalMessage(in: InMessage): void {
                 val burnMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: NotifyMinter {
                         queryId: 0,
                         jettonAmount: actualBurn,
@@ -1670,7 +1670,7 @@ fun onInternalMessage(in: InMessage): void {
             val deployMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: holdingChild,
-                value: ton("0.05"),
+                value: grams("0.05"),
                 body: createEmptySlice(),
             });
             deployMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
@@ -1719,7 +1719,7 @@ fun onInternalMessage(in: InMessage): void {
                 val burnMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: trustedAddrs.minterAddr,
-                    value: ton("0.05"),
+                    value: grams("0.05"),
                     body: NotifyMinter {
                         queryId: 0,
                         jettonAmount: actualBurn,
@@ -1787,7 +1787,7 @@ fun onInternalMessage(in: InMessage): void {
 
         // for migration to other network states
         RequestState => {
-            assert (in.valueCoins == ton("1")) throw Errors.InsufficientGasSent;
+            assert (in.valueCoins == grams("1")) throw Errors.InsufficientGasSent;
 
             val stateMsg = createMessage({
                 bounce: BounceMode.NoBounce,

@@ -28,7 +28,7 @@ get fun `test validation: malformed forward payload should be rejected`() {
         bounce: true,
         value: DEFAULT_TRANSFER_MSG_VALUE,
         dest: wallet.address,
-        body: buildTransferBody(ton("1"), 0, deployer.address, deployer.address, badPayload),
+        body: buildTransferBody(grams("1"), 0, deployer.address, deployer.address, badPayload),
     });
     val res = net.send(deployer.address, outMessage);
     expect(res).toHaveFailedTx<AskToTransfer>({
@@ -42,7 +42,7 @@ get fun `test validation: malformed custom payload should be rejected`() {
     val (minter, deployer, notDeployer) = setupTest();
     val wallet = mintTo(minter, deployer, deployer.address, DEFAULT_MINTED_JETTONS);
 
-    val sentAmount = ton("0.5");
+    val sentAmount = grams("0.5");
     val forwardAmount = DEFAULT_FORWARD_TON_AMOUNT;
     val forwardPayload = beginCell().storeUint(0x1234567890abcdef, 128).endCell();
     val customPayload = beginCell().storeUint(0xfedcba0987654321, 128).endCell();
@@ -110,13 +110,13 @@ get fun `test validation: malformed custom payload should be rejected`() {
 
 get fun `test validation: wallet cannot send to masterchain`() {
     val (minter, deployer, _) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("1"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("1"));
     val masterAddr = address.fromWorkchainAndHash(-1, 0);
 
     val res = wallet.sendTransfer(
         deployer.address,
         DEFAULT_TRANSFER_MSG_VALUE,
-        ton("1"),
+        grams("1"),
         masterAddr,
         deployer.address,
         null,
@@ -132,7 +132,7 @@ get fun `test validation: wallet cannot send to masterchain`() {
 
 get fun `test validation: wallet should reject internal transfer from unauthorized sender`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, deployer.address, ton("2"));
+    val wallet = mintTo(minter, deployer, deployer.address, grams("2"));
     val balanceBefore = wallet.getJettonBalance();
 
     val outMessage = createMessage({
@@ -141,7 +141,7 @@ get fun `test validation: wallet should reject internal transfer from unauthoriz
         dest: wallet.address,
         body: makeInternalTransferStep(
             0,
-            ton("0.01"),
+            grams("0.01"),
             deployer.address,
             deployer.address, // sendExcessesTo
             DEFAULT_FORWARD_TON_AMOUNT,
@@ -159,17 +159,17 @@ get fun `test validation: wallet should reject internal transfer from unauthoriz
 
 get fun `test validation: minter cannot force transfer tokens`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, notDeployer.address, ton("2"));
+    val wallet = mintTo(minter, deployer, notDeployer.address, grams("2"));
     val target = testing.treasury("receiver");
     val balanceBefore = wallet.getJettonBalance();
 
     val transferMsg = createMessage({
         bounce: true,
-        value: ton("1"),
+        value: grams("1"),
         dest: wallet.address,
         body: AskToTransfer {
             queryId: 0,
-            jettonAmount: ton("1"),
+            jettonAmount: grams("1"),
             transferRecipient: target.address,
             sendExcessesTo: notDeployer.address,
             customPayload: null,
@@ -188,7 +188,7 @@ get fun `test validation: minter cannot force transfer tokens`() {
     val ok = wallet.sendTransfer(
         notDeployer.address,
         DEFAULT_TRANSFER_MSG_VALUE,
-        ton("1"),
+        grams("1"),
         target.address,
         notDeployer.address,
         null,

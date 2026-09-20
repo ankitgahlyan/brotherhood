@@ -15,5 +15,5 @@
 /// This function always returns the correct cell with the contract code.
 @pure
 fun voterCompiledCodeLibraryRef(): cell asm """
-    "te6ccgEBBQEAugABFP8A9KQT9LzyyAsBAgFiAgMBvND4kfJAIO1E0PpI+kjSANcKAATXLCAAAIfsjiw1+JIixwXy4rwE038x1woABJVRI7rDAJIycOKT8sL14Mj6UvpSz4PKAMntVOA0WwHXLCAAAIf8MeMCMIQPAccA8vQEAB2gxLPaiaH0kfSRpAGkAaMAaDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wA=" base64>B B>boc PUSHREF
+    "te6ccgEBBQEAugABFP8A9KQT9LzyyAsBAgFiAwIAHaDEs9qJofSR9JGkAaQBowG80PiR8kAg7UTQ+kj6SNIA1woABNcsIAAAh+yOLDX4kiLHBfLivATTfzHXCgAElVEjusMAkjJw4pPywvXgyPpS+lLPg8oAye1U4DRbAdcsIAAAh/wx4wIwhA8BxwDy9AQAaDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wA=" base64>B B>boc PUSHREF
 """

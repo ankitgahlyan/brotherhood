@@ -24,7 +24,7 @@ fun sendFollow(
     followeeWalletAddr: address,
     queryId: uint64 = 1,
 ): SendResultList {
-    return wallet.sendFollow(from, queryId, followeeWalletAddr, { value: ton("0.6") });
+    return wallet.sendFollow(from, queryId, followeeWalletAddr, { value: grams("0.6") });
 }
 
 fun sendUnfollow(
@@ -34,7 +34,13 @@ fun sendUnfollow(
     followeeWalletAddr: address,
     queryId: uint64 = 0,
 ): SendResultList {
-    return wallet.sendUnfollow(from, queryId, initiator, followeeWalletAddr, { value: ton("0.6") });
+    return wallet.sendUnfollow(
+        from,
+        queryId,
+        initiator,
+        followeeWalletAddr,
+        { value: grams("0.6") },
+    );
 }
 
 fun setupFollowingTest(): (FossFi, Treasury, Treasury, FossFiWallet, FossFiWallet) {
@@ -183,7 +189,7 @@ get fun `test follow: following inactive account bounces and rolls back followin
         null,
         0,
         true,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     val followerBalanceBefore = followerWallet.getJettonBalance();
@@ -211,7 +217,7 @@ get fun `test follow: unfollowing inactive account bounces and rolls back follow
         null,
         0,
         true,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     // Unfollow request bounces from inactive followee
@@ -257,7 +263,7 @@ get fun `test follow: survivor settlement on follower death burns from living fo
         followerWallet.address,
         1,
         deployer.address,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(settleRes).toHaveSuccessfulTx<SettleDeath>({
         from: followerWallet.address,
@@ -279,7 +285,7 @@ get fun `test follow: survivor settlement with insufficient balance creates debt
     val burnExcess = followeeWallet.sendAskToBurn(
         notDeployer.address,
         0,
-        currentBalance - ton("100"),
+        currentBalance - grams("100"),
         notDeployer.address,
         null,
         { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
@@ -288,14 +294,14 @@ get fun `test follow: survivor settlement with insufficient balance creates debt
         from: notDeployer.address,
         to: followeeWallet.address,
     });
-    expect(followeeWallet.getJettonBalance()).toEqual(ton("100"));
+    expect(followeeWallet.getJettonBalance()).toEqual(grams("100"));
 
     // Settlement burn arrives for 1000 FI: 100 FI burned, remaining 900 FI becomes debt
     val settleRes = followeeWallet.sendSettleDeath(
         followerWallet.address,
         1,
         deployer.address,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(settleRes).toHaveSuccessfulTx<SettleDeath>({
         from: followerWallet.address,
@@ -304,7 +310,7 @@ get fun `test follow: survivor settlement with insufficient balance creates debt
 
     val walletData = followeeWallet.getWalletDataAll();
     expect(walletData.jettonBalance).toEqual(0);
-    expect(walletData.debt).toEqual(ton("900"));
+    expect(walletData.debt).toEqual(grams("900"));
     expect(walletData.debt > 0).toBeTrue();
 }
 
@@ -317,7 +323,7 @@ get fun `test follow: unauthorized sender cannot trigger unfollow`() {
         0,
         randomAccount.address,
         followeeWallet.address,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(res).toHaveFailedTx<Unfollow>({
         from: randomAccount.address,
@@ -331,7 +337,7 @@ get fun `test deactivate: transfer funds and set deficit as debt`() {
 
     // followeeWallet has initial 1 FI balance from invite activation
     val initialBalance = followeeWallet.getJettonBalance();
-    expect(initialBalance).toEqual(ton("1"));
+    expect(initialBalance).toEqual(grams("1"));
 
     // Follower deactivates followee with amount ton("5") - exceeds balance by 4
     // and toggleActive: false (leave active intact)
@@ -339,14 +345,14 @@ get fun `test deactivate: transfer funds and set deficit as debt`() {
         deployer.address,
         notDeployer.address,
         deployer.address, // send funds to deployer
-        ton("5"),
+        grams("5"),
         false,            // toggleActive is false
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
 
     val followeeData = followeeWallet.getWalletDataAll();
     expect(followeeData.active).toBeTrue();        // active remains true
     expect(followeeData.jettonBalance).toEqual(0); // all 1 transferred
-    expect(followeeData.debt).toEqual(ton("4"));   // 4 deficit set as debt
+    expect(followeeData.debt).toEqual(grams("4")); // 4 deficit set as debt
     expect(followeeData.debt > 0).toBeTrue();
 }

@@ -47,7 +47,7 @@ fun calculatePersonalMinterMinStorageFee(): coins {
 // the contract still keeps enough to cover its storage
 fun reserveForPersonalWalletBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculatePersonalWalletMinStorageFee()),
         RESERVE_MODE_AT_MOST,
@@ -56,7 +56,7 @@ fun reserveForPersonalWalletBalance(inValue: coins): void {
 
 fun reserveForPersonalMinterBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculatePersonalMinterMinStorageFee()),
         RESERVE_MODE_AT_MOST,
@@ -93,14 +93,14 @@ fun calcMinimalPersonalTransferAmount(forwardTonAmount: int, fwdFee: int): int {
         : jettonWalletGasConsumption;
 
     return forwardTonAmount +
-    // 3 messages: wal1->wal2, wal2->owner, wal2->response
-    // but last one is optional (it is ok if it fails)
-    fwdCount * fwdFee +
-    forwardInitStatePersonalWalletOverhead() +
-    // additional fwd fees related to initstate in internal_transfer
-    calculateGasFee(MY_WORKCHAIN, sendTransferGasConsumption) +
-    calculateGasFee(MY_WORKCHAIN, receiveTransferGasConsumption) +
-    calculatePersonalWalletMinStorageFee();
+        // 3 messages: wal1->wal2, wal2->owner, wal2->response
+        // but last one is optional (it is ok if it fails)
+        fwdCount * fwdFee +
+        forwardInitStatePersonalWalletOverhead() +
+        // additional fwd fees related to initstate in internal_transfer
+        calculateGasFee(MY_WORKCHAIN, sendTransferGasConsumption) +
+        calculateGasFee(MY_WORKCHAIN, receiveTransferGasConsumption) +
+        calculatePersonalWalletMinStorageFee();
 }
 
 fun checkAmountIsEnoughToPersonalTransfer(msgValue: int, forwardTonAmount: int, fwdFee: int) {
@@ -119,8 +119,8 @@ fun calcMinimalPersonalBurnAmount(): coins {
         MESSAGE_SIZE_PERSONAL_BURN_NOTIFICATION_BITS,
         MESSAGE_SIZE_PERSONAL_BURN_NOTIFICATION_CELLS,
     ) +
-    calculateGasFee(MY_WORKCHAIN, sendBurnGasConsumption) +
-    calculateGasFee(MY_WORKCHAIN, GAS_CONSUMPTION_PERSONAL_BURN_NOTIFICATION);
+        calculateGasFee(MY_WORKCHAIN, sendBurnGasConsumption) +
+        calculateGasFee(MY_WORKCHAIN, GAS_CONSUMPTION_PERSONAL_BURN_NOTIFICATION);
 }
 
 fun checkAmountIsEnoughToPersonalBurn(msgValue: int) {

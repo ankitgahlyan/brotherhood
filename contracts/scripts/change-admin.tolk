@@ -19,7 +19,7 @@ fun main() {
         admin.address,
         0,
         nextAdmin,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     println(res.waitForTrace());
 

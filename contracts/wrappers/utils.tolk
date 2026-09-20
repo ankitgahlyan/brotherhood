@@ -13,7 +13,7 @@ fun FossFi.sendDiscovery(
     from: address,
     ownerAddress: address,
     includeOwnerAddress: bool,
-    value: coins = ton("0.1"),
+    value: coins = grams("0.1"),
 ): SendResultList {
     val outMessage = createMessage({
         bounce: false,
@@ -51,7 +51,7 @@ fun FossFi.sendMint(
     val forwardPayload = beginCell().storeMaybeRef(customPayload).endCell().beginParse();
     val outMessage = createMessage({
         bounce: false,
-        value: totalTonAmount + ton("0.1"), // fee buffer covers wallet init-state forward fee
+        value: totalTonAmount + grams("0.1"), // fee buffer covers wallet init-state forward fee
         dest: self.address,
         body: MintNewJettons {
             queryId: 0,
@@ -76,13 +76,13 @@ fun Personal.sendMint(
     recipient: address,
     jettonAmount: int,
     forwardTonAmount: int = 1,
-    totalTonAmount: int = ton("0.7"),
+    totalTonAmount: int = grams("0.7"),
     customPayload: cell? = null,
 ): SendResultList {
     val forwardPayload = beginCell().storeMaybeRef(customPayload).endCell().beginParse();
     val outMessage = createMessage({
         bounce: false,
-        value: totalTonAmount + ton("0.05"),
+        value: totalTonAmount + grams("0.05"),
         dest: self.address,
         body: MintNewJettons {
             queryId: 0,
@@ -108,7 +108,7 @@ fun FossFiWallet.sendChangeAdmin(
 ): SendResultList {
     val outMessage = createMessage({
         bounce: false,
-        value: ton("0.05"),
+        value: grams("0.05"),
         dest: self.address,
         body: ChangeMinterAdmin {
             queryId: 0,
@@ -121,7 +121,7 @@ fun FossFiWallet.sendChangeAdmin(
 fun FossFiWallet.sendClaimAdmin(self, from: address): SendResultList {
     val outMessage = createMessage({
         bounce: false,
-        value: ton("0.05"),
+        value: grams("0.05"),
         dest: self.address,
         // body: ClaimMinterAdmin { queryId: 0 },
     });
@@ -131,7 +131,7 @@ fun FossFiWallet.sendClaimAdmin(self, from: address): SendResultList {
 fun FossFiWallet.sendDropAdmin(self, from: address): SendResultList {
     val outMessage = createMessage({
         bounce: false,
-        value: ton("0.05"),
+        value: grams("0.05"),
         dest: self.address,
         // body: DropMinterAdmin { queryId: 0 },
     });
@@ -264,13 +264,14 @@ fun FossFiWallet.sendTransferPayloadAuto(
         customPayload,
         forwardTonAmount,
         forwardPayload: createEmptySlice(),
-    }.toCell()
-        .beginParse()
-        .remainingBitsAndRefsCount();
+    }
+    .toCell()
+    .beginParse()
+    .remainingBitsAndRefsCount();
 
     // +1 for the prefix bit added by `PayloadInline`/`PayloadInRef`
     val fitsInline = (1023 - bodyBits - 1) >= forwardPayload.remainingBitsCount() &&
-    (4 - bodyRefs) > forwardPayload.remainingRefsCount();
+        (4 - bodyRefs) > forwardPayload.remainingRefsCount();
 
     return fitsInline
         ? self.sendTransferPayloadInline(

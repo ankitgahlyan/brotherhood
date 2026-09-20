@@ -14,7 +14,7 @@ import "@contracts/fossFi/storage"
 import "@contracts/personalMinter/storage"
 
 fun mintToPersonal(minter: FossFi, from: address, recipient: address, amount: coins): address {
-    val res = minter.sendMint(from, recipient, amount, ton("0.05"), ton("0.3"));
+    val res = minter.sendMint(from, recipient, amount, grams("0.05"), grams("0.3"));
     res.waitForFirstTransaction();
     return minter.getWalletAddress(recipient);
 }
@@ -34,7 +34,7 @@ fun activateIssuer(
             "issuer_user",
             "Tokyo", // todo: fixme
             20,
-            { value: ton("1") },
+            { value: grams("1") },
         );
     invite.waitForFirstTransaction();
     return minter.getWalletAddress(issuer);
@@ -48,7 +48,7 @@ fun main() {
 
     // 1. fresh jetton minter + an active issuer FI account
     val (minter, _, _) = setupTest();
-    val buyerWallet = mintToPersonal(minter, deployer, deployer, ton("1000"));
+    val buyerWallet = mintToPersonal(minter, deployer, deployer, grams("1000"));
     val issuerWallet = activateIssuer(minter, buyerWallet, deployer, issuerOwner);
     println("MINTER={}", minter.address);
     println("ISSUER_WALLET={}", issuerWallet);
@@ -73,7 +73,7 @@ fun main() {
 
     val deployMsg = createMessage({
         bounce: false,
-        value: ton("1"),
+        value: grams("1"),
         dest: {
             workchain: BASECHAIN,
             stateInit,
@@ -88,7 +88,7 @@ fun main() {
             issuerOwner,
             pmAddress,
             personalWalletAddress,
-            { value: ton("0.6") },
+            { value: grams("0.6") },
         );
     pointRes.waitForFirstTransaction();
 
@@ -113,15 +113,15 @@ fun main() {
         .sendSetLoanRequirement(
             issuerOwner,
             0,
-            ton("1000"),
+            grams("1000"),
             1_800_000_000 + 86400,
             null,
-            { value: ton("0.1") },
+            { value: grams("0.1") },
         );
     setCreditRes.waitForFirstTransaction();
 
     // 3. buy credit end-to-end: the buyer's FI moves to the issuer
-    val loan = ton("100");
+    val loan = grams("100");
     val buyerFiBefore = FossFiWallet.fromAddress(buyerWallet).getJettonBalance();
     val issuerFiBefore = FossFiWallet.fromAddress(issuerWallet).getJettonBalance();
 
@@ -133,7 +133,7 @@ fun main() {
             loan,
             issuerOwner,
             deployer,
-            { value: ton("1.5") },
+            { value: grams("1.5") },
         );
     buyerRes.waitForFirstTransaction();
 
@@ -178,7 +178,7 @@ fun main() {
         .sendAny(
             deployer,
             burnBody,
-            { value: ton("0.6") },
+            { value: grams("0.6") },
         );
     burnRes.waitForFirstTransaction();
 

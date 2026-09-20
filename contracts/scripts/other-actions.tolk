@@ -20,7 +20,7 @@ fun main() {
         sender,
         recipient,
         1,
-        { value: ton("0.55") },
+        { value: grams("0.55") },
     );
     res.waitForFirstTransaction();
 

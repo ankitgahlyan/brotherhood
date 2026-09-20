@@ -83,7 +83,7 @@ fun onInternalMessage(in: InMessage): void {
             val voterMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: voterDeploy,
-                value: ton("0.02"),
+                value: grams("0.02"),
                 body: VoteProposalChild {
                     queryId: msg.queryId,
                     proposalId: msg.proposalId,
@@ -116,7 +116,7 @@ fun onInternalMessage(in: InMessage): void {
                 // safety:
                 execMsg.send(
                     SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL |
-                    SEND_MODE_DESTROY,
+                        SEND_MODE_DESTROY,
                 );
             }
 

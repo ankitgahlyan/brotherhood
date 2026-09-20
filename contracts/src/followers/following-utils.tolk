@@ -5,7 +5,7 @@ fun calcDeployFollowing(
     follower: address,
     followee: address,
     followingCodeLibRef: cell,
-    mintAmount: coins = ton("1000"),
+    mintAmount: coins = grams("1000"),
 ): AutoDeployAddress {
     val store: FollowingStore = {
         follower,

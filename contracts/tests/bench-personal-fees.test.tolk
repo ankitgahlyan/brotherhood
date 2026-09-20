@@ -45,7 +45,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     // ---- 1. PersonalWalletStore storage upper bound ----
     val walletStore = PersonalWalletStore {
-        jettonBalance: ton("1000000"),
+        jettonBalance: grams("1000000"),
         owner: recipient.address,
         deployer: deployer.address,
         minterAddress: minter.address,
@@ -62,7 +62,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     // ---- 3. PersonalStore storage bound ----
     val personalMinterStore = PersonalStore {
-        totalSupply: ton("1000000"),
+        totalSupply: grams("1000000"),
         fiJettonAddress: deployer.address,
         adminAddress: deployer.address,
         metadataUri: null,
@@ -73,7 +73,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
     // ---- 4. Outgoing message bodies ----
     val transferBody = AskToTransfer {
         queryId: 1,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         transferRecipient: recipient.address,
         sendExcessesTo: deployer.address,
         customPayload: null,
@@ -84,7 +84,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     val inTransferBody = makeInternalTransferStep(
         1,
-        ton("100"),
+        grams("100"),
         deployer.address,
         deployer.address,
         DEFAULT_FORWARD_TON_AMOUNT,
@@ -94,7 +94,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     val burnBody = AskToBurn {
         queryId: 1,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         sendExcessesTo: deployer.address,
         customPayload: null,
     }.toCell();
@@ -102,7 +102,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     val notifyMinterBody = NotifyMinter {
         queryId: 0,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         burnInitiator: deployer.address,
         sendExcessesTo: deployer.address,
     }.toCell();
@@ -167,11 +167,11 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
         personalMinterStore,
         { fixedPrefixLength: 8, closeTo: deployer.address },
     );
-    pm.deploy(deployer.address, { value: ton("1") });
+    pm.deploy(deployer.address, { value: grams("1") });
 
     // Mint to deployer and to recipient
-    pm.sendMint(deployer.address, deployer.address, ton("50"), ton("0.02"), ton("0.7"));
-    pm.sendMint(deployer.address, recipient.address, ton("50"), ton("0.02"), ton("0.7"));
+    pm.sendMint(deployer.address, deployer.address, grams("50"), grams("0.02"), grams("0.7"));
+    pm.sendMint(deployer.address, recipient.address, grams("50"), grams("0.02"), grams("0.7"));
 
     val senderWalletAddr = pm.getWalletAddress(deployer.address);
     val destWalletAddr = pm.getWalletAddress(recipient.address);
@@ -181,13 +181,13 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
     val transferRes = senderWallet.sendAskToTransfer(
         deployer.address,
         0,
-        ton("10"),
+        grams("10"),
         recipient.address,
         deployer.address,
         null,
-        ton("0.01"),
+        grams("0.01"),
         PayloadInline { value: createEmptySlice() },
-        { value: ton("0.7") },
+        { value: grams("0.7") },
     );
     println("gas Personal AskToTransfer (JETTON_TRANSFER)   := ");
     println(maxGasOnAccount(transferRes, senderWalletAddr));
@@ -199,10 +199,10 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
     val burnRes = senderWallet.sendAskToBurn(
         deployer.address,
         0,
-        ton("5"),
+        grams("5"),
         deployer.address,
         null,
-        { value: ton("0.7") },
+        { value: grams("0.7") },
     );
     println("gas Personal AskToBurn (BURN_REQUEST)         := ");
     println(maxGasOnAccount(burnRes, senderWalletAddr));

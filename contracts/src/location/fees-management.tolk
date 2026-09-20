@@ -17,7 +17,7 @@ fun calculateLocationMinStorageFee(): coins {
 
 fun reserveForLocationBalance(inValue: coins): void {
     val toLeaveOnBalance = contract.getOriginalBalance() - inValue +
-    contract.getStorageDuePayment();
+        contract.getStorageDuePayment();
     reserveGramsOnBalance(
         max(toLeaveOnBalance, calculateLocationMinStorageFee()),
         RESERVE_MODE_AT_MOST,

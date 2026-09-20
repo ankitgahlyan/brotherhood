@@ -11,7 +11,7 @@ import "personal-token.test"
 import "test-utils"
 
 get fun `test credit multiplier: allows setting and updating multiplier by owner`() {
-    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(ton("10"));
+    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(grams("10"));
 
     val setTx = wallet.sendSetLoanRequirement(
         owner.address,
@@ -19,7 +19,7 @@ get fun `test credit multiplier: allows setting and updating multiplier by owner
         null,
         null,
         2,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(setTx).toHaveSuccessfulTx<SetLoanRequirement>({
@@ -29,7 +29,7 @@ get fun `test credit multiplier: allows setting and updating multiplier by owner
 }
 
 get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`() {
-    val (wallet, _owner, _minter, borrower) = setupDirectWalletWithPersonal(ton("10"));
+    val (wallet, _owner, _minter, borrower) = setupDirectWalletWithPersonal(grams("10"));
 
     val setTx = wallet.sendSetLoanRequirement(
         borrower.address, // non-owner
@@ -37,7 +37,7 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
         null,
         null,
         2,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(setTx).toHaveFailedTx({
@@ -47,7 +47,7 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
 }
 
 get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessage`() {
-    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(ton("10"));
+    val (wallet, owner, _minter, _borrower) = setupDirectWalletWithPersonal(grams("10"));
 
     val setTx = wallet.sendSetLoanRequirement(
         owner.address,
@@ -55,7 +55,7 @@ get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessa
         null,
         null,
         0, // invalid multiplier 0
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     expect(setTx).toHaveFailedTx({
@@ -81,10 +81,10 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
         null,
         null,
         2,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
-    val loan = ton("100");
+    val loan = grams("100");
     val buyerFiBefore = buyerWallet.getJettonBalance();
     val issuerFiBefore = issuerWallet.getJettonBalance();
     val supplyBefore = personalSupply(pm);
@@ -95,7 +95,7 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
         from: deployer.address,
@@ -123,19 +123,19 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
     ) = setupPersonalScenario();
 
     // Set creditNeed to 100 FI and multiplier to 2 in a single atomic transaction
-    val creditNeedAmount = ton("100");
+    val creditNeedAmount = grams("100");
     issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
         creditNeedAmount,
         1_800_000_000 + 86400,
         2,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     val buyerFiBefore = buyerWallet.getJettonBalance();
     val issuerFiBefore = issuerWallet.getJettonBalance();
-    val sentAmount = ton("150"); // exceeds creditNeed of 100
+    val sentAmount = grams("150"); // exceeds creditNeed of 100
 
     val res = buyerWallet.sendBuyCredit(
         deployer.address,
@@ -143,7 +143,7 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         sentAmount,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
         from: deployer.address,

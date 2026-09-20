@@ -23,7 +23,7 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pm = Personal.fromStorage(personalStore, toShard);
-    val res = pm.deploy(admin, { value: ton("1") });
+    val res = pm.deploy(admin, { value: grams("1") });
     expect(res).toHaveSuccessfulDeploy({ to: pm.address });
     return pm;
 }
@@ -39,7 +39,7 @@ fun pointIssuerAtPersonalMinter(
         owner,
         personalMinter,
         personalWallet,
-        { value: ton("0.6") }, // must exceed the > ton("0.5") owner-action gate
+        { value: grams("0.6") }, // must exceed the > ton("0.5") owner-action gate
     );
 }
 
@@ -63,7 +63,7 @@ fun setupPersonalScenario(): (
     val (minter, deployer, notDeployer) = setupTest();
 
     // buyer: the treasury wallet (funded with FI to lend)
-    val buyerWallet = mintTo(minter, deployer, deployer.address, ton("1000"));
+    val buyerWallet = mintTo(minter, deployer, deployer.address, grams("1000"));
 
     // issuer: a distinct active member, activated via deployer's invite
     val issuerWallet = activateUser(
@@ -85,10 +85,10 @@ fun setupPersonalScenario(): (
     issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
-        ton("1000"),
+        grams("1000"),
         1_800_000_000 + 86400,
         null,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     return (
@@ -111,7 +111,7 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     val buyerFiBefore = buyerWallet.getJettonBalance();
     val issuerFiBefore = issuerWallet.getJettonBalance();
     val supplyBefore = personalSupply(pm);
@@ -122,7 +122,7 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
         loan,
         notDeployer.address, // issuer owner; resolved to issuer's FI account via getAddrFiWallet
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
         from: deployer.address,
@@ -154,10 +154,10 @@ get fun `test personal token: cannot buy more FI than the buyer holds`() {
     val res = buyerWallet.sendBuyCredit(
         deployer.address,
         0,
-        ton("5000"), // exceeds buyer's balance
+        grams("5000"), // exceeds buyer's balance
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
     expect(res).toHaveFailedTx<BuyCredit>({
         from: deployer.address,
@@ -176,14 +176,14 @@ get fun `test personal token: lending leaves balances and supply stable while he
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     val buyerFiAfterBuy = buyerWallet.getJettonBalance();
@@ -226,14 +226,14 @@ get fun `test personal token: payback before maturity fails with CreditNotMature
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     val buyerFiAfterBuy = buyerWallet.getJettonBalance();
@@ -278,14 +278,14 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     // Advance time past maturity
@@ -303,7 +303,7 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
     });
 
     // the loan is written off: the Personal Token is burned and the FI returned
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(ton("0"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("0"));
     expect(personalSupply(pm)).toEqual(supplyBefore - loan);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
     expect(issuerWallet.getJettonBalance()).toEqual(issuerFiBefore - loan);
@@ -319,17 +319,17 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
-    val repaid = ton("40");
+    val repaid = grams("40");
     val buyerFiBefore = buyerWallet.getJettonBalance();
     val issuerFiBefore = issuerWallet.getJettonBalance();
     val supplyBefore = personalSupply(pm);
@@ -360,19 +360,19 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
 
-    val res = sendPayback(deployer.address, buyerPriWallet, ton("5000"));
+    val res = sendPayback(deployer.address, buyerPriWallet, grams("5000"));
     expect(res).toHaveFailedTx<AskToBurn>({
         from: deployer.address,
         to: buyerPriWallet.address,
@@ -394,14 +394,14 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     // the issuer spends all its FI, so it can no longer cover the payback
@@ -418,7 +418,7 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
         from: notDeployer.address,
         to: issuerWallet.address,
     });
-    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+    expect(issuerWallet.getJettonBalance()).toEqual(grams("0"));
 
     val buyerFiAfterBuy = buyerWallet.getJettonBalance();
     val supplyBefore = personalSupply(pm);
@@ -447,7 +447,7 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
     expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
     expect(personalSupply(pm)).toEqual(supplyBefore);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiAfterBuy);
-    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+    expect(issuerWallet.getJettonBalance()).toEqual(grams("0"));
 }
 
 get fun `test personal token: payback succeeds when the issuer holds exactly the loan`() {
@@ -460,21 +460,21 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     // the issuer spends its 1 FI activation bonus, holding exactly the loan
     val burnIssuer = issuerWallet.sendAskToBurn(
         notDeployer.address,
         0,
-        ton("1"),
+        grams("1"),
         notDeployer.address,
         null,
         { bounce: false, value: DEFAULT_BURN_MSG_VALUE },
@@ -499,10 +499,10 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
         to: buyerPriWallet.address,
     });
 
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(ton("0"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("0"));
     expect(personalSupply(pm)).toEqual(supplyBefore - loan);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
-    expect(issuerWallet.getJettonBalance()).toEqual(ton("0"));
+    expect(issuerWallet.getJettonBalance()).toEqual(grams("0"));
 }
 
 get fun `test personal token: secondary market transfer succeeds before maturity`() {
@@ -515,14 +515,14 @@ get fun `test personal token: secondary market transfer succeeds before maturity
         pm,
     ) = setupPersonalScenario();
 
-    val loan = ton("100");
+    val loan = grams("100");
     buyerWallet.sendBuyCredit(
         deployer.address,
         0,
         loan,
         notDeployer.address,
         deployer.address,
-        { value: ton("1.5") },
+        { value: grams("1.5") },
     );
 
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
@@ -533,21 +533,21 @@ get fun `test personal token: secondary market transfer succeeds before maturity
     val transferRes = buyerPriWallet.sendAskToTransfer(
         deployer.address,
         0,
-        ton("30"),
+        grams("30"),
         friend.address,
         deployer.address,
         null,
         0,
         PayloadInline { value: createEmptySlice() },
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(transferRes).toHaveSuccessfulTx<AskToTransfer>({
         from: deployer.address,
         to: buyerPriWallet.address,
     });
 
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(ton("70"));
-    expect(personalBalanceOf(pm, friend.address)).toEqual(ton("30"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("70"));
+    expect(personalBalanceOf(pm, friend.address)).toEqual(grams("30"));
 }
 
 get fun `test personal token: admin can directly mint personal tokens with 0.7 ton gas`() {
@@ -561,14 +561,14 @@ get fun `test personal token: admin can directly mint personal tokens with 0.7 t
     ) = setupPersonalScenario();
 
     val recipient = testing.treasury("direct-mint-recipient");
-    val mintAmount = ton("50");
+    val mintAmount = grams("50");
 
     val mintRes = pm.sendMint(
         notDeployer.address,
         recipient.address,
         mintAmount,
-        ton("0.02"),
-        ton("0.7"),
+        grams("0.02"),
+        grams("0.7"),
     );
 
     expect(mintRes).toHaveSuccessfulTx<MintNewJettons>({

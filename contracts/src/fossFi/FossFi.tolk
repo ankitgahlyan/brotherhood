@@ -63,7 +63,7 @@ fun onBouncedMessage(in: InMessageBounced): void {
         }
 
         TopUpTons => {
-            store.totalSupply -= ton("1");
+            store.totalSupply -= grams("1");
         }
     }
     store.save();
@@ -129,7 +129,7 @@ fun onInternalMessage(in: InMessage): void {
             val oldLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
                 dest: oldLocDeploy,
-                value: ton("0.05"),
+                value: grams("0.05"),
                 body: LocationRemoveMember {
                     queryId: msg.queryId,
                     userAddress: msg.owner,

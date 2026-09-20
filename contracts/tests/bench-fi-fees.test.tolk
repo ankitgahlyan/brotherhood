@@ -44,12 +44,12 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     // ---- wallet storage at max: fill heavy maps so we capture upper bounds ----
     var invitedMap: map<address, coins> = [];
-    invitedMap.set(randomAddress(), ton("1"));
-    invitedMap.set(randomAddress(), ton("1"));
-    invitedMap.set(randomAddress(), ton("1"));
+    invitedMap.set(randomAddress(), grams("1"));
+    invitedMap.set(randomAddress(), grams("1"));
+    invitedMap.set(randomAddress(), grams("1"));
     var allowancesMap: map<address, coins> = [];
-    allowancesMap.set(randomAddress(), ton("5"));
-    allowancesMap.set(randomAddress(), ton("5"));
+    allowancesMap.set(randomAddress(), grams("5"));
+    allowancesMap.set(randomAddress(), grams("5"));
     var votedForMap: map<address, uint4> = [];
     votedForMap.set(randomAddress(), 10);
     votedForMap.set(randomAddress(), 10);
@@ -75,7 +75,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     }.toCell();
 
     val heavyStore = FiWalletStore {
-        jettonBalance: ton("100000"),
+        jettonBalance: grams("100000"),
         goldCoins: 1000,
         profile: ProfileInfo {
             username: "user@example.com",
@@ -84,9 +84,9 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
         txnCount: 255,
         status: 3,
         isAuthorityAccount: true,
-        creditNeed: ton("100"),
-        accumulatedFees: ton("50"),
-        debt: ton("10"),
+        creditNeed: grams("100"),
+        accumulatedFees: grams("50"),
+        debt: grams("10"),
         allowDeferred: false,
         votes: 10,
         receivedVotes: 1000000,
@@ -129,7 +129,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     // ---- outgoing message bodies ----
     val transferBody = AskToTransfer {
         queryId: 1,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         transferRecipient: notDeployer.address,
         sendExcessesTo: deployer.address,
         customPayload: null,
@@ -140,7 +140,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     val internalTransferBody = makeInternalTransferStep(
         1,
-        ton("100"),
+        grams("100"),
         deployer.address,
         deployer.address, // sendExcessesTo
         DEFAULT_FORWARD_TON_AMOUNT,
@@ -151,7 +151,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     val burnBody = AskToBurn {
         queryId: 1,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         sendExcessesTo: deployer.address,
         customPayload: null,
     }.toCell();
@@ -159,7 +159,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     val notifyMinterBody = NotifyMinter {
         queryId: 0,
-        jettonAmount: ton("100"),
+        jettonAmount: grams("100"),
         burnInitiator: deployer.address,
         sendExcessesTo: deployer.address,
     }.toCell();
@@ -210,14 +210,14 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     println(forwardInitStateOverhead());
 
     // ---- real gas consumption per flow ----
-    val senderWallet = mintTo(minter, deployer, deployer.address, ton("5"));
+    val senderWallet = mintTo(minter, deployer, deployer.address, grams("5"));
     val dest = notDeployer.address;
-    val destWallet = mintTo(minter, deployer, dest, ton("5"));
+    val destWallet = mintTo(minter, deployer, dest, grams("5"));
 
     val transferRes = senderWallet.sendTransfer(
         deployer.address,
-        ton("1"),
-        ton("1"),
+        grams("1"),
+        grams("1"),
         dest,
         deployer.address,
         null,
@@ -232,8 +232,8 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     val burnRes = senderWallet.sendBurn(
         deployer.address,
-        ton("1"),
-        ton("1"),
+        grams("1"),
+        grams("1"),
         deployer.address,
         null,
     );

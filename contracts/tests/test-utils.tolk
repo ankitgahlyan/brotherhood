@@ -45,7 +45,7 @@ const TEST_NOW_BASELINE = 1800000000
 
 // Common values used across tests (nanotons for TON amounts)
 const TEST_JETTON_UNIT = 1
-const DEFAULT_MINTED_JETTONS = ton("5") // 5 TON in jetton units
+const DEFAULT_MINTED_JETTONS = grams("5") // 5 TON in jetton units
 const DEFAULT_TRANSFER_MSG_VALUE = 300000000 // 0.3 TON
 const LOW_TRANSFER_MSG_VALUE = 200000000 // 0.2 TON
 const DEFAULT_BURN_MSG_VALUE = 200000000 // 0.2 TON
@@ -98,7 +98,7 @@ fun estimateMessageForwardFee<T>(body: T, dest: address, bounce: bool, value: co
 }
 
 fun estimateBodyForwardFee<T>(body: T): coins {
-    return estimateMessageForwardFee(body, randomAddress(), true, ton("1"));
+    return estimateMessageForwardFee(body, randomAddress(), true, grams("1"));
 }
 
 fun sendRawTransferPayload(
@@ -134,7 +134,7 @@ fun activateUser(
         "user1",
         "8828308281fffff",
         0, // for global
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
         from: inviterWallet.address,
@@ -154,7 +154,7 @@ fun walletStateInit(storage: FiWalletStore): ContractState {
 fun deployWalletFromStorage(
     storage: FiWalletStore,
     from: address,
-    value: coins = ton("10"),
+    value: coins = grams("10"),
 ): FossFiWallet {
     val init = storage.jettonBalance == 0
         ? calcDeployFiWallet(
@@ -224,7 +224,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
             minter.address,
             createMessage({
                 bounce: true,
-                value: ton("0.3"),
+                value: grams("0.3"),
                 dest: wallet.address,
                 body: makeInternalTransferStep(
                     0,
@@ -258,7 +258,7 @@ fun setupDirectWalletWithPersonal(initialBalance: coins = 0): (
         owner.address,
         personalMinter.address,
         personalWallet.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(setPtTx).toHaveSuccessfulTx<ActSetPersonalJetton>({
         from: owner.address,
@@ -317,7 +317,7 @@ fun buildLotteryAddrsMap(minterAddress: address, deployer: address): map<uint8, 
             participants: [],
         });
 
-        loc.deploy(deployer, { value: ton("0.5") });
+        loc.deploy(deployer, { value: grams("0.5") });
         lotteryAddrs.set(entryAmount, loc.address);
     }
 
@@ -333,7 +333,7 @@ fun deployDaoProxyTest(
         adminAddress,
         targetAddress: RAW_ZERO_ADDRESS,
     });
-    daoProxy.deploy(deployer.address, { value: ton("10") });
+    daoProxy.deploy(deployer.address, { value: grams("10") });
     daoProxy.sendInitDaoProxy(deployer.address, 0, targetAddress);
     return daoProxy;
 }
@@ -363,7 +363,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         }.toCell(),
     });
 
-    val transactions = minter.sendDeploy(deployer.address, { value: ton("10") });
+    val transactions = minter.sendDeploy(deployer.address, { value: grams("10") });
     expect(transactions).toHaveSuccessfulDeploy({
         to: minter.address,
     });
@@ -375,7 +375,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         deployer.address,
         null,
         build("FossFiWallet"),
-        { value: ton("10") },
+        { value: grams("10") },
     );
     expect(upgradeResult).toHaveSuccessfulTx<Upgrade>({
         from: deployer.address,
@@ -386,7 +386,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
 
     val approveUpgradeResult = minter.sendApproveUpgrade(
         deployer.address,
-        { value: ton("10") },
+        { value: grams("10") },
     );
     expect(approveUpgradeResult).toHaveSuccessfulTx<ApproveUpgrade>({
         from: deployer.address,
@@ -401,7 +401,7 @@ fun mintTo(minter: FossFi, admin: Treasury, recipient: address, amount: coins): 
     val wallet = userWallet(minter, recipient);
     val balanceBefore = wallet.getJettonBalance();
 
-    val mintResult = minter.sendMint(admin.address, recipient, amount, ton("0.05"), ton("0.3"));
+    val mintResult = minter.sendMint(admin.address, recipient, amount, grams("0.05"), grams("0.3"));
     expect(mintResult).toHaveSuccessfulTx<MintNewJettons>({
         from: admin.address,
         to: minter.address,

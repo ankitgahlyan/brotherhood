@@ -26,7 +26,7 @@ fun deployPersonalMinterDirect(admin: address): Personal {
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pm = Personal.fromStorage(personalStore, toShard);
-    val res = pm.deploy(admin, { value: ton("1") });
+    val res = pm.deploy(admin, { value: grams("1") });
     expect(res).toHaveSuccessfulDeploy({ to: pm.address });
     return pm;
 }
@@ -37,12 +37,12 @@ get fun `test personal gas: transfer minimal value edge`() {
     val pm = deployPersonalMinterDirect(deployer.address);
 
     // Mint tokens to deployer
-    pm.sendMint(deployer.address, deployer.address, ton("100"), ton("0.02"), ton("0.7"));
+    pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
     val wallet = PersonalWallet.fromAddress(walletAddr);
 
     val dest = recipient.address;
-    val body = buildTransferBody(ton("10"), 0, dest, dest, makeTinyForwardPayload());
+    val body = buildTransferBody(grams("10"), 0, dest, dest, makeTinyForwardPayload());
 
     val fwdFee = estimateBodyForwardFee(body);
     val minimalTonValue = calcMinimalPersonalTransferAmount(0, fwdFee) + MIN_EDGE_DELTA;
@@ -76,12 +76,12 @@ get fun `test personal gas: transfer minimal value edge`() {
 get fun `test personal gas: transfer minimal value is message-size aware`() {
     val dest = randomAddress();
 
-    val bodySmall = buildTransferBody(ton("10"), 10, dest, dest, makeTinyForwardPayload());
+    val bodySmall = buildTransferBody(grams("10"), 10, dest, dest, makeTinyForwardPayload());
     val feeSmall = estimateBodyForwardFee(bodySmall);
     val minSmall = calcMinimalPersonalTransferAmount(10, feeSmall) + MIN_EDGE_DELTA;
 
     val bodyBig = buildTransferBody(
-        ton("10"),
+        grams("10"),
         10,
         dest,
         dest,
@@ -98,13 +98,13 @@ get fun `test personal gas: transfer with forward amount requires second forward
     val recipient = testing.treasury("recipient");
     val pm = deployPersonalMinterDirect(deployer.address);
 
-    pm.sendMint(deployer.address, deployer.address, ton("100"), ton("0.02"), ton("0.7"));
+    pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
     val wallet = PersonalWallet.fromAddress(walletAddr);
 
     val dest = recipient.address;
     val body = buildTransferBody(
-        ton("10"),
+        grams("10"),
         DEFAULT_FORWARD_TON_AMOUNT,
         dest,
         dest,
@@ -115,7 +115,7 @@ get fun `test personal gas: transfer with forward amount requires second forward
     val minWithoutForward = calcMinimalPersonalTransferAmount(0, fwdFee) + MIN_EDGE_DELTA;
     val minMissingSecondFee = minWithoutForward + DEFAULT_FORWARD_TON_AMOUNT;
     val minWithForward = calcMinimalPersonalTransferAmount(DEFAULT_FORWARD_TON_AMOUNT, fwdFee) +
-    MIN_EDGE_DELTA;
+        MIN_EDGE_DELTA;
 
     expect(minWithForward).toEqual(minWithoutForward + DEFAULT_FORWARD_TON_AMOUNT + fwdFee);
 
@@ -149,7 +149,7 @@ get fun `test personal gas: burn safety floor requires 0.5 TON`() {
     val deployer = testing.treasury("deployer");
     val pm = deployPersonalMinterDirect(deployer.address);
 
-    pm.sendMint(deployer.address, deployer.address, ton("100"), ton("0.02"), ton("0.7"));
+    pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
     val wallet = PersonalWallet.fromAddress(walletAddr);
 
@@ -157,10 +157,10 @@ get fun `test personal gas: burn safety floor requires 0.5 TON`() {
     val underFloorRes = wallet.sendAskToBurn(
         deployer.address,
         0,
-        ton("10"),
+        grams("10"),
         deployer.address,
         null,
-        { value: ton("0.49") },
+        { value: grams("0.49") },
     );
     expect(underFloorRes).toHaveFailedTx<AskToBurn>({
         from: deployer.address,
@@ -172,10 +172,10 @@ get fun `test personal gas: burn safety floor requires 0.5 TON`() {
     val enoughFloorRes = wallet.sendAskToBurn(
         deployer.address,
         0,
-        ton("10"),
+        grams("10"),
         deployer.address,
         null,
-        { value: ton("0.5") },
+        { value: grams("0.5") },
     );
     expect(enoughFloorRes).toHaveSuccessfulTx<AskToBurn>({
         from: deployer.address,
@@ -187,7 +187,7 @@ get fun `test personal gas: wallet storage fee should be measurable`() {
     val deployer = testing.treasury("deployer");
     val pm = deployPersonalMinterDirect(deployer.address);
 
-    pm.sendMint(deployer.address, deployer.address, ton("100"), ton("0.02"), ton("0.7"));
+    pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
 
     val state = testing.getAccountState(walletAddr);

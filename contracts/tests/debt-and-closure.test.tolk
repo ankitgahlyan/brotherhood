@@ -18,7 +18,7 @@ get fun `test unfollow shortfall: followee with insufficient balance incurs debt
     val followeeWallet = activateUser(minter, followerWallet, deployer, notDeployer.address);
 
     // Follower follows followee -> followee receives 1000 FI
-    followerWallet.sendFollow(deployer.address, 1, followeeWallet.address, { value: ton("0.6") });
+    followerWallet.sendFollow(deployer.address, 1, followeeWallet.address, { value: grams("0.6") });
     expect(followeeWallet.getFollowersCount()).toEqual(1);
 
     // Followee spends all 1000 FI + initial balance down to 0
@@ -39,7 +39,7 @@ get fun `test unfollow shortfall: followee with insufficient balance incurs debt
         0,
         deployer.address,
         followeeWallet.address,
-        { value: ton("0.6") },
+        { value: grams("0.6") },
     );
     expect(unfollowTx).toHaveSuccessfulTx<Unfollow>({
         from: deployer.address,
@@ -60,7 +60,7 @@ get fun `test closure: closes account and transfers remaining assets to nominee`
     val closeTx = ownerWallet.sendActCloseAccount(
         deployer.address,
         0,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(closeTx).toHaveSuccessfulTx<ActCloseAccount>({

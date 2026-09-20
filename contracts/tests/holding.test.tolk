@@ -26,13 +26,13 @@ fun setupHoldingTest(): (FossFi, Treasury, Treasury, FossFiWallet, FossFiWallet)
 get fun `test deferred payment: pull rejected when allowDeferred is false by default`() {
     val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
 
-    val amount = ton("100");
+    val amount = grams("100");
     val res = payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
     expect(res).toHaveFailedTx<PullDeferredFunds>({
         from: payeeWallet.address,
@@ -50,7 +50,7 @@ get fun `test deferred payment: owner can toggle allowDeferred`() {
         deployer.address,
         1,
         true,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(toggleTx).toHaveAllSuccessfulTxs();
     expect(payerWallet.getWalletDataAll().allowDeferred).toBeTrue();
@@ -59,7 +59,7 @@ get fun `test deferred payment: owner can toggle allowDeferred`() {
         deployer.address,
         2,
         false,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(toggleOffTx).toHaveAllSuccessfulTxs();
     expect(payerWallet.getWalletDataAll().allowDeferred).toBeFalse();
@@ -67,17 +67,17 @@ get fun `test deferred payment: owner can toggle allowDeferred`() {
 
 get fun `test deferred payment: pull creates holding, deducts balance from payer`() {
     val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: ton("0.1") });
+    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
     val payerBalanceBefore = payerWallet.getJettonBalance();
-    val amount = ton("100");
+    val amount = grams("100");
 
     val res = payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
     expect(res).toHaveAllSuccessfulTxs();
 
@@ -87,15 +87,15 @@ get fun `test deferred payment: pull creates holding, deducts balance from payer
 
 get fun `test deferred payment: early claim fails with WaitMore`() {
     val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: ton("0.1") });
+    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
-    val amount = ton("50");
+    val amount = grams("50");
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
 
     val createdAt = testing.getNow();
@@ -114,7 +114,7 @@ get fun `test deferred payment: early claim fails with WaitMore`() {
         notDeployer.address,
         1,
         holdingAddr,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(resEarly).toHaveFailedTx<ClaimDeferredPayment>({
         from: payeeWallet.address,
@@ -125,17 +125,17 @@ get fun `test deferred payment: early claim fails with WaitMore`() {
 
 get fun `test deferred payment: claim after 72 hours transfers funds to payee and destroys holding`() {
     val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: ton("0.1") });
+    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
     val payeeBalanceBefore = payeeWallet.getJettonBalance();
-    val amount = ton("50");
+    val amount = grams("50");
 
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
 
     val createdAt = testing.getNow();
@@ -154,7 +154,7 @@ get fun `test deferred payment: claim after 72 hours transfers funds to payee an
         notDeployer.address,
         1,
         holdingAddr,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(resClaim).toHaveAllSuccessfulTxs();
 
@@ -164,19 +164,19 @@ get fun `test deferred payment: claim after 72 hours transfers funds to payee an
 
 get fun `test deferred payment: cancel by payer refunds 1x and penalizes payee with 1x burn`() {
     val (minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: ton("0.1") });
+    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
     val payerBalanceBefore = payerWallet.getJettonBalance();
     val payeeBalanceBefore = payeeWallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
-    val amount = ton("100");
+    val amount = grams("100");
 
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
 
     val createdAt = testing.getNow();
@@ -193,7 +193,7 @@ get fun `test deferred payment: cancel by payer refunds 1x and penalizes payee w
         deployer.address,
         1,
         holdingAddr,
-        { value: ton("0.3") },
+        { value: grams("0.3") },
     );
     expect(resCancel).toHaveAllSuccessfulTxs();
 
@@ -211,7 +211,7 @@ get fun `test deferred payment: cancel by payer refunds 1x and penalizes payee w
 get fun `test deferred payment: unauthenticated penalty message rejected`() {
     val (_minter, _deployer, _notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
 
-    val amount = ton("100");
+    val amount = grams("100");
     val createdAt = testing.getNow();
 
     // Send PenalizeDeferredRequester directly from an attacker address
@@ -219,7 +219,7 @@ get fun `test deferred payment: unauthenticated penalty message rejected`() {
     val penaltyMsg = createMessage({
         bounce: BounceMode.NoBounce,
         dest: payeeWallet.address,
-        value: ton("0.1"),
+        value: grams("0.1"),
         body: PenalizeDeferredRequester {
             queryId: 1,
             payer: payerWallet.address,
@@ -237,17 +237,17 @@ get fun `test deferred payment: unauthenticated penalty message rejected`() {
 
 get fun `test deferred payment: fallback reclaim after 30 days`() {
     val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: ton("0.1") });
+    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
     val payerBalanceBefore = payerWallet.getJettonBalance();
-    val amount = ton("50");
+    val amount = grams("50");
 
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
         1,
         deployer.address,
         amount,
-        { value: ton("0.4") },
+        { value: grams("0.4") },
     );
 
     val createdAt = testing.getNow();
@@ -266,7 +266,7 @@ get fun `test deferred payment: fallback reclaim after 30 days`() {
         deployer.address,
         1,
         holdingAddr,
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(resFallback).toHaveAllSuccessfulTxs();
 

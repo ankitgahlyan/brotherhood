@@ -25,7 +25,7 @@ fun main() {
             admin.address,
             null,
             newCode,
-            { value: ton("0.2") },
+            { value: grams("0.2") },
         )
         .waitForTrace();
 }

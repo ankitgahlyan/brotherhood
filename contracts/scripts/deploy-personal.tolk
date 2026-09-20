@@ -61,7 +61,7 @@ fun main() {
     // deploy the Personal Token minter
     val deployMsg = createMessage({
         bounce: false,
-        value: ton("1"),
+        value: grams("1"),
         dest: {
             workchain: BASECHAIN,
             stateInit,
@@ -78,7 +78,7 @@ fun main() {
             admin,
             0,
             buildJettonMetadataCell(metadata),
-            SendParams { value: ton("0.05") },
+            SendParams { value: grams("0.05") },
         );
     metaMsg.waitForFirstTransaction();
 
@@ -90,7 +90,7 @@ fun main() {
             issuerOwner,
             pmAddress,
             personalWalletAddress,
-            { value: ton("0.6") },
+            { value: grams("0.6") },
         );
     pointRes.waitForFirstTransaction();
 

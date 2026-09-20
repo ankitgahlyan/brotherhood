@@ -14,7 +14,7 @@ fun main() {
         admin.address,
         null,
         build("fossFi"),
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
 
     res.waitForTrace();

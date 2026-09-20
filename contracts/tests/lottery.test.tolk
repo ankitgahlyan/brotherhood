@@ -46,7 +46,7 @@ fun deployLotteryContract(owner: address, entryAmount: coins): address {
         owner,
         createMessage({
             bounce: false,
-            value: ton("10"),
+            value: grams("10"),
             dest: init,
             body: beginCell().endCell().beginParse(),
         }),
@@ -93,11 +93,11 @@ get fun `test lottery: reject entry with incorrect amount`() {
         deployer.address, // entries are routed through the minter (owner)
         createMessage({
             bounce: true,
-            value: ton("1"),
+            value: grams("1"),
             dest: lotteryAddress,
             body: EnterLottery {
                 sender: player.address,
-                amount: ton("1"),
+                amount: grams("1"),
             },
         }),
     );
@@ -126,7 +126,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
     });
 
     // empty-body deploy keeps the top-up value on the minter
-    val minterDeploy = minter.deploy(deployer.address, { value: ton("50") });
+    val minterDeploy = minter.deploy(deployer.address, { value: grams("50") });
     expect(minterDeploy).toHaveSuccessfulDeploy({
         to: minter.address,
     });
@@ -137,7 +137,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         entryAmount: LOTTERY_ENTRY_AMT,
         participants: [],
     });
-    val lotteryDeploy = lottery.deploy(minter.address, { value: ton("10") });
+    val lotteryDeploy = lottery.deploy(minter.address, { value: grams("10") });
     expect(lotteryDeploy).toHaveSuccessfulDeploy({
         to: lottery.address,
     });
@@ -171,7 +171,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         deployer.address,
         createMessage({
             bounce: true,
-            value: ton("0.2"),
+            value: grams("0.2"),
             dest: lottery.address,
             body: DrawWinner { queryId: 0 },
         }),

@@ -38,7 +38,7 @@ get fun `test admin: deploy should create minter without bounce`() {
         }.toCell(),
     });
 
-    val deployResult = minter.sendDeploy(deployer.address, { value: ton("10") });
+    val deployResult = minter.sendDeploy(deployer.address, { value: grams("10") });
     expect(deployResult).toHaveSuccessfulDeploy<TopUpTons>({
         from: deployer.address,
         to: minter.address,
@@ -53,13 +53,13 @@ get fun `test admin: deploy should create minter without bounce`() {
 get fun `test admin: minter admin should be able to mint jettons`() {
     val (minter, deployer, notDeployer) = setupTest();
     val supplyBefore = minter.getTotalSupply();
-    val deployerMint = ton("25");
-    val otherMint = ton("7");
+    val deployerMint = grams("25");
+    val otherMint = grams("7");
 
     val deployerWallet = mintTo(minter, deployer, deployer.address, deployerMint);
     val otherWallet = mintTo(minter, deployer, notDeployer.address, otherMint);
 
-    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint + ton("1"));
+    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint + grams("1"));
     expect(otherWallet.getJettonBalance()).toEqual(otherMint);
     expect(minter.getTotalSupply()).toEqual(supplyBefore + deployerMint + otherMint);
     assertSameShardPrefix(notDeployer.address, otherWallet.address);
@@ -72,9 +72,9 @@ get fun `test admin: non-admin should not be able to mint jettons`() {
     val mintResult = minter.sendMint(
         notDeployer.address,
         deployer.address,
-        ton("5"),
-        ton("0.05"),
-        ton("0.3"),
+        grams("5"),
+        grams("0.05"),
+        grams("0.3"),
     );
     expect(mintResult).toHaveFailedTx<MintNewJettons>({
         from: notDeployer.address,
@@ -83,7 +83,7 @@ get fun `test admin: non-admin should not be able to mint jettons`() {
     });
 
     val deployerWallet = userWallet(minter, deployer.address);
-    expect(deployerWallet.getJettonBalance()).toEqual(ton("1"));
+    expect(deployerWallet.getJettonBalance()).toEqual(grams("1"));
     expect(minter.getTotalSupply()).toEqual(supplyBefore);
 }
 
@@ -97,7 +97,7 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
         deployer.address,
         0,
         notDeployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(changeResult).toHaveSuccessfulTx<ChangeMinterAdmin>({
         from: deployer.address,
@@ -110,7 +110,7 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
         deployer.address,
         0,
         deployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(redundantPropose).toHaveFailedTx<ChangeMinterAdmin>({
         from: deployer.address,
@@ -122,7 +122,7 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
     val wrongClaimer = minter.sendClaimMinterAdmin(
         deployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(wrongClaimer).toHaveFailedTx<ClaimMinterAdmin>({
         from: deployer.address,
@@ -134,7 +134,7 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
     val earlyClaim = minter.sendClaimMinterAdmin(
         notDeployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(earlyClaim).toHaveFailedTx<ClaimMinterAdmin>({
         from: notDeployer.address,
@@ -147,7 +147,7 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
     val lateClaim = minter.sendClaimMinterAdmin(
         notDeployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(lateClaim).toHaveSuccessfulTx<ClaimMinterAdmin>({
         from: notDeployer.address,
@@ -160,13 +160,13 @@ get fun `test admin: proposed admin claims after the 1-week window and can then 
         notDeployer.address,
         0,
         deployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     testing.setNow(1_800_000_000 + 2 * ADMIN_HANDOVER_WAIT + 2);
     minter.sendClaimMinterAdmin(
         deployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(minter.getAdminAddress()).toEqual(deployer.address);
 }
@@ -179,7 +179,7 @@ get fun `test admin: current admin can drop a pending handoff within the window`
         deployer.address,
         0,
         notDeployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(minter.getAdminAddress()).toEqual(deployer.address);
 
@@ -187,7 +187,7 @@ get fun `test admin: current admin can drop a pending handoff within the window`
     val dropResult = minter.sendDropMinterAdmin(
         deployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(dropResult).toHaveSuccessfulTx<DropMinterAdmin>({
         from: deployer.address,
@@ -199,7 +199,7 @@ get fun `test admin: current admin can drop a pending handoff within the window`
     val droppedClaim = minter.sendClaimMinterAdmin(
         notDeployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(droppedClaim).toHaveFailedTx<ClaimMinterAdmin>({
         from: notDeployer.address,
@@ -212,7 +212,7 @@ get fun `test admin: current admin can drop a pending handoff within the window`
         deployer.address,
         0,
         notDeployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(rePropose).toHaveSuccessfulTx<ChangeMinterAdmin>({
         from: deployer.address,
@@ -223,7 +223,7 @@ get fun `test admin: current admin can drop a pending handoff within the window`
     minter.sendClaimMinterAdmin(
         notDeployer.address,
         0,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(minter.getAdminAddress()).toEqual(notDeployer.address);
 }
@@ -235,7 +235,7 @@ get fun `test admin: non-admin cannot change admin`() {
         notDeployer.address,
         0,
         deployer.address,
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(changeResult).toHaveFailedTx<ChangeMinterAdmin>({
         from: notDeployer.address,
@@ -256,7 +256,7 @@ get fun `test admin: admin can change metadata uri`() {
         deployer.address,
         0,
         buildTestMetadata(newUri),
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(changeResult).toHaveSuccessfulTx<ChangeMinterMetadata>({
         from: deployer.address,
@@ -279,7 +279,7 @@ get fun `test admin: non-admin cannot change metadata uri`() {
         notDeployer.address,
         0,
         buildTestMetadata("https://evil.meta.example/jetton.json"),
-        { bounce: false, value: ton("0.05") },
+        { bounce: false, value: grams("0.05") },
     );
     expect(changeResult).toHaveFailedTx<ChangeMinterMetadata>({
         from: notDeployer.address,
@@ -291,7 +291,7 @@ get fun `test admin: non-admin cannot change metadata uri`() {
 
 get fun `test admin: discovery should return expected wallet and optional owner`() {
     val (minter, deployer, notDeployer) = setupTest();
-    mintTo(minter, deployer, deployer.address, ton("1"));
+    mintTo(minter, deployer, deployer.address, grams("1"));
 
     val expectedDeployerWallet = userWallet(minter, deployer.address).address;
     val withOwnerRes = minter.sendRequestWalletAddress(
@@ -299,7 +299,7 @@ get fun `test admin: discovery should return expected wallet and optional owner`
         0,
         deployer.address,
         true,
-        { bounce: false, value: ton("0.1") },
+        { bounce: false, value: grams("0.1") },
     );
     val withOwnerTx = withOwnerRes.findTransaction<ResponseWalletAddress>({
         from: minter.address,
@@ -322,7 +322,7 @@ get fun `test admin: discovery should return expected wallet and optional owner`
         0,
         notDeployer.address,
         false,
-        { bounce: false, value: ton("0.1") },
+        { bounce: false, value: grams("0.1") },
     );
     val withoutOwnerTx = withoutOwnerRes.findTransaction<ResponseWalletAddress>({
         from: minter.address,
@@ -345,7 +345,7 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
         0,
         invalidOwner,
         false,
-        { bounce: false, value: ton("0.1") },
+        { bounce: false, value: grams("0.1") },
     );
     val noOwnerTx = noOwnerRes.findTransaction<ResponseWalletAddress>({
         from: minter.address,
@@ -363,7 +363,7 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
         0,
         invalidOwner,
         true,
-        { bounce: false, value: ton("0.1") },
+        { bounce: false, value: grams("0.1") },
     );
     val withOwnerTx = withOwnerRes.findTransaction<ResponseWalletAddress>({
         from: minter.address,
@@ -383,7 +383,7 @@ get fun `test admin: discovery should return none for non-basechain owner`() {
 
 get fun `test shard: wallet address should keep owner shard prefix in get/discovery/transfer`() {
     val (minter, deployer, _) = setupTest();
-    val _senderWallet = mintTo(minter, deployer, deployer.address, ton("100"));
+    val _senderWallet = mintTo(minter, deployer, deployer.address, grams("100"));
 
     var prefix = 0;
     while (prefix < 32) {
@@ -396,7 +396,7 @@ get fun `test shard: wallet address should keep owner shard prefix in get/discov
             0,
             owner,
             true,
-            { bounce: false, value: ton("0.1") },
+            { bounce: false, value: grams("0.1") },
         );
         val discoveryTx = discovery.findTransaction<ResponseWalletAddress>({
             from: minter.address,
@@ -422,17 +422,17 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
         deployer.address,
         0,
         dao.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(changeDaoResult).toNotHaveTx({ bounced: true });
     expect(minter.getDaoAddress()).toEqual(dao.address);
 
-    val mintAmount = ton("50");
+    val mintAmount = grams("50");
     val daoMintResult = minter.sendMintNewJettons(
         dao.address,
         0,
         notDeployer.address,
-        ton("0.1"),
+        grams("0.1"),
         InternalTransferStep {
             queryId: 0,
             jettonAmount: mintAmount,
@@ -443,7 +443,7 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
             forwardTonAmount: 0,
             forwardPayload: createEmptyCell().beginParse(),
         },
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(daoMintResult).toNotHaveTx({ bounced: true });
 
@@ -452,7 +452,7 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
         dao.address,
         0,
         newDao.address,
-        { value: ton("0.1") },
+        { value: grams("0.1") },
     );
     expect(daoChangeResult).toNotHaveTx({ bounced: true });
     expect(minter.getDaoAddress()).toEqual(newDao.address);
@@ -461,7 +461,7 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
         notDeployer.address,
         0,
         notDeployer.address,
-        ton("0.1"),
+        grams("0.1"),
         InternalTransferStep {
             queryId: 0,
             jettonAmount: mintAmount,
@@ -472,7 +472,7 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
             forwardTonAmount: 0,
             forwardPayload: createEmptyCell().beginParse(),
         },
-        { value: ton("0.2") },
+        { value: grams("0.2") },
     );
     expect(unauthorizedMintResult).toHaveTx({
         from: notDeployer.address,

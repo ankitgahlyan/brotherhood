@@ -13,7 +13,7 @@ import "@contracts/common/messages"
 
 import "test-utils"
 
-const MAX_JETTON_VALUE = ton("100000")
+const MAX_JETTON_VALUE = grams("100000")
 
 get fun `test state: should mint max jetton value`() {
     val (minter, deployer, _) = setupTest();
@@ -24,8 +24,8 @@ get fun `test state: should mint max jetton value`() {
         deployer.address,
         recipient,
         MAX_JETTON_VALUE,
-        ton("0.05"),
-        ton("0.3"),
+        grams("0.05"),
+        grams("0.3"),
     );
     expect(mintResult).toHaveSuccessfulTx<MintNewJettons>({
         from: deployer.address,
@@ -37,7 +37,7 @@ get fun `test state: should mint max jetton value`() {
     });
 
     expect(wallet.getJettonBalance()).toEqual(MAX_JETTON_VALUE);
-    expect(minter.getTotalSupply()).toEqual(MAX_JETTON_VALUE + ton("1"));
+    expect(minter.getTotalSupply()).toEqual(MAX_JETTON_VALUE + grams("1"));
 }
 
 get fun `test state: wallet storage and init-state bounds should match fee constants`() {
@@ -45,7 +45,13 @@ get fun `test state: wallet storage and init-state bounds should match fee const
     val recipient = randomAddress();
     val recipientWallet = userWallet(minter, recipient);
 
-    val mintResult = minter.sendMint(deployer.address, recipient, TEST_JETTON_UNIT, 0, ton("0.3"));
+    val mintResult = minter.sendMint(
+        deployer.address,
+        recipient,
+        TEST_JETTON_UNIT,
+        0,
+        grams("0.3"),
+    );
     expect(mintResult).toHaveSuccessfulTx<InternalTransferStep>({
         from: minter.address,
         to: recipientWallet.address,

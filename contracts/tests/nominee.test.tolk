@@ -9,7 +9,7 @@ import "@contracts/common/messages"
 import "test-utils"
 
 get fun `test nominee: allows setting nominee when unset and updating by owner`() {
-    val (wallet, owner, _minter, nominee1) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, nominee1) = setupDirectWallet(grams("10"));
 
     // Verify initial nominee is null
     val initData = wallet.getWalletDataAll();
@@ -24,7 +24,7 @@ get fun `test nominee: allows setting nominee when unset and updating by owner`(
         null,
         null,
         nominee1.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(setTx).toHaveSuccessfulTx<ChangeProfile>({
@@ -45,7 +45,7 @@ get fun `test nominee: allows setting nominee when unset and updating by owner`(
         null,
         null,
         nominee2.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(updateTx).toHaveSuccessfulTx<ChangeProfile>({
@@ -59,7 +59,7 @@ get fun `test nominee: allows setting nominee when unset and updating by owner`(
 }
 
 get fun `test nominee: non-owner change nominee fails with IncorrectSender`() {
-    val (wallet, _owner, _minter, outsider) = setupDirectWallet(ton("10"));
+    val (wallet, _owner, _minter, outsider) = setupDirectWallet(grams("10"));
     val nominee = testing.treasury("nominee-target");
 
     val tx = wallet.sendChangeProfile(
@@ -69,7 +69,7 @@ get fun `test nominee: non-owner change nominee fails with IncorrectSender`() {
         null,
         null,
         nominee.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(tx).toHaveFailedTx({
@@ -79,7 +79,7 @@ get fun `test nominee: non-owner change nominee fails with IncorrectSender`() {
 }
 
 get fun `test nominee: allows setting nominee to self or owner address`() {
-    val (wallet, owner, _minter, _outsider) = setupDirectWallet(ton("10"));
+    val (wallet, owner, _minter, _outsider) = setupDirectWallet(grams("10"));
 
     // Setting nominee to owner
     val txOwner = wallet.sendChangeProfile(
@@ -89,7 +89,7 @@ get fun `test nominee: allows setting nominee to self or owner address`() {
         null,
         null,
         owner.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(txOwner).toHaveSuccessfulTx<ChangeProfile>({
@@ -108,7 +108,7 @@ get fun `test nominee: allows setting nominee to self or owner address`() {
         null,
         null,
         wallet.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(txSelf).toHaveSuccessfulTx<ChangeProfile>({
@@ -136,7 +136,7 @@ get fun `test nominee: closure transfers remaining assets to updated nominee`() 
         null,
         null,
         chosenNominee.address,
-        { value: ton("1") },
+        { value: grams("1") },
     );
     expect(changeTx).toHaveSuccessfulTx<ChangeProfile>({
         from: notDeployer.address,
@@ -147,7 +147,7 @@ get fun `test nominee: closure transfers remaining assets to updated nominee`() 
     val closeTx = userWallet.sendActCloseAccount(
         notDeployer.address,
         0,
-        { value: ton("1") },
+        { value: grams("1") },
     );
 
     expect(closeTx).toHaveSuccessfulTx<ActCloseAccount>({
