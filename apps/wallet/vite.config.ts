@@ -210,9 +210,10 @@ export default defineConfig(() => {
       chunkSizeWarningLimit: 3000,
       rollupOptions: isTwa
         ? {
-            // Key 'index' forces Vite to emit dist-twa/index.html (not index.twa.html).
-            // Using a string input would name the output after the source filename.
-            input: { index: path.resolve(projectRoot, 'index.twa.html') },
+            // Use index.twa.html as entry so the Telegram SDK script loads
+            // synchronously. Vite will emit it as index.twa.html; the
+            // copy-to-dist.mjs post-build script renames it to index.html.
+            input: path.resolve(projectRoot, 'index.twa.html'),
           }
         : {},
     },

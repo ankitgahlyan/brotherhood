@@ -13,8 +13,14 @@
  *  4. Cleans up build artifacts that shouldn't ship (statoscope, etc.).
  */
 
-import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  renameSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,6 +45,22 @@ const distDir = join(WALLET_DIR, isTwa ? 'dist-twa' : 'dist');
 
 console.log(`[copy-to-dist] Processing target: ${target.toUpperCase()}`);
 console.log(`[copy-to-dist] dist dir: ${distDir}`);
+
+// ---------------------------------------------------------------------------
+// 0. Rename TWA HTML output (Vite names it after the source file)
+// ---------------------------------------------------------------------------
+// Vite names the HTML output after the source filename regardless of the
+// rollupOptions.input key. For TWA we use index.twa.html as source, so Vite
+// emits dist-twa/index.twa.html. Rename it to index.html so all downstream
+// scripts (gh-pages-404.mjs, deploy workflows) work without special-casing.
+if (isTwa) {
+  const twaSrc = join(distDir, 'index.twa.html');
+  const twaDst = join(distDir, 'index.html');
+  if (existsSync(twaSrc) && !existsSync(twaDst)) {
+    renameSync(twaSrc, twaDst);
+    console.log('[copy-to-dist] ✅ Renamed index.twa.html → index.html');
+  }
+}
 
 if (!existsSync(join(distDir, 'index.html'))) {
   console.error(
