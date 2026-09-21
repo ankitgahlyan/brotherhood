@@ -9,9 +9,20 @@ import { VitePWA } from 'vite-plugin-pwa';
 import type { ManifestOptions } from 'vite-plugin-pwa';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
-const base = (process.env.VITE_BASE ?? '/brotherhood/').replace(/\/?$/, '/');
 
-const pwaManifest: Partial<ManifestOptions> = {
+// Determine build target: TWA (Telegram Mini App) vs Web (standalone PWA)
+const isTwa =
+  process.env.IS_TELEGRAM_APP === '1' || process.env.VITE_APP_TARGET === 'twa';
+
+// Web default base: /brotherhood/  |  TWA default base: /brotherhood/twa/
+const defaultBase = isTwa ? '/brotherhood/twa/' : '/brotherhood/';
+const base = (process.env.VITE_BASE ?? defaultBase).replace(/\/?$/, '/');
+
+// Output directory: dist (web) or dist-twa (twa) — within apps/wallet/
+const outDir = isTwa ? 'dist-twa' : 'dist';
+
+// Web PWA manifest — not used in TWA builds (Telegram host manages the UX)
+const webPwaManifest: Partial<ManifestOptions> = {
   name: 'BrotherHood Wallet',
   short_name: 'BrotherHood',
   description:
@@ -57,6 +68,22 @@ const pwaManifest: Partial<ManifestOptions> = {
   ],
 };
 
+// TWA manifest: minimal — Telegram controls install/launch UX
+const twaPwaManifest: Partial<ManifestOptions> = {
+  name: 'BrotherHood Wallet',
+  short_name: 'BrotherHood',
+  description: 'BrotherHood Wallet — Telegram Mini App',
+  lang: 'en',
+  start_url: base,
+  scope: base,
+  display: 'fullscreen',
+  theme_color: '#0b0e14',
+  background_color: '#0b0e14',
+  icons: [{ src: `${base}favicon.svg`, sizes: 'any', type: 'image/svg+xml' }],
+};
+
+const pwaManifest = isTwa ? twaPwaManifest : webPwaManifest;
+
 export default defineConfig(() => {
   const isHttps = process.env.VITE_HTTPS === 'true';
   const certKeyPath = path.resolve(projectRoot, '../../.cert/dev-key.pem');
@@ -77,6 +104,8 @@ export default defineConfig(() => {
     envPrefix: ['VITE_', 'TONCENTER_'],
     define: {
       global: 'globalThis',
+      // Expose build target to runtime so components can branch on it
+      'import.meta.env.VITE_APP_TARGET': JSON.stringify(isTwa ? 'twa' : 'web'),
     },
     plugins: [
       react(),
@@ -90,77 +119,101 @@ export default defineConfig(() => {
         ],
       }),
       tailwindcss(),
-      VitePWA({
-        registerType: 'prompt',
-        injectRegister: false,
-        devOptions: {
-          enabled: false,
-        },
-        manifest: pwaManifest,
-        workbox: {
-          globPatterns: [
-            '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff,woff2,ttf,eot,webmanifest}',
-          ],
-          maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
-          navigateFallback: `${base}index.html`,
-          navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
-          runtimeCaching: [
-            {
-              urlPattern: ({ request }) =>
-                request.destination === 'style' ||
-                request.destination === 'script' ||
-                request.destination === 'worker',
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'brotherhood-static-resources',
-                expiration: {
-                  maxEntries: 150,
-                  maxAgeSeconds: 60 * 24 * 60 * 60,
-                },
+      VitePWA(
+        isTwa
+          ? {
+              // TWA: emit manifest only, no service-worker (Telegram manages lifecycle)
+              registerType: 'prompt',
+              injectRegister: false,
+              devOptions: { enabled: false },
+              manifest: pwaManifest,
+              workbox: {
+                // Disable SW generation for TWA — Telegram WebView doesn't need it
+                navigateFallback: null,
+                globPatterns: [],
+              },
+            }
+          : {
+              // Web: full PWA with service worker and runtime caching
+              registerType: 'prompt',
+              injectRegister: false,
+              devOptions: { enabled: false },
+              manifest: pwaManifest,
+              workbox: {
+                globPatterns: [
+                  '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff,woff2,ttf,eot,webmanifest}',
+                ],
+                maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+                navigateFallback: `${base}index.html`,
+                navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
+                runtimeCaching: [
+                  {
+                    urlPattern: ({ request }) =>
+                      request.destination === 'style' ||
+                      request.destination === 'script' ||
+                      request.destination === 'worker',
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'brotherhood-static-resources',
+                      expiration: {
+                        maxEntries: 150,
+                        maxAgeSeconds: 60 * 24 * 60 * 60,
+                      },
+                    },
+                  },
+                  {
+                    urlPattern: ({ request }) =>
+                      request.destination === 'image',
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'brotherhood-images',
+                      expiration: {
+                        maxEntries: 300,
+                        maxAgeSeconds: 60 * 24 * 60 * 60,
+                      },
+                    },
+                  },
+                  {
+                    urlPattern: ({ request }) => request.destination === 'font',
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'brotherhood-fonts',
+                      expiration: {
+                        maxEntries: 60,
+                        maxAgeSeconds: 365 * 24 * 60 * 60,
+                      },
+                    },
+                  },
+                  {
+                    urlPattern:
+                      /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'brotherhood-telegram-sdk',
+                      expiration: {
+                        maxEntries: 5,
+                        maxAgeSeconds: 30 * 24 * 60 * 60,
+                      },
+                      cacheableResponse: {
+                        statuses: [0, 200],
+                      },
+                    },
+                  },
+                ],
               },
             },
-            {
-              urlPattern: ({ request }) => request.destination === 'image',
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'brotherhood-images',
-                expiration: {
-                  maxEntries: 300,
-                  maxAgeSeconds: 60 * 24 * 60 * 60,
-                },
-              },
-            },
-            {
-              urlPattern: ({ request }) => request.destination === 'font',
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'brotherhood-fonts',
-                expiration: {
-                  maxEntries: 60,
-                  maxAgeSeconds: 365 * 24 * 60 * 60,
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'brotherhood-telegram-sdk',
-                expiration: {
-                  maxEntries: 5,
-                  maxAgeSeconds: 30 * 24 * 60 * 60,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
-        },
-      }),
+      ),
     ],
     build: {
+      outDir,
+      emptyOutDir: true,
       chunkSizeWarningLimit: 3000,
+      rollupOptions: isTwa
+        ? {
+            // TWA uses dedicated HTML entry so the Telegram SDK script is synchronous
+            input: path.resolve(projectRoot, 'index.twa.html'),
+          }
+        : {},
     },
     legacy: {
       skipWebSocketTokenCheck: true,

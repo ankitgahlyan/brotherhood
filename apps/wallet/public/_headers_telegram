@@ -1,0 +1,19 @@
+/*
+ * _headers_telegram — Cloudflare Pages / Netlify header rules for the TWA deployment.
+ *
+ * Rules applied to ALL routes (/brotherhood/twa/*):
+ *   - Prevent search engine indexing (TMA is opened inside Telegram, not via crawlers)
+ *   - Allow framing only from official Telegram web origins
+ *   - Security hardening compatible with Telegram WebView
+ *
+ * Copy-to-dist pipeline (scripts/copy-to-dist.mjs) renames this to `_headers`
+ * when assembling the TWA output directory.
+ */
+
+/*
+  X-Robots-Tag: noindex, nofollow
+  X-Frame-Options: ALLOW-FROM https://web.telegram.org
+  Content-Security-Policy: frame-ancestors 'self' https://web.telegram.org https://*.telegram.org
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

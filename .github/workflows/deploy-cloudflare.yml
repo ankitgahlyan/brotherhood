@@ -1,0 +1,176 @@
+# Cloudflare Pages Deployment — Web and/or TWA
+# Manual dispatch or triggered by push to main.
+# Deploys each target to its own Cloudflare Pages project:
+#   Web: brotherhood-wallet  (configurable via CLOUDFLARE_PAGES_WEB_PROJECT secret)
+#   TWA: brotherhood-twa     (configurable via CLOUDFLARE_PAGES_TMA_PROJECT secret)
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deploy target'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - web
+          - twa
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloudflare-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build shared packages
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-packages:
+    name: Build shared packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build packages
+        run: bun run build:packages
+
+      - name: Cache packages build
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            packages/walletkit/dist
+            packages/v4ledger-adapter/dist
+            packages/wallet-core/dist
+          key: cf-packages-${{ github.sha }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deploy Web to Cloudflare Pages (brotherhood-wallet)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-web:
+    name: Deploy Web → Cloudflare Pages
+    needs: build-packages
+    if: >
+      github.event_name == 'push' ||
+      github.event.inputs.target == 'both' ||
+      github.event.inputs.target == 'web'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore packages build
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/walletkit/dist
+            packages/v4ledger-adapter/dist
+            packages/wallet-core/dist
+          key: cf-packages-${{ github.sha }}
+
+      - name: Build Web
+        env:
+          VITE_BASE: /
+          VITE_APP_TARGET: web
+          TONCENTER_MAINNET_API_KEY: ${{ secrets.TONCENTER_MAINNET_API_KEY }}
+          TONCENTER_TESTNET_API_KEY: ${{ secrets.TONCENTER_TESTNET_API_KEY }}
+        run: |
+          bun run --cwd apps/wallet build:web
+          node scripts/copy-to-dist.mjs --target=web
+
+      - name: Deploy to Cloudflare Pages (Web)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_WEB_PROJECT: ${{ vars.CLOUDFLARE_PAGES_WEB_PROJECT || 'brotherhood-wallet' }}
+        run: |
+          npx wrangler pages deploy apps/wallet/dist \
+            --project-name="${CLOUDFLARE_PAGES_WEB_PROJECT}" \
+            --branch=main \
+            --commit-dirty=true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deploy TWA to Cloudflare Pages (brotherhood-twa)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-twa:
+    name: Deploy TWA → Cloudflare Pages
+    needs: build-packages
+    if: >
+      github.event_name == 'push' ||
+      github.event.inputs.target == 'both' ||
+      github.event.inputs.target == 'twa'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore packages build
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/walletkit/dist
+            packages/v4ledger-adapter/dist
+            packages/wallet-core/dist
+          key: cf-packages-${{ github.sha }}
+
+      - name: Build TWA
+        env:
+          VITE_BASE: /
+          IS_TELEGRAM_APP: '1'
+          TONCENTER_MAINNET_API_KEY: ${{ secrets.TONCENTER_MAINNET_API_KEY }}
+          TONCENTER_TESTNET_API_KEY: ${{ secrets.TONCENTER_TESTNET_API_KEY }}
+        run: |
+          bun run --cwd apps/wallet build:twa
+          node scripts/copy-to-dist.mjs --target=twa
+
+      - name: Verify TWA headers
+        run: |
+          grep -q "noindex" apps/wallet/dist-twa/_headers && \
+            echo "✅ TWA _headers contain noindex" || \
+            (echo "❌ TWA _headers missing noindex" && exit 1)
+          grep -q "telegram.org" apps/wallet/dist-twa/_headers && \
+            echo "✅ TWA frame-ancestors present" || \
+            (echo "❌ TWA frame-ancestors missing" && exit 1)
+
+      - name: Deploy to Cloudflare Pages (TWA)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_TMA_PROJECT: ${{ vars.CLOUDFLARE_PAGES_TMA_PROJECT || 'brotherhood-twa' }}
+        run: |
+          npx wrangler pages deploy apps/wallet/dist-twa \
+            --project-name="${CLOUDFLARE_PAGES_TMA_PROJECT}" \
+            --branch=main \
+            --commit-dirty=true

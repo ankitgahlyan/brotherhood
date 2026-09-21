@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="BrotherHood" />
+    <meta name="theme-color" content="#0b0e14" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Telegram Mini App: noindex, prevent search engine crawling -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>BrotherHood Wallet</title>
+    <!-- Telegram WebApp SDK must load synchronously before app code -->
+    <script src="/telegram-web-app.js"></script>
+    <script src="/buffer-polyfill.js"></script>
+    <script>
+      (function () {
+        try {
+          // Apply saved theme immediately to avoid FOUC
+          var stored = localStorage.getItem('brotherhood-theme');
+          var isDark =
+            stored === 'dark' ||
+            stored === 'oled' ||
+            ((!stored || stored === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+          // In TWA, prefer Telegram's colorScheme if available
+          if (
+            window.Telegram &&
+            window.Telegram.WebApp &&
+            window.Telegram.WebApp.colorScheme
+          ) {
+            isDark = window.Telegram.WebApp.colorScheme === 'dark';
+          }
+
+          var theme = stored === 'oled' ? 'oled' : isDark ? 'dark' : 'light';
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute('content', isDark ? 'dark' : 'light');
+
+          var palette = localStorage.getItem('brotherhood-palette') || 'violet';
+          document.documentElement.setAttribute('data-palette', palette);
+
+          // Mark as TWA environment for runtime checks
+          document.documentElement.setAttribute('data-twa', 'true');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

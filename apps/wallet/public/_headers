@@ -1,0 +1,23 @@
+/*
+ * _headers — Cloudflare Pages / Netlify header rules for the Web (PWA) deployment.
+ *
+ * Applied to ALL routes (/brotherhood/*):
+ *   - Standard security headers for standalone PWA
+ *   - Allows framing from 'self' only (no Telegram embedding on web variant)
+ */
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/*.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+
+/sw.js
+  Cache-Control: no-cache
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
