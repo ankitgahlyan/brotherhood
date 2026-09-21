@@ -1,10 +1,9 @@
-/*
- * _headers — Cloudflare Pages / Netlify header rules for the Web (PWA) deployment.
- *
- * Applied to ALL routes (/brotherhood/*):
- *   - Standard security headers for standalone PWA
- *   - Allows framing from 'self' only (no Telegram embedding on web variant)
- */
+# _headers — Cloudflare Pages header rules for the Web (PWA) deployment.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Applied to all routes (/brotherhood/*):
+#   - Standard security headers for standalone PWA
+#   - Allows framing from 'self' only (no Telegram embedding on web variant)
 
 /*
   X-Content-Type-Options: nosniff
@@ -17,7 +16,10 @@
   Content-Type: application/manifest+json; charset=utf-8
 
 /sw.js
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/workbox-*.js
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

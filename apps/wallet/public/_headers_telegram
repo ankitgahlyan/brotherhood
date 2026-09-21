@@ -1,19 +1,27 @@
-/*
- * _headers_telegram — Cloudflare Pages / Netlify header rules for the TWA deployment.
- *
- * Rules applied to ALL routes (/brotherhood/twa/*):
- *   - Prevent search engine indexing (TMA is opened inside Telegram, not via crawlers)
- *   - Allow framing only from official Telegram web origins
- *   - Security hardening compatible with Telegram WebView
- *
- * Copy-to-dist pipeline (scripts/copy-to-dist.mjs) renames this to `_headers`
- * when assembling the TWA output directory.
- */
+# _headers_telegram — Cloudflare Pages header rules for the TWA deployment.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Applied to all routes when serving the Telegram Mini App:
+#   - Prevent search engine indexing (TMA opens inside Telegram, not via crawlers)
+#   - Allow framing ONLY from official Telegram web origins (CSP frame-ancestors)
+#   - X-Frame-Options ALLOW-FROM is deprecated; frame-ancestors is the modern standard
+#   - Security hardening compatible with Telegram WebView
+#
+# scripts/copy-to-dist.mjs renames this file to `_headers` when assembling
+# the TWA output directory.
 
 /*
   X-Robots-Tag: noindex, nofollow
-  X-Frame-Options: ALLOW-FROM https://web.telegram.org
   Content-Security-Policy: frame-ancestors 'self' https://web.telegram.org https://*.telegram.org
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/workbox-*.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate

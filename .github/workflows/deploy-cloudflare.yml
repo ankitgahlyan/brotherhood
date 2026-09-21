@@ -1,15 +1,13 @@
 # Cloudflare Pages Deployment — Web and/or TWA
-# Manual dispatch or triggered by push to main.
+# Manual-only: trigger from the GitHub Actions UI when you want to deploy
+# to Cloudflare Pages. For local deploys use: bash scripts/deploy-cloudflare.sh
+#
 # Deploys each target to its own Cloudflare Pages project:
-#   Web: brotherhood-wallet  (configurable via CLOUDFLARE_PAGES_WEB_PROJECT secret)
-#   TWA: brotherhood-twa     (configurable via CLOUDFLARE_PAGES_TMA_PROJECT secret)
+#   Web: brotherhood-wallet  (configurable via CLOUDFLARE_PAGES_WEB_PROJECT var)
+#   TWA: brotherhood-twa     (configurable via CLOUDFLARE_PAGES_TMA_PROJECT var)
 name: Deploy to Cloudflare Pages
 
 on:
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
     inputs:
       target:

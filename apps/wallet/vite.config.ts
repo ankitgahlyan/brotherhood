@@ -210,8 +210,9 @@ export default defineConfig(() => {
       chunkSizeWarningLimit: 3000,
       rollupOptions: isTwa
         ? {
-            // TWA uses dedicated HTML entry so the Telegram SDK script is synchronous
-            input: path.resolve(projectRoot, 'index.twa.html'),
+            // Key 'index' forces Vite to emit dist-twa/index.html (not index.twa.html).
+            // Using a string input would name the output after the source filename.
+            input: { index: path.resolve(projectRoot, 'index.twa.html') },
           }
         : {},
     },
