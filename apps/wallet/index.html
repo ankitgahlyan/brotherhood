@@ -50,6 +50,28 @@
         } catch (e) {}
       })();
     </script>
+    <!-- GitHub Pages SPA deep-link restore.
+         When 404.html redirects here it appends ?p=<encoded-path>&q=<encoded-search>.
+         Restore the intended URL before the router boots so TanStack Router
+         sees the correct path. -->
+    <script>
+      (function () {
+        var sp = new URLSearchParams(window.location.search);
+        var p = sp.get('p');
+        if (p) {
+          var q = sp.get('q') || '';
+          sp.delete('p');
+          sp.delete('q');
+          var rest = sp.toString();
+          var search = q + (rest ? (q ? '&' : '?') + rest : '');
+          window.history.replaceState(
+            null,
+            '',
+            p + search + (window.location.hash || ''),
+          );
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

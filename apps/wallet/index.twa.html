@@ -60,6 +60,26 @@
         } catch (e) {}
       })();
     </script>
+    <!-- GitHub Pages SPA deep-link restore (same as index.html).
+         404.html redirects /brotherhood/twa/<path> → /brotherhood/twa/?p=<encoded-path> -->
+    <script>
+      (function () {
+        var sp = new URLSearchParams(window.location.search);
+        var p = sp.get('p');
+        if (p) {
+          var q = sp.get('q') || '';
+          sp.delete('p');
+          sp.delete('q');
+          var rest = sp.toString();
+          var search = q + (rest ? (q ? '&' : '?') + rest : '');
+          window.history.replaceState(
+            null,
+            '',
+            p + search + (window.location.hash || ''),
+          );
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
