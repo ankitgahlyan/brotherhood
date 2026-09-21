@@ -22,6 +22,7 @@ import {
   Trash2,
   Check,
   RefreshCw,
+  Wallet,
   X,
 } from 'lucide-react';
 import {
@@ -35,6 +36,7 @@ import {
   useDeveloperMode,
   setDeveloperModalOpen,
 } from '@/core/lib/developer-mode';
+import { setSettingsModalOpen } from '@/core/lib/settings-modal-state';
 import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
@@ -42,6 +44,7 @@ import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
+import { SettingsWalletsModal } from '../settings-wallets';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -80,7 +83,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
         : 'text-foreground hover:bg-muted/80'
     }`}
   >
-    <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
+    <span className="shrink-0 text-muted-foreground">{icon}</span>
     <div className="flex-1 min-w-0">
       <div className="text-sm font-semibold truncate">{label}</div>
       {subtitle && (
@@ -88,7 +91,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
       )}
     </div>
     <ChevronRight
-      className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`}
+      className={`w-4 h-4 shrink-0 ${danger ? 'text-red-400' : 'text-muted-foreground'}`}
     />
   </button>
 );
@@ -151,7 +154,7 @@ export const SettingsDropdown: React.FC = () => {
     showFastSend,
     setShowFastSend,
   } = useAuth();
-  const { getDecryptedMnemonic } = useWallet();
+  const { getDecryptedMnemonic, savedWallets } = useWallet();
   const {
     isSupported: isBiometricsSupported,
     isEnabled: isBiometricsEnabled,
@@ -160,9 +163,23 @@ export const SettingsDropdown: React.FC = () => {
     disable: disableBiometrics,
   } = useBiometrics();
 
-  const [panel, setPanel] = useState<'menu' | 'create' | 'mnemonic' | null>(
-    null,
-  );
+  const [panel, setPanelState] = useState<
+    'menu' | 'create' | 'mnemonic' | null
+  >(null);
+
+  const setPanel = (next: 'menu' | 'create' | 'mnemonic' | null) => {
+    setPanelState(next);
+    setSettingsModalOpen(next !== null);
+  };
+
+  const handleOpenMenu = () => {
+    setPanel('menu');
+  };
+
+  const handleCloseMenu = () => {
+    setPanel(null);
+  };
+  const [isManageWalletsOpen, setIsManageWalletsOpen] = useState(false);
   const [isBiometricPromptOpen, setIsBiometricPromptOpen] = useState(false);
   const [biometricPasscode, setBiometricPasscode] = useState('');
   const [biometricError, setBiometricError] = useState('');
@@ -330,8 +347,8 @@ export const SettingsDropdown: React.FC = () => {
   return (
     <>
       <button
-        onClick={() => setPanel('menu')}
-        className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground"
+        onClick={handleOpenMenu}
+        className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground cursor-pointer"
         aria-label="Settings"
         data-testid="wallet-menu"
       >
@@ -340,7 +357,7 @@ export const SettingsDropdown: React.FC = () => {
 
       <Modal.Container
         isOpened={panel === 'menu'}
-        onOpenChange={(open) => !open && setPanel(null)}
+        onOpenChange={(open) => !open && handleCloseMenu()}
         className="max-w-md h-[90vh] md:h-[85vh] flex flex-col p-0 overflow-hidden"
       >
         <div className="flex-1 flex flex-col min-h-0 bg-background text-foreground overflow-hidden">
@@ -424,7 +441,7 @@ export const SettingsDropdown: React.FC = () => {
                           data-testid={`palette-option-${pal.id}`}
                         >
                           <span
-                            className={`w-6 h-6 rounded-full bg-gradient-to-tr ${pal.gradientClass} flex items-center justify-center shadow-sm transition-transform ${
+                            className={`w-6 h-6 rounded-full bg-linear-to-tr ${pal.gradientClass} flex items-center justify-center shadow-sm transition-transform ${
                               isSelected
                                 ? 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-card'
                                 : 'opacity-85 hover:opacity-100 hover:scale-105'
@@ -553,6 +570,15 @@ export const SettingsDropdown: React.FC = () => {
                   }
                   onClick={handleCheckForUpdate}
                   disabled={isCheckingUpdate}
+                />
+                <ActionRow
+                  icon={<Wallet className="w-5 h-5" />}
+                  label="Manage Wallets"
+                  subtitle={`${savedWallets.length} ${savedWallets.length === 1 ? 'wallet' : 'wallets'} saved`}
+                  onClick={() => {
+                    setPanel(null);
+                    setIsManageWalletsOpen(true);
+                  }}
                 />
                 <ActionRow
                   icon={<Plus className="w-5 h-5" />}
@@ -690,6 +716,11 @@ export const SettingsDropdown: React.FC = () => {
       <InstallPromptDialog
         open={isInstallOpen}
         onOpenChange={setIsInstallOpen}
+      />
+
+      <SettingsWalletsModal
+        isOpen={isManageWalletsOpen}
+        onClose={() => setIsManageWalletsOpen(false)}
       />
     </>
   );

@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "dev": "bun run --cwd apps/wallet dev",
+    "dev:https": "bun scripts/generate-dev-cert.mjs && VITE_HTTPS=true bun run dev",
     "generate-routes": "bun run --cwd apps/wallet generate-routes",
     "build": "bun run build:packages && bun run --cwd apps/wallet build",
     "build:packages": "bun run --cwd packages/walletkit build && bun run --cwd packages/v4ledger-adapter build && bun run --cwd packages/wallet-core build",

@@ -14,6 +14,7 @@ import { UnstakeMode } from '@ton/walletkit';
 
 import { StakingSettings } from '../staking-settings';
 import { StakingInfo } from '../staking-info';
+import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
 
 import { Button } from '@/core/components/ui/button';
 import { CenteredAmountInput } from '@/core/components/ui/centered-amount-input';
@@ -157,130 +158,138 @@ export const StakingInterface: FC = () => {
         ))}
       </div>
 
-      {/* Amount */}
-      <div className="py-2">
-        <CenteredAmountInput
-          value={amount}
-          onValueChange={handleAmountChange}
-          ticker={isStake ? STAKE_TICKER : STAKED_TICKER}
-          baseTestId="stake-amount"
-        />
-      </div>
-
-      {/* Balances + Max */}
-      <div className="space-y-2 rounded-2xl bg-secondary/50 border border-border/60 p-4 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Available</span>
-          <span className="flex items-center gap-2">
-            <span className="font-semibold text-foreground tabular-nums">
-              {formatLargeValue(availableGram, 4)} GRAM
-            </span>
-            {isStake && parseFloat(availableGram) > 0 && (
-              <button
-                type="button"
-                onClick={handleMax}
-                className="font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Max
-              </button>
-            )}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Staked</span>
-          <span className="flex items-center gap-2">
-            <span className="font-semibold text-foreground tabular-nums">
-              {formatLargeValue(stakedTs, 4)} tsTON
-            </span>
-            {!isStake && parseFloat(stakedTs) > 0 && (
-              <button
-                type="button"
-                onClick={handleMax}
-                className="font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Max
-              </button>
-            )}
-          </span>
-        </div>
-      </div>
-
-      {/* Unstake method */}
-      {!isStake && (
-        <div className="space-y-2">
-          <span className="block text-sm font-medium text-foreground">
-            Unstake method
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            {UNSTAKE_MODES.map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setUnstakeMode(mode)}
-                className={cn(
-                  'rounded-xl border-2 py-2 text-xs font-semibold transition-colors',
-                  unstakeMode === mode
-                    ? 'border-blue-500 bg-blue-500/10 text-blue-500'
-                    : 'border-border bg-secondary text-foreground hover:bg-secondary/80',
-                )}
-              >
-                {label}
-              </button>
-            ))}
+      <SwipeableSubTabs
+        tabs={['stake', 'unstake']}
+        activeTab={tab}
+        onTabChange={(t) => handleTab(t as 'stake' | 'unstake')}
+      >
+        <div className="space-y-5">
+          {/* Amount */}
+          <div className="py-2">
+            <CenteredAmountInput
+              value={amount}
+              onValueChange={handleAmountChange}
+              ticker={isStake ? STAKE_TICKER : STAKED_TICKER}
+              baseTestId="stake-amount"
+            />
           </div>
-          {activeHint && (
-            <p className="text-xs text-muted-foreground">{activeHint}</p>
+
+          {/* Balances + Max */}
+          <div className="space-y-2 rounded-2xl bg-secondary/50 border border-border/60 p-4 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Available</span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-foreground tabular-nums">
+                  {formatLargeValue(availableGram, 4)} GRAM
+                </span>
+                {isStake && parseFloat(availableGram) > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMax}
+                    className="font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Max
+                  </button>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Staked</span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-foreground tabular-nums">
+                  {formatLargeValue(stakedTs, 4)} tsTON
+                </span>
+                {!isStake && parseFloat(stakedTs) > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMax}
+                    className="font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Max
+                  </button>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Unstake method */}
+          {!isStake && (
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-foreground">
+                Unstake method
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {UNSTAKE_MODES.map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setUnstakeMode(mode)}
+                    className={cn(
+                      'rounded-xl border-2 py-2 text-xs font-semibold transition-colors',
+                      unstakeMode === mode
+                        ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                        : 'border-border bg-secondary text-foreground hover:bg-secondary/80',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {activeHint && (
+                <p className="text-xs text-muted-foreground">{activeHint}</p>
+              )}
+            </div>
           )}
+
+          {(balanceError || error) && (
+            <p className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-center text-sm text-red-500">
+              {balanceError || error}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            {!currentQuote ? (
+              <Button
+                type="button"
+                fullWidth
+                onClick={handlePreview}
+                loading={isLoadingQuote}
+                disabled={!canPreview || isLoadingQuote}
+              >
+                {isStake ? 'Preview Stake' : 'Preview Unstake'}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setAmount('')}
+                  disabled={isSending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  fullWidth
+                  onClick={handleAction}
+                  loading={isSending}
+                  disabled={isSending}
+                >
+                  {isStake ? 'Stake' : 'Unstake'}
+                </Button>
+              </>
+            )}
+            <StakingSettings
+              providerId={providerId}
+              setProviderId={setStakingProviderId}
+            />
+          </div>
+
+          <StakingInfo receiveTicker={receiveTicker} />
         </div>
-      )}
-
-      {(balanceError || error) && (
-        <p className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-center text-sm text-red-500">
-          {balanceError || error}
-        </p>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        {!currentQuote ? (
-          <Button
-            type="button"
-            fullWidth
-            onClick={handlePreview}
-            loading={isLoadingQuote}
-            disabled={!canPreview || isLoadingQuote}
-          >
-            {isStake ? 'Preview Stake' : 'Preview Unstake'}
-          </Button>
-        ) : (
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              onClick={() => setAmount('')}
-              disabled={isSending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              fullWidth
-              onClick={handleAction}
-              loading={isSending}
-              disabled={isSending}
-            >
-              {isStake ? 'Stake' : 'Unstake'}
-            </Button>
-          </>
-        )}
-        <StakingSettings
-          providerId={providerId}
-          setProviderId={setStakingProviderId}
-        />
-      </div>
-
-      <StakingInfo receiveTicker={receiveTicker} />
+      </SwipeableSubTabs>
     </div>
   );
 };

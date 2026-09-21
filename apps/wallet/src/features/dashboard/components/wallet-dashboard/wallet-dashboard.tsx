@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { BalanceTotal } from '../balance-total';
+import { WalletCardCarousel } from '../wallet-card-carousel';
 import { DashboardActions } from '../dashboard-actions';
 import { DashboardAssets } from '../dashboard-assets';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -25,7 +25,7 @@ export const WalletDashboard: React.FC = () => {
   return (
     <NewLayout>
       <div className="flex flex-col gap-4">
-        <BalanceTotal />
+        <WalletCardCarousel />
         <UpgradeBanner />
         <DashboardActions />
         <DashboardAssets />

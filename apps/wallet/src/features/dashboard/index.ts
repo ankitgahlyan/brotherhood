@@ -12,4 +12,5 @@ export * from './components/balance-total';
 export * from './components/dashboard-action-button';
 export * from './components/dashboard-actions';
 export * from './components/dashboard-assets';
+export * from './components/wallet-card-carousel';
 export * from './components/dashboard-header';

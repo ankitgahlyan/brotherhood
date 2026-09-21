@@ -7,11 +7,10 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown, Moon, Sun, Sparkles } from 'lucide-react';
-import { useTonConnect, useWallet } from '@demo/wallet-core';
+import { Moon, Sun, Sparkles } from 'lucide-react';
+import { useTonConnect } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 
-import { WalletSelectorModal } from '@/features/wallets';
 import { SettingsDropdown } from '@/features/settings';
 import { NotificationBell } from '@/features/notifications';
 import { ConnectDappModal } from '@/features/ton-connect';
@@ -21,13 +20,10 @@ import { NetworkIndicator } from '@/core/components/shared/network-indicator';
 import { SyncStatusButton } from '../sync-status-button';
 
 export const DashboardHeader: React.FC = () => {
-  const [isWalletSelectorOpen, setIsWalletSelectorOpen] = useState(false);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
 
   const { handleTonConnectUrl } = useTonConnect();
-  const { savedWallets, activeWalletId } = useWallet();
   const { resolvedTheme, toggleTheme } = useTheme();
-  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
 
   usePasteHandler(handleTonConnectUrl, isConnectOpen);
 
@@ -43,20 +39,8 @@ export const DashboardHeader: React.FC = () => {
         <ScanIcon className="w-5 h-5 text-foreground" />
       </button>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <NetworkIndicator />
-        <button
-          type="button"
-          onClick={() => setIsWalletSelectorOpen(true)}
-          className="h-9 flex items-center gap-1.5 px-3.5 rounded-full bg-secondary/70 cursor-pointer hover:bg-secondary border border-border/70 active:scale-95 transition-all shadow-2xs"
-          aria-label="Select wallet"
-        >
-          <span className="text-xs font-bold text-foreground">
-            {activeWallet?.name || 'No wallet'}
-          </span>
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-
         <SyncStatusButton />
       </div>
 
@@ -81,10 +65,6 @@ export const DashboardHeader: React.FC = () => {
         <SettingsDropdown />
       </div>
 
-      <WalletSelectorModal
-        isOpen={isWalletSelectorOpen}
-        onClose={() => setIsWalletSelectorOpen(false)}
-      />
       <ConnectDappModal
         isOpen={isConnectOpen}
         onClose={() => setIsConnectOpen(false)}
