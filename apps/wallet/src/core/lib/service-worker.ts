@@ -24,6 +24,25 @@ function notifyListeners(hasUpdate: boolean) {
   });
 }
 
+function isUserBusy(): boolean {
+  return Boolean(
+    typeof document !== 'undefined' &&
+    (document.querySelector('[role="dialog"][data-state="open"]') ||
+      document.querySelector('.signing-in-progress') ||
+      document.querySelector('[data-tx-signing="true"]')),
+  );
+}
+
+function autoApplyUpdate() {
+  if (isUserBusy()) {
+    setTimeout(autoApplyUpdate, 3000);
+    return;
+  }
+
+  console.log('[ServiceWorker] Auto-applying new frontend update...');
+  void applyAppUpdate();
+}
+
 export function onSWUpdateAvailable(cb: UpdateCallback): () => void {
   listeners.add(cb);
   if (hasPendingUpdate) {
@@ -62,6 +81,7 @@ export async function initServiceWorker(): Promise<void> {
     onNeedRefresh() {
       console.log('[ServiceWorker] New version available in waiting state.');
       notifyListeners(true);
+      autoApplyUpdate();
     },
     onOfflineReady() {
       console.log('[ServiceWorker] App cached and ready for offline use.');
@@ -71,12 +91,30 @@ export async function initServiceWorker(): Promise<void> {
         swRegistration = registration;
         if (registration.waiting) {
           notifyListeners(true);
+          autoApplyUpdate();
         }
       }
     },
     onRegisterError(error) {
       console.warn('[ServiceWorker] Registration error:', error);
     },
+  });
+
+  // Periodic background check for new releases every 5 minutes & on focus
+  setInterval(() => {
+    if (navigator.onLine && document.visibilityState === 'visible') {
+      void checkForAppUpdates().then((res) => {
+        if (res.hasUpdate) autoApplyUpdate();
+      });
+    }
+  }, 300_000);
+
+  window.addEventListener('focus', () => {
+    if (navigator.onLine) {
+      void checkForAppUpdates().then((res) => {
+        if (res.hasUpdate) autoApplyUpdate();
+      });
+    }
   });
 }
 

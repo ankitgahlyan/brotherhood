@@ -18,9 +18,7 @@ import {
   BellRing,
   Zap,
   Coins,
-  Download,
   CheckCircle2,
-  RefreshCw,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -36,12 +34,6 @@ import {
   useWeeklyClaim,
   calculateClaimEligibility,
 } from '@/features/brotherhood/hooks/use-weekly-claim';
-import {
-  onSWUpdateAvailable,
-  isUpdateAvailable,
-  applyAppUpdate,
-  checkForAppUpdates,
-} from '@/core/lib/service-worker';
 import {
   getBrowserNotificationPermission,
   requestBrowserNotificationPermission,
@@ -245,8 +237,6 @@ const WalletNotificationCollector: React.FC<
 
 export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasSWUpdate, setHasSWUpdate] = useState(() => isUpdateAvailable());
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [notificationPerm, setNotificationPerm] =
     useState<NativeNotificationPermission>(() =>
       getBrowserNotificationPermission(),
@@ -347,23 +337,8 @@ export const NotificationBell: React.FC = () => {
     return list;
   }, [walletNotifsMap, dismissedKeys]);
 
-  // Total actionable count (Frontend app update + all active notifications)
-  const count =
-    (hasSWUpdate && !dismissedKeys.has('sw-update-available') ? 1 : 0) +
-    allWalletNotifs.length;
-
-  // Listen to PWA / Service Worker update events
-  useEffect(() => {
-    return onSWUpdateAvailable((available) => {
-      setHasSWUpdate(available);
-      if (available) {
-        sendNativeNotification('BrotherHood Update Ready', {
-          body: 'A new version of BrotherHood Wallet is downloaded and ready to apply.',
-          key: 'sw-update-available',
-        });
-      }
-    });
-  }, []);
+  // Total actionable count (active notifications)
+  const count = allWalletNotifs.length;
 
   // Dispatch native notifications for newly discovered actionable items
   useEffect(() => {
@@ -399,23 +374,6 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleCheckUpdates = async () => {
-    setIsCheckingUpdate(true);
-    try {
-      const res = await checkForAppUpdates();
-      if (res.hasUpdate) {
-        setHasSWUpdate(true);
-        toast.info('New version found and ready to apply!');
-      } else {
-        toast.success('You are on the latest version.');
-      }
-    } catch {
-      toast.error('Failed to check for updates.');
-    } finally {
-      setIsCheckingUpdate(false);
-    }
-  };
-
   const handleDismissOne = useCallback(
     (id: string) => {
       setDismissedKeys((prev) => {
@@ -431,14 +389,11 @@ export const NotificationBell: React.FC = () => {
 
   const handleClearAll = useCallback(() => {
     const allIds = new Set(dismissedKeys);
-    if (hasSWUpdate) {
-      allIds.add('sw-update-available');
-    }
     allWalletNotifs.forEach((n) => allIds.add(n.id));
     setDismissedKeys(allIds);
     saveDismissedKeys(network, allIds);
     toast.success('All notifications cleared');
-  }, [dismissedKeys, hasSWUpdate, allWalletNotifs, network]);
+  }, [dismissedKeys, allWalletNotifs, network]);
 
   // Execute upgrade for a specific target wallet
   const handleUpgradeTarget = async (
@@ -575,39 +530,6 @@ export const NotificationBell: React.FC = () => {
             </p>
           )}
 
-          {/* Frontend App Update Card */}
-          {hasSWUpdate && !dismissedKeys.has('sw-update-available') && (
-            <SwipeableCard
-              id="sw-update-available"
-              onDismiss={handleDismissOne}
-            >
-              <div className="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex flex-col gap-2.5 shadow-2xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center flex-shrink-0 text-blue-500">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="font-bold text-foreground text-sm block">
-                        Frontend Update Ready
-                      </span>
-                      <span className="text-[11px] text-muted-foreground block">
-                        A newer version of BrotherHood Wallet is downloaded.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => applyAppUpdate()}
-                  className="w-full text-xs font-semibold py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
-                >
-                  Reload & Update Now
-                </Button>
-              </div>
-            </SwipeableCard>
-          )}
-
           {/* Render All Wallet Notifications */}
           {allWalletNotifs.map((item) => {
             const isProcessing =
@@ -737,31 +659,11 @@ export const NotificationBell: React.FC = () => {
                 You're all caught up!
               </span>
               <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                No pending app updates, contract upgrades, or grant claims at
-                this time across your saved accounts.
+                No pending contract upgrades or grant claims at this time across
+                your saved accounts.
               </p>
             </div>
           )}
-
-          {/* Footer: Manual Check for Updates */}
-          <div className="pt-2 border-t border-border flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">
-              Version status
-            </span>
-            <button
-              type="button"
-              disabled={isCheckingUpdate}
-              onClick={handleCheckUpdates}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw
-                className={`w-3 h-3 ${isCheckingUpdate ? 'animate-spin text-primary' : ''}`}
-              />
-              <span>
-                {isCheckingUpdate ? 'Checking...' : 'Check for App Update'}
-              </span>
-            </button>
-          </div>
         </Modal.Body>
       </Modal.Container>
     </>

@@ -7,7 +7,6 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { useNavigate } from '@/core/routing';
 import {
   ChevronRight,
   Download,
@@ -16,21 +15,12 @@ import {
   Moon,
   Monitor,
   Palette,
-  Plus,
   Sun,
   Sparkles,
   Trash2,
   Check,
-  RefreshCw,
-  Wallet,
   X,
 } from 'lucide-react';
-import {
-  checkForAppUpdates,
-  applyAppUpdate,
-  onSWUpdateAvailable,
-  isUpdateAvailable,
-} from '@/core/lib/service-worker';
 import { toast } from 'sonner';
 import {
   useDeveloperMode,
@@ -44,15 +34,12 @@ import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
-import { SettingsWalletsModal } from '../settings-wallets';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
 import { SettingsIcon } from '@/core/components/ui/icons';
-import { AddWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
-import type { AddWalletMode } from '@/features/wallet-setup';
 
 const log = createComponentLogger('SettingsDropdown');
 
@@ -140,7 +127,6 @@ const PALETTE_OPTIONS: {
 ];
 
 export const SettingsDropdown: React.FC = () => {
-  const navigate = useNavigate();
   const { theme, setTheme, palette, setPalette } = useTheme();
 
   const {
@@ -154,7 +140,7 @@ export const SettingsDropdown: React.FC = () => {
     showFastSend,
     setShowFastSend,
   } = useAuth();
-  const { getDecryptedMnemonic, savedWallets } = useWallet();
+  const { getDecryptedMnemonic } = useWallet();
   const {
     isSupported: isBiometricsSupported,
     isEnabled: isBiometricsEnabled,
@@ -163,11 +149,9 @@ export const SettingsDropdown: React.FC = () => {
     disable: disableBiometrics,
   } = useBiometrics();
 
-  const [panel, setPanelState] = useState<
-    'menu' | 'create' | 'mnemonic' | null
-  >(null);
+  const [panel, setPanelState] = useState<'menu' | 'mnemonic' | null>(null);
 
-  const setPanel = (next: 'menu' | 'create' | 'mnemonic' | null) => {
+  const setPanel = (next: 'menu' | 'mnemonic' | null) => {
     setPanelState(next);
     setSettingsModalOpen(next !== null);
   };
@@ -179,7 +163,6 @@ export const SettingsDropdown: React.FC = () => {
   const handleCloseMenu = () => {
     setPanel(null);
   };
-  const [isManageWalletsOpen, setIsManageWalletsOpen] = useState(false);
   const [isBiometricPromptOpen, setIsBiometricPromptOpen] = useState(false);
   const [biometricPasscode, setBiometricPasscode] = useState('');
   const [biometricError, setBiometricError] = useState('');
@@ -217,51 +200,6 @@ export const SettingsDropdown: React.FC = () => {
       toast.info(
         `You are ${remaining} ${remaining === 1 ? 'step' : 'steps'} away from Developer Mode`,
       );
-    }
-  };
-
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [hasPendingUpdate, setHasPendingUpdate] = useState(() =>
-    isUpdateAvailable(),
-  );
-
-  React.useEffect(() => {
-    return onSWUpdateAvailable((hasUpdate) => {
-      setHasPendingUpdate(hasUpdate);
-    });
-  }, []);
-
-  const handleCheckForUpdate = async () => {
-    if (isCheckingUpdate) return;
-    if (!navigator.onLine) {
-      toast.info('You are offline. Serving from browser cache.');
-      return;
-    }
-
-    if (hasPendingUpdate) {
-      toast('Applying update…');
-      await applyAppUpdate();
-      return;
-    }
-
-    setIsCheckingUpdate(true);
-    try {
-      const result = await checkForAppUpdates();
-      if (result.hasUpdate) {
-        toast.success('Update downloaded! Click to reload & apply.', {
-          duration: 10000,
-          action: {
-            label: 'Reload Now',
-            onClick: () => applyAppUpdate(),
-          },
-        });
-      } else {
-        toast.success('App is up to date. Serving from browser cache.');
-      }
-    } catch {
-      toast.error('Failed to check for updates.');
-    } finally {
-      setIsCheckingUpdate(false);
     }
   };
 
@@ -307,13 +245,6 @@ export const SettingsDropdown: React.FC = () => {
       disableBiometrics();
       reset();
     }
-  };
-
-  const handleAddWallet = () => setPanel('create');
-
-  const handleSelectAddMode = (mode: AddWalletMode) => {
-    setPanel(null);
-    navigate(WALLET_SETUP_ROUTE[mode]);
   };
 
   const handleViewRecoveryPhrase = async () => {
@@ -555,37 +486,6 @@ export const SettingsDropdown: React.FC = () => {
                   }}
                 />
                 <ActionRow
-                  icon={
-                    <RefreshCw
-                      className={`w-5 h-5 ${isCheckingUpdate ? 'animate-spin text-primary' : ''}`}
-                    />
-                  }
-                  label="Check for App Updates"
-                  subtitle={
-                    hasPendingUpdate
-                      ? 'Update ready — click to reload & apply'
-                      : isCheckingUpdate
-                        ? 'Checking host for updates…'
-                        : 'Serving from browser cache'
-                  }
-                  onClick={handleCheckForUpdate}
-                  disabled={isCheckingUpdate}
-                />
-                <ActionRow
-                  icon={<Wallet className="w-5 h-5" />}
-                  label="Manage Wallets"
-                  subtitle={`${savedWallets.length} ${savedWallets.length === 1 ? 'wallet' : 'wallets'} saved`}
-                  onClick={() => {
-                    setPanel(null);
-                    setIsManageWalletsOpen(true);
-                  }}
-                />
-                <ActionRow
-                  icon={<Plus className="w-5 h-5" />}
-                  label="Add Wallet"
-                  onClick={handleAddWallet}
-                />
-                <ActionRow
                   icon={<KeyRound className="w-5 h-5" />}
                   label={
                     isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'
@@ -687,12 +587,6 @@ export const SettingsDropdown: React.FC = () => {
         </Modal.Body>
       </Modal.Container>
 
-      <AddWalletModal
-        isOpen={panel === 'create'}
-        onClose={() => setPanel(null)}
-        onSelect={handleSelectAddMode}
-      />
-
       <Modal.Container
         isOpened={panel === 'mnemonic'}
         onOpenChange={(open) => !open && handleCloseMnemonicModal()}
@@ -716,11 +610,6 @@ export const SettingsDropdown: React.FC = () => {
       <InstallPromptDialog
         open={isInstallOpen}
         onOpenChange={setIsInstallOpen}
-      />
-
-      <SettingsWalletsModal
-        isOpen={isManageWalletsOpen}
-        onClose={() => setIsManageWalletsOpen(false)}
       />
     </>
   );
