@@ -8,15 +8,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from '@/core/routing';
-import {
-  Wallet,
-  Coins,
-  Sparkles,
-  Building2,
-  Vote,
-  Ticket,
-  TrendingUp,
-} from 'lucide-react';
+import { Wallet, Coins, Sparkles, Building2, Vote, Ticket } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -61,12 +53,6 @@ export const ECOSYSTEM_NAV_ITEMS: NavItem[] = [
     label: 'Lottery',
     icon: Ticket,
     path: '/lottery',
-  },
-  {
-    id: 'staking',
-    label: 'Staking',
-    icon: TrendingUp,
-    path: '/staking',
   },
 ];
 

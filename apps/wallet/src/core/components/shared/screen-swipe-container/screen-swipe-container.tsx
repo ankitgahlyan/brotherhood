@@ -17,7 +17,6 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
   '/city-network',
   '/dao',
   '/lottery',
-  '/staking',
 ];
 
 const SWIPE_THRESHOLD_PX = 55;
@@ -45,7 +44,6 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     if (pathname.startsWith('/city-network')) return 3;
     if (pathname.startsWith('/dao')) return 4;
     if (pathname.startsWith('/lottery')) return 5;
-    if (pathname.startsWith('/staking')) return 6;
     return -1;
   };
 
