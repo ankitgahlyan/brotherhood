@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { broadcastBus } from '@/core/lib/broadcast-bus';
 
 export const SETTINGS_STORAGE_EVENT = 'brotherhood:settings-changed';
 
@@ -64,10 +65,17 @@ export class SettingsStorage {
     ) {
       window.addEventListener('storage', (e: StorageEvent) => {
         if (e.key) {
-          this.emit(e.key);
+          this.emit(e.key, false);
         }
       });
     }
+
+    // Also receive settings changes via BroadcastBus from other tabs in 0ms
+    broadcastBus.subscribe<{ key: string }>('settings_changed', (payload) => {
+      if (payload?.key) {
+        this.emit(payload.key, false);
+      }
+    });
   }
 
   private getStorage(): Storage | null {
@@ -130,7 +138,7 @@ export class SettingsStorage {
     } catch {
       // Ignore storage quota/permission errors
     }
-    this.emit(key);
+    this.emit(key, true);
   }
 
   public remove(key: string): void {
@@ -141,7 +149,7 @@ export class SettingsStorage {
     } catch {
       // Ignore storage errors
     }
-    this.emit(key);
+    this.emit(key, true);
   }
 
   public subscribe(key: string, callback: () => void): () => void {
@@ -156,7 +164,7 @@ export class SettingsStorage {
     };
   }
 
-  private emit(key: string): void {
+  private emit(key: string, shouldBroadcast: boolean = true): void {
     for (const listener of this.listeners) {
       try {
         listener(key);
@@ -176,6 +184,10 @@ export class SettingsStorage {
       } catch {
         // Ignore dispatch errors
       }
+    }
+
+    if (shouldBroadcast) {
+      broadcastBus.post('settings_changed', { key });
     }
   }
 }

@@ -194,16 +194,50 @@ export interface WorkerAccountItem {
 }
 
 export interface WorkerHydrateRequest {
+  type?: 'hydrate';
   id: string;
   accounts: WorkerAccountItem[];
 }
 
+export interface WorkerSha256BatchRequest {
+  type: 'sha256_batch';
+  id: string;
+  keys: string[];
+}
+
+export interface WorkerParseBocBatchRequest {
+  type: 'parse_boc_batch';
+  id: string;
+  bocs: string[];
+}
+
+export type WorkerGenericRequest =
+  WorkerHydrateRequest | WorkerSha256BatchRequest | WorkerParseBocBatchRequest;
+
 export interface WorkerHydrateResponse {
+  type?: 'hydrate';
   id: string;
   serializedStores: Record<string, string>; // address -> serializeForStorage JSON string
   outdatedAccounts: string[];
   failedAddresses: string[];
 }
+
+export interface WorkerSha256BatchResponse {
+  type: 'sha256_batch';
+  id: string;
+  hashes: Record<string, string>; // key -> hex hash
+}
+
+export interface WorkerParseBocBatchResponse {
+  type: 'parse_boc_batch';
+  id: string;
+  results: { boc: string; valid: boolean; cellHash?: string }[];
+}
+
+export type WorkerGenericResponse =
+  | WorkerHydrateResponse
+  | WorkerSha256BatchResponse
+  | WorkerParseBocBatchResponse;
 
 export function processAccountItems(accounts: WorkerAccountItem[]): {
   serializedStores: Record<string, string>;
@@ -302,19 +336,80 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
   };
 }
 
+export async function processSha256Batch(
+  keys: string[],
+): Promise<Record<string, string>> {
+  const hashes: Record<string, string> = {};
+  for (const key of keys) {
+    try {
+      const data = new TextEncoder().encode(key);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      hashes[key] = Buffer.from(hashBuffer).toString('hex');
+    } catch (e) {
+      // Fallback
+    }
+  }
+  return hashes;
+}
+
+export function processParseBocBatch(
+  bocs: string[],
+): { boc: string; valid: boolean; cellHash?: string }[] {
+  return bocs.map((boc) => {
+    try {
+      const cell = Cell.fromBase64(boc);
+      return {
+        boc,
+        valid: true,
+        cellHash: cell.hash().toString('base64'),
+      };
+    } catch {
+      return {
+        boc,
+        valid: false,
+      };
+    }
+  });
+}
+
 // Worker message handler
 if (
   typeof self !== 'undefined' &&
   typeof (self as any).postMessage === 'function'
 ) {
-  const handleWorkerMessage = (event: MessageEvent<WorkerHydrateRequest>) => {
+  const handleWorkerMessage = async (
+    event: MessageEvent<WorkerGenericRequest>,
+  ) => {
     try {
       if (!event.data || typeof event.data !== 'object') return;
-      const { id, accounts } = event.data;
+      const { id } = event.data;
       if (!id) return;
 
+      if (event.data.type === 'sha256_batch') {
+        const hashes = await processSha256Batch(event.data.keys || []);
+        (self as any).postMessage({
+          type: 'sha256_batch',
+          id,
+          hashes,
+        } satisfies WorkerSha256BatchResponse);
+        return;
+      }
+
+      if (event.data.type === 'parse_boc_batch') {
+        const results = processParseBocBatch(event.data.bocs || []);
+        (self as any).postMessage({
+          type: 'parse_boc_batch',
+          id,
+          results,
+        } satisfies WorkerParseBocBatchResponse);
+        return;
+      }
+
+      // Default: hydrate request
+      const accounts = (event.data as WorkerHydrateRequest).accounts;
       const result = processAccountItems(accounts);
       const response: WorkerHydrateResponse = {
+        type: 'hydrate',
         id,
         ...result,
       };

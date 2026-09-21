@@ -174,6 +174,22 @@ export default defineConfig(() => {
                     },
                   },
                   {
+                    // Decentralized media gateways (IPFS, Arweave) and TON token image CDNs
+                    urlPattern:
+                      /^https:\/\/(?:[a-zA-Z0-9-]+\.)*(?:ipfs\.io|cloudflare-ipfs\.com|dweb\.link|nftstorage\.link|arweave\.net|cache\.tonapi\.io)\/.*$/i,
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'brotherhood-token-media',
+                      expiration: {
+                        maxEntries: 500,
+                        maxAgeSeconds: 30 * 24 * 60 * 60,
+                      },
+                      cacheableResponse: {
+                        statuses: [0, 200],
+                      },
+                    },
+                  },
+                  {
                     urlPattern: ({ request }) => request.destination === 'font',
                     handler: 'CacheFirst',
                     options: {

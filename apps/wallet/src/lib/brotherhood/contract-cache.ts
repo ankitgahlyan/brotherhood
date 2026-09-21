@@ -1,5 +1,6 @@
 import { Address, Cell } from '@ton/core';
 import { useSyncExternalStore, useMemo, useCallback } from 'react';
+import { broadcastBus } from '@/core/lib/broadcast-bus';
 import {
   serializeReplacer,
   serializeReviver,
@@ -19,6 +20,11 @@ const DB_VERSION = 3;
 const STORE_NAME = 'contract_cache';
 const METADATA_STORE_NAME = 'metadata_cache';
 const ADDRESS_BOOK_STORE_NAME = 'address_book_cache';
+
+// LRU cache limits
+const MAX_L1_CONTRACT_ENTRIES = 500;
+const MAX_L1_METADATA_ENTRIES = 500;
+const MAX_L1_ADDRESS_BOOK_ENTRIES = 500;
 
 export interface CacheEntry<T = any> {
   key: string;
@@ -96,6 +102,123 @@ function openDB(): Promise<IDBDatabase> {
   return cachedDbPromise;
 }
 
+// Idle-commit batching queue
+const pendingContractWrites = new Map<
+  string,
+  { serializedData: string; timestamp: number }
+>();
+let idleCommitCallbackId: number | null = null;
+
+function pruneL1Cache<K, V>(map: Map<K, V>, maxEntries: number) {
+  if (map.size <= maxEntries) return;
+  const excess = map.size - maxEntries;
+  const iterator = map.keys();
+  for (let i = 0; i < excess; i++) {
+    const nextKey = iterator.next().value;
+    if (nextKey !== undefined) {
+      map.delete(nextKey);
+    }
+  }
+}
+
+export async function flushPendingDbWrites(): Promise<void> {
+  if (pendingContractWrites.size === 0) return;
+
+  const entriesToFlush = Array.from(pendingContractWrites.entries());
+  pendingContractWrites.clear();
+
+  if (idleCommitCallbackId !== null) {
+    if (typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(idleCommitCallbackId);
+    } else {
+      clearTimeout(idleCommitCallbackId);
+    }
+    idleCommitCallbackId = null;
+  }
+
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      for (const [key, val] of entriesToFlush) {
+        store.put({
+          key,
+          data: val.serializedData,
+          timestamp: val.timestamp,
+        } satisfies CacheEntry);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.warn(
+      '[ContractCache] Failed to flush pending writes to IndexedDB:',
+      err,
+    );
+  }
+}
+
+function scheduleIdleCommit() {
+  if (idleCommitCallbackId !== null || typeof window === 'undefined') {
+    return;
+  }
+
+  const runCommit = () => {
+    idleCommitCallbackId = null;
+    void flushPendingDbWrites();
+  };
+
+  if (typeof window.requestIdleCallback === 'function') {
+    idleCommitCallbackId = window.requestIdleCallback(runCommit, {
+      timeout: 2000,
+    });
+  } else {
+    idleCommitCallbackId = window.setTimeout(
+      runCommit,
+      500,
+    ) as unknown as number;
+  }
+}
+
+// Setup flush listeners for window lifecycle events (blur, beforeunload, visibilitychange)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    void flushPendingDbWrites();
+  });
+  window.addEventListener('blur', () => {
+    void flushPendingDbWrites();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      void flushPendingDbWrites();
+    }
+  });
+
+  // Cross-tab sync listeners via BroadcastBus
+  broadcastBus.subscribe<{ key: string; timestamp: number }>(
+    'contract_cache_updated',
+    (payload) => {
+      if (!payload?.key) return;
+      // Invalidate or update local L1 cache timestamp so getter knows to pull fresh or notify hooks
+      lastKnownGlobalFetchTime = Math.max(
+        lastKnownGlobalFetchTime ?? 0,
+        payload.timestamp,
+      );
+      notifyCacheUpdated(payload.key, payload.timestamp, false);
+    },
+  );
+
+  broadcastBus.subscribe<{ key: string }>(
+    'contract_cache_invalidated',
+    (payload) => {
+      if (!payload?.key) return;
+      memoryContractCache.delete(payload.key);
+      notifyCacheUpdated(payload.key, Date.now(), false);
+    },
+  );
+}
+
 export async function setMetadataCache(
   address: string,
   metadata: any,
@@ -106,6 +229,8 @@ export async function setMetadataCache(
     metadata,
     timestamp,
   });
+  pruneL1Cache(memoryMetadataCache, MAX_L1_METADATA_ENTRIES);
+
   try {
     const db = await openDB();
     const entry: MetadataEntry = {
@@ -147,6 +272,7 @@ export async function getMetadataCache(address: string): Promise<any | null> {
     );
     if (entry) {
       memoryMetadataCache.set(address, entry);
+      pruneL1Cache(memoryMetadataCache, MAX_L1_METADATA_ENTRIES);
     }
     return entry?.metadata ?? null;
   } catch (err) {
@@ -169,6 +295,8 @@ export async function setAddressBookCache(
     entry: entryData,
     timestamp,
   });
+  pruneL1Cache(memoryAddressBookCache, MAX_L1_ADDRESS_BOOK_ENTRIES);
+
   try {
     const db = await openDB();
     const entry: AddressBookEntry = {
@@ -212,6 +340,7 @@ export async function getAddressBookCache(
     );
     if (entry) {
       memoryAddressBookCache.set(address, entry);
+      pruneL1Cache(memoryAddressBookCache, MAX_L1_ADDRESS_BOOK_ENTRIES);
     }
     return entry?.entry ?? null;
   } catch (err) {
@@ -232,27 +361,22 @@ export async function setContractCache(key: string, data: any): Promise<void> {
     data,
     timestamp,
   });
-  lastKnownGlobalFetchTime = Math.max(lastKnownGlobalFetchTime ?? 0, timestamp);
-  notifyCacheUpdated(key, timestamp);
+  pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
 
-  // 2. Persist to IndexedDB asynchronously
+  lastKnownGlobalFetchTime = Math.max(lastKnownGlobalFetchTime ?? 0, timestamp);
+  notifyCacheUpdated(key, timestamp, true);
+
+  // 2. Queue for idle IndexedDB persistence (non-blocking)
   try {
-    const db = await openDB();
     const serializedData = serializeForStorage(data);
-    const entry: CacheEntry = {
-      key,
-      data: serializedData,
-      timestamp,
-    };
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.put(entry);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    });
+    pendingContractWrites.set(key, { serializedData, timestamp });
+    scheduleIdleCommit();
   } catch (err) {
-    console.warn('[ContractCache] Failed to save cache for key:', key, err);
+    console.warn(
+      '[ContractCache] Failed to serialize cache for key:',
+      key,
+      err,
+    );
   }
 }
 
@@ -262,7 +386,11 @@ let notifyTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingUpdatedKeys = new Set<string>();
 let latestTimestamp = 0;
 
-export function notifyCacheUpdated(key: string, timestamp: number) {
+export function notifyCacheUpdated(
+  key: string,
+  timestamp: number,
+  broadcastCrossTab: boolean = true,
+) {
   if (
     typeof window === 'undefined' ||
     typeof window.dispatchEvent !== 'function'
@@ -276,6 +404,11 @@ export function notifyCacheUpdated(key: string, timestamp: number) {
   window.dispatchEvent(
     new CustomEvent(CACHE_UPDATED_EVENT, { detail: { key, timestamp } }),
   );
+
+  // Post to BroadcastChannel if requested
+  if (broadcastCrossTab) {
+    broadcastBus.post('contract_cache_updated', { key, timestamp });
+  }
 
   // Also dispatch debounced aggregated event for bulk subscribers
   if (!notifyTimer) {
@@ -331,6 +464,8 @@ export async function getContractCache<T = any>(
       data: restoredData,
       timestamp: entry.timestamp,
     });
+    pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
+
     lastKnownGlobalFetchTime = Math.max(
       lastKnownGlobalFetchTime ?? 0,
       entry.timestamp,
@@ -348,6 +483,7 @@ export async function getContractCache<T = any>(
 
 export async function clearContractCache(): Promise<void> {
   memoryContractCache.clear();
+  pendingContractWrites.clear();
   lastKnownGlobalFetchTime = null;
   try {
     const db = await openDB();
@@ -365,6 +501,7 @@ export async function clearContractCache(): Promise<void> {
 
 export async function deleteContractCache(key: string): Promise<void> {
   memoryContractCache.delete(key);
+  pendingContractWrites.delete(key);
   try {
     const db = await openDB();
     await new Promise<void>((resolve, reject) => {
@@ -469,6 +606,7 @@ export async function invalidateContractCache(
 ): Promise<void> {
   const key = getNormalizedContractCacheKey(network, contractAddress);
   await deleteContractCache(key);
+  broadcastBus.post('contract_cache_invalidated', { key });
 }
 
 export function getContractCacheSync<T = any>(
@@ -511,6 +649,7 @@ export function preloadContractCacheFromDb(): Promise<void> {
               data: restored,
               timestamp: entry.timestamp,
             });
+            pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
             if (entry.timestamp > (lastKnownGlobalFetchTime ?? 0)) {
               lastKnownGlobalFetchTime = entry.timestamp;
             }
