@@ -59,6 +59,8 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
         } else {
           setError('Biometric authentication failed to verify passcode.');
         }
+      } else {
+        setError('Biometric authentication was cancelled or not recognized.');
       }
     } catch (err) {
       if (
@@ -67,6 +69,7 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
           err.name === 'AbortError' ||
           err.name === 'SecurityError')
       ) {
+        setError('Biometric prompt was cancelled.');
         return;
       }
       setError(err instanceof Error ? err.message : 'Biometric unlock failed');

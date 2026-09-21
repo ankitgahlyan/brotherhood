@@ -2,20 +2,18 @@
 /**
  * gh-pages-404.mjs — Assemble dual-target GitHub Pages artifact.
  *
- * Output layout (uploaded to GH Pages as a single artifact):
- *   dist/client/           ← Web PWA at /brotherhood/
- *   dist/client/twa/       ← TWA at /brotherhood/twa/
+ * New layout (TWA at root, Web at /web/):
+ *   dist/client/           ← TWA (Telegram Mini App) at /brotherhood/
+ *   dist/client/web/       ← Web PWA at /brotherhood/web/
  *   dist/client/404.html   ← Smart redirect script (handles BOTH roots)
+ *   dist/client/web/404.html
  *
- * The smart 404.html is the key to making GitHub Pages work as a dual-root SPA host.
- * GitHub Pages only serves index.html from the artifact root; for any unmatched path
- * it serves the root 404.html. The smart 404.html detects whether the request is for
- * the Web or TWA sub-tree and redirects accordingly, encoding the intended path as
- * a ?p= query param that each app's index.html restores via history.replaceState
- * before the router boots.
- *
- *   /brotherhood/twa/<path>   →  /brotherhood/twa/?p=<path>  (loads TWA index.html)
- *   /brotherhood/<path>       →  /brotherhood/?p=<path>      (loads Web index.html)
+ * Why this layout:
+ *   Telegram opens https://ankitgahlyan.github.io/brotherhood/ directly as the root
+ *   of the repository site, serving the TWA index.html natively with 200 OK (no redirects, no 404s).
+ *   Web users access https://ankitgahlyan.github.io/brotherhood/web/.
+ *   Any unmatched path under /brotherhood/web/ redirects to Web shell.
+ *   Any other unmatched path under /brotherhood/ redirects to TWA shell.
  */
 
 import {
@@ -31,14 +29,15 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WALLET_DIR = join(ROOT, 'apps', 'wallet');
 
-// Web build output (after copy-to-dist.mjs --target=web)
-const WEB_DIST = join(WALLET_DIR, 'dist');
 // TWA build output (after copy-to-dist.mjs --target=twa)
 const TWA_DIST = join(WALLET_DIR, 'dist-twa');
+// Web build output (after copy-to-dist.mjs --target=web)
+const WEB_DIST = join(WALLET_DIR, 'dist');
+
 // GitHub Pages upload root
 const CLIENT_DIR = join(ROOT, 'dist', 'client');
-// TWA sub-directory inside the GitHub Pages artifact
-const CLIENT_TWA_DIR = join(CLIENT_DIR, 'twa');
+// Web sub-directory inside the GitHub Pages artifact
+const CLIENT_WEB_DIR = join(CLIENT_DIR, 'web');
 
 // ---------------------------------------------------------------------------
 // 1. Validate builds exist
@@ -53,32 +52,31 @@ function assertBuildExists(distDir, label) {
   }
 }
 
-assertBuildExists(WEB_DIST, 'web');
 assertBuildExists(TWA_DIST, 'twa');
+assertBuildExists(WEB_DIST, 'web');
 
 // ---------------------------------------------------------------------------
-// 2. Sync Web build → dist/client/
+// 2. Sync TWA build → dist/client/ (root: /brotherhood/)
 // ---------------------------------------------------------------------------
 mkdirSync(CLIENT_DIR, { recursive: true });
-cpSync(WEB_DIST, CLIENT_DIR, { recursive: true });
-console.log('[gh-pages-404] ✅ Web build → dist/client/');
+cpSync(TWA_DIST, CLIENT_DIR, { recursive: true });
+console.log('[gh-pages-404] ✅ TWA build → dist/client/ (root: /brotherhood/)');
 
 // ---------------------------------------------------------------------------
-// 3. Sync TWA build → dist/client/twa/
+// 3. Sync Web build → dist/client/web/ (subpath: /brotherhood/web/)
 // ---------------------------------------------------------------------------
-mkdirSync(CLIENT_TWA_DIR, { recursive: true });
-cpSync(TWA_DIST, CLIENT_TWA_DIR, { recursive: true });
-console.log('[gh-pages-404] ✅ TWA build → dist/client/twa/');
+mkdirSync(CLIENT_WEB_DIR, { recursive: true });
+cpSync(WEB_DIST, CLIENT_WEB_DIR, { recursive: true });
+console.log(
+  '[gh-pages-404] ✅ Web build → dist/client/web/ (subpath: /brotherhood/web/)',
+);
 
 // ---------------------------------------------------------------------------
-// 4. Emit smart 404.html (replaces both root and twa/404.html)
+// 4. Emit smart 404.html (placed at root and in web/)
 //
 // Logic:
-//   - Path starts with /brotherhood/twa  → redirect to TWA root with ?p=<path>
-//   - Everything else                    → redirect to Web root with ?p=<path>
-//
-// The ?p=<path> is read by the inline script in each app's index.html and
-// restored via history.replaceState before TanStack Router initialises.
+//   - Path starts with /brotherhood/web  → redirect to Web root with ?p=<path>
+//   - Everything else                    → redirect to TWA root with ?p=<path>
 // ---------------------------------------------------------------------------
 const SMART_404 = `<!doctype html>
 <html lang="en">
@@ -86,29 +84,24 @@ const SMART_404 = `<!doctype html>
     <meta charset="UTF-8" />
     <title>BrotherHood</title>
     <script>
-      // GitHub Pages SPA redirect — dual-root edition
-      // Redirects to the correct app shell, encoding the intended path as ?p=
-      // so that the shell can restore it via history.replaceState before the
-      // router boots (see the restore script in index.html / index.twa.html).
+      // GitHub Pages SPA redirect — dual-root edition (TWA root + Web /web/)
       (function () {
         var loc = window.location;
         var path = loc.pathname;
-        var twaBase = '/brotherhood/twa';
-        var webBase = '/brotherhood';
+        var webBase = '/brotherhood/web';
+        var twaBase = '/brotherhood';
         var targetBase;
 
-        if (path === twaBase || path.startsWith(twaBase + '/')) {
-          targetBase = twaBase + '/';
-        } else {
+        if (path === webBase || path.startsWith(webBase + '/')) {
           targetBase = webBase + '/';
+        } else {
+          targetBase = twaBase + '/';
         }
 
-        // Encode the full path as ?p= and search as ?q=
         var search = loc.search ? '&q=' + encodeURIComponent(loc.search) : '';
         var redirect =
           targetBase + '?p=' + encodeURIComponent(path) + search + loc.hash;
 
-        // Use replaceState so the back button doesn't loop
         window.history.replaceState(null, '', redirect);
         window.location.replace(redirect);
       })();
@@ -118,26 +111,28 @@ const SMART_404 = `<!doctype html>
 </html>
 `;
 
-// Write smart 404.html at the root (handles Web + TWA paths)
+// Write smart 404.html at root
 writeFileSync(join(CLIENT_DIR, '404.html'), SMART_404);
-console.log('[gh-pages-404] ✅ Smart 404.html written (dual-root redirect)');
+console.log(
+  '[gh-pages-404] ✅ Smart 404.html written to root (handles TWA + Web)',
+);
 
-// TWA subdirectory 404.html — same smart redirect (handles refreshes within /twa/)
-writeFileSync(join(CLIENT_TWA_DIR, '404.html'), SMART_404);
-console.log('[gh-pages-404] ✅ Smart 404.html written to twa/');
+// Write smart 404.html in web/
+writeFileSync(join(CLIENT_WEB_DIR, '404.html'), SMART_404);
+console.log('[gh-pages-404] ✅ Smart 404.html written to web/');
 
 // ---------------------------------------------------------------------------
-// 5. Verify TWA headers
+// 5. Verify TWA headers at root
 // ---------------------------------------------------------------------------
-const twaHeaders = join(CLIENT_TWA_DIR, '_headers');
+const twaHeaders = join(CLIENT_DIR, '_headers');
 if (existsSync(twaHeaders)) {
   const content = readFileSync(twaHeaders, 'utf8');
   if (!content.includes('X-Robots-Tag') && !content.includes('noindex')) {
     console.warn(
-      '[gh-pages-404] ⚠️ TWA _headers missing noindex — check _headers_telegram',
+      '[gh-pages-404] ⚠️ Root TWA _headers missing noindex — check _headers_telegram',
     );
   } else {
-    console.log('[gh-pages-404] ✅ TWA _headers noindex verified');
+    console.log('[gh-pages-404] ✅ Root TWA _headers noindex verified');
   }
 }
 
@@ -146,6 +141,10 @@ if (existsSync(twaHeaders)) {
 // ---------------------------------------------------------------------------
 console.log('');
 console.log('[gh-pages-404] 🎉 GitHub Pages artifact ready:');
-console.log('   /brotherhood/     → dist/client/  (Web PWA)');
-console.log('   /brotherhood/twa/ → dist/client/twa/  (Telegram Mini App)');
-console.log('   404.html routes any unmatched path to the correct app shell');
+console.log(
+  '   /brotherhood/     → dist/client/      (Telegram Mini App at root)',
+);
+console.log('   /brotherhood/web/ → dist/client/web/  (Web PWA)');
+console.log(
+  '   404.html routes /brotherhood/web/* to Web shell and others to TWA shell',
+);

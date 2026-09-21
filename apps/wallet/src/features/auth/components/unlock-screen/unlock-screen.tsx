@@ -15,6 +15,7 @@ import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
 import { FingerprintIcon } from '@/core/components/ui/icons';
 import { useBiometrics } from '@/core/security/use-biometrics';
+import { isTelegramEnvironment } from '@/core/lib/telegram';
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
@@ -49,6 +50,8 @@ export const UnlockScreen: React.FC = () => {
         } else {
           setError('Biometric authentication failed to verify passcode.');
         }
+      } else {
+        setError('Biometric authentication was cancelled or not recognized.');
       }
     } catch (err) {
       if (
@@ -57,7 +60,7 @@ export const UnlockScreen: React.FC = () => {
           err.name === 'AbortError' ||
           err.name === 'SecurityError')
       ) {
-        // Silently handled (user cancelled or auto-prompt user gesture requirement)
+        setError('Biometric prompt was cancelled.');
         return;
       }
       setError(err instanceof Error ? err.message : 'Biometric unlock failed');
@@ -74,9 +77,15 @@ export const UnlockScreen: React.FC = () => {
     navigate,
   ]);
 
-  // Auto-prompt biometrics once on mobile/supported devices if registered
+  // Auto-prompt biometrics only inside Telegram Mini App where native prompt is non-blocking.
+  // In Web browsers, WebAuthn strictly requires an explicit user gesture (button click).
   useEffect(() => {
-    if (isSupported && isEnabled && !autoPromptTriggered.current) {
+    if (
+      isTelegramEnvironment() &&
+      isSupported &&
+      isEnabled &&
+      !autoPromptTriggered.current
+    ) {
       autoPromptTriggered.current = true;
       void handleBiometricUnlock();
     } else if (!isEnabled) {

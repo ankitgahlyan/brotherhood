@@ -14,8 +14,8 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const isTwa =
   process.env.IS_TELEGRAM_APP === '1' || process.env.VITE_APP_TARGET === 'twa';
 
-// Web default base: /brotherhood/  |  TWA default base: /brotherhood/twa/
-const defaultBase = isTwa ? '/brotherhood/twa/' : '/brotherhood/';
+// TWA default base: /brotherhood/  |  Web default base: /brotherhood/web/
+const defaultBase = isTwa ? '/brotherhood/' : '/brotherhood/web/';
 const base = (process.env.VITE_BASE ?? defaultBase).replace(/\/?$/, '/');
 
 // Output directory: dist (web) or dist-twa (twa) — within apps/wallet/

@@ -23,6 +23,7 @@ import {
  * telegram-web-app.js exposes a version 6.0 stub with an inert BiometricManager that does not work.
  */
 function hasTelegramBiometricManager(): boolean {
+  if (import.meta.env.VITE_APP_TARGET === 'web') return false;
   return (
     isTelegramEnvironment() && Boolean(getRawTelegramWebApp()?.BiometricManager)
   );

@@ -145,6 +145,7 @@ export function getRawTelegramWebApp(): TelegramWebApp | undefined {
 
 export function isTelegramEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
+  if (import.meta.env.VITE_APP_TARGET === 'web') return false;
   if (isInsideTma) return true;
   try {
     if (isTMA()) return true;
@@ -318,7 +319,9 @@ export async function authenticateTelegramBiometrics(
     }
 
     return await new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), 15000);
       bm.authenticate({ reason }, (success, token) => {
+        clearTimeout(timer);
         if (success && token) {
           resolve(token);
         } else {
@@ -356,10 +359,10 @@ export function openTelegramBiometricsSettings(): void {
  * Initializes Telegram Mini App SDK, mounts subsystems, sets up viewport and safe-areas.
  */
 export function initTelegramSdk(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (import.meta.env.VITE_APP_TARGET === 'web') return false;
   if (isInitialized) return isInsideTma;
   isInitialized = true;
-
-  if (typeof window === 'undefined') return false;
 
   const rawApp = getRawTelegramWebApp();
   const hasTg = isTelegramEnvironment();

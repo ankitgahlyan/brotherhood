@@ -32,9 +32,11 @@ function RootComponent() {
     select: (state) => state.location.pathname,
   });
 
-  // Initialize Telegram Mini App SDK
+  // Initialize Telegram Mini App SDK (only in TWA build)
   React.useEffect(() => {
-    initTelegramSdk();
+    if (import.meta.env.VITE_APP_TARGET === 'twa') {
+      initTelegramSdk();
+    }
   }, []);
 
   // Sync Router back navigation with Unified Back Stack (Tier 2/3)

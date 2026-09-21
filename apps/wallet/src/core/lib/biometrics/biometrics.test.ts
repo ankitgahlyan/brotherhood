@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
+import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import {
   getBiometricStatus,
   isBiometricsAvailable,
@@ -8,6 +8,11 @@ import {
 } from './index';
 
 describe('Biometrics & Fingerprint Lock Module', () => {
+  const origWindow = (globalThis as any).window;
+  const origNavigator = (globalThis as any).navigator;
+  const origLocalStorage = (globalThis as any).localStorage;
+  const origPublicKeyCredential = (globalThis as any).PublicKeyCredential;
+
   beforeEach(() => {
     // Reset globals
     const mockLocalStorage = {
@@ -26,14 +31,26 @@ describe('Biometrics & Fingerprint Lock Module', () => {
       },
     };
 
+    const baseWindow = origWindow || {};
     (globalThis as any).window = {
+      ...baseWindow,
       Telegram: undefined,
       PublicKeyCredential: undefined,
       localStorage: mockLocalStorage,
       location: { hostname: 'localhost' },
-      navigator: {},
+      navigator: { ...(origNavigator || {}) },
+      addEventListener: baseWindow.addEventListener || (() => {}),
+      removeEventListener: baseWindow.removeEventListener || (() => {}),
+      dispatchEvent: baseWindow.dispatchEvent || (() => true),
     };
     (globalThis as any).localStorage = mockLocalStorage;
+  });
+
+  afterEach(() => {
+    (globalThis as any).window = origWindow;
+    (globalThis as any).navigator = origNavigator;
+    (globalThis as any).localStorage = origLocalStorage;
+    (globalThis as any).PublicKeyCredential = origPublicKeyCredential;
   });
 
   it('reports unavailable when no biometrics/webauthn in environment', async () => {

@@ -1,7 +1,7 @@
-# GitHub Pages — Build & Deploy (Web + TWA)
+# GitHub Pages — Build & Deploy (TWA at root + Web at /web/)
 # Builds both targets in parallel, assembles them side-by-side, and publishes:
-#   /brotherhood/       → Web PWA
-#   /brotherhood/twa/  → Telegram Mini App (TWA)
+#   /brotherhood/       → Telegram Mini App (TWA at root)
+#   /brotherhood/web/   → Web PWA
 name: GitHub Pages
 
 on:
@@ -92,7 +92,7 @@ jobs:
 
       - name: Build Web
         env:
-          VITE_BASE: /brotherhood/
+          VITE_BASE: /brotherhood/web/
           VITE_APP_TARGET: web
         run: bun run --cwd apps/wallet build:web && node scripts/copy-to-dist.mjs --target=web
 
@@ -133,7 +133,7 @@ jobs:
 
       - name: Build TWA
         env:
-          VITE_BASE: /brotherhood/twa/
+          VITE_BASE: /brotherhood/
           IS_TELEGRAM_APP: '1'
         run: bun run --cwd apps/wallet build:twa && node scripts/copy-to-dist.mjs --target=twa
 
@@ -204,12 +204,12 @@ jobs:
       - name: Verify artifact structure
         run: |
           echo "🔍 Verifying dist/client layout..."
-          test -f dist/client/index.html && echo "✅ Web index.html" || (echo "❌ Missing Web index.html" && exit 1)
-          test -f dist/client/404.html && echo "✅ Web 404.html" || (echo "❌ Missing Web 404.html" && exit 1)
-          test -f dist/client/twa/index.html && echo "✅ TWA index.html" || (echo "❌ Missing TWA index.html" && exit 1)
-          test -f dist/client/twa/404.html && echo "✅ TWA 404.html" || (echo "❌ Missing TWA 404.html" && exit 1)
-          test -f dist/client/twa/_headers && echo "✅ TWA _headers" || (echo "❌ Missing TWA _headers" && exit 1)
-          grep -q "noindex" dist/client/twa/_headers && echo "✅ TWA _headers contains noindex" || (echo "❌ TWA _headers missing noindex" && exit 1)
+          test -f dist/client/index.html && echo "✅ TWA index.html (root)" || (echo "❌ Missing TWA index.html at root" && exit 1)
+          test -f dist/client/404.html && echo "✅ Root 404.html" || (echo "❌ Missing Root 404.html" && exit 1)
+          test -f dist/client/web/index.html && echo "✅ Web index.html (/web/)" || (echo "❌ Missing Web index.html at /web/" && exit 1)
+          test -f dist/client/web/404.html && echo "✅ Web 404.html" || (echo "❌ Missing Web 404.html" && exit 1)
+          test -f dist/client/_headers && echo "✅ TWA _headers (root)" || (echo "❌ Missing TWA _headers at root" && exit 1)
+          grep -q "noindex" dist/client/_headers && echo "✅ TWA _headers contains noindex" || (echo "❌ TWA _headers missing noindex" && exit 1)
           echo "✅ All verification checks passed"
 
       - name: Configure GitHub Pages

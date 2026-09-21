@@ -13,14 +13,17 @@ import {
 } from '@telegram-apps/sdk';
 
 // Initialize the SDK so its helpers can reach the native Telegram client.
-try {
-  init();
-} catch {
-  /* not inside a Telegram Mini App */
+if (import.meta.env.VITE_APP_TARGET === 'twa') {
+  try {
+    init();
+  } catch {
+    /* not inside a Telegram Mini App */
+  }
 }
 
 /** Telegram user id from the Mini App launch params, or undefined outside Telegram. */
 export function getTelegramId(): number | undefined {
+  if (import.meta.env.VITE_APP_TARGET === 'web') return undefined;
   try {
     return retrieveLaunchParams(true).tgWebAppData?.user?.id;
   } catch {
