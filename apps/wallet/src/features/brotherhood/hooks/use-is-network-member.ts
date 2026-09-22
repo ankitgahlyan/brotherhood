@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { useWallet } from '@demo/wallet-core';
+import { useWallet, useBrotherhood } from '@demo/wallet-core';
 import { useNowSeconds } from '@/core/hooks';
 import { useFiAccount, type FiAccountData } from './use-fi-account';
 
@@ -62,6 +62,7 @@ function formatRemainingTime(seconds: number): string {
  */
 export function useIsNetworkMember(): UseIsNetworkMemberResult {
   const { address } = useWallet();
+  const { isMember: isStoreMember, isTracked } = useBrotherhood();
   const account = useFiAccount(address ?? null);
 
   const nowSec = useNowSeconds();
@@ -77,8 +78,9 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
     const data = account.data;
 
     if (!data || data.accountInit === 0) {
+      // If store already marked not member, return not_member immediately
       return {
-        isMember: false,
+        isMember: Boolean(isStoreMember && data && data.accountInit > 0),
         isFullyActive: false,
         memberState: 'not_member' as MemberState,
         activationUnlockTime: 0,
@@ -126,14 +128,14 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
       activationRemainingSeconds: 0,
       activationRemainingFormatted: '0s',
     };
-  }, [account.data, nowSec]);
+  }, [account.data, nowSec, isStoreMember]);
 
   return {
     isMember,
     isFullyActive,
     canOperate: isFullyActive,
     memberState,
-    isLoading: account.isLoading,
+    isLoading: account.isLoading && !isTracked,
     fiAccount: account.data,
     address: address ?? null,
     activationUnlockTime,

@@ -1,3 +1,19 @@
+# Instructions
+
+- **Be concise.** Only change code directly related to the current task; leave unrelated parts untouched.
+- **Reuse** existing types, functions and components. Search before creating a new one.
+- **No new libraries.** Use existing dependencies only. If a task truly can't be done without a new library, stop and explain why.
+- **Only** write tests when directly prompted to do so.
+
+- **After your solution:**
+  1. Think like on a code review and identify any shortcomings.
+  2. Fix those issues. Repeat review-fix cycle until you are sure about code quality.
+  3. Present the improved result.
+
+- **When deeper debugging is needed:**
+  1. Outline clear, step-by-step debugging instructions in your output.
+  2. Remove any temporary debug code once the issue is resolved.
+
 ## Agent Skills
 
 ### Issue tracker
@@ -72,6 +88,13 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Per-Provider Proxy Fallback:** When Direct Mode is active, each provider must independently check for a configured key/custom URL. Any unkeyed provider must continue routing through the local proxy with origin spoofing to avoid public endpoint 429 rate limit errors.
 - **Circuit Breaker Hygiene:** Always call `resetCircuitBreakers()` and `resetThrottledProviderFetchers()` whenever network settings or API keys are updated or saved.
 - **Resilient Polling & Activity Streams:** Always catch and suppress `CircuitOpenError` and `ApiServerError` in background catch-up/polling loops (`activityStream.ts`, `fallbackPollingScheduler.ts`) to avoid spamming debug logs or entering tight retry loops during breaker cooldown windows.
+
+### State Management & Selector Stability Rules (Zustand & React)
+
+- **Stable Fallback References in Selectors:** Never use inline object/array literals as selector fallbacks (e.g. `foo ?? []` or `bar ?? {}`). Inline allocations produce new memory references on every selector pass, defeating `useShallow` / `useSyncExternalStore` equality checks and causing React to throw _"The result of getSnapshot should be cached to avoid an infinite loop"_ and _"Maximum update depth exceeded"_. Always export and return module-level frozen fallback singletons (e.g. `EMPTY_ARRAY = Object.freeze([])`, `EMPTY_OBJECT = Object.freeze({})`).
+- **Decouple Background Hydration from Subscribed State:** Do not place mutable slice state objects (e.g. `brotherhoodByAddress`, `jettonsByAddress`) in `useCallback` or `useEffect` dependency arrays of sync/hydration routines. Instead, access the latest state imperatively via `storeApi.getState()` (or `useWalletStoreApi().getState()`) to avoid circular invalidation feedback loops.
+- **Change Guards in Slice Setters:** Guard slice mutation methods (e.g. `setBrotherhoodMemberData`, `setLocationContract`) against redundant updates. Check existing values before calling `set(...)` to prevent triggering spurious store change events.
+- **Persist Middleware Parity:** Whenever a slice is added to `partialize`, ensure it is also explicitly handled in `persist.merge(...)` within `createWalletStore.ts`. Otherwise, persisted data will be wiped and reset to initial state upon rehydration.
 
 ### Telegram Mini App (TWA) & Mobile Rules
 

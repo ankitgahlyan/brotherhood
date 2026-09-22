@@ -53,8 +53,7 @@ export const NonMemberCard: React.FC<NonMemberCardProps> = ({
             Brotherhood Network Access
           </h4>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            You are not a member of network. Get invited first to interact with
-            brotherhood network.
+            You are not member, get invited first by existing members.
           </p>
         </div>
       </div>

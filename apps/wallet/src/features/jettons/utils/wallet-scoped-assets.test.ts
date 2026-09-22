@@ -299,7 +299,7 @@ describe('Wallet Scoped Assets Tracking', () => {
     });
 
     // Check localStorage persistence
-    const persistedRaw = localStorage.getItem('demo-wallet-store');
+    const persistedRaw = localStorage.getItem('bro-store');
     expect(persistedRaw).not.toBeNull();
     const parsed = JSON.parse(persistedRaw!);
 

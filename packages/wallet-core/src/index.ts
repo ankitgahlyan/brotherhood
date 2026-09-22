@@ -29,6 +29,7 @@ export type { WalletProviderProps } from './providers/WalletProvider';
 // Hooks
 export {
   useWalletStore,
+  useWalletStoreApi,
   useWalletKit,
   useAuth,
   useWallet,
@@ -43,7 +44,14 @@ export {
   useSwap,
   useStaking,
   useGasless,
+  useBrotherhood,
 } from './hooks/useWalletStore';
+export {
+  createBrotherhoodSlice,
+  normalizeAddressByNetwork,
+  EMPTY_CIRCLE,
+  EMPTY_RING,
+} from './store/slices/brotherhoodSlice';
 export {
   useFormattedTonBalance,
   useFormattedAmount,
@@ -68,6 +76,8 @@ export type {
   GaslessSlice,
   GaslessState,
   GaslessQuoteRequest,
+  BrotherhoodSlice,
+  BrotherhoodMemberData,
 } from './types/store';
 
 export type {

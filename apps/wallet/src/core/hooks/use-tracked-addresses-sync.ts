@@ -10,48 +10,49 @@ import { useEffect, useRef, useCallback } from 'react';
 import {
   useWallet,
   useWalletStore,
+  useWalletStoreApi,
   useShallow,
   useJettons,
+  useBrotherhood,
+  normalizeAddressByNetwork,
 } from '@demo/wallet-core';
-import {
-  saveCurrentSelectedWallet,
-  initializeOrGetTrackedAddresses,
-  getAllSavedWalletsTrackedAddresses,
-  getAllTrackedAddressesList,
-  loadTrackedAddresses,
-  addInvitedToCircle,
-  normalizeAddressString,
-  addInvitedToRing,
-  addPersonalWallets,
-} from '@/lib/brotherhood/tracked-addresses-storage';
-import {
-  batchHydrateUniversal,
-  computePersonalWalletAddress,
-} from '@/lib/brotherhood/account-state-hydrator';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 import { isOnline } from '@/core/lib/network-status';
-import { network as defaultNetwork } from '@/lib/brotherhood/config';
+import {
+  network as defaultNetwork,
+  FI_ADDRESS,
+} from '@/lib/brotherhood/config';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tracked-contract-addresses';
+import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
+import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
 import { Address } from '@ton/core';
 
 /**
- * Top-level hook to manage tracked contract addresses lifecycle:
- * 1. Synchronizes selected active wallet to localStorage ("current_selected_wallet")
- * 2. Computes and saves base off-chain derived addresses for all saved wallets
- * 3. Triggers a single universal background hydration for all saved wallets on session start
- * 4. Discovers circle, ring, and personal wallet addresses across all saved wallets
- * 5. Immediately hydrates newly discovered fresh addresses in a single combined call
- * 6. Zero refetch on wallet switch (loads cached state from memory / IndexedDB)
- * 7. Re-hydrates all saved wallets upon manual dashboard refresh
+ * Top-level hook to manage tracked contract addresses lifecycle in bro-store:
+ * 1. Immediately purges legacy localStorage tracked_addresses keys
+ * 2. Fetches jettons for all saved wallets (including isMember: false)
+ * 3. Triggers 1 universal background hydration batch on session start for all persisted addresses
+ * 4. Checks FiWallet initialization: uninit -> isMember: false; active -> isMember: true
+ * 5. Discovers location and circle invites, adds fresh circle to bro-store
+ * 6. Follow-up batch hydrates fresh circle members' FiWallets and records under ring[invitor]
+ * 7. Zero refetch on wallet switch (0ms reads from bro-store & IndexedDB)
  */
 export function useTrackedAddressesSync() {
-  const { address, activeWalletId, savedWallets } = useWallet();
+  const storeApi = useWalletStoreApi();
+  const { address, savedWallets } = useWallet();
   const { loadUserJettons } = useJettons();
+  const {
+    setBrotherhoodMemberData,
+    addCircleInvites,
+    addRingInvites,
+    setLocationContract,
+  } = useBrotherhood();
+
   const { loadEvents } = useWalletStore(
-    useShallow((state) => {
-      return {
-        loadEvents: state.loadEvents,
-      };
-    }),
+    useShallow((state) => ({
+      loadEvents: state.loadEvents,
+    })),
   );
 
   const isWalletKitInitialized = useWalletStore(
@@ -60,157 +61,266 @@ export function useTrackedAddressesSync() {
 
   const hasHydratedSessionRef = useRef(false);
 
+  // Helper to normalize address matching helper
+  const findDecodedStore = (
+    stores: Record<string, any> | undefined,
+    targetAddr: string,
+  ) => {
+    if (!stores) return null;
+    if (stores[targetAddr]) return stores[targetAddr];
+
+    try {
+      const parsed = Address.parse(targetAddr);
+      const raw = parsed.toRawString();
+      const std = parsed.toString();
+      return stores[raw] || stores[std] || null;
+    } catch {
+      return null;
+    }
+  };
+
   const hydrateAllSavedWallets = useCallback(
     async (force = false) => {
       if (!isOnline() || !savedWallets || savedWallets.length === 0) return;
 
-      // load userJettons for all saved wallets
-      loadUserJettons();
+      // 1. Purge legacy localStorage tracked_addresses
+      purgeLegacyTrackedAddressesStorage();
+
+      // 2. Fetch jettons for ALL saved wallets (including isMember: false)
+      void loadUserJettons().catch(() => {});
       if (isWalletKitInitialized) {
         void loadEvents(50, 0, force).catch(() => {});
       }
 
       try {
-        // Gather and format-insensitively deduplicate addresses across ALL saved wallets
-        const allTrackedAddresses = getAllSavedWalletsTrackedAddresses(
-          savedWallets,
+        const currentState = storeApi.getState();
+        const currentJettonsByAddress =
+          currentState.jettons?.jettonsByAddress || {};
+        const currentBrotherhoodByAddress =
+          currentState.brotherhood?.brotherhoodByAddress || {};
+
+        // 3. Assemble 1 master batch address list across all saved wallets
+        const masterSet = new Set<string>();
+
+        const addContract = (addr?: Address | string | null) => {
+          if (!addr) return;
+          const formatted = normalizeAddressByNetwork(
+            addr,
+            true,
+            defaultNetwork,
+          );
+          if (formatted) masterSet.add(formatted);
+        };
+
+        const addWallet = (addr?: Address | string | null) => {
+          if (!addr) return;
+          const formatted = normalizeAddressByNetwork(
+            addr,
+            false,
+            defaultNetwork,
+          );
+          if (formatted) masterSet.add(formatted);
+        };
+
+        // Root FI Minter
+        addContract(FI_ADDRESS);
+
+        for (const wallet of savedWallets) {
+          if (!wallet.address) continue;
+          addWallet(wallet.address);
+
+          // Deterministic FiWallet
+          try {
+            const fiWallet = getFiWalletAddress(
+              Address.parse(wallet.address),
+              defaultNetwork,
+            );
+            addContract(fiWallet);
+          } catch {
+            /* ignore parse error */
+          }
+
+          // Discovered jettons for this wallet
+          const walletJettons =
+            currentJettonsByAddress[wallet.address] ||
+            currentJettonsByAddress[
+              normalizeAddressByNetwork(wallet.address, false, defaultNetwork)
+            ] ||
+            [];
+          for (const j of walletJettons) {
+            if (j.address) addContract(j.address);
+            if (j.walletAddress) addContract(j.walletAddress);
+          }
+
+          // Known Brotherhood state from bro-store
+          const walletKey = normalizeAddressByNetwork(
+            wallet.address,
+            false,
+            defaultNetwork,
+          );
+          const bData = currentBrotherhoodByAddress[walletKey];
+          if (bData && bData.isMember) {
+            if (bData.location) addContract(bData.location);
+            for (const c of bData.circle || []) {
+              addContract(c);
+            }
+            for (const ringList of Object.values(bData.ring || {})) {
+              for (const r of ringList) {
+                addContract(r);
+              }
+            }
+          }
+        }
+
+        const masterAddressList = Array.from(masterSet);
+        if (masterAddressList.length === 0) return;
+
+        // 4. Pass 1: Execute single universal batch hydration
+        const res = await batchHydrateUniversal(
+          masterAddressList,
           defaultNetwork,
+          { force },
         );
 
-        if (allTrackedAddresses.length > 0) {
-          const res = await batchHydrateUniversal(
-            allTrackedAddresses,
+        if (!res?.decodedStores) return;
+
+        const freshCircleQueue: {
+          walletKey: string;
+          freshCircle: string[];
+        }[] = [];
+
+        // 5. Evaluate FiWallet status and membership for each wallet
+        for (const wallet of savedWallets) {
+          if (!wallet.address) continue;
+          const walletKey = normalizeAddressByNetwork(
+            wallet.address,
+            false,
+            defaultNetwork,
+          );
+          let fiWallet: Address | null = null;
+          try {
+            fiWallet = getFiWalletAddress(
+              Address.parse(wallet.address),
+              defaultNetwork,
+            );
+          } catch {
+            fiWallet = null;
+          }
+          if (!fiWallet) continue;
+
+          const fiWalletAddr = normalizeAddressByNetwork(
+            fiWallet,
+            true,
             defaultNetwork,
           );
 
-          if (res?.decodedStores) {
-            const freshAddressesSet = new Set<string>();
+          const fiWalletStore = findDecodedStore(
+            res.decodedStores,
+            fiWalletAddr,
+          );
 
-            for (const wallet of savedWallets) {
-              if (!wallet.address) continue;
-              const walletAddrStr = normalizeAddressString(wallet.address);
-              if (!walletAddrStr) continue;
+          if (!fiWalletStore) {
+            // Account is uninit or inactive: not a member of brotherhood ecosystem
+            setBrotherhoodMemberData(walletKey, {
+              isMember: false,
+              location: undefined,
+              circle: [],
+              ring: {},
+            });
+            continue;
+          }
 
-              const currentData = loadTrackedAddresses(walletAddrStr);
-              if (!currentData) continue;
+          // Active member
+          setBrotherhoodMemberData(walletKey, { isMember: true });
 
-              const existingBefore = new Set(
-                getAllTrackedAddressesList(currentData)
-                  .map(normalizeAddressString)
-                  .filter(Boolean),
+          const { invited, h3Cell } =
+            extractInvitedAndLocationFromFiWallet(fiWalletStore);
+
+          // Location derivation
+          if (h3Cell && h3Cell.trim().length > 0) {
+            try {
+              const calculatedLoc = calculateLocationAddress(h3Cell.trim());
+              setLocationContract(walletKey, calculatedLoc, defaultNetwork);
+            } catch (locErr) {
+              console.warn(
+                '[useTrackedAddressesSync] Failed to calculate location:',
+                locErr,
               );
+            }
+          }
 
-              // 1. Check owner's FiWallet for new Circle invites and Location
-              let updatedData = currentData;
-              const fiWalletStr = currentData.base.fiWallet;
-              const fiWalletStore = fiWalletStr
-                ? res.decodedStores[fiWalletStr] ||
-                  res.decodedStores[normalizeAddressString(fiWalletStr)]
-                : null;
+          // Circle invites
+          if (invited.length > 0) {
+            const freshCircle = addCircleInvites(
+              walletKey,
+              invited,
+              defaultNetwork,
+            );
+            if (freshCircle.length > 0) {
+              freshCircleQueue.push({ walletKey, freshCircle });
+            }
+          }
+        }
 
-              if (fiWalletStore) {
-                const { invited, h3Cell } =
-                  extractInvitedAndLocationFromFiWallet(fiWalletStore);
-                const existingCircle = new Set(
-                  (currentData.circle.invited || []).map(
-                    normalizeAddressString,
-                  ),
-                );
-                const freshInvites = invited.filter(
-                  (i) => !existingCircle.has(normalizeAddressString(i)),
-                );
+        // 6. Pass 2: Follow-up targeted batch for newly discovered fresh circle members
+        if (freshCircleQueue.length > 0) {
+          const freshAddrsSet = new Set<string>();
+          for (const item of freshCircleQueue) {
+            for (const addr of item.freshCircle) {
+              freshAddrsSet.add(addr);
+            }
+          }
 
-                if (
-                  freshInvites.length > 0 ||
-                  (h3Cell && !currentData.circle.location)
-                ) {
-                  updatedData = addInvitedToCircle(
-                    walletAddrStr,
-                    invited,
-                    h3Cell,
+          const freshList = Array.from(freshAddrsSet);
+          if (freshList.length > 0) {
+            const freshRes = await batchHydrateUniversal(
+              freshList,
+              defaultNetwork,
+              { force: true },
+            );
+
+            if (freshRes?.decodedStores) {
+              for (const { walletKey, freshCircle } of freshCircleQueue) {
+                for (const cAddr of freshCircle) {
+                  const cStore = findDecodedStore(
+                    freshRes.decodedStores,
+                    cAddr,
                   );
-                }
-              }
-
-              // 2. From any Circle FiWallets that are already decoded in decodedStores, extract Ring invites
-              const ringInvites: string[] = [];
-              for (const cAddr of updatedData.circle.invited) {
-                const norm = normalizeAddressString(cAddr);
-                const cStore =
-                  res.decodedStores[cAddr] || res.decodedStores[norm];
-                if (cStore) {
-                  const { invited } =
-                    extractInvitedAndLocationFromFiWallet(cStore);
-                  ringInvites.push(...invited);
-                }
-              }
-
-              if (ringInvites.length > 0) {
-                updatedData = addInvitedToRing(walletAddrStr, ringInvites);
-              }
-
-              // 3. For any personal minters in decodedStores, compute owner's personal wallet and track it
-              const newWallets: string[] = [];
-              let parsedOwner: Address | null = null;
-              try {
-                parsedOwner = Address.parse(walletAddrStr);
-              } catch {
-                parsedOwner = null;
-              }
-
-              if (parsedOwner) {
-                for (const minterStr of updatedData.personalJettons || []) {
-                  const normMinter = normalizeAddressString(minterStr);
-                  const minterStore =
-                    res.decodedStores[minterStr] ||
-                    res.decodedStores[normMinter];
-                  const admin = minterStore?.adminAddress;
-                  if (admin) {
-                    try {
-                      const computed = computePersonalWalletAddress(
-                        Address.parse(minterStr),
-                        parsedOwner,
-                        admin,
+                  if (cStore) {
+                    const { invited: ringInvites } =
+                      extractInvitedAndLocationFromFiWallet(cStore);
+                    if (ringInvites.length > 0) {
+                      addRingInvites(
+                        walletKey,
+                        cAddr,
+                        ringInvites,
+                        defaultNetwork,
                       );
-                      newWallets.push(computed.toString());
-                    } catch {
-                      /* ignore derivation error */
                     }
                   }
                 }
               }
-
-              if (newWallets.length > 0) {
-                updatedData = addPersonalWallets(walletAddrStr, newWallets);
-              }
-
-              // Detect fresh addresses for this wallet (not in storage before this discovery run)
-              const afterList = getAllTrackedAddressesList(updatedData);
-              for (const addr of afterList) {
-                const norm = normalizeAddressString(addr);
-                if (norm && !existingBefore.has(norm)) {
-                  freshAddressesSet.add(norm);
-                }
-              }
-            }
-
-            // If fresh addresses were found across any saved wallets, batch fetch them immediately in a single combined call
-            if (freshAddressesSet.size > 0) {
-              await batchHydrateUniversal(
-                Array.from(freshAddressesSet),
-                defaultNetwork,
-              );
             }
           }
         }
       } catch (err) {
         console.error(
-          '[useTrackedAddressesSync] Background universal hydration error across all wallets:',
+          '[useTrackedAddressesSync] Background universal hydration error:',
           err,
         );
       }
     },
-    [savedWallets, isWalletKitInitialized, loadEvents, loadUserJettons],
+    [
+      storeApi,
+      savedWallets,
+      isWalletKitInitialized,
+      loadEvents,
+      loadUserJettons,
+      setBrotherhoodMemberData,
+      addCircleInvites,
+      addRingInvites,
+      setLocationContract,
+    ],
   );
 
   // Session bootstrap: hydrate all saved wallets once
@@ -233,17 +343,6 @@ export function useTrackedAddressesSync() {
       void loadEvents(50, 0).catch(() => {});
     }
   }, [isWalletKitInitialized, address, loadEvents]);
-
-  // Active wallet selection tracking (zero network refetch on switch)
-  useEffect(() => {
-    if (!address) return;
-
-    // 1. Save current wallet selection change to localStorage
-    saveCurrentSelectedWallet(address);
-
-    // 2. Ensure base addresses are calculated off-chain and persisted to localStorage
-    initializeOrGetTrackedAddresses(address, defaultNetwork);
-  }, [address, activeWalletId]);
 
   // Listen for manual dashboard refresh events to re-hydrate all saved wallets
   useEffect(() => {

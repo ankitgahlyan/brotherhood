@@ -378,6 +378,41 @@ export interface SwapSlice {
   validateSwapInputs: () => string | null;
 }
 
+export interface BrotherhoodMemberData {
+  isMember: boolean;
+  location?: string;
+  circle: string[];
+  ring: Record<string, string[]>;
+}
+
+export interface BrotherhoodSlice {
+  brotherhood: {
+    brotherhoodByAddress: Record<string, BrotherhoodMemberData>;
+  };
+
+  setBrotherhoodMemberData: (
+    walletAddress: string,
+    data: Partial<BrotherhoodMemberData>,
+  ) => void;
+  addCircleInvites: (
+    walletAddress: string,
+    invites: (string | any)[],
+    network?: NetworkType,
+  ) => string[];
+  addRingInvites: (
+    walletAddress: string,
+    invitorAddress: string | any,
+    invites: (string | any)[],
+    network?: NetworkType,
+  ) => void;
+  setLocationContract: (
+    walletAddress: string,
+    locationAddress: string | any,
+    network?: NetworkType,
+  ) => void;
+  removeBrotherhoodWallet: (walletAddress: string) => void;
+}
+
 // Combined app state
 export interface AppState
   extends
@@ -390,7 +425,8 @@ export interface AppState
     RatesSlice,
     SwapSlice,
     StakingSlice,
-    GaslessSlice {
+    GaslessSlice,
+    BrotherhoodSlice {
   isHydrated: boolean;
 }
 
@@ -443,6 +479,13 @@ export type GaslessSliceCreator = StateCreator<
   [['zustand/immer', never]],
   [],
   GaslessSlice
+>;
+
+export type BrotherhoodSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  BrotherhoodSlice
 >;
 
 // Migration types

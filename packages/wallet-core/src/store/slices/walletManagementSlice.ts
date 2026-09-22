@@ -640,6 +640,9 @@ export const createWalletManagementSlice =
           delete state.walletManagement.eventsByAddress[removed.address];
           delete state.jettons.jettonsByAddress[removed.address];
           delete state.nfts.nftsByAddress[removed.address];
+          if (state.removeBrotherhoodWallet) {
+            state.removeBrotherhoodWallet(removed.address);
+          }
         }
 
         if (isRemovingActiveWallet && isLastWallet) {

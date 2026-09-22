@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useWallet } from '@demo/wallet-core';
+import { useWallet, useJettons } from '@demo/wallet-core';
 
 import {
   fetchPersonalTokenMetadata,
@@ -19,79 +19,39 @@ import {
   isPersonalMinterContract,
   type DiscoveredPersonalToken,
 } from '@/lib/brotherhood/ton';
-import { network } from '@/lib/brotherhood/config';
-import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
+import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
+import {
+  computePersonalWalletAddress,
+  batchHydrateUniversal,
+} from '@/lib/brotherhood/account-state-hydrator';
 import {
   getNormalizedContractCacheKey,
   getContractCache,
   setContractCache,
 } from '@/lib/brotherhood/contract-cache';
 
-import {
-  loadTrackedAddresses,
-  saveTrackedAddresses,
-  initializeOrGetTrackedAddresses,
-  addPersonalWallets,
-  getAllTrackedAddressesList,
-  getTrackedAddressesKey,
-} from '@/lib/brotherhood/tracked-addresses-storage';
-import { refetchAffectedAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
-
 export function useTrackedPersonalTokens() {
   const queryClient = useQueryClient();
   const { currentWallet, address, getActiveWallet } = useWallet();
+  const { userJettons, refreshJettons } = useJettons();
   const walletAddress =
     address || currentWallet?.getAddress() || getActiveWallet()?.address;
 
-  // Local state for list of tracked minter addresses loaded exclusively from tracked_addresses
-  const [trackedMinters, setTrackedMinters] = useState<string[]>(() => {
-    if (!walletAddress) return [];
-    const trackedData = loadTrackedAddresses(walletAddress);
-    return trackedData?.personalJettons || [];
-  });
+  const [manualMinters, setManualMinters] = useState<string[]>([]);
 
-  const [prevWalletAddress, setPrevWalletAddress] = useState(walletAddress);
-  if (walletAddress !== prevWalletAddress) {
-    setPrevWalletAddress(walletAddress);
-    const trackedData = walletAddress
-      ? loadTrackedAddresses(walletAddress)
-      : null;
-    setTrackedMinters(trackedData?.personalJettons || []);
-  }
-
-  // Keep tracked minters synced when storage updates across tabs
-  useEffect(() => {
-    if (!walletAddress) return;
-
-    const storageKey = getTrackedAddressesKey(walletAddress);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === storageKey) {
-        const freshData = loadTrackedAddresses(walletAddress);
-        setTrackedMinters(freshData?.personalJettons || []);
+  // Tracked minters are dynamically derived from userJettons (excluding FI) plus any manually imported tokens
+  const trackedMinters = useMemo(() => {
+    const set = new Set<string>();
+    for (const j of userJettons) {
+      if (j.address && j.address !== FI_ADDRESS) {
+        set.add(j.address);
       }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, [walletAddress]);
-
-  const persistMinters = useCallback(
-    (newMinters: string[]) => {
-      if (!walletAddress) return;
-      const current =
-        loadTrackedAddresses(walletAddress) ||
-        initializeOrGetTrackedAddresses(walletAddress);
-      const updated = {
-        ...current,
-        personalJettons: newMinters,
-      };
-      saveTrackedAddresses(walletAddress, updated);
-      setTrackedMinters(newMinters);
-    },
-    [walletAddress],
-  );
+    }
+    for (const m of manualMinters) {
+      set.add(m);
+    }
+    return Array.from(set);
+  }, [userJettons, manualMinters]);
 
   const parsedOwnerAddress = useMemo(() => {
     if (!walletAddress) return null;
@@ -221,13 +181,10 @@ export function useTrackedPersonalTokens() {
 
     setIsDiscovering(true);
     try {
-      const trackedData = loadTrackedAddresses(walletAddress);
-      if (trackedData) {
-        const allAddrs = getAllTrackedAddressesList(trackedData);
-        if (allAddrs.length > 0) {
-          await refetchAffectedAddresses(allAddrs, network);
-        }
+      if (trackedMinters.length > 0) {
+        await batchHydrateUniversal(trackedMinters, network, { force: true });
       }
+      await refreshJettons();
 
       await queryClient.invalidateQueries({
         queryKey: ['tracked-personal-tokens', walletAddress],
@@ -239,7 +196,13 @@ export function useTrackedPersonalTokens() {
     } finally {
       setIsDiscovering(false);
     }
-  }, [parsedOwnerAddress, walletAddress, queryClient]);
+  }, [
+    parsedOwnerAddress,
+    walletAddress,
+    trackedMinters,
+    refreshJettons,
+    queryClient,
+  ]);
 
   // Inspect contract address and return token preview
   const inspectToken = useCallback(
@@ -342,18 +305,14 @@ export function useTrackedPersonalTokens() {
       });
 
       if (!alreadyTracked) {
-        const nextList = [...trackedMinters, minterStr];
-        persistMinters(nextList);
-
-        if (inspection.token.walletAddress) {
-          addPersonalWallets(walletAddress, [inspection.token.walletAddress]);
-        }
+        setManualMinters((prev) => [...prev, minterStr]);
 
         const addrsToFetch = [minterStr];
         if (inspection.token.walletAddress) {
           addrsToFetch.push(inspection.token.walletAddress);
         }
-        void refetchAffectedAddresses(addrsToFetch, network);
+        void batchHydrateUniversal(addrsToFetch, network, { force: true });
+        void refreshJettons();
       }
 
       await queryClient.invalidateQueries({
@@ -374,7 +333,7 @@ export function useTrackedPersonalTokens() {
       walletAddress,
       inspectToken,
       trackedMinters,
-      persistMinters,
+      refreshJettons,
       queryClient,
     ],
   );
@@ -389,24 +348,24 @@ export function useTrackedPersonalTokens() {
         // pass
       }
 
-      const nextList = trackedMinters.filter((m) => {
-        if (targetAddr) {
-          try {
-            return !Address.parse(m).equals(targetAddr);
-          } catch {
-            return m !== minterAddress;
+      setManualMinters((prev) =>
+        prev.filter((m) => {
+          if (targetAddr) {
+            try {
+              return !Address.parse(m).equals(targetAddr);
+            } catch {
+              return m !== minterAddress;
+            }
           }
-        }
-        return m !== minterAddress;
-      });
-
-      persistMinters(nextList);
+          return m !== minterAddress;
+        }),
+      );
 
       await queryClient.invalidateQueries({
         queryKey: ['tracked-personal-tokens', walletAddress],
       });
     },
-    [trackedMinters, persistMinters, queryClient, walletAddress],
+    [queryClient, walletAddress],
   );
 
   const activePersonalTokens =

@@ -25,7 +25,6 @@ import {
   PopoverTrigger,
 } from '@/core/components/ui/popover';
 import { formatTonAddress, copyTonAddress } from '@/core/utils/formatters';
-import { removeTrackedAddresses } from '@/lib/brotherhood/tracked-addresses-storage';
 
 const networkBadgeClass = (network: SavedWallet['network']): string => {
   if (network === 'mainnet')
@@ -210,9 +209,6 @@ export const WalletRow: React.FC<WalletRowProps> = ({
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
-                      if (wallet.address) {
-                        removeTrackedAddresses(wallet.address);
-                      }
                       onRemove?.(wallet.id);
                     }}
                     className="flex-1 text-sm font-semibold text-destructive-foreground bg-destructive rounded-lg py-1.5 hover:bg-destructive/90 transition-colors"

@@ -86,10 +86,7 @@ async function main() {
           },
           version: 2,
         };
-        localStorage.setItem(
-          'demo-wallet-store',
-          JSON.stringify(demoWalletStore),
-        );
+        localStorage.setItem('bro-store', JSON.stringify(demoWalletStore));
       } catch (e) {
         console.error('Init script error:', e);
       }

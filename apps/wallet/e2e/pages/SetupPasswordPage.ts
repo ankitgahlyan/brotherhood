@@ -73,7 +73,7 @@ export class SetupPasswordPage {
 
   async getStore() {
     return this.page.evaluate(() =>
-      JSON.parse(localStorage.getItem('demo-wallet-store') ?? '{}'),
+      JSON.parse(localStorage.getItem('bro-store') ?? '{}'),
     );
   }
 }

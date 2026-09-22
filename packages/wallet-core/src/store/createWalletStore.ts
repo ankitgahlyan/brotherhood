@@ -25,6 +25,7 @@ import { createRatesSlice } from './slices/ratesSlice';
 import { createSwapSlice } from './slices/swapSlice';
 import { createStakingSlice } from './slices/stakingSlice';
 import { createGaslessSlice } from './slices/gaslessSlice';
+import { createBrotherhoodSlice } from './slices/brotherhoodSlice';
 import type { AppState } from '../types/store';
 import type { StorageAdapter } from '../adapters/storage/types';
 import type { WalletKitConfig } from '../types/wallet';
@@ -165,9 +166,12 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             ...createGaslessSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createBrotherhoodSlice(...a),
           })) as unknown as any,
           {
-            name: 'demo-wallet-store',
+            name: 'bro-store',
             storage: createJSONStorage(
               () => (storage ? storage : localStorage),
               {
@@ -246,6 +250,10 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 userJettons: state.jettons?.userJettons || [],
                 jettonsByAddress: state.jettons?.jettonsByAddress || {},
                 lastJettonsUpdate: state.jettons?.lastJettonsUpdate || 0,
+              },
+              brotherhood: {
+                brotherhoodByAddress:
+                  state.brotherhood?.brotherhoodByAddress || {},
               },
             }),
             merge: (persistedState, currentState) => {
@@ -328,6 +336,12 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   userJettons: persisted?.jettons?.userJettons || [],
                   jettonsByAddress: persisted?.jettons?.jettonsByAddress || {},
                   lastJettonsUpdate: persisted?.jettons?.lastJettonsUpdate || 0,
+                },
+                brotherhood: {
+                  ...currentState.brotherhood,
+                  ...persisted?.brotherhood,
+                  brotherhoodByAddress:
+                    persisted?.brotherhood?.brotherhoodByAddress || {},
                 },
               };
 

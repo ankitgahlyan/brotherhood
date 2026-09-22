@@ -7,27 +7,14 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import {
-  useAuth,
-  useJettons,
-  useRates,
-  useWallet,
-  useWalletStore,
-} from '@demo/wallet-core';
-import {
-  addPersonalJettons,
-  normalizeAddressString,
-  loadTrackedAddresses,
-} from '@/lib/brotherhood/tracked-addresses-storage';
+import { useAuth, useRates, useWallet } from '@demo/wallet-core';
 import { notifyCacheUpdated } from '@/lib/brotherhood/contract-cache';
-import { refetchAffectedAddresses } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { isOnline } from '@/core/lib/network-status';
 
 export const useWalletDataUpdater = () => {
   const { address, activeWalletId, hasWallet, currentWallet, loadAllWallets } =
     useWallet();
   const { isUnlocked } = useAuth();
-  const { userJettons } = useJettons();
   const { loadRates } = useRates();
 
   // Load wallets when hasWallet but currentWallet missing (e.g. refresh on /send before rehydration)
@@ -65,17 +52,6 @@ export const useWalletDataUpdater = () => {
       void executeWalletSync();
     }
   }, [activeWalletId, address, executeWalletSync]);
-
-  // When userJettons are populated/updated, extract addresses and save to personalJettons
-  useEffect(() => {
-    if (!address || userJettons.length === 0) return;
-    const minterAddresses = userJettons
-      .map((j) => normalizeAddressString(j.address))
-      .filter(Boolean);
-    if (minterAddresses.length > 0) {
-      addPersonalJettons(address, minterAddresses);
-    }
-  }, [address, userJettons]);
 
   // When WebSocket streaming confirms a transaction or updates trace finality,
   // trigger targeted refetch of the affected tracked contracts (FI wallet, personal wallet)

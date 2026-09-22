@@ -15,11 +15,13 @@ import { useIsNetworkMember } from '../hooks/use-is-network-member';
 
 interface MemberGuardProps {
   title: string;
+  allowReadOnly?: boolean;
   children: React.ReactNode;
 }
 
 export const MemberGuard: React.FC<MemberGuardProps> = ({
   title,
+  allowReadOnly = false,
   children,
 }) => {
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ export const MemberGuard: React.FC<MemberGuardProps> = ({
     );
   }
 
-  if (!isMember) {
+  if (!isMember && !allowReadOnly) {
     return (
       <NewLayout
         header={
@@ -53,5 +55,17 @@ export const MemberGuard: React.FC<MemberGuardProps> = ({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {!isMember && (
+        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium flex items-center justify-between">
+          <span>
+            Read-only mode: You are not member, get invited first by existing
+            members.
+          </span>
+        </div>
+      )}
+      {children}
+    </>
+  );
 };

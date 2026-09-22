@@ -24,8 +24,6 @@ export const SettingsKeys = {
   TESTNET_RPC_ROUTING: 'brotherhood_rpc_routing_testnet',
   TESTNET_TONCENTER_CUSTOM_ACTIVE: 'brotherhood_custom_active_toncenter',
   TESTNET_TONAPI_CUSTOM_ACTIVE: 'brotherhood_custom_active_tonapi',
-  TRACKED_PERSONAL_TOKENS_PREFIX: 'brotherhood_tracked_personal_tokens_',
-  DISCOVERED_INITIAL_PREFIX: 'brotherhood_discovered_initial_',
 } as const;
 
 export const ThemeSchema = z.enum(['light', 'dark', 'oled', 'system']);

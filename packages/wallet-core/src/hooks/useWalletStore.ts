@@ -11,6 +11,11 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 
 import { WalletStoreContext } from '../providers/WalletProvider';
+import {
+  normalizeAddressByNetwork,
+  EMPTY_CIRCLE,
+  EMPTY_RING,
+} from '../store/slices/brotherhoodSlice';
 import type { AppState } from '../types/store';
 
 /**
@@ -22,6 +27,17 @@ export function useWalletStore<T>(selector: (state: AppState) => T): T {
     throw new Error('useWalletStore must be used within WalletProvider');
   }
   return useStore(store, selector);
+}
+
+/**
+ * Hook to access the underlying wallet store instance (for getState/setState)
+ */
+export function useWalletStoreApi() {
+  const store = useContext(WalletStoreContext);
+  if (!store) {
+    throw new Error('useWalletStoreApi must be used within WalletProvider');
+  }
+  return store;
 }
 
 /**
@@ -324,5 +340,38 @@ export const useStaking = () => {
       clearStaking: state.clearStaking,
       validateStakingInputs: state.validateStakingInputs,
     })),
+  );
+};
+
+/**
+ * Hook for Brotherhood membership, circle, ring, and location
+ */
+export const useBrotherhood = () => {
+  return useWalletStore(
+    useShallow((state) => {
+      const activeAddress = state.walletManagement.address;
+      const normalizedActiveKey = activeAddress
+        ? normalizeAddressByNetwork(activeAddress, false)
+        : undefined;
+
+      const activeMemberData = normalizedActiveKey
+        ? state.brotherhood.brotherhoodByAddress[normalizedActiveKey]
+        : undefined;
+
+      return {
+        brotherhoodByAddress: state.brotherhood.brotherhoodByAddress,
+        isMember: activeMemberData?.isMember ?? false,
+        isTracked: activeMemberData !== undefined,
+        location: activeMemberData?.location,
+        circle: activeMemberData?.circle ?? (EMPTY_CIRCLE as string[]),
+        ring:
+          activeMemberData?.ring ?? (EMPTY_RING as Record<string, string[]>),
+        setBrotherhoodMemberData: state.setBrotherhoodMemberData,
+        addCircleInvites: state.addCircleInvites,
+        addRingInvites: state.addRingInvites,
+        setLocationContract: state.setLocationContract,
+        removeBrotherhoodWallet: state.removeBrotherhoodWallet,
+      };
+    }),
   );
 };
