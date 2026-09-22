@@ -64,6 +64,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   const eventsByAddress = useWalletStore(
     (state) => state.walletManagement.eventsByAddress,
   );
+  const activeEvents = useWalletStore((state) => state.walletManagement.events);
   const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
   const myAddress = activeWallet?.address;
 
@@ -74,65 +75,141 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
       : transaction?.id);
   const network = transaction?.network ?? 'testnet';
 
-  const myEvents =
-    (myAddress && eventsByAddress ? eventsByAddress[myAddress] : undefined) ||
-    [];
-  const storedEvent = myEvents.find((e: any) => {
-    if (!transaction) return false;
+  const candidateEvents = useMemo(() => {
+    const list: any[] = [];
+    if (myAddress && eventsByAddress) {
+      if (eventsByAddress[myAddress]) {
+        list.push(...eventsByAddress[myAddress]);
+      } else {
+        for (const [key, evts] of Object.entries(eventsByAddress)) {
+          if (sameAddress(key, myAddress) && Array.isArray(evts)) {
+            list.push(...evts);
+          }
+        }
+      }
+    }
+    if (Array.isArray(activeEvents)) {
+      list.push(...activeEvents);
+    }
+    return list;
+  }, [myAddress, eventsByAddress, activeEvents]);
+
+  const storedEvent = useMemo(() => {
+    if (!transaction) return null;
+    const targets = [
+      transaction.id,
+      transaction.txHash,
+      hashForExplorer,
+      transaction.id.startsWith('pending-')
+        ? transaction.id.replace('pending-', '')
+        : undefined,
+    ]
+      .filter(Boolean)
+      .map((s) => String(s).toLowerCase());
+
     return (
-      e.eventId === transaction.id ||
-      e.eventId === transaction.txHash ||
-      (e.traceExternalHash &&
-        (e.traceExternalHash === transaction.txHash ||
-          e.traceExternalHash === transaction.id))
+      candidateEvents.find((e: any) => {
+        if (!e) return false;
+        const eId = e.eventId ? String(e.eventId).toLowerCase() : '';
+        const extHash = e.traceExternalHash
+          ? String(e.traceExternalHash).toLowerCase()
+          : '';
+        if (targets.some((t) => t && (t === eId || t === extHash))) {
+          return true;
+        }
+        if (e.transactions && typeof e.transactions === 'object') {
+          for (const txKey of Object.keys(e.transactions)) {
+            const lowerTx = txKey.toLowerCase();
+            if (targets.some((t) => t && t === lowerTx)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }) ?? null
     );
-  }) as any;
+  }, [candidateEvents, transaction, hashForExplorer]);
 
   // 1. Instant in-memory trace DAG derivation (0 network calls)
   const inMemoryTraceDag = useMemo<TraceDagAnalysis | null>(() => {
+    if (!storedEvent) return null;
+
     if (
-      !storedEvent ||
-      !storedEvent.transactions ||
-      Object.keys(storedEvent.transactions).length === 0
+      storedEvent.transactions &&
+      Object.keys(storedEvent.transactions).length > 0
     ) {
-      return null;
+      try {
+        const traceItem = {
+          trace_id: storedEvent.eventId,
+          trace: storedEvent.trace,
+          transactions: storedEvent.transactions,
+          transactions_order: Object.keys(storedEvent.transactions),
+          is_incomplete: Boolean(storedEvent.inProgress),
+          start_utime: storedEvent.timestamp,
+          start_lt: String(storedEvent.lt || 0),
+          end_utime: storedEvent.timestamp,
+          end_lt: String(storedEvent.lt || 0),
+          external_hash: storedEvent.traceExternalHash || '',
+          mc_seqno_start: '0',
+          mc_seqno_end: '0',
+          actions: storedEvent.actions as any,
+          trace_info: {
+            classification_state: 'parsed',
+            messages: 0,
+            pending_messages: 0,
+            trace_state: 'complete',
+            transactions: Object.keys(storedEvent.transactions).length,
+          },
+          warning: '',
+        };
+        return parseTraceDag(traceItem as any, myAddress);
+      } catch {
+        // Fall back to synthetic DAG
+      }
     }
-    try {
-      const traceItem = {
-        trace_id: storedEvent.eventId,
-        trace: storedEvent.trace,
-        transactions: storedEvent.transactions,
-        transactions_order: Object.keys(storedEvent.transactions),
-        is_incomplete: Boolean(storedEvent.inProgress),
-        start_utime: storedEvent.timestamp,
-        start_lt: String(storedEvent.lt || 0),
-        end_utime: storedEvent.timestamp,
-        end_lt: String(storedEvent.lt || 0),
-        external_hash: storedEvent.traceExternalHash || '',
-        mc_seqno_start: '0',
-        mc_seqno_end: '0',
-        actions: storedEvent.actions as any,
-        trace_info: {
-          classification_state: 'parsed',
-          messages: 0,
-          pending_messages: 0,
-          trace_state: 'complete',
-          transactions: Object.keys(storedEvent.transactions).length,
-        },
-        warning: '',
+
+    if (transaction) {
+      const isSuccess = transaction.status !== 'failed';
+      return {
+        traceId: storedEvent.eventId || transaction.txHash || transaction.id,
+        isSuccess,
+        totalNetworkFee: 0n,
+        totalSent: transaction.isOutgoing ? 1n : 0n,
+        totalReceived: !transaction.isOutgoing ? 1n : 0n,
+        hops: [
+          {
+            hash: transaction.txHash || transaction.id,
+            source: transaction.senderAddress,
+            destination:
+              transaction.recipientAddress ||
+              transaction.counterpartyAddress ||
+              myAddress,
+            fee: 0n,
+            comment: transaction.comment,
+            isSuccess,
+            depth: 0,
+          },
+        ],
       };
-      return parseTraceDag(traceItem as any, myAddress);
-    } catch {
-      return null;
     }
-  }, [storedEvent, myAddress]);
+
+    return null;
+  }, [storedEvent, myAddress, transaction]);
 
   const [fetchedTraceDag, setFetchedTraceDag] =
     useState<TraceDagAnalysis | null>(null);
   const traceDag = inMemoryTraceDag || fetchedTraceDag;
 
   useEffect(() => {
-    if (!isOpen || !hashForExplorer || inMemoryTraceDag || !walletKit) return;
+    if (
+      !isOpen ||
+      !hashForExplorer ||
+      inMemoryTraceDag ||
+      storedEvent ||
+      !walletKit
+    ) {
+      return;
+    }
 
     let isMounted = true;
     const client = walletKit.getApiClient(getChainNetwork(network));
@@ -169,6 +246,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     isOpen,
     hashForExplorer,
     inMemoryTraceDag,
+    storedEvent,
     walletKit,
     network,
     myAddress,
