@@ -6,22 +6,16 @@ struct (0x38b4c81a) CancelDeferredPayment {
     queryId: uint64 = 0
 }
 
-struct (0x5f91e4a3) FallbackReclaim {
-    queryId: uint64 = 0
-}
-
 struct (0x24d8b9e1) PenalizeDeferredRequester {
     queryId: uint64 = 0
     payer: address
     amount: coins
-    createdAt: uint32
 }
 
 struct (0x19a4f210) DeferredPaymentInitiated {
     queryId: uint64 = 0
     holdingAddress: address
     amount: coins
-    createdAt: uint32
 }
 
 struct (0x49f2b801) PullDeferredFunds {
@@ -46,15 +40,9 @@ struct (0x531b70a2) AcceptDeferredTransfer {
     payer: address
     payee: address
     amount: coins
-    createdAt: uint32
 }
 
 struct (0x1f84b29c) ActClaimDeferredPayment {
-    queryId: uint64 = 0
-    holdingAddress: address
-}
-
-struct (0x6d92e541) ActFallbackReclaim {
     queryId: uint64 = 0
     holdingAddress: address
 }

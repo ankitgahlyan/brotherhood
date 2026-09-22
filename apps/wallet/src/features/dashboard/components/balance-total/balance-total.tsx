@@ -165,7 +165,13 @@ export const BalanceTotal: React.FC = () => {
           aria-label="Copy address"
         >
           <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
-            <img src={assetUrl('fi.svg')} alt="FI" className="w-full h-full" />
+            <img
+              src={assetUrl('fi.svg')}
+              alt="FI"
+              width={16}
+              height={16}
+              className="w-full h-full"
+            />
           </span>
           <span className="text-xs font-semibold text-foreground">
             {formatWalletAddress(address, true, 4)}

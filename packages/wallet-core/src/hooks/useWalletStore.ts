@@ -15,8 +15,9 @@ import {
   normalizeAddressByNetwork,
   EMPTY_CIRCLE,
   EMPTY_RING,
+  EMPTY_PENDING_DEFERRED,
 } from '../store/slices/brotherhoodSlice';
-import type { AppState } from '../types/store';
+import type { AppState, PendingDeferredPayment } from '../types/store';
 
 /**
  * Hook to access the wallet store
@@ -358,8 +359,16 @@ export const useBrotherhood = () => {
         ? state.brotherhood.brotherhoodByAddress[normalizedActiveKey]
         : undefined;
 
+      const activePendingDeferred = normalizedActiveKey
+        ? state.brotherhood.pendingDeferredByAddress[normalizedActiveKey]
+        : undefined;
+
       return {
         brotherhoodByAddress: state.brotherhood.brotherhoodByAddress,
+        pendingDeferredByAddress: state.brotherhood.pendingDeferredByAddress,
+        pendingDeferred:
+          activePendingDeferred ??
+          (EMPTY_PENDING_DEFERRED as unknown as PendingDeferredPayment[]),
         isMember: activeMemberData?.isMember ?? false,
         isTracked: activeMemberData !== undefined,
         location: activeMemberData?.location,
@@ -371,6 +380,9 @@ export const useBrotherhood = () => {
         addRingInvites: state.addRingInvites,
         setLocationContract: state.setLocationContract,
         removeBrotherhoodWallet: state.removeBrotherhoodWallet,
+        addPendingDeferredPayment: state.addPendingDeferredPayment,
+        updatePendingDeferredPayment: state.updatePendingDeferredPayment,
+        removePendingDeferredPayment: state.removePendingDeferredPayment,
       };
     }),
   );

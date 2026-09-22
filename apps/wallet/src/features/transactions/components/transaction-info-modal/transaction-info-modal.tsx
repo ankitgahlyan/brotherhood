@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Copy,
   Check,
@@ -31,7 +31,7 @@ import { cn } from '@/core/lib/utils';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '@/features/send/lib/contact-storage';
 import { useWalletStore, getChainNetwork } from '@demo/wallet-core';
-import type { TraceDagAnalysis } from '@ton/walletkit';
+import { parseTraceDag, type TraceDagAnalysis } from '@ton/walletkit';
 
 import type { TransactionRowModel } from '../../utils/map-transaction-row';
 import { decodeExitCode } from '../../utils/map-transaction-row';
@@ -50,7 +50,6 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isInlineExplorerOpen, setIsInlineExplorerOpen] = useState(false);
-  const [traceDag, setTraceDag] = useState<TraceDagAnalysis | null>(null);
   const [isLoadingTrace, setIsLoadingTrace] = useState(false);
   const [isRouteExpanded, setIsRouteExpanded] = useState(false);
 
@@ -62,6 +61,9 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     (state) => state.walletManagement.activeWalletId,
   );
   const walletKit = useWalletStore((state) => state.walletCore.walletKit);
+  const eventsByAddress = useWalletStore(
+    (state) => state.walletManagement.eventsByAddress,
+  );
   const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
   const myAddress = activeWallet?.address;
 
@@ -72,23 +74,86 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
       : transaction?.id);
   const network = transaction?.network ?? 'testnet';
 
+  const myEvents =
+    (myAddress && eventsByAddress ? eventsByAddress[myAddress] : undefined) ||
+    [];
+  const storedEvent = myEvents.find((e: any) => {
+    if (!transaction) return false;
+    return (
+      e.eventId === transaction.id ||
+      e.eventId === transaction.txHash ||
+      (e.traceExternalHash &&
+        (e.traceExternalHash === transaction.txHash ||
+          e.traceExternalHash === transaction.id))
+    );
+  }) as any;
+
+  // 1. Instant in-memory trace DAG derivation (0 network calls)
+  const inMemoryTraceDag = useMemo<TraceDagAnalysis | null>(() => {
+    if (
+      !storedEvent ||
+      !storedEvent.transactions ||
+      Object.keys(storedEvent.transactions).length === 0
+    ) {
+      return null;
+    }
+    try {
+      const traceItem = {
+        trace_id: storedEvent.eventId,
+        trace: storedEvent.trace,
+        transactions: storedEvent.transactions,
+        transactions_order: Object.keys(storedEvent.transactions),
+        is_incomplete: Boolean(storedEvent.inProgress),
+        start_utime: storedEvent.timestamp,
+        start_lt: String(storedEvent.lt || 0),
+        end_utime: storedEvent.timestamp,
+        end_lt: String(storedEvent.lt || 0),
+        external_hash: storedEvent.traceExternalHash || '',
+        mc_seqno_start: '0',
+        mc_seqno_end: '0',
+        actions: storedEvent.actions as any,
+        trace_info: {
+          classification_state: 'parsed',
+          messages: 0,
+          pending_messages: 0,
+          trace_state: 'complete',
+          transactions: Object.keys(storedEvent.transactions).length,
+        },
+        warning: '',
+      };
+      return parseTraceDag(traceItem as any, myAddress);
+    } catch {
+      return null;
+    }
+  }, [storedEvent, myAddress]);
+
+  const [fetchedTraceDag, setFetchedTraceDag] =
+    useState<TraceDagAnalysis | null>(null);
+  const traceDag = inMemoryTraceDag || fetchedTraceDag;
+
   useEffect(() => {
-    if (!isOpen || !hashForExplorer || !walletKit) return;
+    if (!isOpen || !hashForExplorer || inMemoryTraceDag || !walletKit) return;
 
     let isMounted = true;
     const client = walletKit.getApiClient(getChainNetwork(network));
     if (!client || typeof client.getTraceDetails !== 'function') return;
 
+    queueMicrotask(() => {
+      if (isMounted) {
+        setIsLoadingTrace(true);
+      }
+    });
+
     client
       .getTraceDetails({ txHash: hashForExplorer, walletAddress: myAddress })
       .then((dag) => {
         if (isMounted) {
-          setTraceDag(dag ?? null);
+          setFetchedTraceDag(dag ?? null);
         }
       })
       .catch(() => {
         if (isMounted) {
-          setTraceDag(null);
+          setFetchedTraceDag(null);
         }
       })
       .finally(() => {
@@ -100,10 +165,17 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, hashForExplorer, walletKit, network, myAddress]);
+  }, [
+    isOpen,
+    hashForExplorer,
+    inMemoryTraceDag,
+    walletKit,
+    network,
+    myAddress,
+  ]);
 
   const handleClose = () => {
-    setTraceDag(null);
+    setFetchedTraceDag(null);
     setIsRouteExpanded(false);
     onClose();
   };

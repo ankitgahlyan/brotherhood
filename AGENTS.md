@@ -35,7 +35,7 @@ This repository uses a single-context layout for domain documentation. The gloss
 - Use `ton-blockchain` skill for ton blockchain related tasks.
 - Treat the contracts under `contracts/src/` as the source of truth.
 - Treat all contracts as a coupled system. Keep storage, message formats, tests, wrappers, TypeScript wrappers, scripts, and frontend flows consistent across both sides.
-- Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them from the contract ABI instead of hand-editing them when the ABI changes.
+- Treat files in `wrappers`, `wrappers-ts` as generated output. Regenerate them only for changed contracts from the contract ABI instead of hand-editing them when the ABI changes.
 - Keep `contracts/tests/`, `contracts/wrappers/`, `contracts/scripts/`, `wrappers-ts/`, and the frontend code in `src/` aligned with contract changes.
 - Prefer this validation loop when feasible: `acton run loop` `bun typecheck`, `bun format`.
 - Before proposing broadcast deployment changes or metadata changes, verify the contract flow with `acton run deploy-emulation` first.
@@ -104,4 +104,26 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Fullscreen & Safe Area Insets:** In Bot API 8.0+ fullscreen mode, total top safe area is `safeAreaInset.top + contentSafeAreaInset.top`. Always listen to `safeAreaChanged`, `contentSafeAreaChanged`, `fullscreenChanged`, `fullscreenFailed`, and `viewportChanged` events to update `--tg-safe-area-top` and `--tg-safe-area-bottom` so top headers and action buttons are never obscured by the phone status bar.
 - **Eager BackButton Binding & Basepath:** Always attach Telegram BackButton listeners eagerly on application bootstrap (never lazily on first modal opening). Always normalize router paths against `VITE_BASE` / `BASE_URL` (`/brotherhood/`) when evaluating root route vs sub-routes to avoid unintentional TMA minimization.
 - **Modal History & Back-Stack Hygiene on Web vs TWA:** Never push or pop raw `window.history` entries (`window.history.pushState({ modalId })` / `window.history.back()`) for component modals on Web. In SPAs using TanStack Router, synthetic history mutations corrupt router internal state keys (`__TSR_key`, `__TSR_index`), and calling `window.history.back()` on modal unmount races with user navigations out of modals, firing `popstate` events that abort the transition and bounce users back. Reserve back-stack coordination strictly for Telegram's native `BackButton` via `showTelegramBackButton` / `handleGlobalBack()`, leaving Web modal dismissals to React state and Radix/Vaul ESC/backdrop handlers (`syncHistory: false` by default).
-- **Test Runner Isolation:** When running tests with Bun from the workspace root, always exclude `apps/wallet-v2` (`bun test --path-ignore-patterns "**/apps/wallet-v2/**"` or `bun test apps/wallet/src`) because `apps/wallet-v2` uses Jest with fake timer mocks (`jest.advanceTimersByTimeAsync`) that block under Bun.
+
+### Test Runner Isolation & Framework Boundaries
+
+This repository uses separate test frameworks suited for specific workspace targets:
+
+- **`apps/wallet/src` & `packages/wallet-core`:** Tested via **Bun Test** (`bun test` / `bun run test:unit` or `bun test apps/wallet/src`).
+- **`packages/walletkit`:** Tested via **Vitest** (`bun run test:walletkit` / `bun run --cwd packages/walletkit test`) because tests depend on Vitest-specific globals (`vi.stubGlobal`, `vi.mocked`, `vi.runOnlyPendingTimersAsync`, `vi.advanceTimersByTimeAsync`).
+- **`apps/wallet/e2e`:** Tested via **Playwright** (`bun run test:e2e` / `bunx playwright test`). Never run directly via `bun test`.
+- **`apps/wallet-v2`:** Tested via **Jest** (`bun run --cwd apps/wallet-v2 test`). Never run directly via `bun test`.
+- **`contracts/tests`:** Tested via **Acton / Tolk** (`acton test`).
+- **Root `bunfig.toml`:** Always retain `pathIgnorePatterns` for `packages/walletkit/**`, `apps/wallet/e2e/**`, and `apps/wallet-v2/**` to ensure raw `bun test` only executes Bun-native unit tests without false failures.
+
+### Store Slice Mock Invariants in Tests
+
+- **Mirror Full Slice Shapes in Mocks:** When manually constructing mock store states in unit tests for slice factories (e.g. `createBrotherhoodSlice`), always supply all default slice properties defined in `initialState` (e.g. `pendingDeferredByAddress: {}`, `brotherhoodByAddress: {}`) to prevent property traversal errors during cleanup/removal routines.
+- **Friendly vs Raw Opcode Assertions:** When testing utility helpers like `getPayloadMessageName`, verify the formatted user-facing friendly name (e.g. `'Send Token'`) when a friendly mapping exists, rather than the raw opcode identifier.
+
+### Wallet History Ingestion & Ecosystem Opcode Rules
+
+- **Multi-Account Batch Event Attribution:** In multi-account event fetching (e.g. `ApiClientToncenter`), match queried accounts dynamically (`accounts.some(acc => sameAddress(acc, myAddress))`) rather than hardcoding `accounts[0]` to ensure events on secondary wallets are attributed accurately.
+- **Zero-Redundant History Fetching:** Guard history queries with cache checks (`address in eventsByAddress`). Never refetch transaction history solely due to active wallet switching; fetch once per saved address and load incremental events only when a new account is registered or during explicit user pull-to-refresh.
+- **Off-Chain Contract Address Pre-Registration:** Register known derived deterministic contract addresses (`FiWallet`, `PersonalWallet`) in `associatedAddressesByAddress` upon account discovery to permit batch event indexing across both member wallets and parent contracts.
+- **Ecosystem Opcode and Exit Code Parity:** Keep `KNOWN_OPCODES`, `FRIENDLY_OPCODE_TITLES`, `KNOWN_PROJECT_OPCODES`, and `TVM_EXIT_CODES` synchronized with all message structs and errors defined in Tolk contracts (`contracts/src/**/messages.tolk` and `contracts/src/common/errors.tolk`). Never output generic `"Contract call (0x00000000)"` for standard text comments or plain TON transfers.

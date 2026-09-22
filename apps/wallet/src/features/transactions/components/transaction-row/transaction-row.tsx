@@ -179,8 +179,8 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
     }
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (isLongPressRef.current) {
+  const handleClick = (e?: React.SyntheticEvent) => {
+    if (e && isLongPressRef.current) {
       e.preventDefault();
       e.stopPropagation();
       isLongPressRef.current = false;
@@ -251,7 +251,16 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        aria-label={`${title} transaction ${isOutgoing ? 'to' : 'from'} ${counterpartyLabel}`}
         onContextMenu={handleContextMenu}
         onTouchStart={startPressTimer}
         onTouchEnd={clearPressTimer}
@@ -260,7 +269,7 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
         onMouseDown={startPressTimer}
         onMouseUp={clearPressTimer}
         onMouseLeave={clearPressTimer}
-        className="group relative flex items-center gap-3.5 py-2.5 px-3 rounded-2xl cursor-pointer select-none hover:bg-secondary/60 active:scale-[0.985] transition-all border border-transparent hover:border-border/40"
+        className="group relative flex items-center gap-3.5 py-2.5 px-3 rounded-2xl cursor-pointer select-none hover:bg-secondary/60 active:scale-[0.985] transition-all border border-transparent hover:border-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring content-visibility-auto"
       >
         {/* Left: Action Icon with Status Badge */}
         <span className="relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">

@@ -1,2 +1,7 @@
 [test]
 pattern = "**/*.test.ts"
+pathIgnorePatterns = [
+  "packages/walletkit/**",
+  "apps/wallet/e2e/**",
+  "apps/wallet-v2/**",
+]

@@ -45,8 +45,14 @@ let inFlightLoadAllWallets: Promise<void> | null = null;
 let inFlightSwitchWalletId: string | null = null;
 let inFlightSwitchWalletPromise: Promise<void> | null = null;
 
-function isAccountInEvent(ev: any, targetAddr: string): boolean {
+function isAccountInEvent(
+  ev: any,
+  targetAddr: string,
+  associatedAddrs: string[] = [],
+): boolean {
   if (!ev || !targetAddr) return false;
+
+  const allTargets = [targetAddr, ...associatedAddrs];
 
   const matches = (addrCandidate?: unknown): boolean => {
     if (!addrCandidate) return false;
@@ -55,11 +61,14 @@ function isAccountInEvent(ev: any, targetAddr: string): boolean {
         ? addrCandidate
         : (addrCandidate as any)?.address;
     if (!str || typeof str !== 'string') return false;
-    try {
-      return compareAddress(str, targetAddr);
-    } catch {
-      return str === targetAddr;
+    for (const t of allTargets) {
+      try {
+        if (compareAddress(str, t)) return true;
+      } catch {
+        if (str === t) return true;
+      }
     }
+    return false;
   };
 
   // 1. Primary event account
@@ -150,6 +159,7 @@ export const createWalletManagementSlice =
       publicKey: undefined,
       events: [],
       eventsByAddress: {},
+      associatedAddressesByAddress: {},
       hasNextEvents: false,
       pendingTransactions: [],
       confirmedTraceIds: [],
@@ -307,9 +317,11 @@ export const createWalletManagementSlice =
           // so the received-toast hook seeds the actual balance instead of diffing from 0.
           state.walletManagement.balance = undefined;
           state.walletManagement.currentWallet = wallet;
+          state.walletManagement.events = [];
         });
 
         await get().startWebSocketStreaming();
+        void get().loadEvents(15, 0, false);
         log.info(`Created wallet ${walletId} (${walletName})`);
         return walletId;
       } catch (error) {
@@ -912,6 +924,7 @@ export const createWalletManagementSlice =
         state.walletManagement.publicKey = undefined;
         state.walletManagement.events = [];
         state.walletManagement.eventsByAddress = {};
+        state.walletManagement.associatedAddressesByAddress = {};
         state.walletManagement.pendingTransactions = [];
         state.walletManagement.confirmedTraceIds = [];
         state.walletManagement.confirmedExternalHashes = [];
@@ -929,6 +942,25 @@ export const createWalletManagementSlice =
         state.jettons.jettonsByAddress = {};
         state.nfts.userNfts = [];
         state.nfts.nftsByAddress = {};
+      });
+    },
+
+    setAssociatedAddresses: (
+      walletAddress: string,
+      associatedAddresses: string[],
+    ) => {
+      set((state) => {
+        if (!state.walletManagement.associatedAddressesByAddress) {
+          state.walletManagement.associatedAddressesByAddress = {};
+        }
+        const existing =
+          state.walletManagement.associatedAddressesByAddress[walletAddress] ||
+          [];
+        const merged = Array.from(
+          new Set([...existing, ...associatedAddresses]),
+        );
+        state.walletManagement.associatedAddressesByAddress[walletAddress] =
+          merged;
       });
     },
 
@@ -1176,15 +1208,16 @@ export const createWalletManagementSlice =
 
       // On confirmed/finalized, refresh events and balance from REST
       if (update.status === 'confirmed' || update.status === 'finalized') {
-        void get().loadEvents(50, 0, true);
+        void get().loadEvents(15, 0, true);
       }
     },
 
     loadEvents: async (
-      limit = 10,
+      limit = 15,
       offset = 0,
       force = false,
       tokenFilter?: string,
+      extraAddresses?: string[],
     ) => {
       const state = get();
       const address = state.walletManagement.address;
@@ -1199,13 +1232,24 @@ export const createWalletManagementSlice =
       }
 
       const allSavedWallets = state.walletManagement.savedWallets;
-      const allAddresses = Array.from(
+      const associatedMap =
+        state.walletManagement.associatedAddressesByAddress || {};
+      const allAssociated = [
+        ...Object.values(associatedMap).flat(),
+        ...(extraAddresses || []),
+      ];
+
+      const primaryAddresses = Array.from(
         new Set(
           [
             address,
             ...allSavedWallets.map((w) => w.address).filter(Boolean),
           ].map((a) => String(a)),
         ),
+      );
+
+      const allAddresses = Array.from(
+        new Set([...primaryAddresses, ...allAssociated]),
       );
 
       const key = `${allAddresses.sort().join(',')}:${limit}:${offset}:${tokenFilter || ''}`;
@@ -1252,7 +1296,7 @@ export const createWalletManagementSlice =
             .getEvents({
               account:
                 allAddresses.length === 1 ? allAddresses[0] : allAddresses,
-              limit: Math.max(limit, 50),
+              limit: Math.max(limit, 15),
               offset,
               tokenFilter,
             });
@@ -1265,7 +1309,7 @@ export const createWalletManagementSlice =
               ...state.walletManagement.eventsByAddress,
             };
 
-            for (const addr of allAddresses) {
+            for (const addr of primaryAddresses) {
               if (!newEventsByAddress[addr]) {
                 newEventsByAddress[addr] = [];
               }
@@ -1273,9 +1317,11 @@ export const createWalletManagementSlice =
 
             for (const ev of (response.events || []) as any[]) {
               let matched = false;
-              for (const addr of allAddresses) {
+              for (const addr of primaryAddresses) {
+                const associated = associatedMap[addr] || [];
                 const belongs =
-                  allAddresses.length === 1 || isAccountInEvent(ev, addr);
+                  primaryAddresses.length === 1 ||
+                  isAccountInEvent(ev, addr, associated);
                 if (belongs) {
                   matched = true;
                   if (
@@ -1302,7 +1348,7 @@ export const createWalletManagementSlice =
 
             // Sort events descending (newest first) and cap to prevent unbounded growth while supporting pagination
             const maxCap = Math.max(limit * 2, 250);
-            for (const addr of allAddresses) {
+            for (const addr of primaryAddresses) {
               if (newEventsByAddress[addr]) {
                 newEventsByAddress[addr].sort((a: any, b: any) => {
                   const ltA = Number(a?.lt ?? 0);

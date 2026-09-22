@@ -375,3 +375,54 @@
     cursor: pointer;
   }
 }
+
+/* ==========================================================================
+   Native View Transitions & Accessibility Motion Overrides
+   ========================================================================== */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: brotherhood-fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: brotherhood-fade-in;
+}
+
+@keyframes brotherhood-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes brotherhood-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Honor prefers-reduced-motion: disable animations for motion sensitivity */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* High performance list containment utility */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 68px;
+}

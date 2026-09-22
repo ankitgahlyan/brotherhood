@@ -90,21 +90,21 @@ get fun `test deferred payment: early claim fails with WaitMore`() {
     payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
 
     val amount = grams("50");
+    val queryId = 1001;
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
-        1,
+        queryId,
         deployer.address,
         amount,
         { value: grams("0.4") },
     );
 
-    val createdAt = testing.getNow();
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
         holdingCompiledCodeLibraryRef(),
         amount,
-        createdAt,
+        queryId,
     );
 
     val _holding = Holding.fromAddress(holdingAddr);
@@ -129,22 +129,23 @@ get fun `test deferred payment: claim after 72 hours transfers funds to payee an
 
     val payeeBalanceBefore = payeeWallet.getJettonBalance();
     val amount = grams("50");
+    val queryId = 1002;
 
+    val createdAt = testing.getNow();
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
-        1,
+        queryId,
         deployer.address,
         amount,
         { value: grams("0.4") },
     );
 
-    val createdAt = testing.getNow();
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
         holdingCompiledCodeLibraryRef(),
         amount,
-        createdAt,
+        queryId,
     );
 
     // Fast-forward time past 72 hours
@@ -170,22 +171,22 @@ get fun `test deferred payment: cancel by payer refunds 1x and penalizes payee w
     val payeeBalanceBefore = payeeWallet.getJettonBalance();
     val supplyBefore = minter.getTotalSupply();
     val amount = grams("100");
+    val queryId = 1003;
 
     payeeWallet.sendRequestDeferredPayment(
         notDeployer.address,
-        1,
+        queryId,
         deployer.address,
         amount,
         { value: grams("0.4") },
     );
 
-    val createdAt = testing.getNow();
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
         holdingCompiledCodeLibraryRef(),
         amount,
-        createdAt,
+        queryId,
     );
 
     // Payer cancels during the 72-hour window
@@ -212,7 +213,6 @@ get fun `test deferred payment: unauthenticated penalty message rejected`() {
     val (_minter, _deployer, _notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
 
     val amount = grams("100");
-    val createdAt = testing.getNow();
 
     // Send PenalizeDeferredRequester directly from an attacker address
     val attacker = testing.treasury("attacker");
@@ -224,7 +224,6 @@ get fun `test deferred payment: unauthenticated penalty message rejected`() {
             queryId: 1,
             payer: payerWallet.address,
             amount,
-            createdAt,
         },
     });
     val res = net.send(attacker.address, penaltyMsg);
@@ -233,43 +232,4 @@ get fun `test deferred payment: unauthenticated penalty message rejected`() {
         to: payeeWallet.address,
         exitCode: Errors.IncorrectSender,
     });
-}
-
-get fun `test deferred payment: fallback reclaim after 30 days`() {
-    val (_minter, deployer, notDeployer, payerWallet, payeeWallet) = setupHoldingTest();
-    payerWallet.sendToggleDeferredPayment(deployer.address, 0, true, { value: grams("0.1") });
-
-    val payerBalanceBefore = payerWallet.getJettonBalance();
-    val amount = grams("50");
-
-    payeeWallet.sendRequestDeferredPayment(
-        notDeployer.address,
-        1,
-        deployer.address,
-        amount,
-        { value: grams("0.4") },
-    );
-
-    val createdAt = testing.getNow();
-    val holdingAddr = calculateHoldingAddress(
-        payerWallet.address,
-        payeeWallet.address,
-        holdingCompiledCodeLibraryRef(),
-        amount,
-        createdAt,
-    );
-
-    // Fast-forward time past 30 days
-    testing.setNow(createdAt + HOLDING_FALLBACK_DURATION + 10);
-
-    val resFallback = payerWallet.sendActFallbackReclaim(
-        deployer.address,
-        1,
-        holdingAddr,
-        { value: grams("0.2") },
-    );
-    expect(resFallback).toHaveAllSuccessfulTxs();
-
-    // Payer recovers funds without any penalty
-    expect(payerWallet.getJettonBalance()).toEqual(payerBalanceBefore);
 }

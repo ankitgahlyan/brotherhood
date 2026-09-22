@@ -30,7 +30,13 @@ export const DappRequestHeader: React.FC<DappRequestHeaderProps> = ({
   <div className="flex flex-col items-center text-center">
     <div className="flex items-center gap-3">
       <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-secondary border border-border">
-        <img src={assetUrl('walletkit.svg')} alt="" className="h-12 w-12" />
+        <img
+          src={assetUrl('walletkit.svg')}
+          alt="BrotherHood Wallet"
+          width={48}
+          height={48}
+          className="h-12 w-12"
+        />
       </span>
       <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-secondary border border-border">
         <FallbackImage

@@ -31,27 +31,42 @@ export function useNavigate() {
       to: string | number | { to: string; [key: string]: any },
       options?: NavigateOptions,
     ) => {
-      if (typeof to === 'number') {
-        if (to === -1) {
-          window.history.back();
-        } else {
-          window.history.go(to);
+      const performNavigate = () => {
+        if (typeof to === 'number') {
+          if (to === -1) {
+            window.history.back();
+          } else {
+            window.history.go(to);
+          }
+          return;
         }
-        return;
-      }
 
-      if (typeof to === 'object' && to !== null) {
-        tanstackNavigate(to as any);
-        return;
-      }
+        if (typeof to === 'object' && to !== null) {
+          tanstackNavigate(to as any);
+          return;
+        }
 
-      tanstackNavigate({
-        to: to as any,
-        state: options?.state ? () => options.state : undefined,
-        replace: options?.replace,
-        search: options?.search as any,
-        params: options?.params as any,
-      });
+        tanstackNavigate({
+          to: to as any,
+          state: options?.state ? () => options.state : undefined,
+          replace: options?.replace,
+          search: options?.search as any,
+          params: options?.params as any,
+        });
+      };
+
+      if (
+        typeof document !== 'undefined' &&
+        'startViewTransition' in document &&
+        typeof window !== 'undefined' &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        document.startViewTransition(() => {
+          performNavigate();
+        });
+      } else {
+        performNavigate();
+      }
     },
     [tanstackNavigate],
   );

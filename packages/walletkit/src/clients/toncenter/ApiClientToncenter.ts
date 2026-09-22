@@ -46,7 +46,6 @@ import { toDnsRecords } from './types/v3/DNSRecordsResponseV3';
 import {
   toAddressBook,
   toEvent,
-  mapToncenterActionToEvent,
   type AddressBook,
 } from '../../types/toncenter/AccountEvent';
 import { parseTraceDag, type TraceDagAnalysis } from './traceDag';
@@ -662,56 +661,20 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     const accounts = rawAccounts.map((a) =>
       a instanceof Address ? a.toString() : String(a),
     );
-    const limit = request.limit ?? 20;
+    const limit = request.limit ?? 15;
     const offset = request.offset ?? 0;
 
-    // 1. First attempt: Toncenter v3 /api/v3/actions (lightweight, server-parsed, supports token scoping)
-    try {
-      const actionsQuery: Record<string, unknown> = {
-        account: accounts.length === 1 ? accounts[0] : accounts,
-        limit,
-        offset,
-        sort: 'desc',
-      };
-      if (request.tokenFilter) {
-        actionsQuery.token_wallet = request.tokenFilter;
-      }
-
-      const actionsResp = await this.getJson<{
-        actions: any[];
-        address_book: Record<string, any>;
-        metadata?: Record<string, any>;
-      }>('/api/v3/actions', actionsQuery);
-
-      if (actionsResp && Array.isArray(actionsResp.actions)) {
-        const addressBook = toAddressBook(actionsResp as any);
-        const metadata = actionsResp.metadata || {};
-        const events = actionsResp.actions.map((act) =>
-          mapToncenterActionToEvent(
-            act,
-            accounts[0] || '',
-            addressBook,
-            metadata,
-          ),
-        );
-
-        return {
-          events,
-          limit,
-          offset,
-          hasNext: actionsResp.actions.length >= limit,
-        };
-      }
-    } catch {
-      // Fallback cleanly to /traces if /actions encounters any network or endpoint failure
-    }
-
-    // 2. Fallback: Toncenter v3 /api/v3/traces
+    // Direct Toncenter v3 /api/v3/traces: returns full trace DAG, all transactions, and actions in a single payload
     const query: Record<string, unknown> = {
       account: accounts.length === 1 ? accounts[0] : accounts,
       limit,
       offset,
+      include_actions: true,
     };
+    if (request.tokenFilter) {
+      query.token_wallet = request.tokenFilter;
+    }
+
     const list = await this.getJson<ToncenterTracesResponse>(
       '/api/v3/traces',
       query,
@@ -720,8 +683,10 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       events: [],
       limit,
       offset,
-      hasNext: list.traces.length >= limit,
+      hasNext: (list?.traces?.length ?? 0) >= limit,
     };
+    if (!list?.traces?.length) return out;
+
     const addressBook = toAddressBook(list);
     for (const trace of list.traces) {
       if (accounts.length === 1) {
@@ -753,16 +718,7 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
     walletAddress?: string;
   }): Promise<TraceDagAnalysis | undefined> {
     try {
-      const response = await this.getJson<ToncenterTracesResponse>(
-        '/api/v3/traces',
-        {
-          msg_hash: request.txHash,
-          include_actions: true,
-        },
-      );
-      if (response?.traces?.length) {
-        return parseTraceDag(response.traces[0], request.walletAddress);
-      }
+      // 1. Direct trace_id lookup (fastest & standard for event/tx traces)
       const byTraceId = await this.getJson<ToncenterTracesResponse>(
         '/api/v3/traces',
         {
@@ -772,6 +728,18 @@ export class ApiClientToncenter extends BaseApiClient implements ApiClient {
       );
       if (byTraceId?.traces?.length) {
         return parseTraceDag(byTraceId.traces[0], request.walletAddress);
+      }
+
+      // 2. Fallback: msg_hash lookup if trace_id did not return
+      const response = await this.getJson<ToncenterTracesResponse>(
+        '/api/v3/traces',
+        {
+          msg_hash: request.txHash,
+          include_actions: true,
+        },
+      );
+      if (response?.traces?.length) {
+        return parseTraceDag(response.traces[0], request.walletAddress);
       }
     } catch {
       return undefined;

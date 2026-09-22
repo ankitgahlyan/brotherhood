@@ -21,7 +21,7 @@ import { Button } from '@/core/components/ui/button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 15;
 
 /** Full transaction history page: wallet-v2 Activity Feed with date pills, status badges, token filters, and inline navigation. */
 export const HistoryScreen: FC = () => {
@@ -36,6 +36,9 @@ export const HistoryScreen: FC = () => {
   const loadEvents = useWalletStore((state) => state.loadEvents);
   const address = useWalletStore((state) => state.walletManagement.address);
   const rawEvents = useWalletStore((state) => state.walletManagement.events);
+  const eventsByAddress = useWalletStore(
+    (state) => state.walletManagement.eventsByAddress,
+  );
   const userJettons = useWalletStore((state) => state.jettons.userJettons);
   const pendingTransactions = useWalletStore(
     (state) => state.walletManagement.pendingTransactions,
@@ -54,15 +57,20 @@ export const HistoryScreen: FC = () => {
     return tokens;
   }, [userJettons]);
 
+  const isAddressEventsLoaded = Boolean(
+    address && address in (eventsByAddress || {}),
+  );
+
   const isSyncing = pendingTransactions.length > 0;
   const isInitialLoading =
-    isRetrying || (!hasLoadError && rawEvents === undefined);
+    isRetrying ||
+    (!hasLoadError && (!isAddressEventsLoaded || rawEvents === undefined));
 
-  // On mount, load events if not yet fetched
+  // On mount or address switch, load events if not yet fetched for this address
   useEffect(() => {
-    if (!address || rawEvents !== undefined) return;
-    loadEvents(limit, 0, true).catch(() => setHasLoadError(true));
-  }, [address, loadEvents, limit, rawEvents]);
+    if (!address || isAddressEventsLoaded) return;
+    loadEvents(limit, 0, false).catch(() => setHasLoadError(true));
+  }, [address, loadEvents, limit, isAddressEventsLoaded]);
 
   const handleFilterSelect = (filter: string) => {
     setActiveFilter(filter);

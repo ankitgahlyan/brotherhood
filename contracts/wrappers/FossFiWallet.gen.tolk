@@ -939,14 +939,13 @@ fun FossFiWallet.sendDeferredPaymentInitiated(
     queryId: uint64,
     holdingAddress: address,
     amount: coins,
-    createdAt: uint32,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: DeferredPaymentInitiated { queryId, holdingAddress, amount, createdAt },
+        body: DeferredPaymentInitiated { queryId, holdingAddress, amount },
     });
     return net.send(from, genericMsg);
 }
@@ -957,14 +956,13 @@ fun FossFiWallet.sendPenalizeDeferredRequester(
     queryId: uint64,
     payer: address,
     amount: coins,
-    createdAt: uint32,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: PenalizeDeferredRequester { queryId, payer, amount, createdAt },
+        body: PenalizeDeferredRequester { queryId, payer, amount },
     });
     return net.send(from, genericMsg);
 }
@@ -1001,22 +999,6 @@ fun FossFiWallet.sendActClaimDeferredPayment(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendActFallbackReclaim(
-    self,
-    from: address,
-    queryId: uint64,
-    holdingAddress: address,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: ActFallbackReclaim { queryId, holdingAddress },
-    });
-    return net.send(from, genericMsg);
-}
-
 fun FossFiWallet.sendAcceptDeferredTransfer(
     self,
     from: address,
@@ -1024,14 +1006,13 @@ fun FossFiWallet.sendAcceptDeferredTransfer(
     payer: address,
     payee: address,
     amount: coins,
-    createdAt: uint32,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: AcceptDeferredTransfer { queryId, payer, payee, amount, createdAt },
+        body: AcceptDeferredTransfer { queryId, payer, payee, amount },
     });
     return net.send(from, genericMsg);
 }

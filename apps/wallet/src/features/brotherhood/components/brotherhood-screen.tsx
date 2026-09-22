@@ -101,6 +101,8 @@ function formatDate(timestampSec: number | undefined | null): string {
   });
 }
 
+const EMPTY_INVITED_ARRAY: readonly any[] = Object.freeze([]);
+
 export const BrotherhoodScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -909,7 +911,9 @@ export const BrotherhoodScreen: React.FC = () => {
           {/* Trust Network & Lineage (Circle & Ring) */}
           {activeTab === 'network' && (
             <NetworkTab
-              invitedMembers={account.data?.invited ?? []}
+              invitedMembers={
+                account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
+              }
               resolvedProfiles={resolvedProfiles.data}
               isLoading={account.isLoading || resolvedProfiles.isLoading}
               onNavigateToInvite={() => setActiveTab('invite')}
@@ -2273,7 +2277,9 @@ export const BrotherhoodScreen: React.FC = () => {
               {creditSubTab === 'seekers' && (
                 <div className="space-y-4">
                   <CircleCreditList
-                    circleMembers={account.data?.invited ?? []}
+                    circleMembers={
+                      account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
+                    }
                     profiles={resolvedProfiles.data}
                     isLoading={resolvedProfiles.isLoading}
                     onRefresh={() => resolvedProfiles.refetch()}
@@ -2283,7 +2289,9 @@ export const BrotherhoodScreen: React.FC = () => {
                   <hr className="border-border/60" />
 
                   <RingCreditList
-                    circleMembers={account.data?.invited ?? []}
+                    circleMembers={
+                      account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
+                    }
                     circleProfiles={resolvedProfiles.data}
                     onSendCredit={handleSendCredit}
                     onRegisterRingMembers={handleRegisterRingMembers}

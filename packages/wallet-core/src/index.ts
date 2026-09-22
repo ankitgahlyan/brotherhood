@@ -51,7 +51,9 @@ export {
   normalizeAddressByNetwork,
   EMPTY_CIRCLE,
   EMPTY_RING,
+  EMPTY_PENDING_DEFERRED,
 } from './store/slices/brotherhoodSlice';
+export type { PendingDeferredPayment } from './types/store';
 export {
   useFormattedTonBalance,
   useFormattedAmount,

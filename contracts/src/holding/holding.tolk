@@ -7,7 +7,6 @@ import "store"
 type HoldingAllowedMsg =
     | ClaimDeferredPayment
     | CancelDeferredPayment
-    | FallbackReclaim
 
 contract Holding {
     author: "brotherhood"
@@ -20,13 +19,23 @@ contract Holding {
 fun onBouncedMessage(_in: InMessageBounced) {}
 
 fun onInternalMessage(in: InMessage) {
+    var store = lazy HoldingStore.load();
+
+    if (in.body.isEmpty()) {
+        if (store.createdAt == 0) {
+            store.createdAt = blockchain.now();
+            store.save();
+        }
+        return;
+    }
+
     val msg = lazy HoldingAllowedMsg.fromSlice(in.body);
-    val store = lazy HoldingStore.load();
 
     match (msg) {
         ClaimDeferredPayment => {
             assert (in.senderAddress == store.payee) throw Errors.IncorrectSender;
             assert (
+                store.createdAt > 0 &&
                 blockchain.now() >= store.createdAt + HOLDING_CHALLENGE_DURATION
             ) throw Errors.WaitMore;
 
@@ -35,11 +44,10 @@ fun onInternalMessage(in: InMessage) {
                 dest: store.payee,
                 value: 0,
                 body: AcceptDeferredTransfer {
-                    queryId: msg.queryId,
+                    queryId: store.queryId,
                     payer: store.payer,
                     payee: store.payee,
                     amount: store.amount,
-                    createdAt: store.createdAt,
                 },
             });
             // SAFETY: send all remaining balance and tokens to payee and destroy contract
@@ -49,7 +57,8 @@ fun onInternalMessage(in: InMessage) {
         CancelDeferredPayment => {
             assert (in.senderAddress == store.payer) throw Errors.IncorrectSender;
             assert (
-                blockchain.now() < store.createdAt + HOLDING_CHALLENGE_DURATION
+                store.createdAt == 0 || blockchain.now() <
+                store.createdAt + HOLDING_CHALLENGE_DURATION
             ) throw Errors.WaitMore;
 
             // Dispatch penalty message to payee account (1x burn fine)
@@ -58,10 +67,9 @@ fun onInternalMessage(in: InMessage) {
                 dest: store.payee,
                 value: grams("0.05"),
                 body: PenalizeDeferredRequester {
-                    queryId: msg.queryId,
+                    queryId: store.queryId,
                     payer: store.payer,
                     amount: store.amount,
-                    createdAt: store.createdAt,
                 },
             });
             penaltyMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
@@ -72,34 +80,10 @@ fun onInternalMessage(in: InMessage) {
                 dest: store.payer,
                 value: 0,
                 body: AcceptDeferredTransfer {
-                    queryId: msg.queryId,
+                    queryId: store.queryId,
                     payer: store.payer,
                     payee: store.payee,
                     amount: store.amount,
-                    createdAt: store.createdAt,
-                },
-            });
-            // SAFETY: refund remaining balance to payer and destroy holding contract
-            refundMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
-        }
-
-        FallbackReclaim => {
-            assert (in.senderAddress == store.payer) throw Errors.IncorrectSender;
-            assert (
-                blockchain.now() >= store.createdAt + HOLDING_FALLBACK_DURATION
-            ) throw Errors.WaitMore;
-
-            // Refund principal back to payer without penalty and destroy contract
-            val refundMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: store.payer,
-                value: 0,
-                body: AcceptDeferredTransfer {
-                    queryId: msg.queryId,
-                    payer: store.payer,
-                    payee: store.payee,
-                    amount: store.amount,
-                    createdAt: store.createdAt,
                 },
             });
             // SAFETY: refund remaining balance to payer and destroy holding contract

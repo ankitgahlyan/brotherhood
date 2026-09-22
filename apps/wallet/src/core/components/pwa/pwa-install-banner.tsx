@@ -35,9 +35,11 @@ export const PwaInstallBanner: React.FC = () => {
     <>
       <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto z-40 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
         <div className="flex items-center justify-between gap-3 p-3 bg-card/95 backdrop-blur-md border border-primary/20 shadow-xl shadow-black/20 rounded-2xl">
-          <div
+          <button
+            type="button"
             onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+            className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+            aria-label="Install BrotherHood — Choose standalone app or browser shortcut"
           >
             <div className="w-9 h-9 rounded-xl bg-primary/20 text-primary flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-4 h-4" />
@@ -50,7 +52,7 @@ export const PwaInstallBanner: React.FC = () => {
                 Choose standalone app or browser shortcut
               </div>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button

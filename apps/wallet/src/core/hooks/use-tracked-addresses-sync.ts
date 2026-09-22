@@ -49,9 +49,10 @@ export function useTrackedAddressesSync() {
     setLocationContract,
   } = useBrotherhood();
 
-  const { loadEvents } = useWalletStore(
+  const { loadEvents, setAssociatedAddresses } = useWalletStore(
     useShallow((state) => ({
       loadEvents: state.loadEvents,
+      setAssociatedAddresses: state.setAssociatedAddresses,
     })),
   );
 
@@ -136,6 +137,7 @@ export function useTrackedAddressesSync() {
               defaultNetwork,
             );
             addContract(fiWallet);
+            setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
           } catch {
             /* ignore parse error */
           }
@@ -315,6 +317,7 @@ export function useTrackedAddressesSync() {
       savedWallets,
       isWalletKitInitialized,
       loadEvents,
+      setAssociatedAddresses,
       loadUserJettons,
       setBrotherhoodMemberData,
       addCircleInvites,

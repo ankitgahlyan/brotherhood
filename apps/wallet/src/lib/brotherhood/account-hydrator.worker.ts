@@ -20,7 +20,7 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'xihphST2O+rJ/ksfuyyzMLdCwxtRwy/MX8u+CbSzkyo=',
+  fiWallet: 'v1X2csqtJ8J92M7aeGriNNEjUcWdgRPdnc09sWu/5oM=',
   fiMinter: '5zeBnlGAFR5Rg5I/+ZHRxOVGFx8HinkTbBFAaUEmYNc=',
   personalMinter: 'Tvog65zMpvpaesj09SsYeyJLFVlYCG802aUZ+AqpIZs=',
   personalWallet: 'j6cSSA6AECyBf/Qb2UvajkByeAvdrNk9O9cRhkKEW4A=',
@@ -345,7 +345,7 @@ export async function processSha256Batch(
       const data = new TextEncoder().encode(key);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
       hashes[key] = Buffer.from(hashBuffer).toString('hex');
-    } catch (e) {
+    } catch (_e) {
       // Fallback
     }
   }
@@ -414,7 +414,7 @@ if (
         ...result,
       };
       (self as any).postMessage(response);
-    } catch (err) {
+    } catch (_err) {
       const fallbackId = event.data?.id || `err_${Date.now()}`;
       try {
         (self as any).postMessage({

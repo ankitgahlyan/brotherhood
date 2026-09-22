@@ -68,7 +68,9 @@ export const WelcomeScreen: React.FC = () => {
       <div className="flex flex-col items-center text-center px-6">
         <img
           src={assetUrl('favicon.svg')}
-          alt="WalletKit"
+          alt="BrotherHood Wallet"
+          width={160}
+          height={160}
           className="w-40 h-40 object-contain"
         />
         <h1 className="mt-6 text-2xl font-bold text-foreground">

@@ -2,6 +2,7 @@ struct HoldingStore {
     payer: address
     payee: address
     amount: coins
+    queryId: uint64
     createdAt: uint32
 }
 

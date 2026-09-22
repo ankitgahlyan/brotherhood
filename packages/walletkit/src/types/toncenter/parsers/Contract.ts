@@ -37,6 +37,14 @@ export function parseContractActions(
     for (const msg of tx.out_msgs || []) {
       if (!msg || !msg.destination) continue;
       if (!msg.opcode) continue;
+      if (
+        msg.opcode === '0x00000000' ||
+        msg.opcode === '0x0' ||
+        msg.opcode === '0' ||
+        Number(msg.opcode) === 0
+      ) {
+        continue;
+      }
 
       const contractAddress = msg.destination;
       const tonAttached = BigInt(Number(msg.value || '0'));

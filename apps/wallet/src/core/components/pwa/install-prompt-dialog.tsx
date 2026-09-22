@@ -110,8 +110,17 @@ export const InstallPromptDialog: React.FC<InstallPromptDialogProps> = ({
             <div className="space-y-3 pt-1">
               {/* Option 1: Standalone App */}
               <div
+                role="button"
+                tabIndex={0}
                 onClick={handleInstallStandalone}
-                className="group relative rounded-xl p-4 border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleInstallStandalone();
+                  }
+                }}
+                aria-label="Install Standalone App"
+                className="group relative rounded-xl p-4 border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="flex items-start gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -146,8 +155,17 @@ export const InstallPromptDialog: React.FC<InstallPromptDialogProps> = ({
 
               {/* Option 2: Browser Shortcut */}
               <div
+                role="button"
+                tabIndex={0}
                 onClick={handleSelectBrowserShortcut}
-                className="group relative rounded-xl p-4 border border-border bg-card/60 hover:bg-muted/60 hover:border-border/80 transition-all cursor-pointer shadow-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSelectBrowserShortcut();
+                  }
+                }}
+                aria-label="Configure Browser Shortcut"
+                className="group relative rounded-xl p-4 border border-border bg-card/60 hover:bg-muted/60 hover:border-border/80 transition-all cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="flex items-start gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-secondary text-foreground flex items-center justify-center flex-shrink-0 mt-0.5">

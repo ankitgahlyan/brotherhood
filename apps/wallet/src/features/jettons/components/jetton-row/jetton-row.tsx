@@ -55,7 +55,19 @@ export const JettonRow: React.FC<JettonRowProps> = ({
   if (inline) {
     return (
       <div
-        className={`flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onClick();
+                }
+              }
+            : undefined
+        }
+        className={`flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg ${className}`}
         onClick={onClick}
       >
         <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -63,6 +75,8 @@ export const JettonRow: React.FC<JettonRowProps> = ({
             <img
               src={jettonInfo.image}
               alt=""
+              width={20}
+              height={20}
               className="w-5 h-5 rounded-full object-cover"
               onError={handleImageError}
             />
@@ -84,9 +98,22 @@ export const JettonRow: React.FC<JettonRowProps> = ({
 
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      aria-label={`${jettonInfo.name || jettonInfo.symbol} balance ${jettonInfo.balance}`}
       className={`group flex items-center p-4 border border-border rounded-2xl 
                 hover:border-border/80 hover:shadow-md transition-all duration-200 cursor-pointer
-                bg-card hover:bg-secondary/40 min-w-0 select-none ${className}`}
+                bg-card hover:bg-secondary/40 min-w-0 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring content-visibility-auto ${className}`}
       onClick={onClick}
     >
       <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -96,6 +123,8 @@ export const JettonRow: React.FC<JettonRowProps> = ({
               <img
                 src={jettonInfo.image}
                 alt={jettonInfo.name}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full object-cover"
                 onError={handleImageError}
               />

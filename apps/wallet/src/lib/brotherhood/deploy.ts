@@ -27,9 +27,9 @@ import {
   RequestDeferredPayment,
   ActCancelDeferredPayment,
   ActClaimDeferredPayment,
-  ActFallbackReclaim,
   ToggleDeferredPayment,
 } from '@wrappers/FossFiWallet.gen';
+import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
@@ -419,14 +419,25 @@ export function buildClaimDeferredPaymentBody(params: {
   );
 }
 
-export function buildFallbackReclaimBody(params: {
-  holdingAddress: Address;
-  queryId?: bigint;
-}): Cell {
-  const { holdingAddress, queryId = 0n } = params;
-  return ActFallbackReclaim.toCell(
-    ActFallbackReclaim.create({ queryId, holdingAddress }),
+export function calculateHoldingAddress(params: {
+  payer: Address;
+  payee: Address;
+  amount: bigint;
+  queryId: bigint;
+}): Address {
+  const holding = Holding.fromStorage(
+    {
+      payer: params.payer,
+      payee: params.payee,
+      amount: params.amount,
+      queryId: params.queryId,
+      createdAt: 0n,
+    },
+    {
+      toShard: { fixedPrefixLength: 8, closeTo: params.payer },
+    },
   );
+  return holding.address;
 }
 
 export function buildToggleDeferredPaymentBody(params: {

@@ -42,7 +42,6 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x0000100e: 'RequestTotalAccounts',
   0x0000100f: 'ResponseTotalAccounts',
   0x00001010: 'InitDaoProxy',
-  0x00001011: 'PushUpgradeCode',
 
   // Brotherhood Group 2: Account Lifecycle & Onboarding
   0x00001051: 'ActInvite',
@@ -51,7 +50,6 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x00001054: 'InformMinterInviteInternal',
   0x00001055: 'DeActivateCircleRing',
   0x00001056: 'DeActivateCircleRingInternal',
-  0x00001057: 'RequestUpgrade',
   0x00001058: 'ActDestroyAccount',
   0x00001059: 'Destroy',
   0x0000105a: 'ActCloseAccount',
@@ -59,11 +57,9 @@ export const KNOWN_OPCODES: Record<number, string> = {
 
   // Brotherhood Group 3: Profile & Location Indexing
   0x000010a1: 'ChangeProfile',
-  0x000010a2: 'ChangeLocation',
   0x000010a3: 'InformMinterChangeLocation',
   0x000010a4: 'LocationAddMember',
   0x000010a5: 'LocationRemoveMember',
-  0x000010a8: 'ChangeCountry',
 
   // Brotherhood Group 4: Social, Voting, & DAO
   0x000010f1: 'ActVote',
@@ -92,7 +88,6 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x00001149: 'ActSetPersonalJetton',
   0x0000114a: 'SetLoanRequirement',
   0x0000114b: 'RepayDebt',
-  0x0000114c: 'SetCreditMultiplier',
   0x0000114d: 'TriggerDefaultEmi',
   0x0000114e: 'TriggerDecay',
 
@@ -113,7 +108,150 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x00001207: 'RequestUnfollow',
   0x00001208: 'FollowRevertedNotification',
   0x00001209: 'UnfollowRevertedNotification',
+
+  // Brotherhood Group 7: Deferred Payments (Holding Contract)
+  0x716a4d21: 'ClaimDeferredPayment',
+  0x38b4c81a: 'CancelDeferredPayment',
+  0x24d8b9e1: 'PenalizeDeferredRequester',
+  0x19a4f210: 'DeferredPaymentInitiated',
+  0x49f2b801: 'PullDeferredFunds',
+  0x6a1bc924: 'RequestDeferredPayment',
+  0x7c49e102: 'ActCancelDeferredPayment',
+  0x531b70a2: 'AcceptDeferredTransfer',
+  0x1f84b29c: 'ActClaimDeferredPayment',
+  0x576f30a1: 'ToggleDeferredPayment',
+
+  // Brotherhood Group 8: Personal Token
+  0x1674b0a0: 'MintPersonal',
 };
+
+/** Human-friendly action titles for known message types and opcodes */
+export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
+  // Deferred Payments
+  RequestDeferredPayment: 'Request Deferred Payment',
+  ActClaimDeferredPayment: 'Claim Deferred Payment',
+  ClaimDeferredPayment: 'Claim Deferred Payment',
+  ActCancelDeferredPayment: 'Cancel Deferred Payment',
+  CancelDeferredPayment: 'Cancel Deferred Payment',
+  ToggleDeferredPayment: 'Toggle Deferred Payments',
+  PullDeferredFunds: 'Pull Deferred Funds',
+  AcceptDeferredTransfer: 'Accept Deferred Transfer',
+  PenalizeDeferredRequester: 'Penalize Deferred Requester',
+  DeferredPaymentInitiated: 'Deferred Payment Initiated',
+
+  // Brotherhood Governance & Lifecycle
+  MintNewJettons: 'Mint Community Tokens',
+  ChangeMinterAdmin: 'Change Community Admin',
+  ClaimMinterAdmin: 'Claim Community Admin',
+  DropMinterAdmin: 'Drop Community Admin',
+  ChangeMinterMetadata: 'Update Community Info',
+  Upgrade: 'Upgrade Contract',
+  HotUpgrade: 'Hot Upgrade Contract',
+  TopUpTons: 'Top Up Gas',
+  RequestUpgradeCode: 'Request Upgrade Code',
+  ApproveUpgrade: 'Approve Upgrade',
+  RejectUpgrade: 'Reject Upgrade',
+  ChangeDaoAddress: 'Change DAO Address',
+  ExecuteDaoProposal: 'Execute DAO Proposal',
+  RequestTotalAccounts: 'Request Total Accounts',
+  ResponseTotalAccounts: 'Response Total Accounts',
+  InitDaoProxy: 'Initialize DAO Proxy',
+  ActInvite: 'Invite Member',
+  InternalInvite: 'Process Member Invite',
+  InternalInviteApproval: 'Approve Member Invite',
+  InformMinterInviteInternal: 'Inform Minter Invite',
+  DeActivateCircleRing: 'Toggle Circle Ring',
+  DeActivateCircleRingInternal: 'Process Toggle Circle Ring',
+  ActDestroyAccount: 'Destroy Account',
+  Destroy: 'Process Destroy Account',
+  ActCloseAccount: 'Close Account',
+  AuthorityCloseAccount: 'Authority Close Account',
+
+  // Profile & Location
+  ChangeProfile: 'Update Profile',
+  InformMinterChangeLocation: 'Update Location',
+  LocationAddMember: 'Add Member to Location',
+  LocationRemoveMember: 'Remove Member from Location',
+
+  // Social & Voting & DAO
+  ActVote: 'Cast Vouch / Vote',
+  ActUnvote: 'Retract Vouch / Vote',
+  VotingAction: 'Process Vote',
+  ActDispatchAuthorityAction: 'Dispatch Authority Action',
+  AuthorityAction: 'Process Authority Action',
+  SetStatus: 'Set Member Status',
+  TransferByAuthority: 'Transfer By Authority',
+  ActSubmitProposal: 'Submit DAO Proposal',
+  InitPoll: 'Initialize Poll',
+  ActVoteProposal: 'Vote on DAO Proposal',
+  VoteProposalChild: 'Relay Proposal Vote',
+  VoteProposal: 'Record Proposal Vote',
+  CleanupProposalVotes: 'Cleanup Proposal Votes',
+
+  // Economy & Credit
+  ActClaimWeeklyGrant: 'Claim Weekly Grant',
+  ActPayEmi: 'Pay Loan EMI',
+  SetAllowance: 'Set Spending Allowance',
+  SpendAllowance: 'Spend Allowance',
+  AskGoldCoinsTransfer: 'Transfer Community Credit',
+  InternalGoldCoinsTransfer: 'Process Community Credit',
+  BuyCredit: 'Buy Credit',
+  Payback: 'Repay Loan',
+  RepayDebt: 'Repay Debt',
+  ActSetPersonalJetton: 'Link Personal Token',
+  SetLoanRequirement: 'Configure Loan Rules',
+  TriggerDefaultEmi: 'Trigger Default EMI',
+  TriggerDecay: 'Trigger Token Decay',
+  MintPersonal: 'Mint Personal Token',
+
+  // Mini-Apps, Lottery & Follow
+  ActJoinLottery: 'Join Lottery',
+  RequestState: 'Request State',
+  ProvideState: 'Provide State',
+  CustomPayloadMsg: 'Custom Payload',
+  EnterLottery: 'Enter Lottery',
+  LotteryWin: 'Lottery Win',
+  DrawWinner: 'Draw Lottery Winner',
+  UpgradeLotteryCode: 'Upgrade Lottery Code',
+  Follow: 'Follow Member',
+  Unfollow: 'Unfollow Member',
+  InitFollow: 'Initialize Follow',
+  SettleDeath: 'Settle Member Inheritance',
+  RequestFollow: 'Request Follow',
+  RequestUnfollow: 'Request Unfollow',
+  FollowRevertedNotification: 'Follow Reverted',
+  UnfollowRevertedNotification: 'Unfollow Reverted',
+
+  // Standard Token transfers
+  AskToTransfer: 'Send Token',
+  TransferNotificationForRecipient: 'Received Token',
+  InternalTransferStep: 'Transfer Step',
+  ReturnExcessesBack: 'Excess Return',
+  AskToBurn: 'Burn Token',
+  NotifyMinter: 'Notify Token Minter',
+  RequestWalletAddress: 'Request Wallet Address',
+  ResponseWalletAddress: 'Response Wallet Address',
+  NftTransfer: 'Transfer NFT',
+  OwnershipAssigned: 'Ownership Assigned',
+  GetStaticData: 'Get Static Data',
+  ReportStaticData: 'Report Static Data',
+  NftDestroy: 'Destroy NFT',
+};
+
+/** Parses opcode from number or hex string representation (e.g. "0x6a1bc924" or 1780132132) */
+export function parseOpcodeNumber(op: unknown): number | null {
+  if (typeof op === 'number' && !Number.isNaN(op)) return op;
+  if (typeof op === 'string') {
+    const trimmed = op.trim();
+    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+      const parsed = parseInt(trimmed, 16);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return null;
+}
 
 export interface DecodedPayload {
   isComment: boolean;
@@ -121,6 +259,7 @@ export interface DecodedPayload {
   opcode?: number;
   opcodeHex?: string;
   messageName: string;
+  friendlyName?: string;
 }
 
 export function decodeTextCommentPayload(payload: string): string | null {
@@ -183,11 +322,15 @@ export function decodePayload(payload?: string): DecodedPayload | null {
     }
 
     const name = KNOWN_OPCODES[op] ?? `Contract Call (${opHex})`;
+    const friendlyName = KNOWN_OPCODES[op]
+      ? FRIENDLY_OPCODE_TITLES[KNOWN_OPCODES[op]] || KNOWN_OPCODES[op]
+      : undefined;
     return {
       isComment: false,
       opcode: op,
       opcodeHex: opHex,
       messageName: name,
+      friendlyName,
     };
   } catch {
     return {
@@ -195,6 +338,105 @@ export function decodePayload(payload?: string): DecodedPayload | null {
       messageName: 'Contract Message',
     };
   }
+}
+
+/**
+ * Resolves opcode info from an operation value (number, hex string, decimal string)
+ * and/or fallback payload BoC.
+ */
+export function getOpcodeInfo(
+  operation?: unknown,
+  payload?: string,
+): {
+  opcode?: number;
+  opcodeHex?: string;
+  structName?: string;
+  title: string;
+  isKnown: boolean;
+} {
+  // If payload BoC is available, inspect it first for rich decoding (comment or opcode)
+  if (payload) {
+    const decoded = decodePayload(payload);
+    if (decoded) {
+      if (decoded.isComment) {
+        return {
+          opcode: 0,
+          opcodeHex: '0x00000000',
+          title: decoded.comment
+            ? `Comment: “${decoded.comment}”`
+            : 'TonTransfer',
+          isKnown: true,
+        };
+      }
+      if (decoded.opcode !== undefined && decoded.opcode !== 0) {
+        const hex =
+          decoded.opcodeHex ||
+          `0x${decoded.opcode.toString(16).padStart(8, '0')}`;
+        const structName = KNOWN_OPCODES[decoded.opcode];
+        if (structName) {
+          const friendly = FRIENDLY_OPCODE_TITLES[structName] || structName;
+          return {
+            opcode: decoded.opcode,
+            opcodeHex: hex,
+            structName,
+            title: friendly,
+            isKnown: true,
+          };
+        }
+        return {
+          opcode: decoded.opcode,
+          opcodeHex: hex,
+          title: `Contract Call (${hex})`,
+          isKnown: false,
+        };
+      }
+    }
+  }
+
+  const opNum = parseOpcodeNumber(operation);
+  if (opNum !== null) {
+    if (opNum === 0) {
+      return {
+        opcode: 0,
+        opcodeHex: '0x00000000',
+        title: 'TonTransfer',
+        isKnown: true,
+      };
+    }
+    const hex = `0x${opNum.toString(16).padStart(8, '0')}`;
+    const structName = KNOWN_OPCODES[opNum];
+    if (structName) {
+      const friendly = FRIENDLY_OPCODE_TITLES[structName] || structName;
+      return {
+        opcode: opNum,
+        opcodeHex: hex,
+        structName,
+        title: friendly,
+        isKnown: true,
+      };
+    }
+    return {
+      opcode: opNum,
+      opcodeHex: hex,
+      title: `Contract Call (${hex})`,
+      isKnown: false,
+    };
+  }
+
+  const opStr = operation ? String(operation).trim() : '';
+  if (opStr === '0x00000000' || opStr === '0x0' || opStr === '0') {
+    return {
+      opcode: 0,
+      opcodeHex: '0x00000000',
+      title: 'TonTransfer',
+      isKnown: true,
+    };
+  }
+
+  return {
+    title: opStr ? `Contract Call (${opStr})` : 'Smart Contract Execution',
+    isKnown: false,
+  };
 }
 
 /**
@@ -206,5 +448,5 @@ export function getPayloadMessageName(payload?: string): string | null {
   if (decoded.isComment) {
     return decoded.comment ? `Comment: “${decoded.comment}”` : 'Text Comment';
   }
-  return decoded.messageName;
+  return decoded.friendlyName || decoded.messageName;
 }

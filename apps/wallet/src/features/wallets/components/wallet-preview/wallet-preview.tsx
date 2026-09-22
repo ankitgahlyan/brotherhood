@@ -146,8 +146,21 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
   if (isCompact) {
     return (
       <div
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onClick();
+                }
+              }
+            : undefined
+        }
+        aria-label={onClick ? `Select wallet ${wallet.name}` : undefined}
         onClick={onClick}
-        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
           isActive
             ? 'bg-primary/15 border border-primary/30 text-foreground'
             : 'bg-card hover:bg-secondary/70 border border-border text-foreground'
@@ -188,8 +201,21 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
 
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      aria-label={onClick ? `Select wallet ${wallet.name}` : undefined}
       onClick={onClick}
-      className={`border rounded-2xl transition-all ${
+      className={`border rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         isActive
           ? 'border-blue-500 bg-blue-500/10 shadow-md ring-1 ring-blue-500'
           : 'border-border bg-card text-card-foreground hover:border-border/80 hover:shadow-sm'

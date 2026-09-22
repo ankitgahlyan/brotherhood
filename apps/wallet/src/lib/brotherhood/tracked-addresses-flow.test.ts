@@ -3,7 +3,6 @@
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { Address } from '@ton/core';
 import {
   normalizeAddressByNetwork,
   createBrotherhoodSlice,
@@ -79,7 +78,7 @@ describe('Brotherhood State & Normalization Flow', () => {
 
   it('initializes and manages brotherhoodSlice per wallet address', () => {
     const state: any = {
-      brotherhood: { brotherhoodByAddress: {} },
+      brotherhood: { brotherhoodByAddress: {}, pendingDeferredByAddress: {} },
     };
 
     const setState = (updater: (s: any) => void) => {

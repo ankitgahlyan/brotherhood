@@ -77,7 +77,6 @@ type AllowedMessageToWallet =
     | PenalizeDeferredRequester
     | ActCancelDeferredPayment
     | ActClaimDeferredPayment
-    | ActFallbackReclaim
     | AcceptDeferredTransfer
     | ToggleDeferredPayment
 
@@ -1656,14 +1655,13 @@ fun onInternalMessage(in: InMessage): void {
             assert (store.jettonBalance >= msg.amount) throw Errors.InsufficientBalance;
 
             store.jettonBalance -= msg.amount;
-            val createdAt = blockchain.now();
 
             val holdingChild = calcDeployHolding(
                 contract.getAddress(),
                 msg.payee,
                 getHoldingCode(),
                 msg.amount,
-                createdAt,
+                msg.queryId,
             );
             val holdingAddr = holdingChild.calculateAddress();
 
@@ -1683,7 +1681,6 @@ fun onInternalMessage(in: InMessage): void {
                     queryId: msg.queryId,
                     holdingAddress: holdingAddr,
                     amount: msg.amount,
-                    createdAt,
                 },
             });
             notifyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
@@ -1699,7 +1696,7 @@ fun onInternalMessage(in: InMessage): void {
                 contract.getAddress(),
                 getHoldingCode(),
                 msg.amount,
-                msg.createdAt,
+                msg.queryId,
             );
             assert (in.senderAddress == expectedHoldingAddr) throw Errors.IncorrectSender;
 
@@ -1755,25 +1752,13 @@ fun onInternalMessage(in: InMessage): void {
             claimMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
-        ActFallbackReclaim => {
-            checkOwnerAction(in.senderAddress, in.valueCoins, addrs.owner);
-
-            val fallbackMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: msg.holdingAddress,
-                value: 0,
-                body: FallbackReclaim { queryId: msg.queryId },
-            });
-            fallbackMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
-        }
-
         AcceptDeferredTransfer => {
             val expectedHoldingAddr = calculateHoldingAddress(
                 msg.payer,
                 msg.payee,
                 getHoldingCode(),
                 msg.amount,
-                msg.createdAt,
+                msg.queryId,
             );
             assert (in.senderAddress == expectedHoldingAddr) throw Errors.IncorrectSender;
             store.jettonBalance += msg.amount;

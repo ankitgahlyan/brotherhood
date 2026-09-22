@@ -87,6 +87,7 @@ export interface WalletManagementSlice {
     // Event history for active wallet and per-address cache
     events: unknown[];
     eventsByAddress: Record<string, unknown[]>;
+    associatedAddressesByAddress?: Record<string, string[]>;
     hasNextEvents: boolean;
 
     /** Pending transactions from WebSocket streaming */
@@ -134,6 +135,10 @@ export interface WalletManagementSlice {
   // Wallet state actions
   clearWallet: () => void;
   updateBalance: () => Promise<void>;
+  setAssociatedAddresses: (
+    walletAddress: string,
+    associatedAddresses: string[],
+  ) => void;
 
   // WebSocket streaming actions
   startWebSocketStreaming: () => Promise<void>;
@@ -148,6 +153,7 @@ export interface WalletManagementSlice {
     offset?: number,
     force?: boolean,
     tokenFilter?: string,
+    extraAddresses?: string[],
   ) => Promise<void>;
 
   // Getters
@@ -385,9 +391,23 @@ export interface BrotherhoodMemberData {
   ring: Record<string, string[]>;
 }
 
+export interface PendingDeferredPayment {
+  id: string; // holdingAddress
+  holdingAddress: string;
+  queryId: string;
+  role: 'payee' | 'payer';
+  amount: string;
+  counterpartyAddress: string;
+  counterpartyUsername?: string;
+  createdAt: number;
+  expiresAt: number;
+  status: 'pending' | 'ready_to_claim' | 'claimed' | 'cancelled';
+}
+
 export interface BrotherhoodSlice {
   brotherhood: {
     brotherhoodByAddress: Record<string, BrotherhoodMemberData>;
+    pendingDeferredByAddress: Record<string, PendingDeferredPayment[]>;
   };
 
   setBrotherhoodMemberData: (
@@ -411,6 +431,22 @@ export interface BrotherhoodSlice {
     network?: NetworkType,
   ) => void;
   removeBrotherhoodWallet: (walletAddress: string) => void;
+  addPendingDeferredPayment: (
+    walletAddress: string,
+    payment: PendingDeferredPayment,
+    network?: NetworkType,
+  ) => void;
+  updatePendingDeferredPayment: (
+    walletAddress: string,
+    id: string,
+    patch: Partial<PendingDeferredPayment>,
+    network?: NetworkType,
+  ) => void;
+  removePendingDeferredPayment: (
+    walletAddress: string,
+    id: string,
+    network?: NetworkType,
+  ) => void;
 }
 
 // Combined app state

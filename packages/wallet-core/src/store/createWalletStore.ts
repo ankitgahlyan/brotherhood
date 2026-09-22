@@ -226,6 +226,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     Array.isArray(events) ? events.slice(0, 50) : [],
                   ]),
                 ),
+                associatedAddressesByAddress:
+                  state.walletManagement.associatedAddressesByAddress || {},
                 confirmedTraceIds:
                   state.walletManagement.confirmedTraceIds?.slice(-100) || [],
                 confirmedExternalHashes:
@@ -254,6 +256,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
               brotherhood: {
                 brotherhoodByAddress:
                   state.brotherhood?.brotherhoodByAddress || {},
+                pendingDeferredByAddress:
+                  state.brotherhood?.pendingDeferredByAddress || {},
               },
             }),
             merge: (persistedState, currentState) => {
@@ -303,6 +307,9 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     persisted?.walletManagement?.balance,
                   eventsByAddress:
                     persisted?.walletManagement?.eventsByAddress || {},
+                  associatedAddressesByAddress:
+                    persisted?.walletManagement?.associatedAddressesByAddress ||
+                    {},
                   events:
                     (activeWallet?.address &&
                       persisted?.walletManagement?.eventsByAddress?.[
@@ -342,6 +349,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   ...persisted?.brotherhood,
                   brotherhoodByAddress:
                     persisted?.brotherhood?.brotherhoodByAddress || {},
+                  pendingDeferredByAddress:
+                    persisted?.brotherhood?.pendingDeferredByAddress || {},
                 },
               };
 

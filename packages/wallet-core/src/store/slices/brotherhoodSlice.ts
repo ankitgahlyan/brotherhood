@@ -7,8 +7,14 @@
  */
 
 import { Address } from '@ton/core';
-import type { SetState, BrotherhoodSliceCreator } from '../../types/store';
+import type {
+  SetState,
+  BrotherhoodSliceCreator,
+  PendingDeferredPayment,
+} from '../../types/store';
 import type { NetworkType } from '../../utils/network';
+
+export type { PendingDeferredPayment };
 
 export interface BrotherhoodMemberData {
   isMember: boolean;
@@ -37,9 +43,12 @@ export function normalizeAddressByNetwork(
 
 export const EMPTY_CIRCLE: readonly string[] = Object.freeze([]);
 export const EMPTY_RING: Readonly<Record<string, string[]>> = Object.freeze({});
+export const EMPTY_PENDING_DEFERRED: readonly PendingDeferredPayment[] =
+  Object.freeze([]);
 
 export interface BrotherhoodState {
   brotherhoodByAddress: Record<string, BrotherhoodMemberData>;
+  pendingDeferredByAddress: Record<string, PendingDeferredPayment[]>;
 }
 
 export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
@@ -48,6 +57,7 @@ export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
 ) => ({
   brotherhood: {
     brotherhoodByAddress: {},
+    pendingDeferredByAddress: {},
   },
 
   setBrotherhoodMemberData: (
@@ -208,6 +218,7 @@ export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
     // Remove by both raw/unnormalized and normalized keys to be format-safe
     set((state) => {
       const byAddress = state.brotherhood.brotherhoodByAddress;
+      const pendingByAddress = state.brotherhood.pendingDeferredByAddress;
       for (const k of Object.keys(byAddress)) {
         try {
           if (
@@ -222,6 +233,78 @@ export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
           }
         }
       }
+      for (const k of Object.keys(pendingByAddress)) {
+        try {
+          if (
+            k === walletAddress ||
+            Address.parse(k).equals(Address.parse(walletAddress))
+          ) {
+            delete pendingByAddress[k];
+          }
+        } catch {
+          if (k === walletAddress) {
+            delete pendingByAddress[k];
+          }
+        }
+      }
+    });
+  },
+
+  addPendingDeferredPayment: (
+    walletAddress: string,
+    payment: PendingDeferredPayment,
+    network: NetworkType = 'testnet',
+  ) => {
+    if (!walletAddress || !payment) return;
+    const walletKey = normalizeAddressByNetwork(walletAddress, false, network);
+
+    set((state) => {
+      const current =
+        state.brotherhood.pendingDeferredByAddress[walletKey] || [];
+      const existingIndex = current.findIndex((p) => p.id === payment.id);
+      if (existingIndex >= 0) {
+        current[existingIndex] = { ...current[existingIndex], ...payment };
+      } else {
+        current.push(payment);
+      }
+      state.brotherhood.pendingDeferredByAddress[walletKey] = [...current];
+    });
+  },
+
+  updatePendingDeferredPayment: (
+    walletAddress: string,
+    id: string,
+    patch: Partial<PendingDeferredPayment>,
+    network: NetworkType = 'testnet',
+  ) => {
+    if (!walletAddress || !id) return;
+    const walletKey = normalizeAddressByNetwork(walletAddress, false, network);
+
+    set((state) => {
+      const current =
+        state.brotherhood.pendingDeferredByAddress[walletKey] || [];
+      const idx = current.findIndex((p) => p.id === id);
+      if (idx >= 0) {
+        current[idx] = { ...current[idx], ...patch };
+        state.brotherhood.pendingDeferredByAddress[walletKey] = [...current];
+      }
+    });
+  },
+
+  removePendingDeferredPayment: (
+    walletAddress: string,
+    id: string,
+    network: NetworkType = 'testnet',
+  ) => {
+    if (!walletAddress || !id) return;
+    const walletKey = normalizeAddressByNetwork(walletAddress, false, network);
+
+    set((state) => {
+      const current =
+        state.brotherhood.pendingDeferredByAddress[walletKey] || [];
+      state.brotherhood.pendingDeferredByAddress[walletKey] = current.filter(
+        (p) => p.id !== id,
+      );
     });
   },
 });

@@ -195,49 +195,10 @@ export const CancelDeferredPayment = {
 }
 
 /**
- > struct (0x5f91e4a3) FallbackReclaim {
- >     queryId: uint64
- > }
- */
-export interface FallbackReclaim {
-    readonly $: 'FallbackReclaim'
-    queryId: uint64 /* = 0 */
-}
-
-export const FallbackReclaim = {
-    PREFIX: 0x5f91e4a3,
-
-    create(args: {
-        queryId?: uint64 /* = 0 */
-    }): FallbackReclaim {
-        return {
-            $: 'FallbackReclaim',
-            queryId: 0n,
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): FallbackReclaim {
-        loadAndCheckPrefix32(s, 0x5f91e4a3, 'FallbackReclaim');
-        return {
-            $: 'FallbackReclaim',
-            queryId: s.loadUintBig(64),
-        }
-    },
-    store(self: FallbackReclaim, b: c.Builder): void {
-        b.storeUint(0x5f91e4a3, 32);
-        b.storeUint(self.queryId, 64);
-    },
-    toCell(self: FallbackReclaim): c.Cell {
-        return makeCellFrom<FallbackReclaim>(self, FallbackReclaim.store);
-    }
-}
-
-/**
  > struct (0x24d8b9e1) PenalizeDeferredRequester {
  >     queryId: uint64
  >     payer: address
  >     amount: coins
- >     createdAt: uint32
  > }
  */
 export interface PenalizeDeferredRequester {
@@ -245,7 +206,6 @@ export interface PenalizeDeferredRequester {
     queryId: uint64 /* = 0 */
     payer: c.Address
     amount: coins
-    createdAt: uint32
 }
 
 export const PenalizeDeferredRequester = {
@@ -255,7 +215,6 @@ export const PenalizeDeferredRequester = {
         queryId?: uint64 /* = 0 */
         payer: c.Address
         amount: coins
-        createdAt: uint32
     }): PenalizeDeferredRequester {
         return {
             $: 'PenalizeDeferredRequester',
@@ -270,7 +229,6 @@ export const PenalizeDeferredRequester = {
             queryId: s.loadUintBig(64),
             payer: s.loadAddress(),
             amount: s.loadCoins(),
-            createdAt: s.loadUintBig(32),
         }
     },
     store(self: PenalizeDeferredRequester, b: c.Builder): void {
@@ -278,7 +236,6 @@ export const PenalizeDeferredRequester = {
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.payer);
         b.storeCoins(self.amount);
-        b.storeUint(self.createdAt, 32);
     },
     toCell(self: PenalizeDeferredRequester): c.Cell {
         return makeCellFrom<PenalizeDeferredRequester>(self, PenalizeDeferredRequester.store);
@@ -291,7 +248,6 @@ export const PenalizeDeferredRequester = {
  >     payer: address
  >     payee: address
  >     amount: coins
- >     createdAt: uint32
  > }
  */
 export interface AcceptDeferredTransfer {
@@ -300,7 +256,6 @@ export interface AcceptDeferredTransfer {
     payer: c.Address
     payee: c.Address
     amount: coins
-    createdAt: uint32
 }
 
 export const AcceptDeferredTransfer = {
@@ -311,7 +266,6 @@ export const AcceptDeferredTransfer = {
         payer: c.Address
         payee: c.Address
         amount: coins
-        createdAt: uint32
     }): AcceptDeferredTransfer {
         return {
             $: 'AcceptDeferredTransfer',
@@ -327,7 +281,6 @@ export const AcceptDeferredTransfer = {
             payer: s.loadAddress(),
             payee: s.loadAddress(),
             amount: s.loadCoins(),
-            createdAt: s.loadUintBig(32),
         }
     },
     store(self: AcceptDeferredTransfer, b: c.Builder): void {
@@ -336,7 +289,6 @@ export const AcceptDeferredTransfer = {
         b.storeAddress(self.payer);
         b.storeAddress(self.payee);
         b.storeCoins(self.amount);
-        b.storeUint(self.createdAt, 32);
     },
     toCell(self: AcceptDeferredTransfer): c.Cell {
         return makeCellFrom<AcceptDeferredTransfer>(self, AcceptDeferredTransfer.store);
@@ -348,6 +300,7 @@ export const AcceptDeferredTransfer = {
  >     payer: address
  >     payee: address
  >     amount: coins
+ >     queryId: uint64
  >     createdAt: uint32
  > }
  */
@@ -356,6 +309,7 @@ export interface HoldingStore {
     payer: c.Address
     payee: c.Address
     amount: coins
+    queryId: uint64
     createdAt: uint32
 }
 
@@ -364,6 +318,7 @@ export const HoldingStore = {
         payer: c.Address
         payee: c.Address
         amount: coins
+        queryId: uint64
         createdAt: uint32
     }): HoldingStore {
         return {
@@ -377,6 +332,7 @@ export const HoldingStore = {
             payer: s.loadAddress(),
             payee: s.loadAddress(),
             amount: s.loadCoins(),
+            queryId: s.loadUintBig(64),
             createdAt: s.loadUintBig(32),
         }
     },
@@ -384,6 +340,7 @@ export const HoldingStore = {
         b.storeAddress(self.payer);
         b.storeAddress(self.payee);
         b.storeCoins(self.amount);
+        b.storeUint(self.queryId, 64);
         b.storeUint(self.createdAt, 32);
     },
     toCell(self: HoldingStore): c.Cell {
@@ -430,7 +387,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Holding implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECBgEAAVcAART/APSkE/S88sgLAQIBYgIDAvLQ+JGRMOAg7UTQ+kj6SPoA1wsfBNcsI4tSaQyOQjX4kiLHBfLivPgjJIID9ICgvvLi3wTXCz/Iz5FMbcKKyz8S+lJSEPpSUAP6AssfycjPhQgS+lJxzwtuzMmBAKD7AODXLCHFpkDU4wLXLCL8jyUc4wJfBccA8uBIBAUAHaAggdqJofSR9JH0AaY/owDiNfiSI8cF8uK8+CMkggP0gKC58uLfBNcLP4IK+vCAyM+Qk2LnhiLPCz9SQPpSJvoCJc8LH8nIz4UIUkD6Ulj6AnHPC2rMyXP7AMjPkUxtworLP1Ig+lL6UlAD+gLLH8nIz4UIEvpScc8LbszJgQCg+wAAhDX4kiPHBfLivPgjJIIIJ40AoL7y4t8E1ws/yM+RTG3Ciss/UiD6UvpSUAP6AssfycjPhQgS+lJxzwtuzMmBAKD7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECBgEAATMAART/APSkE/S88sgLAQIBYgIDAqTQ+JGRMODtRND6SPpI+gDTP9cLHyXHAI4dNQTAAI4U+CMDyPpSEvpSAfoCEss/yx/J7VTgXwTgJdcsI4tSaQzjAtcsIcWmQNQx4wJfBccA8uBIBAUAIaAggdqJofSR9JH0AaZ/pj+jAJAwNfiSI8cF8uK8JMIAnPgjBYID9ICgFb7DAJI0cOLy4t/Iz5FMbcKKFMs/EvpSUhD6Ulj6AsnIz4UIEvpScc8LbszJgQCg+wAA2DX4kiTHBfLivCSc+CMFggP0gKAVucMAkjR/4vLi34IK+vCAyM+FCFIw+lIB+gKCECTYueHPC4okzws/UjD6UiH6Aslz+wDIz5FMbcKKFMs/UiD6UvpSWPoCycjPhQgS+lJxzwtuzMmBAKD7AA==');
 
     static Errors = {
         'Errors.InvalidOp': 72,
@@ -454,6 +411,7 @@ export class Holding implements c.Contract {
         payer: c.Address
         payee: c.Address
         amount: coins
+        queryId: uint64
         createdAt: uint32
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
@@ -474,12 +432,6 @@ export class Holding implements c.Contract {
         queryId?: uint64 /* = 0 */
     }) {
         return CancelDeferredPayment.toCell(CancelDeferredPayment.create(body));
-    }
-
-    static createCellOfFallbackReclaim(body: {
-        queryId?: uint64 /* = 0 */
-    }) {
-        return FallbackReclaim.toCell(FallbackReclaim.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -510,23 +462,14 @@ export class Holding implements c.Contract {
         });
     }
 
-    async sendFallbackReclaim(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        queryId?: uint64 /* = 0 */
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: FallbackReclaim.toCell(FallbackReclaim.create(body)),
-            ...extraOptions
-        });
-    }
-
     async getHoldingData(provider: ContractProvider): Promise<HoldingStore> {
-        const r = StackReader.fromGetMethod(4, await provider.get('get_holding_data', []));
+        const r = StackReader.fromGetMethod(5, await provider.get('get_holding_data', []));
         return ({
             $: 'HoldingStore',
             payer: r.readSlice().loadAddress(),
             payee: r.readSlice().loadAddress(),
             amount: r.readBigInt(),
+            queryId: r.readBigInt(),
             createdAt: r.readBigInt(),
         });
     }

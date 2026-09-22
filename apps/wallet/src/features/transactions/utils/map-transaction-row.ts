@@ -10,7 +10,7 @@ import { Base64ToHex } from '@ton/walletkit';
 import type { Action, Event } from '@ton/walletkit';
 
 import { formatLargeValue, formatUnits, sameAddress } from '@/core/utils';
-import { KNOWN_OPCODES } from '@/core/utils/payload';
+import { getOpcodeInfo } from '@/core/utils/payload';
 import { getExplorerTxUrl, type ExplorerChoice } from '@/core/explorer';
 import type { NetworkType } from '@demo/wallet-core';
 
@@ -103,6 +103,7 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   72: 'Invalid Op',
   73: 'Not Owner',
   74: 'Not Valid Wallet',
+  250: 'Max Connections',
   333: 'Wrong Workchain',
   404: 'Not Found',
   // Brotherhood Specific Errors
@@ -111,6 +112,7 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   702: 'Account Inactive',
   703: 'Insufficient Gas Sent',
   704: 'Reserved Internal',
+  705: 'Upgrade Wallet',
   706: 'No Pending Request',
   707: 'Cannot Unfollow Reported',
   708: 'Incorrect Receiver',
@@ -149,7 +151,62 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   762: 'Has Active Votes',
   763: 'Credit Not Matured',
   764: 'Personal Jetton Not Registered',
+  765: 'Deferred Payment Disabled',
+  65535: 'Invalid Message Body',
 };
+
+/** Returns contract context badge string based on opcode number */
+export function getContractContextBadge(opcode?: number): string | undefined {
+  if (!opcode) return undefined;
+  // Holding / Deferred Payment
+  if (
+    opcode === 0x716a4d21 ||
+    opcode === 0x38b4c81a ||
+    opcode === 0x24d8b9e1 ||
+    opcode === 0x19a4f210 ||
+    opcode === 0x49f2b801 ||
+    opcode === 0x6a1bc924 ||
+    opcode === 0x7c49e102 ||
+    opcode === 0x531b70a2 ||
+    opcode === 0x1f84b29c ||
+    opcode === 0x576f30a1
+  ) {
+    return 'Holding';
+  }
+  // Brotherhood Member / FiWallet
+  if (
+    (opcode >= 0x00001051 && opcode <= 0x0000105b) ||
+    (opcode >= 0x000010a1 && opcode <= 0x000010a8) ||
+    (opcode >= 0x000010f1 && opcode <= 0x000010f7) ||
+    (opcode >= 0x00001141 && opcode <= 0x0000114e)
+  ) {
+    return 'Brotherhood Member';
+  }
+  // DAO / Poll
+  if (
+    (opcode >= 0x0000100c && opcode <= 0x00001011) ||
+    (opcode >= 0x000010fa && opcode <= 0x000010ff)
+  ) {
+    return 'DAO';
+  }
+  // Community Minter
+  if (opcode >= 0x00001001 && opcode <= 0x0000100b) {
+    return 'FossFi Minter';
+  }
+  // Lottery
+  if (opcode >= 0x00001191 && opcode <= 0x0000119b) {
+    return 'Lottery';
+  }
+  // Followers
+  if (opcode >= 0x00001200 && opcode <= 0x00001209) {
+    return 'Followers';
+  }
+  // Personal Token
+  if (opcode === 0x1674b0a0 || opcode === 0x00001149) {
+    return 'Personal Token';
+  }
+  return undefined;
+}
 
 export function decodeExitCode(code: number): string {
   const name = TVM_EXIT_CODES[code];
@@ -340,24 +397,56 @@ const describeAction = (
 
   if (action.type === 'SmartContractExec' && 'SmartContractExec' in action) {
     const op = action.SmartContractExec.operation;
-    const opNumber = Number(op);
-    const decodedName =
-      !Number.isNaN(opNumber) && KNOWN_OPCODES[opNumber]
-        ? KNOWN_OPCODES[opNumber]
-        : op
-          ? `Contract Call (${op})`
-          : 'SmartContractExec';
+    const payload =
+      (action.SmartContractExec as any).payload || (action as any).payload;
+    const info = getOpcodeInfo(op, payload);
+    const badge = getContractContextBadge(info.opcode);
     const val =
       BigInt(action.SmartContractExec.tonAttached || 0) > 0n
         ? `${formatAmount(action.SmartContractExec.tonAttached, GRAM_DECIMALS)} GRAM`
         : '';
+    const isZeroOp =
+      info.opcode === 0 ||
+      op === '0x00000000' ||
+      op === '0x0' ||
+      op === '0' ||
+      info.title === 'TonTransfer';
+    const actionTitle = isZeroOp
+      ? val
+        ? isOutgoing
+          ? 'Sent TON'
+          : 'Received TON'
+        : 'TON Transfer'
+      : info.title;
+    const detail = val
+      ? `${label} ${val}`
+      : action.simplePreview?.description || actionTitle;
     return {
-      actionName: decodedName,
-      transferDetail: val
-        ? `${label} ${val}`
-        : action.simplePreview.description,
+      actionName: actionTitle,
+      transferDetail: badge ? `[${badge}] ${detail}` : detail,
       value: val,
     };
+  }
+
+  // Generic contract execution fallback
+  if (
+    action.simplePreview?.name?.toLowerCase().includes('contract') ||
+    action.simplePreview?.name?.toLowerCase().includes('call') ||
+    (action as any).payload
+  ) {
+    const info = getOpcodeInfo(
+      (action as any).operation,
+      (action as any).payload,
+    );
+    if (info.isKnown) {
+      const badge = getContractContextBadge(info.opcode);
+      const detail = action.simplePreview?.description || info.title;
+      return {
+        actionName: info.title,
+        transferDetail: badge ? `[${badge}] ${detail}` : detail,
+        value: action.simplePreview?.value || '',
+      };
+    }
   }
 
   if (action.type === 'ContractDeploy') {
@@ -435,10 +524,20 @@ export const mapEventToRow = (
             isFailed = true;
           }
           if (tx.in_msg) {
+            const inBody =
+              tx.in_msg.body ||
+              tx.in_msg.message_content?.body ||
+              tx.in_msg.msg_data;
+            if (inBody) {
+              const info = getOpcodeInfo(undefined, inBody);
+              if (info.isKnown) {
+                actionName = info.title;
+              }
+            }
             if (tx.in_msg.source) {
               counterparty = tx.in_msg.source;
               isOutgoing = false;
-              actionName = 'Received';
+              if (actionName === 'Transaction') actionName = 'Received';
             }
             if (tx.in_msg.value && BigInt(tx.in_msg.value) > 0n) {
               value = `${formatAmount(tx.in_msg.value, GRAM_DECIMALS)} GRAM`;

@@ -117,9 +117,16 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
             <div
               key={item.address}
               onClick={() => onSelectMember(item)}
-              className="group flex flex-col gap-1.5 p-3 bg-card hover:bg-secondary/60 border border-border/80 hover:border-primary/50 rounded-xl cursor-pointer transition-all shadow-xs"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectMember(item);
+                }
+              }}
+              className="group flex flex-col gap-1.5 p-3 bg-card hover:bg-secondary/60 border border-border/80 hover:border-primary/50 rounded-xl cursor-pointer transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               role="button"
               tabIndex={0}
+              aria-label={`Select member ${item.username ? `@${item.username}` : item.address}`}
               data-testid={`recent-member-${item.address}`}
             >
               <div className="flex items-center justify-between">
