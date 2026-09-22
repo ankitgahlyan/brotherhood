@@ -39,7 +39,8 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     if (
       target?.closest('[data-swipe-ignore="true"]') ||
       target?.closest('.no-swipe') ||
-      target?.closest('input, textarea, select, [role="slider"], button, a') ||
+      target?.closest('nav') ||
+      target?.closest('[aria-label="Bottom Navigation"]') ||
       target?.closest('[role="dialog"]')
     ) {
       isIgnoredRef.current = true;

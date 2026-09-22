@@ -13,15 +13,8 @@ import { DashboardAssets } from '../dashboard-assets';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { TransactionHistory } from '@/features/transactions';
 import { UpgradeBanner } from '@/features/brotherhood';
-import { useTonWallet } from '@/core/hooks';
 
 export const WalletDashboard: React.FC = () => {
-  // Re-initialize the wallet when the dashboard mounts (gated behind the unlocked route), so
-  // WalletKit + currentWallet are restored when booting straight onto it — e.g. an extension
-  // popup reopen. Must NOT move to AppRouter: useTonWallet inits once and at the root it fires
-  // before the store rehydrates (isUnlocked=false), skipping loadAllWallets with no retry.
-  useTonWallet();
-
   return (
     <NewLayout>
       <div className="flex flex-col gap-4">

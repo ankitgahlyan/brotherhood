@@ -89,10 +89,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/70 select-none pb-[var(--tg-safe-area-bottom,0px)] transition-transform duration-300 ease-in-out ${
+      className={`fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/70 select-none pb-[var(--tg-safe-area-bottom,0px)] transition-transform duration-300 ease-in-out no-swipe ${
         isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
       aria-label="Bottom Navigation"
+      data-swipe-ignore="true"
     >
       <div className="max-w-md mx-auto flex items-center gap-1 px-2 py-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-proximity">
         {ECOSYSTEM_NAV_ITEMS.map((item) => {

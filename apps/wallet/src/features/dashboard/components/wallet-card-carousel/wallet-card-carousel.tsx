@@ -20,6 +20,9 @@ import { useCountUp } from '@/core/hooks/use-count-up';
 import { assetUrl, findRate, toDecimal } from '@/core/utils';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { isFiJetton } from '@/features/jettons';
+import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
+import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
+import { FI_ADDRESS } from '@/lib/brotherhood/config';
 import { SettingsWalletsModal } from '@/features/settings';
 import { toast } from 'sonner';
 
@@ -49,6 +52,8 @@ export const WalletCardCarousel: React.FC = () => {
   const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
   const { userJettons } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
+  const fiAccount = useFiAccount(address ?? null);
+  const { personalBalance } = usePersonalJettonInfo(address ?? null);
 
   const [copied, setCopied] = useState(false);
   const [isManageWalletsOpen, setIsManageWalletsOpen] = useState(false);
@@ -67,7 +72,7 @@ export const WalletCardCarousel: React.FC = () => {
 
   const activeWallet = savedWallets[currentIndex];
 
-  const ready = balance !== undefined;
+  const ready = balance !== undefined || Boolean(fiAccount.data);
 
   const fiJetton = useMemo(
     () => userJettons.find((j) => isFiJetton(j)),
@@ -75,16 +80,40 @@ export const WalletCardCarousel: React.FC = () => {
   );
 
   const fiAmount = useMemo(() => {
-    if (!fiJetton) return 0;
-    return toDecimal(fiJetton.balance, fiJetton.decimalsNumber ?? 9);
-  }, [fiJetton]);
+    if (fiJetton) {
+      return toDecimal(fiJetton.balance, fiJetton.decimalsNumber ?? 9);
+    }
+    if (fiAccount.data?.jettonBalance !== undefined) {
+      return toDecimal(fiAccount.data.jettonBalance, 9);
+    }
+    return 0;
+  }, [fiJetton, fiAccount.data]);
+
+  const hdJetton = useMemo(
+    () =>
+      userJettons.find((j) => {
+        const sym = j.info?.symbol;
+        return sym?.toUpperCase() === 'HD';
+      }),
+    [userJettons],
+  );
+
+  const hdAmount = useMemo(() => {
+    if (hdJetton) {
+      return toDecimal(hdJetton.balance, hdJetton.decimalsNumber ?? 9);
+    }
+    if (personalBalance !== null && personalBalance !== undefined) {
+      return toDecimal(personalBalance, 9);
+    }
+    return 0;
+  }, [hdJetton, personalBalance]);
 
   const totalUsd = useMemo(() => {
     if (!ready || ratesUpdated === 0) return 0;
 
     let total = 0;
     const tonRate = rates['GRAM']?.rate;
-    if (tonRate) {
+    if (tonRate && balance !== undefined) {
       total += toDecimal(balance, GRAM_DECIMALS) * tonRate;
     }
     for (const jetton of userJettons) {
@@ -92,8 +121,14 @@ export const WalletCardCarousel: React.FC = () => {
       if (!rate) continue;
       total += toDecimal(jetton.balance, jetton.decimalsNumber ?? 9) * rate;
     }
+    if (fiAmount > 0 && !userJettons.some((j) => isFiJetton(j))) {
+      const fiRate = findRate(rates, FI_ADDRESS)?.rate;
+      if (fiRate) {
+        total += fiAmount * fiRate;
+      }
+    }
     return total;
-  }, [ready, ratesUpdated, rates, balance, userJettons]);
+  }, [ready, ratesUpdated, rates, balance, userJettons, fiAmount]);
 
   const handleCopy = useCallback(async () => {
     if (!address) return;
@@ -287,6 +322,8 @@ export const WalletCardCarousel: React.FC = () => {
                   </>
                 )}
                 <span>{tonDecimal.toFixed(2)} TON</span>
+                <span className="text-muted-foreground/50">•</span>
+                <span>{hdAmount.toFixed(2)} HD</span>
               </div>
             </>
           ) : (

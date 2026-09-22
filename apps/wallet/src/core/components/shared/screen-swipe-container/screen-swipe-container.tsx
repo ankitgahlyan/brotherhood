@@ -19,6 +19,8 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
   '/lottery',
 ];
 
+const SUB_TAB_ROUTES = ['/brotherhood', '/personal-jetton', '/dao'];
+
 const SWIPE_THRESHOLD_PX = 55;
 const SWIPE_MIN_VELOCITY_RATIO = 1.3;
 
@@ -37,6 +39,10 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const startYRef = useRef<number | null>(null);
   const isIgnoredRef = useRef(false);
 
+  const isSubTabScreen = SUB_TAB_ROUTES.some((route) =>
+    pathname.startsWith(route),
+  );
+
   const getActiveTabIndex = () => {
     if (pathname === '/' || pathname.startsWith('/wallet')) return 0;
     if (pathname.startsWith('/brotherhood')) return 1;
@@ -48,7 +54,8 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (isSettingsOpen) {
+    // If settings modal is open or the active screen has sub-tabs, don't trigger main ecosystem route swipes
+    if (isSettingsOpen || isSubTabScreen) {
       isIgnoredRef.current = true;
       return;
     }
@@ -56,9 +63,10 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     const target = e.target as HTMLElement | null;
     if (
       target?.closest('[data-swipe-ignore="true"]') ||
+      target?.closest('.no-swipe') ||
+      target?.closest('nav') ||
+      target?.closest('[aria-label="Bottom Navigation"]') ||
       target?.closest('.wallet-card-carousel') ||
-      target?.closest('.swipeable-sub-tabs-container') ||
-      target?.closest('input, textarea, select, [role="slider"]') ||
       target?.closest('[role="dialog"]')
     ) {
       isIgnoredRef.current = true;

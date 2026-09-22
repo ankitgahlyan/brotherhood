@@ -3,7 +3,6 @@ import {
   createWalletStore,
   getSessionPassword,
   setSessionPassword,
-  SESSION_PASSWORD_KEY,
 } from '@demo/wallet-core';
 
 const mockStore = new Map<string, string>();
@@ -208,21 +207,25 @@ describe('Wallet Switching & Session Authentication', () => {
     expect(getBalanceCalls).toBe(0);
   });
 
-  it('loadAllWallets lazily loads only the active wallet into walletKit', async () => {
+  it('loadAllWallets loads all saved wallets into walletKit at startup', async () => {
     const store = createWalletStore({ enableDevtools: false });
     const addedWalletIds: string[] = [];
+    const addedWallets: any[] = [];
 
     const mockWalletKit: any = {
-      getWallet: () => undefined,
-      getWallets: () => [],
+      getWallet: (id: string) =>
+        addedWallets.find((w) => w.getWalletId() === id),
+      getWallets: () => addedWallets,
       addWallet: async (adapter: any) => {
         addedWalletIds.push(adapter.id);
-        return {
+        const wallet = {
           getWalletId: () => adapter.id,
           getAddress: () => adapter.address,
           getPublicKey: () => 'pk',
           getNetwork: () => ({ chainId: -3 }),
         };
+        addedWallets.push(wallet);
+        return wallet;
       },
     };
 
@@ -257,8 +260,8 @@ describe('Wallet Switching & Session Authentication', () => {
 
     await store.getState().loadAllWallets();
 
-    // Only active wallet w1 should be added into walletKit, NOT w2
-    expect(addedWalletIds).toEqual(['kit_w1']);
+    // All saved wallets should be added into walletKit at startup
+    expect(addedWalletIds).toEqual(['kit_w1', 'kit_w2']);
     expect(store.getState().walletManagement.activeWalletId).toBe('w1');
   });
 });

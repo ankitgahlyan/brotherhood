@@ -21,7 +21,7 @@ interface MemberGuardProps {
 
 export const MemberGuard: React.FC<MemberGuardProps> = ({
   title,
-  allowReadOnly = false,
+  allowReadOnly = true,
   children,
 }) => {
   const navigate = useNavigate();

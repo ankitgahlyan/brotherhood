@@ -30,7 +30,7 @@ import {
   setContractCache,
 } from '@/lib/brotherhood/contract-cache';
 
-export function useTrackedPersonalTokens() {
+export function useTrackedPersonalTokens(additionalMinters?: string[]) {
   const queryClient = useQueryClient();
   const { currentWallet, address, getActiveWallet } = useWallet();
   const { userJettons, refreshJettons } = useJettons();
@@ -50,8 +50,13 @@ export function useTrackedPersonalTokens() {
     for (const m of manualMinters) {
       set.add(m);
     }
+    if (additionalMinters) {
+      for (const m of additionalMinters) {
+        if (m) set.add(m);
+      }
+    }
     return Array.from(set);
-  }, [userJettons, manualMinters]);
+  }, [userJettons, manualMinters, additionalMinters]);
 
   const parsedOwnerAddress = useMemo(() => {
     if (!walletAddress) return null;

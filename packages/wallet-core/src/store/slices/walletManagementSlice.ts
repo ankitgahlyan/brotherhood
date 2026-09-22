@@ -630,18 +630,20 @@ export const createWalletManagementSlice =
               ?.id
           : undefined;
 
+      const targetSavedWallet =
+        state.walletManagement.savedWallets[walletIndex];
+      const removedAddress = targetSavedWallet?.address;
+      const removedKitWalletId = targetSavedWallet?.kitWalletId;
+
       set((state) => {
-        const removed = state.walletManagement.savedWallets.splice(
-          walletIndex,
-          1,
-        )[0];
-        if (removed?.address) {
-          delete state.walletManagement.balancesByAddress[removed.address];
-          delete state.walletManagement.eventsByAddress[removed.address];
-          delete state.jettons.jettonsByAddress[removed.address];
-          delete state.nfts.nftsByAddress[removed.address];
-          if (state.removeBrotherhoodWallet) {
-            state.removeBrotherhoodWallet(removed.address);
+        state.walletManagement.savedWallets.splice(walletIndex, 1);
+        if (removedAddress) {
+          delete state.walletManagement.balancesByAddress[removedAddress];
+          delete state.walletManagement.eventsByAddress[removedAddress];
+          delete state.jettons.jettonsByAddress[removedAddress];
+          delete state.nfts.nftsByAddress[removedAddress];
+          if (state.brotherhood?.brotherhoodByAddress) {
+            delete state.brotherhood.brotherhoodByAddress[removedAddress];
           }
         }
 
@@ -664,6 +666,22 @@ export const createWalletManagementSlice =
           state.nfts.userNfts = [];
         }
       });
+
+      if (removedAddress) {
+        get().removeBrotherhoodWallet(removedAddress);
+      }
+      if (state.walletCore.walletKit && removedKitWalletId) {
+        void state.walletCore.walletKit
+          .removeWallet(removedKitWalletId)
+          .catch(() => {});
+      }
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(`wallet_synced_${walletId}`);
+        }
+      } catch {
+        // Ignore localStorage access errors
+      }
 
       if (isRemovingActiveWallet && isLastWallet) {
         void get().stopWebSocketStreaming();
@@ -717,6 +735,60 @@ export const createWalletManagementSlice =
             return;
           }
 
+          log.info(
+            `Loading all wallets (${savedWallets.length}) into WalletKit`,
+          );
+
+          // 1. Load each saved wallet into WalletKit if not already present
+          const kit = state.walletCore.walletKit;
+          for (const savedWallet of savedWallets) {
+            try {
+              let existing = savedWallet.kitWalletId
+                ? kit.getWallet(savedWallet.kitWalletId)
+                : undefined;
+              if (!existing && savedWallet.address) {
+                const loadedWallets = kit.getWallets();
+                existing = loadedWallets.find((w) => {
+                  try {
+                    return compareAddress(w.getAddress(), savedWallet.address);
+                  } catch {
+                    return w.getAddress() === savedWallet.address;
+                  }
+                });
+              }
+
+              if (!existing) {
+                const adapter = await state.createAdapterFromSavedWallet(
+                  kit,
+                  savedWallet,
+                );
+                if (adapter) {
+                  const added = await kit.addWallet(adapter);
+                  if (
+                    added &&
+                    (!savedWallet.kitWalletId ||
+                      savedWallet.kitWalletId !== added.getWalletId())
+                  ) {
+                    set((s) => {
+                      const idx = s.walletManagement.savedWallets.findIndex(
+                        (w) => w.id === savedWallet.id,
+                      );
+                      if (idx !== -1) {
+                        s.walletManagement.savedWallets[idx].kitWalletId =
+                          added.getWalletId();
+                      }
+                    });
+                  }
+                }
+              }
+            } catch (err) {
+              log.warn(
+                `Failed loading wallet ${savedWallet.name} into kit:`,
+                err,
+              );
+            }
+          }
+
           const targetWallet =
             savedWallets.find(
               (w) => w.id === state.walletManagement.activeWalletId,
@@ -726,12 +798,22 @@ export const createWalletManagementSlice =
             return;
           }
 
-          log.info(
-            `Loading active wallet ${targetWallet.name} (${targetWallet.id})`,
-          );
-
-          // Switch to active wallet — lazily instantiates adapter if not yet in kit and activates it
-          await get().switchWallet(targetWallet.id);
+          // 2. Only switch if the active wallet is not already active and instantiated
+          const currentState = get();
+          if (
+            currentState.walletManagement.activeWalletId !== targetWallet.id ||
+            !currentState.walletManagement.currentWallet
+          ) {
+            log.info(
+              `Activating wallet ${targetWallet.name} (${targetWallet.id})`,
+            );
+            await get().switchWallet(targetWallet.id);
+          } else {
+            log.info(`Active wallet ${targetWallet.name} is already active`);
+            if (!currentState.walletManagement.isStreamingConnected) {
+              await get().startWebSocketStreaming();
+            }
+          }
 
           set((state) => {
             const hasWallet = state.walletManagement.savedWallets.length > 0;
@@ -744,11 +826,9 @@ export const createWalletManagementSlice =
             }
           });
 
-          log.info('Active wallet loaded successfully');
+          log.info('All wallets loaded successfully');
         } catch (error) {
-          log.error('Error loading active wallet:', error);
-          // Still mark as authenticated if we have saved wallets —
-          // the user should be able to enter the app even if API is down
+          log.error('Error loading wallets:', error);
           set((state) => {
             const hasWallet = state.walletManagement.savedWallets.length > 0;
             if (

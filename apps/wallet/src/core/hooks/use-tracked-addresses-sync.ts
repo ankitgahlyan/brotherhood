@@ -330,6 +330,8 @@ export function useTrackedAddressesSync() {
     if (currentLen > savedWalletsLengthRef.current) {
       savedWalletsLengthRef.current = currentLen;
       void hydrateAllSavedWallets();
+    } else if (currentLen < savedWalletsLengthRef.current) {
+      savedWalletsLengthRef.current = currentLen;
     }
   }, [savedWallets, hydrateAllSavedWallets]);
 

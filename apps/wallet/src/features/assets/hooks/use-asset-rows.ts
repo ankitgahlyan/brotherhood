@@ -19,9 +19,11 @@ import {
   isFiJetton,
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
+import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
 import { useTrackedPersonalTokens } from './use-tracked-personal-tokens';
+import { FI_ADDRESS } from '@/lib/brotherhood/config';
 import {
   assetUrl,
   findRate,
@@ -57,10 +59,13 @@ export const useAssetRows = (): AssetRows => {
   const { userJettons, lastJettonsUpdate } = useJettons();
   const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
+  const fiAccount = useFiAccount(walletAddress ?? null);
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
-  const { personalTokens } = useTrackedPersonalTokens();
+  const { personalTokens } = useTrackedPersonalTokens(
+    personalMinterAddress ? [personalMinterAddress] : undefined,
+  );
 
   const assetsReady =
     Boolean(walletAddress) &&
@@ -176,6 +181,26 @@ export const useAssetRows = (): AssetRows => {
       });
     }
 
+    // 1.5 Ensure FI is included for members even if not indexed in userJettons
+    const normFi = normalizeAddress(FI_ADDRESS) || FI_ADDRESS;
+    if (isMember && !seenAddresses.has(normFi)) {
+      const fiBal = fiAccount.data?.jettonBalance
+        ? toDecimal(fiAccount.data.jettonBalance, 9)
+        : 0;
+      const rateEntry = findRate(rates, FI_ADDRESS);
+      rows.push({
+        id: FI_ADDRESS,
+        icon: imageSources([assetUrl('fi.svg')]),
+        fallbackText: 'FI',
+        name: 'BrotherHood FI',
+        symbol: 'FI',
+        amount: fiBal,
+        rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
+        fiat: rateEntry ? fiBal * rateEntry.rate : undefined,
+      });
+      seenAddresses.add(normFi);
+    }
+
     // 2. Process personalTokens (discovered on-chain and manually tracked)
     for (const pt of personalTokens) {
       const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
@@ -209,6 +234,7 @@ export const useAssetRows = (): AssetRows => {
     personalMinterAddress,
     verifiedPersonalMinterSet,
     personalTokens,
+    fiAccount.data,
   ]);
 
   return { tonRow, jettonRows, assetsReady };
