@@ -59,7 +59,7 @@ export function useTrackedAddressesSync() {
     (state) => state.walletCore.isWalletKitInitialized,
   );
 
-  const hasHydratedSessionRef = useRef(false);
+  const savedWalletsLengthRef = useRef(0);
 
   // Helper to normalize address matching helper
   const findDecodedStore = (
@@ -323,14 +323,12 @@ export function useTrackedAddressesSync() {
     ],
   );
 
-  // Session bootstrap: hydrate all saved wallets once
+  // Session bootstrap + mid-session wallet addition: hydrate whenever the
+  // wallet list grows (first load: 0→N, new wallet added: N→N+1).
   useEffect(() => {
-    if (
-      !hasHydratedSessionRef.current &&
-      savedWallets &&
-      savedWallets.length > 0
-    ) {
-      hasHydratedSessionRef.current = true;
+    const currentLen = savedWallets?.length ?? 0;
+    if (currentLen > savedWalletsLengthRef.current) {
+      savedWalletsLengthRef.current = currentLen;
       void hydrateAllSavedWallets();
     }
   }, [savedWallets, hydrateAllSavedWallets]);
