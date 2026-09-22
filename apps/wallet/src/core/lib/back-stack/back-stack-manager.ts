@@ -137,7 +137,7 @@ export function registerBackCallback(
   initPopstateListener();
 
   const id = nextId++;
-  const syncHistory = options?.syncHistory ?? true;
+  const syncHistory = options?.syncHistory ?? false;
 
   if (
     syncHistory &&

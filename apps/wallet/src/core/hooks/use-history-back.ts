@@ -24,7 +24,7 @@ export interface UseHistoryBackOptions {
 export function useHistoryBack({
   isActive = true,
   onBack,
-  syncHistory = true,
+  syncHistory = false,
 }: UseHistoryBackOptions): void {
   const onBackRef = useRef(onBack);
   useEffect(() => {

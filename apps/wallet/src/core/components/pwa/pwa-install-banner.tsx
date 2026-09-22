@@ -1,15 +1,31 @@
 import React, { useState } from 'react';
 import { Download, X, Sparkles } from 'lucide-react';
 import { usePwaInstall } from '@/core/hooks/use-pwa-install';
+import { useWallet } from '@demo/wallet-core';
+import { useLocation } from '@/core/routing';
 import { InstallPromptDialog } from './install-prompt-dialog';
 
 export const PwaInstallBanner: React.FC = () => {
   const { isStandalone, isDismissed, isInstalled, dismissPrompt } =
     usePwaInstall();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { hasWallet } = useWallet();
+  const { pathname } = useLocation();
 
-  // If already running standalone or installed or dismissed by user, don't show the floating banner
-  if (isStandalone || isDismissed || isInstalled) {
+  // Never show install banner on onboarding or auth screens where it blocks buttons
+  const cleanPath = (pathname || '').replace(/\/+$/, '') || '/';
+  const isExcludedRoute =
+    !hasWallet ||
+    cleanPath === '' ||
+    cleanPath.endsWith('/welcome') ||
+    cleanPath.endsWith('/setup-password') ||
+    cleanPath.endsWith('/create-wallet') ||
+    cleanPath.endsWith('/import-wallet') ||
+    cleanPath.endsWith('/unlock') ||
+    cleanPath.endsWith('/ledger');
+
+  // If already running standalone or installed or dismissed by user or on onboarding screens, don't show the floating banner
+  if (isExcludedRoute || isStandalone || isDismissed || isInstalled) {
     return (
       <InstallPromptDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     );
@@ -17,7 +33,7 @@ export const PwaInstallBanner: React.FC = () => {
 
   return (
     <>
-      <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+      <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto z-40 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
         <div className="flex items-center justify-between gap-3 p-3 bg-card/95 backdrop-blur-md border border-primary/20 shadow-xl shadow-black/20 rounded-2xl">
           <div
             onClick={() => setDialogOpen(true)}

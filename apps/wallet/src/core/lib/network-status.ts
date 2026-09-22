@@ -21,7 +21,10 @@ let currentOnlineStatus =
     : true;
 const listeners = new Set<(online: boolean) => void>();
 
-if (typeof window !== 'undefined') {
+if (
+  typeof window !== 'undefined' &&
+  typeof window.addEventListener === 'function'
+) {
   window.addEventListener('online', () => {
     currentOnlineStatus = true;
     listeners.forEach((cb) => {
