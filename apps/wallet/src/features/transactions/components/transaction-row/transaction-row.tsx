@@ -3,7 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 import React, { useRef, useState } from 'react';
@@ -12,7 +11,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   X,
-  Pencil,
   ArrowLeftRight,
   Flame,
   Wand2,
@@ -20,17 +18,8 @@ import {
   Settings,
   FileText,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
-import { useWalletStore } from '@demo/wallet-core';
-import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
-import {
-  getCachedUsername,
-  saveUsernameAddressMapping,
-} from '@/features/send/lib/contact-storage';
-import { Modal } from '@/core/components/ui/modal/modal';
-import { Button } from '@/core/components/ui/button';
-import { Input } from '@/core/components/ui/input';
+import { EditableAddressName } from '@/core/components/ui/editable-address-name';
 
 import type {
   TransactionRowModel,
@@ -103,15 +92,14 @@ function getActionIcon(
     };
   }
   if (
-    combined.includes('smartcontract') ||
-    combined.includes('contractdeploy') ||
-    combined.includes('act') ||
-    combined.includes('call') ||
-    combined.includes('vote')
+    combined.includes('admin') ||
+    combined.includes('governance') ||
+    combined.includes('contract') ||
+    combined.includes('config')
   ) {
     return {
       icon: <Settings className="w-4 h-4" strokeWidth={2.2} />,
-      bgClass: 'bg-primary/15 text-primary',
+      bgClass: 'bg-blue-500/15 text-blue-500 dark:text-blue-400',
     };
   }
 
@@ -121,14 +109,12 @@ function getActionIcon(
       bgClass: 'bg-rose-500/15 text-rose-500',
     };
   }
-
   return {
     icon: <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />,
-    bgClass: 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400',
+    bgClass: 'bg-emerald-500/15 text-emerald-500',
   };
 }
 
-/** Single transaction list item styled after wallet-v2 Activity items. */
 export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
   const {
     id,
@@ -137,11 +123,11 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
     title,
     subtitleId,
     counterpartyAddress,
-    failureReason,
     amount,
     isOutgoing,
     status,
     date,
+    failureReason,
     rawType,
     comment,
     timestamp,
@@ -149,8 +135,6 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
 
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
-  const [editingName, setEditingName] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
 
@@ -186,55 +170,8 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
       isLongPressRef.current = false;
       return;
     }
-    // Wallet-v2 behavior: clicking opens in-app transaction details
+    // Clicking opens in-app transaction details
     setIsDetailsModalOpen(true);
-  };
-
-  const { formatWalletAddress } = useFormatAddress();
-  const savedWallets = useWalletStore(
-    (state) => state.walletManagement.savedWallets,
-  );
-  const activeWalletId = useWalletStore(
-    (state) => state.walletManagement.activeWalletId,
-  );
-  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
-  const myAddress = activeWallet?.address;
-
-  // Resolve counterparty representation
-  let counterpartyLabel = subtitleId;
-  let showEditButton = false;
-  let cachedName: string | null = null;
-
-  if (counterpartyAddress) {
-    if (myAddress && sameAddress(counterpartyAddress, myAddress)) {
-      counterpartyLabel = 'self';
-    } else {
-      cachedName = getCachedUsername(counterpartyAddress, network);
-      if (cachedName) {
-        counterpartyLabel = `@${cachedName}`;
-      } else {
-        counterpartyLabel = formatWalletAddress(counterpartyAddress, true);
-      }
-      showEditButton = true;
-    }
-  }
-
-  const handleOpenEditName = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEditingName(cachedName || '');
-    setIsEditNameOpen(true);
-  };
-
-  const handleSaveName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!counterpartyAddress) return;
-    const clean = editingName.trim().replace(/^@+/, '');
-    if (clean) {
-      saveUsernameAddressMapping(clean, counterpartyAddress, network);
-      toast.success(`Saved @${clean} for address`);
-    }
-    setIsEditNameOpen(false);
   };
 
   const { icon, bgClass } = getActionIcon(rawType, title, isOutgoing);
@@ -260,21 +197,19 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
             handleClick();
           }
         }}
-        aria-label={`${title} transaction ${isOutgoing ? 'to' : 'from'} ${counterpartyLabel}`}
-        onContextMenu={handleContextMenu}
         onTouchStart={startPressTimer}
         onTouchEnd={clearPressTimer}
         onTouchMove={clearPressTimer}
-        onTouchCancel={clearPressTimer}
         onMouseDown={startPressTimer}
         onMouseUp={clearPressTimer}
         onMouseLeave={clearPressTimer}
-        className="group relative flex items-center gap-3.5 py-2.5 px-3 rounded-2xl cursor-pointer select-none hover:bg-secondary/60 active:scale-[0.985] transition-all border border-transparent hover:border-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring content-visibility-auto"
+        onContextMenu={handleContextMenu}
+        className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-muted/50 active:bg-muted/80 transition-colors text-left group select-none cursor-pointer border border-transparent hover:border-border/40"
       >
-        {/* Left: Action Icon with Status Badge */}
-        <span className="relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+        {/* Left: Action Icon + Status Badge */}
+        <span className="relative flex-shrink-0 mr-3.5">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 ${bgClass}`}
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${bgClass} transition-transform group-hover:scale-105`}
           >
             {icon}
           </div>
@@ -296,21 +231,19 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
               </span>
             ) : (
               <>
-                <span className="truncate">
-                  {isOutgoing ? 'to ' : 'from '}
-                  {counterpartyLabel}
+                <span className="truncate inline-flex items-center gap-1">
+                  <span>{isOutgoing ? 'to ' : 'from '}</span>
+                  {counterpartyAddress ? (
+                    <EditableAddressName
+                      address={counterpartyAddress}
+                      network={network}
+                      showEditButton={true}
+                      truncate={true}
+                    />
+                  ) : (
+                    <span>{subtitleId}</span>
+                  )}
                 </span>
-                {showEditButton && (
-                  <button
-                    type="button"
-                    onClick={handleOpenEditName}
-                    className="opacity-40 hover:opacity-100 hover:text-foreground transition-opacity p-0.5 shrink-0 cursor-pointer"
-                    title="Edit contact name"
-                    aria-label="Edit contact name"
-                  >
-                    <Pencil className="w-2.5 h-2.5" />
-                  </button>
-                )}
                 <span className="text-muted-foreground/60 select-none">∙</span>
                 <span className="shrink-0">{timeString}</span>
               </>
@@ -342,7 +275,7 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
         </div>
       </div>
 
-      {/* Transaction Details Modal (Wallet-v2 In-App Flow) */}
+      {/* Transaction Details Modal */}
       {isDetailsModalOpen && (
         <TransactionInfoModal
           isOpen={isDetailsModalOpen}
@@ -351,49 +284,14 @@ export const TransactionRow: React.FC<TransactionRowModel> = (props) => {
         />
       )}
 
-      {/* Long-Press / Right-Click Explorer Choice Modal */}
-      {isChoiceModalOpen && (
+      {/* Long-press / Right-click Explorer Choice Modal */}
+      {isChoiceModalOpen && hashForModal && (
         <ExplorerChoiceModal
           isOpen={isChoiceModalOpen}
           onClose={() => setIsChoiceModalOpen(false)}
           txHash={hashForModal}
           network={network}
         />
-      )}
-
-      {/* Edit Contact Name Modal */}
-      {isEditNameOpen && (
-        <Modal.Container
-          isOpened={isEditNameOpen}
-          onOpenChange={setIsEditNameOpen}
-        >
-          <Modal.Header onClose={() => setIsEditNameOpen(false)}>
-            <Modal.Title>Save Contact Name</Modal.Title>
-          </Modal.Header>
-          <form onSubmit={handleSaveName}>
-            <Modal.Body className="space-y-4">
-              <div className="text-xs text-muted-foreground font-mono break-all">
-                {counterpartyAddress}
-              </div>
-              <Input.Container>
-                <Input.Field>
-                  <Input.Input
-                    type="text"
-                    placeholder="e.g. Alice or @alice"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    autoFocus
-                  />
-                </Input.Field>
-              </Input.Container>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button type="submit" className="w-full">
-                Save Contact
-              </Button>
-            </Modal.Footer>
-          </form>
-        </Modal.Container>
       )}
     </>
   );

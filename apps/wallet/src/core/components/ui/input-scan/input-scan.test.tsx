@@ -25,6 +25,7 @@ import {
   saveUsernameAddressMapping,
   setCustomAddressName,
 } from '@/core/lib/contact-storage';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 
 describe('InputScan component', () => {
   const testAddress = '0QAREREREREREREREREREREREREREREREREREREREREREQBc';
@@ -53,6 +54,10 @@ describe('InputScan component', () => {
 
   beforeEach(() => {
     mockLocalStorage.clear();
+    useContactBookStore.setState({
+      contactsByNetwork: { testnet: {}, mainnet: {} },
+      recentByNetwork: { testnet: [], mainnet: [] },
+    });
     if (typeof globalThis.localStorage?.clear === 'function') {
       globalThis.localStorage.clear();
     }

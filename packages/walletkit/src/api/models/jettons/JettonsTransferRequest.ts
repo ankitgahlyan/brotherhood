@@ -38,4 +38,14 @@ export interface JettonsTransferRequest {
    * Human-readable comment attached to the transfer
    */
   comment?: string;
+
+  /**
+   * Optional custom forward payload (plain or encrypted comment cell)
+   */
+  forwardPayload?: any;
+
+  /**
+   * Optional custom payload
+   */
+  customPayload?: any;
 }

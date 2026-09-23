@@ -58,6 +58,8 @@ export class WalletJettonClass implements WalletJettonInterface {
       destination: params.recipientAddress,
       responseDestination: params.responseDestination || this.getAddress(),
       comment: params.comment,
+      forwardPayload: params.forwardPayload,
+      customPayload: params.customPayload,
     });
 
     return createTransferTransaction({

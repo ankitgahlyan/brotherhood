@@ -24,3 +24,15 @@ interface ImportMeta {
 }
 
 declare module '@fontsource-variable/inter';
+
+declare module '*/aes-js.js' {
+  const aesjs: any;
+  export default aesjs;
+}
+
+declare module '*/noble-ed25519.js' {
+  export function getSharedSecret(
+    privateKey: Uint8Array | string,
+    publicKey: Uint8Array | string,
+  ): Uint8Array;
+}

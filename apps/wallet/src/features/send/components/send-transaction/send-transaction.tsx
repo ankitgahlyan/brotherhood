@@ -25,6 +25,7 @@ import { TokenSelectButton } from '../token-select-button';
 import { TokenSelectModal } from '../token-select-modal';
 import { AmountField } from '../amount-field';
 import { RecipientField } from '../recipient-field';
+import { CommentField } from '../comment-field';
 import { SenderField, type SenderMode } from '../sender-field';
 import { RecentTransactedList } from '../recent-transacted-list';
 import {
@@ -73,6 +74,8 @@ export const SendTransaction: React.FC = () => {
     string | null
   >(initialParams.recipient ? initialParams.recipient : null);
   const [amount, setAmount] = useState(initialParams.amount);
+  const [comment, setComment] = useState('');
+  const [isEncryptedComment, setIsEncryptedComment] = useState(true);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -192,6 +195,8 @@ export const SendTransaction: React.FC = () => {
     jetton: selected.token.data,
     recipient: effectiveRecipientAddress ?? recipient,
     amount,
+    comment,
+    isEncrypted: isEncryptedComment,
   });
   const gasless = sender.gasless;
   const effectiveGasless = gasless.effective;
@@ -388,6 +393,17 @@ export const SendTransaction: React.FC = () => {
             onUseMyAddress={address ? handleSendToSelf : undefined}
             tokenContext={tokenContext}
             onDerivedTokenWalletChange={setDerivedRecipientTokenWallet}
+          />
+
+          {/* Comment / Memo field with Encrypted/Plain toggle */}
+          <CommentField
+            comment={comment}
+            onChangeComment={setComment}
+            isEncrypted={isEncryptedComment}
+            onChangeIsEncrypted={setIsEncryptedComment}
+            recipientAddress={effectiveRecipientAddress || recipient}
+            network={network}
+            disabled={isLoading}
           />
 
           {/* Expandable Contract Routing Details for Jetton / FI / Personal Tokens */}

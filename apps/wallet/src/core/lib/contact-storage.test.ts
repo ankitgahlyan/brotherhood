@@ -21,6 +21,7 @@ import {
   hasCustomAddressName,
   getEffectiveUsername,
 } from './contact-storage';
+import { useContactBookStore } from '../storage/useContactBookStore';
 import {
   clearNegativeUsernameCacheForAddress,
   getNegativeUsernameCache,
@@ -56,6 +57,8 @@ describe('contact-storage bidirectional mappings', () => {
     if (typeof globalThis.localStorage?.clear === 'function') {
       globalThis.localStorage.clear();
     }
+    useContactBookStore.getState().clearContacts('testnet');
+    useContactBookStore.getState().clearContacts('mainnet');
     getNegativeUsernameCache().clear();
   });
 

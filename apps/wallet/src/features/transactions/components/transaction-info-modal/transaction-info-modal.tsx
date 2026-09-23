@@ -21,6 +21,7 @@ import {
   Route,
   ChevronDown,
   ChevronUp,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from '@/core/routing';
@@ -30,8 +31,11 @@ import { formatUnits } from '@/core/utils';
 import { cn } from '@/core/lib/utils';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '@/features/send/lib/contact-storage';
-import { useWalletStore, getChainNetwork } from '@demo/wallet-core';
+import { useWalletStore, useWallet, getChainNetwork } from '@demo/wallet-core';
 import { parseTraceDag, type TraceDagAnalysis } from '@ton/walletkit';
+import { mnemonicToPrivateKey } from '@ton/crypto';
+import { tryDecryptComment } from '@/core/utils/encryption';
+import { EditableAddressName } from '@/core/components/ui/editable-address-name';
 
 import type { TransactionRowModel } from '../../utils/map-transaction-row';
 import { decodeExitCode } from '../../utils/map-transaction-row';
@@ -258,6 +262,46 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     onClose();
   };
 
+  const { getDecryptedMnemonic } = useWallet();
+  const [decryptedComment, setDecryptedComment] = useState<string | null>(null);
+  const [isEncryptedComment, setIsEncryptedComment] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!transaction) return;
+
+    const rawComment = transaction.comment;
+    const counterparty =
+      transaction.senderAddress || transaction.counterpartyAddress;
+
+    if (rawComment && counterparty) {
+      void (async () => {
+        try {
+          const mnemonic = await getDecryptedMnemonic();
+          if (mnemonic && mnemonic.length > 0) {
+            const keyPair = await mnemonicToPrivateKey(mnemonic);
+            const decrypted = await tryDecryptComment(
+              rawComment,
+              keyPair.publicKey,
+              keyPair.secretKey,
+              counterparty,
+            );
+            if (isMounted && decrypted) {
+              setDecryptedComment(decrypted);
+              setIsEncryptedComment(true);
+            }
+          }
+        } catch {
+          // Ignore
+        }
+      })();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [transaction, getDecryptedMnemonic]);
+
   if (!transaction) return null;
 
   const {
@@ -274,6 +318,8 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     comment,
     fee,
   } = transaction;
+
+  const effectiveComment = decryptedComment || comment;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -408,15 +454,13 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
                   Sender
                 </span>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    className="font-mono text-foreground truncate cursor-pointer hover:underline"
-                    title={senderAddress}
-                    onClick={() =>
-                      copyToClipboard(senderAddress, 'Sender address')
-                    }
-                  >
-                    {resolveAddressLabel(senderAddress)}
-                  </span>
+                  <EditableAddressName
+                    address={senderAddress}
+                    network={network}
+                    showEditButton={true}
+                    truncate={true}
+                    className="truncate font-mono"
+                  />
                   <button
                     type="button"
                     onClick={() =>
@@ -438,15 +482,13 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
                   Recipient
                 </span>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    className="font-mono text-foreground truncate cursor-pointer hover:underline"
-                    title={recipientAddress}
-                    onClick={() =>
-                      copyToClipboard(recipientAddress, 'Recipient address')
-                    }
-                  >
-                    {resolveAddressLabel(recipientAddress)}
-                  </span>
+                  <EditableAddressName
+                    address={recipientAddress}
+                    network={network}
+                    showEditButton={true}
+                    truncate={true}
+                    className="truncate font-mono"
+                  />
                   <button
                     type="button"
                     onClick={() =>
@@ -470,24 +512,34 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
             )}
 
             {/* Comment / Memo */}
-            {comment && (
+            {(effectiveComment || isEncryptedComment) && (
               <div className="p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground font-medium flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    <span>Comment</span>
+                  <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                    {isEncryptedComment ? (
+                      <Lock className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <FileText className="w-3 h-3" />
+                    )}
+                    <span>
+                      {isEncryptedComment ? 'Encrypted Comment' : 'Comment'}
+                    </span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(comment, 'Comment')}
-                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-                    title="Copy comment"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
+                  {effectiveComment && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard(effectiveComment, 'Comment')
+                      }
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                      title="Copy comment"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
                 <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 text-foreground break-words font-sans">
-                  {comment}
+                  {effectiveComment}
                 </div>
               </div>
             )}

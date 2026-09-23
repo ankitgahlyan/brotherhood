@@ -160,7 +160,9 @@ export function useAddressUsernameResolution({
         const cachedEntry = getContractCacheSync<any>(cacheKey);
         const uname = extractUsernameFromState(cachedEntry?.data);
         if (uname) {
-          saveUsernameAddressMapping(uname, trimmed, net);
+          queueMicrotask(() => {
+            saveUsernameAddressMapping(uname, trimmed, net);
+          });
           return { name: uname, isCustom: false, onChainName: uname };
         }
 
@@ -169,7 +171,9 @@ export function useAddressUsernameResolution({
         const directEntry = getContractCacheSync<any>(directKey);
         const directUname = extractUsernameFromState(directEntry?.data);
         if (directUname) {
-          saveUsernameAddressMapping(directUname, trimmed, net);
+          queueMicrotask(() => {
+            saveUsernameAddressMapping(directUname, trimmed, net);
+          });
           return {
             name: directUname,
             isCustom: false,
@@ -354,18 +358,20 @@ export function useAddressUsernameResolution({
     resolvedAddress ||
     (isDirectAddress ? trimmed : null);
 
-  const canDeriveTokenWallet = Boolean(
-    enabled && effectiveTargetOwner && tokenContext,
-  );
-  if (!canDeriveTokenWallet && derivedTokenWalletAddress !== null) {
-    setDerivedTokenWalletAddress(null);
-  }
-
   useEffect(() => {
-    if (!enabled || !effectiveTargetOwner || !tokenContext) {
-      return;
-    }
     let isCancelled = false;
+    if (!enabled || !effectiveTargetOwner || !tokenContext) {
+      if (derivedTokenWalletAddress !== null) {
+        queueMicrotask(() => {
+          if (!isCancelled) {
+            setDerivedTokenWalletAddress(null);
+          }
+        });
+      }
+      return () => {
+        isCancelled = true;
+      };
+    }
     void deriveTokenWalletAddressOffchain({
       minterAddress: tokenContext.minterAddress,
       ownerAddress: effectiveTargetOwner,
@@ -381,7 +387,13 @@ export function useAddressUsernameResolution({
     return () => {
       isCancelled = true;
     };
-  }, [enabled, effectiveTargetOwner, tokenContext, net]);
+  }, [
+    enabled,
+    effectiveTargetOwner,
+    tokenContext,
+    net,
+    derivedTokenWalletAddress,
+  ]);
 
   const handleSelectSuggestion = useCallback(
     (item: { username: string; address: string }) => {

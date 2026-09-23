@@ -3,28 +3,38 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
-import { Address } from '@ton/core';
+import {
+  useContactBookStore,
+  normalizeContactAddress as normalizeAddr,
+  normalizeContactName,
+  type RecentTransactedMember,
+} from '../storage/useContactBookStore';
 
-export interface RecentTransactedMember {
-  address: string;
-  username?: string;
-  timestamp: number;
-}
+export type { RecentTransactedMember };
+
+const negativeUsernameCache = new Set<string>();
+
+export const getNegativeUsernameCache = (): Set<string> =>
+  negativeUsernameCache;
+
+export const clearNegativeUsernameCacheForAddress = (
+  address: string,
+  network: string,
+): void => {
+  const net = network || 'testnet';
+  const rawKey = normalizeContactAddress(address);
+  negativeUsernameCache.delete(`${net}:${address.trim()}`);
+  negativeUsernameCache.delete(`${net}:${rawKey}`);
+};
 
 export const normalizeUsername = (raw: string): string => {
-  return raw.trim().replace(/^@+/, '').toLowerCase();
+  return normalizeContactName(raw);
 };
 
 export const normalizeContactAddress = (raw: string): string => {
-  const trimmed = raw.trim();
-  try {
-    return Address.parse(trimmed).toRawString();
-  } catch {
-    return trimmed.toLowerCase();
-  }
+  return normalizeAddr(raw);
 };
 
 export const getUsernamesKey = (network: string) =>
@@ -39,28 +49,8 @@ export const getCustomNamesReverseKey = (network: string) =>
   `brotherhood_custom_names_reverse_${network || 'testnet'}`;
 
 export const normalizeCustomName = (raw: string): string => {
-  return raw.trim().replace(/^@+/, '').toLowerCase();
+  return normalizeContactName(raw);
 };
-
-function safeGetItem<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined' || !window.localStorage) return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function safeSetItem<T>(key: string, value: T): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    console.warn(`[contact-storage] Failed to set ${key}:`, err);
-  }
-}
 
 /**
  * Retrieve a manually set custom nickname for an address.
@@ -70,19 +60,25 @@ export function getCustomAddressName(
   network: string,
 ): string | null {
   if (!address) return null;
-  const customMap = safeGetItem<Record<string, string>>(
-    getCustomNamesKey(network),
-    {},
-  );
-  const rawKey = normalizeContactAddress(address);
-  return customMap[rawKey] || customMap[address.trim()] || null;
+  const store = useContactBookStore.getState();
+  const contact = store.getContact(address, network);
+  return contact?.customName ?? null;
 }
 
 /**
  * Retrieve all custom names mapping address -> nickname.
  */
 export function getAllCustomNames(network: string): Record<string, string> {
-  return safeGetItem<Record<string, string>>(getCustomNamesKey(network), {});
+  const store = useContactBookStore.getState();
+  const list = store.getContactsList(network);
+  const result: Record<string, string> = {};
+  for (const c of list) {
+    if (c.customName) {
+      result[c.address] = c.customName;
+      result[c.rawAddress] = c.customName;
+    }
+  }
+  return result;
 }
 
 /**
@@ -97,111 +93,25 @@ export function hasCustomAddressName(
 
 /**
  * Set or update a custom manual name for an address.
- * Overrides any on-chain username across the entire app.
  */
 export function setCustomAddressName(
   address: string,
   customName: string,
   network: string,
 ): void {
-  const addr = address.trim();
-  const cleanName = customName.trim().replace(/^@+/, '');
-  if (!addr) return;
-
-  if (!cleanName) {
-    removeCustomAddressName(addr, network);
-    return;
-  }
-
-  const customMap = safeGetItem<Record<string, string>>(
-    getCustomNamesKey(network),
-    {},
-  );
-  const reverseMap = safeGetItem<Record<string, string>>(
-    getCustomNamesReverseKey(network),
-    {},
-  );
-
-  // Remove existing reverse mapping for this address if present
-  const oldName = getCustomAddressName(addr, network);
-  if (oldName) {
-    delete reverseMap[normalizeCustomName(oldName)];
-  }
-
-  const rawKey = normalizeContactAddress(addr);
-  customMap[addr] = cleanName;
-  customMap[rawKey] = cleanName;
-  reverseMap[normalizeCustomName(cleanName)] = addr;
-
-  safeSetItem(getCustomNamesKey(network), customMap);
-  safeSetItem(getCustomNamesReverseKey(network), reverseMap);
-
-  // Synchronize recent transacted entries with new custom name
-  const recent = getRecentTransacted(network);
-  let changedRecent = false;
-  const updatedRecent = recent.map((item) => {
-    if (
-      item.address.toLowerCase() === addr.toLowerCase() ||
-      normalizeContactAddress(item.address) === rawKey
-    ) {
-      changedRecent = true;
-      return { ...item, username: cleanName };
-    }
-    return item;
-  });
-  if (changedRecent) {
-    safeSetItem(getRecentKey(network), updatedRecent);
-  }
+  useContactBookStore
+    .getState()
+    .setCustomName(address, customName, undefined, network);
 }
 
 /**
- * Remove a custom name for an address, restoring the on-chain profile name if available.
+ * Remove a custom name for an address.
  */
 export function removeCustomAddressName(
   address: string,
   network: string,
 ): void {
-  const addr = address.trim();
-  if (!addr) return;
-
-  const customMap = safeGetItem<Record<string, string>>(
-    getCustomNamesKey(network),
-    {},
-  );
-  const reverseMap = safeGetItem<Record<string, string>>(
-    getCustomNamesReverseKey(network),
-    {},
-  );
-
-  const oldName = getCustomAddressName(addr, network);
-  if (oldName) {
-    delete reverseMap[normalizeCustomName(oldName)];
-  }
-
-  const rawKey = normalizeContactAddress(addr);
-  delete customMap[addr];
-  delete customMap[rawKey];
-
-  safeSetItem(getCustomNamesKey(network), customMap);
-  safeSetItem(getCustomNamesReverseKey(network), reverseMap);
-
-  // Synchronize recent transacted entries back to on-chain username or undefined
-  const onChainFallback = getOnChainCachedUsername(addr, network) || undefined;
-  const recent = getRecentTransacted(network);
-  let changedRecent = false;
-  const updatedRecent = recent.map((item) => {
-    if (
-      item.address.toLowerCase() === addr.toLowerCase() ||
-      normalizeContactAddress(item.address) === rawKey
-    ) {
-      changedRecent = true;
-      return { ...item, username: onChainFallback };
-    }
-    return item;
-  });
-  if (changedRecent) {
-    safeSetItem(getRecentKey(network), updatedRecent);
-  }
+  useContactBookStore.getState().removeCustomName(address, network);
 }
 
 /**
@@ -212,212 +122,139 @@ export function getOnChainCachedUsername(
   network: string,
 ): string | null {
   if (!address) return null;
-  const addresses = safeGetItem<Record<string, string>>(
-    getAddressesKey(network),
-    {},
-  );
-  const rawKey = normalizeContactAddress(address);
-  return addresses[rawKey] || addresses[address.trim()] || null;
+  const store = useContactBookStore.getState();
+  const contact = store.getContact(address, network);
+  return contact?.onChainUsername ?? null;
 }
 
 /**
  * Retrieve the effective username (custom name takes priority over on-chain).
- * Also returns metadata on whether it was custom and what the underlying on-chain name is.
  */
 export function getEffectiveUsername(
   address: string,
   network: string,
 ): { name: string; isCustom: boolean; onChainName?: string } | null {
-  if (!address) return null;
-  const custom = getCustomAddressName(address, network);
-  const onChain = getOnChainCachedUsername(address, network) || undefined;
-
-  if (custom) {
-    return { name: custom, isCustom: true, onChainName: onChain };
-  }
-  if (onChain) {
-    return { name: onChain, isCustom: false, onChainName: onChain };
-  }
-  return null;
+  return useContactBookStore.getState().getEffectiveName(address, network);
 }
 
 /**
- * Retrieve all cached username-to-address entries for a network,
- * combining custom names (taking priority) with on-chain usernames.
+ * Retrieve all cached username-to-address entries for a network.
  */
 export function getAllUsernames(network: string): Record<string, string> {
-  const onChain = safeGetItem<Record<string, string>>(
-    getUsernamesKey(network),
-    {},
-  );
-  const customReverse = safeGetItem<Record<string, string>>(
-    getCustomNamesReverseKey(network),
-    {},
-  );
-  return { ...onChain, ...customReverse };
+  const store = useContactBookStore.getState();
+  const list = store.getContactsList(network);
+  const result: Record<string, string> = {};
+  for (const c of list) {
+    const effective = c.customName || c.onChainUsername;
+    if (effective) {
+      result[normalizeUsername(effective)] = c.address;
+    }
+  }
+  return result;
 }
 
 /**
- * Retrieve a cached username for a given Owner address.
- * Custom manual names take highest priority and override on-chain usernames everywhere.
- */
-export function getCachedUsername(
-  address: string,
-  network: string,
-): string | null {
-  if (!address) return null;
-  const custom = getCustomAddressName(address, network);
-  if (custom) return custom;
-  return getOnChainCachedUsername(address, network);
-}
-
-/**
- * Retrieve a cached Owner address for a given username or custom name.
- * Custom names take highest priority in reverse lookup.
+ * Resolve an address from a username or custom nickname.
  */
 export function getCachedAddressByUsername(
   username: string,
   network: string,
 ): string | null {
-  if (!username) return null;
-  const customReverse = safeGetItem<Record<string, string>>(
-    getCustomNamesReverseKey(network),
-    {},
-  );
-  const normCustom = normalizeCustomName(username);
-  if (normCustom && customReverse[normCustom]) {
-    return customReverse[normCustom];
-  }
-
-  const norm = normalizeUsername(username);
-  if (!norm) return null;
-  const usernames = safeGetItem<Record<string, string>>(
-    getUsernamesKey(network),
-    {},
-  );
-  return usernames[norm] || null;
+  return useContactBookStore.getState().resolveAddress(username, network);
 }
 
 /**
- * Persist bidirectional mapping between username and owner address.
- * Only non-empty usernames should be persisted.
+ * Lookup the cached username or custom nickname for a given address.
+ */
+export function getCachedUsername(
+  address: string,
+  network: string,
+): string | null {
+  const effective = useContactBookStore
+    .getState()
+    .getEffectiveName(address, network);
+  return effective?.name ?? null;
+}
+
+/**
+ * Save an on-chain username <-> address mapping into local cache.
  */
 export function saveUsernameAddressMapping(
   username: string,
   address: string,
   network: string,
 ): void {
-  const norm = normalizeUsername(username);
+  const clean = username.trim().replace(/^@+/, '');
   const addr = address.trim();
-  if (!norm || !addr) return;
-
-  const usernames = safeGetItem<Record<string, string>>(
-    getUsernamesKey(network),
-    {},
-  );
-  usernames[norm] = addr;
-  safeSetItem(getUsernamesKey(network), usernames);
-
-  const addresses = safeGetItem<Record<string, string>>(
-    getAddressesKey(network),
-    {},
-  );
-  const cleanUname = username.trim().replace(/^@+/, '');
-  const rawKey = normalizeContactAddress(addr);
-  addresses[addr] = cleanUname;
-  addresses[rawKey] = cleanUname;
-  safeSetItem(getAddressesKey(network), addresses);
+  if (!clean || !addr) return;
+  useContactBookStore.getState().saveOnChainUsername(addr, clean, network);
 }
 
 /**
- * Remove username and address mapping if needed.
+ * Remove an on-chain username <-> address mapping from local cache.
  */
 export function removeUsernameAddressMapping(
   username: string,
-  address: string,
+  addressOrNetwork?: string,
+  networkArg?: string,
+): void {
+  const net =
+    networkArg ||
+    (addressOrNetwork && !addressOrNetwork.includes(':')
+      ? addressOrNetwork
+      : 'testnet');
+  const targetAddress =
+    addressOrNetwork && addressOrNetwork.includes(':')
+      ? addressOrNetwork
+      : getCachedAddressByUsername(username, net);
+
+  if (targetAddress) {
+    useContactBookStore.getState().deleteContact(targetAddress, net);
+  }
+}
+
+/**
+ * Save multiple username <-> address mappings in batch.
+ */
+export function saveUsernameAddressMappingsBatch(
+  mappings: { username: string; address: string }[],
   network: string,
 ): void {
-  const norm = normalizeUsername(username);
-  const addr = address.trim();
-
-  if (norm) {
-    const usernames = safeGetItem<Record<string, string>>(
-      getUsernamesKey(network),
-      {},
-    );
-    delete usernames[norm];
-    safeSetItem(getUsernamesKey(network), usernames);
-  }
-
-  if (addr) {
-    const addresses = safeGetItem<Record<string, string>>(
-      getAddressesKey(network),
-      {},
-    );
-    delete addresses[addr];
-    delete addresses[normalizeContactAddress(addr)];
-    safeSetItem(getAddressesKey(network), addresses);
+  const store = useContactBookStore.getState();
+  for (const m of mappings) {
+    if (m.username && m.address) {
+      store.saveOnChainUsername(m.address, m.username, network);
+    }
   }
 }
 
 /**
- * Get all recent transacted members, ordered by most recent first.
+ * Get the list of recently transacted members.
  */
 export function getRecentTransacted(network: string): RecentTransactedMember[] {
-  return safeGetItem<RecentTransactedMember[]>(getRecentKey(network), []);
+  const net = network || 'testnet';
+  return useContactBookStore.getState().recentByNetwork[net] || [];
 }
 
 /**
- * Add or bump a member to the top of recent transacted members list (unbounded).
+ * Record a transaction with a member.
  */
 export function addRecentTransacted(
   member: { address: string; username?: string },
   network: string,
 ): void {
-  const addr = member.address.trim();
-  if (!addr) return;
+  useContactBookStore.getState().addRecentRecipient(member, network);
+}
 
-  const existing = getRecentTransacted(network);
-  const filtered = existing.filter(
-    (item) => item.address.toLowerCase() !== addr.toLowerCase(),
-  );
-
-  const resolvedUsername =
-    member.username?.trim().replace(/^@+/, '') ||
-    getCachedUsername(addr, network) ||
-    undefined;
-
-  const updated: RecentTransactedMember[] = [
-    {
-      address: addr,
-      username: resolvedUsername,
-      timestamp: Date.now(),
+/**
+ * Clear recent transacted members list.
+ */
+export function clearRecentTransacted(network: string): void {
+  const net = network || 'testnet';
+  useContactBookStore.setState((state) => ({
+    recentByNetwork: {
+      ...state.recentByNetwork,
+      [net]: [],
     },
-    ...filtered,
-  ];
-
-  safeSetItem(getRecentKey(network), updated);
-
-  if (resolvedUsername) {
-    saveUsernameAddressMapping(resolvedUsername, addr, network);
-  }
-}
-
-/**
- * Remove a single entry from recent transacted list.
- */
-export function removeRecentTransacted(address: string, network: string): void {
-  const addr = address.trim().toLowerCase();
-  const existing = getRecentTransacted(network);
-  const updated = existing.filter(
-    (item) => item.address.toLowerCase() !== addr,
-  );
-  safeSetItem(getRecentKey(network), updated);
-}
-
-/**
- * Clear all recent transacted members.
- */
-export function clearAllRecentTransacted(network: string): void {
-  safeSetItem(getRecentKey(network), []);
+  }));
 }

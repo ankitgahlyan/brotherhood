@@ -49,7 +49,7 @@ export const createJettonsSlice: JettonsSliceCreator = (
     lastPopularUpdate: 0,
   },
 
-  loadUserJettons: async (userAddress?: string) => {
+  loadUserJettons: async (userAddress?: string, force = false) => {
     const state = get();
     const address = userAddress || state.walletManagement.address;
 
@@ -61,6 +61,17 @@ export const createJettonsSlice: JettonsSliceCreator = (
     if (!state.walletCore.walletKit) {
       log.warn('WalletKit not initialized');
       return;
+    }
+
+    // Zero-redundant check: if jettons were loaded in the last 60s, return cached state
+    if (!force) {
+      const now = Date.now();
+      const lastUpdate = state.jettons.lastJettonsUpdate || 0;
+      const cached = state.jettons.jettonsByAddress?.[address];
+      if (cached !== undefined && lastUpdate > 0 && now - lastUpdate < 60_000) {
+        log.info('Using fresh cached jettons (TTL valid)', { lastUpdate });
+        return;
+      }
     }
 
     set((state) => {

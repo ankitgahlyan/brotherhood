@@ -20,6 +20,8 @@ import {
   Trash2,
   Check,
   X,
+  Users,
+  DatabaseZap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -35,6 +37,8 @@ import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
 import { AnimationSettingsCard } from '../animation-settings-card';
+import { ContactsManagerModal } from '../contacts-manager';
+import { clearWholeAppStorage } from '@/core/utils/storage-management';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -169,6 +173,7 @@ export const SettingsDropdown: React.FC = () => {
   const [biometricError, setBiometricError] = useState('');
   const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const [isContactsOpen, setIsContactsOpen] = useState(false);
 
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
@@ -177,6 +182,18 @@ export const SettingsDropdown: React.FC = () => {
   const [, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
   const devTapTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleClearWholeStorage = async () => {
+    if (
+      window.confirm(
+        'Are you sure you want to completely wipe all app storage, local databases, and caches? This will remove all local data and reload the application.',
+      )
+    ) {
+      setPanel(null);
+      await clearWholeAppStorage();
+      window.location.reload();
+    }
+  };
 
   const handleBrotherhoodTap = () => {
     if (devTapTimerRef.current) {
@@ -490,6 +507,15 @@ export const SettingsDropdown: React.FC = () => {
                   }}
                 />
                 <ActionRow
+                  icon={<Users className="w-5 h-5" />}
+                  label="Address Book & Contacts"
+                  subtitle="Manage, backup, and import contacts"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsContactsOpen(true);
+                  }}
+                />
+                <ActionRow
                   icon={<KeyRound className="w-5 h-5" />}
                   label={
                     isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'
@@ -501,6 +527,13 @@ export const SettingsDropdown: React.FC = () => {
                   icon={<Lock className="w-5 h-5" />}
                   label="Lock Wallet"
                   onClick={handleLockWallet}
+                />
+                <ActionRow
+                  icon={<DatabaseZap className="w-5 h-5" />}
+                  label="Clear App Storage & Cache"
+                  subtitle="Wipe local database, cache, and state"
+                  onClick={handleClearWholeStorage}
+                  danger
                 />
                 <ActionRow
                   icon={<Trash2 className="w-5 h-5" />}
@@ -614,6 +647,11 @@ export const SettingsDropdown: React.FC = () => {
       <InstallPromptDialog
         open={isInstallOpen}
         onOpenChange={setIsInstallOpen}
+      />
+
+      <ContactsManagerModal
+        isOpen={isContactsOpen}
+        onClose={() => setIsContactsOpen(false)}
       />
     </>
   );

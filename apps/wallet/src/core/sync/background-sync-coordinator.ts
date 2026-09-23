@@ -15,9 +15,8 @@ const log = createComponentLogger('BackgroundSyncCoordinator');
 const SYNC_THROTTLE_MS = 15_000;
 
 /**
- * BackgroundSyncCoordinator uses transient store access & browser event listeners
- * (visibilitychange, focus, online) to automatically refresh wallet balance and events
- * without creating circular React render feedback loops.
+ * BackgroundSyncCoordinator listens for network online events to restore
+ * synchronization after connectivity loss without polling on tab/window focus.
  */
 export function useBackgroundSyncCoordinator() {
   const storeApi = useWalletStoreApi();
@@ -41,7 +40,12 @@ export function useBackgroundSyncCoordinator() {
 
       log.info(`Triggering background sync (${reason}) for ${activeAddress}`);
 
-      // Refresh balance and events
+      // Ensure WebSocket streaming is connected if disconnected while offline
+      if (!state.walletManagement.isStreamingConnected) {
+        void state.startWebSocketStreaming();
+      }
+
+      // Refresh balance and events once upon network restoration
       void state.updateBalance();
       void state.loadEvents(15, 0, false);
       if (state.loadRates) {
@@ -49,27 +53,13 @@ export function useBackgroundSyncCoordinator() {
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        triggerSync('tab_focus');
-      }
-    };
-
-    const handleWindowFocus = () => {
-      triggerSync('window_focus');
-    };
-
     const handleOnline = () => {
       triggerSync('network_online');
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('online', handleOnline);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('online', handleOnline);
     };
   }, [storeApi]);

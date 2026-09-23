@@ -3,14 +3,14 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateContractState } from '@/lib/brotherhood/queries';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import { Address } from '@ton/core';
+import { Address, Cell } from '@ton/core';
+import { mnemonicToPrivateKey } from '@ton/crypto';
 import { toast } from 'sonner';
 import type {
   ITonWalletKit,
@@ -23,7 +23,21 @@ import { useGaslessJettonSend } from './use-gasless-jetton-send';
 import type { UseGaslessJettonSendResult } from './use-gasless-jetton-send';
 
 import { parseUnits } from '@/core/utils/units';
-import { useAuth } from '@demo/wallet-core';
+import {
+  useAuth,
+  useWallet,
+  useWalletStore,
+  getChainNetwork,
+} from '@demo/wallet-core';
+import {
+  encryptMessageComment,
+  packBytesAsSnakeForEncryptedData,
+} from '@/core/utils/encryption';
+import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
+import {
+  createCommentPayloadBase64,
+  createCommentPayload,
+} from '@ton/walletkit';
 
 const GRAM_DECIMALS = 9;
 
@@ -35,27 +49,16 @@ interface UseSendTokenParams {
   jetton: Jetton | undefined;
   recipient: string;
   amount: string;
+  comment?: string;
+  isEncrypted?: boolean;
 }
 
 export interface UseSendTokenResult {
-  /**
-   * Send the transfer, dispatching to the gasless or the regular flow. Returns
-   * the gasless relayer response (with `normalizedHash`) for the gasless flow,
-   * or `undefined` for the regular flow (which goes through the preview queue).
-   */
   send: () => Promise<SendTransactionResponse | undefined>;
-  /** Inputs aren't ready (no wallet/recipient/amount, or gasless quote pending). */
   isDisabled: boolean;
-  /** Gasless sub-state for the UI (toggle, fee-asset selector, fee, errors). */
   gasless: UseGaslessJettonSendResult;
 }
 
-/**
- * Single entry point for the Send page, mirroring appkit-minter's `useMintNft`:
- * `send()` builds and submits the transfer, picking the gasless flow when it's
- * effective and falling back to the regular TON / jetton transfer otherwise.
- * Balance validation stays in the page (gating mirrors the mint flow).
- */
 export const useSendToken = ({
   wallet,
   walletKit,
@@ -63,9 +66,16 @@ export const useSendToken = ({
   jetton,
   recipient,
   amount,
+  comment = '',
+  isEncrypted = false,
 }: UseSendTokenParams): UseSendTokenResult => {
   const queryClient = useQueryClient();
   const { showFastSend, isUnlocked } = useAuth();
+  const { getDecryptedMnemonic } = useWallet();
+  const savedWallets = useWalletStore(
+    (state) => state.walletManagement.savedWallets,
+  );
+
   const gasless = useGaslessJettonSend({
     wallet,
     jetton: tokenType === 'JETTON' ? jetton : undefined,
@@ -80,9 +90,72 @@ export const useSendToken = ({
   > => {
     if (!wallet) throw new Error('No wallet available');
 
-    // Gasless jetton transfer: relay the already-fetched, locally-signed quote.
+    // Gasless jetton transfer
     if (gaslessEffective && jetton) {
       return gaslessSend();
+    }
+
+    const senderAddress = wallet.getAddress();
+    const net =
+      String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
+
+    // Build comment payload (plain vs encrypted)
+    let payloadCell: Cell | undefined;
+    let payloadBase64: string | undefined;
+
+    const trimmedComment = comment.trim();
+    if (trimmedComment) {
+      let didEncrypt = false;
+
+      if (isEncrypted && senderAddress) {
+        try {
+          let tonClient: any;
+          if (walletKit) {
+            try {
+              const targetNet = getChainNetwork(net || 'testnet');
+              tonClient =
+                typeof walletKit.getApiClient === 'function'
+                  ? walletKit.getApiClient(targetNet)
+                  : (walletKit as any).getClient?.();
+            } catch {
+              tonClient = undefined;
+            }
+          }
+          const theirPublicKey = await resolveRecipientPublicKey(
+            recipient,
+            net,
+            tonClient,
+            savedWallets,
+          );
+
+          if (theirPublicKey) {
+            const mnemonic = await getDecryptedMnemonic();
+            if (mnemonic && mnemonic.length > 0) {
+              const keyPair = await mnemonicToPrivateKey(mnemonic);
+              const encryptedBytes = await encryptMessageComment(
+                trimmedComment,
+                keyPair.publicKey,
+                theirPublicKey,
+                keyPair.secretKey,
+                senderAddress.toString(),
+              );
+              payloadCell = packBytesAsSnakeForEncryptedData(encryptedBytes);
+              payloadBase64 = payloadCell.toBoc().toString('base64');
+              didEncrypt = true;
+            }
+          }
+        } catch (err) {
+          console.warn(
+            '[useSendToken] Comment encryption failed, fallback to plain:',
+            err,
+          );
+        }
+      }
+
+      if (!didEncrypt) {
+        payloadCell = createCommentPayload(trimmedComment);
+        payloadBase64 = createCommentPayloadBase64(trimmedComment);
+      }
     }
 
     let sendResult: SendTransactionResponse | undefined;
@@ -92,6 +165,7 @@ export const useSendToken = ({
         const tx = await wallet.createTransferTonTransaction({
           recipientAddress: recipient,
           transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+          payload: payloadBase64,
         });
         sendResult = await wallet.sendTransaction(tx);
       } else if (jetton) {
@@ -102,13 +176,11 @@ export const useSendToken = ({
           recipientAddress: recipient,
           jettonAddress: jetton.address,
           transferAmount: parseUnits(amount, decimals).toString(),
+          forwardPayload: payloadCell,
         });
         sendResult = await wallet.sendTransaction(tx);
       }
     } else {
-      // The regular flow routes the built tx through the kit's transaction queue;
-      // without the kit it would silently no-op and the page would still report
-      // success. Surface it instead of pretending the transfer went through.
       if (!walletKit) {
         toast.error('Cannot send transaction', {
           description: 'WalletKit is not initialized yet.',
@@ -120,6 +192,7 @@ export const useSendToken = ({
         const tx = await wallet.createTransferTonTransaction({
           recipientAddress: recipient,
           transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+          payload: payloadBase64,
         });
         await walletKit.handleNewTransaction(wallet, tx);
       } else if (jetton) {
@@ -130,14 +203,11 @@ export const useSendToken = ({
           recipientAddress: recipient,
           jettonAddress: jetton.address,
           transferAmount: parseUnits(amount, decimals).toString(),
+          forwardPayload: payloadCell,
         });
         await walletKit.handleNewTransaction(wallet, tx);
       }
     }
-
-    const senderAddress = wallet.getAddress();
-    const net =
-      String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
 
     if (senderAddress) {
       setTimeout(async () => {
@@ -158,12 +228,12 @@ export const useSendToken = ({
               queryClient,
             );
           } catch {
-            /* pass */
+            // Ignore non-member wallet errors
           }
-        } catch (refreshErr) {
-          console.debug('Sender refresh after send skipped:', refreshErr);
+        } catch {
+          // Ignore invalidation errors
         }
-      }, 3000);
+      }, 1000);
     }
 
     return sendResult;
@@ -174,10 +244,14 @@ export const useSendToken = ({
     jetton,
     recipient,
     amount,
-    gaslessEffective,
-    gaslessSend,
+    comment,
+    isEncrypted,
     showFastSend,
     isUnlocked,
+    gaslessEffective,
+    gaslessSend,
+    getDecryptedMnemonic,
+    savedWallets,
     queryClient,
   ]);
 
@@ -186,8 +260,11 @@ export const useSendToken = ({
     !recipient ||
     !amount ||
     parseFloat(amount) <= 0 ||
-    (gasless.effective &&
-      (!gasless.hasQuote || gasless.isQuoting || gasless.isSending));
+    (gasless.effective && (gasless.isQuoting || !gasless.hasQuote));
 
-  return { send, isDisabled, gasless };
+  return {
+    send,
+    isDisabled,
+    gasless,
+  };
 };

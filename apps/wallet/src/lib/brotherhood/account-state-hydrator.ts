@@ -335,6 +335,45 @@ export function clearHydrationCooldowns(): void {
   hydrationCooldowns.clear();
 }
 
+/**
+ * Asynchronously processes account items in non-blocking chunks of 5,
+ * yielding to the browser event loop between chunks to eliminate main-thread freeze.
+ */
+export async function processAccountItemsAsync(
+  items: WorkerAccountItem[],
+  chunkSize = 5,
+): Promise<{
+  serializedStores: Record<string, string>;
+  outdatedAccounts: string[];
+  failedAddresses: string[];
+}> {
+  const result = {
+    serializedStores: {} as Record<string, string>,
+    outdatedAccounts: [] as string[],
+    failedAddresses: [] as string[],
+  };
+
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const chunkResult = processAccountItems(chunk);
+    Object.assign(result.serializedStores, chunkResult.serializedStores);
+    result.outdatedAccounts.push(...chunkResult.outdatedAccounts);
+    result.failedAddresses.push(...chunkResult.failedAddresses);
+
+    if (i + chunkSize < items.length) {
+      await new Promise<void>((resolve) => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+    }
+  }
+
+  return result;
+}
+
 export function batchHydrateUniversal(
   addresses: (Address | string)[],
   net: Network = defaultNetwork,
@@ -491,18 +530,19 @@ export function batchHydrateUniversal(
       const id = `req_${++workerMsgId}_${Date.now()}`;
       try {
         workerResult = await new Promise<WorkerHydrateResponse>((resolve) => {
-          const timer = setTimeout(() => {
+          const timer = setTimeout(async () => {
             workerPendingCallbacks.delete(id);
             console.warn(
-              `[HydratorWorker] Request ${id} timed out after 3.5s, falling back to in-process decoding`,
+              `[HydratorWorker] Request ${id} timed out after 8s, falling back to time-sliced in-process decoding`,
             );
+            const fallback = await processAccountItemsAsync(itemsToProcess);
             resolve({
               id,
-              ...processAccountItems(itemsToProcess),
+              ...fallback,
             });
-          }, 3500);
+          }, 8000);
 
-          workerPendingCallbacks.set(id, (res) => {
+          workerPendingCallbacks.set(id, async (res) => {
             clearTimeout(timer);
             if (
               Object.keys(res.serializedStores).length === 0 &&
@@ -510,10 +550,11 @@ export function batchHydrateUniversal(
               res.failedAddresses.length === 0 &&
               itemsToProcess.length > 0
             ) {
-              // Worker returned an empty result, run in-process fallback
+              // Worker returned an empty result, run time-sliced in-process fallback
+              const fallback = await processAccountItemsAsync(itemsToProcess);
               resolve({
                 id,
-                ...processAccountItems(itemsToProcess),
+                ...fallback,
               });
             } else {
               resolve(res);
@@ -530,11 +571,11 @@ export function batchHydrateUniversal(
           '[HydratorWorker] Worker postMessage failed, falling back in-process:',
           err,
         );
-        workerResult = processAccountItems(itemsToProcess);
+        workerResult = await processAccountItemsAsync(itemsToProcess);
       }
     } else {
       // In-process fallback for Node/Bun test environments
-      workerResult = processAccountItems(itemsToProcess);
+      workerResult = await processAccountItemsAsync(itemsToProcess);
     }
 
     result.outdatedAccounts.push(...workerResult.outdatedAccounts);

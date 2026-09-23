@@ -237,7 +237,7 @@ export interface JettonsSlice {
     lastPopularUpdate: number;
   };
 
-  loadUserJettons: (userAddress?: string) => Promise<void>;
+  loadUserJettons: (userAddress?: string, force?: boolean) => Promise<void>;
   refreshJettons: (userAddress?: string) => Promise<void>;
   updateJettonBalanceFromStream: (
     walletAddress: string,

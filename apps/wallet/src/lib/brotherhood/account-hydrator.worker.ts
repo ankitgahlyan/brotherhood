@@ -429,8 +429,5 @@ if (
     }
   };
 
-  if (typeof (self as any).addEventListener === 'function') {
-    (self as any).addEventListener('message', handleWorkerMessage);
-  }
   self.onmessage = handleWorkerMessage;
 }

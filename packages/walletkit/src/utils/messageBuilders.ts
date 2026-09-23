@@ -70,13 +70,28 @@ export function createJettonTransferPayload(params: {
   destination: UserFriendlyAddress;
   responseDestination: UserFriendlyAddress;
   comment?: string;
+  forwardPayload?: Cell | Base64String | null;
   queryId?: bigint;
-  customPayload?: Cell | null;
+  customPayload?: Cell | Base64String | null;
   forwardAmount?: bigint;
 }): Cell {
-  const forwardPayload = params.comment
-    ? createCommentPayload(params.comment)
-    : null;
+  let fwdPayload: Cell | null = null;
+  if (params.forwardPayload) {
+    fwdPayload =
+      typeof params.forwardPayload === 'string'
+        ? TonCell.fromBase64(params.forwardPayload)
+        : params.forwardPayload;
+  } else if (params.comment) {
+    fwdPayload = createCommentPayload(params.comment);
+  }
+
+  let custPayload: Cell | null = null;
+  if (params.customPayload) {
+    custPayload =
+      typeof params.customPayload === 'string'
+        ? TonCell.fromBase64(params.customPayload)
+        : params.customPayload;
+  }
 
   return beginCell()
     .store(
@@ -85,9 +100,9 @@ export function createJettonTransferPayload(params: {
         amount: params.amount,
         destination: Address.parse(params.destination),
         responseDestination: Address.parse(params.responseDestination),
-        customPayload: params.customPayload ?? null,
+        customPayload: custPayload,
         forwardAmount: params.forwardAmount ?? DEFAULT_FORWARD_AMOUNT,
-        forwardPayload: forwardPayload,
+        forwardPayload: fwdPayload,
       }),
     )
     .endCell();

@@ -16,11 +16,11 @@ const mockLocalStorage = {
   },
 };
 
-if (typeof globalThis.localStorage === 'undefined') {
-  (globalThis as any).localStorage = mockLocalStorage;
-}
+(globalThis as any).localStorage = mockLocalStorage;
 if (typeof globalThis.window === 'undefined') {
   (globalThis as any).window = { localStorage: mockLocalStorage };
+} else {
+  (globalThis.window as any).localStorage = mockLocalStorage;
 }
 
 describe('Wallet Scoped Assets Tracking', () => {
@@ -28,6 +28,7 @@ describe('Wallet Scoped Assets Tracking', () => {
 
   beforeEach(() => {
     mockLocalStorage.clear();
+    globalThis.localStorage?.clear?.();
     store = createWalletStore({
       enableDevtools: false,
     });

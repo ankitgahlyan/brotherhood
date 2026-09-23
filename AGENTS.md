@@ -14,6 +14,8 @@
   1. Outline clear, step-by-step debugging instructions in your output.
   2. Remove any temporary debug code once the issue is resolved.
 
+- when exploring or editing files, if you find any inconsistencies or bugs, point them to me after current request is complete.
+
 ## Agent Skills
 
 ### Issue tracker
@@ -96,6 +98,7 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Stable Fallback References in Selectors:** Never use inline object/array literals as selector fallbacks (e.g. `foo ?? []` or `bar ?? {}`). Inline allocations produce new memory references on every selector pass, defeating `useShallow` / `useSyncExternalStore` equality checks and causing React to throw _"The result of getSnapshot should be cached to avoid an infinite loop"_ and _"Maximum update depth exceeded"_. Always export and return module-level frozen fallback singletons (e.g. `EMPTY_ARRAY = Object.freeze([])`, `EMPTY_OBJECT = Object.freeze({})`).
 - **Decouple Background Hydration from Subscribed State:** Do not place mutable slice state objects (e.g. `brotherhoodByAddress`, `jettonsByAddress`) in `useCallback` or `useEffect` dependency arrays of sync/hydration routines. Instead, access the latest state imperatively via `storeApi.getState()` (or `useWalletStoreApi().getState()`) to avoid circular invalidation feedback loops.
 - **Change Guards in Slice Setters:** Guard slice mutation methods (e.g. `setBrotherhoodMemberData`, `setLocationContract`) against redundant updates. Check existing values before calling `set(...)` to prevent triggering spurious store change events.
+- **No Side Effects or Setters in Render / useMemo:** Never invoke store setters, persistence helpers (e.g. `saveUsernameAddressMapping`), or storage writes directly inside `useMemo` or during the component render phase. Always defer side effects to `useEffect` or wrap in `queueMicrotask` to prevent React from throwing _"Cannot update a component while rendering a different component"_.
 - **Persist Middleware Parity:** Whenever a slice is added to `partialize`, ensure it is also explicitly handled in `persist.merge(...)` within `createWalletStore.ts`. Otherwise, persisted data will be wiped and reset to initial state upon rehydration.
 
 ### Animation, Motion, and Fluid UI Rules (Framer Motion & Zustand)
@@ -103,7 +106,8 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **3-Way Animation Level Parity:** Always respect the active `animationLevel` (`none`, `performance`, `full`) from `usePreferences()` / `useAnimationSettings()`. When `none` (Disabled), suppress spring and layout transitions (`reducedMotion="always"`) to save battery and minimize CPU footprint on low-end devices. When `performance` (TMA/Mobile default), use lightweight opacity crossfades and rolling balance numbers. When `full` (Desktop/Rich default), enable full spring physics, layout shifts (`layout="position"`), and gesture overscroll.
 - **Re-Render-Free Dynamic Values (No RAF setState):** Never use `requestAnimationFrame` loops with React `useState` / `setState` for animated balance tickers or rolling counters. Instead, use Framer Motion's `useSpring` and `useTransform` subscribed directly to the DOM element's `textContent` (e.g. `<AnimatedBalance />`) to update figures smoothly at 60fps without scheduling Virtual DOM component re-renders.
 - **Optimistic Transaction Ingestion & Reconciliation:** Always append newly broadcast transfers (TON, Jettons, FI, Personal Tokens, Swaps) to `pendingTransactions` via `addPendingTransaction` immediately with a pending badge and optimistic balance calculation. Let the WebSocket streaming / on-chain event ingestion stream (`loadEvents`) automatically reconcile and prune the pending record once the block is indexed.
-- **Transient Focus & Online Background Sync:** Coordinate app refocus, tab visibility (`visibilitychange`), and network reconnect (`online`) events using transient store access (`storeApi.getState()`) in `BackgroundSyncCoordinator` with rate throttling, rather than placing mutable slice objects into React `useEffect` dependency arrays.
+- **Zero-Redundant Routing & Background Sync:** Do not poll or trigger balance/event sync on window focus or tab visibility changes when WebSocket streaming is active. Rely exclusively on WebSocket streaming (`watchBalance`, `watchTransactions`), network reconnect (`window.online`), and explicit user pull-to-refresh. In store slices (`loadUserJettons`, `loadEvents`, `batchHydrateUniversal`), protect with 60s TTL guards against redundant route transitions (`/` <-> `/send`), allowing bypass only when `force = true`.
+- **Time-Sliced In-Process Worker Fallback:** When offloading heavy BOC decoding or cryptographic hashing to Web Workers, always pair worker dispatch with an asynchronous, chunked fallback (e.g. `processAccountItemsAsync` in chunks of 5 yielding via `requestAnimationFrame` / `setTimeout(0)`) with an 8s timeout to eliminate main-thread UI freeze violations in fallback/test environments.
 
 ### Telegram Mini App (TWA) & Mobile Rules
 
@@ -126,7 +130,7 @@ This repository uses separate test frameworks suited for specific workspace targ
 ### Store Slice Mock Invariants in Tests
 
 - **Mirror Full Slice Shapes in Mocks:** When manually constructing mock store states in unit tests for slice factories (e.g. `createBrotherhoodSlice`), always supply all default slice properties defined in `initialState` (e.g. `pendingDeferredByAddress: {}`, `brotherhoodByAddress: {}`) to prevent property traversal errors during cleanup/removal routines.
-- **Mock LocalStorage & Window in Bun Unit Tests:** When testing store slice creation, rehydration, or device detection under Bun Test, ensure `globalThis.localStorage` and `globalThis.window` memory mocks are provided to prevent `ReferenceError: localStorage is not defined` from `createJSONStorage` and environment evaluators.
+- **Unconditional LocalStorage Mock Isolation:** When providing `localStorage` memory mocks in Bun unit tests, unconditionally assign `(globalThis as any).localStorage = mockLocalStorage` (and `globalThis.window.localStorage`) and invoke `globalThis.localStorage.clear()` in `beforeEach` to prevent persistent store rehydration state from leaking across parallel test suites.
 - **Friendly vs Raw Opcode Assertions:** When testing utility helpers like `getPayloadMessageName`, verify the formatted user-facing friendly name (e.g. `'Send Token'`) when a friendly mapping exists, rather than the raw opcode identifier.
 
 ### Wallet History Ingestion & Ecosystem Opcode Rules

@@ -61,6 +61,7 @@ export function useTrackedAddressesSync() {
   );
 
   const savedWalletsLengthRef = useRef(0);
+  const lastHydratedRef = useRef(0);
 
   // Helper to normalize address matching helper
   const findDecodedStore = (
@@ -84,11 +85,17 @@ export function useTrackedAddressesSync() {
     async (force = false) => {
       if (!isOnline() || !savedWallets || savedWallets.length === 0) return;
 
+      const now = Date.now();
+      if (!force && now - lastHydratedRef.current < 60_000) {
+        return;
+      }
+      lastHydratedRef.current = now;
+
       // 1. Purge legacy localStorage tracked_addresses
       purgeLegacyTrackedAddressesStorage();
 
       // 2. Fetch jettons for ALL saved wallets (including isMember: false)
-      void loadUserJettons().catch(() => {});
+      void loadUserJettons(undefined, force).catch(() => {});
       if (isWalletKitInitialized) {
         void loadEvents(50, 0, force).catch(() => {});
       }
@@ -336,7 +343,7 @@ export function useTrackedAddressesSync() {
     } else if (currentLen < savedWalletsLengthRef.current) {
       savedWalletsLengthRef.current = currentLen;
     }
-  }, [savedWallets, hydrateAllSavedWallets]);
+  }, [savedWallets?.length, hydrateAllSavedWallets]);
 
   // When WalletKit becomes ready, load initial events once across all saved wallets
   const initialEventsLoadedRef = useRef(false);
