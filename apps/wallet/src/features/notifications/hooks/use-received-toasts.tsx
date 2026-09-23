@@ -9,7 +9,12 @@
 import { useEffect, useRef } from 'react';
 import { ArrowDownLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { useJettons, useRates, useWallet } from '@demo/wallet-core';
+import {
+  useActiveJettons,
+  useJettons,
+  useRates,
+  useWallet,
+} from '@demo/wallet-core';
 import type { RateEntry } from '@demo/wallet-core';
 
 import { getJettonsSymbol } from '@/features/jettons';
@@ -28,19 +33,20 @@ const safeBigInt = (value: string | undefined): bigint | null => {
   }
 };
 
-const ReceivedIcon = (
-  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-100">
-    <ArrowDownLeft className="w-3.5 h-3.5 text-green-600" strokeWidth={2.5} />
-  </span>
+const ReceivedIcon = () => (
+  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+    <ArrowDownLeft className="h-4 w-4" />
+  </div>
 );
 
 const toastReceived = (amount: number, symbol: string, rate?: number): void => {
+  if (amount <= 0) return;
   const fiat = rate
-    ? ` ($${formatLargeValue(String(amount * rate), 2, 2)})`
+    ? ` ($${(amount * rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
     : '';
   toast(
     `You received ${formatLargeValue(String(amount), 4)} ${symbol}${fiat}`.trim(),
-    { icon: ReceivedIcon },
+    { icon: <ReceivedIcon /> },
   );
 };
 
@@ -51,7 +57,8 @@ const toastReceived = (amount: number, symbol: string, rate?: number): void => {
  */
 export const useReceivedToasts = (): void => {
   const { address, balance } = useWallet();
-  const { userJettons, lastJettonsUpdate } = useJettons();
+  const { lastJettonsUpdate } = useJettons();
+  const activeJettons = useActiveJettons();
   const { entries: rates } = useRates();
   const { discoverTokens } = useTrackedPersonalTokens();
 
@@ -99,7 +106,7 @@ export const useReceivedToasts = (): void => {
     if (lastJettonsUpdate === 0) return; // not loaded yet — avoid false baseline
 
     if (!jettonsSeededRef.current) {
-      for (const jetton of userJettons) {
+      for (const jetton of activeJettons) {
         const value = safeBigInt(jetton.balance);
         if (value !== null) balancesRef.current.set(jetton.address, value);
       }
@@ -108,7 +115,7 @@ export const useReceivedToasts = (): void => {
     }
 
     let hasGrowth = false;
-    for (const jetton of userJettons) {
+    for (const jetton of activeJettons) {
       const next = safeBigInt(jetton.balance);
       if (next === null) continue;
 
@@ -130,5 +137,5 @@ export const useReceivedToasts = (): void => {
     if (hasGrowth) {
       void discoverTokens();
     }
-  }, [userJettons, lastJettonsUpdate, discoverTokens]);
+  }, [activeJettons, lastJettonsUpdate, discoverTokens]);
 };

@@ -9,7 +9,12 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
-import { useJettons, useRates, useWallet } from '@demo/wallet-core';
+import {
+  useActiveJettons,
+  useJettons,
+  useRates,
+  useWallet,
+} from '@demo/wallet-core';
 
 import type { AssetRowData } from '../components/asset-row';
 
@@ -56,7 +61,8 @@ export const useAssetRows = (): AssetRows => {
   const { balance, currentWallet, address, getActiveWallet } = useWallet();
   const walletAddress =
     address || currentWallet?.getAddress() || getActiveWallet()?.address;
-  const { userJettons, lastJettonsUpdate } = useJettons();
+  const { lastJettonsUpdate } = useJettons();
+  const activeJettons = useActiveJettons();
   const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
   const fiAccount = useFiAccount(walletAddress ?? null);
@@ -70,13 +76,13 @@ export const useAssetRows = (): AssetRows => {
   const assetsReady =
     Boolean(walletAddress) &&
     (balance !== undefined ||
-      userJettons.length > 0 ||
+      activeJettons.length > 0 ||
       personalTokens.length > 0 ||
       lastJettonsUpdate > 0);
 
   // Other jetton addresses (not FI and not user's own personal minter)
   const candidatePersonalAddresses = useMemo(() => {
-    return userJettons
+    return activeJettons
       .filter((j) => {
         if (isFiJetton(j)) return false;
         if (
@@ -89,7 +95,7 @@ export const useAssetRows = (): AssetRows => {
         return true;
       })
       .map((j) => j.address);
-  }, [userJettons, personalMinterAddress]);
+  }, [activeJettons, personalMinterAddress]);
 
   const { data: verifiedPersonalMinterSet } = useQuery({
     queryKey: [
@@ -138,8 +144,8 @@ export const useAssetRows = (): AssetRows => {
     const rows: AssetRowData[] = [];
     const seenAddresses = new Set<string>();
 
-    // 1. Process userJettons (FI + any personal tokens indexed by walletkit)
-    for (const jetton of userJettons) {
+    // 1. Process activeJettons (FI + any personal tokens indexed by walletkit)
+    for (const jetton of activeJettons) {
       const isFi = isFiJetton(jetton);
       const isUserPersonal = Boolean(
         personalMinterAddress &&
@@ -181,7 +187,7 @@ export const useAssetRows = (): AssetRows => {
       });
     }
 
-    // 1.5 Ensure FI is included for members even if not indexed in userJettons
+    // 1.5 Ensure FI is included for members even if not indexed in activeJettons
     const normFi = normalizeAddress(FI_ADDRESS) || FI_ADDRESS;
     if (isMember && !seenAddresses.has(normFi)) {
       const fiBal = fiAccount.data?.jettonBalance
@@ -228,7 +234,7 @@ export const useAssetRows = (): AssetRows => {
     });
   }, [
     assetsReady,
-    userJettons,
+    activeJettons,
     rates,
     isMember,
     personalMinterAddress,

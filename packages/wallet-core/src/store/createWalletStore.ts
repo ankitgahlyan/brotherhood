@@ -253,7 +253,6 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   state.tonConnect.pendingConnectRequestEvent,
               },
               jettons: {
-                userJettons: state.jettons?.userJettons || [],
                 jettonsByAddress: state.jettons?.jettonsByAddress || {},
                 lastJettonsUpdate: state.jettons?.lastJettonsUpdate || 0,
               },
@@ -349,7 +348,6 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 jettons: {
                   ...currentState.jettons,
                   ...persisted?.jettons,
-                  userJettons: persisted?.jettons?.userJettons || [],
                   jettonsByAddress: persisted?.jettons?.jettonsByAddress || {},
                   lastJettonsUpdate: persisted?.jettons?.lastJettonsUpdate || 0,
                 },

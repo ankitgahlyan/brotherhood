@@ -223,7 +223,6 @@ export interface TonConnectSlice {
 // Jettons slice interface
 export interface JettonsSlice {
   jettons: {
-    userJettons: Jetton[];
     jettonsByAddress: Record<string, Jetton[]>;
     jettonTransfers: JettonTransfer[];
     popularJettons: JettonInfo[];

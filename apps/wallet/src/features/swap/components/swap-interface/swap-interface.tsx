@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { FC } from 'react';
 import { useNavigate } from '@/core/routing';
 import { ArrowDownUp } from 'lucide-react';
-import { useJettons, useSwap, useWallet } from '@demo/wallet-core';
+import { useActiveJettons, useSwap, useWallet } from '@demo/wallet-core';
 import type { SwapToken } from '@ton/walletkit';
 
 import { SwapField } from '../swap-field';
@@ -40,7 +40,7 @@ interface SwapInterfaceProps {
 export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   const navigate = useNavigate();
   const { balance } = useWallet();
-  const { userJettons } = useJettons();
+  const activeJettons = useActiveJettons();
   const {
     fromToken,
     toToken,
@@ -73,7 +73,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         balance: formatUnits(balance || '0', token.decimals),
       };
     }
-    const jetton = userJettons.find((j) => j.address === token.address);
+    const jetton = activeJettons.find((j) => j.address === token.address);
     return {
       symbol:
         token.symbol ||

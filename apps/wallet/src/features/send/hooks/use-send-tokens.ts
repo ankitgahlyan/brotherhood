@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { useJettons, useRates, useWallet } from '@demo/wallet-core';
+import { useActiveJettons, useRates, useWallet } from '@demo/wallet-core';
 
 import type { TokenOption } from '../types';
 
@@ -28,7 +28,7 @@ const TON_GAS_RESERVE = 0.01;
 /** Builds the selectable send assets: FI first for members, then TON, then other held jettons. */
 export const useSendTokens = (): TokenOption[] => {
   const { balance } = useWallet();
-  const { userJettons } = useJettons();
+  const activeJettons = useActiveJettons();
   const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
 
@@ -47,7 +47,7 @@ export const useSendTokens = (): TokenOption[] => {
       rate: rates['GRAM']?.rate,
     };
 
-    const otherJettons = userJettons
+    const otherJettons = activeJettons
       .filter((j) => !isFiJetton(j))
       .map((jetton): TokenOption => {
         const decimals = jetton.decimalsNumber ?? GRAM_DECIMALS;
@@ -71,7 +71,7 @@ export const useSendTokens = (): TokenOption[] => {
       return [tonOption, ...otherJettons];
     }
 
-    const fiJetton = userJettons.find(isFiJetton);
+    const fiJetton = activeJettons.find(isFiJetton);
     const fiDecimals = fiJetton?.decimalsNumber ?? GRAM_DECIMALS;
     const fiAmount = fiJetton ? toDecimal(fiJetton.balance, fiDecimals) : 0;
     const fiOption: TokenOption = {
@@ -107,5 +107,5 @@ export const useSendTokens = (): TokenOption[] => {
     };
 
     return [fiOption, tonOption, ...otherJettons];
-  }, [balance, userJettons, rates, isMember]);
+  }, [balance, activeJettons, rates, isMember]);
 };

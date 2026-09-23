@@ -49,6 +49,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   const startYRef = useRef<number | null>(null);
   const isHorizontalSwipeRef = useRef<boolean | null>(null);
   const isIgnoredRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   const currentIndex = tabs.indexOf(activeTab);
 
@@ -76,7 +77,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
       pathname.startsWith(r),
     );
     if (
-      currentRouteIdx >= 0 &&
+      currentRouteIdx !== -1 &&
       currentRouteIdx < ECOSYSTEM_SWIPE_ROUTES.length - 1
     ) {
       navigate(ECOSYSTEM_SWIPE_ROUTES[currentRouteIdx + 1]);
@@ -127,11 +128,21 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     }
 
     if (isHorizontalSwipeRef.current) {
-      setDragOffset(diffX * 0.45);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = requestAnimationFrame(() => {
+        setDragOffset(diffX * 0.45);
+        rafRef.current = null;
+      });
     }
   };
 
   const onTouchEnd = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     if (isIgnoredRef.current || !isDragging) {
       setDragOffset(0);
       setIsDragging(false);

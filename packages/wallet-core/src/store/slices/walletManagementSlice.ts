@@ -583,12 +583,7 @@ export const createWalletManagementSlice =
                 state.walletManagement.eventsByAddress[savedWallet.address]) ||
               [];
 
-            // Restore cached jettons and nfts for the newly active wallet (or reset to empty if not yet loaded)
-            const cachedJettons = savedWallet.address
-              ? state.jettons.jettonsByAddress[savedWallet.address]
-              : undefined;
-            state.jettons.userJettons = cachedJettons ?? [];
-
+            // Restore cached nfts for the newly active wallet (or reset to empty if not yet loaded)
             const cachedNfts = savedWallet.address
               ? state.nfts.nftsByAddress[savedWallet.address]
               : undefined;
@@ -674,7 +669,6 @@ export const createWalletManagementSlice =
           state.walletManagement.confirmedTraceIds = [];
           state.walletManagement.confirmedExternalHashes = [];
           state.walletManagement.isStreamingConnected = false;
-          state.jettons.userJettons = [];
           state.nfts.userNfts = [];
         }
       });
@@ -938,7 +932,6 @@ export const createWalletManagementSlice =
         state.tonConnect.isSignDataModalOpen = false;
 
         // Clear assets
-        state.jettons.userJettons = [];
         state.jettons.jettonsByAddress = {};
         state.nfts.userNfts = [];
         state.nfts.nftsByAddress = {};
@@ -1049,7 +1042,11 @@ export const createWalletManagementSlice =
               update.decimals,
             );
 
-            const hasJetton = get().jettons.userJettons.some((j) =>
+            const activeAddress = get().walletManagement.address;
+            const currentJettons = activeAddress
+              ? (get().jettons.jettonsByAddress[activeAddress] ?? [])
+              : [];
+            const hasJetton = currentJettons.some((j) =>
               compareAddress(j.walletAddress, update.walletAddress),
             );
 

@@ -8,7 +8,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { Copy } from 'lucide-react';
-import { useWallet, useJettons, useRates } from '@demo/wallet-core';
+import { useWallet, useActiveJettons, useRates } from '@demo/wallet-core';
 
 import { AnimatedBalance } from '@/components/ui/animated-balance';
 import { assetUrl, findRate, toDecimal } from '@/core/utils';
@@ -23,7 +23,7 @@ const GRAM_DECIMALS = 9;
 export const BalanceTotal: React.FC = () => {
   const { address, balance } = useWallet();
   const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
-  const { userJettons } = useJettons();
+  const activeJettons = useActiveJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const fiAccount = useFiAccount(address ?? null);
   const { personalBalance } = usePersonalJettonInfo(address ?? null);
@@ -32,8 +32,8 @@ export const BalanceTotal: React.FC = () => {
 
   // Primary token for BrotherHood is FI
   const fiJetton = useMemo(
-    () => userJettons.find((j) => isFiJetton(j)),
-    [userJettons],
+    () => activeJettons.find((j) => isFiJetton(j)),
+    [activeJettons],
   );
 
   const fiAmount = useMemo(() => {
@@ -48,11 +48,11 @@ export const BalanceTotal: React.FC = () => {
 
   const hdJetton = useMemo(
     () =>
-      userJettons.find((j) => {
+      activeJettons.find((j) => {
         const sym = j.info?.symbol;
         return sym?.toUpperCase() === 'HD';
       }),
-    [userJettons],
+    [activeJettons],
   );
 
   const hdAmount = useMemo(() => {
@@ -73,19 +73,19 @@ export const BalanceTotal: React.FC = () => {
     if (tonRate && balance !== undefined) {
       total += toDecimal(balance, GRAM_DECIMALS) * tonRate;
     }
-    for (const jetton of userJettons) {
+    for (const jetton of activeJettons) {
       const rate = findRate(rates, jetton.address)?.rate;
       if (!rate) continue;
       total += toDecimal(jetton.balance, jetton.decimalsNumber ?? 9) * rate;
     }
-    if (fiAmount > 0 && !userJettons.some((j) => isFiJetton(j))) {
+    if (fiAmount > 0 && !activeJettons.some((j) => isFiJetton(j))) {
       const fiRate = findRate(rates, FI_ADDRESS)?.rate;
       if (fiRate) {
         total += fiAmount * fiRate;
       }
     }
     return total;
-  }, [ready, ratesUpdated, rates, balance, userJettons, fiAmount]);
+  }, [ready, ratesUpdated, rates, balance, activeJettons, fiAmount]);
 
   const [copied, setCopied] = React.useState(false);
 

@@ -16,7 +16,6 @@ import type { SetState, JettonsSliceCreator } from '../../types/store';
 const log = createComponentLogger('JettonsSlice');
 
 export interface JettonsState {
-  userJettons: Jetton[];
   jettonsByAddress: Record<string, Jetton[]>;
   jettonTransfers: JettonTransfer[];
   popularJettons: JettonInfo[];
@@ -36,7 +35,6 @@ export const createJettonsSlice: JettonsSliceCreator = (
   get,
 ) => ({
   jettons: {
-    userJettons: [],
     jettonsByAddress: {},
     jettonTransfers: [],
     popularJettons: [],
@@ -140,17 +138,7 @@ export const createJettonsSlice: JettonsSliceCreator = (
         for (const [addr, jettons] of Object.entries(partitioned)) {
           s.jettons.jettonsByAddress[addr] = jettons;
         }
-
-        const currentActiveAddress = s.walletManagement.address || address;
-        if (currentActiveAddress) {
-          const matchingKey = Object.keys(s.jettons.jettonsByAddress).find(
-            (k) => compareAddress(k, currentActiveAddress),
-          );
-          s.jettons.userJettons = matchingKey
-            ? s.jettons.jettonsByAddress[matchingKey]
-            : [];
-          s.jettons.lastJettonsUpdate = Date.now();
-        }
+        s.jettons.lastJettonsUpdate = Date.now();
         s.jettons.isLoadingJettons = false;
         s.jettons.error = null;
       });
@@ -203,28 +191,21 @@ export const createJettonsSlice: JettonsSliceCreator = (
     decimals?: number,
   ) => {
     set((state) => {
-      const activeAddress = state.walletManagement.address;
-      const jetton = state.jettons.userJettons.find((j) =>
-        compareAddress(j.walletAddress, walletAddress),
-      );
-      if (jetton) {
-        jetton.balance = balance;
-        if (typeof decimals === 'number') {
-          jetton.decimalsNumber = decimals;
-        }
-        state.jettons.lastJettonsUpdate = Date.now();
-      }
-
-      if (activeAddress && state.jettons.jettonsByAddress[activeAddress]) {
-        const addressJetton = state.jettons.jettonsByAddress[
-          activeAddress
-        ].find((j) => compareAddress(j.walletAddress, walletAddress));
+      let updated = false;
+      for (const addressKey of Object.keys(state.jettons.jettonsByAddress)) {
+        const addressJetton = state.jettons.jettonsByAddress[addressKey]?.find(
+          (j) => compareAddress(j.walletAddress, walletAddress),
+        );
         if (addressJetton) {
           addressJetton.balance = balance;
           if (typeof decimals === 'number') {
             addressJetton.decimalsNumber = decimals;
           }
+          updated = true;
         }
+      }
+      if (updated) {
+        state.jettons.lastJettonsUpdate = Date.now();
       }
     });
   },
@@ -240,7 +221,6 @@ export const createJettonsSlice: JettonsSliceCreator = (
 
   clearJettons: () => {
     set((state) => {
-      state.jettons.userJettons = [];
       state.jettons.jettonsByAddress = {};
       state.jettons.jettonTransfers = [];
       state.jettons.popularJettons = [];
@@ -258,7 +238,23 @@ export const createJettonsSlice: JettonsSliceCreator = (
 
   getJettonByAddress: (jettonAddress: string): Jetton | undefined => {
     const state = get();
-    return state.jettons.userJettons.find((j) => j.address === jettonAddress);
+    const activeAddress = state.walletManagement.address;
+    if (activeAddress) {
+      const matchingKey = Object.keys(state.jettons.jettonsByAddress).find(
+        (k) => compareAddress(k, activeAddress),
+      );
+      if (matchingKey) {
+        const jetton = state.jettons.jettonsByAddress[matchingKey]?.find((j) =>
+          compareAddress(j.address, jettonAddress),
+        );
+        if (jetton) return jetton;
+      }
+    }
+    for (const list of Object.values(state.jettons.jettonsByAddress)) {
+      const match = list.find((j) => compareAddress(j.address, jettonAddress));
+      if (match) return match;
+    }
+    return undefined;
   },
 
   formatJettonAmount: (amount: string, decimals: number): string => {

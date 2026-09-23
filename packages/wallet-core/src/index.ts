@@ -40,6 +40,8 @@ export {
   useDisconnectEvents,
   useNfts,
   useJettons,
+  useActiveJettons,
+  EMPTY_ARRAY,
   useRates,
   useSwap,
   useStaking,

@@ -162,9 +162,7 @@ export const createSwapSlice: SwapSliceCreator = (set: SetState, get) => ({
       }
     } else {
       // Check jetton balance
-      const jetton = state.jettons.userJettons.find(
-        (j) => j.address === fromToken.address,
-      );
+      const jetton = get().getJettonByAddress(fromToken.address);
 
       if (!jetton || !jetton.balance) {
         return 'Insufficient balance';

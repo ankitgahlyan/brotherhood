@@ -57,6 +57,7 @@ export class BridgeManager {
   private eventEmitter?: WalletKitEventEmitter;
 
   private requestProcessingTimeoutId?: number;
+  private onlineHandler?: () => void;
 
   constructor(
     walletManifest: WalletInfo | undefined,
@@ -104,6 +105,13 @@ export class BridgeManager {
         this.queueBridgeEvent.bind(this),
 
         (error: any) => {
+          if (
+            typeof window !== 'undefined' &&
+            typeof window.navigator !== 'undefined' &&
+            window.navigator.onLine === false
+          ) {
+            return;
+          }
           log.error('Bridge listener error', { error: error.toString() });
         },
       );
@@ -135,6 +143,20 @@ export class BridgeManager {
 
     try {
       await this.loadLastEventId();
+      if (typeof window !== 'undefined' && !this.onlineHandler) {
+        this.onlineHandler = () => {
+          if (
+            this.isActive &&
+            !this.isConnected &&
+            !this.config?.disableHttpConnection
+          ) {
+            log.info('Network online detected, attempting bridge connection');
+            void this.connectToSSEBridge().catch(() => {});
+          }
+        };
+        window.addEventListener('online', this.onlineHandler);
+      }
+
       if (!this.config?.disableHttpConnection) {
         await this.connectToSSEBridge();
       } else {
@@ -142,9 +164,17 @@ export class BridgeManager {
         this.reconnectAttempts = 0;
       }
     } catch (error) {
-      this.isActive = false;
-      log.error('Failed to start bridge', { error });
-      throw error;
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.navigator !== 'undefined' &&
+        window.navigator.onLine === false
+      ) {
+        log.debug('Bridge start deferred while offline');
+      } else {
+        this.isActive = false;
+        log.error('Failed to start bridge', { error });
+        throw error;
+      }
     }
 
     const requestProcessing = () => {
@@ -369,6 +399,11 @@ export class BridgeManager {
    * Close bridge connection
    */
   async close(): Promise<void> {
+    if (this.onlineHandler && typeof window !== 'undefined') {
+      window.removeEventListener('online', this.onlineHandler);
+      this.onlineHandler = undefined;
+    }
+
     if (this.bridgeProvider) {
       await this.bridgeProvider.close();
     }
@@ -425,6 +460,15 @@ export class BridgeManager {
       );
     }
 
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.navigator !== 'undefined' &&
+      window.navigator.onLine === false
+    ) {
+      log.debug('Skipping bridge SSE connection while offline');
+      return;
+    }
+
     try {
       // Prepare clients array for existing sessions
       const clients = await this.getClients();
@@ -443,6 +487,14 @@ export class BridgeManager {
       this.reconnectAttempts = 0;
       log.info('Bridge connected successfully');
     } catch (error: any) {
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.navigator !== 'undefined' &&
+        window.navigator.onLine === false
+      ) {
+        log.debug('Bridge connection skipped: offline');
+        return;
+      }
       log.error('Bridge connection failed', { error: error?.toString() });
 
       if (!this.config.disableHttpConnection) {
@@ -453,6 +505,13 @@ export class BridgeManager {
             attempt: this.reconnectAttempts,
           });
           setTimeout(() => {
+            if (
+              typeof window !== 'undefined' &&
+              typeof window.navigator !== 'undefined' &&
+              window.navigator.onLine === false
+            ) {
+              return;
+            }
             this.connectToSSEBridge().catch((error) =>
               log.error('Bridge reconnection failed', { error }),
             );

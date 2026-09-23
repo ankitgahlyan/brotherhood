@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useWallet, useJettons } from '@demo/wallet-core';
+import { useWallet, useJettons, useActiveJettons } from '@demo/wallet-core';
 
 import {
   fetchPersonalTokenMetadata,
@@ -33,16 +33,17 @@ import {
 export function useTrackedPersonalTokens(additionalMinters?: string[]) {
   const queryClient = useQueryClient();
   const { currentWallet, address, getActiveWallet } = useWallet();
-  const { userJettons, refreshJettons } = useJettons();
+  const { refreshJettons } = useJettons();
+  const activeJettons = useActiveJettons();
   const walletAddress =
     address || currentWallet?.getAddress() || getActiveWallet()?.address;
 
   const [manualMinters, setManualMinters] = useState<string[]>([]);
 
-  // Tracked minters are dynamically derived from userJettons (excluding FI) plus any manually imported tokens
+  // Tracked minters are dynamically derived from activeJettons (excluding FI) plus any manually imported tokens
   const trackedMinters = useMemo(() => {
     const set = new Set<string>();
-    for (const j of userJettons) {
+    for (const j of activeJettons) {
       if (j.address && j.address !== FI_ADDRESS) {
         set.add(j.address);
       }
@@ -56,7 +57,7 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
       }
     }
     return Array.from(set);
-  }, [userJettons, manualMinters, additionalMinters]);
+  }, [activeJettons, manualMinters, additionalMinters]);
 
   const parsedOwnerAddress = useMemo(() => {
     if (!walletAddress) return null;

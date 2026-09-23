@@ -9,7 +9,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import { RotateCw, AlertCircle, Inbox } from 'lucide-react';
-import { useWalletStore } from '@demo/wallet-core';
+import { useActiveJettons, useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 import { cn } from '@/core/lib/utils';
 
@@ -39,7 +39,7 @@ export const HistoryScreen: FC = () => {
   const eventsByAddress = useWalletStore(
     (state) => state.walletManagement.eventsByAddress,
   );
-  const userJettons = useWalletStore((state) => state.jettons.userJettons);
+  const activeJettons = useActiveJettons();
   const pendingTransactions = useWalletStore(
     (state) => state.walletManagement.pendingTransactions,
   );
@@ -47,7 +47,7 @@ export const HistoryScreen: FC = () => {
   const availableTokens = useMemo(() => {
     const seen = new Set<string>();
     const tokens: Array<{ symbol: string; image?: string }> = [];
-    for (const j of userJettons) {
+    for (const j of activeJettons) {
       const sym = j.info?.symbol;
       if (sym && !seen.has(sym.toUpperCase())) {
         seen.add(sym.toUpperCase());
@@ -55,7 +55,7 @@ export const HistoryScreen: FC = () => {
       }
     }
     return tokens;
-  }, [userJettons]);
+  }, [activeJettons]);
 
   const isAddressEventsLoaded = Boolean(
     address && address in (eventsByAddress || {}),

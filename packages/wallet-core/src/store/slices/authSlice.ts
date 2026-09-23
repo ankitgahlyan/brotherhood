@@ -185,7 +185,6 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       state.tonConnect.disconnectedSessions = [];
 
       // Jettons & NFTs
-      state.jettons.userJettons = [];
       state.jettons.jettonsByAddress = {};
       state.nfts.userNfts = [];
       state.nfts.nftsByAddress = {};

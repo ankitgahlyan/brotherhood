@@ -269,9 +269,6 @@ function getOrCreateHydratorWorker(): Worker | null {
           cb(event.data);
         }
       };
-      if (typeof workerInstance.addEventListener === 'function') {
-        workerInstance.addEventListener('message', handleResponse);
-      }
       workerInstance.onmessage = handleResponse;
       workerInstance.onerror = (err) => {
         console.warn(

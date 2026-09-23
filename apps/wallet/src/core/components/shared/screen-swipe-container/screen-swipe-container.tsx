@@ -41,6 +41,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const startYRef = useRef<number | null>(null);
   const isHorizontalSwipeRef = useRef<boolean | null>(null);
   const isIgnoredRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   const isSubTabScreen = SUB_TAB_ROUTES.some((route) =>
     pathname.startsWith(route),
@@ -104,11 +105,21 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     }
 
     if (isHorizontalSwipeRef.current) {
-      setDragOffset(diffX * 0.45);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = requestAnimationFrame(() => {
+        setDragOffset(diffX * 0.45);
+        rafRef.current = null;
+      });
     }
   };
 
   const onTouchEnd = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     if (isIgnoredRef.current || !isDragging) {
       setDragOffset(0);
       setIsDragging(false);

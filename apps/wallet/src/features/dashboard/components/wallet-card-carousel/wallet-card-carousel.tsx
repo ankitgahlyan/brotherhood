@@ -19,7 +19,7 @@ import {
 import {
   useWallet,
   useWalletKit,
-  useJettons,
+  useActiveJettons,
   useRates,
 } from '@demo/wallet-core';
 
@@ -60,7 +60,7 @@ export const WalletCardCarousel: React.FC = () => {
   } = useWallet();
   const walletKit = useWalletKit();
   const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
-  const { userJettons } = useJettons();
+  const activeJettons = useActiveJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
   const fiAccount = useFiAccount(address ?? null);
   const { personalBalance } = usePersonalJettonInfo(address ?? null);
@@ -116,8 +116,8 @@ export const WalletCardCarousel: React.FC = () => {
   const ready = balance !== undefined || Boolean(fiAccount.data);
 
   const fiJetton = useMemo(
-    () => userJettons.find((j) => isFiJetton(j)),
-    [userJettons],
+    () => activeJettons.find((j) => isFiJetton(j)),
+    [activeJettons],
   );
 
   const fiAmount = useMemo(() => {
@@ -132,11 +132,11 @@ export const WalletCardCarousel: React.FC = () => {
 
   const hdJetton = useMemo(
     () =>
-      userJettons.find((j) => {
+      activeJettons.find((j) => {
         const sym = j.info?.symbol;
         return sym?.toUpperCase() === 'HD';
       }),
-    [userJettons],
+    [activeJettons],
   );
 
   const _hdAmount = useMemo(() => {
@@ -157,19 +157,19 @@ export const WalletCardCarousel: React.FC = () => {
     if (tonRate && balance !== undefined) {
       total += toDecimal(balance, GRAM_DECIMALS) * tonRate;
     }
-    for (const jetton of userJettons) {
+    for (const jetton of activeJettons) {
       const rate = findRate(rates, jetton.address)?.rate;
       if (!rate) continue;
       total += toDecimal(jetton.balance, jetton.decimalsNumber ?? 9) * rate;
     }
-    if (fiAmount > 0 && !userJettons.some((j) => isFiJetton(j))) {
+    if (fiAmount > 0 && !activeJettons.some((j) => isFiJetton(j))) {
       const fiRate = findRate(rates, FI_ADDRESS)?.rate;
       if (fiRate) {
         total += fiAmount * fiRate;
       }
     }
     return total;
-  }, [ready, ratesUpdated, rates, balance, userJettons, fiAmount]);
+  }, [ready, ratesUpdated, rates, balance, activeJettons, fiAmount]);
 
   const handleCopy = useCallback(async () => {
     if (!address) return;

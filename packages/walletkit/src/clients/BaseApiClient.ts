@@ -38,6 +38,17 @@ export abstract class BaseApiClient {
   protected abstract appendAuthHeaders(headers: Headers): void;
 
   async fetch<T>(url: URL, props: globalThis.RequestInit = {}): Promise<T> {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.navigator !== 'undefined' &&
+      window.navigator.onLine === false
+    ) {
+      throw new TonClientError(
+        'Network offline, request skipped',
+        0,
+        'Offline',
+      );
+    }
     const headers = new Headers(props.headers);
     headers.set('accept', 'application/json');
     this.appendAuthHeaders(headers);

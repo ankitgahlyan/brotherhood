@@ -10,6 +10,9 @@ import { useContext } from 'react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 
+import { compareAddress } from '@ton/walletkit';
+import type { Jetton } from '@ton/walletkit';
+
 import { WalletStoreContext } from '../providers/WalletProvider';
 import {
   normalizeAddressByNetwork,
@@ -18,6 +21,8 @@ import {
   EMPTY_PENDING_DEFERRED,
 } from '../store/slices/brotherhoodSlice';
 import type { AppState, PendingDeferredPayment } from '../types/store';
+
+export const EMPTY_ARRAY: readonly any[] = Object.freeze([]);
 
 /**
  * Hook to access the wallet store
@@ -223,7 +228,6 @@ export const useNfts = () => {
 export const useJettons = () => {
   return useWalletStore(
     useShallow((state) => ({
-      userJettons: state.jettons.userJettons,
       jettonsByAddress: state.jettons.jettonsByAddress,
       jettonTransfers: state.jettons.jettonTransfers,
       popularJettons: state.jettons.popularJettons,
@@ -241,6 +245,27 @@ export const useJettons = () => {
       getJettonByAddress: state.getJettonByAddress,
       formatJettonAmount: state.formatJettonAmount,
     })),
+  );
+};
+
+/**
+ * Hook to retrieve jettons for the currently active wallet.
+ * Uses address matching with compareAddress to ensure workchain formatting differences match.
+ * Returns module-level EMPTY_ARRAY fallback to prevent selector instability.
+ */
+export const useActiveJettons = (): Jetton[] => {
+  return useWalletStore(
+    useShallow((state) => {
+      const addr = state.walletManagement.address;
+      if (!addr) return EMPTY_ARRAY as unknown as Jetton[];
+      const matchingKey = Object.keys(state.jettons.jettonsByAddress).find(
+        (k) => compareAddress(k, addr),
+      );
+      return matchingKey
+        ? state.jettons.jettonsByAddress[matchingKey] ||
+            (EMPTY_ARRAY as unknown as Jetton[])
+        : (EMPTY_ARRAY as unknown as Jetton[]);
+    }),
   );
 };
 
