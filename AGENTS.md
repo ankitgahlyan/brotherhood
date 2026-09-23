@@ -15,6 +15,7 @@
   2. Remove any temporary debug code once the issue is resolved.
 
 - when exploring or editing files, if you find any inconsistencies or bugs, point them to me after current request is complete.
+- **Codify All Failures into Rules:** Whenever a bug, test failure, runtime error, or framework violation (e.g. React infinite re-render loops, TVM execution errors, serialization mismatch, selector instability) is identified and resolved, formulate and append the underlying invariant as an explicit rule under the relevant section of `AGENTS.md` to prevent future regressions.
 
 ## Agent Skills
 
@@ -95,7 +96,7 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 
 ### State Management & Selector Stability Rules (Zustand & React)
 
-- **Stable Fallback References in Selectors:** Never use inline object/array literals as selector fallbacks (e.g. `foo ?? []` or `bar ?? {}`). Inline allocations produce new memory references on every selector pass, defeating `useShallow` / `useSyncExternalStore` equality checks and causing React to throw _"The result of getSnapshot should be cached to avoid an infinite loop"_ and _"Maximum update depth exceeded"_. Always export and return module-level frozen fallback singletons (e.g. `EMPTY_ARRAY = Object.freeze([])`, `EMPTY_OBJECT = Object.freeze({})`).
+- **Stable Fallback References in Selectors:** Never use inline object/array literals as selector fallbacks (e.g. `foo ?? []` or `bar ?? {}`) and never invoke state methods that compute or allocate fresh collections inside selector functions (e.g. `state.getContactsList(network)`). Inline allocations produce new memory references on every selector pass, defeating `useShallow` / `useSyncExternalStore` equality checks and causing React to throw _"The result of getSnapshot should be cached to avoid an infinite loop"_ and _"Maximum update depth exceeded"_. Always subscribe directly to the raw slice state property with a module-level frozen fallback singleton (e.g. `state.contactsByNetwork[network] || EMPTY_CONTACTS_MAP`, `EMPTY_ARRAY = Object.freeze([])`, `EMPTY_OBJECT = Object.freeze({})`) and perform filtering or derivation inside `useMemo`.
 - **Decouple Background Hydration from Subscribed State:** Do not place mutable slice state objects (e.g. `brotherhoodByAddress`, `jettonsByAddress`) in `useCallback` or `useEffect` dependency arrays of sync/hydration routines. Instead, access the latest state imperatively via `storeApi.getState()` (or `useWalletStoreApi().getState()`) to avoid circular invalidation feedback loops.
 - **Change Guards in Slice Setters:** Guard slice mutation methods (e.g. `setBrotherhoodMemberData`, `setLocationContract`) against redundant updates. Check existing values before calling `set(...)` to prevent triggering spurious store change events.
 - **No Side Effects or Setters in Render / useMemo:** Never invoke store setters, persistence helpers (e.g. `saveUsernameAddressMapping`), or storage writes directly inside `useMemo` or during the component render phase. Always defer side effects to `useEffect` or wrap in `queueMicrotask` to prevent React from throwing _"Cannot update a component while rendering a different component"_.
