@@ -98,6 +98,13 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Change Guards in Slice Setters:** Guard slice mutation methods (e.g. `setBrotherhoodMemberData`, `setLocationContract`) against redundant updates. Check existing values before calling `set(...)` to prevent triggering spurious store change events.
 - **Persist Middleware Parity:** Whenever a slice is added to `partialize`, ensure it is also explicitly handled in `persist.merge(...)` within `createWalletStore.ts`. Otherwise, persisted data will be wiped and reset to initial state upon rehydration.
 
+### Animation, Motion, and Fluid UI Rules (Framer Motion & Zustand)
+
+- **3-Way Animation Level Parity:** Always respect the active `animationLevel` (`none`, `performance`, `full`) from `usePreferences()` / `useAnimationSettings()`. When `none` (Disabled), suppress spring and layout transitions (`reducedMotion="always"`) to save battery and minimize CPU footprint on low-end devices. When `performance` (TMA/Mobile default), use lightweight opacity crossfades and rolling balance numbers. When `full` (Desktop/Rich default), enable full spring physics, layout shifts (`layout="position"`), and gesture overscroll.
+- **Re-Render-Free Dynamic Values (No RAF setState):** Never use `requestAnimationFrame` loops with React `useState` / `setState` for animated balance tickers or rolling counters. Instead, use Framer Motion's `useSpring` and `useTransform` subscribed directly to the DOM element's `textContent` (e.g. `<AnimatedBalance />`) to update figures smoothly at 60fps without scheduling Virtual DOM component re-renders.
+- **Optimistic Transaction Ingestion & Reconciliation:** Always append newly broadcast transfers (TON, Jettons, FI, Personal Tokens, Swaps) to `pendingTransactions` via `addPendingTransaction` immediately with a pending badge and optimistic balance calculation. Let the WebSocket streaming / on-chain event ingestion stream (`loadEvents`) automatically reconcile and prune the pending record once the block is indexed.
+- **Transient Focus & Online Background Sync:** Coordinate app refocus, tab visibility (`visibilitychange`), and network reconnect (`online`) events using transient store access (`storeApi.getState()`) in `BackgroundSyncCoordinator` with rate throttling, rather than placing mutable slice objects into React `useEffect` dependency arrays.
+
 ### Telegram Mini App (TWA) & Mobile Rules
 
 - **Biometric Authentication in TWA:** Never use `window.PublicKeyCredential` (WebAuthn) inside Telegram WebViews as it is blocked by default. Always use Telegram's native `BiometricManager` (`init`, `requestAccess`, `updateBiometricToken`, `authenticate`) inside TWA, falling back to WebAuthn only on standard Web/PWA.
@@ -119,6 +126,7 @@ This repository uses separate test frameworks suited for specific workspace targ
 ### Store Slice Mock Invariants in Tests
 
 - **Mirror Full Slice Shapes in Mocks:** When manually constructing mock store states in unit tests for slice factories (e.g. `createBrotherhoodSlice`), always supply all default slice properties defined in `initialState` (e.g. `pendingDeferredByAddress: {}`, `brotherhoodByAddress: {}`) to prevent property traversal errors during cleanup/removal routines.
+- **Mock LocalStorage & Window in Bun Unit Tests:** When testing store slice creation, rehydration, or device detection under Bun Test, ensure `globalThis.localStorage` and `globalThis.window` memory mocks are provided to prevent `ReferenceError: localStorage is not defined` from `createJSONStorage` and environment evaluators.
 - **Friendly vs Raw Opcode Assertions:** When testing utility helpers like `getPayloadMessageName`, verify the formatted user-facing friendly name (e.g. `'Send Token'`) when a friendly mapping exists, rather than the raw opcode identifier.
 
 ### Wallet History Ingestion & Ecosystem Opcode Rules
