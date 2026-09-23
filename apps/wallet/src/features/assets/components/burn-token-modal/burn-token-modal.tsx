@@ -288,7 +288,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
           <span>
             {burner.isSending
               ? 'Broadcasting Burn…'
-              : isPersonal && isPayback
+              : canBurnForPayback && isPayback
                 ? 'Burn & Request Payback'
                 : 'Burn Tokens'}
           </span>

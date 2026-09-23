@@ -52,7 +52,6 @@ import {
 import { useRegisterPersonalJetton } from '../hooks/use-register-personal-jetton';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 import { useMintPersonal } from '../hooks/use-mint-personal';
-import { useBurnPersonal } from '../hooks/use-burn-personal';
 import { useDestroyPersonal } from '../hooks/use-destroy-personal';
 import {
   usePersonalMinterAdmin,
@@ -64,14 +63,7 @@ import { TokenImagePicker } from './token-image-picker';
 import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
 
 type Tab =
-  | 'info'
-  | 'deploy'
-  | 'mint'
-  | 'burn'
-  | 'addresses'
-  | 'admin'
-  | 'topup'
-  | 'destroy';
+  'info' | 'deploy' | 'mint' | 'addresses' | 'admin' | 'topup' | 'destroy';
 
 export const PersonalJettonScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -166,17 +158,8 @@ export const PersonalJettonScreen: React.FC = () => {
 
   const availableTabs: Tab[] =
     info.isDeployedOnChain && !deployer.deployedAddresses
-      ? ['info', 'mint', 'burn', 'addresses', 'admin', 'topup', 'destroy']
-      : [
-          'info',
-          'deploy',
-          'mint',
-          'burn',
-          'addresses',
-          'admin',
-          'topup',
-          'destroy',
-        ];
+      ? ['info', 'mint', 'addresses', 'admin', 'topup', 'destroy']
+      : ['info', 'deploy', 'mint', 'addresses', 'admin', 'topup', 'destroy'];
 
   // If already deployed on-chain and not in post-deploy success state, switch to info
   const [prevDeployState, setPrevDeployState] = useState({
@@ -233,15 +216,6 @@ export const PersonalJettonScreen: React.FC = () => {
     minterAddress: activeMinter,
     recipient,
     amount,
-  });
-
-  const burner = useBurnPersonal({
-    wallet: currentWallet,
-    walletKit,
-    walletAddress: address ?? null,
-    personalWalletAddress: activePersonalWallet,
-    amount,
-    isPayback,
   });
 
   const destroyer = useDestroyPersonal({
@@ -876,118 +850,6 @@ export const PersonalJettonScreen: React.FC = () => {
                 data-testid="personal-mint-submit"
               >
                 Mint Tokens
-              </Button>
-            </div>
-          )}
-
-          {/* Burn Tokens */}
-          {activeTab === 'burn' && (
-            <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-              <h3 className="font-semibold text-base mb-1">
-                Burn Personal Tokens
-              </h3>
-              {!activePersonalWallet && (
-                <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
-                  <span>
-                    No personal wallet registered. Deploy your token first or
-                    specify a custom wallet address.
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => setActiveTab('deploy')}
-                    className="shrink-0 text-xs"
-                  >
-                    Deploy Token
-                  </Button>
-                </div>
-              )}
-              <div className="space-y-2">
-                <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">
-                      Minter Contract:
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-foreground font-medium">
-                        {formatContractAddress(activeMinter) || 'None'}
-                      </span>
-                      {activeMinter && (
-                        <CopyButton
-                          address={activeMinter}
-                          type="contract"
-                          size="xs"
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-[11px]">
-                      Personal Wallet:
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-foreground font-medium">
-                        {formatContractAddress(activePersonalWallet) || 'None'}
-                      </span>
-                      {activePersonalWallet && (
-                        <CopyButton
-                          address={activePersonalWallet}
-                          type="contract"
-                          size="xs"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-foreground block mb-1">
-                    Amount to Burn
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Amount to Burn"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="personal-burn-amount"
-                  />
-                </div>
-              </div>
-
-              {/* Payback vs Simple Burn Checkbox */}
-              <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 cursor-pointer select-none transition-colors">
-                <input
-                  type="checkbox"
-                  checked={isPayback}
-                  onChange={(e) => setIsPayback(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary"
-                  data-testid="personal-burn-payback-checkbox"
-                />
-                <div className="space-y-0.5 text-xs">
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    Burn for FI Token Payback
-                    <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                      Recommended
-                    </span>
-                  </span>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Sends your wallet address with the burn request to trigger
-                    an automatic FI token payback from the issuer's account
-                    (requires credit maturity). Uncheck for a simple burn
-                    without payback.
-                  </p>
-                </div>
-              </label>
-
-              <Button
-                onClick={() => burner.burn()}
-                disabled={!canOperate || burner.isDisabled}
-                loading={burner.isSending}
-                fullWidth
-                data-testid="personal-burn-submit"
-              >
-                {isPayback ? 'Burn & Request Payback' : 'Burn Tokens'}
               </Button>
             </div>
           )}

@@ -261,6 +261,7 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   state.brotherhood?.brotherhoodByAddress || {},
                 pendingDeferredByAddress:
                   state.brotherhood?.pendingDeferredByAddress || {},
+                watchedLocations: state.brotherhood?.watchedLocations || [],
               },
               preferences: {
                 animationLevel: state.preferences?.animationLevel,
@@ -358,6 +359,8 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     persisted?.brotherhood?.brotherhoodByAddress || {},
                   pendingDeferredByAddress:
                     persisted?.brotherhood?.pendingDeferredByAddress || {},
+                  watchedLocations:
+                    persisted?.brotherhood?.watchedLocations || [],
                 },
                 preferences: {
                   ...currentState.preferences,

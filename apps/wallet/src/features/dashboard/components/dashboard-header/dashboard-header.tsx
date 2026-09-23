@@ -6,12 +6,18 @@
  *
  */
 
-import React, { useState } from 'react';
-import { Moon, Sun, Sparkles } from 'lucide-react';
-import { useTonConnect } from '@demo/wallet-core';
+import React, { useState, useMemo } from 'react';
+import {
+  Moon,
+  Sun,
+  Sparkles,
+  Wallet as WalletIcon,
+  ChevronDown,
+} from 'lucide-react';
+import { useTonConnect, useWallet } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 
-import { SettingsDropdown } from '@/features/settings';
+import { SettingsDropdown, SettingsWalletsModal } from '@/features/settings';
 import { NotificationBell } from '@/features/notifications';
 import { ConnectDappModal } from '@/features/ton-connect';
 import { ScanIcon } from '@/core/components/ui/icons';
@@ -21,6 +27,13 @@ import { SyncStatusButton } from '../sync-status-button';
 
 export const DashboardHeader: React.FC = () => {
   const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const [isManageWalletsOpen, setIsManageWalletsOpen] = useState(false);
+
+  const { savedWallets, activeWalletId } = useWallet();
+  const activeWallet = useMemo(
+    () => savedWallets.find((w) => w.id === activeWalletId) || savedWallets[0],
+    [savedWallets, activeWalletId],
+  );
 
   const { handleTonConnectUrl } = useTonConnect();
   const { resolvedTheme, toggleTheme } = useTheme();
@@ -40,6 +53,21 @@ export const DashboardHeader: React.FC = () => {
       </button>
 
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsManageWalletsOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/80 hover:bg-secondary border border-border/80 active:scale-95 transition-all shadow-2xs cursor-pointer group"
+          aria-label="Manage Wallets"
+          title="Click to manage or switch wallets"
+          data-testid="header-wallet-switcher"
+        >
+          <WalletIcon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-bold text-foreground tracking-tight max-w-28 sm:max-w-36 truncate">
+            {activeWallet?.name || 'My Wallet'}
+          </span>
+          <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+        </button>
+
         <NetworkIndicator />
         <SyncStatusButton />
       </div>
@@ -68,6 +96,11 @@ export const DashboardHeader: React.FC = () => {
       <ConnectDappModal
         isOpen={isConnectOpen}
         onClose={() => setIsConnectOpen(false)}
+      />
+
+      <SettingsWalletsModal
+        isOpen={isManageWalletsOpen}
+        onClose={() => setIsManageWalletsOpen(false)}
       />
     </header>
   );

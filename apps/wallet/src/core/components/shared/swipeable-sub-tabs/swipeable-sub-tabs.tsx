@@ -87,6 +87,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   }, [onBoundaryNext, pathname, navigate]);
 
   const onTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
     const target = e.target as HTMLElement | null;
     if (
       target?.closest('[data-swipe-ignore="true"]') ||
@@ -108,6 +109,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
     if (
       isIgnoredRef.current ||
       startXRef.current === null ||
@@ -138,7 +140,8 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     }
   };
 
-  const onTouchEnd = () => {
+  const onTouchEnd = (e?: React.TouchEvent) => {
+    e?.stopPropagation();
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
@@ -190,7 +193,9 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
   return (
     <div
-      className={`swipeable-sub-tabs-container touch-pan-y flex flex-col flex-1 w-full min-h-[calc(100vh-180px)] ${className}`}
+      className={`swipeable-sub-tabs-container touch-pan-y flex flex-col flex-1 w-full ${
+        className.includes('min-h') ? '' : 'min-h-[calc(100vh-180px)]'
+      } ${className}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}

@@ -11,6 +11,7 @@ import { User, Users, Check, AlertCircle } from 'lucide-react';
 import { Input } from '@/core/components/ui/input';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '../../lib/contact-storage';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 
 export type SenderMode = 'self' | 'other';
 
@@ -42,21 +43,28 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   const { network, formatWalletAddress } = useFormatAddress();
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Suggestions from localStorage matching granterInput
+  const contacts = useContactBookStore((state) =>
+    state.getContactsList(network),
+  );
+
+  // Suggestions from Contact Book matching granterInput
   const suggestions = useMemo(() => {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
-    try {
-      const raw = localStorage.getItem(`brotherhood_usernames_${network}`);
-      if (!raw) return [];
-      const mapping = JSON.parse(raw) as Record<string, string>;
-      const q = granterInput.trim().replace(/^@+/, '').toLowerCase();
-      return Object.entries(mapping)
-        .filter(([uname]) => (q ? uname.includes(q) : true))
-        .map(([uname, addr]) => ({ username: uname, address: addr }));
-    } catch {
-      return [];
+    const q = granterInput.trim().replace(/^@+/, '').toLowerCase();
+    const list: { username: string; address: string }[] = [];
+    for (const c of contacts) {
+      const name = c.customName || c.onChainUsername;
+      if (name) {
+        if (
+          !q ||
+          name.toLowerCase().includes(q) ||
+          c.address.toLowerCase().includes(q)
+        ) {
+          list.push({ username: name, address: c.address });
+        }
+      }
     }
-  }, [granterInput, network]);
+    return list;
+  }, [contacts, granterInput]);
 
   const resolvedGranterUsername = useMemo(() => {
     if (!resolvedGranterAddress) return null;

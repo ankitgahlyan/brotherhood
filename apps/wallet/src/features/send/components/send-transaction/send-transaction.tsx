@@ -161,9 +161,11 @@ export const SendTransaction: React.FC = () => {
   const resolvedGranterAddress = useMemo(() => {
     if (senderMode !== 'other') return null;
     const trimmed = granterInput.trim();
+    if (!trimmed) return null;
     if (isValidAddress(trimmed)) return trimmed;
-    if (trimmed.startsWith('@') || /^[a-zA-Z0-9_]{3,32}$/.test(trimmed)) {
-      return getCachedAddressByUsername(trimmed.replace(/^@+/, ''), network);
+    const cleanUsername = trimmed.replace(/^@+/, '');
+    if (cleanUsername.length > 0) {
+      return getCachedAddressByUsername(cleanUsername, network);
     }
     return null;
   }, [senderMode, granterInput, network]);

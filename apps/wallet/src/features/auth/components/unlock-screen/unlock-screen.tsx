@@ -62,12 +62,15 @@ export const UnlockScreen: React.FC = () => {
         err instanceof Error &&
         (err.name === 'NotAllowedError' ||
           err.name === 'AbortError' ||
-          err.name === 'SecurityError')
+          err.name === 'SecurityError' ||
+          err.message?.includes('cancelled'))
       ) {
-        setError('Biometric prompt was cancelled.');
+        // Silently let the user enter their passcode if auto-prompt is cancelled or not permitted
+        inputRef.current?.focus();
         return;
       }
       setError(err instanceof Error ? err.message : 'Biometric unlock failed');
+      inputRef.current?.focus();
     } finally {
       setIsBiometricLoading(false);
       setIsLoading(false);
@@ -82,15 +85,9 @@ export const UnlockScreen: React.FC = () => {
     navigate,
   ]);
 
-  // Auto-prompt biometrics only inside Telegram Mini App where native prompt is non-blocking.
-  // In Web browsers, WebAuthn strictly requires an explicit user gesture (button click).
+  // Auto-prompt biometrics on TWA and Web if supported and enabled
   useEffect(() => {
-    if (
-      isTelegramEnvironment() &&
-      isSupported &&
-      isEnabled &&
-      !autoPromptTriggered.current
-    ) {
+    if (isSupported && isEnabled && !autoPromptTriggered.current) {
       autoPromptTriggered.current = true;
       void handleBiometricUnlock();
     } else if (!isEnabled) {

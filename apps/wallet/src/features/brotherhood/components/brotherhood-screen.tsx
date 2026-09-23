@@ -43,7 +43,6 @@ import {
   type MemberProfileInfo,
 } from '../hooks/use-member-profiles';
 import { useLoanRequirement } from '../hooks/use-loan-requirement';
-import { useFiBurn } from '../hooks/use-fi-burn';
 import { useWeeklyClaim } from '../hooks/use-weekly-claim';
 import { usePayEmi } from '../hooks/use-pay-emi';
 import { useInviteMember } from '../hooks/use-invite-member';
@@ -71,7 +70,6 @@ import { SyncStatusButton } from '@/features/dashboard/components/sync-status-bu
 type Tab =
   | 'account'
   | 'network'
-  | 'burn'
   | 'claim'
   | 'invite'
   | 'vote'
@@ -129,7 +127,6 @@ export const BrotherhoodScreen: React.FC = () => {
     const validTabs: Tab[] = [
       'account',
       'network',
-      'burn',
       'claim',
       'invite',
       'vote',
@@ -156,7 +153,6 @@ export const BrotherhoodScreen: React.FC = () => {
     const validTabs: Tab[] = [
       'account',
       'network',
-      'burn',
       'claim',
       'invite',
       'vote',
@@ -384,15 +380,6 @@ export const BrotherhoodScreen: React.FC = () => {
     },
   });
 
-  const burn = useFiBurn({
-    wallet: currentWallet,
-    walletKit,
-    walletAddress: address ?? null,
-    amount,
-    network,
-    accountData: account.data,
-  });
-
   const claim = useWeeklyClaim({
     wallet: currentWallet,
     walletKit,
@@ -578,7 +565,6 @@ export const BrotherhoodScreen: React.FC = () => {
         tabs={[
           'account',
           'network',
-          'burn',
           'claim',
           'invite',
           'vote',
@@ -626,7 +612,6 @@ export const BrotherhoodScreen: React.FC = () => {
               [
                 'account',
                 'network',
-                'burn',
                 'claim',
                 'invite',
                 'vote',
@@ -933,49 +918,6 @@ export const BrotherhoodScreen: React.FC = () => {
               }
             }}
           />
-        )}
-
-        {/* Burn FI */}
-        {activeTab === 'burn' && (
-          <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            <h3 className="font-semibold text-base mb-1">Burn FI Tokens</h3>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Available Balance:</span>
-              <span className="font-semibold text-foreground">
-                {formatFi(account.data?.jettonBalance)} FI
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Amount to Burn (FI)
-              </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.0"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="brotherhood-burn-amount"
-              />
-            </div>
-
-            {burn.validationError && (
-              <p className="text-xs text-rose-500 font-medium">
-                {burn.validationError}
-              </p>
-            )}
-
-            <TxButton
-              onAction={() => burn.send()}
-              disabled={burn.isDisabled}
-              loading={burn.isSending}
-              fullWidth
-              testId="brotherhood-burn-submit"
-            >
-              Burn FI
-            </TxButton>
-          </div>
         )}
 
         {/* Weekly Claim & Monthly Due (EMI) */}
@@ -2501,246 +2443,257 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Allowances */}
         {activeTab === 'allowance' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            {/* Sub-tabs header */}
-            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setAllowanceSubTab('active')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  allowanceSubTab === 'active'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-allowance-subtab-active"
-              >
-                Active Permissions ({account.data?.allowances.length ?? 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAllowanceSubTab('grant')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  allowanceSubTab === 'grant'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-allowance-subtab-grant"
-              >
-                Grant Allowance
-              </button>
-              <button
-                type="button"
-                onClick={() => setAllowanceSubTab('spend')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  allowanceSubTab === 'spend'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-allowance-subtab-spend"
-              >
-                Spend Allowance
-              </button>
-            </div>
-
-            {/* Active Allowances List Sub-Tab */}
-            {allowanceSubTab === 'active' && (
-              <div className="space-y-3 pt-1">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">
-                      Granted Spending Permissions
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Accounts authorized to spend FI tokens from your wallet
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setAllowanceSubTab('grant')}
-                    className="text-xs"
+            <SwipeableSubTabs
+              tabs={['active', 'grant', 'spend']}
+              activeTab={allowanceSubTab}
+              onTabChange={(tab) => setAllowanceSubTab(tab as any)}
+              loop={false}
+              className="min-h-0"
+              onBoundaryPrev={() => setActiveTab('credit')}
+              onBoundaryNext={() => setActiveTab('gold')}
+              stickyTabBar={
+                <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAllowanceSubTab('active')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      allowanceSubTab === 'active'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-allowance-subtab-active"
                   >
-                    + Grant New
-                  </Button>
+                    Active Permissions ({account.data?.allowances.length ?? 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllowanceSubTab('grant')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      allowanceSubTab === 'grant'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-allowance-subtab-grant"
+                  >
+                    Grant Allowance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllowanceSubTab('spend')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      allowanceSubTab === 'spend'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-allowance-subtab-spend"
+                  >
+                    Spend Allowance
+                  </button>
                 </div>
-
-                {account.data && account.data.allowances.length > 0 ? (
-                  <div className="space-y-2">
-                    {account.data.allowances.map((entry) => (
-                      <div
-                        key={entry.addressString}
-                        className="p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-foreground font-medium">
-                              {formatShortWallet(entry.addressString)}
-                            </span>
-                            <CopyButton
-                              address={entry.addressString}
-                              type="wallet"
-                              size="xs"
-                            />
-                          </div>
-                          <span className="text-[11px] text-muted-foreground block">
-                            Spending Limit:{' '}
-                            <strong className="text-foreground">
-                              {formatFi(entry.amount)} FI
-                            </strong>
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="text-xs h-7"
-                            onClick={() => {
-                              setGrantee(entry.addressString);
-                              setAmount(formatFi(entry.amount));
-                              setAllowanceSubTab('grant');
-                            }}
-                          >
-                            Adjust
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            className="text-xs h-7"
-                            onClick={() => {
-                              setGrantee(entry.addressString);
-                              setAmount('0');
-                              setAllowanceSubTab('grant');
-                            }}
-                          >
-                            Revoke
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-8 px-4 text-center space-y-3 bg-secondary/20 border border-border/50 rounded-2xl">
-                    <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg">
-                      🛡️
-                    </div>
+              }
+            >
+              {/* Active Allowances List Sub-Tab */}
+              {allowanceSubTab === 'active' && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex justify-between items-center">
                     <div>
                       <h4 className="text-sm font-semibold text-foreground">
-                        No Active Allowances
+                        Granted Spending Permissions
                       </h4>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                        You have not granted spending permissions to any account
-                        yet.
+                      <p className="text-xs text-muted-foreground">
+                        Accounts authorized to spend FI tokens from your wallet
                       </p>
                     </div>
                     <Button
-                      variant="primary"
                       size="sm"
+                      variant="secondary"
                       onClick={() => setAllowanceSubTab('grant')}
                       className="text-xs"
                     >
-                      Grant First Allowance
+                      + Grant New
                     </Button>
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Grant Allowance Sub-Tab */}
-            {allowanceSubTab === 'grant' && (
-              <div className="space-y-3 pt-1">
-                <div>
-                  <h3 className="font-semibold text-base">Grant Allowance</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Authorize an account to spend up to a maximum amount of FI
-                    from your wallet. Setting amount to 0 revokes the allowance.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <InputScan
-                    value={grantee}
-                    onChange={setGrantee}
-                    placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                    data-testid="brotherhood-grantee-address"
-                    tokenContext={FI_TOKEN_CONTEXT}
-                  />
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Allowance Amount (FI)"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="brotherhood-allowance-amount"
-                  />
-
-                  {setAllowance.validationError && (
-                    <p className="text-xs text-rose-500 font-medium">
-                      {setAllowance.validationError}
-                    </p>
+                  {account.data && account.data.allowances.length > 0 ? (
+                    <div className="space-y-2">
+                      {account.data.allowances.map((entry) => (
+                        <div
+                          key={entry.addressString}
+                          className="p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs flex justify-between items-center"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-foreground font-medium">
+                                {formatShortWallet(entry.addressString)}
+                              </span>
+                              <CopyButton
+                                address={entry.addressString}
+                                type="wallet"
+                                size="xs"
+                              />
+                            </div>
+                            <span className="text-[11px] text-muted-foreground block">
+                              Spending Limit:{' '}
+                              <strong className="text-foreground">
+                                {formatFi(entry.amount)} FI
+                              </strong>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="text-xs h-7"
+                              onClick={() => {
+                                setGrantee(entry.addressString);
+                                setAmount(formatFi(entry.amount));
+                                setAllowanceSubTab('grant');
+                              }}
+                            >
+                              Adjust
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="text-xs h-7"
+                              onClick={() => {
+                                setGrantee(entry.addressString);
+                                setAmount('0');
+                                setAllowanceSubTab('grant');
+                              }}
+                            >
+                              Revoke
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 px-4 text-center space-y-3 bg-secondary/20 border border-border/50 rounded-2xl">
+                      <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg">
+                        🛡️
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground">
+                          No Active Allowances
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                          You have not granted spending permissions to any
+                          account yet.
+                        </p>
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setAllowanceSubTab('grant')}
+                        className="text-xs"
+                      >
+                        Grant First Allowance
+                      </Button>
+                    </div>
                   )}
-
-                  <TxButton
-                    onAction={() => setAllowance.send()}
-                    disabled={setAllowance.isDisabled}
-                    loading={setAllowance.isSending}
-                    fullWidth
-                    testId="brotherhood-grant-allowance-submit"
-                  >
-                    Grant Allowance
-                  </TxButton>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Spend Allowance Sub-Tab */}
-            {allowanceSubTab === 'spend' && (
-              <div className="space-y-3 pt-1">
-                <div>
-                  <h3 className="font-semibold text-base">Spend Allowance</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Spend FI tokens authorized to you by a granter account.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <InputScan
-                    value={granter}
-                    onChange={setGranter}
-                    placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                    data-testid="brotherhood-granter-address"
-                    tokenContext={FI_TOKEN_CONTEXT}
-                  />
-                  <InputScan
-                    value={recipient}
-                    onChange={setRecipient}
-                    placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                    data-testid="brotherhood-spend-receiver"
-                    tokenContext={FI_TOKEN_CONTEXT}
-                  />
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Amount to Spend (FI)"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="brotherhood-spend-amount"
-                  />
-
-                  {spendAllowance.validationError && (
-                    <p className="text-xs text-rose-500 font-medium">
-                      {spendAllowance.validationError}
+              {/* Grant Allowance Sub-Tab */}
+              {allowanceSubTab === 'grant' && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <h3 className="font-semibold text-base">Grant Allowance</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Authorize an account to spend up to a maximum amount of FI
+                      from your wallet. Setting amount to 0 revokes the
+                      allowance.
                     </p>
-                  )}
+                  </div>
+                  <div className="space-y-2">
+                    <InputScan
+                      value={grantee}
+                      onChange={setGrantee}
+                      placeholder={`Grantee Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                      data-testid="brotherhood-grantee-address"
+                      tokenContext={FI_TOKEN_CONTEXT}
+                    />
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Allowance Amount (FI)"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="brotherhood-allowance-amount"
+                    />
 
-                  <TxButton
-                    onAction={() => spendAllowance.send()}
-                    disabled={spendAllowance.isDisabled}
-                    loading={spendAllowance.isSending}
-                    fullWidth
-                    testId="brotherhood-spend-allowance-submit"
-                  >
-                    Spend Allowance
-                  </TxButton>
+                    {setAllowance.validationError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {setAllowance.validationError}
+                      </p>
+                    )}
+
+                    <TxButton
+                      onAction={() => setAllowance.send()}
+                      disabled={setAllowance.isDisabled}
+                      loading={setAllowance.isSending}
+                      fullWidth
+                      testId="brotherhood-grant-allowance-submit"
+                    >
+                      Grant Allowance
+                    </TxButton>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Spend Allowance Sub-Tab */}
+              {allowanceSubTab === 'spend' && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <h3 className="font-semibold text-base">Spend Allowance</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Spend FI tokens authorized to you by a granter account.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <InputScan
+                      value={granter}
+                      onChange={setGranter}
+                      placeholder={`Granter Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                      data-testid="brotherhood-granter-address"
+                      tokenContext={FI_TOKEN_CONTEXT}
+                    />
+                    <InputScan
+                      value={recipient}
+                      onChange={setRecipient}
+                      placeholder={`Receiver Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                      data-testid="brotherhood-spend-receiver"
+                      tokenContext={FI_TOKEN_CONTEXT}
+                    />
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Amount to Spend (FI)"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="brotherhood-spend-amount"
+                    />
+
+                    {spendAllowance.validationError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {spendAllowance.validationError}
+                      </p>
+                    )}
+
+                    <TxButton
+                      onAction={() => spendAllowance.send()}
+                      disabled={spendAllowance.isDisabled}
+                      loading={spendAllowance.isSending}
+                      fullWidth
+                      testId="brotherhood-spend-allowance-submit"
+                    >
+                      Spend Allowance
+                    </TxButton>
+                  </div>
+                </div>
+              )}
+            </SwipeableSubTabs>
           </div>
         )}
 

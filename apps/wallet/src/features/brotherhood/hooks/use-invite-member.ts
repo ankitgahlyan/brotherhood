@@ -16,6 +16,7 @@ import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { cleanTelegramUsername } from '@/core/utils/telegram';
 import { useNowSeconds } from '@/core/hooks';
+import { saveUsernameAddressMapping } from '@/core/lib/contact-storage';
 
 export interface UseInviteMemberParams {
   wallet: Wallet | null | undefined;
@@ -132,9 +133,10 @@ export function useInviteMember({
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const inviteeAddr = Address.parse(invitee.trim());
 
+    const cleanUser = cleanTelegramUsername(username);
     const payload = buildInviteBody({
       transferRecipient: inviteeAddr,
-      username: cleanTelegramUsername(username),
+      username: cleanUser,
       h3Cell: h3Cell.trim(),
       country,
     });
@@ -142,6 +144,14 @@ export function useInviteMember({
     await sendTx([
       { toAddress: fiWalletAddr.toString(), amount: GAS.INVITE, payload },
     ]);
+
+    if (cleanUser && inviteeAddr) {
+      try {
+        saveUsernameAddressMapping(cleanUser, inviteeAddr.toString(), network);
+      } catch {
+        /* ignore storage error */
+      }
+    }
   }, [walletAddress, invitee, username, h3Cell, country, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
