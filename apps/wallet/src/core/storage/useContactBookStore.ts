@@ -76,6 +76,11 @@ export const normalizeContactName = (raw: string): string => {
   return raw.trim().replace(/^@+/, '').toLowerCase();
 };
 
+export const EMPTY_CONTACTS_MAP: Readonly<Record<string, ContactItem>> =
+  Object.freeze({});
+export const EMPTY_RECENT_ARRAY: Readonly<RecentTransactedMember[]> =
+  Object.freeze([]);
+
 const DEFAULT_NETWORK = 'testnet';
 
 /**

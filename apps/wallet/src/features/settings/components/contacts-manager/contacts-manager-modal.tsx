@@ -22,6 +22,7 @@ import { isValidAddress } from '@ton/walletkit';
 import { useWallet } from '@demo/wallet-core';
 import {
   useContactBookStore,
+  EMPTY_CONTACTS_MAP,
   type ContactItem,
 } from '@/core/storage/useContactBookStore';
 import { useFormatAddress } from '@/core/utils/formatters';
@@ -57,7 +58,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
   const { formatWalletAddress } = useFormatAddress();
 
   const contactsMap = useContactBookStore(
-    (state) => state.contactsByNetwork[network] || {},
+    (state) => state.contactsByNetwork[network] || EMPTY_CONTACTS_MAP,
   );
   const setCustomName = useContactBookStore((state) => state.setCustomName);
   const deleteContact = useContactBookStore((state) => state.deleteContact);

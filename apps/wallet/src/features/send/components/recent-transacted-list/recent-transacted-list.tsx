@@ -8,7 +8,10 @@
 import React, { useState } from 'react';
 import { Copy, Trash2, Check, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { useContactBookStore } from '@/core/storage/useContactBookStore';
+import {
+  useContactBookStore,
+  EMPTY_RECENT_ARRAY,
+} from '@/core/storage/useContactBookStore';
 import { EditableAddressName } from '@/core/components/ui/editable-address-name';
 
 interface RecentTransactedListProps {
@@ -21,7 +24,7 @@ export const RecentTransactedList: React.FC<RecentTransactedListProps> = ({
   onSelectMember,
 }) => {
   const recent = useContactBookStore(
-    (state) => state.recentByNetwork[network] || [],
+    (state) => state.recentByNetwork[network] || EMPTY_RECENT_ARRAY,
   );
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
