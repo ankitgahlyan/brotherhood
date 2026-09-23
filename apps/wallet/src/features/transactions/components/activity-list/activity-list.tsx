@@ -7,9 +7,11 @@
  */
 
 import React, { useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DateHeader, getDayStartSeconds } from '../date-header';
 import { TransactionRow } from '../transaction-row';
 import type { TransactionRowModel } from '../../utils/map-transaction-row';
+import { useAnimationSettings } from '@/core/motion/motion-provider';
 
 export interface ActivityListProps {
   rows: TransactionRowModel[];
@@ -26,6 +28,8 @@ export const ActivityList: React.FC<ActivityListProps> = ({
   rows,
   isSyncing = false,
 }) => {
+  const { isReduced, isRich } = useAnimationSettings();
+
   const dayGroups = useMemo<DayGroup[]>(() => {
     if (!rows || rows.length === 0) return [];
 
@@ -57,9 +61,20 @@ export const ActivityList: React.FC<ActivityListProps> = ({
             isUpdating={groupIndex === 0 && isSyncing}
           />
           <div className="bg-card/60 backdrop-blur-xs rounded-2xl border border-border/60 divide-y divide-border/40 overflow-hidden shadow-2xs">
-            {group.rows.map((row) => (
-              <TransactionRow key={row.id} {...row} />
-            ))}
+            <AnimatePresence initial={false}>
+              {group.rows.map((row) => (
+                <motion.div
+                  key={row.id}
+                  layout={isRich ? 'position' : undefined}
+                  initial={isReduced ? false : { opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={isReduced ? undefined : { opacity: 0 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  <TransactionRow {...row} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
       ))}

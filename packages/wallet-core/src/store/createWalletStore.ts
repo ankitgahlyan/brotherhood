@@ -26,6 +26,7 @@ import { createSwapSlice } from './slices/swapSlice';
 import { createStakingSlice } from './slices/stakingSlice';
 import { createGaslessSlice } from './slices/gaslessSlice';
 import { createBrotherhoodSlice } from './slices/brotherhoodSlice';
+import { createPreferencesSlice } from './slices/preferencesSlice';
 import type { AppState } from '../types/store';
 import type { StorageAdapter } from '../adapters/storage/types';
 import type { WalletKitConfig } from '../types/wallet';
@@ -169,6 +170,9 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             ...createBrotherhoodSlice(...a),
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ...createPreferencesSlice(...a),
           })) as unknown as any,
           {
             name: 'bro-store',
@@ -258,6 +262,11 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   state.brotherhood?.brotherhoodByAddress || {},
                 pendingDeferredByAddress:
                   state.brotherhood?.pendingDeferredByAddress || {},
+              },
+              preferences: {
+                animationLevel: state.preferences?.animationLevel,
+                isCustomAnimationLevel:
+                  state.preferences?.isCustomAnimationLevel,
               },
             }),
             merge: (persistedState, currentState) => {
@@ -351,6 +360,13 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     persisted?.brotherhood?.brotherhoodByAddress || {},
                   pendingDeferredByAddress:
                     persisted?.brotherhood?.pendingDeferredByAddress || {},
+                },
+                preferences: {
+                  ...currentState.preferences,
+                  ...persisted?.preferences,
+                  animationLevel:
+                    persisted?.preferences?.animationLevel ||
+                    currentState.preferences.animationLevel,
                 },
               };
 

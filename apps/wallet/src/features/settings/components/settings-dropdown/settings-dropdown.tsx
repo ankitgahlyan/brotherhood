@@ -34,6 +34,7 @@ import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
+import { AnimationSettingsCard } from '../animation-settings-card';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -396,7 +397,10 @@ export const SettingsDropdown: React.FC = () => {
               </div>
             </div>
 
-            {/* Section 2: Security & Preferences */}
+            {/* Section 2: Animations & Motion */}
+            <AnimationSettingsCard />
+
+            {/* Section 3: Security & Preferences */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
                 Security & Preferences

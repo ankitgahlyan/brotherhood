@@ -75,177 +75,180 @@ export const DaoScreen: React.FC = () => {
           />
         }
       >
-        <div className="space-y-4">
-          <ActivationBanner />
+        <SwipeableSubTabs
+          tabs={['proposals', 'submit', 'vote']}
+          activeTab={activeTab}
+          onTabChange={(t) => setActiveTab(t as Tab)}
+          pinnedHeader={
+            <div className="space-y-4 mb-2">
+              <ActivationBanner />
 
-          {/* Global DAO Contract Address Input */}
-          <div className="bg-card text-card-foreground p-3 border border-border rounded-2xl shadow-sm text-xs space-y-1">
-            <div className="flex justify-between items-center">
-              <label className="font-semibold text-foreground">
-                Target DAO Contract Address
-              </label>
-              {daoAddrInput && (
-                <CopyButton address={daoAddrInput} type="contract" size="xs" />
+              {/* Global DAO Contract Address Input */}
+              <div className="bg-card text-card-foreground p-3 border border-border rounded-2xl shadow-sm text-xs space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="font-semibold text-foreground">
+                    Target DAO Contract Address
+                  </label>
+                  {daoAddrInput && (
+                    <CopyButton
+                      address={daoAddrInput}
+                      type="contract"
+                      size="xs"
+                    />
+                  )}
+                </div>
+                <InputScan
+                  value={daoAddrInput}
+                  onChange={setDaoAddrInput}
+                  placeholder={`DAO Address (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`}
+                  data-testid="dao-address-input"
+                />
+              </div>
+            </div>
+          }
+          stickyTabBar={
+            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+              {(['proposals', 'submit', 'vote'] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-1.5 rounded-lg capitalize transition-colors ${
+                    activeTab === tab
+                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  }`}
+                  data-testid={`dao-tab-${tab}`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {/* Proposals List */}
+          {activeTab === 'proposals' && (
+            <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold text-base">Active Proposals</h3>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => proposals.refetch()}
+                >
+                  Refresh
+                </Button>
+              </div>
+
+              {proposals.isLoading ? (
+                <p className="text-muted-foreground text-xs">
+                  Loading proposals from DAO contract…
+                </p>
+              ) : proposals.proposals.length > 0 ? (
+                <div className="space-y-2">
+                  {proposals.proposals.map((p) => (
+                    <div
+                      key={p.id}
+                      className="p-3 border border-border/60 rounded-xl bg-secondary/50 text-xs space-y-1"
+                    >
+                      <div className="flex justify-between font-semibold text-foreground">
+                        <span>Proposal #{p.id}</span>
+                        <span>{p.executed ? 'Executed' : 'Active'}</span>
+                      </div>
+                      <p className="text-muted-foreground break-all">
+                        Proposer: {formatWalletAddress(p.proposer, true)}
+                      </p>
+                      <div className="flex gap-4 pt-1 font-medium">
+                        <span className="text-emerald-500 font-semibold">
+                          Yes: {p.yesVotes.toString()}
+                        </span>
+                        <span className="text-rose-500 font-semibold">
+                          No: {p.noVotes.toString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  {daoAddrInput
+                    ? 'No proposals found in this DAO.'
+                    : 'Enter a DAO contract address above.'}
+                </p>
               )}
             </div>
-            <InputScan
-              value={daoAddrInput}
-              onChange={setDaoAddrInput}
-              placeholder={`DAO Address (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`}
-              data-testid="dao-address-input"
-            />
-          </div>
+          )}
 
-          {/* Tabs */}
-          <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-            {(['proposals', 'submit', 'vote'] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-1.5 rounded-lg capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid={`dao-tab-${tab}`}
+          {/* Submit Proposal */}
+          {activeTab === 'submit' && (
+            <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <h3 className="font-semibold text-base mb-1">
+                Submit Governance Proposal
+              </h3>
+              <p className="text-xs text-muted-foreground mb-2">
+                Submitting a proposal requires target message payload and DAO
+                contract address.
+              </p>
+              <Button
+                onClick={() => submitter.submit()}
+                disabled={!canOperate || submitter.isDisabled}
+                loading={submitter.isSending}
+                fullWidth
+                data-testid="dao-submit-proposal-btn"
               >
-                {tab}
-              </button>
-            ))}
-          </div>
+                Submit Proposal
+              </Button>
+            </div>
+          )}
 
-          <SwipeableSubTabs
-            tabs={['proposals', 'submit', 'vote']}
-            activeTab={activeTab}
-            onTabChange={(t) => setActiveTab(t as Tab)}
-          >
-            {/* Proposals List */}
-            {activeTab === 'proposals' && (
-              <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-base">Active Proposals</h3>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => proposals.refetch()}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-
-                {proposals.isLoading ? (
-                  <p className="text-muted-foreground text-xs">
-                    Loading proposals from DAO contract…
-                  </p>
-                ) : proposals.proposals.length > 0 ? (
-                  <div className="space-y-2">
-                    {proposals.proposals.map((p) => (
-                      <div
-                        key={p.id}
-                        className="p-3 border border-border/60 rounded-xl bg-secondary/50 text-xs space-y-1"
-                      >
-                        <div className="flex justify-between font-semibold text-foreground">
-                          <span>Proposal #{p.id}</span>
-                          <span>{p.executed ? 'Executed' : 'Active'}</span>
-                        </div>
-                        <p className="text-muted-foreground break-all">
-                          Proposer: {formatWalletAddress(p.proposer, true)}
-                        </p>
-                        <div className="flex gap-4 pt-1 font-medium">
-                          <span className="text-emerald-500 font-semibold">
-                            Yes: {p.yesVotes.toString()}
-                          </span>
-                          <span className="text-rose-500 font-semibold">
-                            No: {p.noVotes.toString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    {daoAddrInput
-                      ? 'No proposals found in this DAO.'
-                      : 'Enter a DAO contract address above.'}
-                  </p>
-                )}
+          {/* Vote on Proposal */}
+          {activeTab === 'vote' && (
+            <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
+              <h3 className="font-semibold text-base mb-1">Vote on Proposal</h3>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Proposal ID
+                </label>
+                <input
+                  type="number"
+                  value={voteProposalId}
+                  onChange={(e) => setVoteProposalId(e.target.value)}
+                  placeholder="0"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="dao-vote-proposal-id"
+                />
               </div>
-            )}
-
-            {/* Submit Proposal */}
-            {activeTab === 'submit' && (
-              <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-                <h3 className="font-semibold text-base mb-1">
-                  Submit Governance Proposal
-                </h3>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Submitting a proposal requires target message payload and DAO
-                  contract address.
-                </p>
-                <Button
-                  onClick={() => submitter.submit()}
-                  disabled={!canOperate || submitter.isDisabled}
-                  loading={submitter.isSending}
-                  fullWidth
-                  data-testid="dao-submit-proposal-btn"
-                >
-                  Submit Proposal
-                </Button>
-              </div>
-            )}
-
-            {/* Vote on Proposal */}
-            {activeTab === 'vote' && (
-              <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-                <h3 className="font-semibold text-base mb-1">
-                  Vote on Proposal
-                </h3>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Proposal ID
-                  </label>
+              <div className="flex items-center gap-4 text-xs font-medium my-2">
+                <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
                   <input
-                    type="number"
-                    value={voteProposalId}
-                    onChange={(e) => setVoteProposalId(e.target.value)}
-                    placeholder="0"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-testid="dao-vote-proposal-id"
+                    type="radio"
+                    name="voteRadio"
+                    checked={voteYes}
+                    onChange={() => setVoteYes(true)}
                   />
-                </div>
-                <div className="flex items-center gap-4 text-xs font-medium my-2">
-                  <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
-                    <input
-                      type="radio"
-                      name="voteRadio"
-                      checked={voteYes}
-                      onChange={() => setVoteYes(true)}
-                    />
-                    Vote YES
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
-                    <input
-                      type="radio"
-                      name="voteRadio"
-                      checked={!voteYes}
-                      onChange={() => setVoteYes(false)}
-                    />
-                    Vote NO
-                  </label>
-                </div>
-                <Button
-                  onClick={() => voter.vote()}
-                  disabled={!canOperate || voter.isDisabled}
-                  loading={voter.isSending}
-                  fullWidth
-                  data-testid="dao-vote-submit-btn"
-                >
-                  Cast Vote
-                </Button>
+                  Vote YES
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
+                  <input
+                    type="radio"
+                    name="voteRadio"
+                    checked={!voteYes}
+                    onChange={() => setVoteYes(false)}
+                  />
+                  Vote NO
+                </label>
               </div>
-            )}
-          </SwipeableSubTabs>
-        </div>
+              <Button
+                onClick={() => voter.vote()}
+                disabled={!canOperate || voter.isDisabled}
+                loading={voter.isSending}
+                fullWidth
+                data-testid="dao-vote-submit-btn"
+              >
+                Cast Vote
+              </Button>
+            </div>
+          )}
+        </SwipeableSubTabs>
       </NewLayout>
     </MemberGuard>
   );

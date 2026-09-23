@@ -106,6 +106,9 @@ export const useWallet = () => {
       removeWallet: state.removeWallet,
       renameWallet: state.renameWallet,
       createLedgerWallet: state.createLedgerWallet,
+      addPendingTransaction: state.addPendingTransaction,
+      removePendingTransaction: state.removePendingTransaction,
+      clearPendingTransactions: state.clearPendingTransactions,
     })),
   );
 };
@@ -385,5 +388,19 @@ export const useBrotherhood = () => {
         removePendingDeferredPayment: state.removePendingDeferredPayment,
       };
     }),
+  );
+};
+
+/**
+ * Hook for user preferences and animation level
+ */
+export const usePreferences = () => {
+  return useWalletStore(
+    useShallow((state) => ({
+      animationLevel: state.preferences.animationLevel,
+      isCustomAnimationLevel: state.preferences.isCustomAnimationLevel,
+      setAnimationLevel: state.setAnimationLevel,
+      resetPreferences: state.resetPreferences,
+    })),
   );
 };

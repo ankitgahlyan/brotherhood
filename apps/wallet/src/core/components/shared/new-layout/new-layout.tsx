@@ -21,8 +21,8 @@ export const NewLayout: React.FC<NewLayoutProps> = ({
 
   return (
     <ScreenSwipeContainer>
-      <div className="min-h-screen bg-background text-foreground select-none pt-[var(--tg-safe-area-top,0px)] pb-[var(--tg-safe-area-bottom,0px)]">
-        <div className="max-w-md mx-auto">
+      <div className="min-h-screen bg-background text-foreground select-none pt-(--tg-safe-area-top,0px) pb-(--tg-safe-area-bottom,0px) flex flex-col">
+        <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
           <div
             className={`sticky top-0 z-40 bg-background/95 backdrop-blur-md transition-transform duration-300 ease-in-out ${
               isBarsVisible ? 'translate-y-0' : '-translate-y-full'
@@ -31,7 +31,11 @@ export const NewLayout: React.FC<NewLayoutProps> = ({
             {!hideUniversalHeader && <DashboardHeader />}
             {header}
           </div>
-          <main className={`px-4 ${hideBottomNav ? 'pb-6' : 'pb-24'}`}>
+          <main
+            className={`px-4 flex-1 flex flex-col ${
+              hideBottomNav ? 'pb-6' : 'pb-24'
+            }`}
+          >
             {children}
           </main>
           {!hideBottomNav && <BottomNav isVisible={isBarsVisible} />}

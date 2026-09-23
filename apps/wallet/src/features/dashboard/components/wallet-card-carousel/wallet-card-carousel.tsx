@@ -13,25 +13,28 @@ import {
   ChevronRight,
   Wallet as WalletIcon,
   ChevronDown,
+  Zap,
+  Loader2,
 } from 'lucide-react';
-import { useWallet, useJettons, useRates } from '@demo/wallet-core';
+import {
+  useWallet,
+  useWalletKit,
+  useJettons,
+  useRates,
+} from '@demo/wallet-core';
 
 import { useCountUp } from '@/core/hooks/use-count-up';
 import { assetUrl, findRate, toDecimal } from '@/core/utils';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { isFiJetton } from '@/features/jettons';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
+import { useToggleDeferredPayment } from '@/features/brotherhood/hooks/use-deferred-payment';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
 import { SettingsWalletsModal } from '@/features/settings';
 import { toast } from 'sonner';
 
 const fiFormat = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const usdFormat = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -47,8 +50,15 @@ const GRAM_DECIMALS = 9;
 const SWIPE_THRESHOLD_PX = 40;
 
 export const WalletCardCarousel: React.FC = () => {
-  const { savedWallets, activeWalletId, switchWallet, address, balance } =
-    useWallet();
+  const {
+    savedWallets,
+    activeWalletId,
+    switchWallet,
+    address,
+    balance,
+    currentWallet,
+  } = useWallet();
+  const walletKit = useWalletKit();
   const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
   const { userJettons } = useJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
@@ -60,6 +70,7 @@ export const WalletCardCarousel: React.FC = () => {
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isSwitchingAnim, setIsSwitchingAnim] = useState(false);
+  const [isTogglingDeferred, setIsTogglingDeferred] = useState(false);
 
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
@@ -71,6 +82,36 @@ export const WalletCardCarousel: React.FC = () => {
   }, [savedWallets, activeWalletId]);
 
   const activeWallet = savedWallets[currentIndex];
+  const network = activeWallet?.network ?? 'testnet';
+  const allowDeferred = Boolean(fiAccount.data?.allowDeferred);
+
+  const toggleDeferredHook = useToggleDeferredPayment({
+    wallet: currentWallet,
+    walletKit,
+    walletAddress: address ?? null,
+    enabled: !allowDeferred,
+    network,
+    accountData: fiAccount.data,
+  });
+
+  const handleToggleDeferred = useCallback(async () => {
+    if (toggleDeferredHook.isDisabled || isTogglingDeferred) return;
+    setIsTogglingDeferred(true);
+    try {
+      await toggleDeferredHook.send();
+      toast.success(
+        allowDeferred
+          ? 'Offline payments disabled'
+          : 'Offline payments enabled',
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to toggle offline payment',
+      );
+    } finally {
+      setIsTogglingDeferred(false);
+    }
+  }, [toggleDeferredHook, isTogglingDeferred, allowDeferred]);
 
   const ready = balance !== undefined || Boolean(fiAccount.data);
 
@@ -98,7 +139,7 @@ export const WalletCardCarousel: React.FC = () => {
     [userJettons],
   );
 
-  const hdAmount = useMemo(() => {
+  const _hdAmount = useMemo(() => {
     if (hdJetton) {
       return toDecimal(hdJetton.balance, hdJetton.decimalsNumber ?? 9);
     }
@@ -108,7 +149,7 @@ export const WalletCardCarousel: React.FC = () => {
     return 0;
   }, [hdJetton, personalBalance]);
 
-  const totalUsd = useMemo(() => {
+  const _totalUsd = useMemo(() => {
     if (!ready || ratesUpdated === 0) return 0;
 
     let total = 0;
@@ -219,7 +260,7 @@ export const WalletCardCarousel: React.FC = () => {
   return (
     <>
       <section
-        className="wallet-card-carousel relative flex flex-col items-center p-4 pt-3 pb-4 rounded-3xl bg-gradient-to-b from-card/90 via-card/70 to-card/90 border border-border/80 shadow-md backdrop-blur-xl select-none touch-pan-y transition-all overflow-hidden"
+        className="wallet-card-carousel relative flex flex-col items-center p-4 pt-3 pb-4 rounded-3xl bg-linear-to-b from-card/90 via-card/70 to-card/90 border border-border/80 shadow-md backdrop-blur-xl select-none touch-pan-y transition-all overflow-hidden"
         data-swipe-ignore="true"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -262,7 +303,7 @@ export const WalletCardCarousel: React.FC = () => {
             title="Click to manage or switch wallets"
           >
             <WalletIcon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-foreground tracking-tight max-w-[150px] truncate">
+            <span className="text-xs font-bold text-foreground tracking-tight max-w-37.5 truncate">
               {activeWallet?.name || 'My Wallet'}
             </span>
             <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -307,23 +348,23 @@ export const WalletCardCarousel: React.FC = () => {
                 <span className="text-3xl font-semibold text-muted-foreground">
                   {fracPart}
                 </span>
-                <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  FI
+                <span className="ml-2 text-2xl font-bold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  HD
                 </span>
               </div>
 
               <div className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                {totalUsd > 0 && (
+                {/* {totalUsd > 0 && (
                   <>
                     <span className="font-semibold text-foreground/80">
                       ≈ ${usdFormat.format(totalUsd)} USD
                     </span>
                     <span className="text-muted-foreground/50">•</span>
                   </>
-                )}
+                )} */}
                 <span>{tonDecimal.toFixed(2)} TON</span>
-                <span className="text-muted-foreground/50">•</span>
-                <span>{hdAmount.toFixed(2)} HD</span>
+                {/* <span className="text-muted-foreground/50">•</span>
+                <span>{hdAmount.toFixed(2)} HD</span> */}
               </div>
             </>
           ) : (
@@ -331,33 +372,64 @@ export const WalletCardCarousel: React.FC = () => {
           )}
 
           {address ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleCopy();
-              }}
-              className="mt-3 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/80 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
-              aria-label="Copy address"
-            >
-              <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
-                <img
-                  src={assetUrl('fi.svg')}
-                  alt="FI"
-                  className="w-full h-full"
-                />
-              </span>
-              <span className="text-xs font-semibold text-foreground">
-                {formatWalletAddress(address, true, 4)}
-              </span>
-              {copied ? (
-                <span className="text-emerald-500 flex items-center gap-1 text-xs font-semibold">
-                  Copied
+            <div className="mt-3 flex items-center gap-2 flex-wrap justify-center">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleCopy();
+                }}
+                className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/80 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
+                aria-label="Copy address"
+              >
+                <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
+                  <img
+                    src={assetUrl('fi.svg')}
+                    alt="FI"
+                    className="w-full h-full"
+                  />
                 </span>
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-              )}
-            </button>
+                <span className="text-xs font-semibold text-foreground">
+                  {formatWalletAddress(address, true, 4)}
+                </span>
+                {copied ? (
+                  <span className="text-emerald-500 flex items-center gap-1 text-xs font-semibold">
+                    Copied
+                  </span>
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled={toggleDeferredHook.isDisabled || isTogglingDeferred}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleToggleDeferred();
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  allowDeferred
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25'
+                    : 'bg-secondary/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
+                title="Toggle Offline (Deferred) Payment for this wallet"
+                aria-label="Toggle offline payment"
+              >
+                {isTogglingDeferred ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                ) : (
+                  <Zap
+                    className={`w-3.5 h-3.5 ${
+                      allowDeferred
+                        ? 'text-emerald-500 fill-emerald-500/30'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                )}
+                <span>Offline Pay: {allowDeferred ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
           ) : (
             <div className="mt-3 h-7 w-32 rounded-full bg-muted/60 animate-pulse" />
           )}

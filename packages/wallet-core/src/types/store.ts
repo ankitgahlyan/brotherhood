@@ -140,11 +140,14 @@ export interface WalletManagementSlice {
     associatedAddresses: string[],
   ) => void;
 
-  // WebSocket streaming actions
+  // WebSocket streaming & optimistic pending actions
   startWebSocketStreaming: () => Promise<void>;
   stopWebSocketStreaming: () => Promise<void>;
   updateWebSocketSubscription: () => Promise<void>;
   handleStreamingTransactions: (update: TransactionsUpdate) => void;
+  addPendingTransaction: (pendingTx: PendingTransaction) => void;
+  removePendingTransaction: (traceIdOrExternalHash: string) => void;
+  clearPendingTransactions: () => void;
 
   // Events-based history
   // addEvent: (event: unknown) => void;
@@ -449,6 +452,20 @@ export interface BrotherhoodSlice {
   ) => void;
 }
 
+export type AnimationLevel = 'none' | 'performance' | 'full';
+
+export interface PreferencesState {
+  animationLevel: AnimationLevel;
+  /** Whether the user explicitly overrode the detected default */
+  isCustomAnimationLevel: boolean;
+}
+
+export interface PreferencesSlice {
+  preferences: PreferencesState;
+  setAnimationLevel: (level: AnimationLevel) => void;
+  resetPreferences: () => void;
+}
+
 // Combined app state
 export interface AppState
   extends
@@ -462,9 +479,17 @@ export interface AppState
     SwapSlice,
     StakingSlice,
     GaslessSlice,
-    BrotherhoodSlice {
+    BrotherhoodSlice,
+    PreferencesSlice {
   isHydrated: boolean;
 }
+
+export type PreferencesSliceCreator = StateCreator<
+  AppState,
+  [['zustand/immer', never]],
+  [],
+  PreferencesSlice
+>;
 
 // Slice creator types
 export type AuthSliceCreator = StateCreator<AppState, [], [], AuthSlice>;

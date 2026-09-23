@@ -19,7 +19,11 @@ import { FloatingDevButton } from '@/features/developer/components/floating-dev-
 import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
 import { registerRouterBack } from '@/core/lib/back-stack';
 
+import { motion } from 'framer-motion';
+import { useAnimationSettings } from '@/core/motion/motion-provider';
+
 function RootComponent() {
+  const { isReduced } = useAnimationSettings();
   const isWalletKitInitialized = useWalletStore(
     (state) => state.walletCore.isWalletKitInitialized,
   );
@@ -116,7 +120,19 @@ function RootComponent() {
 
   return (
     <>
-      <Outlet />
+      {isReduced ? (
+        <Outlet />
+      ) : (
+        <motion.div
+          key={currentPath}
+          initial={{ opacity: 0.85 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.14, ease: 'easeOut' }}
+          className="contents"
+        >
+          <Outlet />
+        </motion.div>
+      )}
       <GlobalRequestModals />
       {!isTma && <PwaInstallBanner />}
       <FloatingDevButton />

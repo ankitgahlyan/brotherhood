@@ -45,6 +45,7 @@ export {
   useStaking,
   useGasless,
   useBrotherhood,
+  usePreferences,
 } from './hooks/useWalletStore';
 export {
   createBrotherhoodSlice,
@@ -53,6 +54,10 @@ export {
   EMPTY_RING,
   EMPTY_PENDING_DEFERRED,
 } from './store/slices/brotherhoodSlice';
+export {
+  createPreferencesSlice,
+  detectDefaultAnimationLevel,
+} from './store/slices/preferencesSlice';
 export type { PendingDeferredPayment } from './types/store';
 export {
   useFormattedTonBalance,
@@ -80,6 +85,9 @@ export type {
   GaslessQuoteRequest,
   BrotherhoodSlice,
   BrotherhoodMemberData,
+  AnimationLevel,
+  PreferencesSlice,
+  PreferencesState,
 } from './types/store';
 
 export type {

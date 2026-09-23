@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { useSettingsModal } from '@/core/lib/settings-modal-state';
 
@@ -21,8 +21,7 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
 
 const SUB_TAB_ROUTES = ['/brotherhood', '/personal-jetton', '/dao'];
 
-const SWIPE_THRESHOLD_PX = 55;
-const SWIPE_MIN_VELOCITY_RATIO = 1.3;
+const SWIPE_THRESHOLD_PX = 50;
 
 interface ScreenSwipeContainerProps {
   children: React.ReactNode;
@@ -35,8 +34,12 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const navigate = useNavigate();
   const [isSettingsOpen] = useSettingsModal();
 
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
+  const isHorizontalSwipeRef = useRef<boolean | null>(null);
   const isIgnoredRef = useRef(false);
 
   const isSubTabScreen = SUB_TAB_ROUTES.some((route) =>
@@ -76,9 +79,11 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     isIgnoredRef.current = false;
     startXRef.current = e.touches[0].clientX;
     startYRef.current = e.touches[0].clientY;
+    isHorizontalSwipeRef.current = null;
+    setIsDragging(true);
   };
 
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchMove = (e: React.TouchEvent) => {
     if (
       isIgnoredRef.current ||
       startXRef.current === null ||
@@ -87,40 +92,75 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
       return;
     }
 
-    const endX = e.changedTouches[0].clientX;
-    const endY = e.changedTouches[0].clientY;
-    const diffX = endX - startXRef.current;
-    const diffY = endY - startYRef.current;
+    const clientX = e.touches[0].clientX;
+    const clientY = e.touches[0].clientY;
+    const diffX = clientX - startXRef.current;
+    const diffY = clientY - startYRef.current;
 
-    startXRef.current = null;
-    startYRef.current = null;
-
-    // Check if horizontal swipe dominates vertical scroll
-    if (
-      Math.abs(diffX) > SWIPE_THRESHOLD_PX &&
-      Math.abs(diffX) > Math.abs(diffY) * SWIPE_MIN_VELOCITY_RATIO
-    ) {
-      const currentIdx = getActiveTabIndex();
-      if (currentIdx === -1) return;
-
-      const total = ECOSYSTEM_SWIPE_ROUTES.length;
-      if (diffX < 0) {
-        // Swipe left -> Next tab (endless loop)
-        const nextIdx = (currentIdx + 1) % total;
-        navigate(ECOSYSTEM_SWIPE_ROUTES[nextIdx]);
-      } else if (diffX > 0) {
-        // Swipe right -> Prev tab (endless loop)
-        const prevIdx = (currentIdx - 1 + total) % total;
-        navigate(ECOSYSTEM_SWIPE_ROUTES[prevIdx]);
+    if (isHorizontalSwipeRef.current === null) {
+      if (Math.abs(diffX) > 6 || Math.abs(diffY) > 6) {
+        isHorizontalSwipeRef.current = Math.abs(diffX) > Math.abs(diffY) * 1.1;
       }
     }
+
+    if (isHorizontalSwipeRef.current) {
+      setDragOffset(diffX * 0.45);
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (isIgnoredRef.current || !isDragging) {
+      setDragOffset(0);
+      setIsDragging(false);
+      startXRef.current = null;
+      startYRef.current = null;
+      isHorizontalSwipeRef.current = null;
+      return;
+    }
+
+    setIsDragging(false);
+
+    if (
+      isHorizontalSwipeRef.current &&
+      Math.abs(dragOffset) > SWIPE_THRESHOLD_PX * 0.4
+    ) {
+      const currentIdx = getActiveTabIndex();
+      if (currentIdx !== -1) {
+        const total = ECOSYSTEM_SWIPE_ROUTES.length;
+        if (dragOffset < 0) {
+          // Swipe left -> Next tab (endless loop)
+          const nextIdx = (currentIdx + 1) % total;
+          navigate(ECOSYSTEM_SWIPE_ROUTES[nextIdx]);
+        } else if (dragOffset > 0) {
+          // Swipe right -> Prev tab (endless loop)
+          const prevIdx = (currentIdx - 1 + total) % total;
+          navigate(ECOSYSTEM_SWIPE_ROUTES[prevIdx]);
+        }
+      }
+    }
+
+    setDragOffset(0);
+    startXRef.current = null;
+    startYRef.current = null;
+    isHorizontalSwipeRef.current = null;
   };
 
   return (
     <div
-      className="screen-swipe-container w-full min-h-screen flex flex-col"
+      className="screen-swipe-container w-full min-h-screen flex flex-col touch-pan-y"
       onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      style={{
+        transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
+        opacity: dragOffset
+          ? Math.max(0.5, 1 - Math.abs(dragOffset) / 300)
+          : undefined,
+        transition: isDragging
+          ? 'none'
+          : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms ease-out',
+      }}
     >
       {children}
     </div>

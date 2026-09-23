@@ -8,9 +8,11 @@
 
 import { useState, type FC } from 'react';
 import { Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons } from '@demo/wallet-core';
+import { useAnimationSettings } from '@/core/motion/motion-provider';
 
 import { AssetRow, AssetRowSkeleton } from '../asset-row';
 import { AssetDetailsModal } from '../asset-details-modal';
@@ -25,6 +27,7 @@ import { SyncStatusButton } from '@/features/dashboard/components/sync-status-bu
 /** Full assets page: every token on the active wallet's balance (TON + member jettons). */
 export const AssetsScreen: FC = () => {
   const navigate = useNavigate();
+  const { isReduced, isRich } = useAnimationSettings();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
 
@@ -76,13 +79,20 @@ export const AssetsScreen: FC = () => {
           <AssetRowSkeleton />
         )}
         {assetsReady || jettonRows.length > 0 ? (
-          jettonRows.map((row) => (
-            <AssetRow
-              key={row.id}
-              {...row}
-              onClick={() => handleAssetClick(row)}
-            />
-          ))
+          <AnimatePresence initial={false}>
+            {jettonRows.map((row) => (
+              <motion.div
+                key={row.id}
+                layout={isRich ? 'position' : undefined}
+                initial={isReduced ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={isReduced ? undefined : { opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <AssetRow {...row} onClick={() => handleAssetClick(row)} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         ) : (
           <>
             <AssetRowSkeleton />

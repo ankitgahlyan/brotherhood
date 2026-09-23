@@ -32,12 +32,15 @@ import {
   API_KEYS_UPDATED_EVENT,
 } from '@/core/lib/network-api-keys';
 import { useTrackedAddressesSync } from '@/core/hooks/use-tracked-addresses-sync';
+import { useBackgroundSyncCoordinator } from '@/core/sync/background-sync-coordinator';
+import { MotionProvider } from '@/core/motion/motion-provider';
 
 import './App.css';
 import './storePatch';
 
 function TrackedAddressesSyncMount() {
   useTrackedAddressesSync();
+  useBackgroundSyncCoordinator();
   return null;
 }
 
@@ -94,8 +97,10 @@ export function App() {
         walletKitConfig={config}
         enableDevtools={true}
       >
-        <TrackedAddressesSyncMount />
-        <RouterProvider router={router} />
+        <MotionProvider>
+          <TrackedAddressesSyncMount />
+          <RouterProvider router={router} />
+        </MotionProvider>
       </WalletProvider>
     </QueryClientProvider>
   );

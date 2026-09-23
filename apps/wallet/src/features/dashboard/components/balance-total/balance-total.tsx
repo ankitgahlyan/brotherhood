@@ -10,31 +10,13 @@ import React, { useCallback, useMemo } from 'react';
 import { Copy } from 'lucide-react';
 import { useWallet, useJettons, useRates } from '@demo/wallet-core';
 
-import { useCountUp } from '@/core/hooks/use-count-up';
+import { AnimatedBalance } from '@/components/ui/animated-balance';
 import { assetUrl, findRate, toDecimal } from '@/core/utils';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { isFiJetton } from '@/features/jettons';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
-
-const fiFormat = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const usdFormat = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/** Formats a numeric value into integer and fraction parts. */
-const formatNumberParts = (
-  value: number,
-): { intPart: string; fracPart: string } => {
-  const [intPart, fracPart = '00'] = fiFormat.format(value).split('.');
-  return { intPart, fracPart };
-};
 
 const GRAM_DECIMALS = 9;
 
@@ -114,8 +96,6 @@ export const BalanceTotal: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   }, [address, copyWalletAddress]);
 
-  const animatedFi = useCountUp(fiAmount);
-  const { intPart, fracPart } = formatNumberParts(animatedFi);
   const tonDecimal =
     balance !== undefined ? toDecimal(balance, GRAM_DECIMALS) : 0;
 
@@ -127,14 +107,16 @@ export const BalanceTotal: React.FC = () => {
       {ready ? (
         <>
           <div className="flex items-baseline justify-center font-display font-bold tabular-nums leading-none tracking-tight">
-            <span className="text-5xl font-extrabold text-foreground tracking-tight drop-shadow-xs">
-              {intPart}
-            </span>
-            <span className="text-5xl text-muted-foreground/70">.</span>
-            <span className="text-3xl font-semibold text-muted-foreground">
-              {fracPart}
-            </span>
-            <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <AnimatedBalance
+              value={fiAmount}
+              decimals={2}
+              splitParts
+              className="flex items-baseline justify-center"
+              intClassName="text-5xl font-extrabold text-foreground tracking-tight drop-shadow-xs"
+              dotClassName="text-5xl text-muted-foreground/70"
+              fracClassName="text-3xl font-semibold text-muted-foreground"
+            />
+            <span className="ml-2 text-2xl font-bold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               FI
             </span>
           </div>
@@ -142,15 +124,25 @@ export const BalanceTotal: React.FC = () => {
           <div className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground font-medium">
             {totalUsd > 0 && (
               <>
-                <span className="font-semibold text-foreground/80">
-                  ≈ ${usdFormat.format(totalUsd)} USD
+                <span className="font-semibold text-foreground/80 flex items-center gap-1">
+                  ≈ $
+                  <AnimatedBalance
+                    value={totalUsd}
+                    decimals={2}
+                    className="font-semibold text-foreground/80"
+                  />{' '}
+                  USD
                 </span>
                 <span className="text-muted-foreground/50">•</span>
               </>
             )}
-            <span>{tonDecimal.toFixed(2)} TON</span>
+            <span className="flex items-center gap-0.5">
+              <AnimatedBalance value={tonDecimal} decimals={2} /> TON
+            </span>
             <span className="text-muted-foreground/50">•</span>
-            <span>{hdAmount.toFixed(2)} HD</span>
+            <span className="flex items-center gap-0.5">
+              <AnimatedBalance value={hdAmount} decimals={2} /> HD
+            </span>
           </div>
         </>
       ) : (

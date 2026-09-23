@@ -1212,6 +1212,44 @@ export const createWalletManagementSlice =
       }
     },
 
+    addPendingTransaction: (pendingTx) => {
+      set((s) => {
+        const existingIndex = s.walletManagement.pendingTransactions.findIndex(
+          (p) =>
+            (pendingTx.externalHash &&
+              p.externalHash &&
+              p.externalHash === pendingTx.externalHash) ||
+            p.traceId === pendingTx.traceId,
+        );
+
+        if (existingIndex !== -1) {
+          s.walletManagement.pendingTransactions[existingIndex] = {
+            ...s.walletManagement.pendingTransactions[existingIndex],
+            ...pendingTx,
+          };
+        } else {
+          s.walletManagement.pendingTransactions.unshift(pendingTx);
+        }
+      });
+    },
+
+    removePendingTransaction: (traceIdOrExternalHash: string) => {
+      set((s) => {
+        s.walletManagement.pendingTransactions =
+          s.walletManagement.pendingTransactions.filter(
+            (p) =>
+              p.traceId !== traceIdOrExternalHash &&
+              p.externalHash !== traceIdOrExternalHash,
+          );
+      });
+    },
+
+    clearPendingTransactions: () => {
+      set((s) => {
+        s.walletManagement.pendingTransactions = [];
+      });
+    },
+
     loadEvents: async (
       limit = 15,
       offset = 0,
