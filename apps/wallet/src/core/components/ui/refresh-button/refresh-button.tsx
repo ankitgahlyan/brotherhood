@@ -86,7 +86,7 @@ export function useThrottledRefresh({
             }
           }, successDurationMs);
         }
-      } catch (err) {
+      } catch (_err) {
         if (isMountedRef.current) {
           setIsRefreshing(false);
           setIsSuccess(false);

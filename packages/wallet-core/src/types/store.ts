@@ -410,6 +410,7 @@ export interface BrotherhoodSlice {
   brotherhood: {
     brotherhoodByAddress: Record<string, BrotherhoodMemberData>;
     pendingDeferredByAddress: Record<string, PendingDeferredPayment[]>;
+    watchedLocations: string[];
   };
 
   setBrotherhoodMemberData: (
@@ -433,6 +434,9 @@ export interface BrotherhoodSlice {
     network?: NetworkType,
   ) => void;
   removeBrotherhoodWallet: (walletAddress: string) => void;
+  watchLocation: (locationAddress: string) => void;
+  unwatchLocation: (locationAddress: string) => void;
+  clearWatchedLocations: () => void;
   addPendingDeferredPayment: (
     walletAddress: string,
     payment: PendingDeferredPayment,

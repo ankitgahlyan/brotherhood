@@ -2,7 +2,6 @@ import { TonClient } from '@ton/ton';
 import { Address, Dictionary } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
-import { FossFi } from '@wrappers/FossFi.gen';
 import {
   Addresses,
   FossFiWallet,
@@ -14,8 +13,6 @@ import {
   TimeStamps,
   TrustedAddrs,
 } from '@wrappers/FossFiWallet.gen';
-import { PersonalMinter, OnchainMetadataReply } from '@wrappers/Personal.gen';
-import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   rateLimitedFetch,
   createTonClientAxiosAdapter,
@@ -24,11 +21,9 @@ import {
 import { testnetRpcManager } from './testnet-rpc-manager';
 import {
   getContractCache,
-  setContractCache,
   getNormalizedContractCacheKey,
 } from './contract-cache';
 import { computePersonalWalletAddress } from './account-state-hydrator';
-import { sha256 } from './jettonContent';
 
 export type { Network } from './config';
 

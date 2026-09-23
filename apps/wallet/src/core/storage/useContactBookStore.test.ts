@@ -1,8 +1,5 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import {
-  useContactBookStore,
-  normalizeContactAddress,
-} from './useContactBookStore';
+import { useContactBookStore } from './useContactBookStore';
 
 describe('useContactBookStore', () => {
   const TEST_ADDR_1 =

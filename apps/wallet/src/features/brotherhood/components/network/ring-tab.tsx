@@ -8,7 +8,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { Address } from '@ton/core';
-import { RefreshCw } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
@@ -74,16 +73,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
   const isProfilesLoading =
     resolvedRingProfiles.isLoading && safeInvitees.length > 0;
   const isLoading = isInviteesLoading || isProfilesLoading;
-  const isRefreshing = resolvedRingProfiles.isFetching || isInviteesLoading;
   const error = inviteesError || resolvedRingProfiles.error;
-
-  const handleRefresh = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    refetchInvitees();
-    if (resolvedRingProfiles.refetch) {
-      resolvedRingProfiles.refetch();
-    }
-  };
 
   return (
     <div className="border border-border/60 rounded-xl overflow-hidden bg-secondary/30">
@@ -207,7 +197,12 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleRefresh}
+                onClick={() => {
+                  refetchInvitees();
+                  if (resolvedRingProfiles.refetch) {
+                    void resolvedRingProfiles.refetch();
+                  }
+                }}
                 className="text-xs h-7"
               >
                 Retry

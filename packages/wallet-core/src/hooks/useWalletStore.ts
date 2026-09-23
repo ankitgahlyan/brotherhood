@@ -19,6 +19,7 @@ import {
   EMPTY_CIRCLE,
   EMPTY_RING,
   EMPTY_PENDING_DEFERRED,
+  EMPTY_WATCHED_LOCATIONS,
 } from '../store/slices/brotherhoodSlice';
 import type { AppState, PendingDeferredPayment } from '../types/store';
 
@@ -403,11 +404,17 @@ export const useBrotherhood = () => {
         circle: activeMemberData?.circle ?? (EMPTY_CIRCLE as string[]),
         ring:
           activeMemberData?.ring ?? (EMPTY_RING as Record<string, string[]>),
+        watchedLocations:
+          state.brotherhood.watchedLocations ??
+          (EMPTY_WATCHED_LOCATIONS as string[]),
         setBrotherhoodMemberData: state.setBrotherhoodMemberData,
         addCircleInvites: state.addCircleInvites,
         addRingInvites: state.addRingInvites,
         setLocationContract: state.setLocationContract,
         removeBrotherhoodWallet: state.removeBrotherhoodWallet,
+        watchLocation: state.watchLocation,
+        unwatchLocation: state.unwatchLocation,
+        clearWatchedLocations: state.clearWatchedLocations,
         addPendingDeferredPayment: state.addPendingDeferredPayment,
         updatePendingDeferredPayment: state.updatePendingDeferredPayment,
         removePendingDeferredPayment: state.removePendingDeferredPayment,

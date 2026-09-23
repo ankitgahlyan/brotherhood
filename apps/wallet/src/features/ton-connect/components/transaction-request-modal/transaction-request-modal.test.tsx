@@ -4,12 +4,12 @@ import { renderToString } from 'react-dom/server';
 
 let mockFastSend = false;
 let mockUnlocked = true;
-let approveCalled = false;
+let _approveCalled = false;
 
 mock.module('@demo/wallet-core', () => ({
   useTransactionRequests: () => ({
     approveTransactionRequest: async () => {
-      approveCalled = true;
+      _approveCalled = true;
       return { signedBoc: 'te6cckEBAQEAAgAAAEysuc0=' };
     },
     rejectTransactionRequest: mock(),

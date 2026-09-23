@@ -8,9 +8,9 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from '@/core/routing';
-import { useWallet } from '@demo/wallet-core';
+import { useWallet, useBrotherhood } from '@demo/wallet-core';
 import { Address } from '@ton/core';
-import { ExternalLink, Loader2, Search, X } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Loader2, Search, X } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { Button } from '@/core/components/ui/button';
@@ -30,7 +30,6 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
 
 import { useLocationByH3Cell } from '../hooks/use-cities';
-import { useLocationMembers } from '../hooks/use-city-members';
 
 export const CityNetworkScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +37,12 @@ export const CityNetworkScreen: React.FC = () => {
     useFormatAddress();
   const { address } = useWallet();
   const account = useFiAccount(address ?? null);
+  const {
+    watchedLocations,
+    watchLocation,
+    unwatchLocation,
+    clearWatchedLocations,
+  } = useBrotherhood();
 
   // Connected wallet's H3 cell from fiwallet state
   const myH3Cell = account.data?.h3Cell || '';
@@ -46,10 +51,6 @@ export const CityNetworkScreen: React.FC = () => {
   const [h3CellInput, setH3CellInput] = useState('');
   const [queriedH3Cell, setQueriedH3Cell] = useState('');
   const [hasInitializedH3, setHasInitializedH3] = useState(false);
-
-  // Verify Member Tool
-  const [verifyLocationAddr, setVerifyLocationAddr] = useState('');
-  const [targetMember, setTargetMember] = useState('');
 
   // Member Search Query
   const [memberSearch, setMemberSearch] = useState('');
@@ -71,6 +72,25 @@ export const CityNetworkScreen: React.FC = () => {
   // Queries - only executed for confirmed valid H3 cells
   const locationByH3Query = useLocationByH3Cell(queriedH3Cell);
 
+  const isCurrentLocationWatched = useMemo(() => {
+    const calc = locationByH3Query.calculatedAddress;
+    if (!calc) return false;
+    return watchedLocations.some((addr) => {
+      try {
+        return Address.parse(addr).equals(Address.parse(calc));
+      } catch {
+        return addr === calc;
+      }
+    });
+  }, [watchedLocations, locationByH3Query.calculatedAddress]);
+
+  // Clean up watched locations when leaving the location tab
+  React.useEffect(() => {
+    return () => {
+      clearWatchedLocations();
+    };
+  }, [clearWatchedLocations]);
+
   const isInputValid = isValidH3Cell(h3CellInput);
   const showValidationError = h3CellInput.trim().length > 0 && !isInputValid;
 
@@ -87,22 +107,6 @@ export const CityNetworkScreen: React.FC = () => {
       setQueriedH3Cell(normalized);
     }
   };
-
-  // Auto-populate verify location address with current calculated location if empty
-  const [prevCalculatedAddr, setPrevCalculatedAddr] = useState(
-    locationByH3Query.calculatedAddress,
-  );
-  if (locationByH3Query.calculatedAddress !== prevCalculatedAddr) {
-    setPrevCalculatedAddr(locationByH3Query.calculatedAddress);
-    if (locationByH3Query.calculatedAddress && !verifyLocationAddr) {
-      setVerifyLocationAddr(locationByH3Query.calculatedAddress);
-    }
-  }
-
-  const locationMembersQuery = useLocationMembers(
-    verifyLocationAddr || locationByH3Query.calculatedAddress || '',
-    targetMember,
-  );
 
   // Member profiles hydration: Location stores member owner addresses.
   // Derive both owner and deterministic FiWallet contract addresses so profiles are resolved.
@@ -296,15 +300,45 @@ export const CityNetworkScreen: React.FC = () => {
                       : 'Auto-Deploy on Join'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-1">
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
                   <span className="font-mono text-foreground text-[11px] break-all">
                     {formatContractAddress(locationByH3Query.calculatedAddress)}
                   </span>
-                  <CopyButton
-                    address={locationByH3Query.calculatedAddress}
-                    type="contract"
-                    size="xs"
-                  />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      type="button"
+                      variant={isCurrentLocationWatched ? 'secondary' : 'gray'}
+                      size="sm"
+                      onClick={() => {
+                        const calc = locationByH3Query.calculatedAddress;
+                        if (!calc) return;
+                        if (isCurrentLocationWatched) {
+                          unwatchLocation(calc);
+                        } else {
+                          watchLocation(calc);
+                        }
+                      }}
+                      className="h-6 text-[10px] px-2 py-0 gap-1 rounded-lg"
+                      data-testid="watch-location-btn"
+                    >
+                      {isCurrentLocationWatched ? (
+                        <>
+                          <EyeOff className="w-3 h-3 text-blue-500" />
+                          <span>Watching</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3 h-3" />
+                          <span>Watch</span>
+                        </>
+                      )}
+                    </Button>
+                    <CopyButton
+                      address={locationByH3Query.calculatedAddress}
+                      type="contract"
+                      size="xs"
+                    />
+                  </div>
                 </div>
               </div>
             )}

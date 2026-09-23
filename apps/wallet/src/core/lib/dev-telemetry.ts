@@ -1,5 +1,5 @@
-import { toast } from 'sonner';
 import { sanitizeBocFields, safeStringifyJson } from './json-boc-sanitizer';
+import { notifyApiCallFailed } from './network-status';
 
 export interface CallInvocation {
   id: string;
@@ -95,12 +95,7 @@ export function notifyRateLimit429(_url?: string): void {
     return;
   }
   last429ToastTime = now;
-
-  toast.error('Too Many Requests (429)', {
-    id: 'rate-limit-429',
-    description: 'Rate limit reached. Requests are backing off.',
-    position: 'top-center',
-  });
+  notifyApiCallFailed();
 }
 
 function parseCallerFromStack(
@@ -557,6 +552,7 @@ class DevTelemetryManager {
 
         if (!response.ok) {
           this.metrics.failedApiCalls++;
+          notifyApiCallFailed();
           if (response.status === 429) {
             notifyRateLimit429(url);
           }
@@ -626,6 +622,7 @@ class DevTelemetryManager {
           this.metrics.activeApiCalls - 1,
         );
         this.metrics.failedApiCalls++;
+        notifyApiCallFailed();
 
         if (
           err?.status === 429 ||

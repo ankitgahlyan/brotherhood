@@ -10,7 +10,6 @@ import React, { useState, useEffect } from 'react';
 import {
   ChevronDown,
   ChevronRight,
-  RefreshCw,
   Network as NetworkIcon,
   Loader2,
 } from 'lucide-react';
@@ -84,12 +83,6 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
       onRegisterRingMembers(allProfiles);
     }
   }, [ringProfiles, onRegisterRingMembers]);
-
-  const handleRefresh = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    refetchInvitees();
-    refetchProfiles();
-  };
 
   return (
     <div className="border border-border/70 rounded-xl overflow-hidden bg-card transition-colors">

@@ -24,7 +24,7 @@ export interface CircleCreditListProps {
 export const CircleCreditList: React.FC<CircleCreditListProps> = ({
   circleMembers,
   profiles,
-  isLoading = false,
+  isLoading: _isLoading = false,
   onRefresh,
   onSendCredit,
 }) => {

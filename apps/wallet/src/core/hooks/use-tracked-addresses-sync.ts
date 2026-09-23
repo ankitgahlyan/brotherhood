@@ -42,12 +42,8 @@ export function useTrackedAddressesSync() {
   const storeApi = useWalletStoreApi();
   const { address, savedWallets } = useWallet();
   const { loadUserJettons } = useJettons();
-  const {
-    setBrotherhoodMemberData,
-    addCircleInvites,
-    addRingInvites,
-    setLocationContract,
-  } = useBrotherhood();
+  const { setBrotherhoodMemberData, addCircleInvites, setLocationContract } =
+    useBrotherhood();
 
   const { loadEvents, setAssociatedAddresses } = useWalletStore(
     useShallow((state) => ({
@@ -97,7 +93,7 @@ export function useTrackedAddressesSync() {
       // 2. Fetch jettons for ALL saved wallets (including isMember: false)
       void loadUserJettons(undefined, force).catch(() => {});
       if (isWalletKitInitialized) {
-        void loadEvents(50, 0, force).catch(() => {});
+        void loadEvents(20, 0, force).catch(() => {});
       }
 
       try {
@@ -161,24 +157,23 @@ export function useTrackedAddressesSync() {
             if (j.walletAddress) addContract(j.walletAddress);
           }
 
-          // Known Brotherhood state from bro-store
+          // Known location contract for this wallet
           const walletKey = normalizeAddressByNetwork(
             wallet.address,
             false,
             defaultNetwork,
           );
           const bData = currentBrotherhoodByAddress[walletKey];
-          if (bData && bData.isMember) {
-            if (bData.location) addContract(bData.location);
-            for (const c of bData.circle || []) {
-              addContract(c);
-            }
-            for (const ringList of Object.values(bData.ring || {})) {
-              for (const r of ringList) {
-                addContract(r);
-              }
-            }
+          if (bData && bData.isMember && bData.location) {
+            addContract(bData.location);
           }
+        }
+
+        // Manually watched locations
+        const currentWatchedLocations =
+          currentState.brotherhood?.watchedLocations || [];
+        for (const loc of currentWatchedLocations) {
+          addContract(loc);
         }
 
         const masterAddressList = Array.from(masterSet);
@@ -193,10 +188,7 @@ export function useTrackedAddressesSync() {
 
         if (!res?.decodedStores) return;
 
-        const freshCircleQueue: {
-          walletKey: string;
-          freshCircle: string[];
-        }[] = [];
+        const newLocationsToHydrate: string[] = [];
 
         // 5. Evaluate FiWallet status and membership for each wallet
         for (const wallet of savedWallets) {
@@ -250,6 +242,16 @@ export function useTrackedAddressesSync() {
             try {
               const calculatedLoc = calculateLocationAddress(h3Cell.trim());
               setLocationContract(walletKey, calculatedLoc, defaultNetwork);
+              if (calculatedLoc) {
+                const normLoc = normalizeAddressByNetwork(
+                  calculatedLoc,
+                  true,
+                  defaultNetwork,
+                );
+                if (normLoc && !masterSet.has(normLoc)) {
+                  newLocationsToHydrate.push(normLoc);
+                }
+              }
             } catch (locErr) {
               console.warn(
                 '[useTrackedAddressesSync] Failed to calculate location:',
@@ -260,56 +262,17 @@ export function useTrackedAddressesSync() {
 
           // Circle invites
           if (invited.length > 0) {
-            const freshCircle = addCircleInvites(
-              walletKey,
-              invited,
-              defaultNetwork,
-            );
-            if (freshCircle.length > 0) {
-              freshCircleQueue.push({ walletKey, freshCircle });
-            }
+            addCircleInvites(walletKey, invited, defaultNetwork);
           }
         }
 
-        // 6. Pass 2: Follow-up targeted batch for newly discovered fresh circle members
-        if (freshCircleQueue.length > 0) {
-          const freshAddrsSet = new Set<string>();
-          for (const item of freshCircleQueue) {
-            for (const addr of item.freshCircle) {
-              freshAddrsSet.add(addr);
-            }
-          }
-
-          const freshList = Array.from(freshAddrsSet);
+        // 6. Pass 2: Follow-up targeted batch for newly discovered location contracts for saved wallets
+        if (newLocationsToHydrate.length > 0) {
+          const freshList = Array.from(new Set(newLocationsToHydrate));
           if (freshList.length > 0) {
-            const freshRes = await batchHydrateUniversal(
-              freshList,
-              defaultNetwork,
-              { force: true },
-            );
-
-            if (freshRes?.decodedStores) {
-              for (const { walletKey, freshCircle } of freshCircleQueue) {
-                for (const cAddr of freshCircle) {
-                  const cStore = findDecodedStore(
-                    freshRes.decodedStores,
-                    cAddr,
-                  );
-                  if (cStore) {
-                    const { invited: ringInvites } =
-                      extractInvitedAndLocationFromFiWallet(cStore);
-                    if (ringInvites.length > 0) {
-                      addRingInvites(
-                        walletKey,
-                        cAddr,
-                        ringInvites,
-                        defaultNetwork,
-                      );
-                    }
-                  }
-                }
-              }
-            }
+            await batchHydrateUniversal(freshList, defaultNetwork, {
+              force: true,
+            });
           }
         }
       } catch (err) {
@@ -328,7 +291,6 @@ export function useTrackedAddressesSync() {
       loadUserJettons,
       setBrotherhoodMemberData,
       addCircleInvites,
-      addRingInvites,
       setLocationContract,
     ],
   );

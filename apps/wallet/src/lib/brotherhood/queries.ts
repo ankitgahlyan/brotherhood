@@ -10,7 +10,6 @@ import { useMemo, useCallback } from 'react';
 import { type Address } from '@ton/core';
 import {
   useContractState,
-  getNormalizedContractCacheKey,
   invalidateContractCache,
   getContractCache,
   setContractCache,
@@ -19,7 +18,6 @@ import { FI_ADDRESS, network as defaultNetwork, type Network } from './config';
 import {
   getFiWalletAddress,
   isZeroAddress,
-  type JettonMasterInfo,
   type PersonalMinterDetails,
 } from './ton';
 import { computePersonalWalletAddress } from './account-state-hydrator';

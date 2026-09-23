@@ -1,4 +1,4 @@
-import { Address, Cell } from '@ton/core';
+import { Address } from '@ton/core';
 import { useSyncExternalStore, useMemo, useCallback } from 'react';
 import { broadcastBus } from '@/core/lib/broadcast-bus';
 import {

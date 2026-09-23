@@ -67,6 +67,25 @@ export function onNetworkStatusChange(
   };
 }
 
+const apiFailureListeners = new Set<() => void>();
+
+export function notifyApiCallFailed(): void {
+  apiFailureListeners.forEach((cb) => {
+    try {
+      cb();
+    } catch (e) {
+      console.error('[NetworkStatus] Error in api failure listener:', e);
+    }
+  });
+}
+
+export function onApiCallFailed(cb: () => void): () => void {
+  apiFailureListeners.add(cb);
+  return () => {
+    apiFailureListeners.delete(cb);
+  };
+}
+
 const subscribeNetwork = (callback: () => void) => {
   return onNetworkStatusChange(callback);
 };

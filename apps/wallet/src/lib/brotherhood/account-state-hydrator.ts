@@ -5,18 +5,9 @@ if (typeof globalThis !== 'undefined') {
   (globalThis as any).Buffer = (globalThis as any).Buffer || Buffer;
 }
 
-import { Address, Cell, Dictionary } from '@ton/core';
-import { FossFiWallet, FiWalletStore } from '@wrappers/FossFiWallet.gen';
-import { FossFi, FiStore } from '@wrappers/FossFi.gen';
-import { PersonalMinter, PersonalStore } from '@wrappers/Personal.gen';
-import {
-  PersonalWalletStore,
-  PersonalWallet,
-} from '@wrappers/PersonalWallet.gen';
-import { Location, LocationStore } from '@wrappers/Location.gen';
-import { Lottery, LotteryStorage } from '@wrappers/Lottery.gen';
-import { Poll, PollStore } from '@wrappers/Poll.gen';
-import { WalletV5R1CodeBoc, type WalletV5Config } from '@ton/walletkit';
+import { Address, Cell } from '@ton/core';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
+import { WalletV5R1CodeBoc } from '@ton/walletkit';
 import {
   setContractCache,
   setMetadataCache,

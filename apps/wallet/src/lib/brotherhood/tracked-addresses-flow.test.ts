@@ -78,7 +78,11 @@ describe('Brotherhood State & Normalization Flow', () => {
 
   it('initializes and manages brotherhoodSlice per wallet address', () => {
     const state: any = {
-      brotherhood: { brotherhoodByAddress: {}, pendingDeferredByAddress: {} },
+      brotherhood: {
+        brotherhoodByAddress: {},
+        pendingDeferredByAddress: {},
+        watchedLocations: [],
+      },
     };
 
     const setState = (updater: (s: any) => void) => {
@@ -116,7 +120,25 @@ describe('Brotherhood State & Normalization Flow', () => {
       ),
     ).toBe(true);
 
-    // 3. Add circle invites (capped at 10, deduplicated, formatted kQ)
+    // 3. Watch location temporary tracking
+    slice.watchLocation(locContract);
+    expect(state.brotherhood.watchedLocations.length).toBe(1);
+    expect(state.brotherhood.watchedLocations[0].startsWith('kQ')).toBe(true);
+
+    // Watch duplicate does not add twice
+    slice.watchLocation(locContract);
+    expect(state.brotherhood.watchedLocations.length).toBe(1);
+
+    // Unwatch location
+    slice.unwatchLocation(locContract);
+    expect(state.brotherhood.watchedLocations.length).toBe(0);
+
+    // Clear watched locations
+    slice.watchLocation(locContract);
+    slice.clearWatchedLocations();
+    expect(state.brotherhood.watchedLocations.length).toBe(0);
+
+    // 4. Add circle invites (capped at 10, deduplicated, formatted kQ)
     const invites = Array.from({ length: 15 }, (_, i) => {
       const hex = i.toString(16).padStart(64, '3');
       return `0:${hex}`;
@@ -133,7 +155,7 @@ describe('Brotherhood State & Normalization Flow', () => {
       ),
     ).toBe(true);
 
-    // 4. Add ring invites under invitor key
+    // 5. Add ring invites under invitor key
     const invitor = state.brotherhood.brotherhoodByAddress[walletKey].circle[0];
     const ringInvites = Array.from({ length: 5 }, (_, i) => {
       const hex = i.toString(16).padStart(64, '4');
@@ -147,7 +169,7 @@ describe('Brotherhood State & Normalization Flow', () => {
     expect(ringMap[invitor].length).toBe(5);
     expect(ringMap[invitor][0].startsWith('kQ')).toBe(true);
 
-    // 5. Remove wallet cleans up brotherhood state
+    // 6. Remove wallet cleans up brotherhood state
     slice.removeBrotherhoodWallet(walletAddr);
     expect(state.brotherhood.brotherhoodByAddress[walletKey]).toBeUndefined();
   });

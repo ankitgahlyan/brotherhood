@@ -841,6 +841,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   <InputScan
                     value={recipient}
                     onChange={setRecipient}
+                    enableUsernameResolution={false}
                     placeholder={`Recipient Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="personal-mint-recipient"
                     tokenContext={{
@@ -1121,6 +1122,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   <InputScan
                     value={addressesTabMinter || targetRegisterMinter}
                     onChange={setAddressesTabMinter}
+                    enableUsernameResolution={false}
                     placeholder="Enter Personal Minter Address"
                     data-testid="personal-addresses-minter-input"
                   />
@@ -1148,6 +1150,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   <InputScan
                     value={addressesTabWallet || targetRegisterWallet}
                     onChange={setAddressesTabWallet}
+                    enableUsernameResolution={false}
                     placeholder="Enter Personal Wallet Address"
                     data-testid="personal-addresses-wallet-input"
                   />
@@ -1217,6 +1220,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   <InputScan
                     value={newAdmin}
                     onChange={setNewAdmin}
+                    enableUsernameResolution={false}
                     placeholder={`New Admin Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
                     data-testid="personal-admin-new-admin"
                   />
@@ -1316,6 +1320,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 <InputScan
                   value={topUpTarget}
                   onChange={setTopUpTarget}
+                  enableUsernameResolution={false}
                   placeholder={`Target Contract Address (Default: ${activeMinter || 'None'})`}
                   data-testid="personal-topup-target"
                 />

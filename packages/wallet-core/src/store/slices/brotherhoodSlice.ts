@@ -45,10 +45,12 @@ export const EMPTY_CIRCLE: readonly string[] = Object.freeze([]);
 export const EMPTY_RING: Readonly<Record<string, string[]>> = Object.freeze({});
 export const EMPTY_PENDING_DEFERRED: readonly PendingDeferredPayment[] =
   Object.freeze([]);
+export const EMPTY_WATCHED_LOCATIONS: readonly string[] = Object.freeze([]);
 
 export interface BrotherhoodState {
   brotherhoodByAddress: Record<string, BrotherhoodMemberData>;
   pendingDeferredByAddress: Record<string, PendingDeferredPayment[]>;
+  watchedLocations: string[];
 }
 
 export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
@@ -58,6 +60,7 @@ export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
   brotherhood: {
     brotherhoodByAddress: {},
     pendingDeferredByAddress: {},
+    watchedLocations: [],
   },
 
   setBrotherhoodMemberData: (
@@ -247,6 +250,44 @@ export const createBrotherhoodSlice: BrotherhoodSliceCreator = (
           }
         }
       }
+    });
+  },
+
+  watchLocation: (locationAddress: string) => {
+    if (!locationAddress) return;
+    const key = normalizeAddressByNetwork(locationAddress, true);
+    set((state) => {
+      const watched = state.brotherhood.watchedLocations || [];
+      const alreadyWatched = watched.some((addr) => {
+        try {
+          return Address.parse(addr).equals(Address.parse(key));
+        } catch {
+          return addr === key;
+        }
+      });
+      if (!alreadyWatched) {
+        state.brotherhood.watchedLocations = [...watched, key];
+      }
+    });
+  },
+
+  unwatchLocation: (locationAddress: string) => {
+    if (!locationAddress) return;
+    set((state) => {
+      const watched = state.brotherhood.watchedLocations || [];
+      state.brotherhood.watchedLocations = watched.filter((addr) => {
+        try {
+          return !Address.parse(addr).equals(Address.parse(locationAddress));
+        } catch {
+          return addr !== locationAddress;
+        }
+      });
+    });
+  },
+
+  clearWatchedLocations: () => {
+    set((state) => {
+      state.brotherhood.watchedLocations = [];
     });
   },
 

@@ -25,7 +25,6 @@ import type { NetworkType } from '@demo/wallet-core';
 import {
   useExplorer,
   getExplorerAddressUrl,
-  type ExplorerChoice,
 } from '@/core/explorer/use-explorer';
 import {
   devTelemetry,
@@ -651,7 +650,6 @@ const ApiCard: React.FC<{
   const renderPathSegments = (pathStr: string) => {
     const segments = pathStr.split('/');
     return segments.map((seg, idx) => {
-      const isLast = idx === segments.length - 1;
       const cleanSeg = seg.trim();
       const isAddr = isTonAddress(cleanSeg);
       return (

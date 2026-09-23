@@ -427,9 +427,26 @@ export const NotificationBell: React.FC = () => {
   // Total actionable count (active notifications)
   const count = allWalletNotifs.length;
 
-  // Dispatch native notifications for newly discovered actionable items
+  // Dispatch native notifications only for newly discovered actionable items (suppress initial load flood)
+  const knownNotifIdsRef = useRef<Set<string>>(new Set());
+  const isInitialLoadRef = useRef(true);
+
   useEffect(() => {
+    if (isInitialLoadRef.current) {
+      // Seed existing notifications so app startup or adding a wallet doesn't flood native alerts
+      allWalletNotifs.forEach((item) => {
+        knownNotifIdsRef.current.add(item.id);
+      });
+      if (allWalletNotifs.length > 0) {
+        isInitialLoadRef.current = false;
+      }
+      return;
+    }
+
     allWalletNotifs.forEach((item) => {
+      if (knownNotifIdsRef.current.has(item.id)) return;
+      knownNotifIdsRef.current.add(item.id);
+
       if (item.type === 'claim' && item.data.claimAmountFi) {
         sendNativeNotification(`Weekly FI Grant Ready (${item.walletName})`, {
           body: `${item.walletName} has ${item.data.claimAmountFi} FI ready to claim.`,

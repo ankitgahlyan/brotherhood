@@ -55,6 +55,7 @@ export {
   EMPTY_CIRCLE,
   EMPTY_RING,
   EMPTY_PENDING_DEFERRED,
+  EMPTY_WATCHED_LOCATIONS,
 } from './store/slices/brotherhoodSlice';
 export {
   createPreferencesSlice,
