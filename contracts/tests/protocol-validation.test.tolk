@@ -159,7 +159,8 @@ get fun `test validation: wallet should reject internal transfer from unauthoriz
 
 get fun `test validation: minter cannot force transfer tokens`() {
     val (minter, deployer, notDeployer) = setupTest();
-    val wallet = mintTo(minter, deployer, notDeployer.address, grams("2"));
+    val deployerWallet = userWallet(minter, deployer.address);
+    val wallet = activateUser(minter, deployerWallet, deployer, notDeployer.address);
     val target = testing.treasury("receiver");
     val balanceBefore = wallet.getJettonBalance();
 

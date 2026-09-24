@@ -178,12 +178,17 @@ fun PersonalMinter.sendHotUpgrade(
     return net.send(from, genericMsg);
 }
 
-fun PersonalMinter.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
+fun PersonalMinter.sendTopUpTons(
+    self,
+    from: address,
+    latestFiWalletCode: cell?,
+    config: SendParams = {},
+): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: TopUpTons {},
+        body: TopUpTons { latestFiWalletCode },
     });
     return net.send(from, genericMsg);
 }

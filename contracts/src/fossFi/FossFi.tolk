@@ -372,7 +372,7 @@ fun onInternalMessage(in: InMessage): void {
                     bounce: BounceMode.Only256BitsOfBody,
                     value: 0,
                     dest: getAutoAddress(in.senderAddress),
-                    body: TopUpTons {},
+                    body: TopUpTons { latestFiWalletCode: others.latestFiWalletCode },
                 });
                 deployTopUpMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
@@ -521,7 +521,7 @@ fun assertCorrectSender(sender: address, owner: address): void {
 }
 
 fun getAutoAddress(owner: address): AutoDeployAddress {
-    return calcDeployFiWallet(
+    return calcDeployBaseFiWallet(
         owner,
         contract.getAddress(),
         getFiWalletCode(),

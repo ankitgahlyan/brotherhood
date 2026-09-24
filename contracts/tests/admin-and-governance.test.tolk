@@ -57,11 +57,12 @@ get fun `test admin: minter admin should be able to mint jettons`() {
     val otherMint = grams("7");
 
     val deployerWallet = mintTo(minter, deployer, deployer.address, deployerMint);
+    activateUser(minter, deployerWallet, deployer, notDeployer.address);
     val otherWallet = mintTo(minter, deployer, notDeployer.address, otherMint);
 
-    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint + grams("1"));
-    expect(otherWallet.getJettonBalance()).toEqual(otherMint);
-    expect(minter.getTotalSupply()).toEqual(supplyBefore + deployerMint + otherMint);
+    expect(deployerWallet.getJettonBalance()).toEqual(deployerMint + grams("1") + grams("999"));
+    expect(otherWallet.getJettonBalance()).toEqual(otherMint + grams("1"));
+    expect(minter.getTotalSupply()).toEqual(supplyBefore + deployerMint + otherMint + MBRP_AMOUNT);
     assertSameShardPrefix(notDeployer.address, otherWallet.address);
 }
 

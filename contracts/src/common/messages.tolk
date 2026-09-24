@@ -148,7 +148,9 @@ struct (0x00001006) Upgrade {
     newCode: cell? = null
 }
 
-struct (0x00001007) TopUpTons
+struct (0x00001007) TopUpTons {
+    latestFiWalletCode: cell? = null
+}
 
 struct (0x00001008) RequestUpgradeCode {
     targetAddress: address? = null
@@ -209,7 +211,7 @@ struct (0x00001052) InternalInvite {
     version: uint10
     sender: address
     invitor: address
-    currentWalletCode: cell
+    latestFiWalletCode: cell
     currentStorage: cell?
     username: string
     h3Cell: string

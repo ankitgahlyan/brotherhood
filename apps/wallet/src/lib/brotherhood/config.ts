@@ -1,6 +1,6 @@
 export type Network = 'mainnet' | 'testnet' | 'tetra';
 
 export const network: Network = 'testnet';
-export const FI_ADDRESS = 'kQCU0cAJ20PF7MX9CLBcjUCw6ZwOfYil1iiKWXZeeBlfv1gP';
+export const FI_ADDRESS = 'kQByVk5DwR_q9O0QECxai3CDpE-7Qimbb4OUE9Bt4Qz0deAE';
 export const ZERO_ADDRESS =
   '0:0000000000000000000000000000000000000000000000000000000000000000';

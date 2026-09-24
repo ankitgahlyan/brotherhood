@@ -13,7 +13,7 @@ import "@contracts/fossFi/storage"
 import "@contracts/holding/messages"
 import "@contracts/lottery/messages"
 
-/// Storage `FiWalletStore` is defined in `@contracts/fossFi/storage`
+/// Storage `BaseFiWalletStore` is defined in `@contracts/fossFi/storage`
 struct FossFiWallet {
     address: address
     stateInit: ContractState? = null
@@ -22,7 +22,7 @@ struct FossFiWallet {
 
 /// Creates a contract wrapper instance from the storage data
 fun FossFiWallet.fromStorage(
-    storage: FiWalletStore,
+    storage: BaseFiWalletStore,
     toShard: AddressShardingOptions? = null,
     workchain: int8 = BASECHAIN,
 ): FossFiWallet {
@@ -399,7 +399,7 @@ fun FossFiWallet.sendInternalInvite(
     version: uint10,
     sender: address,
     invitor: address,
-    currentWalletCode: cell,
+    latestFiWalletCode: cell,
     currentStorage: cell?,
     username: string,
     h3Cell: string,
@@ -415,7 +415,7 @@ fun FossFiWallet.sendInternalInvite(
             version,
             sender,
             invitor,
-            currentWalletCode,
+            latestFiWalletCode,
             currentStorage,
             username,
             h3Cell,
@@ -483,12 +483,17 @@ fun FossFiWallet.sendSetStatus(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
+fun FossFiWallet.sendTopUpTons(
+    self,
+    from: address,
+    latestFiWalletCode: cell?,
+    config: SendParams = {},
+): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: TopUpTons {},
+        body: TopUpTons { latestFiWalletCode },
     });
     return net.send(from, genericMsg);
 }
@@ -533,22 +538,6 @@ fun FossFiWallet.sendUpgrade(
         value: config.value,
         dest: self.address,
         body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun FossFiWallet.sendHotUpgrade(
-    self,
-    from: address,
-    additionalData: cell?,
-    code: cell,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: HotUpgrade { additionalData, code },
     });
     return net.send(from, genericMsg);
 }

@@ -11,8 +11,9 @@ acton = "trunk"
 display-name = "FossFi Parent"
 src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
-    "Lottery", # small number deployed easy upgrades
-    { name = "FossFiWallet", kind = "embed_code", function = "fossFiWalletCompiledCodeLibraryRef" },
+    # small number deployed easy upgrades
+    "Lottery",
+    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Location", kind = "embed_code", function = "locationCompiledCodeLibraryRef" },
 ]
 
@@ -20,9 +21,15 @@ depends = [
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
+    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Following", kind = "embed_code", function = "followingCompiledCodeLibraryRef" },
     { name = "Holding", kind = "embed_code", function = "holdingCompiledCodeLibraryRef" },
 ]
+
+[contracts.BaseFiWallet]
+display-name = "BaseFiWallet Proxy"
+src = "contracts/src/fossFi/BaseFiWallet.tolk"
+depends = []
 
 [contracts.Following]
 display-name = "Following Child"
@@ -68,6 +75,7 @@ depends = [
 display-name = "Poll Governance"
 src = "contracts/src/dao/Poll.tolk"
 depends = [
+    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Voter", kind = "embed_code", function = "voterCompiledCodeLibraryRef" },
 ]
 

@@ -2,41 +2,17 @@ import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
+import "@contracts/common/utils"
 import "@contracts/lottery/messages"
 
 import "fees-management"
 import "storage"
 
-fun calcDeployFiWallet(
-    owner: address,
-    minterAddr: address,
-    baseFiWalletCode: cell,
-): AutoDeployAddress {
-    val emptyFiWalletStore: FiWalletStore = {
-        addresses: Addresses {
-            owner,
-            nomInAddrs: NomInAddrs {}.toCell(),
-            trustedJettonAddrs: TrustedAddrs { minterAddr }.toCell(),
-        }.toCell(),
-        maps: Maps {
-            social: SocialMaps {}.toCell(),
-            reportInfo: ReportInfo {}.toCell(),
-        }.toCell(),
-        profile: ProfileInfo {}.toCell(),
-        timestamps: TimeStamps {}.toCell(),
-    };
-
-    return {
-        stateInit: { code: baseFiWalletCode, data: emptyFiWalletStore.toCell() },
-        toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: owner },
-    };
-}
-
 fun address.getAddrFiWallet(self): address {
     // used by: wallet txn sending
     val store = lazy FiWalletStore.load();
     val addrs = lazy store.addresses.load();
-    return calcDeployFiWallet(
+    return calcDeployBaseFiWallet(
         self,
         addrs.trustedJettonAddrs.load().minterAddr,
         getFiWalletCode(),
@@ -162,21 +138,6 @@ fun notifyOwner(
         },
     });
     outMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS); // bounce back to sender
-}
-
-@method_id(2222)
-fun hotUpgradeFiWalletData(_additionalData: cell?) {
-    // var oldStorage = lazy FiStore.fromCell(contract.getData());
-    // assert (additionalData != null) throw 1112;
-    // var storage = FiStore {
-    //     supply: oldStorage.totalSupply,
-    //     walletVersion: oldStorage.walletVersion,
-    //     admin: oldStorage.adminAddress,
-    //     baseFiWalletCode: oldStorage.baseFiWalletCode,
-    //     metadata: oldStorage.metadata,
-    //     others: oldStorage.others,
-    // };
-    // contract.setData(storage.toCell());
 }
 
 fun isNonEmptyString(str: string): bool {

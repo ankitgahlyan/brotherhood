@@ -50,10 +50,11 @@ fun setupDaoTest(): TestSetup {
         adminHandoff: null,
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });
     minter.sendDeploy(deployer.address, { value: grams("10") });
+    minter.sendTopUpTons(deployer.address, null, { value: grams("1") });
 
     val deployerWallet = userWallet(minter, deployer.address);
 

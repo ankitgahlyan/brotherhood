@@ -3,7 +3,6 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/Lottery.gen"
@@ -121,7 +120,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         adminHandoff: null,
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });
 
@@ -130,6 +129,9 @@ get fun `test lottery: draw winner mints FI to the winner`() {
     expect(minterDeploy).toHaveSuccessfulDeploy({
         to: minter.address,
     });
+    minter.sendTopUpTons(deployer.address, null, { value: grams("1") });
+    val deployerWallet = userWallet(minter, deployer.address);
+    activateUser(minter, deployerWallet, deployer, winner.address);
 
     // lottery must live at the address the minter computes via calcDeployLottery
     val lottery = Lottery.fromStorage({

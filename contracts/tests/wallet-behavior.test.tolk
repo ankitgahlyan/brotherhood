@@ -11,7 +11,7 @@ import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
-import "@contracts/fossFi/jetton-utils"
+import "@contracts/common/utils"
 import "@contracts/fossFi/storage"
 
 import "test-utils"
@@ -147,7 +147,7 @@ get fun `test : addrs r same`() {
         profile: ProfileInfo {}.toCell(),
         timestamps: TimeStamps {}.toCell(),
     };
-    val calcAddr = calcDeployFiWallet(
+    val calcAddr = calcDeployBaseFiWallet(
         deployer.address,
         minter.address,
         getFiWalletCode(),

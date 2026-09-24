@@ -19,8 +19,9 @@ fun main() {
     val _daoProxy = deployDaoProxy(deployer, admin, minter.address);
 
     printJettonMinterInfo(minter, "JETTON");
-    printJettonWalletInfo(minter, admin, "JETTON_ADMIN");
+    // printJettonWalletInfo(minter, admin, "JETTON_ADMIN");
     // update FI_ADDRESS for frontend and interaction scripts
     // comment all libRefs
     // refactor code and send initial upgrade to fiWallet to replace code to lib ref
+    // TODO: update code hashes of minter, wallet, minter address in frontend and tolk, dao address, basefiwallet code for offchain addr calculation
 }

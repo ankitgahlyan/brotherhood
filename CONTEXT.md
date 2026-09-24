@@ -22,6 +22,9 @@ _Avoid_: Coordinate, GPS, City name, Address
 **Account** — a member's on-chain record, implemented as a `FossFiWallet` contract. Holds the member's balance, votes, connections, and status. One member owns exactly one account.
 _Avoid_: Wallet, jetton wallet (reserved for the TON standard view)
 
+**Base Account** — the minimal initial proxy contract deployed on-chain (`BaseFiWallet`) to establish deterministic Account address calculation with negligible bytecode footprint before upgrading to full Account logic.
+_Avoid_: Proxy wallet, stub account
+
 **Username** — the Telegram handle registered in a Member's Account profile (`ProfileInfo`), enabling peer communication and network coordination via Telegram deep-links.
 _Avoid_: Handle, nick, alias
 
@@ -153,6 +156,9 @@ _Avoid_: Locked, flagged
 
 **Closure** — the permanent end of an Account, on a Member's death or as an Authority sanction. Unfollows all, burns the remaining minted FI, propagates up the Invite Lineage, and transfers the Member's remaining tokens to their Nominee.
 _Avoid_: Deletion, destruction
+
+**Storage Migration** — the version-gated schema transformation of on-chain Account state, converting a Base Account's minimal initial seed into a full Account record (`migrateFromInit`) or migrating an Account across schema revisions (`migrateFromPreviousVersion`).
+_Avoid_: Schema patch, state update
 
 ### Organization
 

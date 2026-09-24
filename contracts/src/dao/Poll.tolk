@@ -2,8 +2,8 @@ import "@gen/Voter.code"
 import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/messages"
+import "@contracts/common/utils"
 import "@contracts/dao/dao-utils"
-import "@contracts/fossFi/jetton-utils"
 
 import "storage"
 
@@ -49,7 +49,7 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         VoteProposal => {
-            val expectedWallet = calcDeployFiWallet(
+            val expectedWallet = calcDeployBaseFiWallet(
                 msg.voterOwner,
                 addrs.fiAddress,
                 getFiWalletCode(),

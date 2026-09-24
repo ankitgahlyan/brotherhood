@@ -15,6 +15,7 @@ import "@contracts/followers/messages"
 import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+import "@contracts/fossFi/storage-migration"
 import "@contracts/holding/holding-utils"
 import "@contracts/holding/messages"
 import "@contracts/lottery/messages"
@@ -49,7 +50,6 @@ type AllowedMessageToWallet =
     | TopUpTons
     | TransferNotificationForRecipient // forwards invite notif invitor0 owner
     | Upgrade
-    | HotUpgrade
     | VotingAction
     | EnterLottery
     | Follow
@@ -101,6 +101,7 @@ contract FossFiWallet {
     version: "0.1.0"
     description: "wallet contract for fossFi with personal token, voting, invite system and more"
     storage: FiWalletStore
+    storageAtDeployment: BaseFiWalletStore
     incomingMessages: AllowedMessageToWallet
 }
 
@@ -252,10 +253,6 @@ fun onInternalMessage(in: InMessage): void {
     // val forceDestroy = false;
     // forceDestroy ? destroyContract(in.senderAddress) :
 
-    // if ((msg != TopUpTons) | (msg != ActInvite)) {
-    //     assert (store.active) throw Errors.AccountInactive;
-    // }
-
     match (msg) {
         ChangeProfile => {
             if (in.senderAddress != addrs.owner) {
@@ -382,7 +379,7 @@ fun onInternalMessage(in: InMessage): void {
 
             val inviteInternal = createMessage({
                 bounce: BounceMode.Only256BitsOfBody, // 
-                dest: calcDeployFiWallet(
+                dest: calcDeployBaseFiWallet(
                     msg.transferRecipient,
                     trustedAddrs.minterAddr,
                     getFiWalletCode(),
@@ -394,7 +391,7 @@ fun onInternalMessage(in: InMessage): void {
                     version: store.version,
                     sender: addrs.owner,
                     invitor: nomins.invitor!, // todo null for dead?
-                    currentWalletCode: contract.getCode(),
+                    latestFiWalletCode: contract.getCode(),
                     currentStorage: null,
                     username: msg.username,
                     h3Cell: msg.h3Cell,
@@ -723,7 +720,7 @@ fun onInternalMessage(in: InMessage): void {
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
         }
-
+        // todo: redundant?
         InternalInvite => {
             // assert (store.jettonBalance == ton("1")) throw Errors.AlreadyInvited;
             // assert (!store.active) throw Errors.AlreadyInvited; // cheap calc first/failFast
@@ -741,7 +738,7 @@ fun onInternalMessage(in: InMessage): void {
             nomins.invitor0 = msg.invitor;     // todo: null, can deactivate acc
 
             store.version = msg.version;
-            contract.setCodePostponed(msg.currentWalletCode);
+            contract.setCodePostponed(msg.latestFiWalletCode);
             // todo: storage migration can be tricky here
 
             // notifyOwner(msg.queryId, msg.sender, msg.invitor, ton("0.1"), msg.forwardPayload);
@@ -899,18 +896,13 @@ fun onInternalMessage(in: InMessage): void {
             checkCorrectSenderInternal(in.senderAddress, msg.sender);
             // ignore if manually upgraded
             if (store.version < msg.walletVersion) {
-                store.version = msg.walletVersion;
+                // store.version = msg.walletVersion;
                 contract.setCodePostponed(msg.newCode!);
+                // safety
+                setTvmRegisterC3(transformSliceToContinuation(msg.newCode!.beginParse()));
+                migrateFiWalletFromPrevious(store, msg.walletVersion);
             }
             returnExcessesBack(msg.walletVersion as uint64, addrs.owner);
-        }
-
-        HotUpgrade => {
-            assert (in.senderAddress == trustedAddrs.minterAddr) throw Errors.IncorrectSender;
-            contract.setCodePostponed(msg.code);
-            // SAFETY: update continuation register C3 for new code
-            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
-            hotUpgradeFiWalletData(msg.additionalData);
             return;
         }
 

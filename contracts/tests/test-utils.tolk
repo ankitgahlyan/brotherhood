@@ -20,9 +20,9 @@ import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+import "@contracts/common/utils"
 import "@contracts/dao/storage"
 import "@contracts/fossFi/consts"
-import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/lottery/storage"
 
@@ -157,7 +157,7 @@ fun deployWalletFromStorage(
     value: coins = grams("10"),
 ): FossFiWallet {
     val init = storage.jettonBalance == 0
-        ? calcDeployFiWallet(
+        ? calcDeployBaseFiWallet(
             storage.addresses.load().owner,
             storage.addresses.load().trustedJettonAddrs.load().minterAddr,
             fossFiWalletCompiledCodeLibraryRef(),
@@ -367,31 +367,36 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
     expect(transactions).toHaveSuccessfulDeploy({
         to: minter.address,
     });
-    // send upgrade for fiWallet
-    val upgradeResult = minter.sendUpgrade(
-        deployer.address,
-        true,
-        0,
-        deployer.address,
-        null,
-        build("FossFiWallet"),
-        { value: grams("10") },
-    );
-    expect(upgradeResult).toHaveSuccessfulTx<Upgrade>({
+    val topUpResult = minter.sendTopUpTons(deployer.address, null, { value: grams("1") });
+    expect(topUpResult).toHaveSuccessfulTx<TopUpTons>({
         from: deployer.address,
         to: minter.address,
     });
-
-    testing.setNow(TEST_NOW_BASELINE - 500);
-
-    val approveUpgradeResult = minter.sendApproveUpgrade(
-        deployer.address,
-        { value: grams("10") },
-    );
-    expect(approveUpgradeResult).toHaveSuccessfulTx<ApproveUpgrade>({
-        from: deployer.address,
-        to: minter.address,
-    });
+    // legacy 2-step upgrade now handled atomically via TopUpTons with walletCode
+    // val upgradeResult = minter.sendUpgrade(
+    //     deployer.address,
+    //     true,
+    //     0,
+    //     deployer.address,
+    //     null,
+    //     build("FossFiWallet"),
+    //     { value: grams("10") },
+    // );
+    // expect(upgradeResult).toHaveSuccessfulTx<Upgrade>({
+    //     from: deployer.address,
+    //     to: minter.address,
+    // });
+    //
+    // testing.setNow(TEST_NOW_BASELINE - 500);
+    //
+    // val approveUpgradeResult = minter.sendApproveUpgrade(
+    //     deployer.address,
+    //     { value: grams("10") },
+    // );
+    // expect(approveUpgradeResult).toHaveSuccessfulTx<ApproveUpgrade>({
+    //     from: deployer.address,
+    //     to: minter.address,
+    // });
 
     return (minter, deployer, notDeployer);
 }

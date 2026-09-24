@@ -10,6 +10,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
 import "@contracts/common/messages"
+import "@contracts/fossFi/consts"
 
 import "test-utils"
 
@@ -18,6 +19,8 @@ const MAX_JETTON_VALUE = grams("100000")
 get fun `test state: should mint max jetton value`() {
     val (minter, deployer, _) = setupTest();
     val recipient = randomAddress();
+    val deployerWallet = userWallet(minter, deployer.address);
+    activateUser(minter, deployerWallet, deployer, recipient);
     val wallet = userWallet(minter, recipient);
 
     val mintResult = minter.sendMint(
@@ -36,13 +39,15 @@ get fun `test state: should mint max jetton value`() {
         to: wallet.address,
     });
 
-    expect(wallet.getJettonBalance()).toEqual(MAX_JETTON_VALUE);
-    expect(minter.getTotalSupply()).toEqual(MAX_JETTON_VALUE + grams("1"));
+    expect(wallet.getJettonBalance()).toEqual(MAX_JETTON_VALUE + grams("1"));
+    expect(minter.getTotalSupply()).toEqual(MAX_JETTON_VALUE + grams("1") + MBRP_AMOUNT);
 }
 
 get fun `test state: wallet storage and init-state bounds should match fee constants`() {
     val (minter, deployer, _) = setupTest();
     val recipient = randomAddress();
+    val deployerWallet = userWallet(minter, deployer.address);
+    activateUser(minter, deployerWallet, deployer, recipient);
     val recipientWallet = userWallet(minter, recipient);
 
     val mintResult = minter.sendMint(

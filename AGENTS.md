@@ -50,6 +50,7 @@ This repository uses a single-context layout for domain documentation. The gloss
 - separate struct/msg files for each contract instead of unnecessarily bloating other contracts and common file for common structs/msg.
 - report any circular dependency issues.
 - use fail-fast approach, use assertions early at msg entry into contracts.
+- **Deterministic Proxy Bytecode & Storage Migration:** Minimal proxy contracts (`BaseFiWallet`) used for deterministic child address derivation must never self-import their own compiled bytecode artifact (preventing compiler cycles). Storage migration logic must reside in the target upgraded contract (`FossFiWallet` / `storage-migration.tolk`) rather than bloating the proxy. The proxy executes `setCodePostponed`, replaces `c3` via `setTvmRegisterC3`, and invokes migration via `@method_id(2223)`. Target contracts must preserve `@method_id(2223)` in their compiled code dictionary against dead-code elimination. Operational messages (token transfers, mints, lottery prizes) require an onboarded wallet; un-onboarded proxies accept only `TopUpTons` or `InternalInvite`.
 
 ### Frontend (TanStack Start)
 

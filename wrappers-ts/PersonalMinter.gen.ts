@@ -813,28 +813,38 @@ export const Upgrade = {
 
 /**
  > struct (0x00001007) TopUpTons {
+ >     latestFiWalletCode: cell?
  > }
  */
 export interface TopUpTons {
     readonly $: 'TopUpTons'
+    latestFiWalletCode: c.Cell | null /* = null */
 }
 
 export const TopUpTons = {
     PREFIX: 0x00001007,
 
-    create(): TopUpTons {
+    create(args: {
+        latestFiWalletCode?: c.Cell | null /* = null */
+    }): TopUpTons {
         return {
             $: 'TopUpTons',
+            latestFiWalletCode: null,
+            ...args
         }
     },
     fromSlice(s: c.Slice): TopUpTons {
         loadAndCheckPrefix32(s, 0x00001007, 'TopUpTons');
         return {
             $: 'TopUpTons',
+            latestFiWalletCode: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: TopUpTons, b: c.Builder): void {
         b.storeUint(0x00001007, 32);
+        storeTolkNullable<c.Cell>(self.latestFiWalletCode, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: TopUpTons): c.Cell {
         return makeCellFrom<TopUpTons>(self, TopUpTons.store);
@@ -1164,8 +1174,9 @@ export class PersonalMinter implements c.Contract {
     }
 
     static createCellOfTopUpTons(body: {
+        latestFiWalletCode?: c.Cell | null /* = null */
     }) {
-        return TopUpTons.toCell(TopUpTons.create());
+        return TopUpTons.toCell(TopUpTons.create(body));
     }
 
     static createCellOfDestroy(body: {
@@ -1267,10 +1278,11 @@ export class PersonalMinter implements c.Contract {
     }
 
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        latestFiWalletCode?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: TopUpTons.toCell(TopUpTons.create()),
+            body: TopUpTons.toCell(TopUpTons.create(body)),
             ...extraOptions
         });
     }

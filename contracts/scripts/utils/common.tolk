@@ -1,5 +1,6 @@
 import "@stdlib/strings"
 
+import "@acton/build"
 import "@acton/env"
 import "@acton/fmt"
 import "@acton/io"
@@ -7,7 +8,6 @@ import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
-import "@gen/FossFiWallet.code"
 import "@gen/Lottery.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
@@ -20,7 +20,7 @@ import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 const DAO_PROXY_ADDR = "kQBs0efjOXMJ_mTYkUqB16JynaYqMNpt2eTNzy79Ge0eLGk7"
-const FI_ADDRESS = "kQCU0cAJ20PF7MX9CLBcjUCw6ZwOfYil1iiKWXZeeBlfv1gP"
+const FI_ADDRESS = "kQByVk5DwR_q9O0QECxai3CDpE-7Qimbb4OUE9Bt4Qz0deAE"
 const JETTON_DEFAULT_NAME = "BroTherHOOD"
 const JETTON_DEFAULT_SYMBOL = "HD"
 const JETTON_DEFAULT_DESCRIPTION = "token with social minting + debt-free credit claims capabilities & supply is controlled by scarcity of humans & value is backed by paybacks by connections + lifetime emi & unique humans are ensured by peer reporting & genuine reports will be rewarded & lookout for your circle and rings to find potential valid reports"
@@ -152,7 +152,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
             lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     };
 }

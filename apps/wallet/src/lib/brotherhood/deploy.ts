@@ -356,7 +356,7 @@ export function buildRequestUpgradeBody(targetAddress?: Address): Cell {
 }
 
 export function buildTopUpTonsBody(): Cell {
-  return TopUpTons.toCell(TopUpTons.create());
+  return TopUpTons.toCell(TopUpTons.create({}));
 }
 
 export function buildApproveUpgradeBody(): Cell {

@@ -3,6 +3,12 @@ import "@stdlib/strings"
 import "@contracts/common/messages"
 import "@contracts/fossFi/consts"
 
+struct BaseFiWalletStore {
+    owner: address
+    minterAddr: address
+    version: uint10 = 0
+}
+
 struct NomInAddrs {
     nominee: address? = null
     invitor: address? = null
@@ -115,6 +121,14 @@ fun FiStore.load(): FiStore {
 }
 
 fun FiStore.save(self): void {
+    contract.setData(self.toCell());
+}
+
+fun BaseFiWalletStore.load(): BaseFiWalletStore {
+    return BaseFiWalletStore.fromCell(contract.getData());
+}
+
+fun BaseFiWalletStore.save(self): void {
     contract.setData(self.toCell());
 }
 

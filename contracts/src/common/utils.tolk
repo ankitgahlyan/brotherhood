@@ -1,3 +1,7 @@
+import "@contracts/common/sharding"
+
+import "@contracts/fossFi/storage"
+
 import "messages"
 
 // SnakeString describes a (potentially long) string inside a cell;
@@ -29,4 +33,17 @@ fun destroyContract(dest: address) {
     });
     // SAFETY: Sends entire balance to dest and destroys the contract on finalization
     outMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
+}
+
+fun calcDeployBaseFiWallet(
+    owner: address,
+    minterAddr: address,
+    baseFiWalletCode: cell,
+): AutoDeployAddress {
+    val emptyFiWalletStore: BaseFiWalletStore = { owner, minterAddr };
+
+    return {
+        stateInit: { code: baseFiWalletCode, data: emptyFiWalletStore.toCell() },
+        toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: owner },
+    };
 }

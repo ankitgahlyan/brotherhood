@@ -2,17 +2,8 @@ import { TonClient } from '@ton/ton';
 import { Address, Dictionary } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
-import {
-  Addresses,
-  FossFiWallet,
-  Maps,
-  NomInAddrs,
-  ProfileInfo,
-  ReportInfo,
-  SocialMaps,
-  TimeStamps,
-  TrustedAddrs,
-} from '@wrappers/FossFiWallet.gen';
+import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { BaseFiWallet } from '@wrappers/BaseFiWallet.gen';
 import {
   rateLimitedFetch,
   createTonClientAxiosAdapter,
@@ -174,37 +165,15 @@ export function getFiWalletAddress(
 
   /**
    * Computes Brotherhood FI wallet address deterministically off-chain
-   * using baseFiWalletCodeCell and initial empty storage schema.
+   * using baseFiWalletCodeCell and BaseFiWallet proxy storage.
    */
-  const emptyFiWalletStore = {
-    profile: { ref: ProfileInfo.create({}) },
-    timestamps: { ref: TimeStamps.create({}) },
-    addresses: {
-      ref: Addresses.create({
-        owner,
-        nomInAddrs: { ref: NomInAddrs.create({}) },
-        trustedJettonAddrs: {
-          ref: TrustedAddrs.create({
-            minterAddr: Address.parse(FI_ADDRESS),
-            authorisedAccs: Dictionary.empty(),
-          }),
-        },
-      }),
+  const wallet = BaseFiWallet.fromStorage(
+    { owner, minterAddr: minterAddress },
+    {
+      overrideContractCode: baseFiWalletCodeCell,
+      toShard: { fixedPrefixLength: 8, closeTo: owner },
     },
-    maps: {
-      ref: Maps.create({
-        invited: Dictionary.empty(),
-        allowances: Dictionary.empty(),
-        social: { ref: SocialMaps.create({ votedFor: Dictionary.empty() }) },
-        reportInfo: { ref: ReportInfo.create({ reports: Dictionary.empty() }) },
-      }),
-    },
-  };
-
-  const wallet = FossFiWallet.fromStorage(emptyFiWalletStore, {
-    overrideContractCode: baseFiWalletCodeCell,
-    toShard: { fixedPrefixLength: 8, closeTo: owner },
-  });
+  );
   const offchainAddr = wallet.address;
 
   setCachedDeterministicWalletAddress(net, minterAddress, owner, offchainAddr);
