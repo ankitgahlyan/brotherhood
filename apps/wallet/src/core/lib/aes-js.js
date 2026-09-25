@@ -1392,28 +1392,12 @@ var aesjs = (function (root) {
     },
   };
 
-  // node.js
-  if (typeof exports !== 'undefined') {
-    module.exports = aesjs;
+  if (root && root.aesjs) {
+    aesjs._aesjs = root.aesjs;
+  }
 
-    // RequireJS/AMD
-    // http://www.requirejs.org/docs/api.html
-    // https://github.com/amdjs/amdjs-api/wiki/AMD
-  } else if (typeof define === 'function' && define.amd) {
-    define([], function () {
-      return aesjs;
-    });
-
-    // Web Browsers
-  } else {
-    // If there was an existing library at "aesjs" make sure it's still available
-    if (root && root.aesjs) {
-      aesjs._aesjs = root.aesjs;
-    }
-
-    if (root) {
-      root.aesjs = aesjs;
-    }
+  if (root) {
+    root.aesjs = aesjs;
   }
 
   return aesjs;
