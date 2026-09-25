@@ -656,3 +656,12 @@ export function subscribeTelegramBackButton(cb: () => void): () => void {
 
   return () => {};
 }
+
+export function closeTelegramApp(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    getRawTelegramWebApp()?.close?.();
+  } catch {
+    // ignore
+  }
+}

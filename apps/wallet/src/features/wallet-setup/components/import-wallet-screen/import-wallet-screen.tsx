@@ -117,7 +117,7 @@ export const ImportWalletScreen: React.FC = () => {
         subwalletId,
         finalName,
       );
-      navigate('/wallet');
+      navigate('/wallet', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import wallet');
     } finally {

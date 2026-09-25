@@ -44,7 +44,7 @@ export const LedgerScreen: React.FC = () => {
     try {
       setUseWalletInterfaceType('ledger');
       await createLedgerWallet(network, walletName.trim() || defaultName);
-      navigate('/wallet');
+      navigate('/wallet', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect Ledger');
     } finally {

@@ -307,7 +307,19 @@ export async function invalidateContractState(
   net: Network = defaultNetwork,
   _queryClient?: any,
 ): Promise<void> {
-  await invalidateContractCache(net, contractAddress);
+  try {
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    const clean =
+      typeof contractAddress === 'string'
+        ? contractAddress.trim()
+        : contractAddress.toRawString();
+    await batchHydrateUniversal([clean], net, { force: true });
+  } catch (err) {
+    console.warn(
+      '[invalidateContractState] Failed to rehydrate contract in background:',
+      err,
+    );
+  }
 }
 
 export function createRefetchWrapper<T>(

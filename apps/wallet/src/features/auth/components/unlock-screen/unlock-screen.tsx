@@ -44,10 +44,10 @@ export const UnlockScreen: React.FC = () => {
         const success = await unlock(decryptedPassword);
         if (success) {
           if (hasWallet) {
-            navigate('/wallet');
+            navigate('/wallet', { replace: true });
             void loadAllWallets();
           } else {
-            navigate('/welcome');
+            navigate('/welcome', { replace: true });
           }
           return;
         } else {
@@ -104,10 +104,10 @@ export const UnlockScreen: React.FC = () => {
         throw new Error('Incorrect password');
       }
       if (hasWallet) {
-        navigate('/wallet');
+        navigate('/wallet', { replace: true });
         void loadAllWallets();
       } else {
-        navigate('/welcome');
+        navigate('/welcome', { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to unlock wallet');

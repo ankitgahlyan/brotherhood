@@ -11,7 +11,10 @@ import {
   showTelegramBackButton,
   hideTelegramBackButton,
   subscribeTelegramBackButton,
+  closeTelegramApp,
+  telegramHaptics,
 } from '../telegram';
+import { toast } from 'sonner';
 
 interface BackStackEntry {
   id: number;
@@ -27,6 +30,8 @@ let isPopstateSubscribed = false;
 let routerBackHandler: (() => void) | undefined = undefined;
 let isAtRootRoute = true;
 let isAlteringHistory = false;
+let lastRootBackPressTime = 0;
+const DOUBLE_BACK_WINDOW_MS = 2000;
 
 function updateNativeBackButtonState(): void {
   const hasModals = stack.some((entry) => !entry.isClosed);
@@ -39,8 +44,49 @@ function updateNativeBackButtonState(): void {
   }
 }
 
+export function handleRootExitConfirmation(): boolean {
+  const now = Date.now();
+  if (now - lastRootBackPressTime < DOUBLE_BACK_WINDOW_MS) {
+    lastRootBackPressTime = 0;
+    if (isTelegramEnvironment()) {
+      closeTelegramApp();
+      return true;
+    }
+    return false;
+  }
+
+  lastRootBackPressTime = now;
+  try {
+    telegramHaptics.impact('light');
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.vibrate === 'function'
+    ) {
+      navigator.vibrate(40);
+    }
+  } catch {
+    // ignore
+  }
+
+  toast.info('Press back again to exit', {
+    duration: DOUBLE_BACK_WINDOW_MS,
+    position: 'bottom-center',
+    id: 'double-back-exit-toast',
+  });
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.history.pushState({ isRootTrap: true }, '', window.location.href);
+    } catch {
+      // ignore
+    }
+  }
+
+  return true;
+}
+
 /**
- * Executes the topmost back action (modal dismiss or router back).
+ * Executes the topmost back action (modal dismiss, router back, or root exit confirmation).
  */
 export function handleGlobalBack(): boolean {
   for (let i = stack.length - 1; i >= 0; i--) {
@@ -65,6 +111,13 @@ export function handleGlobalBack(): boolean {
     } catch (err) {
       console.error('[BackStack] Error executing router back:', err);
     }
+  }
+
+  // Tier 3: Root route exit confirmation
+  if (isAtRootRoute) {
+    const trapped = handleRootExitConfirmation();
+    updateNativeBackButtonState();
+    return trapped;
   }
 
   updateNativeBackButtonState();
@@ -109,6 +162,11 @@ function initPopstateListener(): void {
         }
       }
       updateNativeBackButtonState();
+      return;
+    }
+
+    if (isAtRootRoute) {
+      handleRootExitConfirmation();
     }
   });
 

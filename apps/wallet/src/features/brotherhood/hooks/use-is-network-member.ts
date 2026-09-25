@@ -78,9 +78,18 @@ export function useIsNetworkMember(): UseIsNetworkMemberResult {
     const data = account.data;
 
     if (!data || data.accountInit === 0) {
-      // If store already marked not member, return not_member immediately
+      if (isStoreMember) {
+        return {
+          isMember: true,
+          isFullyActive: true,
+          memberState: 'fully_active' as MemberState,
+          activationUnlockTime: 0,
+          activationRemainingSeconds: 0,
+          activationRemainingFormatted: '0s',
+        };
+      }
       return {
-        isMember: Boolean(isStoreMember && data && data.accountInit > 0),
+        isMember: false,
         isFullyActive: false,
         memberState: 'not_member' as MemberState,
         activationUnlockTime: 0,

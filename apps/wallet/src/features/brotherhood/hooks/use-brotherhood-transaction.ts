@@ -151,23 +151,35 @@ export function useBrotherhoodTransaction(
           }
         }
 
-        // Target invalidation after 4 seconds (1-2 TON blocks)
-        setTimeout(async () => {
-          try {
-            const targetList = Array.from(targets);
-            await Promise.all(
-              targetList.map((addr) =>
-                invalidateContractState(addr, 'testnet', queryClient),
-              ),
-            );
-            toast.info('On-chain state updated');
-          } catch (refreshErr) {
-            console.error(
-              'Targeted refresh after transaction failed:',
-              refreshErr,
-            );
-          }
-        }, 4000);
+        // Target invalidations at 2s and 5s
+        const net =
+          String(wallet?.getNetwork()?.chainId) === '-239'
+            ? 'mainnet'
+            : 'testnet';
+        const targetList = Array.from(targets);
+
+        const runInvalidation = (delayMs: number, showToast: boolean) => {
+          setTimeout(async () => {
+            try {
+              await Promise.all(
+                targetList.map((addr) =>
+                  invalidateContractState(addr, net, queryClient),
+                ),
+              );
+              if (showToast) {
+                toast.info('On-chain state updated');
+              }
+            } catch (refreshErr) {
+              console.error(
+                'Targeted refresh after transaction failed:',
+                refreshErr,
+              );
+            }
+          }, delayMs);
+        };
+
+        runInvalidation(2000, false);
+        runInvalidation(5000, true);
       } catch (err) {
         const errMsg =
           err instanceof Error ? err.message : 'Transaction failed';

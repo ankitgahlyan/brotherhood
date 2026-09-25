@@ -210,30 +210,35 @@ export const useSendToken = ({
     }
 
     if (senderAddress) {
-      setTimeout(async () => {
-        try {
-          await invalidateContractState(
-            senderAddress.toString(),
-            net,
-            queryClient,
-          );
+      const scheduleRevalidation = (delayMs: number) => {
+        setTimeout(async () => {
           try {
-            const userFiWallet = getFiWalletAddress(
-              Address.parse(senderAddress.toString()),
-              net,
-            );
             await invalidateContractState(
-              userFiWallet.toString(),
+              senderAddress.toString(),
               net,
               queryClient,
             );
+            try {
+              const userFiWallet = getFiWalletAddress(
+                Address.parse(senderAddress.toString()),
+                net,
+              );
+              await invalidateContractState(
+                userFiWallet.toString(),
+                net,
+                queryClient,
+              );
+            } catch {
+              // Ignore non-member wallet errors
+            }
           } catch {
-            // Ignore non-member wallet errors
+            // Ignore invalidation errors
           }
-        } catch {
-          // Ignore invalidation errors
-        }
-      }, 1000);
+        }, delayMs);
+      };
+
+      scheduleRevalidation(2000);
+      scheduleRevalidation(5000);
     }
 
     return sendResult;

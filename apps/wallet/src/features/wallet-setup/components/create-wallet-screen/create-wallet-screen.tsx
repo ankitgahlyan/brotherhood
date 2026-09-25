@@ -71,7 +71,7 @@ export const CreateWalletScreen: React.FC = () => {
       const subwalletId = network === 'testnet' ? 2147483645 : 2147483409;
       const finalName = walletName.trim() || defaultName;
       await importWallet(mnemonic, 'v5r1', network, subwalletId, finalName);
-      navigate('/wallet');
+      navigate('/wallet', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create wallet');
       setConfirmOpen(false);
