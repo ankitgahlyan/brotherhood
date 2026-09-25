@@ -1,5 +1,5 @@
 import { TonClient } from '@ton/ton';
-import { Address, Dictionary } from '@ton/core';
+import { Address } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
 import { FossFiWallet } from '@wrappers/FossFiWallet.gen';

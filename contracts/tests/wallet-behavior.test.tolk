@@ -105,7 +105,7 @@ get fun `test wallet: kitchenSink`() {
     sendHotUpgrade.waitForTrace();
 
     val minterData = minter.getJettonData();
-    expect(minterData.totalSupply).toEqual(grams("12112"));
+    expect(minterData.totalSupply).toEqual(grams("1001"));
 }
 
 get fun `test : hotUpgrade`() {
@@ -121,7 +121,7 @@ get fun `test : hotUpgrade`() {
 
     // println(sendHotUpgrade);
     val minterData = minter.getJettonData();
-    expect(minterData.totalSupply).toEqual(grams("11112"));
+    expect(minterData.totalSupply).toEqual(grams("1"));
 }
 
 get fun `test : addrs r same`() {

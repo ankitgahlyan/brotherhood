@@ -97,9 +97,6 @@ export const PersonalJettonScreen: React.FC = () => {
     'metadata',
   );
 
-  // Burn tab options
-  const [isPayback, setIsPayback] = useState(true);
-
   // Destroy tab confirmation dialog states & auth gate
   const { isPasswordSet, unlock } = useAuth();
   const [isConfirmWalletOpen, setIsConfirmWalletOpen] = useState(false);

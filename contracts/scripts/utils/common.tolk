@@ -78,7 +78,7 @@ fun promptJettonAddressRequired(envName: string, message: string): address {
     if (fromEnv != null) {
         return fromEnv;
     }
-    return parseAddress(prompt(message, "EQ... / kQ..."));
+    return parseAddress(prompt(message, "EQ... / kQ...", FI_ADDRESS));
 }
 
 fun promptJettonCoins(envName: string, message: string, default: string): coins {

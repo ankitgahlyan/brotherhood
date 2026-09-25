@@ -13,7 +13,7 @@ fun main() {
     val res = minter.sendHotUpgrade(
         admin.address,
         null,
-        build("fossFi"),
+        build("FossFi"),
         { value: grams("0.1") },
     );
 

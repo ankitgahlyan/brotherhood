@@ -127,11 +127,15 @@ export const useTonConnect = () => {
     useShallow((state) => ({
       pendingConnectRequest: state.tonConnect.pendingConnectRequestEvent,
       isConnectModalOpen: state.tonConnect.isConnectModalOpen,
+      connectedSessions: state.tonConnect.connectedSessions || [],
       handleTonConnectUrl: state.handleTonConnectUrl,
       showConnectRequest: state.showConnectRequest,
       approveConnectRequest: state.approveConnectRequest,
       rejectConnectRequest: state.rejectConnectRequest,
       closeConnectModal: state.closeConnectModal,
+      loadConnectedSessions: state.loadConnectedSessions,
+      disconnectSession: state.disconnectSession,
+      disconnectAllSessions: state.disconnectAllSessions,
     })),
   );
 };

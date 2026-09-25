@@ -12,6 +12,7 @@ import {
   persist,
   createJSONStorage,
   subscribeWithSelector,
+  type StateStorage,
 } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
@@ -177,7 +178,73 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
           {
             name: 'bro-store',
             storage: createJSONStorage(
-              () => (storage ? storage : localStorage),
+              () => {
+                const targetStorage: StateStorage =
+                  storage ||
+                  (typeof window !== 'undefined'
+                    ? window.localStorage
+                    : (undefined as unknown as StateStorage));
+
+                if (!targetStorage) {
+                  return {
+                    getItem: () => null,
+                    setItem: () => {},
+                    removeItem: () => {},
+                  };
+                }
+
+                return {
+                  getItem: (name: string) => targetStorage.getItem(name),
+                  removeItem: (name: string) => targetStorage.removeItem(name),
+                  setItem: (name: string, value: string) => {
+                    try {
+                      targetStorage.setItem(name, value);
+                    } catch (err: any) {
+                      const isQuotaError =
+                        err?.name === 'QuotaExceededError' ||
+                        err?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+                        err?.code === 22 ||
+                        err?.code === 1014;
+
+                      if (!isQuotaError) {
+                        throw err;
+                      }
+
+                      log.warn(
+                        '[createWalletStore] QuotaExceededError on setItem. Evicting non-essential event caches...',
+                      );
+
+                      try {
+                        const parsed = JSON.parse(value);
+                        if (parsed?.state?.walletManagement?.eventsByAddress) {
+                          const pruned: Record<string, unknown[]> = {};
+                          for (const [addr, evs] of Object.entries(
+                            parsed.state.walletManagement.eventsByAddress,
+                          )) {
+                            pruned[addr] = Array.isArray(evs)
+                              ? evs.slice(0, 5)
+                              : [];
+                          }
+                          parsed.state.walletManagement.eventsByAddress =
+                            pruned;
+                        }
+                        if (parsed?.state?.jettons?.jettonsByAddress) {
+                          parsed.state.jettons.jettonsByAddress = {};
+                        }
+                        targetStorage.setItem(name, JSON.stringify(parsed));
+                        log.info(
+                          '[createWalletStore] Resumed write after emergency cache pruning.',
+                        );
+                      } catch (innerErr) {
+                        log.error(
+                          '[createWalletStore] Failed to write after cache pruning:',
+                          innerErr,
+                        );
+                      }
+                    }
+                  },
+                };
+              },
               {
                 replacer: (_key, value) =>
                   typeof value === 'bigint'
@@ -227,7 +294,17 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                     state.walletManagement.eventsByAddress || {},
                   ).map(([addr, events]) => [
                     addr,
-                    Array.isArray(events) ? events.slice(0, 50) : [],
+                    Array.isArray(events)
+                      ? events.slice(0, 20).map((ev: any) => {
+                          if (!ev || typeof ev !== 'object') return ev;
+                          const {
+                            trace: _trace,
+                            transactions: _transactions,
+                            ...cleaned
+                          } = ev;
+                          return cleaned;
+                        })
+                      : [],
                   ]),
                 ),
                 associatedAddressesByAddress:

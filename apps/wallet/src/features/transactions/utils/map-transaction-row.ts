@@ -215,6 +215,10 @@ export function decodeExitCode(code: number): string {
 
 /** Extracts the failure exit code from transaction compute phase if available. */
 function extractFailureReason(event: Event): string | undefined {
+  if (event.failureReason) return event.failureReason;
+  if (event.exitCode !== undefined && event.exitCode !== 0) {
+    return decodeExitCode(event.exitCode);
+  }
   if (!event.transactions) return undefined;
   for (const tx of Object.values(event.transactions)) {
     const computePh = tx.description?.compute_ph;

@@ -50,6 +50,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
     pendingSignMessageRequestEvent: undefined,
     isSignMessageModalOpen: false,
     disconnectedSessions: [],
+    connectedSessions: [],
   },
 
   // TON Connect URL handling
@@ -173,6 +174,56 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       state.tonConnect.pendingConnectRequestEvent = undefined;
     });
     get().clearCurrentRequestFromQueue();
+  },
+
+  // Connected Sessions management
+  loadConnectedSessions: async () => {
+    const state = get();
+    if (!state.walletCore.walletKit) {
+      return [];
+    }
+    try {
+      const sessions = await state.walletCore.walletKit.listSessions();
+      set((state) => {
+        state.tonConnect.connectedSessions = sessions;
+      });
+      return sessions;
+    } catch (error) {
+      log.error('Failed to list sessions:', error);
+      return [];
+    }
+  },
+
+  disconnectSession: async (sessionId: string) => {
+    const state = get();
+    if (!state.walletCore.walletKit) {
+      return;
+    }
+    try {
+      await state.walletCore.walletKit.disconnect(sessionId);
+      set((state) => {
+        state.tonConnect.connectedSessions = (
+          state.tonConnect.connectedSessions || []
+        ).filter((s) => s.sessionId !== sessionId);
+      });
+    } catch (error) {
+      log.error('Failed to disconnect session:', error);
+    }
+  },
+
+  disconnectAllSessions: async () => {
+    const state = get();
+    if (!state.walletCore.walletKit) {
+      return;
+    }
+    try {
+      await state.walletCore.walletKit.disconnect();
+      set((state) => {
+        state.tonConnect.connectedSessions = [];
+      });
+    } catch (error) {
+      log.error('Failed to disconnect all sessions:', error);
+    }
   },
 
   // Transaction request actions

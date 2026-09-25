@@ -62,20 +62,30 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
   badge,
 }) => (
   <div
-    className={`flex items-center justify-between gap-3 px-4 py-3 ${
-      disabled ? 'opacity-60' : ''
+    onClick={() => {
+      if (!disabled) {
+        onChange(!checked);
+      }
+    }}
+    className={`flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors select-none ${
+      disabled ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''
     }`}
   >
-    <div className="min-w-0">
+    <div className="min-w-0 flex-1">
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-sm font-semibold text-foreground">{label}</span>
         {badge}
-        {info && <InfoPopover label={label}>{info}</InfoPopover>}
+        {info && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <InfoPopover label={label}>{info}</InfoPopover>
+          </div>
+        )}
       </div>
       <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
     </div>
     <label
       data-testid={testId}
+      onClick={(e) => e.stopPropagation()}
       className={`relative inline-flex items-center flex-shrink-0 ${
         disabled ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'
       }`}

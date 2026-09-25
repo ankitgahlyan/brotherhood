@@ -136,8 +136,10 @@ export interface Event {
   isScam: boolean;
   lt: number;
   inProgress: boolean;
-  trace: EmulationTraceNode;
-  transactions: Record<string, ToncenterTransaction>;
+  exitCode?: number;
+  failureReason?: string;
+  trace?: EmulationTraceNode;
+  transactions?: Record<string, ToncenterTransaction>;
 }
 
 export type StatusAction = 'success' | 'failure';
@@ -234,6 +236,34 @@ export type Action =
   | JettonSwapAction;
 
 /**
+ * Helper: Extract failure exit code / reason from transaction compute or action phase
+ */
+function extractFailureInfo(
+  transactions?: Record<string, ToncenterTransaction>,
+): { exitCode?: number; failureReason?: string } {
+  if (!transactions) return {};
+  for (const tx of Object.values(transactions)) {
+    const computePh = tx.description?.compute_ph;
+    if (
+      computePh &&
+      !computePh.success &&
+      computePh.exit_code !== undefined &&
+      computePh.exit_code !== 0
+    ) {
+      return { exitCode: computePh.exit_code };
+    }
+    const actionPh = tx.description?.action;
+    if (actionPh && !actionPh.success && actionPh.result_code !== 0) {
+      return {
+        exitCode: actionPh.result_code,
+        failureReason: `Action Failed (code ${actionPh.result_code})`,
+      };
+    }
+  }
+  return {};
+}
+
+/**
  * Helper: Build Event structure from parsed data
  */
 function buildEvent(
@@ -256,6 +286,9 @@ function buildEvent(
       ''
     );
   })();
+
+  const failure = extractFailureInfo(data.transactions);
+
   return {
     eventId: Base64ToHex(data.trace_id),
     traceExternalHash: extHash ? Base64NormalizeUrl(extHash) : undefined,
@@ -265,8 +298,7 @@ function buildEvent(
     isScam: false,
     lt: Number(data.start_lt),
     inProgress: data.is_incomplete,
-    trace: data.trace,
-    transactions: data.transactions,
+    ...failure,
   };
 }
 

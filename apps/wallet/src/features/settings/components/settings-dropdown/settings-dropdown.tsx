@@ -12,16 +12,12 @@ import {
   Download,
   KeyRound,
   Lock,
-  Moon,
-  Monitor,
   Palette,
-  Sun,
-  Sparkles,
   Trash2,
-  Check,
   X,
   Users,
   DatabaseZap,
+  Radio,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -31,14 +27,13 @@ import {
 import { setSettingsModalOpen } from '@/core/lib/settings-modal-state';
 import { InstallPromptDialog } from '@/core/components/pwa';
 import { useAuth, useWallet } from '@demo/wallet-core';
-import { useTheme } from '@/core/theme';
-import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
 import { ToggleRow } from '../toggle-row';
-import { AnimationSettingsCard } from '../animation-settings-card';
+import { AppearanceModal } from '../appearance';
 import { ContactsManagerModal } from '../contacts-manager';
-import { clearWholeAppStorage } from '@/core/utils/storage-management';
+import { StorageManagerModal } from '../storage-manager/storage-manager-modal';
+import { TonconnectAppsModal } from '../tonconnect-apps/tonconnect-apps-modal';
 
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -69,7 +64,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors disabled:opacity-50 ${
+    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer select-none disabled:opacity-50 ${
       danger
         ? 'text-red-500 hover:bg-red-500/10'
         : 'text-foreground hover:bg-muted/80'
@@ -88,52 +83,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
   </button>
 );
 
-const THEME_OPTIONS: {
-  mode: ThemeMode;
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  { mode: 'system', label: 'System', icon: <Monitor className="w-4 h-4" /> },
-  { mode: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
-  { mode: 'dark', label: 'Midnight', icon: <Moon className="w-4 h-4" /> },
-  { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
-];
-
-const PALETTE_OPTIONS: {
-  id: ColorPalette;
-  name: string;
-  gradientClass: string;
-}[] = [
-  {
-    id: 'violet',
-    name: 'Brotherhood',
-    gradientClass: 'from-purple-600 to-indigo-600',
-  },
-  {
-    id: 'ton',
-    name: 'TON Ocean',
-    gradientClass: 'from-cyan-500 to-blue-600',
-  },
-  {
-    id: 'emerald',
-    name: 'Emerald',
-    gradientClass: 'from-emerald-500 to-teal-500',
-  },
-  {
-    id: 'sunset',
-    name: 'Sunset',
-    gradientClass: 'from-amber-500 to-rose-500',
-  },
-  {
-    id: 'fuchsia',
-    name: 'Fuchsia',
-    gradientClass: 'from-pink-500 to-fuchsia-600',
-  },
-];
-
 export const SettingsDropdown: React.FC = () => {
-  const { theme, setTheme, palette, setPalette } = useTheme();
-
   const {
     lock,
     reset,
@@ -173,7 +123,10 @@ export const SettingsDropdown: React.FC = () => {
   const [biometricError, setBiometricError] = useState('');
   const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isContactsOpen, setIsContactsOpen] = useState(false);
+  const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
+  const [isTonConnectAppsOpen, setIsTonConnectAppsOpen] = useState(false);
 
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
@@ -182,18 +135,6 @@ export const SettingsDropdown: React.FC = () => {
   const [, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
   const devTapTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleClearWholeStorage = async () => {
-    if (
-      window.confirm(
-        'Are you sure you want to completely wipe all app storage, local databases, and caches? This will remove all local data and reload the application.',
-      )
-    ) {
-      setPanel(null);
-      await clearWholeAppStorage();
-      window.location.reload();
-    }
-  };
 
   const handleBrotherhoodTap = () => {
     if (devTapTimerRef.current) {
@@ -310,7 +251,7 @@ export const SettingsDropdown: React.FC = () => {
         className="max-w-md h-[90vh] md:h-[85vh] flex flex-col p-0 overflow-hidden"
       >
         <div className="flex-1 flex flex-col min-h-0 bg-background text-foreground overflow-hidden">
-          {/* Header styled like DeveloperScreen with Close button */}
+          {/* Header */}
           <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3 pt-[calc(0.75rem+var(--tg-safe-area-top,0px))] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <SettingsIcon className="w-5 h-5 text-blue-500" />
@@ -327,100 +268,30 @@ export const SettingsDropdown: React.FC = () => {
             </button>
           </header>
 
-          {/* Scrollable body matching DeveloperScreen flex-1 overflow-y-auto min-h-0 */}
+          {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-4 py-4 flex flex-col gap-4 pb-12">
-            {/* Section 1: Appearance */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 block">
-                Appearance & Theme
+            {/* Section 1: Appearance & Motion */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
+                Appearance & Motion
               </span>
-              <div className="rounded-2xl bg-secondary/60 p-3 border border-border flex flex-col gap-3">
-                {/* Mode Selector */}
-                <div>
-                  <span className="text-[11px] font-medium text-muted-foreground mb-1.5 block">
-                    Display Mode
-                  </span>
-                  <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
-                    {THEME_OPTIONS.map((opt) => {
-                      const isSelected = theme === opt.mode;
-                      return (
-                        <button
-                          key={opt.mode}
-                          type="button"
-                          onClick={() => setTheme(opt.mode)}
-                          className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                          }`}
-                          data-testid={`theme-option-${opt.mode}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {opt.icon}
-                            {isSelected && (
-                              <Check className="w-3 h-3 text-primary" />
-                            )}
-                          </div>
-                          <span>{opt.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Color Palette Selector */}
-                <div>
-                  <span className="text-[11px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                    <Palette className="w-3 h-3 text-primary" />
-                    Color Palette
-                  </span>
-                  <div className="grid grid-cols-5 gap-1.5 bg-background/60 p-1.5 rounded-xl border border-border">
-                    {PALETTE_OPTIONS.map((pal) => {
-                      const isSelected = palette === pal.id;
-                      return (
-                        <button
-                          key={pal.id}
-                          type="button"
-                          onClick={() => setPalette(pal.id)}
-                          className={`flex flex-col items-center gap-1.5 py-2 px-0.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-card text-foreground shadow-sm font-semibold border border-border'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                          }`}
-                          data-testid={`palette-option-${pal.id}`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-full bg-linear-to-tr ${pal.gradientClass} flex items-center justify-center shadow-sm transition-transform ${
-                              isSelected
-                                ? 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-card'
-                                : 'opacity-85 hover:opacity-100 hover:scale-105'
-                            }`}
-                          >
-                            {isSelected && (
-                              <Check
-                                className="w-3.5 h-3.5 text-white"
-                                strokeWidth={3}
-                              />
-                            )}
-                          </span>
-                          <span className="truncate w-full text-center text-[10px] leading-tight">
-                            {pal.name}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
+                <ActionRow
+                  icon={<Palette className="w-5 h-5 text-pink-500" />}
+                  label="Appearance & Animations"
+                  subtitle="Theme mode, color accents & motion physics"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsAppearanceOpen(true);
+                  }}
+                />
               </div>
             </div>
 
-            {/* Section 2: Animations & Motion */}
-            <AnimationSettingsCard />
-
-            {/* Section 3: Security & Preferences */}
+            {/* Section 2: Security & Signing */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
-                Security & Preferences
+                Security & Signing
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 {(isBiometricsSupported || isBiometricsInsecure) && (
@@ -442,102 +313,102 @@ export const SettingsDropdown: React.FC = () => {
                       ) : undefined
                     }
                     onChange={handleToggleBiometrics}
-                    info={
-                      isBiometricsInsecure ? (
-                        <>
-                          <strong>HTTPS Required:</strong> Web browsers strictly
-                          restrict WebAuthn platform biometrics to secure
-                          contexts (HTTPS or localhost). Run dev with HTTPS or
-                          open in Telegram.
-                        </>
-                      ) : undefined
-                    }
                   />
                 )}
                 <ToggleRow
                   testId="auto-lock"
                   label="Auto-Lock"
-                  description="Lock wallet on app reload (more secure)"
+                  description="Lock wallet on app reload"
                   checked={!persistPassword}
                   onChange={(checked) => setPersistPassword(!checked)}
-                  info={
-                    <>
-                      <strong>Security notice:</strong> when auto-lock is off,
-                      your password is stored locally and the wallet stays
-                      unlocked. Only use for development.
-                    </>
-                  }
                 />
                 <ToggleRow
                   testId="hold-to-sign"
                   label="Hold to Sign"
-                  description="Require holding buttons to approve transactions or broadcast fast sends. Prevents accidental touches."
+                  description="Hold action buttons to approve sends and signing"
                   checked={holdToSign ?? true}
                   onChange={setHoldToSign}
-                  info={
-                    <>
-                      <strong>Security notice:</strong> disabling hold-to-sign
-                      makes it easier to accidentally approve transactions. Only
-                      use for testing.
-                    </>
-                  }
                 />
                 <ToggleRow
                   testId="show-fast-send"
-                  label="Fast send"
-                  description="Automatically sign and broadcast transactions without confirmation dialogs"
+                  label="Fast Send"
+                  description="Sign transactions instantly without modal popups"
                   checked={showFastSend ?? false}
                   onChange={setShowFastSend}
+                />
+                <ActionRow
+                  icon={<KeyRound className="w-5 h-5 text-blue-400" />}
+                  label={
+                    isLoadingMnemonic ? 'Decrypting…' : 'View Recovery Phrase'
+                  }
+                  subtitle="Reveal seed phrase backup"
+                  onClick={handleViewRecoveryPhrase}
+                  disabled={isLoadingMnemonic}
+                />
+                <ActionRow
+                  icon={<Lock className="w-5 h-5 text-muted-foreground" />}
+                  label="Lock Wallet"
+                  subtitle="Require passcode on next action"
+                  onClick={handleLockWallet}
                 />
               </div>
             </div>
 
-            {/* Section 3: Management & Actions */}
+            {/* Section 3: Data & Connected Apps */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
-                Management & Actions
+                Data & Connections
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
-                  icon={<Download className="w-5 h-5" />}
-                  label="Install App / Add Shortcut"
+                  icon={<Radio className="w-5 h-5 text-cyan-400" />}
+                  label="Connected dApps"
+                  subtitle="Manage TonConnect active sessions"
                   onClick={() => {
                     setPanel(null);
-                    setIsInstallOpen(true);
+                    setIsTonConnectAppsOpen(true);
                   }}
                 />
                 <ActionRow
-                  icon={<Users className="w-5 h-5" />}
+                  icon={<Users className="w-5 h-5 text-amber-400" />}
                   label="Address Book & Contacts"
-                  subtitle="Manage, backup, and import contacts"
+                  subtitle="Manage and export saved contacts"
                   onClick={() => {
                     setPanel(null);
                     setIsContactsOpen(true);
                   }}
                 />
                 <ActionRow
-                  icon={<KeyRound className="w-5 h-5" />}
-                  label={
-                    isLoadingMnemonic ? 'Loading…' : 'View Recovery Phrase'
-                  }
-                  onClick={handleViewRecoveryPhrase}
-                  disabled={isLoadingMnemonic}
+                  icon={<DatabaseZap className="w-5 h-5 text-purple-400" />}
+                  label="Storage & Cache Manager"
+                  subtitle="Manage local storage, history & traces"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsStorageManagerOpen(true);
+                  }}
                 />
                 <ActionRow
-                  icon={<Lock className="w-5 h-5" />}
-                  label="Lock Wallet"
-                  onClick={handleLockWallet}
+                  icon={<Download className="w-5 h-5 text-emerald-400" />}
+                  label="Install App / Shortcut"
+                  subtitle="Add to home screen or desktop"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsInstallOpen(true);
+                  }}
                 />
+              </div>
+            </div>
+
+            {/* Section 4: Danger Zone */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-red-400/80 px-1 mb-1.5 block">
+                Danger Zone
+              </span>
+              <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
-                  icon={<DatabaseZap className="w-5 h-5" />}
-                  label="Clear App Storage & Cache"
-                  subtitle="Wipe local database, cache, and state"
-                  onClick={handleClearWholeStorage}
-                  danger
-                />
-                <ActionRow
-                  icon={<Trash2 className="w-5 h-5" />}
+                  icon={<Trash2 className="w-5 h-5 text-red-500" />}
                   label="Delete Wallet"
+                  subtitle="Wipe this wallet from device"
                   onClick={handleDeleteWallet}
                   danger
                 />
@@ -649,9 +520,24 @@ export const SettingsDropdown: React.FC = () => {
         onOpenChange={setIsInstallOpen}
       />
 
+      <AppearanceModal
+        isOpen={isAppearanceOpen}
+        onClose={() => setIsAppearanceOpen(false)}
+      />
+
       <ContactsManagerModal
         isOpen={isContactsOpen}
         onClose={() => setIsContactsOpen(false)}
+      />
+
+      <StorageManagerModal
+        isOpen={isStorageManagerOpen}
+        onClose={() => setIsStorageManagerOpen(false)}
+      />
+
+      <TonconnectAppsModal
+        isOpen={isTonConnectAppsOpen}
+        onClose={() => setIsTonConnectAppsOpen(false)}
       />
     </>
   );

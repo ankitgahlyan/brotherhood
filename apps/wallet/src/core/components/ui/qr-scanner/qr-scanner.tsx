@@ -15,18 +15,20 @@ export interface QrScannerProps {
   onScan: (data: string) => void | Promise<void>;
   onClose: () => void;
   title?: string;
+  footer?: React.ReactNode;
 }
 
 const SCANNER_CONFIG = {
   fps: 10,
-  qrbox: { width: 220, height: 220 },
+  qrbox: { width: 240, height: 240 },
 };
 
 export const QrScanner: React.FC<QrScannerProps> = ({
   isVisible,
   onScan,
   onClose,
-  title = 'Scan QR code',
+  title = 'Scan QR Code',
+  footer,
 }) => {
   const rawId = useId();
   const scannerElementId = `qr-scanner-${rawId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
@@ -191,10 +193,12 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     return () => {
       isCancelled = true;
       const scanner = scannerRef.current;
-      scannerRef.current = null;
-      void safeStopScanner(scanner);
+      if (scanner) {
+        void safeStopScanner(scanner);
+        scannerRef.current = null;
+      }
     };
-  }, [isVisible, scannerElementId, handleScanSuccess, safeStopScanner]);
+  }, [isVisible, safeStopScanner, handleScanSuccess, scannerElementId]);
 
   const flipCamera = async () => {
     const scanner = scannerRef.current;
@@ -230,61 +234,72 @@ export const QrScanner: React.FC<QrScannerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col justify-between bg-black/90 text-white p-4 pt-[calc(1rem+var(--tg-safe-area-top,0px))] pb-[calc(1.5rem+var(--tg-safe-area-bottom,0px))] backdrop-blur-md cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
-        if (e.target === e.currentTarget) {
-          void handleClose();
-        }
+        void handleClose();
       }}
     >
+      {/* Top Header Bar */}
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-card text-card-foreground border border-border p-5 shadow-2xl space-y-4"
+        className="flex items-center justify-between w-full max-w-sm mx-auto z-10 px-1 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Camera className="w-5 h-5 text-blue-600" />
-            <span className="font-semibold text-sm text-foreground">
-              {title}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {cameras.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void flipCamera();
-                }}
-                disabled={isFlipping || isLoading}
-                className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
-                title="Flip Camera"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isFlipping ? 'animate-spin' : ''}`}
-                />
-              </button>
-            )}
+        <div className="flex items-center gap-2">
+          <Camera className="w-5 h-5 text-blue-400" />
+          <span className="font-semibold text-sm text-white tracking-tight">
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {cameras.length > 1 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                void handleClose();
+                void flipCamera();
               }}
-              className="p-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
-              title="Close"
+              disabled={isFlipping || isLoading}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors disabled:opacity-50 cursor-pointer"
+              title="Flip Camera"
             >
-              <X className="w-4 h-4" />
+              <RefreshCw
+                className={`w-4 h-4 ${isFlipping ? 'animate-spin' : ''}`}
+              />
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleClose();
+            }}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
+      </div>
 
-        <div className="relative rounded-xl bg-black p-2 overflow-hidden flex items-center justify-center min-h-[240px]">
+      {/* Centered Viewfinder Box */}
+      <div className="relative flex-1 flex flex-col items-center justify-center my-auto w-full max-w-sm mx-auto min-h-[280px] pointer-events-none">
+        <div
+          className="relative w-72 h-72 rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black flex items-center justify-center pointer-events-auto cursor-default"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Scanner Corner Reticles */}
+          <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-blue-400 rounded-tl-lg z-20" />
+          <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-blue-400 rounded-tr-lg z-20" />
+          <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl-lg z-20" />
+          <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-blue-400 rounded-br-lg z-20" />
+
           {isLoading && !errorMessage && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/60 z-10">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-              <span className="text-xs">Initializing camera...</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/80 z-10">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+              <span className="text-xs font-medium">
+                Initializing camera...
+              </span>
             </div>
           )}
 
@@ -297,9 +312,21 @@ export const QrScanner: React.FC<QrScannerProps> = ({
 
           <div
             id={scannerElementId}
-            className="w-full h-full rounded-lg overflow-hidden"
+            className="w-full h-full rounded-2xl overflow-hidden [&_video]:w-full! [&_video]:h-full! [&_video]:object-cover! [&_img]:hidden! [&_span]:hidden!"
           />
         </div>
+
+        <p className="text-xs text-white/70 text-center mt-4 font-medium select-none">
+          Align QR code within the frame
+        </p>
+      </div>
+
+      {/* Footer / Actions */}
+      <div
+        className="w-full max-w-sm mx-auto z-10 flex flex-col gap-2 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {footer}
       </div>
     </div>
   );

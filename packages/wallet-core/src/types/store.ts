@@ -32,6 +32,7 @@ import type {
   GaslessQuote,
   GaslessSupportedAsset,
   SendTransactionResponse,
+  TONConnectSession,
 } from '@ton/walletkit';
 
 import type { PendingTransaction } from './streaming';
@@ -178,6 +179,7 @@ export interface TonConnectSlice {
     pendingSignMessageRequestEvent?: SignMessageRequestEvent;
     isSignMessageModalOpen: boolean;
     disconnectedSessions: DisconnectNotification[];
+    connectedSessions: TONConnectSession[];
   };
 
   // TON Connect actions
@@ -186,6 +188,11 @@ export interface TonConnectSlice {
   approveConnectRequest: (selectedWallet: Wallet) => Promise<void>;
   rejectConnectRequest: (reason?: string) => Promise<void>;
   closeConnectModal: () => void;
+
+  // Connected Sessions management
+  loadConnectedSessions: () => Promise<TONConnectSession[]>;
+  disconnectSession: (sessionId: string) => Promise<void>;
+  disconnectAllSessions: () => Promise<void>;
 
   // Transaction request actions
   showTransactionRequest: (request: SendTransactionRequestEvent) => void;

@@ -244,7 +244,7 @@ describe('Wallet Scoped Assets Tracking', () => {
     expect(state.nfts.nftsByAddress[wallet1]).toBeDefined();
   });
 
-  it('persists eventsByAddress in localStorage, caps at 50, and restores on rehydration', async () => {
+  it('persists eventsByAddress in localStorage, caps at 20, and restores on rehydration', async () => {
     const wallet1 = '0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC9q';
     const wallet2 = '0QBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBAC9q';
 
@@ -303,9 +303,9 @@ describe('Wallet Scoped Assets Tracking', () => {
     const parsed = JSON.parse(persistedRaw!);
 
     expect(parsed.state.walletManagement.eventsByAddress).toBeDefined();
-    // Must be capped at 50 for wallet 1
+    // Must be capped at 20 for wallet 1
     expect(parsed.state.walletManagement.eventsByAddress[wallet1]).toHaveLength(
-      50,
+      20,
     );
     // Wallet 2 has 10
     expect(parsed.state.walletManagement.eventsByAddress[wallet2]).toHaveLength(
@@ -327,7 +327,7 @@ describe('Wallet Scoped Assets Tracking', () => {
 
     expect(
       rehydratedState.walletManagement.eventsByAddress[wallet1],
-    ).toHaveLength(50);
+    ).toHaveLength(20);
     expect(
       (rehydratedState.walletManagement.eventsByAddress[wallet1][0] as any)
         .actions[0].TonTransfer.amount,
@@ -339,7 +339,7 @@ describe('Wallet Scoped Assets Tracking', () => {
     expect(
       rehydratedState.walletManagement.eventsByAddress[wallet2],
     ).toHaveLength(10);
-    expect(rehydratedState.walletManagement.events).toHaveLength(50);
+    expect(rehydratedState.walletManagement.events).toHaveLength(20);
     expect(
       (rehydratedState.walletManagement.events[0] as any).actions[0].TonTransfer
         .amount,

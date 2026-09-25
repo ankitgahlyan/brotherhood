@@ -15,7 +15,6 @@ import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
 import { FingerprintIcon } from '@/core/components/ui/icons';
 import { useBiometrics } from '@/core/security/use-biometrics';
-import { isTelegramEnvironment } from '@/core/lib/telegram';
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';

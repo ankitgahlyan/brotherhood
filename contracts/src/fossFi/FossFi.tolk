@@ -366,16 +366,17 @@ fun onInternalMessage(in: InMessage): void {
             // deploy + accept tons + deploy jettonWallet
             if ((in.senderAddress == store.adminAddress) & (store.totalSupply == 0)) {
                 store.totalSupply = grams("1");
+                store.walletVersion = 1; // atomic upgrade
                 others.totalAccounts = 1;
                 val deployTopUpMsg = createMessage({
                     // bounce for collecting fees back
                     bounce: BounceMode.Only256BitsOfBody,
-                    value: 0,
+                    value: grams("0.2"),
                     dest: getAutoAddress(in.senderAddress),
                     body: TopUpTons { latestFiWalletCode: others.latestFiWalletCode },
                 });
                 deployTopUpMsg.send(
-                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                    SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
             }
         }
@@ -548,9 +549,12 @@ fun calcDeployLottery(
 fun hotUpgradeFiData(_additionalData: cell?) {
     val oldStorage = FiStore.load();
     val storage = FiStore {
-        totalSupply: oldStorage.totalSupply + grams("11111"),
-        walletVersion: oldStorage.walletVersion,
+        // update all fields or init state will be used
+        totalSupply: oldStorage.totalSupply,
+        offChainRulesHash: oldStorage.offChainRulesHash,
+        walletVersion: oldStorage.walletVersion + 1,
         adminAddress: oldStorage.adminAddress,
+        daoAddress: oldStorage.daoAddress,
         adminHandoff: oldStorage.adminHandoff,
         metadata: oldStorage.metadata,
         others: oldStorage.others,

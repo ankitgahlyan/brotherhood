@@ -175,7 +175,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     if (transaction) {
       const isSuccess = transaction.status !== 'failed';
       return {
-        traceId: storedEvent.eventId || transaction.txHash || transaction.id,
+        traceId: storedEvent?.eventId || transaction.txHash || transaction.id,
         isSuccess,
         totalNetworkFee: 0n,
         totalSent: transaction.isOutgoing ? 1n : 0n,
@@ -200,18 +200,17 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
     return null;
   }, [storedEvent, myAddress, transaction]);
 
+  const hasDetailedInMemory = Boolean(
+    storedEvent?.transactions &&
+    Object.keys(storedEvent.transactions).length > 0,
+  );
+
   const [fetchedTraceDag, setFetchedTraceDag] =
     useState<TraceDagAnalysis | null>(null);
-  const traceDag = inMemoryTraceDag || fetchedTraceDag;
+  const traceDag = fetchedTraceDag || inMemoryTraceDag;
 
   useEffect(() => {
-    if (
-      !isOpen ||
-      !hashForExplorer ||
-      inMemoryTraceDag ||
-      storedEvent ||
-      !walletKit
-    ) {
+    if (!isOpen || !hashForExplorer || hasDetailedInMemory || !walletKit) {
       return;
     }
 
@@ -249,6 +248,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   }, [
     isOpen,
     hashForExplorer,
+    hasDetailedInMemory,
     inMemoryTraceDag,
     storedEvent,
     walletKit,
