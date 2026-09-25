@@ -9,11 +9,6 @@
 // Store
 export { createWalletStore } from './store/createWalletStore';
 export type { CreateWalletStoreOptions } from './store/createWalletStore';
-export {
-  getSessionPassword,
-  setSessionPassword,
-  SESSION_PASSWORD_KEY,
-} from './store/slices/authSlice';
 
 // Storages
 export {

@@ -33,10 +33,6 @@ export const TransactionRequestModal: React.FC<
   const { explorer } = useExplorer();
   const { approveTransactionRequest, rejectTransactionRequest } =
     useTransactionRequests();
-  const { showFastSend, isUnlocked } = useAuth();
-  const isAutoApprovingRef = useRef(false);
-
-  const isFastSendActive = Boolean(showFastSend && isUnlocked);
 
   const handleApprove = useCallback(async () => {
     try {
@@ -52,15 +48,6 @@ export const TransactionRequestModal: React.FC<
     }
   }, [approveTransactionRequest, network, explorer, rejectTransactionRequest]);
 
-  useEffect(() => {
-    if (isOpen && isFastSendActive && !isAutoApprovingRef.current) {
-      isAutoApprovingRef.current = true;
-      handleApprove().finally(() => {
-        isAutoApprovingRef.current = false;
-      });
-    }
-  }, [isOpen, isFastSendActive, handleApprove]);
-
   const handleReject = () => {
     rejectTransactionRequest('User rejected the transaction');
   };
@@ -69,7 +56,7 @@ export const TransactionRequestModal: React.FC<
     <RequestModal
       request={request}
       savedWallets={savedWallets}
-      isOpen={isOpen && !isFastSendActive}
+      isOpen={isOpen}
       verb="Confirm transaction for"
       subtitle="A dApp wants to send a transaction from your wallet:"
       details={<TransactionRequestDetails request={request.request} />}

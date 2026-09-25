@@ -6,60 +6,22 @@
  *
  */
 
+import { Buffer } from 'buffer';
 import type { AuthSliceCreator, SetState } from '../../types/store';
 import { createComponentLogger } from '../../utils/logger';
+import { derivePasswordVerificationHash } from '../../utils';
 
 // Create logger for auth slice
 const log = createComponentLogger('AuthSlice');
-
-export const SESSION_PASSWORD_KEY = 'brotherhood_session_password';
-
-export function getSessionPassword(): string | undefined {
-  try {
-    const storage =
-      typeof window !== 'undefined' && window.sessionStorage
-        ? window.sessionStorage
-        : typeof globalThis !== 'undefined' &&
-            (globalThis as any).sessionStorage
-          ? (globalThis as any).sessionStorage
-          : undefined;
-    if (storage) {
-      return storage.getItem(SESSION_PASSWORD_KEY) || undefined;
-    }
-  } catch {
-    // ignore sessionStorage access errors
-  }
-  return undefined;
-}
-
-export function setSessionPassword(password: string | undefined): void {
-  try {
-    const storage =
-      typeof window !== 'undefined' && window.sessionStorage
-        ? window.sessionStorage
-        : typeof globalThis !== 'undefined' &&
-            (globalThis as any).sessionStorage
-          ? (globalThis as any).sessionStorage
-          : undefined;
-    if (storage) {
-      if (password) {
-        storage.setItem(SESSION_PASSWORD_KEY, password);
-      } else {
-        storage.removeItem(SESSION_PASSWORD_KEY);
-      }
-    }
-  } catch {
-    // ignore sessionStorage access errors
-  }
-}
 
 export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   // Initial state
   auth: {
     isPasswordSet: false,
     isUnlocked: false,
-    currentPassword: getSessionPassword(),
+    currentPassword: undefined,
     passwordHash: undefined,
+    passwordSalt: undefined,
     persistPassword: false,
     holdToSign: true, // Default to true for better security
     showFastSend: false,
@@ -70,21 +32,19 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   // Actions
   setPassword: async (password: string) => {
     try {
-      // Create a simple hash for password verification
-      const passwordHashBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(password + 'wallet_salt'),
+      const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+      const saltBase64 = Buffer.from(saltBytes).toString('base64');
+      const passwordHash = await derivePasswordVerificationHash(
+        password,
+        saltBytes,
       );
-
-      const passwordHash = Array.from(new Uint8Array(passwordHashBuffer));
-
-      setSessionPassword(password);
 
       set((state) => {
         state.auth.isPasswordSet = true;
         state.auth.isUnlocked = true;
         state.auth.currentPassword = password;
         state.auth.passwordHash = passwordHash;
+        state.auth.passwordSalt = saltBase64;
       });
     } catch (error) {
       log.error('Error setting password:', error);
@@ -97,22 +57,44 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       const state = get();
       if (!state.auth.passwordHash) return false;
 
-      // Verify password
-      const passwordHashBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(password + 'wallet_salt'),
-      );
+      let currentHash: number[];
+      if (state.auth.passwordSalt) {
+        const saltBytes = new Uint8Array(
+          Buffer.from(state.auth.passwordSalt, 'base64'),
+        );
+        currentHash = await derivePasswordVerificationHash(password, saltBytes);
+      } else {
+        // Backward-compatible fallback for legacy un-salted hash
+        const passwordHashBuffer = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(password + 'wallet_salt'),
+        );
+        currentHash = Array.from(new Uint8Array(passwordHashBuffer));
+      }
 
-      const currentHash = Array.from(new Uint8Array(passwordHashBuffer));
-      const isValid = state.auth.passwordHash.every(
-        (byte: number, index: number) => byte === currentHash[index],
-      );
+      const isValid =
+        state.auth.passwordHash.length === currentHash.length &&
+        state.auth.passwordHash.every(
+          (byte: number, index: number) => byte === currentHash[index],
+        );
 
       if (isValid) {
-        setSessionPassword(password);
+        let saltBase64 = state.auth.passwordSalt;
+        let passwordHash = state.auth.passwordHash;
+        if (!saltBase64) {
+          const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+          saltBase64 = Buffer.from(saltBytes).toString('base64');
+          passwordHash = await derivePasswordVerificationHash(
+            password,
+            saltBytes,
+          );
+        }
+
         set((state) => {
           state.auth.isUnlocked = true;
           state.auth.currentPassword = password;
+          state.auth.passwordSalt = saltBase64;
+          state.auth.passwordHash = passwordHash;
         });
         return true;
       }
@@ -125,7 +107,6 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   },
 
   lock: () => {
-    setSessionPassword(undefined);
     set((state) => {
       state.auth.isUnlocked = false;
       state.auth.currentPassword = undefined;
@@ -133,7 +114,6 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   },
 
   reset: () => {
-    setSessionPassword(undefined);
     const state = get();
 
     // Clear WalletKit internal storage (wallets + sessions)
@@ -150,6 +130,7 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
       state.auth.isUnlocked = false;
       state.auth.currentPassword = undefined;
       state.auth.passwordHash = undefined;
+      state.auth.passwordSalt = undefined;
       state.auth.persistPassword = false;
       state.auth.showFastSend = false;
       state.auth.useWalletInterfaceType = 'mnemonic';

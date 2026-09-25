@@ -89,3 +89,11 @@ export const generateSalt = (): string => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   return Buffer.from(salt).toString('base64');
 };
+
+export async function derivePasswordVerificationHash(
+  password: string,
+  salt: Uint8Array,
+): Promise<number[]> {
+  const hash = await pbkdf2_sha512(password, Buffer.from(salt), 100000, 32);
+  return Array.from(new Uint8Array(hash));
+}

@@ -46,6 +46,7 @@ export interface AuthState {
   auth: {
     currentPassword?: string;
     passwordHash?: number[];
+    passwordSalt?: string;
     isPasswordSet?: boolean;
     isUnlocked?: boolean;
     persistPassword?: boolean;

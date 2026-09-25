@@ -1,7 +1,7 @@
-# Netlify Configuration for BrotherHood Wallet (Root)
+# Netlify Configuration for BrotherHood Wallet (When Base Directory is apps/wallet)
 [build]
   command = "bun run build:netlify"
-  publish = "apps/wallet/dist"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"

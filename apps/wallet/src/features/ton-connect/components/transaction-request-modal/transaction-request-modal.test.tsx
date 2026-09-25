@@ -6,7 +6,10 @@ let mockFastSend = false;
 let mockUnlocked = true;
 let _approveCalled = false;
 
+const actualWalletCore = await import('@demo/wallet-core');
+
 mock.module('@demo/wallet-core', () => ({
+  ...actualWalletCore,
   useTransactionRequests: () => ({
     approveTransactionRequest: async () => {
       _approveCalled = true;
@@ -47,7 +50,7 @@ mock.module('../transaction-request-details', () => ({
 
 import { TransactionRequestModal } from './transaction-request-modal';
 
-describe('TransactionRequestModal Fast Send', () => {
+describe('TransactionRequestModal Confirmation Invariant', () => {
   const dummyRequest: any = {
     id: 'req-1',
     walletId: 'w1',
@@ -72,7 +75,7 @@ describe('TransactionRequestModal Fast Send', () => {
     expect(html).toContain('Modal Content');
   });
 
-  it('hides modal when fast send is enabled and wallet is unlocked', () => {
+  it('always renders modal for dApp requests even when fast send is enabled and wallet is unlocked', () => {
     mockFastSend = true;
     mockUnlocked = true;
 
@@ -84,8 +87,8 @@ describe('TransactionRequestModal Fast Send', () => {
       />,
     );
 
-    expect(html).toContain('data-open="false"');
-    expect(html).not.toContain('Modal Content');
+    expect(html).toContain('data-open="true"');
+    expect(html).toContain('Modal Content');
   });
 
   it('renders modal when fast send is enabled but wallet is locked', () => {

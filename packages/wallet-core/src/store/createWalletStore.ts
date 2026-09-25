@@ -16,7 +16,7 @@ import {
 } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { createAuthSlice, getSessionPassword } from './slices/authSlice';
+import { createAuthSlice } from './slices/authSlice';
 import { createWalletCoreSlice } from './slices/walletCoreSlice';
 import { createWalletManagementSlice } from './slices/walletManagementSlice';
 import { createTonConnectSlice } from './slices/tonConnectSlice';
@@ -272,14 +272,12 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
               auth: {
                 isPasswordSet: state.auth.isPasswordSet,
                 passwordHash: state.auth.passwordHash,
+                passwordSalt: state.auth.passwordSalt,
                 persistPassword: state.auth.persistPassword,
                 holdToSign: state.auth.holdToSign,
                 showFastSend: state.auth.showFastSend,
                 useWalletInterfaceType: state.auth.useWalletInterfaceType,
                 ledgerAccountNumber: state.auth.ledgerAccountNumber,
-                ...(state.auth.persistPassword && {
-                  currentPassword: state.auth.currentPassword,
-                }),
               },
               walletManagement: {
                 hasWallet: state.walletManagement.hasWallet,
@@ -356,14 +354,7 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   w.id === persisted?.walletManagement?.activeWalletId,
               );
 
-              const sessionPassword = getSessionPassword();
-              const effectivePassword =
-                (persisted?.auth?.persistPassword
-                  ? persisted?.auth?.currentPassword
-                  : undefined) ||
-                sessionPassword ||
-                currentState?.auth?.currentPassword;
-
+              const effectivePassword = currentState?.auth?.currentPassword;
               const isUnlocked = Boolean(
                 persisted?.auth?.isPasswordSet && effectivePassword,
               );

@@ -1,30 +1,27 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import {
-  createWalletStore,
-  getSessionPassword,
-  setSessionPassword,
-} from '@demo/wallet-core';
-
-const mockStore = new Map<string, string>();
-const mockSessionStorage = {
-  getItem: (key: string) => mockStore.get(key) || null,
-  setItem: (key: string, value: string) => mockStore.set(key, String(value)),
-  removeItem: (key: string) => mockStore.delete(key),
-  clear: () => mockStore.clear(),
-};
+import { createWalletStore } from '@demo/wallet-core';
 
 describe('Wallet Switching & Session Authentication', () => {
   beforeEach(() => {
-    (globalThis as any).sessionStorage = mockSessionStorage;
-    mockStore.clear();
+    (globalThis as any).localStorage?.clear?.();
   });
 
-  it('getSessionPassword and setSessionPassword manage sessionStorage safely', () => {
-    expect(getSessionPassword()).toBeUndefined();
-    setSessionPassword('TestPass123!');
-    expect(getSessionPassword()).toBe('TestPass123!');
-    setSessionPassword(undefined);
-    expect(getSessionPassword()).toBeUndefined();
+  it('manages password lifecycle in memory and never writes plaintext password to storage', async () => {
+    const store = createWalletStore({ enableDevtools: false });
+    expect(store.getState().auth.currentPassword).toBeUndefined();
+
+    await store.getState().setPassword('TestPass123!');
+    expect(store.getState().auth.currentPassword).toBe('TestPass123!');
+    expect(store.getState().auth.isUnlocked).toBe(true);
+
+    store.getState().lock();
+    expect(store.getState().auth.currentPassword).toBeUndefined();
+    expect(store.getState().auth.isUnlocked).toBe(false);
+
+    const unlocked = await store.getState().unlock('TestPass123!');
+    expect(unlocked).toBe(true);
+    expect(store.getState().auth.currentPassword).toBe('TestPass123!');
+    expect(store.getState().auth.isUnlocked).toBe(true);
   });
 
   it('loadAllWallets gracefully no-ops when currentPassword is not set', async () => {
