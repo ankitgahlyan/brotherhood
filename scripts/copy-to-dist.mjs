@@ -153,10 +153,16 @@ for (const file of toRemove) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Write 404.html (SPA fallback for the respective basepath)
+// 3. Write 404.html & _redirects (SPA fallback for Netlify and static hosts)
 // ---------------------------------------------------------------------------
 const indexHtml = readFileSync(join(distDir, 'index.html'), 'utf8');
 writeFileSync(join(distDir, '404.html'), indexHtml);
 console.log('[copy-to-dist] ✅ 404.html written');
+
+const redirectsDst = join(distDir, '_redirects');
+if (!existsSync(redirectsDst)) {
+  writeFileSync(redirectsDst, '/* /index.html 200\n');
+  console.log('[copy-to-dist] ✅ _redirects written');
+}
 
 console.log(`\n[copy-to-dist] 🎉 ${target.toUpperCase()} post-build complete.`);

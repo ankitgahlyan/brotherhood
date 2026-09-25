@@ -137,7 +137,8 @@ function RootComponent() {
       {!isTma && <PwaInstallBanner />}
       <FloatingDevButton />
       <Toaster />
-      {process.env.NODE_ENV === 'development' && (
+      {(process.env.NODE_ENV === 'development' ||
+        import.meta.env.VITE_DEVTOOLS === 'true') && (
         <TanStackRouterDevtools position="bottom-right" />
       )}
     </>

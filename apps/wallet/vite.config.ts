@@ -106,6 +106,11 @@ export default defineConfig(() => {
       global: 'globalThis',
       // Expose build target to runtime so components can branch on it
       'import.meta.env.VITE_APP_TARGET': JSON.stringify(isTwa ? 'twa' : 'web'),
+      'import.meta.env.VITE_DEVTOOLS': JSON.stringify(
+        process.env.VITE_DEVTOOLS === 'true' ||
+          process.env.VITE_DEBUG_BUILD === '1' ||
+          process.env.NODE_ENV === 'development',
+      ),
     },
     plugins: [
       react(),
@@ -223,6 +228,10 @@ export default defineConfig(() => {
     build: {
       outDir,
       emptyOutDir: true,
+      sourcemap:
+        process.env.VITE_DEBUG_BUILD === '1' ||
+        process.env.VITE_SOURCEMAP === 'true' ||
+        process.env.NODE_ENV === 'development',
       chunkSizeWarningLimit: 3000,
       rollupOptions: isTwa
         ? {

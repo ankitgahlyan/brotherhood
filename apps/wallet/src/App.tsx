@@ -12,6 +12,7 @@ import { WalletProvider } from '@demo/wallet-core';
 import type { WalletKitConfig } from '@demo/wallet-core';
 import { RouterProvider } from '@tanstack/react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { router } from './router';
 import { queryClient } from '@/lib/brotherhood/ton';
 import {
@@ -100,6 +101,13 @@ export function App() {
         <MotionProvider>
           <TrackedAddressesSyncMount />
           <RouterProvider router={router} />
+          {(process.env.NODE_ENV === 'development' ||
+            import.meta.env.VITE_DEVTOOLS === 'true') && (
+            <ReactQueryDevtools
+              initialIsOpen={false}
+              buttonPosition="bottom-left"
+            />
+          )}
         </MotionProvider>
       </WalletProvider>
     </QueryClientProvider>

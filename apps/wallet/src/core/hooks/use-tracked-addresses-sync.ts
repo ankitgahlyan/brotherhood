@@ -312,7 +312,7 @@ export function useTrackedAddressesSync() {
   useEffect(() => {
     if (isWalletKitInitialized && address && !initialEventsLoadedRef.current) {
       initialEventsLoadedRef.current = true;
-      void loadEvents(50, 0).catch(() => {});
+      void loadEvents(20, 0).catch(() => {});
     }
   }, [isWalletKitInitialized, address, loadEvents]);
 

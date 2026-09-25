@@ -321,7 +321,8 @@ export const createWalletManagementSlice =
         });
 
         await get().startWebSocketStreaming();
-        void get().loadEvents(15, 0, false);
+        // todo: we need jettons, accountStates and events also, so broascast to refetch all states
+        // void get().loadEvents(15, 0, false);
         log.info(`Created wallet ${walletId} (${walletName})`);
         return walletId;
       } catch (error) {
