@@ -26,6 +26,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
+import { autoFundUnderfundedFiWallets } from '@/features/brotherhood/hooks/use-auto-fiwallet-funding';
 import { Address } from '@ton/core';
 
 /**
@@ -275,6 +276,57 @@ export function useTrackedAddressesSync() {
             });
           }
         }
+
+        // 7. Auto-fund underfunded FiWallets (< 2 TON) across saved wallets & circle invitees
+        const latestState = storeApi.getState();
+        const latestBrotherhood =
+          latestState.brotherhood?.brotherhoodByAddress || {};
+        const circleFiWallets: string[] = [];
+        for (const wallet of savedWallets) {
+          if (!wallet.address) continue;
+          const walletKey = normalizeAddressByNetwork(
+            wallet.address,
+            false,
+            defaultNetwork,
+          );
+          const bData = latestBrotherhood[walletKey];
+          if (bData?.circle && bData.circle.length > 0) {
+            for (const invitee of bData.circle) {
+              try {
+                const inviteeFi = getFiWalletAddress(
+                  Address.parse(invitee),
+                  defaultNetwork,
+                );
+                circleFiWallets.push(inviteeFi.toString());
+              } catch {
+                /* pass */
+              }
+            }
+          }
+        }
+
+        const activeWallet = latestState.walletManagement?.currentWallet;
+        const isWalletUnlocked = latestState.auth?.isUnlocked ?? false;
+
+        void autoFundUnderfundedFiWallets({
+          wallet: activeWallet,
+          isUnlocked: isWalletUnlocked,
+          savedWallets,
+          network: defaultNetwork,
+          extraFiWallets: circleFiWallets,
+          onTransactionSent: (hash) => {
+            latestState.addPendingTransaction?.({
+              traceId: hash,
+              externalHash: hash,
+              finality: 'pending',
+            });
+          },
+        }).catch((err) => {
+          console.warn(
+            '[useTrackedAddressesSync] Auto-funding check error:',
+            err,
+          );
+        });
       } catch (err) {
         console.error(
           '[useTrackedAddressesSync] Background universal hydration error:',
@@ -315,6 +367,19 @@ export function useTrackedAddressesSync() {
       void loadEvents(20, 0).catch(() => {});
     }
   }, [isWalletKitInitialized, address, loadEvents]);
+
+  // Trigger hydration & auto-funding when wallet becomes unlocked mid-session
+  const isUnlocked = useWalletStore((state) => state.auth.isUnlocked);
+  const currentWallet = useWalletStore(
+    (state) => state.walletManagement.currentWallet,
+  );
+  const unlockedFundingDoneRef = useRef(false);
+  useEffect(() => {
+    if (isUnlocked && currentWallet && !unlockedFundingDoneRef.current) {
+      unlockedFundingDoneRef.current = true;
+      void hydrateAllSavedWallets();
+    }
+  }, [isUnlocked, currentWallet, hydrateAllSavedWallets]);
 
   // Listen for manual dashboard refresh events to re-hydrate all saved wallets
   useEffect(() => {

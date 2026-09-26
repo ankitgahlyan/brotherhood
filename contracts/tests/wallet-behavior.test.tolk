@@ -992,3 +992,84 @@ get fun `test : version mismatch between fiwallets throws VersionMismatch`() {
         exitCode: Errors.VersionMismatch,
     });
 }
+
+get fun `test : fiwallet forwards upgrade to all its invitees upon receiving upgrade`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val senderWallet = userWallet(minter, deployer.address);
+    val receiverWallet = userWallet(minter, notDeployer.address);
+
+    // Deploy and invite receiverWallet
+    val invite = senderWallet.sendActInvite(
+        deployer.address,
+        0,
+        notDeployer.address,
+        "bob",
+        "8828308281fffff",
+        0,
+        { value: grams("1") },
+    );
+    expect(invite).toHaveSuccessfulDeploy<InternalInvite>({
+        from: senderWallet.address,
+        to: receiverWallet.address,
+    });
+
+    // Top up senderWallet with 1 TON so it has plenty of balance above 0.2 TON safety reserve
+    senderWallet.sendTopUpTons(deployer.address, null, { value: grams("1") });
+
+    // Send Upgrade from minter with version 2
+    val upgradeRes = senderWallet.sendUpgrade(
+        minter.address,
+        true,
+        2,
+        minter.address,
+        null,
+        build("FossFiWallet"),
+        { value: grams("0.3") },
+    );
+
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: minter.address,
+        to: senderWallet.address,
+    });
+
+    // Verify Upgrade was forwarded from senderWallet to receiverWallet with 0.1 TON
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: senderWallet.address,
+        to: receiverWallet.address,
+    });
+}
+
+get fun `test : fiwallet stops forwarding upgrade when balance falls below safety reserve`() {
+    val (minter, deployer, notDeployer) = setupTest();
+    val senderWallet = userWallet(minter, deployer.address);
+    val _receiverWallet = userWallet(minter, notDeployer.address);
+
+    // Invite receiverWallet
+    senderWallet.sendActInvite(
+        deployer.address,
+        0,
+        notDeployer.address,
+        "charlie",
+        "8828308281fffff",
+        0,
+        { value: grams("1") },
+    );
+
+    // Send Upgrade with minimal gas (0.05 TON) and senderWallet not topped up,
+    // so available balance is below safety reserve (0.2 TON) + forwardCost (0.1 TON).
+    // The upgrade on senderWallet should still succeed without reverting or bricking.
+    val upgradeRes = senderWallet.sendUpgrade(
+        minter.address,
+        true,
+        2,
+        minter.address,
+        null,
+        build("FossFiWallet"),
+        { value: grams("0.05") },
+    );
+
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: minter.address,
+        to: senderWallet.address,
+    });
+}

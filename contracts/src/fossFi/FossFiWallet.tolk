@@ -239,6 +239,9 @@ fun onBouncedMessage(in: InMessageBounced): void {
 }
 
 fun onInternalMessage(in: InMessage): void {
+    if (in.body.remainingBitsCount() == 0) {
+        return;
+    }
     val msg = lazy AllowedMessageToWallet.fromSlice(in.body);
     var store = lazy FiWalletStore.load();
     var profile = lazy store.profile.load();
@@ -897,10 +900,35 @@ fun onInternalMessage(in: InMessage): void {
             // ignore if manually upgraded
             if (store.version < msg.walletVersion) {
                 // store.version = msg.walletVersion;
-                contract.setCodePostponed(msg.newCode!);
+                val codeToInstall = msg.newCode != null ? msg.newCode : contract.getCode();
+                contract.setCodePostponed(codeToInstall);
                 // safety
-                setTvmRegisterC3(transformSliceToContinuation(msg.newCode!.beginParse()));
+                setTvmRegisterC3(transformSliceToContinuation(codeToInstall.beginParse()));
                 migrateFiWalletFromPrevious(store, msg.walletVersion);
+
+                // Instant upgrade fan-out to all invitees (up to 10)
+                var currentBalance = contract.getOriginalBalance();
+                val forwardCost = grams("0.1");
+                val safetyReserve = grams("0.2");
+
+                var entry = maps.invited.findFirst();
+                while (entry.isFound & (currentBalance >= safetyReserve + forwardCost)) {
+                    val inviteeFiWallet = entry.getKey();
+                    val fwdUpgradeMsg = createMessage({
+                        bounce: false,
+                        dest: inviteeFiWallet,
+                        value: forwardCost,
+                        body: Upgrade {
+                            walletVersion: msg.walletVersion,
+                            sender: addrs.owner,
+                            newCode: codeToInstall,
+                            newData: msg.newData,
+                        },
+                    });
+                    fwdUpgradeMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                    currentBalance -= forwardCost;
+                    entry = maps.invited.iterateNext(entry);
+                }
             }
             returnExcessesBack(msg.walletVersion as uint64, addrs.owner);
             return;
