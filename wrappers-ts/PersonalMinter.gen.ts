@@ -1019,12 +1019,46 @@ export const Payback = {
 }
 
 /**
+ > struct PersonalCodes {
+ >     latestPersonalWalletCode: cell
+ > }
+ */
+export interface PersonalCodes {
+    readonly $: 'PersonalCodes'
+    latestPersonalWalletCode: c.Cell
+}
+
+export const PersonalCodes = {
+    create(args: {
+        latestPersonalWalletCode: c.Cell
+    }): PersonalCodes {
+        return {
+            $: 'PersonalCodes',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PersonalCodes {
+        return {
+            $: 'PersonalCodes',
+            latestPersonalWalletCode: s.loadRef(),
+        }
+    },
+    store(self: PersonalCodes, b: c.Builder): void {
+        b.storeRef(self.latestPersonalWalletCode);
+    },
+    toCell(self: PersonalCodes): c.Cell {
+        return makeCellFrom<PersonalCodes>(self, PersonalCodes.store);
+    }
+}
+
+/**
  > struct PersonalStore {
  >     totalSupply: coins
  >     fiJettonAddress: address
  >     adminAddress: address
  >     metadataUri: cell?
  >     version: uint10
+ >     codes: PersonalCodes
  > }
  */
 export interface PersonalStore {
@@ -1034,6 +1068,7 @@ export interface PersonalStore {
     adminAddress: c.Address
     metadataUri: c.Cell | null /* = null */
     version: uint10 /* = 1 */
+    codes: PersonalCodes
 }
 
 export const PersonalStore = {
@@ -1043,6 +1078,7 @@ export const PersonalStore = {
         adminAddress: c.Address
         metadataUri?: c.Cell | null /* = null */
         version?: uint10 /* = 1 */
+        codes: PersonalCodes
     }): PersonalStore {
         return {
             $: 'PersonalStore',
@@ -1060,6 +1096,7 @@ export const PersonalStore = {
             adminAddress: s.loadAddress(),
             metadataUri: s.loadBoolean() ? s.loadRef() : null,
             version: s.loadUintBig(10),
+            codes: PersonalCodes.fromSlice(s),
         }
     },
     store(self: PersonalStore, b: c.Builder): void {
@@ -1070,6 +1107,7 @@ export const PersonalStore = {
             (v,b) => b.storeRef(v)
         );
         b.storeUint(self.version, 10);
+        PersonalCodes.store(self.codes, b);
     },
     toCell(self: PersonalStore): c.Cell {
         return makeCellFrom<PersonalStore>(self, PersonalStore.store);
@@ -1132,7 +1170,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1160,6 +1198,7 @@ export class PersonalMinter implements c.Contract {
         adminAddress: c.Address
         metadataUri?: c.Cell | null /* = null */
         version?: uint10 /* = 1 */
+        codes: PersonalCodes
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,
@@ -1366,7 +1405,7 @@ export class PersonalMinter implements c.Contract {
     }
 
     async getState(provider: ContractProvider): Promise<PersonalStore> {
-        const r = StackReader.fromGetMethod(5, await provider.get('get_state', []));
+        const r = StackReader.fromGetMethod(6, await provider.get('get_state', []));
         return ({
             $: 'PersonalStore',
             totalSupply: r.readBigInt(),
@@ -1376,6 +1415,10 @@ export class PersonalMinter implements c.Contract {
                 (r) => r.readCell()
             ),
             version: r.readBigInt(),
+            codes: ({
+                $: 'PersonalCodes',
+                latestPersonalWalletCode: r.readCell(),
+            }),
         });
     }
 

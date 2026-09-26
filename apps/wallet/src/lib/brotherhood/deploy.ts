@@ -31,8 +31,9 @@ import {
 } from '@wrappers/FossFiWallet.gen';
 import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
-import { PersonalMinter } from '@wrappers/Personal.gen';
+import { PersonalMinter, PersonalCodes } from '@wrappers/Personal.gen';
 import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
+import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   buildOnchainMetadata,
   buildTolkOnchainMetadata,
@@ -148,6 +149,9 @@ export function getPersonalMinter(params: {
       fiJettonAddress: params.issuerWallet,
       adminAddress: params.adminAddress,
       metadataUri: null,
+      codes: PersonalCodes.create({
+        latestPersonalWalletCode: PersonalWallet.CodeCell,
+      }),
     },
     {
       toShard: { fixedPrefixLength: 8, closeTo: params.adminAddress },

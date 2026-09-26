@@ -1,3 +1,4 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -21,6 +22,7 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
         metadataUri: null,
+        codes: { latestPersonalWalletCode: build("PersonalWallet") },
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pm = Personal.fromStorage(personalStore, toShard);
@@ -753,4 +755,73 @@ get fun `test personal token: upgrade personal wallet from unauthorized address 
     });
 
     expect(buyerPriWallet.getPersonalWalletState().version).toEqual(1);
+}
+
+get fun `test personal minter: stores latest wallet code and handles wallet upgrade and request upgrade code`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val initialMinterState = pm.getState();
+    expect(initialMinterState.version).toEqual(1);
+    expect(initialMinterState.codes.latestPersonalWalletCode).toEqual(build("PersonalWallet"));
+
+    val dummyNewWalletCode = beginCell().storeUint(0x1234, 16).endCell();
+
+    // 1. Upgrade from non-admin/non-fiJetton must fail
+    val attacker = testing.treasury("attacker_minter");
+    val unauthUpgradeRes = pm.sendUpgrade(
+        attacker.address,
+        true,
+        2,
+        attacker.address,
+        null,
+        dummyNewWalletCode,
+        { value: grams("0.5") },
+    );
+    expect(unauthUpgradeRes).toHaveFailedTx<Upgrade>({
+        from: attacker.address,
+        to: pm.address,
+        exitCode: Errors.IncorrectSender,
+    });
+
+    // 2. Admin (notDeployer) upgrades personal wallet code via minter
+    val upgradeRes = pm.sendUpgrade(
+        notDeployer.address,
+        true,
+        2,
+        notDeployer.address,
+        null,
+        dummyNewWalletCode,
+        { value: grams("0.5") },
+    );
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: notDeployer.address,
+        to: pm.address,
+    });
+
+    val updatedMinterState = pm.getState();
+    expect(updatedMinterState.version).toEqual(2);
+    expect(updatedMinterState.codes.latestPersonalWalletCode).toEqual(dummyNewWalletCode);
+
+    // 3. Wallets requesting upgrade code receive the updated latestPersonalWalletCode
+    val pmWrapper = PersonalMinter.fromAddress(pm.address);
+    val reqRes = pmWrapper.sendRequestUpgradeCode(
+        deployer.address,
+        deployer.address,
+        { value: grams("0.2") },
+    );
+    expect(reqRes).toHaveSuccessfulTx<RequestUpgradeCode>({
+        from: deployer.address,
+        to: pm.address,
+    });
+    expect(reqRes).toHaveSuccessfulTx<Upgrade>({
+        from: pm.address,
+        to: deployer.address,
+    });
 }

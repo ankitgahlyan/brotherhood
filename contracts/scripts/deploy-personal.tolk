@@ -46,6 +46,7 @@ fun main() {
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
         metadataUri: null,
+        codes: { latestPersonalWalletCode: build("PersonalWallet") },
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),

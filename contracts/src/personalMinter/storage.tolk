@@ -13,12 +13,17 @@ struct PersonalWalletStore {
     version: uint10 = 1
 }
 
+struct PersonalCodes {
+    latestPersonalWalletCode: cell
+}
+
 struct PersonalStore {
     totalSupply: coins = 0
     fiJettonAddress: address
     adminAddress: address
     metadataUri: cell? = null // null on deploy for deterministic address calculation
     version: uint10 = 1
+    codes: PersonalCodes
 }
 
 fun PersonalStore.load(): PersonalStore {

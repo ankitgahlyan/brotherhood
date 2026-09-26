@@ -1,5 +1,6 @@
 import "@stdlib/gas-payments"
 
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -23,6 +24,7 @@ fun deployPersonalMinterDirect(admin: address): Personal {
         fiJettonAddress: admin,
         adminAddress: admin,
         metadataUri: null,
+        codes: { latestPersonalWalletCode: build("PersonalWallet") },
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pm = Personal.fromStorage(personalStore, toShard);

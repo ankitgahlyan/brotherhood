@@ -59,6 +59,7 @@ fun main() {
         fiJettonAddress: issuerWallet,
         adminAddress: issuerOwner,
         metadataUri: null,
+        codes: { latestPersonalWalletCode: build("PersonalWallet") },
     };
     val stateInit = ContractState {
         code: build("PersonalMinter"),
@@ -108,7 +109,7 @@ fun main() {
     }
 
     // Set issuer's loan requirement with a future maturity date
-    val setCreditRes = FossFiWallet
+    val _setCreditRes = FossFiWallet
         .fromAddress(issuerWallet)
         .sendSetLoanRequirement(
             issuerOwner,
@@ -118,7 +119,17 @@ fun main() {
             null,
             { value: grams("0.1") },
         );
-    setCreditRes.waitForFirstTransaction();
+    // Onboard buyer's personal wallet with 1 GRAM deploy signal
+    val onboardRes = Personal
+        .fromAddress(pmAddress)
+        .sendMint(
+            issuerOwner,
+            deployer,
+            grams("1"),
+            grams("0.02"),
+            grams("0.7"),
+        );
+    onboardRes.waitForFirstTransaction();
 
     // 3. buy credit end-to-end: the buyer's FI moves to the issuer
     val loan = grams("100");
@@ -158,7 +169,7 @@ fun main() {
         .getWalletData()
         .jettonBalance;
     println("BUYER_PERSONAL_BALANCE={}", personalBalance);
-    if (personalBalance == loan) {
+    if (personalBalance == loan + grams("1")) {
         println("VERIFY_OK: buyer received the loan in personal tokens");
     } else {
         println("VERIFY_FAIL: personal token mint did not match the loan");
@@ -194,7 +205,10 @@ fun main() {
         issuerFiFinal,
         personalAfter,
     );
-    if (buyerFiFinal == buyerFiBefore && issuerFiFinal == issuerFiBefore && personalAfter == 0) {
+    if (
+        buyerFiFinal == buyerFiBefore && issuerFiFinal == issuerFiBefore &&
+        personalAfter == grams("1")
+    ) {
         println("VERIFY_OK: payback returned the loan and burned the personal tokens");
     } else {
         println("VERIFY_FAIL: payback did not unwind the loan");

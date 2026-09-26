@@ -1,6 +1,5 @@
 import "@stdlib/tvm-lowlevel"
 
-import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
@@ -168,7 +167,7 @@ fun onInternalMessage(in: InMessage) {
                     internalTransferMsg.forwardPayload,
                     internalTransferMsg.version,
                     internalTransferMsg.transferredAsCredit,
-                    personalWalletCompiledCodeLibraryRef(),
+                    storage.codes.latestPersonalWalletCode,
                 );
             }
 
@@ -216,17 +215,43 @@ fun onInternalMessage(in: InMessage) {
                 (in.senderAddress == storage.adminAddress)
             ) throw Errors.IncorrectSender;
 
-            if (msg.newCode != null) {
-                contract.setCodePostponed(msg.newCode);
-            }
+            if (msg.walletUpgrade) {
+                if (msg.newCode != null) {
+                    storage.codes.latestPersonalWalletCode = msg.newCode;
+                }
 
-            if (msg.newData != null) {
-                contract.setData(msg.newData);
-                return;
-            }
+                if (storage.version < msg.walletVersion) {
+                    storage.version = msg.walletVersion;
+                }
 
-            if (storage.version < msg.walletVersion) {
-                storage.version = msg.walletVersion;
+                val upgradeMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    value: 0,
+                    dest: autoAddrPriWalletMinter(storage.adminAddress),
+                    body: Upgrade {
+                        walletUpgrade: true,
+                        walletVersion: storage.version,
+                        sender: storage.adminAddress,
+                        newData: msg.newData,
+                        newCode: msg.newCode,
+                    },
+                });
+                upgradeMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            } else {
+                if (msg.newCode != null) {
+                    contract.setCodePostponed(msg.newCode);
+                }
+
+                if (msg.newData != null) {
+                    contract.setData(msg.newData);
+                    return;
+                }
+
+                if (storage.version < msg.walletVersion) {
+                    storage.version = msg.walletVersion;
+                }
             }
         }
 
@@ -240,7 +265,7 @@ fun onInternalMessage(in: InMessage) {
                     walletUpgrade: true,
                     walletVersion: storage.version,
                     sender: storage.adminAddress,
-                    newCode: getPersonalWalletCode(),
+                    newCode: storage.codes.latestPersonalWalletCode,
                 },
             });
             upgradeMsg.send(
