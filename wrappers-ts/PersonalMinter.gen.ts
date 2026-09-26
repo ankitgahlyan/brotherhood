@@ -349,6 +349,7 @@ export const PayloadInRef = {
  >     transferInitiator: address
  >     sendExcessesTo: address?
  >     forwardTonAmount: coins
+ >     latestWalletCode: cell?
  >     forwardPayload: ForwardPayloadRemainder
  > }
  */
@@ -361,6 +362,7 @@ export interface InternalTransferStep {
     transferInitiator: c.Address
     sendExcessesTo: c.Address | null
     forwardTonAmount: coins
+    latestWalletCode: c.Cell | null /* = null */
     forwardPayload: PayloadInline | PayloadInRef
 }
 
@@ -375,11 +377,13 @@ export const InternalTransferStep = {
         transferInitiator: c.Address
         sendExcessesTo: c.Address | null
         forwardTonAmount: coins
+        latestWalletCode?: c.Cell | null /* = null */
         forwardPayload: PayloadInline | PayloadInRef
     }): InternalTransferStep {
         return {
             $: 'InternalTransferStep',
             transferredAsCredit: false,
+            latestWalletCode: null,
             ...args
         }
     },
@@ -394,6 +398,7 @@ export const InternalTransferStep = {
             transferInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
             forwardTonAmount: s.loadCoins(),
+            latestWalletCode: s.loadBoolean() ? s.loadRef() : null,
             forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
                 lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
                 throwNonePrefixMatch('InternalTransferStep.forwardPayload'),
@@ -408,6 +413,9 @@ export const InternalTransferStep = {
         b.storeAddress(self.transferInitiator);
         b.storeAddress(self.sendExcessesTo);
         b.storeCoins(self.forwardTonAmount);
+        storeTolkNullable<c.Cell>(self.latestWalletCode, b,
+            (v,b) => b.storeRef(v)
+        );
         switch (self.forwardPayload.$) {
             case 'PayloadInline':
                 PayloadInline.store(self.forwardPayload, b);
@@ -852,6 +860,44 @@ export const TopUpTons = {
 }
 
 /**
+ > struct (0x00001008) RequestUpgradeCode {
+ >     targetAddress: address?
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    targetAddress: c.Address | null /* = null */
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        targetAddress?: c.Address | null /* = null */
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            targetAddress: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            targetAddress: s.loadMaybeAddress(),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.targetAddress);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
  > struct (0x0000100b) HotUpgrade {
  >     additionalData: cell?
  >     code: cell
@@ -978,6 +1024,7 @@ export const Payback = {
  >     fiJettonAddress: address
  >     adminAddress: address
  >     metadataUri: cell?
+ >     version: uint10
  > }
  */
 export interface PersonalStore {
@@ -986,6 +1033,7 @@ export interface PersonalStore {
     fiJettonAddress: c.Address
     adminAddress: c.Address
     metadataUri: c.Cell | null /* = null */
+    version: uint10 /* = 1 */
 }
 
 export const PersonalStore = {
@@ -994,11 +1042,13 @@ export const PersonalStore = {
         fiJettonAddress: c.Address
         adminAddress: c.Address
         metadataUri?: c.Cell | null /* = null */
+        version?: uint10 /* = 1 */
     }): PersonalStore {
         return {
             $: 'PersonalStore',
             totalSupply: 0n,
             metadataUri: null,
+            version: 1n,
             ...args
         }
     },
@@ -1009,6 +1059,7 @@ export const PersonalStore = {
             fiJettonAddress: s.loadAddress(),
             adminAddress: s.loadAddress(),
             metadataUri: s.loadBoolean() ? s.loadRef() : null,
+            version: s.loadUintBig(10),
         }
     },
     store(self: PersonalStore, b: c.Builder): void {
@@ -1018,6 +1069,7 @@ export const PersonalStore = {
         storeTolkNullable<c.Cell>(self.metadataUri, b,
             (v,b) => b.storeRef(v)
         );
+        b.storeUint(self.version, 10);
     },
     toCell(self: PersonalStore): c.Cell {
         return makeCellFrom<PersonalStore>(self, PersonalStore.store);
@@ -1080,7 +1132,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1107,6 +1159,7 @@ export class PersonalMinter implements c.Contract {
         fiJettonAddress: c.Address
         adminAddress: c.Address
         metadataUri?: c.Cell | null /* = null */
+        version?: uint10 /* = 1 */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalMinter.CodeCell,
@@ -1171,6 +1224,12 @@ export class PersonalMinter implements c.Contract {
         code: c.Cell
     }) {
         return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfRequestUpgradeCode(body: {
+        targetAddress?: c.Address | null /* = null */
+    }) {
+        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
     }
 
     static createCellOfTopUpTons(body: {
@@ -1277,6 +1336,16 @@ export class PersonalMinter implements c.Contract {
         });
     }
 
+    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        targetAddress?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
+            ...extraOptions
+        });
+    }
+
     async sendTopUpTons(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         latestFiWalletCode?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
@@ -1297,7 +1366,7 @@ export class PersonalMinter implements c.Contract {
     }
 
     async getState(provider: ContractProvider): Promise<PersonalStore> {
-        const r = StackReader.fromGetMethod(4, await provider.get('get_state', []));
+        const r = StackReader.fromGetMethod(5, await provider.get('get_state', []));
         return ({
             $: 'PersonalStore',
             totalSupply: r.readBigInt(),
@@ -1306,6 +1375,7 @@ export class PersonalMinter implements c.Contract {
             metadataUri: r.readNullable<c.Cell>(
                 (r) => r.readCell()
             ),
+            version: r.readBigInt(),
         });
     }
 

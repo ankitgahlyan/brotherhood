@@ -10,7 +10,6 @@ import { useMemo, useCallback } from 'react';
 import { type Address } from '@ton/core';
 import {
   useContractState,
-  invalidateContractCache,
   getContractCache,
   setContractCache,
 } from './contract-cache';

@@ -32,7 +32,7 @@ import {
 import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { PersonalMinter } from '@wrappers/Personal.gen';
-import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
+import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
 import {
   buildOnchainMetadata,
   buildTolkOnchainMetadata,
@@ -181,7 +181,7 @@ export function getExpectedPersonalWalletAddress(params: {
   owner: Address;
   adminAddress?: Address;
 }): Address {
-  return PersonalWallet.fromStorage(
+  return BasePersonalWallet.fromStorage(
     {
       owner: params.owner,
       deployer: params.adminAddress ?? params.owner,

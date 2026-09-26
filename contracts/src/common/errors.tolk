@@ -60,4 +60,5 @@ enum Errors {
     CreditNotMatured = 763
     PersonalJettonNotRegistered = 764
     DeferredPaymentDisabled = 765
+    NotOnboardedWallet = 766
 }

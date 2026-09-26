@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import {
   Address,
   Cell,
+  beginCell,
   type TupleItem,
   type TupleItemInt,
   type Slice,
@@ -220,9 +221,22 @@ export function decodeContractGetter(
 
   try {
     switch (methodName) {
-      // 1. Personal Minter: get_state (4 items)
+      // 1. Personal Minter: get_state (4 or 5 items)
       case 'get_state': {
-        if (n === 4) {
+        if (n === 5) {
+          const r = StackReader.fromStack(5, tuple);
+          return {
+            structName: 'PersonalStore',
+            data: sanitizeForJson({
+              $: 'PersonalStore',
+              totalSupply: r.readBigInt(),
+              fiJettonAddress: r.readSlice().loadAddress(),
+              adminAddress: r.readSlice().loadAddress(),
+              metadataUri: r.readNullable((r2) => r2.readCell()),
+              version: r.readBigInt(),
+            }),
+          };
+        } else if (n === 4) {
           const r = StackReader.fromStack(4, tuple);
           return {
             structName: 'PersonalStore',
@@ -232,6 +246,7 @@ export function decodeContractGetter(
               fiJettonAddress: r.readSlice().loadAddress(),
               adminAddress: r.readSlice().loadAddress(),
               metadataUri: r.readNullable((r2) => r2.readCell()),
+              version: 1n,
             }),
           };
         }
@@ -280,9 +295,23 @@ export function decodeContractGetter(
         break;
       }
 
-      // 4. Personal Wallet: get_personal_wallet_state (4 items)
+      // 4. Personal Wallet: get_personal_wallet_state (4 or 6 items)
       case 'get_personal_wallet_state': {
-        if (n === 4) {
+        if (n === 6) {
+          const r = StackReader.fromStack(6, tuple);
+          return {
+            structName: 'PersonalWalletStore',
+            data: sanitizeForJson({
+              $: 'PersonalWalletStore',
+              jettonBalance: r.readBigInt(),
+              owner: r.readSlice().loadAddress(),
+              deployer: r.readSlice().loadAddress(),
+              minterAddress: r.readSlice().loadAddress(),
+              baseWalletCode: r.readCell(),
+              version: r.readBigInt(),
+            }),
+          };
+        } else if (n === 4) {
           const r = StackReader.fromStack(4, tuple);
           return {
             structName: 'PersonalWalletStore',
@@ -292,6 +321,8 @@ export function decodeContractGetter(
               owner: r.readSlice().loadAddress(),
               deployer: r.readSlice().loadAddress(),
               minterAddress: r.readSlice().loadAddress(),
+              baseWalletCode: beginCell().endCell(),
+              version: 1n,
             }),
           };
         }

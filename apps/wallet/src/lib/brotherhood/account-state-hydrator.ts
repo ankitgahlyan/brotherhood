@@ -6,7 +6,7 @@ if (typeof globalThis !== 'undefined') {
 }
 
 import { Address, Cell } from '@ton/core';
-import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
+import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
 import { WalletV5R1CodeBoc } from '@ton/walletkit';
 import {
   setContractCache,
@@ -292,14 +292,14 @@ function getOrCreateHydratorWorker(): Worker | null {
 }
 
 /**
- * Computes personal wallet address deterministically off-chain using PersonalWallet.fromStorage
+ * Computes personal wallet address deterministically off-chain using BasePersonalWallet.fromStorage
  */
 export function computePersonalWalletAddress(
   personalMinter: Address,
   owner: Address,
   adminAddress: Address,
 ): Address {
-  const wallet = PersonalWallet.fromStorage(
+  const wallet = BasePersonalWallet.fromStorage(
     {
       owner,
       deployer: adminAddress,

@@ -36,8 +36,8 @@ describe('getter-decoder', () => {
   });
 
   describe('decodeContractGetter', () => {
-    it('decodes Personal Minter get_state', () => {
-      const tuple = [
+    it('decodes Personal Minter get_state (legacy 4-item and versioned 5-item)', () => {
+      const tuple4 = [
         { type: 'int' as const, value: 5000n },
         {
           type: 'slice' as const,
@@ -50,19 +50,27 @@ describe('getter-decoder', () => {
         { type: 'null' as const },
       ];
 
-      const decoded = decodeContractGetter('get_state', tuple);
-      expect(decoded).not.toBeNull();
-      expect(decoded?.structName).toBe('PersonalStore');
-      expect((decoded?.data as Record<string, unknown>).totalSupply).toBe(
+      const decoded4 = decodeContractGetter('get_state', tuple4);
+      expect(decoded4).not.toBeNull();
+      expect(decoded4?.structName).toBe('PersonalStore');
+      expect((decoded4?.data as Record<string, unknown>).totalSupply).toBe(
         '5000',
       );
-      expect((decoded?.data as Record<string, unknown>).adminAddress).toBe(
+      expect((decoded4?.data as Record<string, unknown>).adminAddress).toBe(
         testOwner.toString(),
       );
+      expect((decoded4?.data as Record<string, unknown>).version).toBe('1');
+
+      const tuple5 = [...tuple4, { type: 'int' as const, value: 2n }];
+
+      const decoded5 = decodeContractGetter('get_state', tuple5);
+      expect(decoded5).not.toBeNull();
+      expect(decoded5?.structName).toBe('PersonalStore');
+      expect((decoded5?.data as Record<string, unknown>).version).toBe('2');
     });
 
-    it('decodes Personal Wallet get_personal_wallet_state', () => {
-      const tuple = [
+    it('decodes Personal Wallet get_personal_wallet_state (legacy 4-item and versioned 6-item)', () => {
+      const tuple4 = [
         { type: 'int' as const, value: 2500n },
         {
           type: 'slice' as const,
@@ -78,12 +86,49 @@ describe('getter-decoder', () => {
         },
       ];
 
-      const decoded = decodeContractGetter('get_personal_wallet_state', tuple);
-      expect(decoded).not.toBeNull();
-      expect(decoded?.structName).toBe('PersonalWalletStore');
-      expect((decoded?.data as Record<string, unknown>).jettonBalance).toBe(
+      const decoded4 = decodeContractGetter(
+        'get_personal_wallet_state',
+        tuple4,
+      );
+      expect(decoded4).not.toBeNull();
+      expect(decoded4?.structName).toBe('PersonalWalletStore');
+      expect((decoded4?.data as Record<string, unknown>).jettonBalance).toBe(
         '2500',
       );
+      expect((decoded4?.data as Record<string, unknown>).version).toBe('1');
+
+      const dummyCode = beginCell().storeUint(0x1234, 16).endCell();
+      const tuple6 = [
+        { type: 'int' as const, value: 3000n },
+        {
+          type: 'slice' as const,
+          cell: beginCell().storeAddress(testOwner).endCell(),
+        },
+        {
+          type: 'slice' as const,
+          cell: beginCell().storeAddress(testOwner).endCell(),
+        },
+        {
+          type: 'slice' as const,
+          cell: beginCell().storeAddress(testMinter).endCell(),
+        },
+        {
+          type: 'cell' as const,
+          cell: dummyCode,
+        },
+        { type: 'int' as const, value: 2n },
+      ];
+
+      const decoded6 = decodeContractGetter(
+        'get_personal_wallet_state',
+        tuple6,
+      );
+      expect(decoded6).not.toBeNull();
+      expect(decoded6?.structName).toBe('PersonalWalletStore');
+      expect((decoded6?.data as Record<string, unknown>).jettonBalance).toBe(
+        '3000',
+      );
+      expect((decoded6?.data as Record<string, unknown>).version).toBe('2');
     });
 
     it('decodes get_wallet_data', () => {

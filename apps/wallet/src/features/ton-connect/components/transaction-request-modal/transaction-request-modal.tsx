@@ -6,10 +6,10 @@
  *
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import type { SendTransactionRequestEvent } from '@ton/walletkit';
 import { getNormalizedExtMessageHash } from '@ton/walletkit';
-import { useTransactionRequests, useAuth } from '@demo/wallet-core';
+import { useTransactionRequests } from '@demo/wallet-core';
 import type { SavedWallet } from '@demo/wallet-core';
 import { toast } from 'sonner';
 

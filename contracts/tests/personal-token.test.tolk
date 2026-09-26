@@ -5,6 +5,7 @@ import "@acton/testing/expect"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
+import "@wrappers/PersonalMinter.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
@@ -51,6 +52,11 @@ fun personalWalletForOwner(pm: Personal, owner: address): PersonalWallet {
     return PersonalWallet.fromAddress(pm.getWalletAddress(owner));
 }
 
+fun onboardPersonalWallet(pm: Personal, admin: Treasury, owner: address): PersonalWallet {
+    pm.sendMint(admin.address, owner, grams("1"));
+    return personalWalletForOwner(pm, owner);
+}
+
 fun setupPersonalScenario(): (
     FossFi,
     Treasury,
@@ -90,6 +96,9 @@ fun setupPersonalScenario(): (
         null,
         { value: grams("0.1") },
     );
+
+    // Onboard buyer's personal token wallet with 1 GRAM deploy signal
+    onboardPersonalWallet(pm, notDeployer, deployer.address);
 
     return (
         minter,
@@ -134,7 +143,7 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
     expect(issuerWallet.getJettonBalance()).toEqual(issuerFiBefore + loan);
     // ... and the issuer's Personal Token was minted to the buyer
     expect(personalSupply(pm)).toEqual(supplyBefore + loan);
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan);
 
     val trusted = issuerWallet.getWalletDataAll().addresses.load().trustedJettonAddrs.load();
     expect(trusted.personalJettonMinter).toEqual(pm.address);
@@ -262,7 +271,7 @@ get fun `test personal token: payback before maturity fails with CreditNotMature
     });
 
     // Personal tokens are restored to the buyer and no FI is transferred
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan);
     expect(personalSupply(pm)).toEqual(supplyBefore);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiAfterBuy);
     expect(issuerWallet.getJettonBalance()).toEqual(issuerFiAfterBuy);
@@ -303,7 +312,7 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
     });
 
     // the loan is written off: the Personal Token is burned and the FI returned
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("0"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1"));
     expect(personalSupply(pm)).toEqual(supplyBefore - loan);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
     expect(issuerWallet.getJettonBalance()).toEqual(issuerFiBefore - loan);
@@ -344,7 +353,7 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
         to: buyerPriWallet.address,
     });
 
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan - repaid);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan - repaid);
     expect(personalSupply(pm)).toEqual(supplyBefore - repaid);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + repaid);
     expect(issuerWallet.getJettonBalance()).toEqual(issuerFiBefore - repaid);
@@ -380,8 +389,8 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
     });
 
     // nothing moves when the burn fails
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
-    expect(personalSupply(pm)).toEqual(loan);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan);
+    expect(personalSupply(pm)).toEqual(grams("1") + loan);
 }
 
 get fun `test personal token: payback unwinds when the issuer cannot cover the loan`() {
@@ -444,7 +453,7 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
         from: issuerWallet.address,
         to: pm.address,
     });
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan);
     expect(personalSupply(pm)).toEqual(supplyBefore);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiAfterBuy);
     expect(issuerWallet.getJettonBalance()).toEqual(grams("0"));
@@ -499,7 +508,7 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
         to: buyerPriWallet.address,
     });
 
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("0"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1"));
     expect(personalSupply(pm)).toEqual(supplyBefore - loan);
     expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore + loan);
     expect(issuerWallet.getJettonBalance()).toEqual(grams("0"));
@@ -527,6 +536,7 @@ get fun `test personal token: secondary market transfer succeeds before maturity
 
     val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
     val friend = testing.treasury("personal-token-recipient");
+    onboardPersonalWallet(pm, notDeployer, friend.address);
 
     // Transfer 30 personal tokens to friend while still before maturity
     testing.setNow(1_800_000_000 + 1000);
@@ -545,9 +555,10 @@ get fun `test personal token: secondary market transfer succeeds before maturity
         from: deployer.address,
         to: buyerPriWallet.address,
     });
+    expect(transferRes).toHaveAllSuccessfulTxs();
 
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("70"));
-    expect(personalBalanceOf(pm, friend.address)).toEqual(grams("30"));
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + loan - grams("30"));
+    expect(personalBalanceOf(pm, friend.address)).toEqual(grams("1") + grams("30"));
 }
 
 get fun `test personal token: admin can directly mint personal tokens with 0.7 ton gas`() {
@@ -561,6 +572,7 @@ get fun `test personal token: admin can directly mint personal tokens with 0.7 t
     ) = setupPersonalScenario();
 
     val recipient = testing.treasury("direct-mint-recipient");
+    onboardPersonalWallet(pm, notDeployer, recipient.address);
     val mintAmount = grams("50");
 
     val mintRes = pm.sendMint(
@@ -576,10 +588,169 @@ get fun `test personal token: admin can directly mint personal tokens with 0.7 t
         to: pm.address,
     });
 
-    expect(personalBalanceOf(pm, recipient.address)).toEqual(mintAmount);
-    expect(personalSupply(pm)).toEqual(mintAmount);
+    expect(personalBalanceOf(pm, recipient.address)).toEqual(grams("1") + mintAmount);
+    expect(personalSupply(pm)).toEqual(grams("1") + grams("1") + mintAmount);
 }
 
 fun personalBalanceOf(pm: Personal, owner: address): coins {
     return personalWalletForOwner(pm, owner).getWalletData().jettonBalance;
+}
+
+get fun `test personal token: request upgrade code returns Upgrade message`() {
+    val (
+        _minter,
+        deployer,
+        _notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val minterWrapper = PersonalMinter.fromAddress(pm.address);
+
+    // 1. Request from minter
+    val minterReqRes = minterWrapper.sendRequestUpgradeCode(
+        deployer.address,
+        null,
+        { value: grams("0.2") },
+    );
+    expect(minterReqRes).toHaveSuccessfulTx<RequestUpgradeCode>({
+        from: deployer.address,
+        to: pm.address,
+    });
+    expect(minterReqRes).toHaveSuccessfulTx<Upgrade>({
+        from: pm.address,
+        to: deployer.address,
+    });
+
+    // 2. Request from personal wallet
+    val walletReqRes = buyerPriWallet.sendRequestUpgradeCode(
+        deployer.address,
+        null,
+        { value: grams("0.2") },
+    );
+    expect(walletReqRes).toHaveSuccessfulTx<RequestUpgradeCode>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+    expect(walletReqRes).toHaveSuccessfulTx<Upgrade>({
+        from: buyerPriWallet.address,
+        to: deployer.address,
+    });
+}
+
+get fun `test personal token: upgrade personal wallet from minter succeeds and updates version`() {
+    val (
+        _minter,
+        deployer,
+        _notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val initialVersion = buyerPriWallet.getPersonalWalletState().version;
+    expect(initialVersion).toEqual(1);
+
+    // Minter upgrades wallet
+    val upgradeRes = buyerPriWallet.sendUpgrade(
+        pm.address,
+        true,
+        2, // new version
+        pm.address,
+        null,
+        null,
+        { value: grams("0.3") },
+    );
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: pm.address,
+        to: buyerPriWallet.address,
+    });
+
+    val updatedVersion = buyerPriWallet.getPersonalWalletState().version;
+    expect(updatedVersion).toEqual(2);
+}
+
+get fun `test personal token: upgrade personal wallet from peer personal wallet succeeds`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val peer = testing.treasury("peer-wallet-owner");
+    val peerPriWallet = onboardPersonalWallet(pm, notDeployer, peer.address);
+
+    expect(buyerPriWallet.getPersonalWalletState().version).toEqual(1);
+
+    // Peer personal wallet sends Upgrade to buyerPriWallet with sender: peer.address
+    val upgradeRes = buyerPriWallet.sendUpgrade(
+        peerPriWallet.address,
+        true,
+        3,
+        peer.address,
+        null,
+        null,
+        { value: grams("0.3") },
+    );
+    expect(upgradeRes).toHaveSuccessfulTx<Upgrade>({
+        from: peerPriWallet.address,
+        to: buyerPriWallet.address,
+    });
+
+    expect(buyerPriWallet.getPersonalWalletState().version).toEqual(3);
+}
+
+get fun `test personal token: upgrade personal wallet from unauthorized address fails with IncorrectSender`() {
+    val (
+        _minter,
+        deployer,
+        _notDeployer,
+        _buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val attacker = testing.treasury("attacker");
+
+    // Attacker tries to send Upgrade directly
+    val fakeUpgradeRes = buyerPriWallet.sendUpgrade(
+        attacker.address,
+        true,
+        5,
+        attacker.address,
+        null,
+        null,
+        { value: grams("0.3") },
+    );
+    expect(fakeUpgradeRes).toHaveFailedTx<Upgrade>({
+        from: attacker.address,
+        to: buyerPriWallet.address,
+        exitCode: Errors.IncorrectSender,
+    });
+
+    // Even the wallet owner cannot directly invoke Upgrade (must be minter or verified peer)
+    val ownerUpgradeRes = buyerPriWallet.sendUpgrade(
+        deployer.address,
+        true,
+        5,
+        deployer.address,
+        null,
+        null,
+        { value: grams("0.3") },
+    );
+    expect(ownerUpgradeRes).toHaveFailedTx<Upgrade>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+        exitCode: Errors.IncorrectSender,
+    });
+
+    expect(buyerPriWallet.getPersonalWalletState().version).toEqual(1);
 }

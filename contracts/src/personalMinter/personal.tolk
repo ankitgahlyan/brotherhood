@@ -10,6 +10,7 @@ import "@contracts/common/utils"
 
 import "fees-management"
 import "jetton-utils"
+import "personal-wallet-code"
 import "storage"
 
 type AllowedMsgToPersonalMinter =
@@ -20,6 +21,7 @@ type AllowedMsgToPersonalMinter =
     | ChangeMinterMetadata
     | Upgrade
     | HotUpgrade
+    | RequestUpgradeCode
     | TopUpTons
     | Destroy
 
@@ -155,6 +157,21 @@ fun onInternalMessage(in: InMessage) {
 
             reservePersonalMinterStorageFee();
 
+            var internalTransferBody = msg.internalTransferMsg;
+            if (internalTransferMsg.jettonAmount == grams("1")) {
+                internalTransferBody = makeInternalTransferStep(
+                    internalTransferMsg.queryId,
+                    internalTransferMsg.jettonAmount,
+                    internalTransferMsg.transferInitiator,
+                    internalTransferMsg.sendExcessesTo,
+                    internalTransferMsg.forwardTonAmount,
+                    internalTransferMsg.forwardPayload,
+                    internalTransferMsg.version,
+                    internalTransferMsg.transferredAsCredit,
+                    personalWalletCompiledCodeLibraryRef(),
+                );
+            }
+
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: calcDeployPriWallet(
@@ -164,7 +181,7 @@ fun onInternalMessage(in: InMessage) {
                     getPersonalWalletCode(),
                 ),
                 value: msg.tonAmount,
-                body: msg.internalTransferMsg,
+                body: internalTransferBody,
             });
             deployMsg.send(
                 SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
@@ -207,6 +224,28 @@ fun onInternalMessage(in: InMessage) {
                 contract.setData(msg.newData);
                 return;
             }
+
+            if (storage.version < msg.walletVersion) {
+                storage.version = msg.walletVersion;
+            }
+        }
+
+        RequestUpgradeCode => {
+            val target = msg.targetAddress != null ? msg.targetAddress : in.senderAddress;
+            val upgradeMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                value: 0,
+                dest: target,
+                body: Upgrade {
+                    walletUpgrade: true,
+                    walletVersion: storage.version,
+                    sender: storage.adminAddress,
+                    newCode: getPersonalWalletCode(),
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
         }
 
         TopUpTons => {
@@ -267,5 +306,5 @@ fun autoAddrPriWalletMinter(owner: address): address {
 }
 
 fun getPersonalWalletCode(): cell {
-    return personalWalletCompiledCodeLibraryRef();
+    return getBasePersonalWalletCode();
 }

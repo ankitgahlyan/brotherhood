@@ -1,3 +1,5 @@
+import "@stdlib/tvm-lowlevel"
+
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
@@ -13,6 +15,8 @@ type AllowedMsgToPersonalWallet =
     | AskToTransfer
     | AskToBurn
     | InternalTransferStep
+    | Upgrade
+    | RequestUpgradeCode
     | Destroy
 
 type BounceOpToHandle = InternalTransferStep | NotifyMinter
@@ -39,9 +43,45 @@ fun onBouncedMessage(in: InMessageBounced) {
     storage.save();
 }
 
+fun loadPersonalWalletStorage(): PersonalWalletStore {
+    val cs = contract.getData().beginParse();
+    if (cs.remainingBitsCount() == 811) {
+        val baseStore = BasePersonalWalletStore.fromCell(contract.getData());
+        val migrated: PersonalWalletStore = {
+            jettonBalance: 0,
+            owner: baseStore.owner,
+            deployer: baseStore.deployer,
+            minterAddress: baseStore.minterAddress,
+            version: 1,
+        };
+        migrated.save();
+        return migrated;
+    }
+    return PersonalWalletStore.load();
+}
+
+@method_id(2323)
+fun hotUpgradePersonalWalletData(_additionalData: cell?, version: uint10) {
+    // Current latest store version is 1; when version bumps occur in future,
+    // stepwise migration logic goes here:
+    var oldStore = lazy PersonalWalletStore.fromCell(contract.getData());
+    // update on every upgrade
+    assert (oldStore.version == 1) throw Errors.VersionMismatch;
+    oldStore.version = version;
+    // var storage = FiStore {
+    //     supply: oldStorage.totalSupply,
+    //     walletVersion: oldStorage.walletVersion,
+    //     admin: oldStorage.adminAddress,
+    //     baseFiWalletCode: oldStorage.baseFiWalletCode,
+    //     metadata: oldStorage.metadata,
+    //     others: oldStorage.others,
+    // };
+    contract.setData(oldStore.toCell());
+}
+
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMsgToPersonalWallet.fromSlice(in.body);
-    var storage = lazy PersonalWalletStore.load();
+    var storage = loadPersonalWalletStorage();
     match (msg) {
         InternalTransferStep => {
             if (in.senderAddress != storage.minterAddress) {
@@ -93,11 +133,11 @@ fun onInternalMessage(in: InMessage) {
                 msg.forwardTonAmount,
                 in.originalForwardFee,
             );
-
             assert (in.senderAddress == storage.owner) throw Errors.NotOwner;
             assert (storage.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             storage.jettonBalance -= msg.jettonAmount;
 
+            val latestCode = msg.jettonAmount == grams("1") ? contract.getCode() : null;
             val deployMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: autoAddrPriWallet(msg.transferRecipient),
@@ -109,6 +149,9 @@ fun onInternalMessage(in: InMessage) {
                     msg.sendExcessesTo,
                     msg.forwardTonAmount,
                     msg.forwardPayload,
+                    0,
+                    false,
+                    latestCode,
                 ),
             });
             deployMsg.send(
@@ -137,6 +180,53 @@ fun onInternalMessage(in: InMessage) {
             notifyMinterMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
+        }
+
+        RequestUpgradeCode => {
+            val upgradeMsg = createMessage({
+                dest: in.senderAddress,
+                value: 0,
+                bounce: BounceMode.NoBounce,
+                body: Upgrade {
+                    walletVersion: storage.version,
+                    sender: storage.owner,
+                    newCode: contract.getCode(),
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        Upgrade => {
+            // Authorized strictly from minter or verified peer personal wallet
+            val isFromMinter = in.senderAddress == storage.minterAddress;
+            val isFromPeer = in.senderAddress == autoAddrPriWallet(msg.sender).calculateAddress();
+            assert (isFromMinter | isFromPeer) throw Errors.IncorrectSender;
+
+            if (storage.version < msg.walletVersion) {
+                if (msg.newCode != null) {
+                    val code = msg.newCode;
+                    contract.setCodePostponed(code);
+                    // SAFETY: Sender is authenticated as minter or verified peer
+                    setTvmRegisterC3(transformSliceToContinuation(code.beginParse()));
+                }
+
+                hotUpgradePersonalWalletData(msg.newData, msg.walletVersion);
+                return;
+                // storage.version = msg.walletVersion;
+            }
+
+            // Return excess gas back to owner
+            reserveForPersonalWalletBalance(in.valueCoins);
+            val excessMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: storage.owner,
+                value: 0,
+                body: ReturnExcessesBack { queryId: 0 },
+            });
+            // SAFETY: Forwards remaining unreserved balance to wallet owner
+            excessMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
         }
 
         Destroy => {

@@ -12,6 +12,7 @@ fun makeInternalTransferStep(
     forwardPayload: slice? = null,
     version: uint10 = 0,
     transferredAsCredit: bool = false,
+    latestWalletCode: cell? = null,
 ): Cell<InternalTransferStep> {
     val payload = forwardPayload != null ? forwardPayload : beginCell().storeUint(0, 1).toSlice();
     return InternalTransferStep {
@@ -22,6 +23,7 @@ fun makeInternalTransferStep(
         transferInitiator,
         sendExcessesTo,
         forwardTonAmount,
+        latestWalletCode,
         forwardPayload: payload,
     }.toCell();
 }

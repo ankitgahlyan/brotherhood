@@ -369,6 +369,7 @@ fun FossFiWallet.sendInternalTransferStep(
     transferInitiator: address,
     sendExcessesTo: address?,
     forwardTonAmount: coins,
+    latestWalletCode: cell?,
     forwardPayload: PayloadInline | PayloadInRef,
     config: SendParams = {},
 ): SendResultList {
@@ -382,6 +383,7 @@ fun FossFiWallet.sendInternalTransferStep(
         .storeAny(transferInitiator)
         .storeAny(sendExcessesTo)
         .storeAny(forwardTonAmount)
+        .storeAny(latestWalletCode)
         .storeAny(forwardPayload);
     val genericMsg = createMessage({
         bounce: config.bounce,

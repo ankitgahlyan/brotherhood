@@ -178,6 +178,21 @@ fun PersonalMinter.sendHotUpgrade(
     return net.send(from, genericMsg);
 }
 
+fun PersonalMinter.sendRequestUpgradeCode(
+    self,
+    from: address,
+    targetAddress: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestUpgradeCode { targetAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun PersonalMinter.sendTopUpTons(
     self,
     from: address,

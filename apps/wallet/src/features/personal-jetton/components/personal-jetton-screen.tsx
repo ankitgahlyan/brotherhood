@@ -833,10 +833,23 @@ export const PersonalJettonScreen: React.FC = () => {
                     min="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Amount to Mint"
+                    placeholder="Amount to Mint (e.g. 1)"
                     className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                     data-testid="personal-mint-amount"
                   />
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
+                    <span>
+                      New personal wallets require exactly 1 token (1 GRAM) to
+                      activate.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAmount('1')}
+                      className="text-primary hover:underline font-medium shrink-0 ml-1"
+                    >
+                      Set 1 (Activation)
+                    </button>
+                  </div>
                 </div>
               </div>
               <Button

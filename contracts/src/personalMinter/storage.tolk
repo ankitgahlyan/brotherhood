@@ -1,8 +1,16 @@
+struct BasePersonalWalletStore {
+    owner: address
+    deployer: address
+    minterAddress: address
+    version: uint10 = 0
+}
+
 struct PersonalWalletStore {
     jettonBalance: coins = 0
     owner: address
     deployer: address
     minterAddress: address
+    version: uint10 = 1
 }
 
 struct PersonalStore {
@@ -10,6 +18,7 @@ struct PersonalStore {
     fiJettonAddress: address
     adminAddress: address
     metadataUri: cell? = null // null on deploy for deterministic address calculation
+    version: uint10 = 1
 }
 
 fun PersonalStore.load(): PersonalStore {

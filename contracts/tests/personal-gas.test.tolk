@@ -36,6 +36,8 @@ get fun `test personal gas: transfer minimal value edge`() {
     val recipient = testing.treasury("recipient");
     val pm = deployPersonalMinterDirect(deployer.address);
 
+    // Onboard deployer wallet with 1 GRAM deploy signal
+    pm.sendMint(deployer.address, deployer.address, grams("1"), grams("0.02"), grams("0.7"));
     // Mint tokens to deployer
     pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
@@ -98,6 +100,7 @@ get fun `test personal gas: transfer with forward amount requires second forward
     val recipient = testing.treasury("recipient");
     val pm = deployPersonalMinterDirect(deployer.address);
 
+    pm.sendMint(deployer.address, deployer.address, grams("1"), grams("0.02"), grams("0.7"));
     pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
     val wallet = PersonalWallet.fromAddress(walletAddr);
@@ -149,6 +152,7 @@ get fun `test personal gas: burn safety floor requires 0.5 TON`() {
     val deployer = testing.treasury("deployer");
     val pm = deployPersonalMinterDirect(deployer.address);
 
+    pm.sendMint(deployer.address, deployer.address, grams("1"), grams("0.02"), grams("0.7"));
     pm.sendMint(deployer.address, deployer.address, grams("100"), grams("0.02"), grams("0.7"));
     val walletAddr = pm.getWalletAddress(deployer.address);
     val wallet = PersonalWallet.fromAddress(walletAddr);

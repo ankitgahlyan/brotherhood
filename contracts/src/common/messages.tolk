@@ -68,6 +68,7 @@ struct (0x178d4519) InternalTransferStep {
     transferInitiator: address
     sendExcessesTo: address?
     forwardTonAmount: coins
+    latestWalletCode: cell? = null
     @abi.clientType(PayloadInline | PayloadInRef)
     forwardPayload: ForwardPayloadRemainder
 }

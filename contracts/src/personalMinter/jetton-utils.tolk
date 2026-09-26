@@ -1,5 +1,7 @@
 import "@contracts/common/sharding"
 
+import "@contracts/personalMinter/personal-wallet-code"
+
 import "storage"
 
 fun calcDeployPriWallet(
@@ -8,10 +10,11 @@ fun calcDeployPriWallet(
     minterAddress: address,
     jettonWalletCode: cell,
 ): AutoDeployAddress {
-    val emptyPersonalWalletStore: PersonalWalletStore = {
+    val emptyPersonalWalletStore: BasePersonalWalletStore = {
         owner,
         deployer,
         minterAddress,
+        version: 0,
     };
 
     return {
@@ -29,6 +32,6 @@ fun autoAddrPriWallet(owner: address): AutoDeployAddress {
         owner,
         st.deployer,
         st.minterAddress,
-        contract.getCode(),
+        getBasePersonalWalletCode(),
     );
 }

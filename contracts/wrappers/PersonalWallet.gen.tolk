@@ -112,6 +112,7 @@ fun PersonalWallet.sendInternalTransferStep(
     transferInitiator: address,
     sendExcessesTo: address?,
     forwardTonAmount: coins,
+    latestWalletCode: cell?,
     forwardPayload: PayloadInline | PayloadInRef,
     config: SendParams = {},
 ): SendResultList {
@@ -125,12 +126,47 @@ fun PersonalWallet.sendInternalTransferStep(
         .storeAny(transferInitiator)
         .storeAny(sendExcessesTo)
         .storeAny(forwardTonAmount)
+        .storeAny(latestWalletCode)
         .storeAny(forwardPayload);
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
         body: InternalTransferStep.fromSlice(bodyB.toSlice()),
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendUpgrade(
+    self,
+    from: address,
+    walletUpgrade: bool,
+    walletVersion: uint10,
+    sender: address,
+    newData: cell?,
+    newCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Upgrade { walletUpgrade, walletVersion, sender, newData, newCode },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendRequestUpgradeCode(
+    self,
+    from: address,
+    targetAddress: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestUpgradeCode { targetAddress },
     });
     return net.send(from, genericMsg);
 }

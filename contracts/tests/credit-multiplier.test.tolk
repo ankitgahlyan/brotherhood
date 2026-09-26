@@ -109,7 +109,7 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
     // ... and 2x (200) Personal Tokens were minted to buyer
     val expectedPersonalMinted = loan * 2;
     expect(personalSupply(pm)).toEqual(supplyBefore + expectedPersonalMinted);
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(expectedPersonalMinted);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + expectedPersonalMinted);
 }
 
 get fun `test credit multiplier: sent tokens > creditNeed mints required and returns excess`() {
@@ -156,5 +156,5 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
 
     // Personal tokens minted equal 2x of accepted creditNeedAmount (100 * 2 = 200)
     val expectedPersonalMinted = creditNeedAmount * 2;
-    expect(personalBalanceOf(pm, deployer.address)).toEqual(expectedPersonalMinted);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + expectedPersonalMinted);
 }

@@ -56,6 +56,14 @@ depends = []
 display-name = "Personal Token Minter"
 src = "contracts/src/personalMinter/personal.tolk"
 depends = [
+    { name = "BasePersonalWallet", kind = "embed_code", function = "basePersonalWalletCompiledCode" },
+    { name = "PersonalWallet", kind = "embed_code", function = "personalWalletCompiledCodeLibraryRef" },
+]
+
+[contracts.BasePersonalWallet]
+display-name = "BasePersonalWallet Proxy"
+src = "contracts/src/personalMinter/BasePersonalWallet.tolk"
+depends = [
     { name = "PersonalWallet", kind = "embed_code", function = "personalWalletCompiledCodeLibraryRef" },
 ]
 
@@ -104,8 +112,8 @@ width = 100
 separate-import-groups = true
 
 [lint]
-exclude = ["contracts/wrappers/*.*.tolk", "gen/*.tolk"]
-max-warnings = 0                                        # fail on any warning
+exclude = [".acton", "contracts/wrappers/*.*.tolk", "gen/*.tolk"]
+max-warnings = 0                                                  # fail on any warning
 
 [lint.rules]
 unused-variable = "deny"

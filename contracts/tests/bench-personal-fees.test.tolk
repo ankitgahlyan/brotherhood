@@ -169,6 +169,10 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
     );
     pm.deploy(deployer.address, { value: grams("1") });
 
+    // Onboard deployer and recipient with 1 GRAM deploy signal
+    pm.sendMint(deployer.address, deployer.address, grams("1"), grams("0.02"), grams("0.7"));
+    pm.sendMint(deployer.address, recipient.address, grams("1"), grams("0.02"), grams("0.7"));
+
     // Mint to deployer and to recipient
     pm.sendMint(deployer.address, deployer.address, grams("50"), grams("0.02"), grams("0.7"));
     pm.sendMint(deployer.address, recipient.address, grams("50"), grams("0.02"), grams("0.7"));

@@ -9,6 +9,7 @@
         "@playwright/test": "^1.63.0",
         "@ton/core": "^0.63.1",
         "@ton/crypto": "^3.3.0",
+        "@ton/tolk-abi-to-typescript": "0.5.0",
         "@ton/ton": "^16.3.0",
         "@types/bun": "^1.4.2",
         "@types/node": "^26.5.1",
@@ -765,6 +766,8 @@
     "@ton/crypto": ["@ton/crypto@3.3.0", "", { "dependencies": { "@ton/crypto-primitives": "2.1.0", "jssha": "3.2.0", "tweetnacl": "1.0.3" } }, "sha512-/A6CYGgA/H36OZ9BbTaGerKtzWp50rg67ZCH2oIjV1NcrBaCK9Z343M+CxedvM7Haf3f/Ee9EhxyeTp0GKMUpA=="],
 
     "@ton/crypto-primitives": ["@ton/crypto-primitives@2.1.0", "", { "dependencies": { "jssha": "3.2.0" } }, "sha512-PQesoyPgqyI6vzYtCXw4/ZzevePc4VGcJtFwf08v10OevVJHVfW238KBdpj1kEDQkxWLeuNHEpTECNFKnP6tow=="],
+
+    "@ton/tolk-abi-to-typescript": ["@ton/tolk-abi-to-typescript@0.5.0", "", { "bin": { "tolk-abi-to-typescript": "dist/cli.js" } }, "sha512-/eS8bwMoGBT+S3KJrB/5DXJatoixLKGxe9BQEqzb3TJXnAOPNWyuGvS/WEz6Y8D3cR8XFJjTCvaE5aNwzstoww=="],
 
     "@ton/ton": ["@ton/ton@16.3.0", "", { "dependencies": { "axios": "^1.15.0", "dataloader": "^2.0.0", "zod": "^3.21.4" }, "peerDependencies": { "@ton/core": ">=0.63.0 <1.0.0", "@ton/crypto": ">=3.2.0" } }, "sha512-iafYCLYVD2+ZrqbnJA7CvuZ13hUVQSmmOAxx8Ozo2pgl0HHjj004hdoHzrdE0XCHdj7AOZB3zcZaHBVJxQOh9Q=="],
 

@@ -152,6 +152,7 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   763: 'Credit Not Matured',
   764: 'Personal Jetton Not Registered',
   765: 'Deferred Payment Disabled',
+  766: 'Wallet Not Onboarded',
   65535: 'Invalid Message Body',
 };
 
