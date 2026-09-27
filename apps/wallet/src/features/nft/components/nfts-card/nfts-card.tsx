@@ -3,39 +3,129 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
-import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { ChevronRight, Globe, Plus } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
-import { useNfts } from '@demo/wallet-core';
+import { useNfts, useWallet } from '@demo/wallet-core';
+import type { NFT } from '@ton/walletkit';
+import {
+  useDnsStore,
+  selectOwnedDomains,
+} from '@/features/dns/store/dns-store';
+import type { Network } from '@/lib/brotherhood/config';
 
 import { NftTile } from '../nft-tile';
 
-/** Dashboard NFTs preview: a horizontal-scroll strip; renders nothing when the wallet has no NFTs. */
-export const NftsCard: React.FC = () => {
-  const navigate = useNavigate();
-  const { userNfts, formatNftIndex } = useNfts();
+interface NftsCardProps {
+  /** If true, hides the internal header (useful when rendered inside a parent tab like DashboardAssets) */
+  hideHeader?: boolean;
+}
 
-  if (userNfts.length === 0) {
-    return null;
+/** Dashboard NFTs preview: a horizontal-scroll strip; renders preview or empty state. */
+export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
+  const navigate = useNavigate();
+  const {
+    userNfts,
+    formatNftIndex,
+    isLoadingNfts,
+    lastNftsUpdate,
+    loadUserNfts,
+  } = useNfts();
+  const { savedWallets, activeWalletId } = useWallet();
+
+  const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
+    'testnet') as Network;
+
+  const ownedBroDomains = useDnsStore((s) => selectOwnedDomains(s, network));
+
+  // Trigger on-demand load if never fetched
+  useEffect(() => {
+    if (lastNftsUpdate === 0 && !isLoadingNfts) {
+      void loadUserNfts();
+    }
+  }, [lastNftsUpdate, isLoadingNfts, loadUserNfts]);
+
+  // Unify standard indexer NFTs with local .bro domains
+  const allNfts = useMemo<NFT[]>(() => {
+    const existingAddresses = new Set(userNfts.map((n) => n.address));
+    const broNfts: NFT[] = ownedBroDomains
+      .filter((d) => !existingAddresses.has(d.nftAddress))
+      .map((d) => ({
+        address: d.nftAddress,
+        index: d.name,
+        info: {
+          name: `${d.name}.${d.zone}`,
+          image: {
+            url: 'https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-logo.png',
+          },
+          description: `Brotherhood .${d.zone} domain`,
+        },
+      }));
+    return [...userNfts, ...broNfts];
+  }, [userNfts, ownedBroDomains]);
+
+  const header = (
+    <button
+      type="button"
+      onClick={() => navigate('/wallet/nft')}
+      className="flex items-center gap-1 mb-2 group cursor-pointer"
+      aria-label="View all NFTs"
+    >
+      <h2 className="text-base font-semibold text-foreground">NFTs</h2>
+      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+    </button>
+  );
+
+  if (isLoadingNfts && allNfts.length === 0) {
+    return (
+      <section>
+        {!hideHeader && header}
+        <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
+          <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
+        </div>
+      </section>
+    );
+  }
+
+  if (allNfts.length === 0) {
+    return (
+      <section>
+        {!hideHeader && header}
+        <div className="p-4 bg-secondary/40 border border-border/70 rounded-2xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                No NFTs yet
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Register a sovereign .bro domain to start your collection.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/dns')}
+            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>.bro</span>
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
     <section>
-      <button
-        type="button"
-        onClick={() => navigate('/wallet/nft')}
-        className="flex items-center gap-1 mb-2 group"
-        aria-label="View all NFTs"
-      >
-        <h2 className="text-base font-semibold text-foreground">NFTs</h2>
-        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-      </button>
-
+      {!hideHeader && header}
       <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
-        {userNfts.map((nft) => (
+        {allNfts.map((nft) => (
           <div key={nft.address} className="w-36 flex-shrink-0">
             <NftTile nft={nft} formatNftIndex={formatNftIndex} />
           </div>

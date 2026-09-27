@@ -15,6 +15,7 @@ import { Route as CityNetworkRouteImport } from './routes/city-network'
 import { Route as CreateWalletRouteImport } from './routes/create-wallet'
 import { Route as DaoRouteImport } from './routes/dao'
 import { Route as DeveloperRouteImport } from './routes/developer'
+import { Route as DnsRouteImport } from './routes/dns'
 import { Route as ImportWalletRouteImport } from './routes/import-wallet'
 import { Route as LedgerRouteImport } from './routes/ledger'
 import { Route as LotteryRouteImport } from './routes/lottery'
@@ -59,6 +60,11 @@ const DaoRoute = DaoRouteImport.update({
 const DeveloperRoute = DeveloperRouteImport.update({
   id: '/developer',
   path: '/developer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DnsRoute = DnsRouteImport.update({
+  id: '/dns',
+  path: '/dns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportWalletRoute = ImportWalletRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/create-wallet': typeof CreateWalletRoute
   '/dao': typeof DaoRoute
   '/developer': typeof DeveloperRoute
+  '/dns': typeof DnsRoute
   '/import-wallet': typeof ImportWalletRoute
   '/ledger': typeof LedgerRoute
   '/lottery': typeof LotteryRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/create-wallet': typeof CreateWalletRoute
   '/dao': typeof DaoRoute
   '/developer': typeof DeveloperRoute
+  '/dns': typeof DnsRoute
   '/import-wallet': typeof ImportWalletRoute
   '/ledger': typeof LedgerRoute
   '/lottery': typeof LotteryRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/create-wallet': typeof CreateWalletRoute
   '/dao': typeof DaoRoute
   '/developer': typeof DeveloperRoute
+  '/dns': typeof DnsRoute
   '/import-wallet': typeof ImportWalletRoute
   '/ledger': typeof LedgerRoute
   '/lottery': typeof LotteryRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/create-wallet'
     | '/dao'
     | '/developer'
+    | '/dns'
     | '/import-wallet'
     | '/ledger'
     | '/lottery'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/create-wallet'
     | '/dao'
     | '/developer'
+    | '/dns'
     | '/import-wallet'
     | '/ledger'
     | '/lottery'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/create-wallet'
     | '/dao'
     | '/developer'
+    | '/dns'
     | '/import-wallet'
     | '/ledger'
     | '/lottery'
@@ -286,6 +298,7 @@ export interface RootRouteChildren {
   CreateWalletRoute: typeof CreateWalletRoute
   DaoRoute: typeof DaoRoute
   DeveloperRoute: typeof DeveloperRoute
+  DnsRoute: typeof DnsRoute
   ImportWalletRoute: typeof ImportWalletRoute
   LedgerRoute: typeof LedgerRoute
   LotteryRoute: typeof LotteryRoute
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/developer'
       fullPath: '/developer'
       preLoaderRoute: typeof DeveloperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dns': {
+      id: '/dns'
+      path: '/dns'
+      fullPath: '/dns'
+      preLoaderRoute: typeof DnsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/import-wallet': {
@@ -462,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateWalletRoute: CreateWalletRoute,
   DaoRoute: DaoRoute,
   DeveloperRoute: DeveloperRoute,
+  DnsRoute: DnsRoute,
   ImportWalletRoute: ImportWalletRoute,
   LedgerRoute: LedgerRoute,
   LotteryRoute: LotteryRoute,

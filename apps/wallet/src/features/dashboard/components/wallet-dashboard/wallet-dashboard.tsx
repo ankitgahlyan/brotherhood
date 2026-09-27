@@ -22,7 +22,6 @@ export const WalletDashboard: React.FC = () => {
         <UpgradeBanner />
         <DashboardActions />
         <DashboardAssets />
-        {/* /<NftsCard /> */}
         <TransactionHistory />
       </div>
     </NewLayout>

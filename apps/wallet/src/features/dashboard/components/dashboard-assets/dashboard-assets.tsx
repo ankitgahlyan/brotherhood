@@ -10,7 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
-import { useJettons } from '@demo/wallet-core';
+import { useJettons, useNfts } from '@demo/wallet-core';
 
 import {
   AddTokenModal,
@@ -20,6 +20,7 @@ import {
   useAssetRows,
 } from '@/features/assets';
 import type { AssetRowData } from '@/features/assets';
+import { NftsCard } from '@/features/nft';
 
 const JETTON_SLOTS = 5;
 
@@ -27,7 +28,10 @@ export const DashboardAssets: React.FC = () => {
   const navigate = useNavigate();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
+  const { loadUserNfts, refreshNfts, lastNftsUpdate, isLoadingNfts } =
+    useNfts();
 
+  const [assetTab, setAssetTab] = useState<'tokens' | 'nfts'>('tokens');
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -51,70 +55,137 @@ export const DashboardAssets: React.FC = () => {
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
-        <button
-          type="button"
-          onClick={() => navigate('/wallet/assets')}
-          className="flex items-center gap-1 group cursor-pointer"
-          aria-label="View all assets"
-        >
-          <h2 className="text-base font-semibold text-foreground">Assets</h2>
-          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              navigate(assetTab === 'tokens' ? '/wallet/assets' : '/wallet/nft')
+            }
+            className="flex items-center gap-1 group cursor-pointer"
+            aria-label="View all assets"
+          >
+            <h2 className="text-base font-semibold text-foreground">
+              {assetTab === 'tokens' ? 'Tokens' : 'NFTs'}
+            </h2>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </button>
+
+          <div className="flex bg-secondary/80 p-0.5 rounded-lg border border-border/60 text-xs">
+            <button
+              type="button"
+              onClick={() => setAssetTab('tokens')}
+              className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                assetTab === 'tokens'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              data-testid="dashboard-tab-tokens"
+            >
+              Tokens
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAssetTab('nfts');
+                if (lastNftsUpdate === 0 && !isLoadingNfts) {
+                  void loadUserNfts();
+                }
+              }}
+              className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                assetTab === 'nfts'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              data-testid="dashboard-tab-nfts"
+            >
+              NFTs
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-1.5">
           <RefreshButton
             iconOnly
             onRefresh={async () => {
-              await loadUserJettons();
+              if (assetTab === 'tokens') {
+                await loadUserJettons();
+              } else {
+                await refreshNfts();
+              }
             }}
             className="rounded-full bg-secondary p-1"
-            title="Refresh and discover tokens"
-            ariaLabel="Refresh and discover tokens"
+            title={
+              assetTab === 'tokens'
+                ? 'Refresh and discover tokens'
+                : 'Refresh NFTs'
+            }
+            ariaLabel={
+              assetTab === 'tokens'
+                ? 'Refresh and discover tokens'
+                : 'Refresh NFTs'
+            }
             testId="dashboard-assets-refresh-btn"
           />
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
-            title="Add personal token by minter address"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+          {assetTab === 'tokens' ? (
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+              title="Add personal token by minter address"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate('/dns')}
+              className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+              title="Register sovereign .bro domain"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        {tonRow ? (
-          <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
-        ) : (
-          <AssetRowSkeleton />
-        )}
-        {assetsReady ? (
-          displayedJettons.map((row) => (
-            <AssetRow
-              key={row.id}
-              {...row}
-              onClick={() => handleAssetClick(row)}
-            />
-          ))
-        ) : (
-          <>
-            <AssetRowSkeleton />
-            <AssetRowSkeleton />
-          </>
-        )}
-      </div>
+      {assetTab === 'tokens' ? (
+        <>
+          <div className="flex flex-col gap-1">
+            {tonRow ? (
+              <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
+            ) : (
+              <AssetRowSkeleton />
+            )}
+            {assetsReady ? (
+              displayedJettons.map((row) => (
+                <AssetRow
+                  key={row.id}
+                  {...row}
+                  onClick={() => handleAssetClick(row)}
+                />
+              ))
+            ) : (
+              <>
+                <AssetRowSkeleton />
+                <AssetRowSkeleton />
+              </>
+            )}
+          </div>
 
-      {hasMoreJettons && (
-        <div className="mt-2 text-center">
-          <button
-            type="button"
-            onClick={() => setShowAll((prev) => !prev)}
-            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer py-1 px-3 rounded-md hover:bg-secondary/50"
-          >
-            {showAll ? 'Show less' : `Show all (${jettonRows.length})`}
-          </button>
-        </div>
+          {hasMoreJettons && (
+            <div className="mt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer py-1 px-3 rounded-md hover:bg-secondary/50"
+              >
+                {showAll ? 'Show less' : `Show all (${jettonRows.length})`}
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <NftsCard hideHeader />
       )}
 
       <AssetDetailsModal
