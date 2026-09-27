@@ -61,6 +61,8 @@ export interface TransactionRowModel {
   status: TransactionRowStatus;
   /** Formatted date+time, e.g. "Sep 10, 14:30". */
   date: string;
+  /** Exact Tolk struct message name (e.g. "ActInvite", "BuyCredit", "AskToTransfer") when identified. */
+  tolkStructName?: string;
 }
 
 /** Minimal shape of a streaming pending transaction (structural — avoids a cross-package type import). */
@@ -373,19 +375,30 @@ const extractFee = (event: Event): string | undefined => {
 };
 
 /** Action name + transfer detail + value (no sign), derived from the typed action fields. */
+/** Action name + transfer detail + value (no sign), derived from the typed action fields. */
 const describeAction = (
   action: Action,
   isOutgoing: boolean,
-): { actionName: string; transferDetail: string; value: string } => {
+): {
+  actionName: string;
+  transferDetail: string;
+  value: string;
+  tolkStructName?: string;
+} => {
   const label = isOutgoing ? 'Sent' : 'Received';
 
   if (action.type === 'TonTransfer' && 'TonTransfer' in action) {
     const value = `${formatAmount(action.TonTransfer.amount, GRAM_DECIMALS)} GRAM`;
     const comment = action.TonTransfer.comment?.trim();
     return {
-      actionName: comment ? `Comment: “${comment}”` : 'TonTransfer',
+      actionName: comment
+        ? `Comment: “${comment}”`
+        : isOutgoing
+          ? 'Sent TON'
+          : 'Received TON',
       transferDetail: `${label} ${value}`,
       value,
+      tolkStructName: undefined,
     };
   }
 
@@ -393,10 +406,15 @@ const describeAction = (
     const { amount, jetton, comment } = action.JettonTransfer;
     const value =
       `${formatAmount(amount, jetton.decimals)} ${jetton.symbol}`.trim();
+    const actionTitle = isOutgoing
+      ? `Send ${jetton.symbol || 'Token'}`
+      : `Received ${jetton.symbol || 'Token'}`;
+    const commentSuffix = comment ? ` (“${comment}”)` : '';
     return {
-      actionName: comment ? `JettonTransfer: “${comment}”` : 'AskToTransfer',
-      transferDetail: `${label} ${value}`,
+      actionName: actionTitle,
+      transferDetail: `${label} ${value}${commentSuffix}`,
       value,
+      tolkStructName: 'AskToTransfer',
     };
   }
 
@@ -423,13 +441,17 @@ const describeAction = (
           : 'Received TON'
         : 'TON Transfer'
       : info.title;
+    const structDetail = info.structName ? `[${info.structName}] ` : '';
     const detail = val
       ? `${label} ${val}`
       : action.simplePreview?.description || actionTitle;
     return {
       actionName: actionTitle,
-      transferDetail: badge ? `[${badge}] ${detail}` : detail,
+      transferDetail: badge
+        ? `[${badge}] ${structDetail}${detail}`
+        : `${structDetail}${detail}`,
       value: val,
+      tolkStructName: info.structName,
     };
   }
 
@@ -445,28 +467,34 @@ const describeAction = (
     );
     if (info.isKnown) {
       const badge = getContractContextBadge(info.opcode);
+      const structDetail = info.structName ? `[${info.structName}] ` : '';
       const detail = action.simplePreview?.description || info.title;
       return {
         actionName: info.title,
-        transferDetail: badge ? `[${badge}] ${detail}` : detail,
+        transferDetail: badge
+          ? `[${badge}] ${structDetail}${detail}`
+          : `${structDetail}${detail}`,
         value: action.simplePreview?.value || '',
+        tolkStructName: info.structName,
       };
     }
   }
 
   if (action.type === 'ContractDeploy') {
     return {
-      actionName: 'ContractDeploy',
+      actionName: 'Contract Deploy',
       transferDetail: action.simplePreview.description || 'Deploy Contract',
       value: action.simplePreview.value || '',
+      tolkStructName: 'ContractDeploy',
     };
   }
 
   if (action.type === 'JettonSwap') {
     return {
-      actionName: 'JettonSwap',
+      actionName: 'Jetton Swap',
       transferDetail: action.simplePreview.description || 'Swap',
       value: action.simplePreview.value || '',
+      tolkStructName: 'JettonSwap',
     };
   }
 
@@ -479,18 +507,50 @@ const describeAction = (
       'Transaction',
     transferDetail: action.simplePreview.description,
     value: action.simplePreview.value,
+    tolkStructName: undefined,
   };
 };
 
-/** Picks the action that involves the current wallet, preferring the one where we are the sender. */
+/** Action priority rank: specialized contract/token operations take precedence over raw TonTransfer */
+const getActionPriority = (type?: string): number => {
+  switch (type) {
+    case 'SmartContractExec':
+      return 5;
+    case 'JettonTransfer':
+      return 4;
+    case 'JettonSwap':
+      return 3;
+    case 'NftItemTransfer':
+      return 3;
+    case 'ContractDeploy':
+      return 2;
+    case 'TonTransfer':
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+/** Picks the most relevant action that involves the current wallet, prioritizing contract operations over generic TON transfers. */
 const selectRelevantAction = (actions: Action[], myAddress: string): Action => {
   const withMe = actions.filter((a) =>
     a.simplePreview?.accounts?.some((acc) =>
       sameAddress(acc.address, myAddress),
     ),
   );
-  const isSender = (a: Action): boolean => isOutgoingFromAction(a, myAddress);
-  return withMe.find(isSender) ?? withMe[0] ?? actions[0];
+  const candidates = withMe.length > 0 ? withMe : actions;
+  if (candidates.length <= 1) return candidates[0];
+
+  return [...candidates].sort((a, b) => {
+    // 1. Higher action type priority (SmartContractExec > JettonTransfer > TonTransfer)
+    const priorityDiff = getActionPriority(b.type) - getActionPriority(a.type);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    // 2. Sender actions preferred over recipient actions
+    const aSender = isOutgoingFromAction(a, myAddress) ? 1 : 0;
+    const bSender = isOutgoingFromAction(b, myAddress) ? 1 : 0;
+    return bSender - aSender;
+  })[0];
 };
 
 const signedAmount = (value: string, isOutgoing: boolean): string =>
@@ -517,6 +577,7 @@ export const mapEventToRow = (
     let value = '';
     let counterparty: string | undefined;
     let actionName = 'Transaction';
+    let tolkStructName: string | undefined;
     let isFailed = false;
 
     if (event.transactions && typeof event.transactions === 'object') {
@@ -533,16 +594,17 @@ export const mapEventToRow = (
               tx.in_msg.body ||
               tx.in_msg.message_content?.body ||
               tx.in_msg.msg_data;
-            if (inBody) {
-              const info = getOpcodeInfo(undefined, inBody);
+            if (inBody || tx.in_msg.opcode) {
+              const info = getOpcodeInfo(tx.in_msg.opcode, inBody);
               if (info.isKnown) {
                 actionName = info.title;
+                tolkStructName = info.structName;
               }
             }
             if (tx.in_msg.source) {
               counterparty = tx.in_msg.source;
               isOutgoing = false;
-              if (actionName === 'Transaction') actionName = 'Received';
+              if (actionName === 'Transaction') actionName = 'Received TON';
             }
             if (tx.in_msg.value && BigInt(tx.in_msg.value) > 0n) {
               value = `${formatAmount(tx.in_msg.value, GRAM_DECIMALS)} GRAM`;
@@ -553,7 +615,16 @@ export const mapEventToRow = (
             if (out?.destination) {
               counterparty = out.destination;
               isOutgoing = true;
-              actionName = 'Sent';
+              actionName = 'Sent TON';
+            }
+            const outBody =
+              out?.body || out?.message_content?.body || out?.msg_data;
+            if (outBody || out?.opcode) {
+              const info = getOpcodeInfo(out.opcode, outBody);
+              if (info.isKnown && info.opcode !== 0) {
+                actionName = info.title;
+                tolkStructName = info.structName;
+              }
             }
             if (out?.value && BigInt(out.value) > 0n) {
               value = `${formatAmount(out.value, GRAM_DECIMALS)} GRAM`;
@@ -594,12 +665,13 @@ export const mapEventToRow = (
       isOutgoing,
       status: isFailed ? 'failed' : 'success',
       date: formatTxDate(event.timestamp),
+      tolkStructName,
     };
   }
 
   const action = selectRelevantAction(event.actions, myAddress);
   const isOutgoing = isOutgoingFromAction(action, myAddress);
-  const { actionName, transferDetail, value } = describeAction(
+  const { actionName, transferDetail, value, tolkStructName } = describeAction(
     action,
     isOutgoing,
   );
@@ -635,6 +707,7 @@ export const mapEventToRow = (
     isOutgoing,
     status: isFailed ? 'failed' : 'success',
     date: formatTxDate(event.timestamp),
+    tolkStructName,
   };
 };
 
@@ -676,10 +749,8 @@ export const mapPendingToRow = (
 
   if (pending.action) {
     const isOutgoing = isOutgoingFromAction(pending.action, myAddress);
-    const { actionName, transferDetail, value } = describeAction(
-      pending.action,
-      isOutgoing,
-    );
+    const { actionName, transferDetail, value, tolkStructName } =
+      describeAction(pending.action, isOutgoing);
     const counterparty = getCounterpartyAddress(
       pending.action,
       isOutgoing,
@@ -707,6 +778,7 @@ export const mapPendingToRow = (
       symbol,
       amount: signedAmount(value, isOutgoing),
       isOutgoing,
+      tolkStructName,
     };
   }
 

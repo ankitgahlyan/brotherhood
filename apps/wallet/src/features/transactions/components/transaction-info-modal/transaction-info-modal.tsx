@@ -305,6 +305,8 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   if (!transaction) return null;
 
   const {
+    title,
+    tolkStructName,
     counterpartyAddress,
     senderAddress,
     recipientAddress,
@@ -447,6 +449,25 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
 
           {/* Details Card */}
           <div className="rounded-2xl bg-secondary/50 border border-border/80 divide-y divide-border/60 overflow-hidden text-xs">
+            {/* Action / Operation */}
+            {title && (
+              <div className="flex items-center justify-between p-3 gap-2">
+                <span className="text-muted-foreground font-medium shrink-0">
+                  Action
+                </span>
+                <div className="flex items-center gap-1.5 min-w-0 text-right">
+                  <span className="font-semibold text-foreground truncate">
+                    {title}
+                  </span>
+                  {tolkStructName && (
+                    <span className="font-mono text-[10px] bg-muted/80 text-muted-foreground px-1.5 py-0.5 rounded shrink-0">
+                      {tolkStructName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Sender */}
             {senderAddress && (
               <div className="flex items-center justify-between p-3 gap-2">
@@ -538,7 +559,7 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
                     </button>
                   )}
                 </div>
-                <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 text-foreground break-words font-sans">
+                <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 text-foreground wrap-break-word font-sans">
                   {effectiveComment}
                 </div>
               </div>
