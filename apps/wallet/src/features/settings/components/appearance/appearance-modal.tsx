@@ -7,7 +7,17 @@
  */
 
 import React from 'react';
-import { Monitor, Sun, Moon, Sparkles, Palette, Check } from 'lucide-react';
+import {
+  Monitor,
+  Sun,
+  Moon,
+  Sparkles,
+  Palette,
+  Check,
+  LayoutGrid,
+  Eye,
+} from 'lucide-react';
+import { usePreferences } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
 import type { ThemeMode, ColorPalette } from '@/core/theme';
 import { Modal } from '@/core/components/ui/modal';
@@ -66,6 +76,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
   onClose,
 }) => {
   const { theme, setTheme, palette, setPalette } = useTheme();
+  const { viewMode, setViewMode } = usePreferences();
 
   return (
     <Modal.Container
@@ -163,6 +174,68 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Visual Navigation Mode (Standard vs Pictorial) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Eye className="w-3 h-3 text-primary" />
+                  Navigation View Mode
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {viewMode === 'icons_only' ? 'Icons Only' : 'Text + Icons'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 bg-background/60 p-1.5 rounded-xl border border-border">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('standard')}
+                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    viewMode !== 'icons_only'
+                      ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                  }`}
+                  data-testid="appearance-viewmode-standard"
+                >
+                  <LayoutGrid className="w-4 h-4 text-primary shrink-0" />
+                  <div className="text-left flex-1 min-w-0">
+                    <div className="font-semibold leading-tight">Standard</div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      Text & Icons
+                    </div>
+                  </div>
+                  {viewMode !== 'icons_only' && (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('icons_only')}
+                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    viewMode === 'icons_only'
+                      ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                  }`}
+                  data-testid="appearance-viewmode-icons-only"
+                >
+                  <Eye className="w-4 h-4 text-amber-500 shrink-0" />
+                  <div className="text-left flex-1 min-w-0">
+                    <div className="font-semibold leading-tight">Pictorial</div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      Icons Only
+                    </div>
+                  </div>
+                  {viewMode === 'icons_only' && (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                Pictorial mode enlarges icons and removes text on tabs & actions
+                for universal global usability.
+              </p>
             </div>
           </div>
         </div>

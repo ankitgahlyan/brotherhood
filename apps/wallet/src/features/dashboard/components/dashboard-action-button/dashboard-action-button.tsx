@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import { usePreferences } from '@demo/wallet-core';
 import { cn } from '@/core/lib/utils';
 
 interface DashboardActionButtonProps {
@@ -27,25 +28,37 @@ export const DashboardActionButton: React.FC<DashboardActionButtonProps> = ({
   testId,
   className,
   iconContainerClassName,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    data-testid={testId}
-    aria-label={ariaLabel ?? label}
-    className={cn(
-      'flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl bg-secondary/50 hover:bg-secondary/80 border border-border/80 text-foreground text-xs font-semibold hover:shadow-sm active:scale-[0.96] transition-all cursor-pointer select-none',
-      className,
-    )}
-  >
-    <div
+}) => {
+  const { viewMode } = usePreferences();
+  const isPictorial = viewMode === 'icons_only';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      aria-label={ariaLabel ?? label}
+      title={label}
       className={cn(
-        'w-10 h-10 rounded-xl flex items-center justify-center transition-transform',
-        iconContainerClassName,
+        'flex-1 flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-secondary/50 hover:bg-secondary/80 border border-border/80 text-foreground text-xs font-semibold hover:shadow-xs active:scale-[0.96] transition-all cursor-pointer select-none',
+        isPictorial ? 'py-3.5 px-3 min-w-[72px]' : 'py-3 px-2 min-w-[100px]',
+        className,
       )}
     >
-      {icon}
-    </div>
-    <span className="tracking-tight">{label}</span>
-  </button>
-);
+      <div
+        className={cn(
+          'rounded-xl flex items-center justify-center transition-transform',
+          isPictorial ? 'w-11 h-11 scale-105' : 'w-10 h-10',
+          iconContainerClassName,
+        )}
+      >
+        {icon}
+      </div>
+      {isPictorial ? (
+        <span className="sr-only">{label}</span>
+      ) : (
+        <span className="tracking-tight">{label}</span>
+      )}
+    </button>
+  );
+};

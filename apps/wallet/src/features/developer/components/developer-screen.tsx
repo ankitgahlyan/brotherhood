@@ -18,6 +18,8 @@ import {
   Layers,
   Globe,
   ExternalLink,
+  Server,
+  ListFilter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
@@ -396,36 +398,41 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('api')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'api'
                       ? 'bg-card text-foreground shadow-xs border border-border'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  API Calls ({metrics.totalApiCalls})
+                  <Server className="w-3.5 h-3.5 text-blue-500" />
+                  <span>API Calls ({metrics.totalApiCalls})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('console')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'console'
                       ? 'bg-card text-foreground shadow-xs border border-border'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Console Logs (
-                  {items.filter((i) => i.type === 'console').length})
+                  <Terminal className="w-3.5 h-3.5 text-amber-500" />
+                  <span>
+                    Console Logs (
+                    {items.filter((i) => i.type === 'console').length})
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'all'
                       ? 'bg-card text-foreground shadow-xs border border-border'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  All ({items.length})
+                  <ListFilter className="w-3.5 h-3.5 text-purple-500" />
+                  <span>All ({items.length})</span>
                 </button>
               </div>
 

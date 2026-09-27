@@ -12,9 +12,11 @@ import { useNavigate } from '@/core/routing';
 import { useStaking, useWallet } from '@demo/wallet-core';
 import { UnstakeMode } from '@ton/walletkit';
 
+import { Layers, Layers2 } from 'lucide-react';
 import { StakingSettings } from '../staking-settings';
 import { StakingInfo } from '../staking-info';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
 
 import { Button } from '@/core/components/ui/button';
 import { CenteredAmountInput } from '@/core/components/ui/centered-amount-input';
@@ -143,23 +145,28 @@ export const StakingInterface: FC = () => {
       activeTab={tab}
       onTabChange={(t) => handleTab(t as 'stake' | 'unstake')}
       stickyTabBar={
-        <div className="flex rounded-2xl bg-secondary/70 border border-border p-1">
-          {(['stake', 'unstake'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => handleTab(value)}
-              className={cn(
-                'flex-1 rounded-xl py-2.5 text-sm font-semibold capitalize transition-colors',
-                tab === value
-                  ? 'bg-card text-foreground shadow-sm border border-border'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
+        <ScrollableTabBar
+          tabs={[
+            {
+              id: 'stake',
+              label: 'Stake',
+              icon: Layers,
+              testId: 'staking-tab-stake',
+              activeColorClass:
+                'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+            },
+            {
+              id: 'unstake',
+              label: 'Unstake',
+              icon: Layers2,
+              testId: 'staking-tab-unstake',
+              activeColorClass:
+                'bg-card text-amber-500 font-semibold border border-border shadow-xs',
+            },
+          ]}
+          activeTab={tab}
+          onTabChange={(t) => handleTab(t as 'stake' | 'unstake')}
+        />
       }
     >
       <div className="space-y-5">

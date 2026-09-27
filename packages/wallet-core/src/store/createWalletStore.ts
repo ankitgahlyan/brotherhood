@@ -348,6 +348,7 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 animationLevel: state.preferences?.animationLevel,
                 isCustomAnimationLevel:
                   state.preferences?.isCustomAnimationLevel,
+                viewMode: state.preferences?.viewMode,
               },
             }),
             merge: (persistedState, currentState) => {
@@ -454,6 +455,9 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   animationLevel:
                     persisted?.preferences?.animationLevel ||
                     currentState.preferences.animationLevel,
+                  viewMode:
+                    persisted?.preferences?.viewMode ||
+                    currentState.preferences.viewMode,
                 },
               };
 

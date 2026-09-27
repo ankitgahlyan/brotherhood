@@ -9,9 +9,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { FileText, PlusCircle, Vote } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
 import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
@@ -107,22 +109,36 @@ export const DaoScreen: React.FC = () => {
             </div>
           }
           stickyTabBar={
-            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              {(['proposals', 'submit', 'vote'] as Tab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-1.5 rounded-lg capitalize transition-colors ${
-                    activeTab === tab
-                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                  }`}
-                  data-testid={`dao-tab-${tab}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <ScrollableTabBar
+              tabs={[
+                {
+                  id: 'proposals',
+                  label: 'Proposals',
+                  icon: FileText,
+                  testId: 'dao-tab-proposals',
+                  activeColorClass:
+                    'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+                },
+                {
+                  id: 'submit',
+                  label: 'Submit',
+                  icon: PlusCircle,
+                  testId: 'dao-tab-submit',
+                  activeColorClass:
+                    'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+                },
+                {
+                  id: 'vote',
+                  label: 'Vote',
+                  icon: Vote,
+                  testId: 'dao-tab-vote',
+                  activeColorClass:
+                    'bg-card text-purple-500 font-semibold border border-border shadow-xs',
+                },
+              ]}
+              activeTab={activeTab}
+              onTabChange={(tab) => setActiveTab(tab as Tab)}
+            />
           }
         >
           {/* Proposals List */}

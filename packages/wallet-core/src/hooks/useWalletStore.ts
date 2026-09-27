@@ -435,7 +435,9 @@ export const usePreferences = () => {
     useShallow((state) => ({
       animationLevel: state.preferences.animationLevel,
       isCustomAnimationLevel: state.preferences.isCustomAnimationLevel,
+      viewMode: state.preferences.viewMode,
       setAnimationLevel: state.setAnimationLevel,
+      setViewMode: state.setViewMode,
       resetPreferences: state.resetPreferences,
     })),
   );

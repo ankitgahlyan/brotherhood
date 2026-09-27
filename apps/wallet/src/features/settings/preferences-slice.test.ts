@@ -60,8 +60,16 @@ describe('PreferencesSlice & Animation Settings', () => {
     store.getState().setAnimationLevel('full');
     expect(store.getState().preferences.animationLevel).toBe('full');
 
+    // Test viewMode default and updates
+    expect(store.getState().preferences.viewMode).toBe('standard');
+    store.getState().setViewMode('icons_only');
+    expect(store.getState().preferences.viewMode).toBe('icons_only');
+    store.getState().setViewMode('standard');
+    expect(store.getState().preferences.viewMode).toBe('standard');
+
     // Reset preferences
     store.getState().resetPreferences();
     expect(store.getState().preferences.isCustomAnimationLevel).toBe(false);
+    expect(store.getState().preferences.viewMode).toBe('standard');
   });
 });

@@ -8,6 +8,7 @@
 
 import type {
   AnimationLevel,
+  ViewMode,
   PreferencesSliceCreator,
   PreferencesState,
 } from '../../types/store';
@@ -46,6 +47,7 @@ export const detectDefaultAnimationLevel = (): AnimationLevel => {
 const getInitialPreferences = (): PreferencesState => ({
   animationLevel: detectDefaultAnimationLevel(),
   isCustomAnimationLevel: false,
+  viewMode: 'standard',
 });
 
 export const createPreferencesSlice: PreferencesSliceCreator = (set) => ({
@@ -53,8 +55,16 @@ export const createPreferencesSlice: PreferencesSliceCreator = (set) => ({
 
   setAnimationLevel: (level: AnimationLevel) => {
     set((state) => {
+      if (state.preferences.animationLevel === level) return;
       state.preferences.animationLevel = level;
       state.preferences.isCustomAnimationLevel = true;
+    });
+  },
+
+  setViewMode: (mode: ViewMode) => {
+    set((state) => {
+      if (state.preferences.viewMode === mode) return;
+      state.preferences.viewMode = mode;
     });
   },
 

@@ -8,6 +8,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from '@/core/routing';
+import { usePreferences } from '@demo/wallet-core';
 import {
   Wallet,
   Coins,
@@ -16,13 +17,16 @@ import {
   Vote,
   Ticket,
   Globe,
+  type LucideIcon,
 } from 'lucide-react';
 
 interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon | React.ComponentType<{ className?: string }>;
   path: string;
+  activeColor?: string;
+  activeBg?: string;
 }
 
 export const ECOSYSTEM_NAV_ITEMS: NavItem[] = [
@@ -31,42 +35,56 @@ export const ECOSYSTEM_NAV_ITEMS: NavItem[] = [
     label: 'Wallet',
     icon: Wallet,
     path: '/wallet',
+    activeColor: 'text-blue-500',
+    activeBg: 'bg-blue-500/15',
   },
   {
     id: 'brotherhood',
     label: 'Fi',
     icon: Coins,
     path: '/brotherhood',
+    activeColor: 'text-amber-500',
+    activeBg: 'bg-amber-500/15',
   },
   {
     id: 'personal',
     label: 'Personal',
     icon: Sparkles,
     path: '/personal-jetton',
+    activeColor: 'text-purple-500',
+    activeBg: 'bg-purple-500/15',
   },
   {
     id: 'city',
     label: 'Cities',
     icon: Building2,
     path: '/city-network',
+    activeColor: 'text-emerald-500',
+    activeBg: 'bg-emerald-500/15',
   },
   {
     id: 'dao',
     label: 'DAO',
     icon: Vote,
     path: '/dao',
+    activeColor: 'text-indigo-500',
+    activeBg: 'bg-indigo-500/15',
   },
   {
     id: 'lottery',
     label: 'Lottery',
     icon: Ticket,
     path: '/lottery',
+    activeColor: 'text-rose-500',
+    activeBg: 'bg-rose-500/15',
   },
   {
     id: 'dns',
     label: 'Domains',
     icon: Globe,
     path: '/dns',
+    activeColor: 'text-cyan-500',
+    activeBg: 'bg-cyan-500/15',
   },
 ];
 
@@ -77,6 +95,8 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { viewMode } = usePreferences();
+  const isPictorial = viewMode === 'icons_only';
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const getIsActive = (item: NavItem) => {
@@ -114,6 +134,41 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
           const isActive = getIsActive(item);
           const Icon = item.icon;
 
+          if (isPictorial) {
+            return (
+              <button
+                key={item.id}
+                ref={isActive ? activeBtnRef : null}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`flex-1 min-w-12 shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? `${item.activeColor || 'text-primary'} scale-105`
+                    : 'text-muted-foreground hover:text-foreground active:scale-95'
+                }`}
+                aria-label={item.label}
+                title={item.label}
+                data-testid={`bottom-nav-${item.id}`}
+              >
+                <div
+                  className={`relative flex items-center justify-center w-10 h-8 rounded-full transition-all duration-200 ${
+                    isActive
+                      ? item.activeBg || 'bg-primary/15'
+                      : 'bg-transparent'
+                  }`}
+                >
+                  <Icon
+                    aria-hidden="true"
+                    className={`w-5.5 h-5.5 transition-transform duration-200 ${
+                      isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
+                    }`}
+                  />
+                </div>
+                <span className="sr-only">{item.label}</span>
+              </button>
+            );
+          }
+
           return (
             <button
               key={item.id}
@@ -134,6 +189,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 }`}
               >
                 <Icon
+                  aria-hidden="true"
                   className={`w-4.5 h-4.5 transition-transform duration-200 ${
                     isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
                   }`}

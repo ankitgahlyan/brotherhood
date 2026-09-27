@@ -7,10 +7,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Coins, Image } from 'lucide-react';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
-import { useJettons, useNfts } from '@demo/wallet-core';
+import { useJettons, useNfts, usePreferences } from '@demo/wallet-core';
 
 import {
   AddTokenModal,
@@ -30,6 +30,9 @@ export const DashboardAssets: React.FC = () => {
   const { loadUserJettons } = useJettons();
   const { loadUserNfts, refreshNfts, lastNftsUpdate, isLoadingNfts } =
     useNfts();
+
+  const { viewMode } = usePreferences();
+  const isPictorial = viewMode === 'icons_only';
 
   const [assetTab, setAssetTab] = useState<'tokens' | 'nfts'>('tokens');
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
@@ -64,8 +67,18 @@ export const DashboardAssets: React.FC = () => {
             className="flex items-center gap-1 group cursor-pointer"
             aria-label="View all assets"
           >
-            <h2 className="text-base font-semibold text-foreground">
-              {assetTab === 'tokens' ? 'Tokens' : 'NFTs'}
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-1.5">
+              {assetTab === 'tokens' ? (
+                <>
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <span>Tokens</span>
+                </>
+              ) : (
+                <>
+                  <Image className="w-4 h-4 text-purple-500" />
+                  <span>NFTs</span>
+                </>
+              )}
             </h2>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </button>
@@ -74,14 +87,24 @@ export const DashboardAssets: React.FC = () => {
             <button
               type="button"
               onClick={() => setAssetTab('tokens')}
-              className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+              aria-label="Tokens"
+              title="Tokens"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
                 assetTab === 'tokens'
                   ? 'bg-card text-foreground shadow-xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               data-testid="dashboard-tab-tokens"
             >
-              Tokens
+              <Coins
+                className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                aria-hidden="true"
+              />
+              {isPictorial ? (
+                <span className="sr-only">Tokens</span>
+              ) : (
+                <span>Tokens</span>
+              )}
             </button>
             <button
               type="button"
@@ -91,14 +114,24 @@ export const DashboardAssets: React.FC = () => {
                   void loadUserNfts();
                 }
               }}
-              className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+              aria-label="NFTs"
+              title="NFTs"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
                 assetTab === 'nfts'
                   ? 'bg-card text-foreground shadow-xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               data-testid="dashboard-tab-nfts"
             >
-              NFTs
+              <Image
+                className="w-3.5 h-3.5 text-purple-500 shrink-0"
+                aria-hidden="true"
+              />
+              {isPictorial ? (
+                <span className="sr-only">NFTs</span>
+              ) : (
+                <span>NFTs</span>
+              )}
             </button>
           </div>
         </div>

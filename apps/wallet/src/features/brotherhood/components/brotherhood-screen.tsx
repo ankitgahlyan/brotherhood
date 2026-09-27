@@ -12,6 +12,24 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
+import {
+  User,
+  Users,
+  Gift,
+  UserPlus,
+  Vote,
+  CreditCard,
+  KeyRound,
+  Sparkles,
+  IdCard,
+  Clock,
+  Crown,
+  CheckCircle2,
+  PlusCircle,
+  Send,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { TxButton } from '@/core/components/ui/tx-button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
@@ -79,6 +97,82 @@ type Tab =
   | 'profile'
   | 'authority'
   | 'deferred';
+
+const BROTHERHOOD_TAB_CONFIG: Record<
+  Tab,
+  {
+    label: string;
+    icon: LucideIcon | React.ComponentType<{ className?: string }>;
+    activeColorClass?: string;
+  }
+> = {
+  account: {
+    label: 'Account',
+    icon: User,
+    activeColorClass:
+      'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+  },
+  network: {
+    label: 'Network',
+    icon: Users,
+    activeColorClass:
+      'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+  },
+  claim: {
+    label: 'Claim',
+    icon: Gift,
+    activeColorClass:
+      'bg-card text-amber-500 font-semibold border border-border shadow-xs',
+  },
+  invite: {
+    label: 'Invite',
+    icon: UserPlus,
+    activeColorClass:
+      'bg-card text-purple-500 font-semibold border border-border shadow-xs',
+  },
+  vote: {
+    label: 'Vote',
+    icon: Vote,
+    activeColorClass:
+      'bg-card text-indigo-500 font-semibold border border-border shadow-xs',
+  },
+  credit: {
+    label: 'Credit',
+    icon: CreditCard,
+    activeColorClass:
+      'bg-card text-cyan-500 font-semibold border border-border shadow-xs',
+  },
+  allowance: {
+    label: 'Allowance',
+    icon: KeyRound,
+    activeColorClass:
+      'bg-card text-teal-500 font-semibold border border-border shadow-xs',
+  },
+  gold: {
+    label: 'Gold',
+    icon: Sparkles,
+    activeColorClass:
+      'bg-card text-yellow-500 font-semibold border border-border shadow-xs',
+  },
+  profile: {
+    label: 'Profile',
+    icon: IdCard,
+    activeColorClass:
+      'bg-card text-rose-500 font-semibold border border-border shadow-xs',
+  },
+  deferred: {
+    label: 'Deferred',
+    icon: Clock,
+    activeColorClass:
+      'bg-card text-orange-500 font-semibold border border-border shadow-xs',
+  },
+  authority: {
+    label: 'Authority',
+    icon: Crown,
+    activeColorClass:
+      'bg-card text-red-500 font-semibold border border-border shadow-xs',
+  },
+};
 
 function formatFi(amountNano: bigint | undefined | null): string {
   if (amountNano === undefined || amountNano === null) return '0.0000';
@@ -607,8 +701,8 @@ export const BrotherhoodScreen: React.FC = () => {
           </div>
         }
         stickyTabBar={
-          <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-            {(
+          <ScrollableTabBar
+            tabs={(
               [
                 'account',
                 'network',
@@ -622,21 +716,16 @@ export const BrotherhoodScreen: React.FC = () => {
                 'deferred',
                 ...(isAuthority ? ['authority'] : []),
               ] as Tab[]
-            ).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-2.5 py-1.5 rounded-lg capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid={`brotherhood-tab-${tab}`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+            ).map((tab) => ({
+              id: tab,
+              label: BROTHERHOOD_TAB_CONFIG[tab].label,
+              icon: BROTHERHOOD_TAB_CONFIG[tab].icon,
+              testId: `brotherhood-tab-${tab}`,
+              activeColorClass: BROTHERHOOD_TAB_CONFIG[tab].activeColorClass,
+            }))}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as Tab)}
+          />
         }
       >
         {/* Account Dashboard */}
@@ -2452,44 +2541,36 @@ export const BrotherhoodScreen: React.FC = () => {
               onBoundaryPrev={() => setActiveTab('credit')}
               onBoundaryNext={() => setActiveTab('gold')}
               stickyTabBar={
-                <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setAllowanceSubTab('active')}
-                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      allowanceSubTab === 'active'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    data-testid="brotherhood-allowance-subtab-active"
-                  >
-                    Active Permissions ({account.data?.allowances.length ?? 0})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAllowanceSubTab('grant')}
-                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      allowanceSubTab === 'grant'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    data-testid="brotherhood-allowance-subtab-grant"
-                  >
-                    Grant Allowance
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAllowanceSubTab('spend')}
-                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      allowanceSubTab === 'spend'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    data-testid="brotherhood-allowance-subtab-spend"
-                  >
-                    Spend Allowance
-                  </button>
-                </div>
+                <ScrollableTabBar
+                  tabs={[
+                    {
+                      id: 'active',
+                      label: `Active (${account.data?.allowances.length ?? 0})`,
+                      icon: CheckCircle2,
+                      testId: 'brotherhood-allowance-subtab-active',
+                      activeColorClass:
+                        'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+                    },
+                    {
+                      id: 'grant',
+                      label: 'Grant Allowance',
+                      icon: PlusCircle,
+                      testId: 'brotherhood-allowance-subtab-grant',
+                      activeColorClass:
+                        'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+                    },
+                    {
+                      id: 'spend',
+                      label: 'Spend Allowance',
+                      icon: Send,
+                      testId: 'brotherhood-allowance-subtab-spend',
+                      activeColorClass:
+                        'bg-card text-purple-500 font-semibold border border-border shadow-xs',
+                    },
+                  ]}
+                  activeTab={allowanceSubTab}
+                  onTabChange={(tab) => setAllowanceSubTab(tab as any)}
+                />
               }
             >
               {/* Active Allowances List Sub-Tab */}

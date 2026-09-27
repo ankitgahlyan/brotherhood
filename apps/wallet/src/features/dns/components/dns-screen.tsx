@@ -13,6 +13,8 @@ import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
 import { sameAddress } from '@/core/utils/formatters';
 import { BRO_TREASURY_ADDRESS, type Network } from '@/lib/brotherhood/config';
+import { Compass, Globe, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
 import { ExploreTab } from './explore-tab';
 import { MyDomainsTab } from './my-domains-tab';
 import { AdminTab } from './admin-tab';
@@ -20,10 +22,32 @@ import { AdminTab } from './admin-tab';
 type Tab = 'explore' | 'my-domains' | 'admin';
 
 const VALID_TABS: Tab[] = ['explore', 'my-domains', 'admin'];
-const TAB_LABELS: Record<Tab, string> = {
-  explore: 'Explore',
-  'my-domains': 'My Domains',
-  admin: 'Admin',
+const DNS_TAB_CONFIG: Record<
+  Tab,
+  {
+    label: string;
+    icon: LucideIcon | React.ComponentType<{ className?: string }>;
+    activeColorClass?: string;
+  }
+> = {
+  explore: {
+    label: 'Explore',
+    icon: Compass,
+    activeColorClass:
+      'bg-card text-cyan-500 font-semibold border border-border shadow-xs',
+  },
+  'my-domains': {
+    label: 'My Domains',
+    icon: Globe,
+    activeColorClass:
+      'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+  },
+  admin: {
+    label: 'Admin',
+    icon: ShieldCheck,
+    activeColorClass:
+      'bg-card text-purple-500 font-semibold border border-border shadow-xs',
+  },
 };
 
 export const DnsScreen: React.FC = () => {
@@ -69,23 +93,17 @@ export const DnsScreen: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab as Tab)}
         stickyTabBar={
-          <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === tab
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid={`dns-tab-${tab}`}
-              >
-                {TAB_LABELS[tab]}
-              </button>
-            ))}
-          </div>
+          <ScrollableTabBar
+            tabs={tabs.map((tab) => ({
+              id: tab,
+              label: DNS_TAB_CONFIG[tab].label,
+              icon: DNS_TAB_CONFIG[tab].icon,
+              testId: `dns-tab-${tab}`,
+              activeColorClass: DNS_TAB_CONFIG[tab].activeColorClass,
+            }))}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as Tab)}
+          />
         }
       >
         {activeTab === 'explore' && <ExploreTab network={network} />}

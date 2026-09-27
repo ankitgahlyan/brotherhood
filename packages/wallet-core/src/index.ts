@@ -84,6 +84,7 @@ export type {
   BrotherhoodSlice,
   BrotherhoodMemberData,
   AnimationLevel,
+  ViewMode,
   PreferencesSlice,
   PreferencesState,
 } from './types/store';

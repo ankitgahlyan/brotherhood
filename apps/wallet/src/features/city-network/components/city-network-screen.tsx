@@ -18,10 +18,13 @@ import {
   Search,
   X,
   MapPin,
+  Compass,
+  BookmarkCheck,
 } from 'lucide-react';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
 import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { CopyButton } from '@/core/components/ui/copy-button';
@@ -313,30 +316,28 @@ export const CityNetworkScreen: React.FC = () => {
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t as CityTab)}
           stickyTabBar={
-            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setActiveTab('explore')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'explore'
-                    ? 'bg-card shadow-xs text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-              >
-                Explore & Search
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('tracked')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'tracked'
-                    ? 'bg-card shadow-xs text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-              >
-                Tracked Locations ({watchedLocations.length})
-              </button>
-            </div>
+            <ScrollableTabBar
+              tabs={[
+                {
+                  id: 'explore',
+                  label: 'Explore & Search',
+                  icon: Compass,
+                  testId: 'city-tab-explore',
+                  activeColorClass:
+                    'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+                },
+                {
+                  id: 'tracked',
+                  label: `Tracked (${watchedLocations.length})`,
+                  icon: BookmarkCheck,
+                  testId: 'city-tab-tracked',
+                  activeColorClass:
+                    'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+                },
+              ]}
+              activeTab={activeTab}
+              onTabChange={(t) => setActiveTab(t as CityTab)}
+            />
           }
         >
           <div className="space-y-4">

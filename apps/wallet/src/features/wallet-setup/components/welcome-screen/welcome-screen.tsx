@@ -7,8 +7,9 @@
  */
 
 import React, { useState } from 'react';
+import { LayoutGrid, Eye } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
-import { useAuth } from '@demo/wallet-core';
+import { useAuth, usePreferences } from '@demo/wallet-core';
 
 import { AddWalletModal } from '../add-wallet-modal';
 import type { AddWalletMode } from '../add-wallet-modal';
@@ -23,6 +24,7 @@ import { assetUrl } from '@/core/utils';
 export const WelcomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { isPasswordSet, isUnlocked } = useAuth();
+  const { viewMode, setViewMode } = usePreferences();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Brand-new users set a PIN first; an already-authenticated user (no wallet) goes straight in.
@@ -80,6 +82,36 @@ export const WelcomeScreen: React.FC = () => {
           Create a new wallet or add an existing one to start sending and
           receiving GRAM.
         </p>
+
+        {/* Global Accessibility Mode Switch (Standard vs Pictorial) */}
+        <div className="mt-5 inline-flex items-center p-1 rounded-xl bg-secondary/80 border border-border text-xs">
+          <button
+            type="button"
+            onClick={() => setViewMode('standard')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              viewMode !== 'icons_only'
+                ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            data-testid="welcome-viewmode-standard"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+            <span>Standard</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('icons_only')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              viewMode === 'icons_only'
+                ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            data-testid="welcome-viewmode-pictorial"
+          >
+            <Eye className="w-3.5 h-3.5 text-amber-500" />
+            <span>Pictorial</span>
+          </button>
+        </div>
       </div>
 
       <AddWalletModal

@@ -463,16 +463,20 @@ export interface BrotherhoodSlice {
 }
 
 export type AnimationLevel = 'none' | 'performance' | 'full';
+export type ViewMode = 'standard' | 'icons_only';
 
 export interface PreferencesState {
   animationLevel: AnimationLevel;
   /** Whether the user explicitly overrode the detected default */
   isCustomAnimationLevel: boolean;
+  /** UI display mode: standard (text + icons) or pictorial (icons only) */
+  viewMode: ViewMode;
 }
 
 export interface PreferencesSlice {
   preferences: PreferencesState;
   setAnimationLevel: (level: AnimationLevel) => void;
+  setViewMode: (mode: ViewMode) => void;
   resetPreferences: () => void;
 }
 

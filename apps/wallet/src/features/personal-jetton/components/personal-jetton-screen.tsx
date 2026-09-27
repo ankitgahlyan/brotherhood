@@ -17,6 +17,11 @@ import {
   ExternalLink,
   Trash2,
   Info,
+  Coins,
+  Wallet,
+  ShieldCheck,
+  PlusCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit, useAuth } from '@demo/wallet-core';
@@ -27,6 +32,7 @@ import {
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
+import { ScrollableTabBar } from '@/core/components/ui/tabs';
 import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
@@ -64,6 +70,58 @@ import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
 
 type Tab =
   'info' | 'deploy' | 'mint' | 'addresses' | 'admin' | 'topup' | 'destroy';
+
+const PERSONAL_JETTON_TAB_CONFIG: Record<
+  Tab,
+  {
+    label: string;
+    icon: LucideIcon | React.ComponentType<{ className?: string }>;
+    activeColorClass?: string;
+  }
+> = {
+  info: {
+    label: 'Overview',
+    icon: Info,
+    activeColorClass:
+      'bg-card text-blue-500 font-semibold border border-border shadow-xs',
+  },
+  deploy: {
+    label: 'Deploy',
+    icon: Rocket,
+    activeColorClass:
+      'bg-card text-purple-500 font-semibold border border-border shadow-xs',
+  },
+  mint: {
+    label: 'Mint',
+    icon: Coins,
+    activeColorClass:
+      'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
+  },
+  addresses: {
+    label: 'Wallets',
+    icon: Wallet,
+    activeColorClass:
+      'bg-card text-cyan-500 font-semibold border border-border shadow-xs',
+  },
+  admin: {
+    label: 'Admin',
+    icon: ShieldCheck,
+    activeColorClass:
+      'bg-card text-indigo-500 font-semibold border border-border shadow-xs',
+  },
+  topup: {
+    label: 'Top Up',
+    icon: PlusCircle,
+    activeColorClass:
+      'bg-card text-amber-500 font-semibold border border-border shadow-xs',
+  },
+  destroy: {
+    label: 'Destroy',
+    icon: Trash2,
+    activeColorClass:
+      'bg-card text-red-500 font-semibold border border-border shadow-xs',
+  },
+};
 
 export const PersonalJettonScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -270,22 +328,18 @@ export const PersonalJettonScreen: React.FC = () => {
             </div>
           }
           stickyTabBar={
-            <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              {availableTabs.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 rounded-lg capitalize transition-colors ${
-                    activeTab === tab
-                      ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                  }`}
-                  data-testid={`personal-tab-${tab}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <ScrollableTabBar
+              tabs={availableTabs.map((tab) => ({
+                id: tab,
+                label: PERSONAL_JETTON_TAB_CONFIG[tab].label,
+                icon: PERSONAL_JETTON_TAB_CONFIG[tab].icon,
+                testId: `personal-tab-${tab}`,
+                activeColorClass:
+                  PERSONAL_JETTON_TAB_CONFIG[tab].activeColorClass,
+              }))}
+              activeTab={activeTab}
+              onTabChange={(t) => setActiveTab(t as Tab)}
+            />
           }
         >
           {/* Info Tab */}
