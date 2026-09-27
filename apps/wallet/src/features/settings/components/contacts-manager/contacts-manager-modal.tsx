@@ -16,6 +16,7 @@ import {
   Upload,
   X,
   FileJson,
+  Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isValidAddress } from '@ton/walletkit';
@@ -28,6 +29,7 @@ import {
 import { useFormatAddress } from '@/core/utils/formatters';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
+import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
 
 interface ContactsManagerModalProps {
   isOpen: boolean;
@@ -61,6 +63,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
     (state) => state.contactsByNetwork[network] || EMPTY_CONTACTS_MAP,
   );
   const setCustomName = useContactBookStore((state) => state.setCustomName);
+  const saveDnsDomain = useContactBookStore((state) => state.saveDnsDomain);
   const deleteContact = useContactBookStore((state) => state.deleteContact);
   const importContacts = useContactBookStore((state) => state.importContacts);
   const exportContacts = useContactBookStore((state) => state.exportContacts);
@@ -82,7 +85,10 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
         c.address.toLowerCase().includes(q) ||
         c.rawAddress.toLowerCase().includes(q);
       const notesMatch = c.notes && c.notes.toLowerCase().includes(q);
-      return nameMatch || userMatch || addrMatch || notesMatch;
+      const dnsMatch =
+        (c.dnsDomain && c.dnsDomain.toLowerCase().includes(q)) ||
+        (c.dnsDomains && c.dnsDomains.some((d) => d.toLowerCase().includes(q)));
+      return nameMatch || userMatch || addrMatch || notesMatch || dnsMatch;
     });
   }, [contactsList, searchQuery]);
 
@@ -95,24 +101,58 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
   };
 
   const handleOpenEdit = (contact: ContactItem) => {
-    setFormAddress(contact.address);
+    setFormAddress(contact.dnsDomain || contact.address);
     setFormName(contact.customName || contact.onChainUsername || '');
     setFormNotes(contact.notes || '');
     setEditingContact(contact);
     setIsAddingNew(true);
   };
 
-  const handleSaveContact = (e: React.FormEvent) => {
+  const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanAddr = formAddress.trim();
-    const cleanName = formName.trim().replace(/^@+/, '');
+    let cleanName = formName.trim().replace(/^@+/, '');
 
-    if (!cleanAddr || !isValidAddress(cleanAddr)) {
-      toast.error('Please provide a valid TON address');
+    let targetAddr = cleanAddr;
+    let detectedDomain: string | undefined;
+
+    if (isTonChainDns(cleanAddr)) {
+      detectedDomain = cleanAddr.toLowerCase();
+      try {
+        const resolved = await resolveAddressByDomain(
+          cleanAddr,
+          network === 'mainnet' ? 'mainnet' : 'testnet',
+        );
+        if (!resolved) {
+          toast.error(`Could not resolve TON DNS domain: ${cleanAddr}`);
+          return;
+        }
+        targetAddr = resolved;
+        if (!cleanName) {
+          cleanName = cleanAddr;
+        }
+      } catch (err) {
+        toast.error(
+          `Failed to resolve domain: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        );
+        return;
+      }
+    }
+
+    if (!targetAddr || !isValidAddress(targetAddr)) {
+      toast.error('Please provide a valid TON address or domain');
       return;
     }
 
-    setCustomName(cleanAddr, cleanName, formNotes.trim() || undefined, network);
+    setCustomName(
+      targetAddr,
+      cleanName,
+      formNotes.trim() || undefined,
+      network,
+    );
+    if (detectedDomain) {
+      saveDnsDomain(targetAddr, detectedDomain, network);
+    }
     toast.success(editingContact ? 'Contact updated' : 'Contact added');
     setIsAddingNew(false);
     setEditingContact(null);
@@ -290,6 +330,12 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
                           custom
                         </span>
                       )}
+                      {contact.dnsDomain && (
+                        <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-medium flex items-center gap-0.5">
+                          <Globe className="w-2.5 h-2.5" />
+                          {contact.dnsDomain}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] font-mono text-muted-foreground truncate">
                       {formatWalletAddress(contact.address, true)}
@@ -345,11 +391,11 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
           <form onSubmit={handleSaveContact} className="space-y-3.5 pt-3">
             <div>
               <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                TON Address *
+                TON Address or Domain *
               </label>
               <input
                 type="text"
-                placeholder="EQ... / 0:..."
+                placeholder="EQ... / 0:... or alice.ton"
                 value={formAddress}
                 onChange={(e) => setFormAddress(e.target.value)}
                 disabled={Boolean(editingContact)}

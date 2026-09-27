@@ -127,8 +127,12 @@ describe('autoFundUnderfundedFiWallets', () => {
 
   it('funds multiple underfunded FiWallets using multi-message transaction', async () => {
     // Active wallet has 10 TON
-    const { mockWallet, singleTxCalls, multiTxCalls, sentTxs } =
-      createMockWallet(10_000_000_000n);
+    const {
+      mockWallet,
+      singleTxCalls: _singleTxCalls,
+      multiTxCalls,
+      sentTxs,
+    } = createMockWallet(10_000_000_000n);
 
     const addr1 = 'EQBynBO23ywHy_CgarY9NK9FTz0yDsGvvqq23W612bOoqTtU';
     const addr2 = 'EQC_1zgw2SxDqAabD02r3Jve889y_g_Pz11n499999999999';
@@ -235,8 +239,12 @@ describe('autoFundUnderfundedFiWallets', () => {
     // Active wallet has 3.0 TON
     // Reserve is 0.5 TON -> available is 2.5 TON
     // Cost per recipient is 2.05 TON -> can afford only 1 recipient!
-    const { mockWallet, singleTxCalls, multiTxCalls, sentTxs } =
-      createMockWallet(3_000_000_000n);
+    const {
+      mockWallet,
+      singleTxCalls,
+      multiTxCalls: _multiTxCalls,
+      sentTxs,
+    } = createMockWallet(3_000_000_000n);
 
     const addr1 = 'EQBynBO23ywHy_CgarY9NK9FTz0yDsGvvqq23W612bOoqTtU';
     const addr2 = 'EQC_1zgw2SxDqAabD02r3Jve889y_g_Pz11n499999999999';

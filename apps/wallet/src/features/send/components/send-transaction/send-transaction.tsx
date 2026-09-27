@@ -39,6 +39,8 @@ import {
   deriveTokenWalletAddressOffchain,
   type TokenContractContext,
 } from '../../lib/token-contract-resolution';
+import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 import { Layers, ChevronDown } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
@@ -158,17 +160,90 @@ export const SendTransaction: React.FC = () => {
     };
   }, [address, tokenContext, network]);
 
+  const trimmedGranter = granterInput.trim();
+  const isGranterDns = isTonChainDns(trimmedGranter);
+
+  const localGranterDns = useMemo(() => {
+    if (senderMode !== 'other' || !isGranterDns) return null;
+    return useContactBookStore
+      .getState()
+      .resolveAddress(trimmedGranter, network);
+  }, [senderMode, isGranterDns, trimmedGranter, network]);
+
+  const [asyncResolvedGranter, setAsyncResolvedGranter] = useState<{
+    domain: string;
+    address: string;
+  } | null>(null);
+
+  const dnsResolvedGranterAddress =
+    localGranterDns ||
+    (asyncResolvedGranter?.domain.toLowerCase() === trimmedGranter.toLowerCase()
+      ? asyncResolvedGranter.address
+      : null);
+
+  useEffect(() => {
+    if (senderMode !== 'other' || !isGranterDns || localGranterDns) {
+      return;
+    }
+
+    if (
+      asyncResolvedGranter?.domain.toLowerCase() ===
+      trimmedGranter.toLowerCase()
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const resolved = await resolveAddressByDomain(
+          trimmedGranter,
+          network === 'mainnet' ? 'mainnet' : 'testnet',
+        );
+        if (!isCancelled && resolved) {
+          setAsyncResolvedGranter({
+            domain: trimmedGranter,
+            address: resolved,
+          });
+          useContactBookStore
+            .getState()
+            .saveDnsDomain(resolved, trimmedGranter, network);
+        }
+      } catch {
+        // Ignore resolution failure
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    senderMode,
+    isGranterDns,
+    trimmedGranter,
+    localGranterDns,
+    asyncResolvedGranter,
+    network,
+  ]);
+
   const resolvedGranterAddress = useMemo(() => {
     if (senderMode !== 'other') return null;
     const trimmed = granterInput.trim();
     if (!trimmed) return null;
     if (isValidAddress(trimmed)) return trimmed;
+    if (isTonChainDns(trimmed)) {
+      return (
+        dnsResolvedGranterAddress ||
+        useContactBookStore.getState().resolveAddress(trimmed, network)
+      );
+    }
     const cleanUsername = trimmed.replace(/^@+/, '');
     if (cleanUsername.length > 0) {
       return getCachedAddressByUsername(cleanUsername, network);
     }
     return null;
-  }, [senderMode, granterInput, network]);
+  }, [senderMode, granterInput, network, dnsResolvedGranterAddress]);
 
   const {
     allowance,
@@ -247,7 +322,17 @@ export const SendTransaction: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const targetRecipient = (effectiveRecipientAddress || recipient).trim();
+      let targetRecipient = (effectiveRecipientAddress || recipient).trim();
+      if (!isValidAddress(targetRecipient) && isTonChainDns(targetRecipient)) {
+        const resolved = await resolveAddressByDomain(
+          targetRecipient,
+          network === 'mainnet' ? 'mainnet' : 'testnet',
+        );
+        if (resolved) {
+          targetRecipient = resolved;
+          setEffectiveRecipientAddress(resolved);
+        }
+      }
       if (!isValidAddress(targetRecipient)) {
         throw new Error('Invalid recipient address');
       }
@@ -289,7 +374,7 @@ export const SendTransaction: React.FC = () => {
           !isValidAddress(resolvedGranterAddress)
         ) {
           throw new Error(
-            'Please enter a valid granter Owner address or username',
+            'Please enter a valid granter Owner address, @username, or .ton domain',
           );
         }
         const amountNano = parseUnits(amount, 9);
@@ -317,12 +402,14 @@ export const SendTransaction: React.FC = () => {
 
   const targetRecipient = (effectiveRecipientAddress || recipient).trim();
   const recipientError =
-    targetRecipient.length > 0 && !isValidAddress(targetRecipient)
+    targetRecipient.length > 0 &&
+    !isValidAddress(targetRecipient) &&
+    !isTonChainDns(recipient.trim())
       ? 'Invalid address'
       : '';
   const granterError =
     senderMode === 'other' && granterInput.length > 0 && !resolvedGranterAddress
-      ? 'Invalid granter address or username'
+      ? 'Invalid granter address, username, or .ton domain'
       : '';
 
   const isSpendAllowanceDisabled =

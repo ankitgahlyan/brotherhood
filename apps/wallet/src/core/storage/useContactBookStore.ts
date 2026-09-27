@@ -14,6 +14,8 @@ export interface ContactItem {
   rawAddress: string;
   customName?: string;
   onChainUsername?: string;
+  dnsDomain?: string;
+  dnsDomains?: string[];
   notes?: string;
   updatedAt: number;
 }
@@ -43,6 +45,7 @@ export interface ContactBookState {
     username: string,
     network?: string,
   ) => void;
+  saveDnsDomain: (address: string, domain: string, network?: string) => void;
   addRecentRecipient: (
     member: { address: string; username?: string },
     network?: string,
@@ -182,8 +185,12 @@ export const useContactBookStore = create<ContactBookState>()(
             const existing = netContacts[raw];
 
             if (!cleanName) {
-              // If name is cleared, remove custom name but keep onChainUsername if exists
-              if (existing?.onChainUsername || existing?.notes) {
+              // If name is cleared, remove custom name but keep onChainUsername or dnsDomain if exists
+              if (
+                existing?.onChainUsername ||
+                existing?.dnsDomain ||
+                existing?.notes
+              ) {
                 netContacts[raw] = {
                   ...existing,
                   customName: undefined,
@@ -199,6 +206,8 @@ export const useContactBookStore = create<ContactBookState>()(
                 rawAddress: raw,
                 customName: cleanName,
                 onChainUsername: existing?.onChainUsername,
+                dnsDomain: existing?.dnsDomain,
+                dnsDomains: existing?.dnsDomains,
                 notes: notes !== undefined ? notes : existing?.notes,
                 updatedAt: Date.now(),
               };
@@ -210,7 +219,10 @@ export const useContactBookStore = create<ContactBookState>()(
               if (normalizeContactAddress(item.address) === raw) {
                 return {
                   ...item,
-                  username: cleanName || existing?.onChainUsername,
+                  username:
+                    cleanName ||
+                    existing?.onChainUsername ||
+                    existing?.dnsDomain,
                 };
               }
               return item;
@@ -238,7 +250,11 @@ export const useContactBookStore = create<ContactBookState>()(
             const existing = netContacts[raw];
             if (!existing) return state;
 
-            if (existing.onChainUsername || existing.notes) {
+            if (
+              existing.onChainUsername ||
+              existing.dnsDomain ||
+              existing.notes
+            ) {
               netContacts[raw] = {
                 ...existing,
                 customName: undefined,
@@ -253,7 +269,7 @@ export const useContactBookStore = create<ContactBookState>()(
               if (normalizeContactAddress(item.address) === raw) {
                 return {
                   ...item,
-                  username: existing.onChainUsername,
+                  username: existing.onChainUsername || existing.dnsDomain,
                 };
               }
               return item;
@@ -289,6 +305,8 @@ export const useContactBookStore = create<ContactBookState>()(
               rawAddress: raw,
               customName: existing?.customName,
               onChainUsername: cleanName,
+              dnsDomain: existing?.dnsDomain,
+              dnsDomains: existing?.dnsDomains,
               notes: existing?.notes,
               updatedAt: Date.now(),
             };
@@ -297,6 +315,61 @@ export const useContactBookStore = create<ContactBookState>()(
               contactsByNetwork: {
                 ...state.contactsByNetwork,
                 [net]: netContacts,
+              },
+            };
+          });
+        },
+
+        saveDnsDomain: (address, domain, network = DEFAULT_NETWORK) => {
+          const net = network || DEFAULT_NETWORK;
+          const cleanAddr = address.trim();
+          const cleanDomain = domain.trim().toLowerCase();
+          if (!cleanAddr || !cleanDomain) return;
+
+          const raw = normalizeContactAddress(cleanAddr);
+
+          set((state) => {
+            const netContacts = { ...(state.contactsByNetwork[net] || {}) };
+            const existing = netContacts[raw];
+
+            const existingDomains =
+              existing?.dnsDomains ||
+              (existing?.dnsDomain ? [existing.dnsDomain] : []);
+            const updatedDomains = Array.from(
+              new Set([...existingDomains, cleanDomain]),
+            );
+
+            netContacts[raw] = {
+              address: existing?.address || cleanAddr,
+              rawAddress: raw,
+              customName: existing?.customName,
+              onChainUsername: existing?.onChainUsername,
+              dnsDomain: cleanDomain,
+              dnsDomains: updatedDomains,
+              notes: existing?.notes,
+              updatedAt: Date.now(),
+            };
+
+            // Sync recent list
+            const currentRecent = state.recentByNetwork[net] || [];
+            const updatedRecent = currentRecent.map((item) => {
+              if (normalizeContactAddress(item.address) === raw) {
+                return {
+                  ...item,
+                  username: item.username || cleanDomain,
+                };
+              }
+              return item;
+            });
+
+            return {
+              contactsByNetwork: {
+                ...state.contactsByNetwork,
+                [net]: netContacts,
+              },
+              recentByNetwork: {
+                ...state.recentByNetwork,
+                [net]: updatedRecent,
               },
             };
           });
@@ -378,6 +451,13 @@ export const useContactBookStore = create<ContactBookState>()(
               onChainName: contact.onChainUsername,
             };
           }
+          if (contact.dnsDomain) {
+            return {
+              name: contact.dnsDomain,
+              isCustom: false,
+              onChainName: contact.onChainUsername,
+            };
+          }
           return null;
         },
 
@@ -390,10 +470,11 @@ export const useContactBookStore = create<ContactBookState>()(
           try {
             return Address.parse(trimmed).toString();
           } catch {
-            // Not a direct address, search in contacts by name
+            // Not a direct address, search in contacts by name or domain
           }
 
           const cleanName = normalizeContactName(trimmed);
+          const cleanDomain = trimmed.toLowerCase();
           const contacts = Object.values(get().contactsByNetwork[net] || {});
 
           // 1. Check custom names first
@@ -410,6 +491,15 @@ export const useContactBookStore = create<ContactBookState>()(
               normalizeContactName(c.onChainUsername) === cleanName,
           );
           if (onChainMatch) return onChainMatch.address;
+
+          // 3. Check DNS domains next
+          const domainMatch = contacts.find(
+            (c) =>
+              (c.dnsDomain && c.dnsDomain.toLowerCase() === cleanDomain) ||
+              (c.dnsDomains &&
+                c.dnsDomains.some((d) => d.toLowerCase() === cleanDomain)),
+          );
+          if (domainMatch) return domainMatch.address;
 
           return null;
         },
@@ -464,6 +554,8 @@ export const useContactBookStore = create<ContactBookState>()(
                   item.customName || item.name || existing?.customName,
                 onChainUsername:
                   item.onChainUsername || existing?.onChainUsername,
+                dnsDomain: item.dnsDomain || existing?.dnsDomain,
+                dnsDomains: item.dnsDomains || existing?.dnsDomains,
                 notes: item.notes || existing?.notes,
                 updatedAt: item.updatedAt || Date.now(),
               };

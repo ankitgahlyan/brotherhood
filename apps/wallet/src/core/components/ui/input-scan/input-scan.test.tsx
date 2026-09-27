@@ -70,8 +70,18 @@ describe('InputScan component', () => {
         onChange: () => {},
       }),
     );
-    expect(html).toContain('UQ... or @username');
+    expect(html).toContain('UQ..., @username or .ton domain');
     expect(html).toContain('Scan QR code');
+  });
+
+  it('displays DNS resolving or unresolved warning when an unmapped DNS domain is entered', () => {
+    const html = renderToString(
+      React.createElement(InputScan, {
+        value: 'unknown-domain.ton',
+        onChange: () => {},
+      }),
+    );
+    expect(html).toContain('Domain could not be resolved on-chain');
   });
 
   it('displays resolved username badge when address is mapped in localStorage', () => {

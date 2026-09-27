@@ -7,7 +7,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { QrCode, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import {
+  QrCode,
+  Check,
+  AlertCircle,
+  Loader2,
+  RefreshCw,
+  Globe,
+  User,
+} from 'lucide-react';
 
 import { Input } from '@/core/components/ui/input';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
@@ -27,8 +35,8 @@ interface RecipientFieldProps {
 }
 
 /**
- * Recipient field supporting Owner address or @username entry with automatic
- * localStorage caching, on-chain FiWallet profile resolution, and force refetch.
+ * Recipient field supporting Owner address, @username, or .ton DNS domain entry with automatic
+ * localStorage caching, on-chain FiWallet profile resolution, pure TVM DNS resolution, and force refetch.
  */
 export const RecipientField: React.FC<RecipientFieldProps> = ({
   value,
@@ -45,6 +53,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
   const {
     isDirectAddress,
     isUsernameInput,
+    isDnsInput,
     resolvedAddress,
     resolvedUsername,
     isResolving,
@@ -98,8 +107,8 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             }}
             placeholder={
               net === 'mainnet'
-                ? 'Owner address (UQ…) or @username'
-                : 'Owner address (0Q…) or @username'
+                ? 'Owner address (UQ…), @username, or .ton domain'
+                : 'Owner address (0Q…), @username, or .ton domain'
             }
             data-testid="recipient-input"
           />
@@ -130,9 +139,21 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
                 }}
                 className="w-full px-3 py-2 text-left hover:bg-secondary/70 flex items-center justify-between text-xs transition-colors"
               >
-                <span className="font-medium text-foreground">
-                  @{item.username}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {item.isDns ? (
+                    <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  ) : (
+                    <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                  <span className="font-medium text-foreground">
+                    {item.isDns ? item.username : `@${item.username}`}
+                  </span>
+                  {item.isDns && (
+                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-normal">
+                      DNS
+                    </span>
+                  )}
+                </div>
                 <span className="text-muted-foreground text-[11px] truncate max-w-45">
                   {formatWalletAddress(item.address, false)}
                 </span>
@@ -162,8 +183,31 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
         </div>
       )}
 
+      {/* Resolved DNS domain pill */}
+      {isDnsInput && resolvedAddress && (
+        <div className="flex items-center justify-between mt-1 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-500">
+          <div className="flex items-center gap-1.5 font-medium truncate">
+            <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="truncate">{value.trim()}</span>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-normal shrink-0">
+              Saved in Contacts
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onChange(resolvedAddress)}
+              className="text-[11px] font-mono text-emerald-400/90 hover:underline transition-colors"
+              title="Click to fill address"
+            >
+              {formatWalletAddress(resolvedAddress, false)}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Resolved identity pill */}
-      {resolvedAddress && (
+      {!isDnsInput && resolvedAddress && (
         <div className="flex items-center justify-between mt-1 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-500">
           <div className="flex items-center gap-1.5 font-medium">
             <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -211,6 +255,17 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>
             Username not found in saved contacts. Please enter owner address.
+          </span>
+        </div>
+      )}
+
+      {/* Unresolved DNS domain warning */}
+      {isDnsInput && !resolvedAddress && !isResolving && (
+        <div className="flex items-center gap-1 mt-1 text-xs text-amber-500">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Domain could not be resolved on-chain. Check spelling or enter TON
+            address directly.
           </span>
         </div>
       )}

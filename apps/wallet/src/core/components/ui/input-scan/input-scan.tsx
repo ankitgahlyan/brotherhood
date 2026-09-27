@@ -18,6 +18,7 @@ import {
   RotateCcw,
   X,
   Tag,
+  Globe,
 } from 'lucide-react';
 import { QrScanner } from '../qr-scanner/qr-scanner';
 import { cn } from '@/core/lib/utils';
@@ -43,7 +44,7 @@ export interface InputScanProps {
 export const InputScan: React.FC<InputScanProps> = ({
   value,
   onChange,
-  placeholder = 'UQ... or @username',
+  placeholder = 'UQ..., @username or .ton domain',
   disabled = false,
   scannerTitle = 'Scan address QR code',
   containerClassName,
@@ -62,6 +63,7 @@ export const InputScan: React.FC<InputScanProps> = ({
   const {
     isDirectAddress,
     isUsernameInput,
+    isDnsInput,
     resolvedAddress,
     resolvedUsername,
     isCustomName,
@@ -161,11 +163,20 @@ export const InputScan: React.FC<InputScanProps> = ({
                     className="w-full px-3 py-2 text-left text-xs hover:bg-muted flex items-center justify-between transition-colors border-b border-border/40 last:border-0"
                   >
                     <div className="flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                      {item.isDns ? (
+                        <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                      )}
                       <span className="font-semibold text-foreground">
-                        @{item.username}
+                        {item.isDns ? item.username : `@${item.username}`}
                       </span>
-                      {item.isCustom && (
+                      {item.isDns && (
+                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-normal">
+                          DNS
+                        </span>
+                      )}
+                      {item.isCustom && !item.isDns && (
                         <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
                           Custom
                         </span>
@@ -221,7 +232,11 @@ export const InputScan: React.FC<InputScanProps> = ({
             {isResolving && !isEditingCustomName && (
               <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
                 <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
-                <span>Checking username...</span>
+                <span>
+                  {isDnsInput
+                    ? 'Resolving TON DNS on-chain...'
+                    : 'Checking username...'}
+                </span>
               </div>
             )}
 
@@ -275,44 +290,20 @@ export const InputScan: React.FC<InputScanProps> = ({
               </div>
             )}
 
-            {/* Resolved username display */}
-            {!isResolving && !isEditingCustomName && resolvedUsername && (
-              <div className="flex items-center justify-between w-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded text-emerald-500">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{`@${resolvedUsername}`}</span>
-                  {isCustomName && (
-                    <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
-                      Custom
+            {/* Resolved DNS domain display */}
+            {!isResolving &&
+              !isEditingCustomName &&
+              isDnsInput &&
+              resolvedAddress && (
+                <div className="flex items-center justify-between w-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded text-emerald-500">
+                  <div className="flex items-center gap-1.5 font-medium truncate">
+                    <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span className="truncate">{value.trim()}</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-normal shrink-0">
+                      Saved in Contacts
                     </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleStartEdit}
-                    className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500"
-                    title={
-                      isCustomName ? 'Edit custom name' : 'Set custom name'
-                    }
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  {isCustomName && (
-                    <button
-                      type="button"
-                      onClick={handleRevertToOnChain}
-                      className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500/80 hover:text-emerald-500"
-                      title={
-                        onChainUsername
-                          ? `Revert to @${onChainUsername}`
-                          : 'Remove custom name'
-                      }
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                    </button>
-                  )}
-                  {resolvedAddress && isUsernameInput && (
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => onChange(resolvedAddress)}
@@ -321,20 +312,73 @@ export const InputScan: React.FC<InputScanProps> = ({
                     >
                       {formatWalletAddress(resolvedAddress, false)}
                     </button>
-                  )}
-                  {isDirectAddress && (
+                  </div>
+                </div>
+              )}
+
+            {/* Resolved username display */}
+            {!isResolving &&
+              !isEditingCustomName &&
+              !isDnsInput &&
+              resolvedUsername && (
+                <div className="flex items-center justify-between w-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded text-emerald-500">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>{`@${resolvedUsername}`}</span>
+                    {isCustomName && (
+                      <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
+                        Custom
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => void refetchProfile()}
-                      title="Refetch profile from on-chain"
+                      onClick={handleStartEdit}
                       className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500"
+                      title={
+                        isCustomName ? 'Edit custom name' : 'Set custom name'
+                      }
                     >
-                      <RefreshCw className="w-3 h-3" />
+                      <Pencil className="w-3 h-3" />
                     </button>
-                  )}
+                    {isCustomName && (
+                      <button
+                        type="button"
+                        onClick={handleRevertToOnChain}
+                        className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500/80 hover:text-emerald-500"
+                        title={
+                          onChainUsername
+                            ? `Revert to @${onChainUsername}`
+                            : 'Remove custom name'
+                        }
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                    )}
+                    {resolvedAddress && isUsernameInput && (
+                      <button
+                        type="button"
+                        onClick={() => onChange(resolvedAddress)}
+                        className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 px-1.5 py-0.5 rounded text-emerald-400 font-mono transition-colors"
+                        title="Click to insert address"
+                      >
+                        {formatWalletAddress(resolvedAddress, false)}
+                      </button>
+                    )}
+                    {isDirectAddress && (
+                      <button
+                        type="button"
+                        onClick={() => void refetchProfile()}
+                        title="Refetch profile from on-chain"
+                        className="p-1 hover:bg-emerald-500/20 rounded transition-colors text-emerald-500"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Valid direct address with no username found */}
             {!isResolving &&
@@ -377,6 +421,20 @@ export const InputScan: React.FC<InputScanProps> = ({
                   <span>
                     Username not in local address book. Enter TON address
                     directly.
+                  </span>
+                </div>
+              )}
+
+            {/* Unresolved DNS domain warning */}
+            {!isResolving &&
+              !isEditingCustomName &&
+              isDnsInput &&
+              !resolvedAddress && (
+                <div className="flex items-center gap-1.5 text-amber-500 text-[11px]">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Domain could not be resolved on-chain. Check spelling or
+                    enter TON address directly.
                   </span>
                 </div>
               )}

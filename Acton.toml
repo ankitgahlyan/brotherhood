@@ -92,6 +92,21 @@ display-name = "Voter Child"
 src = "contracts/src/dao/Voter.tolk"
 depends = []
 
+[contracts.DnsCollection]
+display-name = "DNS Collection"
+src = "contracts/src/dns/DnsCollection.tolk"
+depends = []
+
+[contracts.DnsItem]
+display-name = "DNS Item"
+src = "contracts/src/dns/DnsItem.tolk"
+depends = []
+
+[contracts.RootDns]
+display-name = "Root DNS"
+src = "contracts/src/dns/RootDns.tolk"
+depends = []
+
 [test]
 # ui = true
 # ui-port = 12345
@@ -144,8 +159,12 @@ fi-upgrade-testnet = "acton script contracts/scripts/send-upgrade.tolk --net tes
 fi-wallet-upgrade = "JETTON_WALLET_UPGRADE=y acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target fiWallet"
 fi-minter-upgrade = "JETTON_WALLET_UPGRADE=n acton script contracts/scripts/send-upgrade.tolk --net testnet && acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target fiMinter"
 approve-upgrade = "acton script contracts/scripts/approve-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts"
+fi-hot-upgrade = "acton script contracts/scripts/hot-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts"
 personal-upgrade = "acton script contracts/scripts/personal-upgrade.tolk --net testnet && bun scripts/update-contract-code-hashes.ts --target personalMinter"
 update-code-hashes = "bun scripts/update-contract-code-hashes.ts"
+test-dns = "acton test contracts/tests/dns"
+deploy-bro = "acton script contracts/scripts/dns/deploy-bro.tolk"
+emulate-fork-upgrade = "acton script contracts/scripts/emulate-fork-upgrade.tolk --fork-net testnet"
 
 
 [import-mappings]

@@ -1,0 +1,10 @@
+{
+  "name": "Brotherhood DNS (.bro)",
+  "description": "Decentralized, authoritative .bro top-level domain zone on The Open Network (TON). Instant minting, annual FillUp renewals, and TEP-81 smart contract resolution for the Brotherhood Network.",
+  "image": "https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-logo.png",
+  "cover_image": "https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-banner.png",
+  "external_url": "https://ankitgahlyan.github.io/brotherhood/dns",
+  "social_links": [
+    "https://t.me/brohoood"
+  ]
+}

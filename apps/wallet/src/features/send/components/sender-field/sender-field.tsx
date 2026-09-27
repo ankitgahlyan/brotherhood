@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { User, Users, Check, AlertCircle } from 'lucide-react';
+import { User, Users, Check, AlertCircle, Globe } from 'lucide-react';
 import { Input } from '@/core/components/ui/input';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '../../lib/contact-storage';
@@ -15,6 +15,7 @@ import {
   useContactBookStore,
   EMPTY_CONTACTS_MAP,
 } from '@/core/storage/useContactBookStore';
+import { isTonChainDns } from '@/core/lib/dns';
 
 export type SenderMode = 'self' | 'other';
 
@@ -54,8 +55,17 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   const suggestions = useMemo(() => {
     const contacts = Object.values(contactsMap);
     const q = granterInput.trim().replace(/^@+/, '').toLowerCase();
-    const list: { username: string; address: string }[] = [];
+    const list: { username: string; address: string; isDns?: boolean }[] = [];
     for (const c of contacts) {
+      if (c.dnsDomain) {
+        if (
+          !q ||
+          c.dnsDomain.toLowerCase().includes(q) ||
+          c.address.toLowerCase().includes(q)
+        ) {
+          list.push({ username: c.dnsDomain, address: c.address, isDns: true });
+        }
+      }
       const name = c.customName || c.onChainUsername;
       if (name) {
         if (
@@ -63,7 +73,9 @@ export const SenderField: React.FC<SenderFieldProps> = ({
           name.toLowerCase().includes(q) ||
           c.address.toLowerCase().includes(q)
         ) {
-          list.push({ username: name, address: c.address });
+          if (!list.some((l) => l.address === c.address)) {
+            list.push({ username: name, address: c.address });
+          }
         }
       }
     }
@@ -78,8 +90,9 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   const handleSelectSuggestion = (item: {
     username: string;
     address: string;
+    isDns?: boolean;
   }) => {
-    onGranterInputChange(`@${item.username}`);
+    onGranterInputChange(item.isDns ? item.username : `@${item.username}`);
     setShowSuggestions(false);
   };
 
@@ -140,7 +153,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                   // Small delay to allow click on suggestions
                   setTimeout(() => setShowSuggestions(false), 200);
                 }}
-                placeholder="Granter Owner Address or @username"
+                placeholder="Granter Owner Address, @username, or .ton domain"
                 data-testid="sender-granter-input"
               />
             </Input.Field>
@@ -150,14 +163,26 @@ export const SenderField: React.FC<SenderFieldProps> = ({
               <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl max-h-40 overflow-y-auto divide-y divide-border">
                 {suggestions.map((item) => (
                   <button
-                    key={item.address}
+                    key={`${item.username}-${item.address}`}
                     type="button"
                     onMouseDown={() => handleSelectSuggestion(item)}
                     className="w-full px-3 py-2 text-left hover:bg-secondary/70 flex items-center justify-between text-xs transition-colors"
                   >
-                    <span className="font-medium text-foreground">
-                      @{item.username}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {item.isDns ? (
+                        <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                      )}
+                      <span className="font-medium text-foreground">
+                        {item.isDns ? item.username : `@${item.username}`}
+                      </span>
+                      {item.isDns && (
+                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-normal">
+                          DNS
+                        </span>
+                      )}
+                    </div>
                     <span className="text-muted-foreground text-[11px] truncate max-w-45">
                       {item.address}
                     </span>
@@ -171,14 +196,22 @@ export const SenderField: React.FC<SenderFieldProps> = ({
           {resolvedGranterAddress && (
             <div className="flex flex-col gap-1.5 px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-xs">
               <div className="flex items-center justify-between text-primary">
-                <span className="font-medium flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-primary" />
-                  Granter:{' '}
-                  {resolvedGranterUsername
-                    ? `@${resolvedGranterUsername}`
-                    : 'Valid Owner'}
+                <span className="font-medium flex items-center gap-1.5 truncate">
+                  {isTonChainDns(granterInput.trim()) ? (
+                    <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                  <span className="truncate">
+                    Granter:{' '}
+                    {isTonChainDns(granterInput.trim())
+                      ? granterInput.trim()
+                      : resolvedGranterUsername
+                        ? `@${resolvedGranterUsername}`
+                        : 'Valid Owner'}
+                  </span>
                 </span>
-                <span className="text-[11px] font-mono text-primary/80 truncate max-w-37.5">
+                <span className="text-[11px] font-mono text-primary/80 truncate max-w-37.5 shrink-0 ml-2">
                   {formatWalletAddress(resolvedGranterAddress, false)}
                 </span>
               </div>

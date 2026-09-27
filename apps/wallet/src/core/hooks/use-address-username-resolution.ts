@@ -35,6 +35,8 @@ import {
   type TokenContractContext,
   type ChildContractCorrection,
 } from '@/features/send/lib/token-contract-resolution';
+import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 
 // In-memory negative cache for addresses without usernames to avoid redundant on-chain calls
 const negativeUsernameCache = new Set<string>();
@@ -76,12 +78,20 @@ export interface UseAddressUsernameResolutionResult {
   trimmed: string;
   isDirectAddress: boolean;
   isUsernameInput: boolean;
+  isDnsInput: boolean;
   resolvedAddress: string | null;
   resolvedUsername: string | null;
+  resolvedDnsAddress: string | null;
+  isDnsResolved: boolean;
   isCustomName: boolean;
   onChainUsername: string | null;
   isResolving: boolean;
-  suggestions: { username: string; address: string; isCustom?: boolean }[];
+  suggestions: {
+    username: string;
+    address: string;
+    isCustom?: boolean;
+    isDns?: boolean;
+  }[];
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   handleSelectSuggestion: (item: { username: string; address: string }) => void;
@@ -122,6 +132,27 @@ export function useAddressUsernameResolution({
     [enabled, trimmed],
   );
 
+  const isDnsInput = useMemo(() => {
+    if (!enabled || !trimmed || isDirectAddress) return false;
+    return isTonChainDns(trimmed);
+  }, [enabled, trimmed, isDirectAddress]);
+
+  const [asyncResolvedDns, setAsyncResolvedDns] = useState<{
+    domain: string;
+    address: string;
+  } | null>(null);
+
+  const localDnsAddress = useMemo(() => {
+    if (!enabled || !isDnsInput) return null;
+    return useContactBookStore.getState().resolveAddress(trimmed, net);
+  }, [enabled, isDnsInput, trimmed, net]);
+
+  const resolvedDnsAddress =
+    localDnsAddress ||
+    (asyncResolvedDns?.domain.toLowerCase() === trimmed.toLowerCase()
+      ? asyncResolvedDns.address
+      : null);
+
   const [, setCustomNameVersion] = useState(0);
   const [derivedTokenWalletAddress, setDerivedTokenWalletAddress] = useState<
     string | null
@@ -138,11 +169,11 @@ export function useAddressUsernameResolution({
   }, [childContractCorrection, onChange, onResolvedAddressChange]);
 
   const isUsernameInput = useMemo(() => {
-    if (!enabled || !trimmed || isDirectAddress) return false;
+    if (!enabled || !trimmed || isDirectAddress || isDnsInput) return false;
     return trimmed.startsWith('@') || /^[a-zA-Z0-9_\- ]{2,40}$/.test(trimmed);
-  }, [enabled, trimmed, isDirectAddress]);
+  }, [enabled, trimmed, isDirectAddress, isDnsInput]);
 
-  if (isUsernameInput && childContractCorrection !== null) {
+  if ((isUsernameInput || isDnsInput) && childContractCorrection !== null) {
     setChildContractCorrection(null);
   }
 
@@ -207,38 +238,95 @@ export function useAddressUsernameResolution({
   const effectiveOnChainUsername =
     effectiveInfo?.onChainName ?? onChainUsername;
 
-  // Suggestions from localStorage
+  // Suggestions from Contact Book and localStorage
   const suggestions = useMemo(() => {
-    if (!enabled || !isUsernameInput || typeof window === 'undefined') {
+    if (
+      !enabled ||
+      (!isUsernameInput && !isDnsInput) ||
+      typeof window === 'undefined'
+    ) {
       return [];
     }
     try {
-      const mapping = getAllUsernames(net);
       const query = trimmed.replace(/^@+/, '').toLowerCase();
-      return Object.entries(mapping)
-        .filter(([uname]) =>
-          query ? uname.toLowerCase().includes(query) : true,
-        )
-        .map(([uname, addr]) => ({
-          username: uname,
-          address: addr,
-          isCustom: hasCustomAddressName(addr, net),
-        }));
+      const results: {
+        username: string;
+        address: string;
+        isCustom?: boolean;
+        isDns?: boolean;
+      }[] = [];
+
+      // 1. From Contact Book (custom names, onChainUsernames, dnsDomains)
+      const contacts =
+        useContactBookStore.getState().contactsByNetwork[net] || {};
+      for (const c of Object.values(contacts)) {
+        if (
+          c.dnsDomain &&
+          (query ? c.dnsDomain.toLowerCase().includes(query) : true)
+        ) {
+          if (!results.some((r) => r.username === c.dnsDomain)) {
+            results.push({
+              username: c.dnsDomain,
+              address: c.address,
+              isDns: true,
+            });
+          }
+        }
+        if (
+          c.customName &&
+          (query ? c.customName.toLowerCase().includes(query) : true)
+        ) {
+          if (!results.some((r) => r.username === c.customName)) {
+            results.push({
+              username: c.customName,
+              address: c.address,
+              isCustom: true,
+            });
+          }
+        }
+      }
+
+      // 2. From brotherhood username mapping
+      const mapping = getAllUsernames(net);
+      for (const [uname, addr] of Object.entries(mapping)) {
+        if (query ? uname.toLowerCase().includes(query) : true) {
+          if (
+            !results.some((r) => r.address === addr || r.username === uname)
+          ) {
+            results.push({
+              username: uname,
+              address: addr,
+              isCustom: hasCustomAddressName(addr, net),
+            });
+          }
+        }
+      }
+
+      return results;
     } catch {
       return [];
     }
-  }, [enabled, isUsernameInput, trimmed, net]);
+  }, [enabled, isUsernameInput, isDnsInput, trimmed, net]);
 
   // Resolved address computation
   const resolvedAddress = useMemo(() => {
     if (!enabled) return null;
     if (isDirectAddress) return trimmed;
+    if (isDnsInput) return resolvedDnsAddress;
     if (isUsernameInput) {
       const clean = trimmed.replace(/^@+/, '');
       return getCachedAddressByUsername(clean, net);
     }
     return null;
-  }, [enabled, isDirectAddress, isUsernameInput, trimmed, net]);
+  }, [
+    enabled,
+    isDirectAddress,
+    isDnsInput,
+    resolvedDnsAddress,
+    isUsernameInput,
+    trimmed,
+    net,
+  ]);
 
   // Sync resolution
   useEffect(() => {
@@ -248,6 +336,52 @@ export function useAddressUsernameResolution({
     }
 
     let isCancelled = false;
+
+    if (isDnsInput) {
+      if (localDnsAddress) {
+        onResolvedAddressChange?.(localDnsAddress);
+        return;
+      }
+
+      if (asyncResolvedDns?.domain.toLowerCase() === trimmed.toLowerCase()) {
+        onResolvedAddressChange?.(asyncResolvedDns.address);
+        return;
+      }
+
+      // Pure on-chain TVM dnsresolve with debounce
+      const timer = setTimeout(async () => {
+        setIsResolving(true);
+        try {
+          const resolved = await resolveAddressByDomain(trimmed, net);
+          if (isCancelled) return;
+
+          if (resolved) {
+            setAsyncResolvedDns({ domain: trimmed, address: resolved });
+            // Auto-save into addressbook non-destructively!
+            useContactBookStore
+              .getState()
+              .saveDnsDomain(resolved, trimmed, net);
+            onResolvedAddressChange?.(resolved);
+          } else {
+            onResolvedAddressChange?.(null);
+          }
+        } catch {
+          if (!isCancelled) {
+            onResolvedAddressChange?.(null);
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsResolving(false);
+          }
+        }
+      }, 350);
+
+      return () => {
+        isCancelled = true;
+        clearTimeout(timer);
+        setIsResolving(false);
+      };
+    }
 
     if (isDirectAddress) {
       // 1. Detect if this is a child contract (FiWallet / PersonalWallet)
@@ -345,6 +479,9 @@ export function useAddressUsernameResolution({
     enabled,
     trimmed,
     isDirectAddress,
+    isDnsInput,
+    localDnsAddress,
+    asyncResolvedDns,
     isUsernameInput,
     effectiveInfo,
     isCustomName,
@@ -483,8 +620,13 @@ export function useAddressUsernameResolution({
     trimmed,
     isDirectAddress,
     isUsernameInput,
+    isDnsInput,
     resolvedAddress,
     resolvedUsername,
+    resolvedDnsAddress,
+    isDnsResolved: Boolean(
+      isDnsInput && (resolvedDnsAddress || resolvedAddress),
+    ),
     isCustomName,
     onChainUsername: effectiveOnChainUsername,
     isResolving,
