@@ -35,7 +35,12 @@ import {
   type TokenContractContext,
   type ChildContractCorrection,
 } from '@/features/send/lib/token-contract-resolution';
-import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
+import {
+  isTonChainDns,
+  resolveAddressByDomain,
+  getBroDomainAuctionInfo,
+  type BroDomainAuctionInfo,
+} from '@/core/lib/dns';
 import { useContactBookStore } from '@/core/storage/useContactBookStore';
 
 // In-memory negative cache for addresses without usernames to avoid redundant on-chain calls
@@ -83,6 +88,7 @@ export interface UseAddressUsernameResolutionResult {
   resolvedUsername: string | null;
   resolvedDnsAddress: string | null;
   isDnsResolved: boolean;
+  dnsAuctionInfo: BroDomainAuctionInfo | null;
   isCustomName: boolean;
   onChainUsername: string | null;
   isResolving: boolean;
@@ -134,8 +140,11 @@ export function useAddressUsernameResolution({
 
   const isDnsInput = useMemo(() => {
     if (!enabled || !trimmed || isDirectAddress) return false;
-    return isTonChainDns(trimmed);
-  }, [enabled, trimmed, isDirectAddress]);
+    return isTonChainDns(trimmed, net);
+  }, [enabled, trimmed, isDirectAddress, net]);
+
+  const [dnsAuctionInfo, setDnsAuctionInfo] =
+    useState<BroDomainAuctionInfo | null>(null);
 
   const [asyncResolvedDns, setAsyncResolvedDns] = useState<{
     domain: string;
@@ -357,16 +366,30 @@ export function useAddressUsernameResolution({
 
           if (resolved) {
             setAsyncResolvedDns({ domain: trimmed, address: resolved });
+            setDnsAuctionInfo(null);
             // Auto-save into addressbook non-destructively!
             useContactBookStore
               .getState()
               .saveDnsDomain(resolved, trimmed, net);
             onResolvedAddressChange?.(resolved);
           } else {
+            // Check if domain is in an active or ended auction
+            if (
+              trimmed.toLowerCase().endsWith('.bro') ||
+              !trimmed.includes('.')
+            ) {
+              const auction = await getBroDomainAuctionInfo(trimmed, net);
+              if (!isCancelled) {
+                setDnsAuctionInfo(auction);
+              }
+            } else {
+              setDnsAuctionInfo(null);
+            }
             onResolvedAddressChange?.(null);
           }
         } catch {
           if (!isCancelled) {
+            setDnsAuctionInfo(null);
             onResolvedAddressChange?.(null);
           }
         } finally {
@@ -627,6 +650,7 @@ export function useAddressUsernameResolution({
     isDnsResolved: Boolean(
       isDnsInput && (resolvedDnsAddress || resolvedAddress),
     ),
+    dnsAuctionInfo,
     isCustomName,
     onChainUsername: effectiveOnChainUsername,
     isResolving,

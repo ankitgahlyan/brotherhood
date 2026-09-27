@@ -8,10 +8,12 @@ export function notifyTransactionSent(
   normalizedHash: string,
   network: NetworkType,
   explorer: ExplorerChoice = 'tonviewer',
+  senderAddress?: string,
 ) {
   const { tonScan, tonViewer, actonScan } = getTransactionExplorerUrls(
     normalizedHash,
     network,
+    senderAddress,
   );
   const primaryUrl =
     explorer === 'tonviewer'

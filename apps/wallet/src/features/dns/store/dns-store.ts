@@ -24,6 +24,16 @@ export interface OwnedDomain {
   walletRecord?: string;
   /** True if on-chain code hash does not match current DnsItem code */
   isOutdated?: boolean;
+  /** Unix timestamp (seconds) when auction ends, if in auction */
+  auctionEndTime?: number;
+  /** Address of the current highest bidder, if in auction */
+  maxBidAddress?: string | null;
+  /** True if the domain is currently in active 7-day auction */
+  isAuctionActive?: boolean;
+  /** True if the 7-day auction duration has passed but FinalizeAuction hasn't been called yet */
+  isAuctionEnded?: boolean;
+  /** True if domain has an assigned owner on-chain */
+  hasOwner?: boolean;
 }
 
 interface DnsState {

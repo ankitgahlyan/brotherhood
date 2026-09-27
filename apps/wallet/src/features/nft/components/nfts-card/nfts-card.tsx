@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Globe, Plus } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useNfts, useWallet } from '@demo/wallet-core';
@@ -17,6 +17,7 @@ import {
 import type { Network } from '@/lib/brotherhood/config';
 
 import { NftTile } from '../nft-tile';
+import { NftTransferModal } from '../nft-transfer-modal';
 
 interface NftsCardProps {
   /** If true, hides the internal header (useful when rendered inside a parent tab like DashboardAssets) */
@@ -37,6 +38,8 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
     'testnet') as Network;
+
+  const [selectedNft, setSelectedNft] = useState<NFT | null>(null);
 
   const ownedBroDomains = useDnsStore((s) => selectOwnedDomains(s, network));
 
@@ -82,7 +85,10 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
     return (
       <section>
         {!hideHeader && header}
-        <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+        <div
+          className="no-swipe flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+          data-swipe-ignore="true"
+        >
           <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
           <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
         </div>
@@ -124,13 +130,27 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
   return (
     <section>
       {!hideHeader && header}
-      <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+      <div
+        className="no-swipe flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+        data-swipe-ignore="true"
+      >
         {allNfts.map((nft) => (
           <div key={nft.address} className="w-36 flex-shrink-0">
-            <NftTile nft={nft} formatNftIndex={formatNftIndex} />
+            <NftTile
+              nft={nft}
+              formatNftIndex={formatNftIndex}
+              onClick={() => setSelectedNft(nft)}
+            />
           </div>
         ))}
       </div>
+
+      <NftTransferModal
+        nft={selectedNft}
+        isOpen={Boolean(selectedNft)}
+        onClose={() => setSelectedNft(null)}
+        formatNftIndex={formatNftIndex}
+      />
     </section>
   );
 };

@@ -55,7 +55,12 @@ export function useBrotherhoodTransaction(
         String(wallet?.getNetwork()?.chainId) === '-239'
           ? 'mainnet'
           : 'testnet';
-      notifyTransactionSent(normalizedHash, net, explorer);
+      notifyTransactionSent(
+        normalizedHash,
+        net,
+        explorer,
+        wallet?.getAddress(),
+      );
     },
     [wallet, explorer],
   );

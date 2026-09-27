@@ -9,3 +9,4 @@
 export * from './components/nfts-card';
 export * from './components/nft-tile';
 export * from './components/nft-screen';
+export * from './components/nft-transfer-modal';

@@ -6,8 +6,13 @@
  */
 
 import { Address, beginCell, Builder, Cell } from '@ton/core';
-import { DnsItem } from '@wrappers/DnsItem.gen';
-import { DnsCategory, dnsCategoryToBigInt } from '@/core/lib/dns';
+import {
+  DnsCategory,
+  dnsCategoryToBigInt,
+  encodeDomainCell,
+  domainItemIndex,
+  deriveDnsItemAddress,
+} from '@/core/lib/dns';
 
 // ─── Pricing & Timing (re-exported from centralized config.ts) ───────────────
 
@@ -35,46 +40,9 @@ export {
   RESERVATION_PERIOD_SEC,
 } from '@/lib/brotherhood/config';
 
-// ─── Domain encoding ─────────────────────────────────────────────────────────
+// ─── Domain encoding & derivation (re-exported from centralized @/core/lib/dns) ─
 
-/**
- * Encodes a bare domain name (e.g. "alice") into the cell bytes that the
- * DnsCollection contract reads via readDomainFromComment().
- *
- * The contract reads the body slice bits directly (not a text comment prefix),
- * so we just store ASCII bytes into a builder cell.
- */
-function encodeDomainCell(name: string): Cell {
-  const lower = name.toLowerCase();
-  const b = beginCell();
-  for (let i = 0; i < lower.length; i++) {
-    b.storeUint(lower.charCodeAt(i), 8);
-  }
-  return b.endCell();
-}
-
-/**
- * Computes the domain item index (sha256 of the domain cell), mirroring
- * `domain.hash()` in Tolk (cell hash = sha256 of the BOC representation).
- */
-export function domainItemIndex(name: string): bigint {
-  const cell = encodeDomainCell(name);
-  return BigInt('0x' + cell.hash().toString('hex'));
-}
-
-/**
- * Derives the DnsItem NFT address off-chain, given the .bro collection address
- * and the bare domain name (no TLD).
- */
-export function deriveDnsItemAddress(
-  collectionAddress: Address,
-  domainName: string,
-  testOnly = false,
-): string {
-  const index = domainItemIndex(domainName);
-  const item = DnsItem.fromStorage({ index, collectionAddress });
-  return item.address.toString({ bounceable: true, testOnly });
-}
+export { encodeDomainCell, domainItemIndex, deriveDnsItemAddress };
 
 // ─── Message body builders ────────────────────────────────────────────────────
 

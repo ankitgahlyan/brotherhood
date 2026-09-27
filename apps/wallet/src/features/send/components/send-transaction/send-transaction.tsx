@@ -282,7 +282,7 @@ export const SendTransaction: React.FC = () => {
   // immediately (gasless send, fast send).
   const { explorer } = useExplorer();
   const notifySent = (normalizedHash: string) => {
-    notifyTransactionSent(normalizedHash, network, explorer);
+    notifyTransactionSent(normalizedHash, network, explorer, address);
   };
 
   const handleSelectToken = (option: TokenOption) => {

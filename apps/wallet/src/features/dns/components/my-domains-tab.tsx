@@ -17,6 +17,7 @@ import {
   useMyDomains,
   isDomainExpired,
   domainExpirySeconds,
+  domainAuctionSecondsLeft,
 } from '../hooks/use-my-domains';
 import { useDnsTransaction, DNS_GAS } from '../hooks/use-dns-transaction';
 import {
@@ -24,6 +25,7 @@ import {
   buildChangeDnsRecordBody,
   buildWalletDnsRecordCell,
   buildDnsRenewRequestBody,
+  buildFinalizeAuctionBody,
   walletDnsKey,
   broRenewalFee,
   broFiRenewalFee,
@@ -140,6 +142,25 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
     [recordValue, send],
   );
 
+  const handleFinalizeAuction = useCallback(
+    async (nftAddress: string) => {
+      setSendingFor(nftAddress);
+      try {
+        const payload = buildFinalizeAuctionBody(BigInt(Date.now()));
+        await send([
+          {
+            toAddress: nftAddress,
+            amount: toNano('0.5'),
+            payload,
+          },
+        ]);
+      } finally {
+        setSendingFor(null);
+      }
+    },
+    [send],
+  );
+
   const handleClearRecord = useCallback(
     async (nftAddress: string) => {
       setSendingFor(nftAddress);
@@ -194,6 +215,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       {domains.map((domain) => {
         const expired = isDomainExpired(domain);
         const secondsLeft = domainExpirySeconds(domain);
+        const auctionSecondsLeft = domainAuctionSecondsLeft(domain);
         const isThisSending = sendingFor === domain.nftAddress || isSending;
         const charCount = domain.name.length;
         const renewalFee = broRenewalFee(charCount);
@@ -218,16 +240,24 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
               </div>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                  expired
-                    ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                    : secondsLeft < 30 * 86400
-                      ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  domain.isAuctionActive
+                    ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                    : domain.isAuctionEnded && !domain.hasOwner
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                      : expired
+                        ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                        : secondsLeft < 30 * 86400
+                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                 }`}
               >
-                {expired
-                  ? 'Expired'
-                  : `Expires in ${formatDuration(secondsLeft)}`}
+                {domain.isAuctionActive
+                  ? `Auction Active (${formatDuration(auctionSecondsLeft)})`
+                  : domain.isAuctionEnded && !domain.hasOwner
+                    ? 'Auction Ended'
+                    : expired
+                      ? 'Expired'
+                      : `Expires in ${formatDuration(secondsLeft)}`}
               </span>
             </div>
 
@@ -256,43 +286,89 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
               </div>
             )}
 
-            {/* Renewal */}
+            {/* Actions */}
             {!domain.isOutdated && (
-              <div className="flex gap-2">
-                <TxButton
-                  size="sm"
-                  variant="secondary"
-                  className="flex-1"
-                  disabled={isThisSending}
-                  loading={isThisSending && sendingFor === domain.nftAddress}
-                  onAction={() =>
-                    domain.zone === 'bro'
-                      ? handleRenewFi(domain.nftAddress, charCount)
-                      : handleRenew(domain.nftAddress, charCount)
-                  }
-                  actionLabel={
-                    domain.zone === 'bro'
-                      ? `Renew (${formatFi(broFiRenewalFee(charCount))}/yr)`
-                      : `Renew (${formatNano(renewalFee)}/yr)`
-                  }
-                  completeLabel="Renewed!"
-                >
-                  Renew
-                </TxButton>
-                <TxButton
-                  size="sm"
-                  variant="secondary"
-                  className="flex-1"
-                  disabled={isThisSending}
-                  onAction={() => {
-                    setEditingRecord(isEditing ? null : domain.nftAddress);
-                    setRecordValue(domain.walletRecord ?? '');
-                  }}
-                  actionLabel="Set DNS Record"
-                >
-                  {isEditing ? 'Cancel' : 'Set DNS Record'}
-                </TxButton>
-              </div>
+              <>
+                {domain.isAuctionActive && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="font-medium">Active 7-Day Auction</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      This domain is in its initial auction period. Once the
+                      auction ends and is finalized, domain ownership is granted
+                      and you can link wallet records.
+                    </p>
+                  </div>
+                )}
+
+                {domain.isAuctionEnded && !domain.hasOwner && (
+                  <div className="space-y-2">
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-600 dark:text-purple-400">
+                      <p className="font-medium">Auction Completed!</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        The 7-day bidding window has closed. Finalize the
+                        auction to assign domain ownership to the winner and
+                        burn the winning FI bid.
+                      </p>
+                    </div>
+                    <TxButton
+                      size="sm"
+                      className="w-full"
+                      disabled={isThisSending}
+                      loading={
+                        isThisSending && sendingFor === domain.nftAddress
+                      }
+                      onAction={() => handleFinalizeAuction(domain.nftAddress)}
+                      actionLabel="Finalize Domain (0.5 TON)"
+                      completeLabel="Finalized!"
+                    >
+                      Finalize Domain
+                    </TxButton>
+                  </div>
+                )}
+
+                {!domain.isAuctionActive &&
+                  (domain.hasOwner || !domain.isAuctionEnded) && (
+                    <div className="flex gap-2">
+                      <TxButton
+                        size="sm"
+                        variant="secondary"
+                        className="flex-1"
+                        disabled={isThisSending}
+                        loading={
+                          isThisSending && sendingFor === domain.nftAddress
+                        }
+                        onAction={() =>
+                          domain.zone === 'bro'
+                            ? handleRenewFi(domain.nftAddress, charCount)
+                            : handleRenew(domain.nftAddress, charCount)
+                        }
+                        actionLabel={
+                          domain.zone === 'bro'
+                            ? `Renew (${formatFi(broFiRenewalFee(charCount))}/yr)`
+                            : `Renew (${formatNano(renewalFee)}/yr)`
+                        }
+                        completeLabel="Renewed!"
+                      >
+                        Renew
+                      </TxButton>
+                      <TxButton
+                        size="sm"
+                        variant="secondary"
+                        className="flex-1"
+                        disabled={isThisSending}
+                        onAction={() => {
+                          setEditingRecord(
+                            isEditing ? null : domain.nftAddress,
+                          );
+                          setRecordValue(domain.walletRecord ?? '');
+                        }}
+                        actionLabel="Set DNS Record"
+                      >
+                        {isEditing ? 'Cancel' : 'Set DNS Record'}
+                      </TxButton>
+                    </div>
+                  )}
+              </>
             )}
 
             {/* DNS record form */}

@@ -181,7 +181,9 @@ fun onInternalMessage(in: InMessage) {
 
     match (msg) {
         TransferOwnership => {
-            assert (in.senderAddress == storage.ownerAddress!) throw Errors.DnsNotOwner;
+            assert (
+                storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
+            ) throw Errors.DnsNotOwner;
 
             applyOwnershipTransfer(
                 myBalance,
@@ -193,7 +195,9 @@ fun onInternalMessage(in: InMessage) {
         }
 
         EditContent => {
-            assert (in.senderAddress == storage.ownerAddress!) throw Errors.OnlyOwnerCanEditContent;
+            assert (
+                storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
+            ) throw Errors.OnlyOwnerCanEditContent;
 
             storage.content = msg.newContent;
             storage.lastFillUpTime = blockchain.now();
@@ -201,7 +205,9 @@ fun onInternalMessage(in: InMessage) {
         }
 
         ChangeDnsRecord => {
-            assert (in.senderAddress == storage.ownerAddress!) throw Errors.OnlyOwnerCanChangeDns;
+            assert (
+                storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
+            ) throw Errors.OnlyOwnerCanChangeDns;
 
             var dnsRecords = storage.content.load();
 
@@ -308,7 +314,7 @@ fun onInternalMessage(in: InMessage) {
 
         FillUp => {
             assert (
-                in.senderAddress == storage.ownerAddress!
+                storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
             ) throw Errors.OnlyOwnerCanFillUpAfterAuction;
 
             val domainLen = storage.domain.beginParse().remainingBitsCount();
@@ -369,7 +375,7 @@ fun onInternalMessage(in: InMessage) {
                 assert (in.senderAddress == fiMinterAddr) throw Errors.DnsIncorrectSender;
             } else {
                 assert (
-                    in.senderAddress == storage.ownerAddress!
+                    storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
                 ) throw Errors.OnlyOwnerCanFillUpAfterAuction;
             }
             val domainLen = storage.domain.beginParse().remainingBitsCount();

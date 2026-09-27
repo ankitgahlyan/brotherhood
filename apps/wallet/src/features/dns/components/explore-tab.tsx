@@ -22,10 +22,6 @@ import {
   buildDnsBidRequestBody,
   buildFinalizeAuctionBody,
   broTierPrice,
-  broFiStartingBid,
-  broFiRenewalFee,
-  broFiTierLabel,
-  BRO_FIXED_TON_FEE,
   BRO_COLLECTION_RESOLVER,
   deriveDnsItemAddress,
 } from '../lib/dns-bodies';

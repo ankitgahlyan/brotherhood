@@ -45,6 +45,7 @@ export const SettingsWalletsModal: React.FC<SettingsWalletsModalProps> = ({
     try {
       await switchWallet(walletId);
       toast.success('Switched wallet successfully');
+      onClose();
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : 'Failed to switch wallet';
@@ -63,6 +64,8 @@ export const SettingsWalletsModal: React.FC<SettingsWalletsModalProps> = ({
   const handleSelect = async (walletId: string) => {
     if (walletId !== activeWalletId) {
       await performSwitch(walletId);
+    } else {
+      onClose();
     }
   };
 

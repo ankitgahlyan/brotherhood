@@ -41,6 +41,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   // Register with Unified Back Stack (Tier 1 modal dismiss)
   useHistoryBack({
     isActive: isOpened,
+    syncHistory: true,
     onBack: () => {
       if (dismissible) {
         onOpenChange(false);
@@ -66,7 +67,10 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
         dismissible={dismissible}
       >
         <DrawerContent
-          className={cn('max-w-md mx-auto', className)}
+          className={cn(
+            'max-w-md mx-auto max-h-[88dvh] overflow-hidden flex flex-col',
+            className,
+          )}
           aria-describedby={undefined}
           {...props}
         >
@@ -79,7 +83,10 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   return (
     <Dialog open={isOpened} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn('max-w-md rounded-2xl p-0 gap-0', className)}
+        className={cn(
+          'max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-2xl p-0 gap-0',
+          className,
+        )}
         aria-describedby={undefined}
         onInteractOutside={dismissible ? undefined : (e) => e.preventDefault()}
         onEscapeKeyDown={dismissible ? undefined : (e) => e.preventDefault()}
@@ -156,7 +163,13 @@ export const ModalBody: React.FC<ComponentProps<'div'>> = ({
   className,
   ...props
 }) => (
-  <div className={cn('flex flex-col px-4 pb-6', className)} {...props}>
+  <div
+    className={cn(
+      'flex flex-col px-4 pb-6 overflow-y-auto min-h-0 flex-1',
+      className,
+    )}
+    {...props}
+  >
     {children}
   </div>
 );

@@ -55,6 +55,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
     isUsernameInput,
     isDnsInput,
     resolvedAddress,
+    dnsAuctionInfo,
     resolvedUsername,
     isResolving,
     suggestions,
@@ -259,16 +260,42 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
         </div>
       )}
 
+      {/* Unresolved DNS domain in auction warning */}
+      {isDnsInput &&
+        !resolvedAddress &&
+        !isResolving &&
+        dnsAuctionInfo?.inAuction && (
+          <div className="flex flex-col gap-1 mt-1 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-500">
+            <div className="flex items-center gap-1.5 font-medium">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                {value.trim()} is currently in{' '}
+                {dnsAuctionInfo.isEnded
+                  ? 'an ended auction awaiting finalization'
+                  : 'an active 7-day auction'}
+                .
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              Transfers to this domain will become available after the auction
+              is finalized and a wallet address is linked.
+            </span>
+          </div>
+        )}
+
       {/* Unresolved DNS domain warning */}
-      {isDnsInput && !resolvedAddress && !isResolving && (
-        <div className="flex items-center gap-1 mt-1 text-xs text-amber-500">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            Domain could not be resolved on-chain. Check spelling or enter TON
-            address directly.
-          </span>
-        </div>
-      )}
+      {isDnsInput &&
+        !resolvedAddress &&
+        !isResolving &&
+        !dnsAuctionInfo?.inAuction && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-amber-500">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              Domain could not be resolved on-chain. Check spelling or enter TON
+              address directly.
+            </span>
+          </div>
+        )}
 
       {error && <Input.Caption>{error}</Input.Caption>}
 

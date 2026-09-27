@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Address, Builder, Cell, Slice } from '@ton/core';
+import { Address, beginCell, Builder, Cell, Slice } from '@ton/core';
 import { sha256_sync } from '@ton/crypto';
 import type { TonClient } from '@ton/ton';
+import { DnsItem } from '@wrappers/DnsItem.gen';
 import { BRO_COLLECTION_RESOLVER } from '@/lib/brotherhood/config';
 import { getTonClient, type Network } from '@/lib/brotherhood/ton';
 
@@ -28,56 +29,91 @@ export interface DnsZone {
   isTelemint: boolean;
 }
 
+export const TON_TESTNET_ROOT_DNS =
+  'Ef_v5x0Thgr6pq6ur2NvkWhIf4DxAxsL-Nk5rknT6n99oPKX';
+export const TON_MAINNET_ROOT_DNS =
+  'EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz';
+
 /**
- * Standard TON DNS zones matching wallet-v2 reference.
+ * Returns supported DNS zones based on network. On testnet, only .bro and .ton are active.
  */
-export const TON_DNS_ZONES: DnsZone[] = [
-  {
-    suffixes: ['bro'],
-    baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,126}$/i,
-    resolver: BRO_COLLECTION_RESOLVER,
-    collectionName: 'Brotherhood Domains (.bro)',
-    isRenewable: true,
-    isLinkable: true,
-    isTelemint: false,
-  },
-  {
-    suffixes: ['ton'],
-    baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{4,126}$/i,
-    resolver: 'EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz',
-    collectionName: 'TON DNS Domains',
-    isRenewable: true,
-    isLinkable: true,
-    isTelemint: false,
-  },
-  {
-    suffixes: ['t.me'],
-    baseFormat: /^([-\da-z]+\.){0,2}[-_\da-z]{4,32}$/i,
-    resolver: 'EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi',
-    collectionName: 'Telegram Usernames',
-    isRenewable: false,
-    isLinkable: true,
-    isTelemint: true,
-  },
-  {
-    suffixes: ['vip', 'ton.vip', 'vip.ton'],
-    baseFormat: /^([-\da-z]+\.){0,2}[\da-z]{1,24}$/i,
-    resolver: 'EQBWG4EBbPDv4Xj7xlPwzxd7hSyHMzwwLB5O6rY-0BBeaixS',
-    collectionName: 'VIP DNS Domains',
-    isRenewable: false,
-    isLinkable: true,
-    isTelemint: false,
-  },
-  {
-    suffixes: ['grm'],
-    baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,127}$/i,
-    resolver: 'EQAic3zPce496ukFDhbco28FVsKKl2WUX_iJwaL87CBxSiLQ',
-    collectionName: 'GRAM DNS Domains',
-    isRenewable: false,
-    isLinkable: true,
-    isTelemint: false,
-  },
-];
+export function getTonDnsZones(network: Network = 'mainnet'): DnsZone[] {
+  if (network === 'testnet') {
+    return [
+      {
+        suffixes: ['bro'],
+        baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,126}$/i,
+        resolver: BRO_COLLECTION_RESOLVER,
+        collectionName: 'Brotherhood Domains (.bro)',
+        isRenewable: true,
+        isLinkable: true,
+        isTelemint: false,
+      },
+      {
+        suffixes: ['ton'],
+        baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{4,126}$/i,
+        resolver: TON_TESTNET_ROOT_DNS,
+        collectionName: 'TON DNS Domains',
+        isRenewable: true,
+        isLinkable: true,
+        isTelemint: false,
+      },
+    ];
+  }
+
+  return [
+    {
+      suffixes: ['bro'],
+      baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,126}$/i,
+      resolver: BRO_COLLECTION_RESOLVER,
+      collectionName: 'Brotherhood Domains (.bro)',
+      isRenewable: true,
+      isLinkable: true,
+      isTelemint: false,
+    },
+    {
+      suffixes: ['ton'],
+      baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{4,126}$/i,
+      resolver: TON_MAINNET_ROOT_DNS,
+      collectionName: 'TON DNS Domains',
+      isRenewable: true,
+      isLinkable: true,
+      isTelemint: false,
+    },
+    {
+      suffixes: ['t.me'],
+      baseFormat: /^([-\da-z]+\.){0,2}[-_\da-z]{4,32}$/i,
+      resolver: 'EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi',
+      collectionName: 'Telegram Usernames',
+      isRenewable: false,
+      isLinkable: true,
+      isTelemint: true,
+    },
+    {
+      suffixes: ['vip', 'ton.vip', 'vip.ton'],
+      baseFormat: /^([-\da-z]+\.){0,2}[\da-z]{1,24}$/i,
+      resolver: 'EQBWG4EBbPDv4Xj7xlPwzxd7hSyHMzwwLB5O6rY-0BBeaixS',
+      collectionName: 'VIP DNS Domains',
+      isRenewable: false,
+      isLinkable: true,
+      isTelemint: false,
+    },
+    {
+      suffixes: ['grm'],
+      baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,127}$/i,
+      resolver: 'EQAic3zPce496ukFDhbco28FVsKKl2WUX_iJwaL87CBxSiLQ',
+      collectionName: 'GRAM DNS Domains',
+      isRenewable: false,
+      isLinkable: true,
+      isTelemint: false,
+    },
+  ];
+}
+
+/**
+ * Standard TON DNS zones (mainnet baseline).
+ */
+export const TON_DNS_ZONES: DnsZone[] = getTonDnsZones('mainnet');
 
 export function sha256BigInt(s: string): bigint {
   return BigInt(`0x${sha256_sync(s).toString('hex')}`);
@@ -129,14 +165,115 @@ export function encodeDomain(domain: string): string {
   return `${arr.reverse().join('\0')}\0`;
 }
 
+export function encodeDomainCell(domain: string): Cell {
+  const lower = domain.toLowerCase();
+  const b = beginCell();
+  for (let i = 0; i < lower.length; i++) {
+    b.storeUint(lower.charCodeAt(i), 8);
+  }
+  return b.endCell();
+}
+
+export function domainItemIndex(name: string): bigint {
+  const cell = encodeDomainCell(name);
+  return BigInt('0x' + cell.hash().toString('hex'));
+}
+
+/**
+ * Derives the DnsItem NFT address off-chain, given the .bro collection address
+ * and the bare domain name (no TLD).
+ */
+export function deriveDnsItemAddress(
+  collectionAddress: Address,
+  domainName: string,
+  testOnly = false,
+): string {
+  const index = domainItemIndex(domainName);
+  const item = DnsItem.fromStorage({ index, collectionAddress });
+  return item.address.toString({ bounceable: true, testOnly });
+}
+
+export interface BroDomainAuctionInfo {
+  inAuction: boolean;
+  isEnded: boolean;
+  itemAddress: string;
+  maxBidAddress: string | null;
+  maxBidAmount: bigint;
+  auctionEndTime: number;
+}
+
+/**
+ * Checks on-chain whether a .bro domain is currently undergoing or has finished an auction.
+ */
+export async function getBroDomainAuctionInfo(
+  domain: string,
+  network: Network = 'mainnet',
+  customClient?: TonClient,
+): Promise<BroDomainAuctionInfo | null> {
+  const trimmed = domain.trim().toLowerCase();
+  const base = trimmed.endsWith('.bro') ? trimmed.slice(0, -4) : trimmed;
+  if (!base || base.includes('.')) return null;
+
+  try {
+    const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
+    const itemAddressStr = deriveDnsItemAddress(
+      collectionAddr,
+      base,
+      network === 'testnet',
+    );
+    const itemAddr = Address.parse(itemAddressStr);
+    const client = customClient ?? getTonClient(network);
+
+    const auctionRes = await client.callGetMethod(
+      itemAddr,
+      'get_auction_info',
+      [],
+    );
+
+    let maxBidAddr: Address | null = null;
+    try {
+      const bidAddrSlice = auctionRes.stack.readCell().beginParse();
+      maxBidAddr =
+        bidAddrSlice.remainingBits > 2 ? bidAddrSlice.loadAddress() : null;
+    } catch {
+      maxBidAddr = null;
+    }
+
+    const maxBidAmount = auctionRes.stack.readBigNumber();
+    const auctionEndTime = auctionRes.stack.readNumber();
+
+    if (auctionEndTime === 0 && maxBidAmount === 0n) {
+      return null;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    return {
+      inAuction: true,
+      isEnded: nowSec >= auctionEndTime,
+      itemAddress: itemAddressStr,
+      maxBidAddress: maxBidAddr
+        ? maxBidAddr.toString({
+            bounceable: false,
+            testOnly: network === 'testnet',
+          })
+        : null,
+      maxBidAmount,
+      auctionEndTime,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Detects if a string is a domain belonging to one of the supported TON DNS zones.
  */
 export function getDnsDomainZone(
   domain: string,
+  network: Network = 'mainnet',
 ): { base: string; zone: DnsZone } | undefined {
   const normalized = domain.trim().toLowerCase();
-  for (const zone of TON_DNS_ZONES) {
+  for (const zone of getTonDnsZones(network)) {
     const { suffixes, baseFormat } = zone;
 
     // Iterate suffixes in reverse order to prioritize longer suffixes if any
@@ -158,9 +295,12 @@ export function getDnsDomainZone(
   return undefined;
 }
 
-export function isTonChainDns(value: string): boolean {
+export function isTonChainDns(
+  value: string,
+  network: Network = 'mainnet',
+): boolean {
   if (!value || typeof value !== 'string') return false;
-  return getDnsDomainZone(value) !== undefined;
+  return getDnsDomainZone(value, network) !== undefined;
 }
 
 function parseAddress(slice: Slice): Address | undefined {
@@ -327,7 +467,7 @@ export async function resolveAddressByDomain(
     );
   }
 
-  const zoneMatch = getDnsDomainZone(domain);
+  const zoneMatch = getDnsDomainZone(domain, network);
   if (!zoneMatch) {
     return undefined;
   }

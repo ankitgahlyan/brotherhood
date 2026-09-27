@@ -113,11 +113,64 @@ export function useMyDomains(
               /* pass */
             }
 
+            // Check auction info if owner is not yet assigned
+            let auctionEndTime: number | undefined;
+            let maxBidAddress: string | null | undefined;
+            let isAuctionActive: boolean | undefined;
+            let isAuctionEnded: boolean | undefined;
+            const hasOwner = ownerAddr !== null;
+
+            if (!ownerAddr) {
+              try {
+                const auctionRes = await client.callGetMethod(
+                  itemAddr,
+                  'get_auction_info',
+                  [],
+                );
+                let maxBidAddr: Address | null = null;
+                try {
+                  const bidSlice = auctionRes.stack.readCell().beginParse();
+                  maxBidAddr =
+                    bidSlice.remainingBits > 2 ? bidSlice.loadAddress() : null;
+                } catch {
+                  maxBidAddr = null;
+                }
+                const maxBidAmount = auctionRes.stack.readBigNumber();
+                const endTime = auctionRes.stack.readNumber();
+
+                if (endTime > 0 || maxBidAmount > 0n) {
+                  auctionEndTime = endTime;
+                  maxBidAddress = maxBidAddr
+                    ? maxBidAddr.toString({
+                        bounceable: false,
+                        testOnly: network === 'testnet',
+                      })
+                    : null;
+                  const nowSec = Math.floor(Date.now() / 1000);
+                  isAuctionActive = nowSec < endTime;
+                  isAuctionEnded = nowSec >= endTime;
+                }
+              } catch {
+                /* no auction info */
+              }
+            } else {
+              isAuctionActive = false;
+              isAuctionEnded = false;
+            }
+
             if (cancelled) return;
 
             updateDomain(
               d.nftAddress,
-              { lastFillUpTime, isOutdated: false },
+              {
+                lastFillUpTime,
+                isOutdated: false,
+                auctionEndTime,
+                maxBidAddress,
+                isAuctionActive,
+                isAuctionEnded,
+                hasOwner,
+              },
               network,
             );
           } catch {
@@ -154,4 +207,12 @@ export function domainExpirySeconds(domain: OwnedDomain): number {
   if (!domain.lastFillUpTime) return ONE_YEAR_SEC;
   const expiresAt = domain.lastFillUpTime + ONE_YEAR_SEC;
   return Math.max(0, expiresAt - Math.floor(Date.now() / 1000));
+}
+
+/**
+ * Returns seconds left in an active auction, or 0 if expired/not in auction.
+ */
+export function domainAuctionSecondsLeft(domain: OwnedDomain): number {
+  if (!domain.auctionEndTime) return 0;
+  return Math.max(0, domain.auctionEndTime - Math.floor(Date.now() / 1000));
 }

@@ -39,14 +39,20 @@ export const TransactionRequestModal: React.FC<
       const result = await approveTransactionRequest();
       if (result?.signedBoc) {
         const { hash } = getNormalizedExtMessageHash(result.signedBoc);
-        notifyTransactionSent(hash, network, explorer);
+        notifyTransactionSent(hash, network, explorer, request.walletAddress);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       toast.error('Transaction failed', { description: msg });
       rejectTransactionRequest(msg);
     }
-  }, [approveTransactionRequest, network, explorer, rejectTransactionRequest]);
+  }, [
+    approveTransactionRequest,
+    network,
+    explorer,
+    rejectTransactionRequest,
+    request.walletAddress,
+  ]);
 
   const handleReject = () => {
     rejectTransactionRequest('User rejected the transaction');

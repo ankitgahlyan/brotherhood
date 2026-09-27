@@ -17,14 +17,19 @@ const getPrefix = (network: NetworkType): string => {
 export function getTransactionExplorerUrls(
   hash: string,
   network: NetworkType,
+  senderAddress?: string,
 ): { tonScan: string; tonViewer: string; actonScan: string } {
   const prefix = getPrefix(network);
   const hashClean = hash.startsWith('0x') ? hash.slice(2) : hash;
   const actonQuery = network === 'testnet' ? '?network=testnet' : '';
+  const actonScan = senderAddress
+    ? `https://actonscan.com/address/${senderAddress}${actonQuery}#activity`
+    : `https://actonscan.com/tx/${hashClean}${actonQuery}`;
+
   return {
     tonScan: `https://${prefix}tonscan.org/tx/${hashClean}`,
     tonViewer: `https://${prefix}tonviewer.com/transaction/${hashClean}`,
-    actonScan: `https://actonscan.com/tx/${hashClean}${actonQuery}`,
+    actonScan,
   };
 }
 

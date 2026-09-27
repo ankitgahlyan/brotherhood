@@ -33,18 +33,42 @@ const getNftName = (
 interface NftTileProps {
   nft: NFT;
   formatNftIndex: (index: string) => string;
+  onClick?: () => void;
 }
 
 /**
  * NFT card (image + name + index). Width follows the container — wrapped for the
  * horizontal-scroll preview on the dashboard, gridded on the full NFTs page.
  */
-export const NftTile: React.FC<NftTileProps> = ({ nft, formatNftIndex }) => {
+export const NftTile: React.FC<NftTileProps> = ({
+  nft,
+  formatNftIndex,
+  onClick,
+}) => {
   const name = getNftName(nft, formatNftIndex);
   const indexLabel = nft.index ? formatNftIndex(nft.index) : null;
 
   return (
-    <article className="bg-secondary/70 border border-border rounded-2xl overflow-hidden">
+    <article
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={`bg-secondary/70 border border-border rounded-2xl overflow-hidden text-left ${
+        onClick
+          ? 'cursor-pointer hover:border-primary/50 hover:shadow-md transition-all active:scale-[0.98]'
+          : ''
+      }`}
+    >
       <div className="aspect-square w-full overflow-hidden bg-muted">
         <FallbackImage
           src={getNftImageSources(nft)}

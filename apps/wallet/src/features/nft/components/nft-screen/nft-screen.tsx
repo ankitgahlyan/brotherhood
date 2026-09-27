@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useNfts, useWallet } from '@demo/wallet-core';
@@ -18,6 +18,7 @@ import {
 import type { Network } from '@/lib/brotherhood/config';
 
 import { NftTile } from '../nft-tile';
+import { NftTransferModal } from '../nft-transfer-modal';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
@@ -36,6 +37,8 @@ export const NftsScreen: FC = () => {
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
     'testnet') as Network;
+
+  const [selectedNft, setSelectedNft] = useState<NFT | null>(null);
 
   const ownedBroDomains = useDnsStore((s) => selectOwnedDomains(s, network));
 
@@ -107,10 +110,18 @@ export const NftsScreen: FC = () => {
               key={nft.address}
               nft={nft}
               formatNftIndex={formatNftIndex}
+              onClick={() => setSelectedNft(nft)}
             />
           ))}
         </div>
       )}
+
+      <NftTransferModal
+        nft={selectedNft}
+        isOpen={Boolean(selectedNft)}
+        onClose={() => setSelectedNft(null)}
+        formatNftIndex={formatNftIndex}
+      />
     </NewLayout>
   );
 };
