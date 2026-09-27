@@ -8,6 +8,7 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 
 import "@contracts/common/messages"
+import "@contracts/dns/messages"
 import "@contracts/fossFi/storage"
 import "@contracts/lottery/messages"
 
@@ -382,6 +383,95 @@ fun FossFi.sendDestroy(self, from: address, config: SendParams = {}): SendResult
         value: config.value,
         dest: self.address,
         body: Destroy {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendBidBroDomain(
+    self,
+    from: address,
+    queryId: uint64,
+    bidder: address,
+    fiAmount: coins,
+    domain: RemainingBitsAndRefs,
+    collectionAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: BidBroDomain {
+            queryId,
+            bidder,
+            fiAmount,
+            domain: domain.toCell(),
+            collectionAddress,
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendDnsOutbidNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    outbidAddress: address,
+    fiAmount: coins,
+    domain: RemainingBitsAndRefs,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsOutbidNotification {
+            queryId,
+            outbidAddress,
+            fiAmount,
+            domain: domain.toCell(),
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendDnsAuctionFinalized(
+    self,
+    from: address,
+    queryId: uint64,
+    winner: address,
+    winningFiAmount: coins,
+    domain: RemainingBitsAndRefs,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsAuctionFinalized {
+            queryId,
+            winner,
+            winningFiAmount,
+            domain: domain.toCell(),
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFi.sendRenewBroDomain(
+    self,
+    from: address,
+    queryId: uint64,
+    renewer: address,
+    fiAmount: coins,
+    itemAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RenewBroDomain { queryId, renewer, fiAmount, itemAddress },
     });
     return net.send(from, genericMsg);
 }

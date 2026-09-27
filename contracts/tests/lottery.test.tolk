@@ -8,11 +8,10 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
 import "@contracts/common/errors"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
-import "@contracts/lottery/consts"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
 

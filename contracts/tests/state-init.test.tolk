@@ -9,8 +9,9 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
+
 import "@contracts/common/messages"
-import "@contracts/fossFi/consts"
 
 import "test-utils"
 

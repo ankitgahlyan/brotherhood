@@ -14,28 +14,10 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
 import "@wrappers/utils"
+import "@contracts/common/constants"
 import "@contracts/common/messages"
 import "@contracts/dao/storage"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
-
-const DAO_PROXY_ADDR = "kQBs0efjOXMJ_mTYkUqB16JynaYqMNpt2eTNzy79Ge0eLGk7"
-const FI_ADDRESS = "kQByVk5DwR_q9O0QECxai3CDpE-7Qimbb4OUE9Bt4Qz0deAE"
-const JETTON_DEFAULT_NAME = "BroTherHOOD"
-const JETTON_DEFAULT_SYMBOL = "HD"
-const JETTON_DEFAULT_DESCRIPTION = "token with social minting + debt-free credit claims capabilities & supply is controlled by scarcity of humans & value is backed by paybacks by connections + lifetime emi & unique humans are ensured by peer reporting & genuine reports will be rewarded & lookout for your circle and rings to find potential valid reports"
-// const JETTON_DEFAULT_IMAGE = "https://github.com/Cryptofonts/cryptoicons/blob/master/SVG/ton.svg"
-// const JETTON_DEFAULT_IMAGE = "https://ankitgahlyan.github.io/fossfiat/icon1.png"
-const JETTON_DEFAULT_IMAGE = "https://raw.githubusercontent.com/ankitgahlyan/fossfiat/refs/heads/main/public/icon1.png"
-
-const JETTON_IMAGE = "https://raw.githubusercontent.com/ankitgahlyan/fossfiat/refs/heads/main/public/tiger.svg"
-
-const JETTON_DEFAULT_DECIMALS = "9"
-const JETTON_DEFAULT_UPDATED_DESCRIPTION = "Sample jetton (metadata updated from acton-contracts scripts)"
-
-const JETTON_DEFAULT_INITIAL_SUPPLY = "0"
-const JETTON_DEFAULT_MINT_AMOUNT = "100000000000"
-const JETTON_DEFAULT_TRANSFER_AMOUNT = "10000000000"
 
 struct JettonMetadata {
     name: string

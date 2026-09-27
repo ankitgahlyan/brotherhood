@@ -1,4 +1,4 @@
-import "@contracts/fossFi/consts"
+import "@contracts/common/constants"
 
 struct DaoProxyStore {
     adminAddress: address

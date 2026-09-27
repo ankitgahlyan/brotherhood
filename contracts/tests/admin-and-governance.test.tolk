@@ -10,10 +10,10 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"

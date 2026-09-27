@@ -1,5 +1,6 @@
 import "@stdlib/tvm-lowlevel"
 
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 

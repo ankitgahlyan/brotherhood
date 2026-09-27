@@ -13,12 +13,12 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Poll.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
 import "@contracts/dao/storage"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"

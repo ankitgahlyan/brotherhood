@@ -1,24 +1,3 @@
 // CONTRACT_CONSTS
-// Declare a compile-time constant upper-bound for our map
-const AUTHORITY_THRESHOLD = 1000000 // 1 million votes = 100,000 acounts/voters
-const ZERO_ADDRESS = address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c") // TODO mainnet addr
-const RAW_ZERO_ADDRESS = address("0:0000000000000000000000000000000000000000000000000000000000000000")
-const MBRP_AMOUNT: int = grams("1000") // NOTE: store as consts to upgrade with code now minter updates, any const update also updates version but should not
-const LOTTERY_ENTRY_AMT: coins = grams("10")
-const ACTIVATION_WAIT: int = 86400 // 1 DAY
-const CLAIM_INTERVAL: int = 604800 // 1 WEEK
-const ADMIN_HANDOVER_WAIT: int = 604800 // 1 WEEK to reject/drop a pending admin handoff
-const INVITE_WAIT: int = 14400 // 4 HOURS
-const MAX_CLAIM_PERIOD: int = 63072000 // 2 YEARS
-const CLOSURE_WAIT: int = 86400 // 1 day
-const DECAY_MONTH_SECONDS: int = 2592000 // 30 days
-const DECAY_MONTHS_TOTAL: int = 480 // ~40 years
-const WEEKLY_CLAIM_AMOUNT: coins = grams("11111")
-const VOTE_GRANT_RATE: coins = grams("10")
-const POST_2YR_BASELINE_CLAIM: coins = grams("500")
-const EMI_AMOUNT: coins = grams("2500")
-const EMI_GRACE_PERIOD: int = 86400 // 24 hours
-const EMI_PENALTY_PERCENT: int = 5 // 5% penalty
-const FOLLOW_MINT_AMOUNT: coins = grams("1000") // minted to followee on following, burnt on unfollow/settlement
-const MIN_FOLLOW_GAS: coins = grams("0.08")
-const PROPOSAL_FEE: coins = grams("1000")
+// Re-export centralized constants for backwards compatibility
+import "@contracts/common/constants"

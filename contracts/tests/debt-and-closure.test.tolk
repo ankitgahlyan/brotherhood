@@ -5,9 +5,9 @@ import "@acton/testing/expect"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
 import "@contracts/common/messages"
 import "@contracts/followers/messages"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/storage"
 
 import "test-utils"

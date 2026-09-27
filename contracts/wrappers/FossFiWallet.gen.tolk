@@ -8,6 +8,7 @@ import "@acton/emulation/network"
 import "@acton/testing/assert"
 
 import "@contracts/common/messages"
+import "@contracts/dns/messages"
 import "@contracts/followers/messages"
 import "@contracts/fossFi/storage"
 import "@contracts/holding/messages"
@@ -119,6 +120,46 @@ fun FossFiWallet.sendActUnvote(
         value: config.value,
         dest: self.address,
         body: ActUnvote { transferRecipient, count },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendDnsBidRequest(
+    self,
+    from: address,
+    queryId: uint64,
+    domain: RemainingBitsAndRefs,
+    fiBidAmount: coins,
+    collectionAddress: address,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsBidRequest {
+            queryId,
+            domain: domain.toCell(),
+            fiBidAmount,
+            collectionAddress,
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendDnsRenewRequest(
+    self,
+    from: address,
+    queryId: uint64,
+    itemAddress: address,
+    fiAmount: coins,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsRenewRequest { queryId, itemAddress, fiAmount },
     });
     return net.send(from, genericMsg);
 }

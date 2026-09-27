@@ -1,13 +1,15 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/Location.code"
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/common/utils"
-import "@contracts/fossFi/consts"
+import "@contracts/dns/messages"
+
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/location/location-utils"
@@ -38,6 +40,10 @@ type AllowedMessageToMinter =
     | RejectUpgrade
     | ApproveUpgrade
     | Destroy
+    | BidBroDomain
+    | DnsOutbidNotification
+    | DnsAuctionFinalized
+    | RenewBroDomain
 
 type BounceOpToHandle =
     | InternalTransferStep
@@ -289,7 +295,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (others.currentRequest != null) throw Errors.WaitMore; // todo: better error code
 
             others.currentRequest = null;
-            // returnExcessesBack(0, in.senderAddress);
+            returnExcessesBack(0, in.senderAddress);
         }
 
         ApproveUpgrade => {
@@ -467,6 +473,61 @@ fun onInternalMessage(in: InMessage): void {
                 },
             });
             replyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        }
+
+        BidBroDomain => {
+            assertCorrectSender(in.senderAddress, msg.bidder);
+            assert (in.valueCoins >= grams("1.0")) throw Errors.InsufficientGasSent;
+
+            val collectionMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.collectionAddress,
+                value: 0,
+                body: msg,
+            });
+            collectionMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        DnsOutbidNotification => {
+            val refundWallet = getAutoAddress(msg.outbidAddress).calculateAddress();
+            val refundMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: refundWallet,
+                value: grams("0.05"),
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.fiAmount,
+                    contract.getAddress(),
+                    msg.outbidAddress,
+                ),
+            });
+            refundMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
+        }
+
+        DnsAuctionFinalized => {
+            store.totalSupply -= msg.winningFiAmount;
+
+            val treasuryAddr = store.adminAddress;
+            val treasuryMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: treasuryAddr,
+                value: grams("0.5"),
+                body: Excesses { queryId: msg.queryId },
+            });
+            treasuryMsg.send(SEND_MODE_IGNORE_ERRORS);
+        }
+
+        RenewBroDomain => {
+            assertCorrectSender(in.senderAddress, msg.renewer);
+            store.totalSupply -= msg.fiAmount;
+
+            val itemMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: msg.itemAddress,
+                value: 0,
+                body: msg,
+            });
+            itemMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
         else => {

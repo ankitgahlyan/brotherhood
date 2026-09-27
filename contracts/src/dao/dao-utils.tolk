@@ -1,5 +1,5 @@
+import "@contracts/common/constants"
 import "@contracts/dao/storage"
-import "@contracts/fossFi/consts"
 
 fun calcDeployDaoProxy(
     adminAddress: address,

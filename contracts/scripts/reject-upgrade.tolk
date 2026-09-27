@@ -2,6 +2,8 @@ import "@acton/emulation/scripts"
 
 import "@wrappers/FossFi.gen"
 
+import "@contracts/common/constants"
+
 import "utils/common"
 
 fun main() {

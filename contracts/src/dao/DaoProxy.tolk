@@ -1,11 +1,12 @@
 import "@stdlib/tvm-lowlevel"
 
 import "@gen/Poll.code"
+import "@contracts/common/constants"
+
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/dao/dao-utils"
-import "@contracts/fossFi/consts"
 
 import "fees-management"
 import "storage"

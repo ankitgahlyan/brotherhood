@@ -6,6 +6,8 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
+
 import "utils/common"
 
 fun main() {

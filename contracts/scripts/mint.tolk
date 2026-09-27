@@ -4,6 +4,8 @@ import "@acton/emulation/scripts"
 
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
+
 import "utils/common"
 
 fun main() {

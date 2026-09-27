@@ -1,7 +1,7 @@
 import "@stdlib/strings"
 
+import "@contracts/common/constants"
 import "@contracts/common/messages"
-import "@contracts/fossFi/consts"
 
 struct BaseFiWalletStore {
     owner: address

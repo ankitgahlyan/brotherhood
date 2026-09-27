@@ -2,6 +2,7 @@ import "@stdlib/tvm-lowlevel"
 
 import "@gen/Following.code"
 import "@gen/Holding.code"
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
@@ -9,10 +10,11 @@ import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/common/utils"
 import "@contracts/dao/dao-utils"
+import "@contracts/dns/messages"
+
 import "@contracts/followers/consts"
 import "@contracts/followers/following-utils"
 import "@contracts/followers/messages"
-import "@contracts/fossFi/consts"
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
 import "@contracts/fossFi/storage-migration"
@@ -28,6 +30,8 @@ type AllowedMessageToWallet =
     | ActInvite
     | ActVote
     | ActUnvote
+    | DnsBidRequest
+    | DnsRenewRequest
     | DeActivateCircleRing
     | DeActivateCircleRingInternal
     | ActDispatchAuthorityAction
@@ -1024,6 +1028,49 @@ fun onInternalMessage(in: InMessage): void {
             notifyMinterMsg.send(
                 SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
             );
+        }
+
+        DnsBidRequest => {
+            idActionChecks(store);
+            assert (store.jettonBalance >= msg.fiBidAmount) throw Errors.InsufficientBalance;
+            assert (in.valueCoins >= grams("1.0")) throw Errors.InsufficientGasSent;
+
+            store.jettonBalance -= msg.fiBidAmount;
+
+            val bidMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: BidBroDomain {
+                    queryId: msg.queryId,
+                    bidder: addrs.owner,
+                    fiAmount: msg.fiBidAmount,
+                    domain: msg.domain,
+                    collectionAddress: msg.collectionAddress,
+                },
+            });
+            bidMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
+
+        DnsRenewRequest => {
+            idActionChecks(store);
+            assert (store.jettonBalance >= msg.fiAmount) throw Errors.InsufficientBalance;
+            assert (in.valueCoins >= grams("0.1")) throw Errors.InsufficientGasSent;
+
+            store.jettonBalance -= msg.fiAmount;
+
+            val renewMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: trustedAddrs.minterAddr,
+                value: 0,
+                body: RenewBroDomain {
+                    queryId: msg.queryId,
+                    renewer: addrs.owner,
+                    fiAmount: msg.fiAmount,
+                    itemAddress: msg.itemAddress,
+                },
+            });
+            renewMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
         TopUpTons => {

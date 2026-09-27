@@ -7,10 +7,10 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Holding.gen"
 import "@wrappers/utils"
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/fossFi/storage"
 
-import "@contracts/holding/consts"
 import "@contracts/holding/holding-utils"
 import "@contracts/holding/messages"
 

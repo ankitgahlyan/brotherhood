@@ -331,6 +331,12 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 jettonsByAddress: state.jettons?.jettonsByAddress || {},
                 lastJettonsUpdate: state.jettons?.lastJettonsUpdate || 0,
               },
+              nfts: {
+                nftsByAddress: state.nfts?.nftsByAddress || {},
+                lastNftsUpdate: state.nfts?.lastNftsUpdate || 0,
+                offset: state.nfts?.offset || 0,
+                hasMore: state.nfts?.hasMore ?? true,
+              },
               brotherhood: {
                 brotherhoodByAddress:
                   state.brotherhood?.brotherhoodByAddress || {},
@@ -419,6 +425,18 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   ...persisted?.jettons,
                   jettonsByAddress: persisted?.jettons?.jettonsByAddress || {},
                   lastJettonsUpdate: persisted?.jettons?.lastJettonsUpdate || 0,
+                },
+                nfts: {
+                  ...currentState.nfts,
+                  ...persisted?.nfts,
+                  nftsByAddress: persisted?.nfts?.nftsByAddress || {},
+                  userNfts:
+                    (activeWallet?.address &&
+                      persisted?.nfts?.nftsByAddress?.[activeWallet.address]) ||
+                    [],
+                  lastNftsUpdate: persisted?.nfts?.lastNftsUpdate || 0,
+                  offset: persisted?.nfts?.offset || 0,
+                  hasMore: persisted?.nfts?.hasMore ?? true,
                 },
                 brotherhood: {
                   ...currentState.brotherhood,

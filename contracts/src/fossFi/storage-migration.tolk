@@ -1,7 +1,7 @@
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
 
-import "consts"
 import "storage"
 
 type AllowedBaseUpgradeMessage =

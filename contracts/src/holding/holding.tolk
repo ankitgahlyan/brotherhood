@@ -1,6 +1,6 @@
+import "@contracts/common/constants"
 import "@contracts/common/errors"
 
-import "consts"
 import "messages"
 import "store"
 

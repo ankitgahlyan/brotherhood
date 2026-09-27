@@ -1,9 +1,12 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
+import "@contracts/dns/storage"
 
+import "DnsItem.gen"
 import "FossFi.gen"
 import "FossFiWallet.gen"
 import "Personal.gen"
@@ -316,4 +319,17 @@ fun FossFiWallet.sendBurn(
         },
     });
     return net.send(from, outMessage);
+}
+
+/// Creates a DNS item wrapper from the not-yet-initialized storage layout.
+fun DnsItem.fromNotInitializedStorage(
+    storage: ItemStorageNotInitialized,
+    toShard: AddressShardingOptions? = null,
+): DnsItem {
+    val stateInit = ContractState {
+        code: build("DnsItem"),
+        data: storage.toCell(),
+    };
+    val address = AutoDeployAddress { stateInit, toShard }.calculateAddress();
+    return DnsItem { address, stateInit };
 }
