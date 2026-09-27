@@ -61,4 +61,34 @@ enum Errors {
     PersonalJettonNotRegistered = 764
     DeferredPaymentDisabled = 765
     NotOnboardedWallet = 766
+
+    // DNS Errors
+    DnsInvalidSubdomainBits = 70
+    AuctionNotStarted = 199
+    DomainTooShort = 200
+    DomainTooLong = 201
+    DomainFormatInvalid = 202
+    DomainHasInvalidChars = 203
+    BidBelowMinPrice = 204
+    DomainIsBlacklisted = 205
+    DnsNotOwner = 401
+    NotEnoughBalance = 402
+    NotFromCollection = 405
+    OnlyOwnerCanFillUpAfterAuction = 406
+    BidTooLow = 407
+    OnlyOwnerCanEditContent = 410
+    OnlyOwnerCanChangeDns = 411
+    ContentTagInvalid = 412
+    GovernanceRequiresNoAuction = 413
+    DnsBalanceReleaseForbidden = 414
+    ConfigEntryNotFound = 415
+    ConfigOperationInvalid = 416
+    NotAuthorizedTreasury = 417
+    ReservationPeriodActive = 418
+    NoActiveAuction = 420
+    AuctionNotFinished = 421
+    AuctionAlreadyFinished = 422
+    NoWinner = 423
+    DnsIncorrectSender = 424
+    UnknownOp = 0xFFFF
 }
