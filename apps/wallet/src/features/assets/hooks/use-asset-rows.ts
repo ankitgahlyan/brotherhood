@@ -97,9 +97,12 @@ export const useAssetRows = (): AssetRows => {
       .map((j) => j.address);
   }, [activeJettons, personalMinterAddress]);
 
+  const network = getActiveWallet()?.network ?? 'testnet';
+
   const { data: verifiedPersonalMinterSet } = useQuery({
     queryKey: [
       'verified-personal-minters',
+      network,
       [...candidatePersonalAddresses].sort().join(','),
     ],
     queryFn: async () => {

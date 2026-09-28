@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Layers,
   AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
@@ -70,6 +71,16 @@ interface QueryCacheEntry {
 }
 
 const DEV_MODE_KEY = 'brotherhood_developer_mode';
+
+const PROTECTED_STORAGE_KEYS = new Set(['bro-store', 'savedWallets', 'auth']);
+
+export function isProtectedStorageKey(key: string): boolean {
+  return (
+    PROTECTED_STORAGE_KEYS.has(key) ||
+    key.startsWith('bro-auth') ||
+    key.startsWith('bro-wallet')
+  );
+}
 
 export const DbStateExplorer: React.FC = () => {
   const { currentWallet } = useWallet();
@@ -199,6 +210,12 @@ export const DbStateExplorer: React.FC = () => {
 
   // LocalStorage Actions
   const handleSaveLs = (key: string, value: string) => {
+    if (isProtectedStorageKey(key)) {
+      toast.error(
+        `Key "${key}" is protected to prevent cryptographic and wallet corruption.`,
+      );
+      return;
+    }
     try {
       localStorage.setItem(key, value);
       loadLocalStorage();
@@ -209,6 +226,12 @@ export const DbStateExplorer: React.FC = () => {
   };
 
   const handleDeleteLs = (key: string) => {
+    if (isProtectedStorageKey(key)) {
+      toast.error(
+        `Key "${key}" is protected to prevent cryptographic and wallet corruption.`,
+      );
+      return;
+    }
     const previousValue = localStorage.getItem(key);
     try {
       localStorage.removeItem(key);
@@ -632,28 +655,40 @@ export const DbStateExplorer: React.FC = () => {
                           <Copy className="w-3.5 h-3.5" />
                         )}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setEditingItem({
-                            key: item.key,
-                            value: item.value,
-                            isNew: false,
-                          })
-                        }
-                        className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted/50 transition-colors"
-                        title="Edit value"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLs(item.key)}
-                        className="p-1 text-muted-foreground hover:text-rose-500 rounded hover:bg-rose-500/10 transition-colors"
-                        title="Delete key"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isProtectedStorageKey(item.key) ? (
+                        <span
+                          className="flex items-center gap-1 text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded"
+                          title="Protected cryptographic / wallet state"
+                        >
+                          <ShieldAlert className="w-3 h-3" />
+                          Protected
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingItem({
+                                key: item.key,
+                                value: item.value,
+                                isNew: false,
+                              })
+                            }
+                            className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted/50 transition-colors"
+                            title="Edit value"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLs(item.key)}
+                            className="p-1 text-muted-foreground hover:text-rose-500 rounded hover:bg-rose-500/10 transition-colors"
+                            title="Delete key"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 

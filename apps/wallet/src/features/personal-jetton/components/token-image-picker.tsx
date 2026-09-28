@@ -113,6 +113,7 @@ export const TokenImagePicker: React.FC<TokenImagePickerProps> = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder={DEFAULT_TOKEN_IMAGE}
           disabled={disabled}
+          aria-label="Token icon image URL"
           className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none truncate"
           data-testid="token-image-input"
         />

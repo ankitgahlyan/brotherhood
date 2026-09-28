@@ -51,7 +51,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
   }, [asset]);
 
   const { data: isPersonalToken } = useQuery({
-    queryKey: ['is-personal-minter', asset?.id],
+    queryKey: ['is-personal-minter', network, asset?.id],
     queryFn: async () => {
       if (!asset?.id || isGram || isFi) return false;
       try {

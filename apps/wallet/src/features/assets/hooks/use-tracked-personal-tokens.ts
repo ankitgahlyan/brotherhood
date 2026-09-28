@@ -100,6 +100,8 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
     };
   }, [summaryCacheKey]);
 
+  const activeNetwork = getActiveWallet()?.network ?? network;
+
   // Pure cache assembler query: reads hydrated state directly from L1 / IndexedDB cache
   const {
     data: personalTokens = [],
@@ -108,6 +110,7 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
   } = useQuery({
     queryKey: [
       'tracked-personal-tokens',
+      activeNetwork,
       walletAddress,
       [...trackedMinters].sort().join(','),
     ],

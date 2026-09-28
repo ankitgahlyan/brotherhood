@@ -129,6 +129,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search country or code (e.g. 840, India)..."
+              aria-label="Search countries"
               className="w-full p-2 text-xs bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
               data-testid={`${testId}-search`}
             />

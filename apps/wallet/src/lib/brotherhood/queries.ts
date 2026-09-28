@@ -304,7 +304,7 @@ export function markForceFresh(_key?: string) {}
 export async function invalidateContractState(
   contractAddress: Address | string,
   net: Network = defaultNetwork,
-  _queryClient?: any,
+  queryClientInstance?: any,
 ): Promise<void> {
   try {
     const { batchHydrateUniversal } = await import('./account-state-hydrator');
@@ -313,6 +313,19 @@ export async function invalidateContractState(
         ? contractAddress.trim()
         : contractAddress.toRawString();
     await batchHydrateUniversal([clean], net, { force: true });
+
+    if (queryClientInstance?.invalidateQueries) {
+      queryClientInstance.invalidateQueries({ queryKey: ['member-profiles'] });
+      queryClientInstance.invalidateQueries({
+        queryKey: ['tracked-personal-tokens'],
+      });
+      queryClientInstance.invalidateQueries({
+        queryKey: ['verified-personal-minters'],
+      });
+      queryClientInstance.invalidateQueries({
+        queryKey: ['is-personal-minter'],
+      });
+    }
   } catch (err) {
     console.warn(
       '[invalidateContractState] Failed to rehydrate contract in background:',
@@ -328,12 +341,18 @@ export function createRefetchWrapper<T>(
   return refetchFn;
 }
 
+const DEFAULT_QUERY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function cachedQueryFn<T>(
   cacheKey: string,
   fetcher: (options?: any) => Promise<T>,
+  ttlMs: number = DEFAULT_QUERY_CACHE_TTL_MS,
 ): Promise<T> {
   const cached = await getContractCache<T>(cacheKey);
-  if (cached?.data !== undefined && cached.data !== null) {
+  const isFresh =
+    cached && cached.timestamp && Date.now() - cached.timestamp < ttlMs;
+
+  if (cached?.data !== undefined && cached.data !== null && isFresh) {
     return cached.data;
   }
   const fresh = await fetcher();

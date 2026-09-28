@@ -8,16 +8,22 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Toaster } from '@/core/components/ui/sonner';
 import { useWalletDataUpdater } from '@/core/hooks/use-wallet-data-updater';
-import { useReceivedToasts } from '@/features/notifications';
+import { useReceivedToasts } from '@/features/notifications/hooks/use-received-toasts';
 import { useWalletStore } from '@demo/wallet-core';
 import { LoaderCircle } from '@/core/components/ui/loader-circle';
 import { Button } from '@/core/components/ui/button';
 import { GlobalRequestModals } from '@/features/ton-connect';
 import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
-import { FloatingDevButton } from '@/features/developer/components/floating-dev-button';
+import { RouteErrorFallback } from '@/core/components/shared/route-error-fallback';
 import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
 import { registerRouterBack } from '@/core/lib/back-stack';
+
+const FloatingDevButton = React.lazy(() =>
+  import('@/features/developer/components/floating-dev-button').then((m) => ({
+    default: m.FloatingDevButton,
+  })),
+);
 
 import { motion } from 'framer-motion';
 import { useAnimationSettings } from '@/core/motion/motion-provider';
@@ -135,7 +141,9 @@ function RootComponent() {
       )}
       <GlobalRequestModals />
       {!isTma && <PwaInstallBanner />}
-      <FloatingDevButton />
+      <React.Suspense fallback={null}>
+        <FloatingDevButton />
+      </React.Suspense>
       <Toaster />
       {(process.env.NODE_ENV === 'development' ||
         import.meta.env.VITE_DEVTOOLS === 'true') && (
@@ -148,4 +156,5 @@ function RootComponent() {
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFound,
+  errorComponent: RouteErrorFallback,
 });

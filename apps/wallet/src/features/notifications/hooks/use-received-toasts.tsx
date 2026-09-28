@@ -17,9 +17,9 @@ import {
 } from '@demo/wallet-core';
 import type { RateEntry } from '@demo/wallet-core';
 
-import { getJettonsSymbol } from '@/features/jettons';
+import { getJettonsSymbol } from '@/features/jettons/utils/jetton';
 import { formatLargeValue, toDecimal } from '@/core/utils';
-import { useTrackedPersonalTokens } from '@/features/assets';
+import { useTrackedPersonalTokens } from '@/features/assets/hooks/use-tracked-personal-tokens';
 
 const GRAM_KEY = 'GRAM';
 const GRAM_DECIMALS = 9;

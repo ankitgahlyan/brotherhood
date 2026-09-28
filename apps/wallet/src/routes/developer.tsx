@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { RouteFallback } from '@/core/components/shared/route-fallback';
+import { ProtectedRoute } from '@/core/routing';
 
 const DeveloperScreen = lazy(() =>
   import('@/features/developer').then((m) => ({
@@ -10,8 +11,10 @@ const DeveloperScreen = lazy(() =>
 
 export const Route = createFileRoute('/developer')({
   component: () => (
-    <Suspense fallback={<RouteFallback />}>
-      <DeveloperScreen />
-    </Suspense>
+    <ProtectedRoute requiresWallet>
+      <Suspense fallback={<RouteFallback />}>
+        <DeveloperScreen />
+      </Suspense>
+    </ProtectedRoute>
   ),
 });

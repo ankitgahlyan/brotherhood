@@ -317,15 +317,6 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 requestQueue: {
                   items: state.tonConnect.requestQueue.items,
                 },
-                isSignDataModalOpen: state.tonConnect.isSignDataModalOpen,
-                isTransactionModalOpen: state.tonConnect.isTransactionModalOpen,
-                isConnectModalOpen: state.tonConnect.isConnectModalOpen,
-                pendingSignDataRequest:
-                  state.tonConnect.pendingSignDataRequestEvent,
-                pendingTransactionRequest:
-                  state.tonConnect.pendingTransactionRequestEvent,
-                pendingConnectRequest:
-                  state.tonConnect.pendingConnectRequestEvent,
               },
               jettons: {
                 jettonsByAddress: state.jettons?.jettonsByAddress || {},
@@ -413,8 +404,16 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 },
                 tonConnect: {
                   ...currentState.tonConnect,
-                  ...persisted?.tonConnect,
                   disconnectedSessions: [],
+                  connectedSessions: [],
+                  isConnectModalOpen: false,
+                  isTransactionModalOpen: false,
+                  isSignDataModalOpen: false,
+                  isSignMessageModalOpen: false,
+                  pendingConnectRequestEvent: undefined,
+                  pendingTransactionRequestEvent: undefined,
+                  pendingSignDataRequestEvent: undefined,
+                  pendingSignMessageRequestEvent: undefined,
                   requestQueue: {
                     items: persisted?.tonConnect?.requestQueue?.items || [],
                     currentRequestId: undefined,

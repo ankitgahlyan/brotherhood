@@ -5,30 +5,72 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
+import { z } from 'zod';
 
-export const ENV_BRIDGE_URL =
-  import.meta.env.VITE_BRIDGE_URL ?? 'https://connect.ton.org/bridge';
-export const ENV_TON_API_PROVIDER =
-  import.meta.env?.VITE_TON_API_PROVIDER === 'tonapi' ? 'tonapi' : 'toncenter';
-export const ENV_TON_API_KEY_MAINNET =
-  import.meta.env.VITE_TON_API_KEY ??
-  '25a9b2326a34b39a5fa4b264fb78fb4709e1bd576fc5e6b176639f5b71e94b0d';
-export const ENV_TON_API_KEY_TESTNET =
-  import.meta.env.VITE_TON_API_TESTNET_KEY ??
-  'd852b54d062f631565761042cccea87fa6337c41eb19b075e6c7fb88898a3992';
-export const ENV_TON_API_KEY_TETRA =
-  import.meta.env.VITE_TON_API_TETRA_KEY ?? '';
+const envSchema = z.object({
+  VITE_BRIDGE_URL: z
+    .string()
+    .url()
+    .catch('https://connect.ton.org/bridge')
+    .default('https://connect.ton.org/bridge'),
+  VITE_TON_API_PROVIDER: z
+    .enum(['tonapi', 'toncenter'])
+    .catch('toncenter')
+    .default('toncenter'),
+  VITE_TON_API_KEY: z.string().default(''),
+  VITE_TON_API_TESTNET_KEY: z.string().default(''),
+  VITE_TON_API_TETRA_KEY: z.string().default(''),
+  VITE_CUSTOM_TON_TESTNET_RPC: z.string().default(''),
+  VITE_DISABLE_NETWORK_SEND: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+  VITE_DISABLE_MANIFEST_DOMAIN_CHECK: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+  VITE_DISABLE_HTTP_BRIDGE: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+  VITE_DISABLE_AUTO_POPUP: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+  VITE_DISABLE_AUTO_EMULATION: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
+});
 
-export const ENV_CUSTOM_TON_TESTNET_RPC =
-  import.meta.env.VITE_CUSTOM_TON_TESTNET_RPC ?? '';
+const parsedEnv = envSchema.safeParse(import.meta.env ?? {});
+const envData = parsedEnv.success
+  ? parsedEnv.data
+  : {
+      VITE_BRIDGE_URL: 'https://connect.ton.org/bridge',
+      VITE_TON_API_PROVIDER: 'toncenter' as const,
+      VITE_TON_API_KEY: '',
+      VITE_TON_API_TESTNET_KEY: '',
+      VITE_TON_API_TETRA_KEY: '',
+      VITE_CUSTOM_TON_TESTNET_RPC: '',
+      VITE_DISABLE_NETWORK_SEND: false,
+      VITE_DISABLE_MANIFEST_DOMAIN_CHECK: false,
+      VITE_DISABLE_HTTP_BRIDGE: false,
+      VITE_DISABLE_AUTO_POPUP: false,
+      VITE_DISABLE_AUTO_EMULATION: false,
+    };
 
-export const DISABLE_NETWORK_SEND =
-  import.meta.env?.VITE_DISABLE_NETWORK_SEND === 'true' || false;
+export const ENV_BRIDGE_URL = envData.VITE_BRIDGE_URL;
+export const ENV_TON_API_PROVIDER = envData.VITE_TON_API_PROVIDER;
+export const ENV_TON_API_KEY_MAINNET = envData.VITE_TON_API_KEY;
+export const ENV_TON_API_KEY_TESTNET = envData.VITE_TON_API_TESTNET_KEY;
+export const ENV_TON_API_KEY_TETRA = envData.VITE_TON_API_TETRA_KEY;
+
+export const ENV_CUSTOM_TON_TESTNET_RPC = envData.VITE_CUSTOM_TON_TESTNET_RPC;
+
+export const DISABLE_NETWORK_SEND = envData.VITE_DISABLE_NETWORK_SEND;
 export const DISABLE_MANIFEST_DOMAIN_CHECK =
-  import.meta.env?.VITE_DISABLE_MANIFEST_DOMAIN_CHECK === 'true' || false;
-export const DISABLE_HTTP_BRIDGE =
-  import.meta.env?.VITE_DISABLE_HTTP_BRIDGE === 'true' || false;
-export const DISABLE_AUTO_POPUP =
-  import.meta.env?.VITE_DISABLE_AUTO_POPUP === 'true' || false;
-export const DISABLE_AUTO_EMULATION =
-  import.meta.env?.VITE_DISABLE_AUTO_EMULATION === 'true' || false;
+  envData.VITE_DISABLE_MANIFEST_DOMAIN_CHECK;
+export const DISABLE_HTTP_BRIDGE = envData.VITE_DISABLE_HTTP_BRIDGE;
+export const DISABLE_AUTO_POPUP = envData.VITE_DISABLE_AUTO_POPUP;
+export const DISABLE_AUTO_EMULATION = envData.VITE_DISABLE_AUTO_EMULATION;

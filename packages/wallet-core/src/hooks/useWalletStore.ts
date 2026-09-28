@@ -127,7 +127,8 @@ export const useTonConnect = () => {
     useShallow((state) => ({
       pendingConnectRequest: state.tonConnect.pendingConnectRequestEvent,
       isConnectModalOpen: state.tonConnect.isConnectModalOpen,
-      connectedSessions: state.tonConnect.connectedSessions || [],
+      connectedSessions:
+        state.tonConnect.connectedSessions ?? (EMPTY_ARRAY as any),
       handleTonConnectUrl: state.handleTonConnectUrl,
       showConnectRequest: state.showConnectRequest,
       approveConnectRequest: state.approveConnectRequest,
@@ -196,7 +197,8 @@ export const useSignMessageRequests = () => {
 export const useDisconnectEvents = () => {
   return useWalletStore(
     useShallow((state) => ({
-      disconnectedSessions: state.tonConnect.disconnectedSessions || [],
+      disconnectedSessions:
+        state.tonConnect.disconnectedSessions ?? (EMPTY_ARRAY as any),
       handleDisconnectEvent: state.handleDisconnectEvent,
       clearDisconnectNotifications: state.clearDisconnectNotifications,
     })),

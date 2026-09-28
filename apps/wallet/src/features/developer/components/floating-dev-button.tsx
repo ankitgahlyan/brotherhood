@@ -3,7 +3,10 @@ import { motion } from 'framer-motion';
 import { Terminal } from 'lucide-react';
 import { useDeveloperMode, useDeveloperModal } from '@/core/lib/developer-mode';
 import { devTelemetry, type TelemetryMetrics } from '@/core/lib/dev-telemetry';
-import { DeveloperModal } from './developer-modal';
+
+const DeveloperModal = React.lazy(() =>
+  import('./developer-modal').then((m) => ({ default: m.DeveloperModal })),
+);
 
 export const FloatingDevButton: React.FC = () => {
   const [developerMode] = useDeveloperMode();
@@ -89,10 +92,14 @@ export const FloatingDevButton: React.FC = () => {
         </div>
       </motion.div>
 
-      <DeveloperModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {isModalOpen && (
+        <React.Suspense fallback={null}>
+          <DeveloperModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+          />
+        </React.Suspense>
+      )}
     </>
   );
 };

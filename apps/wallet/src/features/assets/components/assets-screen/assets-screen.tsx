@@ -64,6 +64,7 @@ export const AssetsScreen: FC = () => {
                 onClick={() => setIsAddModalOpen(true)}
                 className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
                 title="Add personal token by minter address"
+                aria-label="Add personal token by minter address"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>

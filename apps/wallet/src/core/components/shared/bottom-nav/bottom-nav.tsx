@@ -98,6 +98,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
   const { viewMode } = usePreferences();
   const isPictorial = viewMode === 'icons_only';
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const getIsActive = (item: NavItem) => {
     if (item.path === '/wallet') {
@@ -110,13 +111,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
     return pathname.startsWith(item.path);
   };
 
-  // Scroll active tab into view horizontally if needed
+  // Scroll active tab into view horizontally inside container without jerking page viewport
   useEffect(() => {
-    if (activeBtnRef.current) {
-      activeBtnRef.current.scrollIntoView({
+    if (containerRef.current && activeBtnRef.current) {
+      const container = containerRef.current;
+      const btn = activeBtnRef.current;
+      const targetLeft =
+        btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
+      container.scrollTo({
+        left: Math.max(0, targetLeft),
         behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
       });
     }
   }, [pathname]);
@@ -129,7 +133,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
       aria-label="Bottom Navigation"
       data-swipe-ignore="true"
     >
-      <div className="max-w-md mx-auto flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity">
+      <div
+        ref={containerRef}
+        className="max-w-md mx-auto flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity"
+      >
         {ECOSYSTEM_NAV_ITEMS.map((item) => {
           const isActive = getIsActive(item);
           const Icon = item.icon;
@@ -141,7 +148,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 ref={isActive ? activeBtnRef : null}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`flex-1 min-w-12 shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[48px] min-h-[44px] shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
                     ? `${item.activeColor || 'text-primary'} scale-105`
                     : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -175,7 +182,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
               ref={isActive ? activeBtnRef : null}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`flex-1 min-w-13.5 shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+              className={`flex-1 min-w-[52px] min-h-[44px] shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'text-primary scale-[1.02]'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
