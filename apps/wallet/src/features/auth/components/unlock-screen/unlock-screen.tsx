@@ -85,17 +85,13 @@ export const UnlockScreen: React.FC = () => {
     navigate,
   ]);
 
-  // Auto-prompt biometrics on TWA if supported and enabled; on Web, require user gesture via button
+  // Auto-prompt biometrics on TWA and Web if supported and enabled
   useEffect(() => {
     if (isSupported && isEnabled && !autoPromptTriggered.current) {
-      if (isTelegramEnvironment()) {
-        autoPromptTriggered.current = true;
-        queueMicrotask(() => {
-          void handleBiometricUnlock();
-        });
-      } else {
-        inputRef.current?.focus();
-      }
+      autoPromptTriggered.current = true;
+      queueMicrotask(() => {
+        void handleBiometricUnlock();
+      });
     } else if (!isEnabled) {
       inputRef.current?.focus();
     }

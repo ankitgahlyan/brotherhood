@@ -185,21 +185,11 @@ export function registerRouterBack(handler: () => void, isRoot: boolean): void {
   initPopstateListener();
   routerBackHandler = handler;
   isAtRootRoute = isRoot;
-
-  if (isRoot && typeof window !== 'undefined') {
-    try {
-      if (!window.history.state?.isRootTrap) {
-        window.history.pushState(
-          { isRootTrap: true },
-          '',
-          window.location.href,
-        );
-      }
-    } catch {
-      // ignore
-    }
-  }
-
+  // NOTE: Do NOT push history state here. Eagerly calling window.history.pushState()
+  // while TanStack Router is mid-navigation (e.g. redirecting / → /unlock) corrupts
+  // the router's internal popstate listener and causes a blank screen on initial load.
+  // The isRootTrap state is pushed lazily in handleRootExitConfirmation() when the
+  // user actually presses back on a root route.
   updateNativeBackButtonState();
 }
 

@@ -9,6 +9,10 @@ export const router = createRouter({
   defaultNotFoundComponent: NotFound,
 });
 
+if (typeof window !== 'undefined') {
+  (window as any).router = router;
+}
+
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
