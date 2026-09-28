@@ -283,9 +283,17 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       </div>
 
       {/* Centered Viewfinder Box */}
-      <div className="relative flex-1 flex flex-col items-center justify-center my-auto w-full max-w-sm mx-auto min-h-[280px] pointer-events-none">
+      <div
+        className="relative flex-1 flex flex-col items-center justify-center my-auto w-full max-w-sm mx-auto min-h-[280px] cursor-pointer"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            e.stopPropagation();
+            void handleClose();
+          }
+        }}
+      >
         <div
-          className="relative w-72 h-72 rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black flex items-center justify-center pointer-events-auto cursor-default"
+          className="relative w-72 h-72 rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black flex items-center justify-center cursor-default"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Scanner Corner Reticles */}
@@ -295,7 +303,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-blue-400 rounded-br-lg z-20" />
 
           {isLoading && !errorMessage && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/80 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/80 z-10 pointer-events-none">
               <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
               <span className="text-xs font-medium">
                 Initializing camera...
@@ -304,7 +312,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           )}
 
           {errorMessage && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center gap-2 text-red-400 bg-black/90 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center gap-2 text-red-400 bg-black/90 z-10 pointer-events-none">
               <AlertCircle className="w-8 h-8 text-red-500" />
               <p className="text-xs">{errorMessage}</p>
             </div>
@@ -316,7 +324,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           />
         </div>
 
-        <p className="text-xs text-white/70 text-center mt-4 font-medium select-none">
+        <p className="text-xs text-white/70 text-center mt-4 font-medium select-none pointer-events-none">
           Align QR code within the frame
         </p>
       </div>

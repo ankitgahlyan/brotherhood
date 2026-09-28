@@ -59,6 +59,9 @@ export function useTrackedAddressesSync() {
 
   const savedWalletsLengthRef = useRef(0);
   const lastHydratedRef = useRef(0);
+  const hydrateAllSavedWalletsRef = useRef<
+    ((force?: boolean) => Promise<void>) | null
+  >(null);
 
   // Helper to normalize address matching helper
   const findDecodedStore = (
@@ -187,7 +190,16 @@ export function useTrackedAddressesSync() {
           { force },
         );
 
-        if (!res?.decodedStores) return;
+        if (
+          !res?.decodedStores ||
+          Object.keys(res.decodedStores).length === 0
+        ) {
+          lastHydratedRef.current = 0;
+          setTimeout(() => {
+            void hydrateAllSavedWalletsRef.current?.(true);
+          }, 4000);
+          return;
+        }
 
         const newLocationsToHydrate: string[] = [];
 
@@ -293,11 +305,9 @@ export function useTrackedAddressesSync() {
           if (bData?.circle && bData.circle.length > 0) {
             for (const invitee of bData.circle) {
               try {
-                const inviteeFi = getFiWalletAddress(
-                  Address.parse(invitee),
-                  defaultNetwork,
-                );
-                circleFiWallets.push(inviteeFi.toString());
+                // bData.circle already contains the invitee's FiWallet contract address
+                const parsed = Address.parse(invitee);
+                circleFiWallets.push(parsed.toString());
               } catch {
                 /* pass */
               }
@@ -332,6 +342,10 @@ export function useTrackedAddressesSync() {
           '[useTrackedAddressesSync] Background universal hydration error:',
           err,
         );
+        lastHydratedRef.current = 0;
+        setTimeout(() => {
+          void hydrateAllSavedWalletsRef.current?.(true);
+        }, 5000);
       }
     },
     [
@@ -346,6 +360,10 @@ export function useTrackedAddressesSync() {
       setLocationContract,
     ],
   );
+
+  useEffect(() => {
+    hydrateAllSavedWalletsRef.current = hydrateAllSavedWallets;
+  }, [hydrateAllSavedWallets]);
 
   // Session bootstrap + mid-session wallet addition: hydrate whenever the
   // wallet list grows (first load: 0→N, new wallet added: N→N+1).

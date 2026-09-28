@@ -115,6 +115,12 @@ export interface TelegramWebApp {
     callback?: (buttonId: string) => void,
   ) => void;
   openTelegramLink?: (url: string) => void;
+  showScanQrPopup?: (
+    params: { text?: string },
+    callback?: (text: string) => boolean | void,
+  ) => void;
+  closeScanQrPopup?: () => void;
+  readTextFromClipboard?: (callback: (text: string | null) => void) => void;
   onEvent?: (eventType: string, eventHandler: (...args: any[]) => void) => void;
   offEvent?: (
     eventType: string,
@@ -664,4 +670,86 @@ export function closeTelegramApp(): void {
   } catch {
     // ignore
   }
+}
+
+export function isTelegramScanQrSupported(): boolean {
+  const webApp = getRawTelegramWebApp();
+  return Boolean(
+    isTelegramEnvironment() && typeof webApp?.showScanQrPopup === 'function',
+  );
+}
+
+export function showTelegramScanQrPopup(
+  params: { text?: string },
+  onScanned: (result: string) => boolean | void,
+  onClosed?: () => void,
+): boolean {
+  const webApp = getRawTelegramWebApp();
+  if (
+    isTelegramEnvironment() &&
+    typeof webApp?.showScanQrPopup === 'function'
+  ) {
+    try {
+      const handlePopupClosed = () => {
+        webApp.offEvent?.('scanQrPopupClosed', handlePopupClosed);
+        onClosed?.();
+      };
+      webApp.onEvent?.('scanQrPopupClosed', handlePopupClosed);
+
+      webApp.showScanQrPopup(params, (text: string) => {
+        webApp.offEvent?.('scanQrPopupClosed', handlePopupClosed);
+        const handled = onScanned(text);
+        if (handled !== false) {
+          closeTelegramScanQrPopup();
+        }
+        return true;
+      });
+      return true;
+    } catch (err) {
+      console.warn(
+        '[TelegramAdapter] Failed to open native scan QR popup:',
+        err,
+      );
+    }
+  }
+  return false;
+}
+
+export function closeTelegramScanQrPopup(): void {
+  const webApp = getRawTelegramWebApp();
+  if (typeof webApp?.closeScanQrPopup === 'function') {
+    try {
+      webApp.closeScanQrPopup();
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export function readTelegramClipboardText(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const webApp = getRawTelegramWebApp();
+    if (
+      isTelegramEnvironment() &&
+      typeof webApp?.readTextFromClipboard === 'function'
+    ) {
+      try {
+        webApp.readTextFromClipboard((text: string | null) => {
+          resolve(text ?? null);
+        });
+        return;
+      } catch (err) {
+        console.warn('[TelegramAdapter] Failed to read from clipboard:', err);
+      }
+    }
+    // Fallback to web clipboard API if not in Telegram or readTextFromClipboard unsupported
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+      navigator.clipboard
+        .readText()
+        .then((txt) => resolve(txt || null))
+        .catch(() => resolve(null));
+      return;
+    }
+    resolve(null);
+  });
 }

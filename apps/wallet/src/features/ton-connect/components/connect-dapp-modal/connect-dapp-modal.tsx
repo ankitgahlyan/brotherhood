@@ -5,6 +5,11 @@ import { useTonConnect } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
 import { Modal } from '@/core/components/ui/modal';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
+import {
+  isTelegramScanQrSupported,
+  showTelegramScanQrPopup,
+  closeTelegramScanQrPopup,
+} from '@/core/lib/telegram';
 
 interface ConnectDappModalProps {
   isOpen: boolean;
@@ -63,28 +68,54 @@ export const ConnectDappModal: React.FC<ConnectDappModalProps> = ({
     [processUrl],
   );
 
+  const hasNativeScanner = isTelegramScanQrSupported();
+
+  useEffect(() => {
+    if (isOpen && mode === 'scanner' && hasNativeScanner) {
+      const opened = showTelegramScanQrPopup(
+        { text: 'Scan TonConnect QR' },
+        (scanned) => {
+          if (scanned) {
+            void processUrl(scanned);
+          }
+          return true;
+        },
+        () => {
+          onClose();
+        },
+      );
+      if (opened) {
+        return () => {
+          closeTelegramScanQrPopup();
+        };
+      }
+    }
+  }, [isOpen, mode, hasNativeScanner, processUrl, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* 1. Default: Fullscreen Camera QR Scanner with Manual Paste button */}
-      <QrScanner
-        isVisible={isOpen && mode === 'scanner'}
-        onScan={handleScan}
-        onClose={onClose}
-        title="Scan TonConnect QR"
-        footer={
-          <Button
-            type="button"
-            variant="gray"
-            onClick={() => setMode('paste')}
-            className="w-full h-9 text-xs gap-1.5 border-border hover:bg-secondary cursor-pointer"
-          >
-            <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>Paste Link Manually</span>
-          </Button>
-        }
-      />
+      {/* 1. Default: Fullscreen Camera QR Scanner with Manual Paste button (Web only) */}
+      {!hasNativeScanner && (
+        <QrScanner
+          isVisible={isOpen && mode === 'scanner'}
+          onScan={handleScan}
+          onClose={onClose}
+          title="Scan TonConnect QR"
+          footer={
+            <Button
+              type="button"
+              variant="gray"
+              onClick={() => setMode('paste')}
+              className="w-full h-9 text-xs gap-1.5 border-border hover:bg-secondary cursor-pointer"
+            >
+              <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Paste Link Manually</span>
+            </Button>
+          }
+        />
+      )}
 
       {/* 2. Manual URL Entry Modal */}
       <Modal.Container

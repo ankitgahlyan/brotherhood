@@ -23,18 +23,6 @@ describe('TON DNS Library (TEP-81)', () => {
   });
 
   describe('isTonChainDns', () => {
-    it('identifies standard .ton domains', () => {
-      expect(isTonChainDns('alice.ton')).toBe(true);
-      expect(isTonChainDns('ALICE.TON')).toBe(true);
-      expect(isTonChainDns('sub.alice.ton')).toBe(true);
-      expect(isTonChainDns('my-cool-name.ton')).toBe(true);
-    });
-
-    it('identifies telegram username domains (.t.me)', () => {
-      expect(isTonChainDns('durov.t.me')).toBe(true);
-      expect(isTonChainDns('my_channel.t.me')).toBe(true);
-    });
-
     it('identifies brotherhood .bro domains', () => {
       expect(isTonChainDns('alice.bro')).toBe(true);
       expect(isTonChainDns('ALICE.BRO')).toBe(true);
@@ -42,9 +30,11 @@ describe('TON DNS Library (TEP-81)', () => {
       expect(isTonChainDns('sub.alice.bro')).toBe(true);
     });
 
-    it('identifies other supported TEP-81 zones (.vip, .grm)', () => {
-      expect(isTonChainDns('founder.vip')).toBe(true);
-      expect(isTonChainDns('community.grm')).toBe(true);
+    it('rejects other non-.bro zones (.ton, .t.me, .vip, .grm)', () => {
+      expect(isTonChainDns('alice.ton')).toBe(false);
+      expect(isTonChainDns('durov.t.me')).toBe(false);
+      expect(isTonChainDns('founder.vip')).toBe(false);
+      expect(isTonChainDns('community.grm')).toBe(false);
     });
 
     it('rejects regular TON addresses', () => {
@@ -65,7 +55,7 @@ describe('TON DNS Library (TEP-81)', () => {
       expect(isTonChainDns('google.com')).toBe(false);
       expect(isTonChainDns('ton.org')).toBe(false);
       expect(isTonChainDns('alice@ton')).toBe(false);
-      expect(isTonChainDns('.ton')).toBe(false);
+      expect(isTonChainDns('.bro')).toBe(false);
       expect(isTonChainDns('')).toBe(false);
       expect(isTonChainDns('   ')).toBe(false);
       expect(isTonChainDns('justaword')).toBe(false);
@@ -73,22 +63,15 @@ describe('TON DNS Library (TEP-81)', () => {
   });
 
   describe('getDnsDomainZone', () => {
-    it('correctly splits base name from zone suffix', () => {
-      const matchTon = getDnsDomainZone('alice.ton');
-      expect(matchTon).toBeDefined();
-      expect(matchTon?.base).toBe('alice');
-      expect(matchTon?.zone.collectionName).toBe('TON DNS Domains');
-
-      const matchTme = getDnsDomainZone('durov.t.me');
-      expect(matchTme).toBeDefined();
-      expect(matchTme?.base).toBe('durov');
-      expect(matchTme?.zone.collectionName).toBe('Telegram Usernames');
-
+    it('correctly splits base name from zone suffix for .bro', () => {
       const matchBro = getDnsDomainZone('alice.bro');
       expect(matchBro).toBeDefined();
       expect(matchBro?.base).toBe('alice');
       expect(matchBro?.zone.collectionName).toBe('Brotherhood Domains (.bro)');
       expect(matchBro?.zone.isRenewable).toBe(true);
+
+      const matchTon = getDnsDomainZone('alice.ton');
+      expect(matchTon).toBeUndefined();
     });
   });
 
@@ -196,7 +179,7 @@ describe('TON DNS Library (TEP-81)', () => {
       };
 
       const result1 = await resolveAddressByDomain(
-        'alice.ton',
+        'alice.bro',
         'mainnet',
         undefined,
         mockClient as any,
@@ -209,7 +192,7 @@ describe('TON DNS Library (TEP-81)', () => {
 
       // Second call within TTL should hit cache
       const result2 = await resolveAddressByDomain(
-        'alice.ton',
+        'alice.bro',
         'mainnet',
         undefined,
         mockClient as any,
@@ -228,7 +211,7 @@ describe('TON DNS Library (TEP-81)', () => {
       };
 
       const result = await resolveAddressByDomain(
-        'nonexistent.ton',
+        'nonexistent.bro',
         'mainnet',
         undefined,
         mockClient as any,
@@ -237,8 +220,14 @@ describe('TON DNS Library (TEP-81)', () => {
     });
 
     it('returns undefined if domain format is not a supported TON DNS zone', async () => {
-      const result = await resolveAddressByDomain('google.com', 'mainnet');
-      expect(result).toBeUndefined();
+      const resultGoogle = await resolveAddressByDomain(
+        'google.com',
+        'mainnet',
+      );
+      expect(resultGoogle).toBeUndefined();
+
+      const resultTon = await resolveAddressByDomain('alice.ton', 'mainnet');
+      expect(resultTon).toBeUndefined();
     });
   });
 });

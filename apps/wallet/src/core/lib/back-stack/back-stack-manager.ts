@@ -52,7 +52,11 @@ export function handleRootExitConfirmation(): boolean {
       closeTelegramApp();
       return true;
     }
-    return false;
+    if (typeof window !== 'undefined') {
+      // Allow browser to exit / close
+      window.history.go(-2);
+    }
+    return true;
   }
 
   lastRootBackPressTime = now;
@@ -181,6 +185,21 @@ export function registerRouterBack(handler: () => void, isRoot: boolean): void {
   initPopstateListener();
   routerBackHandler = handler;
   isAtRootRoute = isRoot;
+
+  if (isRoot && typeof window !== 'undefined') {
+    try {
+      if (!window.history.state?.isRootTrap) {
+        window.history.pushState(
+          { isRootTrap: true },
+          '',
+          window.location.href,
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   updateNativeBackButtonState();
 }
 

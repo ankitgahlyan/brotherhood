@@ -254,7 +254,7 @@ export async function rateLimitedFetch(
       },
     );
 
-  const maxRetries = options?.maxRetries ?? 4;
+  const maxRetries = options?.maxRetries ?? 8;
 
   let attempt = 0;
   while (true) {
@@ -264,9 +264,29 @@ export async function rateLimitedFetch(
       }, hasKey);
 
       if (res.status === 429) {
-        queue.record429(options?.baseBackoffMs ?? 1500);
+        let retryAfterMs = 0;
+        const retryHeader = res.headers?.get?.('retry-after');
+        if (retryHeader) {
+          const parsedSeconds = parseFloat(retryHeader);
+          if (!isNaN(parsedSeconds) && parsedSeconds > 0) {
+            retryAfterMs = parsedSeconds * 1000;
+          }
+        }
+
+        const baseMs = options?.baseBackoffMs ?? 1500;
+        const computedBackoff =
+          retryAfterMs > 0
+            ? retryAfterMs
+            : Math.min(
+                baseMs * Math.pow(1.5, attempt) + Math.random() * 500,
+                15000,
+              );
+
+        queue.record429(computedBackoff);
+
         if (attempt < maxRetries) {
           attempt++;
+          await new Promise((resolve) => setTimeout(resolve, computedBackoff));
           continue;
         }
       }
@@ -275,7 +295,7 @@ export async function rateLimitedFetch(
     } catch (err) {
       if (attempt < maxRetries) {
         attempt++;
-        await new Promise((r) => setTimeout(r, 1000 * attempt));
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(1.5, attempt)));
         continue;
       }
       throw err;

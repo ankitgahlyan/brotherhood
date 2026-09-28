@@ -17,6 +17,7 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
   '/city-network',
   '/dao',
   '/lottery',
+  '/dns',
 ];
 
 const SUB_TAB_ROUTES = [
@@ -24,6 +25,7 @@ const SUB_TAB_ROUTES = [
   '/personal-jetton',
   '/city-network',
   '/dao',
+  '/dns',
 ];
 
 const SWIPE_THRESHOLD_PX = 50;

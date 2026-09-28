@@ -29,38 +29,10 @@ export interface DnsZone {
   isTelemint: boolean;
 }
 
-export const TON_TESTNET_ROOT_DNS =
-  'Ef_v5x0Thgr6pq6ur2NvkWhIf4DxAxsL-Nk5rknT6n99oPKX';
-export const TON_MAINNET_ROOT_DNS =
-  'EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz';
-
 /**
- * Returns supported DNS zones based on network. On testnet, only .bro and .ton are active.
+ * Returns supported DNS zones based on network. Only Brotherhood .bro domains are supported.
  */
-export function getTonDnsZones(network: Network = 'mainnet'): DnsZone[] {
-  if (network === 'testnet') {
-    return [
-      {
-        suffixes: ['bro'],
-        baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,126}$/i,
-        resolver: BRO_COLLECTION_RESOLVER,
-        collectionName: 'Brotherhood Domains (.bro)',
-        isRenewable: true,
-        isLinkable: true,
-        isTelemint: false,
-      },
-      {
-        suffixes: ['ton'],
-        baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{4,126}$/i,
-        resolver: TON_TESTNET_ROOT_DNS,
-        collectionName: 'TON DNS Domains',
-        isRenewable: true,
-        isLinkable: true,
-        isTelemint: false,
-      },
-    ];
-  }
-
+export function getTonDnsZones(_network: Network = 'mainnet'): DnsZone[] {
   return [
     {
       suffixes: ['bro'],
@@ -68,42 +40,6 @@ export function getTonDnsZones(network: Network = 'mainnet'): DnsZone[] {
       resolver: BRO_COLLECTION_RESOLVER,
       collectionName: 'Brotherhood Domains (.bro)',
       isRenewable: true,
-      isLinkable: true,
-      isTelemint: false,
-    },
-    {
-      suffixes: ['ton'],
-      baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{4,126}$/i,
-      resolver: TON_MAINNET_ROOT_DNS,
-      collectionName: 'TON DNS Domains',
-      isRenewable: true,
-      isLinkable: true,
-      isTelemint: false,
-    },
-    {
-      suffixes: ['t.me'],
-      baseFormat: /^([-\da-z]+\.){0,2}[-_\da-z]{4,32}$/i,
-      resolver: 'EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi',
-      collectionName: 'Telegram Usernames',
-      isRenewable: false,
-      isLinkable: true,
-      isTelemint: true,
-    },
-    {
-      suffixes: ['vip', 'ton.vip', 'vip.ton'],
-      baseFormat: /^([-\da-z]+\.){0,2}[\da-z]{1,24}$/i,
-      resolver: 'EQBWG4EBbPDv4Xj7xlPwzxd7hSyHMzwwLB5O6rY-0BBeaixS',
-      collectionName: 'VIP DNS Domains',
-      isRenewable: false,
-      isLinkable: true,
-      isTelemint: false,
-    },
-    {
-      suffixes: ['grm'],
-      baseFormat: /^([-\da-z]+\.){0,2}[-\da-z]{1,127}$/i,
-      resolver: 'EQAic3zPce496ukFDhbco28FVsKKl2WUX_iJwaL87CBxSiLQ',
-      collectionName: 'GRAM DNS Domains',
-      isRenewable: false,
       isLinkable: true,
       isTelemint: false,
     },

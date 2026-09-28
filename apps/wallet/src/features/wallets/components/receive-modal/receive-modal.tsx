@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Address } from '@ton/core';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +36,8 @@ const QR_OPTIONS: Partial<QrOptions> = {
   qrOptions: { errorCorrectionLevel: 'H' },
 };
 
+const CACHE_KEY_PREFIX = 'bro_receive_qr_';
+
 const StyledQrCode: React.FC<{ value: string; size?: number }> = ({
   value,
   size = 220,
@@ -43,9 +45,20 @@ const StyledQrCode: React.FC<{ value: string; size?: number }> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QRCodeStyling | null>(null);
 
-  // Create the QR instance and append it to the container.
+  // Create the QR instance and append it to the container with caching.
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !value) return;
+
+    const cacheKey = `${CACHE_KEY_PREFIX}${value}_${size}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached && containerRef.current) {
+        containerRef.current.innerHTML = cached;
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+
     const qr = new QRCodeStyling({
       ...QR_OPTIONS,
       width: size,
@@ -53,8 +66,26 @@ const StyledQrCode: React.FC<{ value: string; size?: number }> = ({
       data: value,
     });
     qrRef.current = qr;
-    containerRef.current.replaceChildren();
-    qr.append(containerRef.current);
+
+    const updateDomAndCache = () => {
+      if (!containerRef.current) return;
+      containerRef.current.replaceChildren();
+      qr.append(containerRef.current);
+      try {
+        const svgContent = containerRef.current.innerHTML;
+        if (svgContent) {
+          localStorage.setItem(cacheKey, svgContent);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (qr._svgDrawingPromise) {
+      qr._svgDrawingPromise.then(updateDomAndCache).catch(updateDomAndCache);
+    } else {
+      updateDomAndCache();
+    }
   }, [size, value]);
 
   return <div ref={containerRef} style={{ width: size, height: size }} />;
@@ -65,24 +96,12 @@ interface ReceiveModalProps {
   onClose: () => void;
 }
 
-type AddressFormat = 'uq' | 'eq' | 'raw';
-
 export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   isOpen,
   onClose,
 }) => {
   const { address, getActiveWallet } = useWallet();
   const network = getActiveWallet()?.network ?? 'testnet';
-  const [format, setFormat] = useState<AddressFormat>('uq');
-
-  const formatTabs = useMemo<{ id: AddressFormat; label: string }[]>(() => {
-    const isTestnet = network === 'testnet';
-    return [
-      { id: 'uq', label: isTestnet ? '0Q (User)' : 'UQ (User)' },
-      { id: 'eq', label: isTestnet ? 'kQ (Contract)' : 'EQ (Contract)' },
-      { id: 'raw', label: 'Raw' },
-    ];
-  }, [network]);
 
   const parsed = useMemo(() => {
     if (!address) return null;
@@ -93,15 +112,15 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
     }
   }, [address]);
 
+  // Always show user-friendly non-bounceable address format (0Q... on testnet, UQ... on mainnet)
   const formattedAddress = useMemo(() => {
     if (!parsed) return address ?? '';
-    if (format === 'raw') return parsed.toRawString();
     return parsed.toString({
       urlSafe: true,
-      bounceable: format === 'eq',
+      bounceable: false,
       testOnly: network === 'testnet',
     });
-  }, [parsed, format, network, address]);
+  }, [parsed, network, address]);
 
   const handleCopy = async () => {
     if (!formattedAddress) return;
@@ -130,23 +149,6 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
           ) : (
             <div className="w-55 h-55 rounded-lg bg-muted animate-pulse" />
           )}
-        </div>
-
-        <div className="grid grid-cols-3 gap-1 w-full bg-secondary/70 border border-border rounded-full p-1">
-          {formatTabs.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFormat(f.id)}
-              className={`py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                format === f.id
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
         </div>
 
         <button

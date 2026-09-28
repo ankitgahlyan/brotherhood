@@ -44,7 +44,7 @@ export interface InputScanProps {
 export const InputScan: React.FC<InputScanProps> = ({
   value,
   onChange,
-  placeholder = 'UQ..., @username or .ton domain',
+  placeholder = 'UQ..., @username or .bro domain',
   disabled = false,
   scannerTitle = 'Scan address QR code',
   containerClassName,
@@ -234,7 +234,7 @@ export const InputScan: React.FC<InputScanProps> = ({
                 <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
                 <span>
                   {isDnsInput
-                    ? 'Resolving TON DNS on-chain...'
+                    ? 'Resolving .bro DNS on-chain...'
                     : 'Checking username...'}
                 </span>
               </div>

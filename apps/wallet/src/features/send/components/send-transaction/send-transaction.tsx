@@ -374,7 +374,7 @@ export const SendTransaction: React.FC = () => {
           !isValidAddress(resolvedGranterAddress)
         ) {
           throw new Error(
-            'Please enter a valid granter Owner address, @username, or .ton domain',
+            'Please enter a valid granter Owner address, @username, or .bro domain',
           );
         }
         const amountNano = parseUnits(amount, 9);
@@ -409,7 +409,7 @@ export const SendTransaction: React.FC = () => {
       : '';
   const granterError =
     senderMode === 'other' && granterInput.length > 0 && !resolvedGranterAddress
-      ? 'Invalid granter address, username, or .ton domain'
+      ? 'Invalid granter address, username, or .bro domain'
       : '';
 
   const isSpendAllowanceDisabled =

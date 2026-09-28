@@ -11,7 +11,7 @@ import "utils/common"
 fun main() {
     val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
     val minter = promptJettonMinter("Enter Jetton Minter address");
-    val metadata = promptJettonMetadata(JETTON_DEFAULT_UPDATED_DESCRIPTION);
+    val metadata = promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION);
 
     val res = minter.sendChangeMinterMetadata(
         admin.address,

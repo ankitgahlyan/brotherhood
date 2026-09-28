@@ -233,8 +233,8 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                     onClick={() => onSelectMember(entry.addressString)}
                     className="w-full text-left p-2.5 bg-secondary/40 hover:bg-secondary/80 border border-border/50 hover:border-primary/30 rounded-lg transition-all flex justify-between items-center group cursor-pointer"
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-0.5 min-w-0 pr-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span
                           role="button"
                           tabIndex={0}
@@ -253,7 +253,7 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                               openTelegramProfile(prof.username);
                             }
                           }}
-                          className={`font-semibold text-xs text-foreground transition-colors ${
+                          className={`font-semibold text-xs text-foreground transition-colors truncate ${
                             prof?.username
                               ? 'hover:text-primary hover:underline cursor-pointer'
                               : 'group-hover:text-primary'

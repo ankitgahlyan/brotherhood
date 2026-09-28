@@ -7,7 +7,7 @@ if (typeof globalThis !== 'undefined') {
 
 import { Address, Cell } from '@ton/core';
 import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
-import { WalletV5R1CodeBoc } from '@ton/walletkit';
+import { WalletV5R1CodeBoc, CallForSuccess } from '@ton/walletkit';
 import {
   setContractCache,
   setMetadataCache,
@@ -188,15 +188,18 @@ export async function batchFetchAccountStates(
     const url = `${base}/accountStates?${searchParams.toString()}`;
 
     try {
-      const res = await rateLimitedFetch(url, { headers });
-      if (!res.ok) {
-        console.error(
-          `[batchFetchAccountStates] HTTP ${res.status} ${res.statusText} for chunk of ${uniqueChunk.length} addresses:`,
-          uniqueChunk,
-        );
-        return null;
-      }
-      const data = (await res.json()) as ToncenterAccountStatesResponse;
+      const data = await CallForSuccess(
+        async () => {
+          const res = await rateLimitedFetch(url, { headers });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return (await res.json()) as ToncenterAccountStatesResponse;
+        },
+        5,
+        1500,
+      );
+
       // Immediately discard code_boc from all accounts to eliminate huge strings in memory
       if (Array.isArray(data.accounts)) {
         for (const acc of data.accounts) {
@@ -206,7 +209,7 @@ export async function batchFetchAccountStates(
       return data;
     } catch (err) {
       console.error(
-        '[batchFetchAccountStates] Failed to fetch accountStates chunk:',
+        '[batchFetchAccountStates] Failed to fetch accountStates chunk after retries:',
         uniqueChunk,
         err,
       );

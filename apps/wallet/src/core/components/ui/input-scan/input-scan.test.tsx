@@ -70,14 +70,14 @@ describe('InputScan component', () => {
         onChange: () => {},
       }),
     );
-    expect(html).toContain('UQ..., @username or .ton domain');
+    expect(html).toContain('UQ..., @username or .bro domain');
     expect(html).toContain('Scan QR code');
   });
 
   it('displays DNS resolving or unresolved warning when an unmapped DNS domain is entered', () => {
     const html = renderToString(
       React.createElement(InputScan, {
-        value: 'unknown-domain.ton',
+        value: 'unknown-domain.bro',
         onChange: () => {},
       }),
     );

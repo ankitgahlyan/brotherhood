@@ -153,7 +153,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                   // Small delay to allow click on suggestions
                   setTimeout(() => setShowSuggestions(false), 200);
                 }}
-                placeholder="Granter Owner Address, @username, or .ton domain"
+                placeholder="Granter Owner Address, @username, or .bro domain"
                 data-testid="sender-granter-input"
               />
             </Input.Field>

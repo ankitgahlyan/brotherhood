@@ -375,15 +375,18 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
       <Modal.Container
         isOpened={isOpen}
         onOpenChange={(open) => !open && handleClose()}
-        className="max-w-md w-full p-0 overflow-hidden rounded-3xl bg-card border border-border"
+        className="max-w-md w-full p-0 overflow-hidden rounded-3xl bg-card border border-border h-[95dvh] max-h-[95dvh] sm:h-[95vh] sm:max-h-[95vh] flex flex-col"
       >
-        <Modal.Header onClose={handleClose} className="px-5 pt-4 pb-2">
+        <Modal.Header onClose={handleClose} className="px-5 pt-4 pb-2 shrink-0">
           <Modal.Title className="text-base font-semibold text-center w-full">
             Transaction
           </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body className="px-5 pb-6 space-y-5">
+        <Modal.Body
+          data-vaul-no-drag
+          className="px-5 pb-6 space-y-5 overflow-y-auto min-h-0 flex-1 touch-pan-y overscroll-contain"
+        >
           {/* Top Amount Hero */}
           <div className="flex flex-col items-center justify-center pt-2 pb-1">
             <div className="relative mb-3">

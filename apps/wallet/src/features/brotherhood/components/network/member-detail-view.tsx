@@ -318,7 +318,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                     data.ownerAddressString || data.contractAddressString,
                   )
                 }
-                className="text-xs py-1.5"
+                className="text-xs py-1.5 px-1 truncate min-w-0"
               >
                 Send FI
               </Button>
@@ -331,7 +331,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                     data.ownerAddressString || data.contractAddressString,
                   )
                 }
-                className="text-xs py-1.5"
+                className="text-xs py-1.5 px-1 truncate min-w-0"
               >
                 Vote
               </Button>
@@ -344,7 +344,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                     data.ownerAddressString || data.contractAddressString,
                   )
                 }
-                className="text-xs py-1.5"
+                className="text-[11px] sm:text-xs py-1.5 px-1 truncate min-w-0"
               >
                 Set Allowance
               </Button>
@@ -354,8 +354,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
           {/* Circle / Ring Member Suspension / Reactivation */}
           {canManageMember && (
             <div className="p-3 bg-secondary/50 border border-border/70 rounded-xl space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="min-w-0">
                   <span className="text-xs font-semibold text-foreground block">
                     Circle / Ring Management
                   </span>
@@ -365,11 +365,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                       : 'You are this member’s upstream inviter (Ring)'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-end gap-1.5 shrink-0 flex-wrap">
                   <button
                     type="button"
                     onClick={() => setShowLineageOptions((prev) => !prev)}
-                    className="text-[11px] text-primary hover:underline px-1.5 py-0.5"
+                    className="text-[11px] text-primary hover:underline px-1.5 py-0.5 cursor-pointer"
                   >
                     {showLineageOptions ? 'Simple' : 'Advanced'}
                   </button>
@@ -431,8 +431,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
           {/* Authority Enforcement Action */}
           {isAuthority && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="min-w-0">
                   <span className="text-xs font-semibold text-destructive block">
                     Authority Sanction
                   </span>
@@ -440,11 +440,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                     Confiscate or transfer member funds & manage active status
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-end gap-1.5 shrink-0 flex-wrap">
                   <button
                     type="button"
                     onClick={() => setShowAuthorityOptions((prev) => !prev)}
-                    className="text-[11px] text-destructive hover:underline px-1.5 py-0.5"
+                    className="text-[11px] text-destructive hover:underline px-1.5 py-0.5 cursor-pointer"
                   >
                     {showAuthorityOptions ? 'Simple' : 'Advanced'}
                   </button>

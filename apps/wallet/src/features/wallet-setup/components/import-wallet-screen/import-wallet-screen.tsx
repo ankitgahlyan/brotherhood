@@ -23,6 +23,7 @@ import {
   extractMnemonicWordsFromPaste,
   isImportableBip39,
 } from '@/features/wallets';
+import { readTelegramClipboardText } from '@/core/lib/telegram';
 
 type WalletInterface = 'mnemonic' | 'signer';
 
@@ -182,22 +183,17 @@ export const ImportWalletScreen: React.FC = () => {
   };
 
   const handleClickPaste = () => {
-    void navigator.clipboard
-      ?.readText()
-      .then((text) => {
-        const tokens = extractMnemonicWordsFromPaste(text ?? '');
-        if (tokens.length === 0) return;
-        const { nextWords, focusIndex } = applyMnemonicPaste(
-          words,
-          activeInput,
-          tokens,
-        );
-        setWords(nextWords);
-        focusCell(focusIndex);
-      })
-      .catch(() => {
-        /* Clipboard API missing or denied; user can still Ctrl+V into a cell. */
-      });
+    void readTelegramClipboardText().then((text) => {
+      const tokens = extractMnemonicWordsFromPaste(text ?? '');
+      if (tokens.length === 0) return;
+      const { nextWords, focusIndex } = applyMnemonicPaste(
+        words,
+        activeInput,
+        tokens,
+      );
+      setWords(nextWords);
+      focusCell(focusIndex);
+    });
   };
 
   const clearAll = () => {

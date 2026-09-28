@@ -108,8 +108,8 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             }}
             placeholder={
               net === 'mainnet'
-                ? 'Owner address (UQ…), @username, or .ton domain'
-                : 'Owner address (0Q…), @username, or .ton domain'
+                ? 'Owner address (UQ…), @username, or .bro domain'
+                : 'Owner address (0Q…), @username, or .bro domain'
             }
             data-testid="recipient-input"
           />
