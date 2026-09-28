@@ -27,19 +27,20 @@ function notifyListeners(hasUpdate: boolean) {
 function isUserBusy(): boolean {
   return Boolean(
     typeof document !== 'undefined' &&
-    (document.querySelector('[role="dialog"][data-state="open"]') ||
-      document.querySelector('.signing-in-progress') ||
+    (document.querySelector('.signing-in-progress') ||
       document.querySelector('[data-tx-signing="true"]')),
   );
 }
 
 function autoApplyUpdate() {
   if (isUserBusy()) {
-    setTimeout(autoApplyUpdate, 3000);
+    setTimeout(autoApplyUpdate, 1500);
     return;
   }
 
-  console.log('[ServiceWorker] Auto-applying new frontend update...');
+  console.log(
+    '[ServiceWorker] Auto-applying new frontend update and reloading...',
+  );
   void applyAppUpdate();
 }
 
@@ -100,6 +101,18 @@ export async function initServiceWorker(): Promise<void> {
     },
   });
 
+  // Listen for active controller changes and reload immediately to run fresh assets
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
+  // Check for updates immediately on startup and apply if found
+  if (navigator.onLine) {
+    void checkForAppUpdates().then((res) => {
+      if (res.hasUpdate) autoApplyUpdate();
+    });
+  }
+
   // Periodic background check for new releases every 5 minutes & on focus
   setInterval(() => {
     if (navigator.onLine && document.visibilityState === 'visible') {
@@ -144,8 +157,19 @@ export async function checkForAppUpdates(): Promise<{ hasUpdate: boolean }> {
     // Trigger update check against the host
     await reg.update();
 
-    if (reg.waiting || reg.installing) {
+    if (reg.waiting) {
       notifyListeners(true);
+      return { hasUpdate: true };
+    }
+
+    if (reg.installing) {
+      const sw = reg.installing;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed') {
+          notifyListeners(true);
+          autoApplyUpdate();
+        }
+      });
       return { hasUpdate: true };
     }
 
@@ -157,9 +181,17 @@ export async function checkForAppUpdates(): Promise<{ hasUpdate: boolean }> {
 }
 
 export async function applyAppUpdate(): Promise<void> {
-  if (updateSWFn) {
-    await updateSWFn(true);
-  } else {
+  try {
+    if (swRegistration?.waiting) {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    if (updateSWFn) {
+      await updateSWFn(true);
+    } else {
+      window.location.reload();
+    }
+  } catch (err) {
+    console.warn('[ServiceWorker] Error applying update, forcing reload:', err);
     window.location.reload();
   }
 }

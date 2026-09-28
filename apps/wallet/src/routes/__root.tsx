@@ -33,6 +33,7 @@ function RootComponent() {
   const isWalletKitInitialized = useWalletStore(
     (state) => state.walletCore.isWalletKitInitialized,
   );
+  const isHydrated = useWalletStore((state) => state.isHydrated);
   const initializationError = useWalletStore(
     (state) => state.walletCore.initializationError,
   );
@@ -120,7 +121,7 @@ function RootComponent() {
     );
   }
 
-  if (!isWalletKitInitialized) {
+  if (!isWalletKitInitialized || !isHydrated) {
     return <LoaderCircle />;
   }
 
@@ -134,7 +135,7 @@ function RootComponent() {
           initial={{ opacity: 0.85 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.14, ease: 'easeOut' }}
-          className="contents"
+          className="min-h-screen w-full flex flex-col flex-1"
         >
           <Outlet />
         </motion.div>
