@@ -31,6 +31,7 @@
     "lint": "eslint --fix --max-warnings 0 . &&  prettier --write .",
     "lint:fix": "eslint --fix .",
     "format": "eslint --fix . && prettier --write .",
+    "format:changed": "node scripts/format-changed.mjs",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "typecheck": "bun run build:packages && tsc --noEmit && bun run --cwd packages/walletkit typecheck && bun run --cwd packages/v4ledger-adapter typecheck && bun run --cwd packages/wallet-core typecheck && bun run --cwd apps/wallet typecheck",
