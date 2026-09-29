@@ -45,14 +45,17 @@ export const DashboardHeader: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsConnectOpen(true)}
-        className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
+        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
         aria-label="Scan"
         data-testid="connect-dapp-button"
       >
         <ScanIcon className="w-5 h-5 text-foreground" />
+        <NetworkIndicator className="absolute top-1.5 right-1.5" />
       </button>
 
       <div className="flex items-center gap-2">
+        <SyncStatusButton />
+
         <button
           type="button"
           onClick={() => setIsManageWalletsOpen(true)}
@@ -67,9 +70,6 @@ export const DashboardHeader: React.FC = () => {
           </span>
           <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
         </button>
-
-        <NetworkIndicator />
-        <SyncStatusButton />
       </div>
 
       <div className="flex items-center gap-1.5">

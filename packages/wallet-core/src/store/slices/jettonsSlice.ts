@@ -6,7 +6,7 @@
  *
  */
 
-import { JettonError, compareAddress } from '@ton/walletkit';
+import { JettonError, compareAddress, CallForSuccess } from '@ton/walletkit';
 import type { Jetton, JettonTransfer, JettonInfo } from '@ton/walletkit';
 
 import { createComponentLogger } from '../../utils/logger';
@@ -101,12 +101,17 @@ export const createJettonsSlice: JettonsSliceCreator = (
         state.walletManagement.currentWallet?.getClient() ??
         state.walletCore.walletKit.getApiClient(getChainNetwork(walletNetwork));
 
-      const jettonsResponse = await client.jettonsByOwnerAddress({
-        ownerAddress:
-          allAddresses.length === 1 ? allAddresses[0] : allAddresses,
-        offset: 0,
-        limit: Math.max(50, allAddresses.length * 20),
-      });
+      const jettonsResponse = await CallForSuccess(
+        () =>
+          client.jettonsByOwnerAddress({
+            ownerAddress:
+              allAddresses.length === 1 ? allAddresses[0] : allAddresses,
+            offset: 0,
+            limit: Math.max(50, allAddresses.length * 20),
+          }),
+        5,
+        1000,
+      );
 
       if (!jettonsResponse) {
         log.warn('No jettons response received');

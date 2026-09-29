@@ -37,18 +37,6 @@ export const AmountField: React.FC<AmountFieldProps> = ({
   const fiatValue =
     token.rate !== undefined ? String(amountNumber * token.rate) : undefined;
   const presets = [
-    {
-      label: '10%',
-      amount: toAmountString(token.balance * 0.1, token.decimals),
-    },
-    {
-      label: '25%',
-      amount: toAmountString(token.balance * 0.25, token.decimals),
-    },
-    {
-      label: '50%',
-      amount: toAmountString(token.balance * 0.5, token.decimals),
-    },
     { label: 'MAX', amount: toAmountString(token.maxSendable, token.decimals) },
   ];
 

@@ -32,6 +32,7 @@ import {
   getTestnetApiProvider,
   API_KEYS_UPDATED_EVENT,
 } from '@/core/lib/network-api-keys';
+import { rateLimitedFetch } from '@/lib/brotherhood/rate-limiter';
 import { useTrackedAddressesSync } from '@/core/hooks/use-tracked-addresses-sync';
 import { useBackgroundSyncCoordinator } from '@/core/sync/background-sync-coordinator';
 import { MotionProvider } from '@/core/motion/motion-provider';
@@ -72,6 +73,7 @@ function getActiveWalletKitConfig(): WalletKitConfig {
     tonApiKeyTetra: ENV_TON_API_KEY_TETRA,
     createLedgerTransport: createWebLedgerTransport,
     disableAutoEmulation: DISABLE_AUTO_EMULATION,
+    fetchApi: rateLimitedFetch,
   };
 }
 

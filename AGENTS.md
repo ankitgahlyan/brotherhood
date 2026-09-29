@@ -111,6 +111,7 @@ Fetch the OpenAPI schema from API endpoint to discover available operations. Use
 - **Per-Provider Proxy Fallback:** When Direct Mode is active, each provider must independently check for a configured key/custom URL. Any unkeyed provider must continue routing through the local proxy with origin spoofing to avoid public endpoint 429 rate limit errors.
 - **Circuit Breaker Hygiene:** Always call `resetCircuitBreakers()` and `resetThrottledProviderFetchers()` whenever network settings or API keys are updated or saved.
 - **Resilient Polling & Activity Streams:** Always catch and suppress `CircuitOpenError` and `ApiServerError` in background catch-up/polling loops (`activityStream.ts`, `fallbackPollingScheduler.ts`) to avoid spamming debug logs or entering tight retry loops during breaker cooldown windows.
+- **WalletKit ApiClient Global Fetch Bypass & Rate Limiting Invariant:** In `walletCoreSlice.ts`, `ApiClientTonApi` and `ApiClientToncenter` instances must explicitly receive `fetchApi: walletKitConfig?.fetchApi` (bound to `rateLimitedFetch`) across all networks (`mainnet`, `testnet`, `tetra`). Bypassing `fetchApi` causes TonWalletKit to invoke unthrottled global `fetch()`, flooding RPC providers with burst requests, triggering HTTP 429/422 errors on startup, and failing balance and Jetton hydration. Additionally, startup getters (`loadUserJettons`, `updateBalance`) must wrap provider requests in `CallForSuccess` to reliably retry on transient 429 backoff intervals.
 
 ### State Management & Selector Stability Rules (Zustand & React)
 

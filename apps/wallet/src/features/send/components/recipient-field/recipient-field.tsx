@@ -15,12 +15,17 @@ import {
   RefreshCw,
   Globe,
   User,
+  X,
 } from 'lucide-react';
 
 import { Input } from '@/core/components/ui/input';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
+import {
+  isTelegramScanQrSupported,
+  showTelegramScanQrPopup,
+} from '@/core/lib/telegram';
 import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
 
 interface RecipientFieldProps {
@@ -116,12 +121,40 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
           {isResolving && (
             <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
           )}
+          {value && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                onResolvedAddressChange?.(null);
+              }}
+              aria-label="Clear recipient address"
+              title="Clear recipient address"
+              className="shrink-0 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setIsScannerVisible(true)}
+            onClick={() => {
+              if (isTelegramScanQrSupported()) {
+                showTelegramScanQrPopup(
+                  { text: 'Scan recipient QR' },
+                  (scanned) => {
+                    if (scanned) {
+                      onChange(scanned.trim());
+                    }
+                    return true;
+                  },
+                );
+              } else {
+                setIsScannerVisible(true);
+              }
+            }}
             aria-label="Scan QR code"
             title="Scan QR code"
-            className="shrink-0 p-1.5 rounded-full bg-secondary text-primary hover:bg-secondary/80 transition-colors"
+            className="shrink-0 p-1.5 rounded-full bg-secondary text-primary hover:bg-secondary/80 transition-colors cursor-pointer"
           >
             <QrCode className="w-4 h-4" />
           </button>

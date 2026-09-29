@@ -144,4 +144,8 @@ export interface WalletKitConfig {
    * If not provided, Ledger functionality will not be available.
    */
   createLedgerTransport?: CreateLedgerTransportFunction;
+  /**
+   * Custom fetch implementation (e.g. rateLimitedFetch) passed to underlying ApiClients
+   */
+  fetchApi?: (input: any, init?: any) => Promise<Response>;
 }

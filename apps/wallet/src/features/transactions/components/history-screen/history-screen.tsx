@@ -18,6 +18,7 @@ import { useTransactionRows } from '../../hooks/use-transaction-rows';
 import { getJettonsImage } from '@/features/jettons/utils/jetton';
 
 import { Button } from '@/core/components/ui/button';
+import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
@@ -261,7 +262,18 @@ export const HistoryScreen: FC = () => {
   return (
     <NewLayout
       header={
-        <ScreenHeader title="History" onBack={() => navigate('/wallet')} />
+        <ScreenHeader
+          title="History"
+          onBack={() => navigate('/wallet')}
+          rightElement={
+            <RefreshButton
+              iconOnly
+              onRefresh={handleRetry}
+              title="Refresh transaction history"
+              testId="history-refresh-btn"
+            />
+          }
+        />
       }
     >
       {renderContent()}

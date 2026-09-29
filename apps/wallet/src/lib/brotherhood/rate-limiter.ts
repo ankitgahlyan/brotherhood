@@ -81,24 +81,27 @@ export function detectApiKey(
 
   // Check custom key stored in localStorage for this provider
   if (options?.provider) {
-    const custom = getCustomApiKey(options.provider);
+    const isTestnetUrl = url ? url.includes('testnet') : false;
+    const custom = isTestnetUrl
+      ? getCustomApiKey(options.provider, 'testnet')
+      : null;
     if (custom) return true;
   }
 
   // Check Vite environment variables if checkEnv is enabled (default true)
   if (options?.checkEnv !== false) {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
+      const isTestnetUrl = url ? url.includes('testnet') : false;
       const mainnetKey =
         import.meta.env.VITE_TONCENTER_MAINNET_API_KEY ||
         import.meta.env.TONCENTER_MAINNET_API_KEY;
       const testnetKey =
         import.meta.env.VITE_TONCENTER_TESTNET_API_KEY ||
         import.meta.env.TONCENTER_TESTNET_API_KEY;
-      if (
-        (mainnetKey && String(mainnetKey).trim()) ||
-        (testnetKey && String(testnetKey).trim())
-      ) {
-        return true;
+      if (isTestnetUrl) {
+        if (testnetKey && String(testnetKey).trim()) return true;
+      } else {
+        if (mainnetKey && String(mainnetKey).trim()) return true;
       }
     }
   }
@@ -285,6 +288,11 @@ export async function rateLimitedFetch(
         queue.record429(computedBackoff);
 
         if (attempt < maxRetries) {
+          if (!isOnline()) {
+            throw new OfflineError(
+              'Offline: Network connection lost during request.',
+            );
+          }
           attempt++;
           await new Promise((resolve) => setTimeout(resolve, computedBackoff));
           continue;
@@ -293,7 +301,15 @@ export async function rateLimitedFetch(
 
       return res;
     } catch (err) {
+      if (err instanceof OfflineError) {
+        throw err;
+      }
       if (attempt < maxRetries) {
+        if (!isOnline()) {
+          throw new OfflineError(
+            'Offline: Network connection lost during request.',
+          );
+        }
         attempt++;
         await new Promise((r) => setTimeout(r, 1000 * Math.pow(1.5, attempt)));
         continue;

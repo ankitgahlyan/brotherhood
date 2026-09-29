@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { User, Users, Check, AlertCircle, Globe } from 'lucide-react';
+import { User, Users, Check, AlertCircle, Globe, X } from 'lucide-react';
 import { Input } from '@/core/components/ui/input';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { getCachedUsername } from '../../lib/contact-storage';
@@ -156,6 +156,17 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                 placeholder="Granter Owner Address, @username, or .bro domain"
                 data-testid="sender-granter-input"
               />
+              {granterInput && (
+                <button
+                  type="button"
+                  onClick={() => onGranterInputChange('')}
+                  aria-label="Clear granter address"
+                  title="Clear granter address"
+                  className="shrink-0 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </Input.Field>
 
             {/* Suggestions dropdown */}

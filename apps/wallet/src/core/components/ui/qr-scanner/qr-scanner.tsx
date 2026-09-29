@@ -70,9 +70,9 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     }
   }, []);
 
-  const handleClose = useCallback(async () => {
-    await safeStopScanner(scannerRef.current);
+  const handleClose = useCallback(() => {
     onCloseRef.current();
+    void safeStopScanner(scannerRef.current);
   }, [safeStopScanner]);
 
   const handleScanSuccess = useCallback(
@@ -86,8 +86,8 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         address = tonTransferMatch[1];
       }
 
-      await safeStopScanner(scannerRef.current);
       onCloseRef.current();
+      void safeStopScanner(scannerRef.current);
 
       try {
         await Promise.resolve(onScanRef.current(address));
@@ -284,13 +284,8 @@ export const QrScanner: React.FC<QrScannerProps> = ({
 
       {/* Centered Viewfinder Box */}
       <div
-        className="relative flex-1 flex flex-col items-center justify-center my-auto w-full max-w-sm mx-auto min-h-[280px] cursor-pointer"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            e.stopPropagation();
-            void handleClose();
-          }
-        }}
+        className="relative flex-1 flex flex-col items-center justify-center my-auto w-full max-w-sm mx-auto min-h-70 cursor-pointer"
+        onClick={() => handleClose()}
       >
         <div
           className="relative w-72 h-72 rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black flex items-center justify-center cursor-default"

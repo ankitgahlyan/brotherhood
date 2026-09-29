@@ -41,7 +41,8 @@ import {
 } from '../../lib/token-contract-resolution';
 import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
 import { useContactBookStore } from '@/core/storage/useContactBookStore';
-import { Layers, ChevronDown } from 'lucide-react';
+import { useDeveloperMode } from '@/core/lib/developer-mode';
+import { Layers, ChevronDown, Users } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/core/components/ui/button';
@@ -84,6 +85,7 @@ export const SendTransaction: React.FC = () => {
 
   const [senderMode, setSenderMode] = useState<SenderMode>('self');
   const [granterInput, setGranterInput] = useState('');
+  const [isDeveloperMode] = useDeveloperMode();
 
   const options = useSendTokens();
 
@@ -453,20 +455,57 @@ export const SendTransaction: React.FC = () => {
 
           <AmountField value={amount} onChange={setAmount} token={selected} />
 
-          {/* Sender field: only shown when sending FI */}
+          {/* Spend allowance toggle for FI tokens: hidden by default, shown only when selected */}
           {isFiToken && (
-            <SenderField
-              mode={senderMode}
-              onModeChange={setSenderMode}
-              granterInput={granterInput}
-              onGranterInputChange={setGranterInput}
-              resolvedGranterAddress={resolvedGranterAddress}
-              allowance={allowance}
-              formattedAllowance={formattedAllowance}
-              isAllowanceLoading={isAllowanceLoading}
-              userAddress={address ?? null}
-              error={granterError}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = senderMode === 'other' ? 'self' : 'other';
+                    setSenderMode(next);
+                    if (next === 'self') {
+                      setGranterInput('');
+                    }
+                  }}
+                  className={cn(
+                    'text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer',
+                    senderMode === 'other'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  data-testid="toggle-spend-allowance"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Spend from allowance</span>
+                  <span
+                    className={cn(
+                      'text-[10px] px-1.5 py-0.5 rounded font-medium border ml-1',
+                      senderMode === 'other'
+                        ? 'bg-primary/10 border-primary/30 text-primary'
+                        : 'bg-secondary border-border text-muted-foreground',
+                    )}
+                  >
+                    {senderMode === 'other' ? 'Active' : 'Off'}
+                  </span>
+                </button>
+              </div>
+
+              {senderMode === 'other' && (
+                <SenderField
+                  mode={senderMode}
+                  onModeChange={setSenderMode}
+                  granterInput={granterInput}
+                  onGranterInputChange={setGranterInput}
+                  resolvedGranterAddress={resolvedGranterAddress}
+                  allowance={allowance}
+                  formattedAllowance={formattedAllowance}
+                  isAllowanceLoading={isAllowanceLoading}
+                  userAddress={address ?? null}
+                  error={granterError}
+                />
+              )}
+            </div>
           )}
 
           <RecipientField
@@ -495,8 +534,8 @@ export const SendTransaction: React.FC = () => {
             disabled={isLoading}
           />
 
-          {/* Expandable Contract Routing Details for Jetton / FI / Personal Tokens */}
-          {tokenContext.tokenType === 'JETTON' && (
+          {/* Expandable Contract Routing Details for Jetton / FI / Personal Tokens: Only shown when developer mode is on */}
+          {tokenContext.tokenType === 'JETTON' && isDeveloperMode && (
             <div className="border border-border/60 bg-card/50 rounded-xl p-3 text-xs space-y-2">
               <button
                 type="button"

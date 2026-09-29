@@ -6,7 +6,12 @@
  *
  */
 
-import { compareAddress, Base64ToHex, Network } from '@ton/walletkit';
+import {
+  compareAddress,
+  Base64ToHex,
+  Network,
+  CallForSuccess,
+} from '@ton/walletkit';
 import type {
   ITonWalletKit,
   Transaction,
@@ -966,7 +971,11 @@ export const createWalletManagementSlice =
       }
 
       try {
-        const balance = await state.walletManagement.currentWallet.getBalance();
+        const balance = await CallForSuccess(
+          () => state.walletManagement.currentWallet!.getBalance(),
+          5,
+          1000,
+        );
         const balanceString = balance.toString();
         const address = state.walletManagement.address;
 

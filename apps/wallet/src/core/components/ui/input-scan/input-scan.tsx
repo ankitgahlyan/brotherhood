@@ -24,6 +24,10 @@ import { QrScanner } from '../qr-scanner/qr-scanner';
 import { cn } from '@/core/lib/utils';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
 import { useFormatAddress } from '@/core/utils/formatters';
+import {
+  isTelegramScanQrSupported,
+  showTelegramScanQrPopup,
+} from '@/core/lib/telegram';
 import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
 
 export interface InputScanProps {
@@ -143,9 +147,25 @@ export const InputScan: React.FC<InputScanProps> = ({
             data-testid={dataTestId}
             className={cn(
               'w-full p-2 border border-border bg-card rounded-lg text-xs text-foreground outline-none focus:border-primary',
+              value && !disabled ? 'pr-8' : '',
               className,
             )}
           />
+
+          {value && !disabled && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                onResolvedAddressChange?.(null);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-colors cursor-pointer"
+              title="Clear input"
+              aria-label="Clear input"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           {/* Autocomplete suggestions dropdown */}
           {enableUsernameResolution &&
@@ -193,11 +213,20 @@ export const InputScan: React.FC<InputScanProps> = ({
 
         <button
           type="button"
-          onClick={() => setIsScannerVisible(true)}
+          onClick={() => {
+            if (isTelegramScanQrSupported()) {
+              showTelegramScanQrPopup({ text: scannerTitle }, (scanned) => {
+                handleScan(scanned);
+                return true;
+              });
+            } else {
+              setIsScannerVisible(true);
+            }
+          }}
           disabled={disabled}
           aria-label="Scan QR code"
           title="Scan QR code"
-          className="shrink-0 p-2 rounded-lg bg-secondary text-primary hover:bg-secondary/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-border"
+          className="shrink-0 p-2 rounded-lg bg-secondary text-primary hover:bg-secondary/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-border cursor-pointer"
         >
           <QrCode className="w-4 h-4" />
         </button>

@@ -61,10 +61,12 @@ function createWalletKitInstance(
             ? new ApiClientTonApi({
                 network: Network.mainnet(),
                 apiKey: walletKitConfig?.tonApiKeyMainnet,
+                fetchApi: walletKitConfig?.fetchApi as any,
               })
             : new ApiClientToncenter({
                 network: Network.mainnet(),
                 apiKey: walletKitConfig?.tonApiKeyMainnet,
+                fetchApi: walletKitConfig?.fetchApi as any,
               }),
       },
       [Network.testnet().chainId]: {
@@ -73,10 +75,12 @@ function createWalletKitInstance(
             ? new ApiClientTonApi({
                 network: Network.testnet(),
                 apiKey: walletKitConfig?.tonApiKeyTestnet,
+                fetchApi: walletKitConfig?.fetchApi as any,
               })
             : new ApiClientToncenter({
                 network: Network.testnet(),
                 apiKey: walletKitConfig?.tonApiKeyTestnet,
+                fetchApi: walletKitConfig?.fetchApi as any,
               }),
       },
       [Network.tetra().chainId]: {
@@ -85,10 +89,12 @@ function createWalletKitInstance(
             ? new ApiClientTonApi({
                 network: Network.tetra(),
                 apiKey: walletKitConfig?.tonApiKeyTetra,
+                fetchApi: walletKitConfig?.fetchApi as any,
               })
             : new ApiClientToncenter({
                 network: Network.tetra(),
                 apiKey: walletKitConfig?.tonApiKeyTetra,
+                fetchApi: walletKitConfig?.fetchApi as any,
               }),
       },
     },
