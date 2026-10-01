@@ -89,6 +89,9 @@ export interface WalletManagementSlice {
     events: unknown[];
     eventsByAddress: Record<string, unknown[]>;
     associatedAddressesByAddress?: Record<string, string[]>;
+    eventsFetchedInSessionByAddress?: Record<string, boolean>;
+    eventsStaleByAddress?: Record<string, boolean>;
+    isLoadingEvents?: boolean;
     hasNextEvents: boolean;
 
     /** Pending transactions from WebSocket streaming */
@@ -151,7 +154,7 @@ export interface WalletManagementSlice {
   clearPendingTransactions: () => void;
 
   // Events-based history
-  // addEvent: (event: unknown) => void;
+  markEventsStale: (walletAddress?: string) => void;
   loadEvents: (
     limit?: number,
     offset?: number,

@@ -11,6 +11,7 @@ import { useWalletStore, useShallow } from '@demo/wallet-core';
 import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
 import { useExplorer } from '@/core/explorer';
+import { sameAddress } from '@/core/utils/formatters';
 
 import { mapEventToRow, mapPendingToRow } from '../utils/map-transaction-row';
 import type { TransactionRowModel } from '../utils/map-transaction-row';
@@ -19,52 +20,84 @@ const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 
 interface TransactionRows {
   rows: TransactionRowModel[];
+  allRows: TransactionRowModel[];
   hasMore: boolean;
 }
 
 /**
- * Loads the latest events (first `limit`, newest first), merges pending transactions
- * and maps everything to rows. Shared by the dashboard preview and the full history page.
+ * Reads transformed rows from local store (`eventsByAddress[address]`), merges pending transactions,
+ * and filters locally across All, Contract Calls ('CONTRACT'), TON, and per-token symbols.
  */
 export const useTransactionRows = (
   limit: number,
   tokenFilter?: string,
 ): TransactionRows => {
   const { explorer } = useExplorer();
-  const { events, address, pendingTransactions, network, hasMore } =
-    useWalletStore(
-      useShallow((state) => {
-        const activeWallet = state.walletManagement.savedWallets.find(
-          (w) => w.id === state.walletManagement.activeWalletId,
-        );
-        const currentAddress = state.walletManagement.address ?? '';
-        const cachedCount =
-          state.walletManagement.eventsByAddress[currentAddress]?.length ?? 0;
-        const currentCount = state.walletManagement.events?.length ?? 0;
-        return {
-          events: state.walletManagement.events,
-          address: state.walletManagement.address,
-          pendingTransactions: state.walletManagement.pendingTransactions,
-          network: activeWallet?.network ?? 'testnet',
-          hasMore:
-            state.walletManagement.hasNextEvents ||
-            cachedCount > limit ||
-            currentCount >= limit,
-        };
-      }),
-    );
+  const {
+    events,
+    eventsByAddress,
+    associatedAddressesByAddress,
+    address,
+    pendingTransactions,
+    network,
+    hasNextEvents,
+  } = useWalletStore(
+    useShallow((state) => {
+      const activeWallet = state.walletManagement.savedWallets.find(
+        (w) => w.id === state.walletManagement.activeWalletId,
+      );
+      return {
+        events: state.walletManagement.events,
+        eventsByAddress: state.walletManagement.eventsByAddress,
+        associatedAddressesByAddress:
+          state.walletManagement.associatedAddressesByAddress,
+        address: state.walletManagement.address,
+        pendingTransactions: state.walletManagement.pendingTransactions,
+        network: activeWallet?.network ?? 'testnet',
+        hasNextEvents: Boolean(state.walletManagement.hasNextEvents),
+      };
+    }),
+  );
 
-  const rows = useMemo<TransactionRowModel[]>(() => {
-    const eventItems = (events ?? []) as Event[];
+  const { rows, allRows, totalSourceCount } = useMemo(() => {
     const myAddress = address ?? '';
+    let storedItems: Array<Event | TransactionRowModel> | undefined =
+      myAddress && eventsByAddress
+        ? (eventsByAddress[myAddress] as
+            Array<Event | TransactionRowModel> | undefined)
+        : undefined;
 
-    // Drop pending entries already confirmed by a loaded event.
+    if (!storedItems && myAddress && eventsByAddress) {
+      for (const [key, list] of Object.entries(eventsByAddress)) {
+        if (sameAddress(key, myAddress) && Array.isArray(list)) {
+          storedItems = list as Array<Event | TransactionRowModel>;
+          break;
+        }
+      }
+    }
+
+    const eventItems = (storedItems ?? events ?? []) as Array<
+      Event | TransactionRowModel
+    >;
+    const associatedAddresses =
+      (myAddress && associatedAddressesByAddress?.[myAddress]) || undefined;
+
+    // Drop pending entries already confirmed by a loaded event or transformed row.
     const confirmedTraceIds = new Set<string>();
     const confirmedExternalHashes = new Set<string>();
-    for (const ev of eventItems) {
+    for (const ev of eventItems as any[]) {
+      if (!ev) continue;
       if (ev.eventId) confirmedTraceIds.add(String(ev.eventId));
-      if (ev.traceExternalHash)
-        confirmedExternalHashes.add(Base64ToHex(ev.traceExternalHash));
+      if (ev.id) confirmedTraceIds.add(String(ev.id));
+      if (ev.txHash) confirmedTraceIds.add(String(ev.txHash));
+      if (ev.traceExternalHash) {
+        confirmedExternalHashes.add(String(ev.traceExternalHash));
+        try {
+          confirmedExternalHashes.add(Base64ToHex(ev.traceExternalHash));
+        } catch {
+          // Already hex or non-base64
+        }
+      }
     }
 
     const seen = new Set<string>();
@@ -86,31 +119,53 @@ export const useTransactionRows = (
       });
 
     const eventRows = eventItems
-      .map((ev) => ({
-        timestamp: ev.timestamp,
-        row: mapEventToRow(ev, myAddress, network, explorer),
-      }))
+      .map((ev) => {
+        const row = mapEventToRow(
+          ev,
+          myAddress,
+          network,
+          explorer,
+          associatedAddresses,
+        );
+        return {
+          timestamp: row?.timestamp ?? (ev as any)?.timestamp ?? 0,
+          row,
+        };
+      })
       .filter(
         (item): item is { timestamp: number; row: TransactionRowModel } =>
           item.row !== null,
       );
 
-    const allRows = [...pendingRows, ...eventRows]
+    const combinedRows = [...pendingRows, ...eventRows]
       .sort((a, b) => b.timestamp - a.timestamp)
       .map((item) => item.row);
 
     if (!tokenFilter || tokenFilter.toUpperCase() === 'ALL') {
-      return allRows;
+      return {
+        rows: combinedRows.slice(0, limit),
+        allRows: combinedRows,
+        totalSourceCount: eventItems.length,
+      };
     }
 
     const filterNormalized = tokenFilter.toUpperCase();
-    return allRows.filter((row) => {
+    const filtered = combinedRows.filter((row) => {
+      if (filterNormalized === 'CONTRACT') {
+        return row.category === 'contract' || row.isContractCall === true;
+      }
       if (filterNormalized === 'TON' || filterNormalized === 'GRAM') {
+        if (row.category) {
+          return row.category === 'ton';
+        }
         return (
           row.symbol === 'TON' ||
           row.symbol === 'GRAM' ||
           row.rawType === 'TonTransfer'
         );
+      }
+      if (row.tokens && row.tokens.length > 0) {
+        return row.tokens.some((t) => t.toUpperCase() === filterNormalized);
       }
       return (
         row.symbol?.toUpperCase() === filterNormalized ||
@@ -118,7 +173,26 @@ export const useTransactionRows = (
         row.subtitleId?.toUpperCase().includes(filterNormalized)
       );
     });
-  }, [events, pendingTransactions, address, network, explorer, tokenFilter]);
 
-  return { rows, hasMore };
+    return {
+      rows: filtered.slice(0, limit),
+      allRows: combinedRows,
+      totalSourceCount: eventItems.length,
+    };
+  }, [
+    events,
+    eventsByAddress,
+    associatedAddressesByAddress,
+    pendingTransactions,
+    address,
+    network,
+    explorer,
+    tokenFilter,
+    limit,
+  ]);
+
+  const hasMore =
+    hasNextEvents || allRows.length > limit || totalSourceCount >= limit;
+
+  return { rows, allRows, hasMore };
 };

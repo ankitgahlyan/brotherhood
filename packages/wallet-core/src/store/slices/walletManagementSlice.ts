@@ -50,108 +50,6 @@ let inFlightLoadAllWallets: Promise<void> | null = null;
 let inFlightSwitchWalletId: string | null = null;
 let inFlightSwitchWalletPromise: Promise<void> | null = null;
 
-function isAccountInEvent(
-  ev: any,
-  targetAddr: string,
-  associatedAddrs: string[] = [],
-): boolean {
-  if (!ev || !targetAddr) return false;
-
-  const allTargets = [targetAddr, ...associatedAddrs];
-
-  const matches = (addrCandidate?: unknown): boolean => {
-    if (!addrCandidate) return false;
-    const str =
-      typeof addrCandidate === 'string'
-        ? addrCandidate
-        : (addrCandidate as any)?.address;
-    if (!str || typeof str !== 'string') return false;
-    for (const t of allTargets) {
-      try {
-        if (compareAddress(str, t)) return true;
-      } catch {
-        if (str === t) return true;
-      }
-    }
-    return false;
-  };
-
-  // 1. Primary event account
-  if (matches(ev.account)) return true;
-
-  // 2. Parsed actions
-  if (Array.isArray(ev.actions)) {
-    for (const action of ev.actions) {
-      if (!action) continue;
-
-      // TonTransfer
-      if (action.TonTransfer) {
-        if (matches(action.TonTransfer.sender)) return true;
-        if (matches(action.TonTransfer.recipient)) return true;
-      }
-
-      // JettonTransfer
-      if (action.JettonTransfer) {
-        if (matches(action.JettonTransfer.sender)) return true;
-        if (matches(action.JettonTransfer.recipient)) return true;
-      }
-
-      // JettonSwap
-      if (action.JettonSwap) {
-        if (matches(action.JettonSwap.userWallet)) return true;
-      }
-
-      // NftItemTransfer
-      if (action.NftItemTransfer) {
-        if (matches(action.NftItemTransfer.sender)) return true;
-        if (matches(action.NftItemTransfer.recipient)) return true;
-      }
-
-      // SmartContractExec
-      if (action.SmartContractExec) {
-        if (matches(action.SmartContractExec.executor)) return true;
-        if (matches(action.SmartContractExec.contract)) return true;
-      }
-
-      // ContractDeploy
-      if (action.ContractDeploy) {
-        if (matches(action.ContractDeploy.address)) return true;
-      }
-
-      // SimplePreview accounts
-      if (Array.isArray(action.simplePreview?.accounts)) {
-        for (const previewAcc of action.simplePreview.accounts) {
-          if (matches(previewAcc)) return true;
-        }
-      }
-    }
-  }
-
-  // 3. Transactions / messages
-  if (ev.transactions) {
-    const txList = Array.isArray(ev.transactions)
-      ? ev.transactions
-      : Object.values(ev.transactions);
-    for (const tx of txList as any[]) {
-      if (!tx) continue;
-      if (matches(tx.account)) return true;
-      if (tx.in_msg) {
-        if (matches(tx.in_msg.source)) return true;
-        if (matches(tx.in_msg.destination)) return true;
-      }
-      if (Array.isArray(tx.out_msgs)) {
-        for (const msg of tx.out_msgs) {
-          if (!msg) continue;
-          if (matches(msg.source)) return true;
-          if (matches(msg.destination)) return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
 export const createWalletManagementSlice =
   (walletKitConfig?: WalletKitConfig): WalletManagementSliceCreator =>
   (set: SetState, get) => ({
@@ -165,6 +63,9 @@ export const createWalletManagementSlice =
       events: [],
       eventsByAddress: {},
       associatedAddressesByAddress: {},
+      eventsFetchedInSessionByAddress: {},
+      eventsStaleByAddress: {},
+      isLoadingEvents: false,
       hasNextEvents: false,
       pendingTransactions: [],
       confirmedTraceIds: [],
@@ -653,6 +554,14 @@ export const createWalletManagementSlice =
         if (removedAddress) {
           delete state.walletManagement.balancesByAddress[removedAddress];
           delete state.walletManagement.eventsByAddress[removedAddress];
+          if (state.walletManagement.eventsFetchedInSessionByAddress) {
+            delete state.walletManagement.eventsFetchedInSessionByAddress[
+              removedAddress
+            ];
+          }
+          if (state.walletManagement.eventsStaleByAddress) {
+            delete state.walletManagement.eventsStaleByAddress[removedAddress];
+          }
           delete state.jettons.jettonsByAddress[removedAddress];
           delete state.nfts.nftsByAddress[removedAddress];
           if (state.brotherhood?.brotherhoodByAddress) {
@@ -671,6 +580,8 @@ export const createWalletManagementSlice =
           state.walletManagement.currentWallet = undefined;
           state.walletManagement.events = [];
           state.walletManagement.eventsByAddress = {};
+          state.walletManagement.eventsFetchedInSessionByAddress = {};
+          state.walletManagement.eventsStaleByAddress = {};
           state.walletManagement.pendingTransactions = [];
           state.walletManagement.confirmedTraceIds = [];
           state.walletManagement.confirmedExternalHashes = [];
@@ -924,6 +835,8 @@ export const createWalletManagementSlice =
         state.walletManagement.publicKey = undefined;
         state.walletManagement.events = [];
         state.walletManagement.eventsByAddress = {};
+        state.walletManagement.eventsFetchedInSessionByAddress = {};
+        state.walletManagement.eventsStaleByAddress = {};
         state.walletManagement.associatedAddressesByAddress = {};
         state.walletManagement.pendingTransactions = [];
         state.walletManagement.confirmedTraceIds = [];
@@ -980,9 +893,18 @@ export const createWalletManagementSlice =
         const address = state.walletManagement.address;
 
         set((state) => {
+          const prevBalance = address
+            ? state.walletManagement.balancesByAddress[address]
+            : state.walletManagement.balance;
           state.walletManagement.balance = balanceString;
           if (address) {
             state.walletManagement.balancesByAddress[address] = balanceString;
+            if (prevBalance !== undefined && prevBalance !== balanceString) {
+              if (!state.walletManagement.eventsStaleByAddress) {
+                state.walletManagement.eventsStaleByAddress = {};
+              }
+              state.walletManagement.eventsStaleByAddress[address] = true;
+            }
           }
         });
       } catch (error) {
@@ -1034,6 +956,10 @@ export const createWalletManagementSlice =
               if (address) {
                 s.walletManagement.balancesByAddress[address] =
                   update.rawBalance;
+                if (!s.walletManagement.eventsStaleByAddress) {
+                  s.walletManagement.eventsStaleByAddress = {};
+                }
+                s.walletManagement.eventsStaleByAddress[address] = true;
               }
               log.info('Balance updated via WebSocket:', update.rawBalance);
             }
@@ -1051,6 +977,7 @@ export const createWalletManagementSlice =
               update.rawBalance,
               update.decimals,
             );
+            get().markEventsStale(address);
 
             const activeAddress = get().walletManagement.address;
             const currentJettons = activeAddress
@@ -1211,12 +1138,13 @@ export const createWalletManagementSlice =
         } else {
           s.walletManagement.pendingTransactions.unshift(pendingTx);
         }
-      });
 
-      // On confirmed/finalized, refresh events and balance from REST
-      if (update.status === 'confirmed' || update.status === 'finalized') {
-        void get().loadEvents(15, 0, true);
-      }
+        // Mark events stale so HistoryScreen refreshes when open or next visited
+        if (!s.walletManagement.eventsStaleByAddress) {
+          s.walletManagement.eventsStaleByAddress = {};
+        }
+        s.walletManagement.eventsStaleByAddress[address] = true;
+      });
     },
 
     addPendingTransaction: (pendingTx) => {
@@ -1236,6 +1164,14 @@ export const createWalletManagementSlice =
           };
         } else {
           s.walletManagement.pendingTransactions.unshift(pendingTx);
+        }
+
+        const addr = s.walletManagement.address;
+        if (addr) {
+          if (!s.walletManagement.eventsStaleByAddress) {
+            s.walletManagement.eventsStaleByAddress = {};
+          }
+          s.walletManagement.eventsStaleByAddress[addr] = true;
         }
       });
     },
@@ -1257,11 +1193,22 @@ export const createWalletManagementSlice =
       });
     },
 
+    markEventsStale: (walletAddress?: string) => {
+      set((s) => {
+        const target = walletAddress || s.walletManagement.address;
+        if (!target) return;
+        if (!s.walletManagement.eventsStaleByAddress) {
+          s.walletManagement.eventsStaleByAddress = {};
+        }
+        s.walletManagement.eventsStaleByAddress[target] = true;
+      });
+    },
+
     loadEvents: async (
       limit = 15,
       offset = 0,
       force = false,
-      tokenFilter?: string,
+      _tokenFilter?: string,
       extraAddresses?: string[],
     ) => {
       const state = get();
@@ -1276,58 +1223,60 @@ export const createWalletManagementSlice =
         return;
       }
 
-      const allSavedWallets = state.walletManagement.savedWallets;
+      // Query strictly the current active wallet + its own associated FiWallet address
       const associatedMap =
         state.walletManagement.associatedAddressesByAddress || {};
-      const allAssociated = [
-        ...Object.values(associatedMap).flat(),
-        ...(extraAddresses || []),
-      ];
-
-      const primaryAddresses = Array.from(
+      const myAssociated = Array.from(
         new Set(
-          [
-            address,
-            ...allSavedWallets.map((w) => w.address).filter(Boolean),
-          ].map((a) => String(a)),
+          [...(associatedMap[address] || []), ...(extraAddresses || [])]
+            .filter(Boolean)
+            .map(String),
         ),
       );
 
-      const allAddresses = Array.from(
-        new Set([...primaryAddresses, ...allAssociated]),
-      );
+      const targetAddresses = Array.from(new Set([address, ...myAssociated]));
 
-      const key = `${allAddresses.sort().join(',')}:${limit}:${offset}:${tokenFilter || ''}`;
+      const key = `${targetAddresses.sort().join(',')}:${limit}:${offset}`;
       if (inFlightLoadEvents && lastLoadEventsKey === key) {
         return inFlightLoadEvents;
       }
 
-      // Cache check: If events were recently loaded for these addresses, reuse cache unless forced
+      const isStale = Boolean(
+        state.walletManagement.eventsStaleByAddress?.[address],
+      );
+
+      // Cache check: If events were recently loaded for this wallet and not marked stale, reuse cache unless forced
       const now = Date.now();
       if (
         !force &&
+        !isStale &&
         key === lastLoadEventsKey &&
         now - lastLoadEventsTime < EVENTS_CACHE_TTL_MS
       ) {
-        set((state) => {
-          state.walletManagement.events = (
-            state.walletManagement.eventsByAddress[address] || []
+        set((s) => {
+          s.walletManagement.events = (
+            s.walletManagement.eventsByAddress[address] || []
           ).slice(0, limit);
+          if (!s.walletManagement.eventsFetchedInSessionByAddress) {
+            s.walletManagement.eventsFetchedInSessionByAddress = {};
+          }
+          s.walletManagement.eventsFetchedInSessionByAddress[address] = true;
         });
         return;
       }
 
       const run = async () => {
+        set((s) => {
+          s.walletManagement.isLoadingEvents = true;
+        });
         try {
           log.info(
-            'Loading events for addresses:',
-            allAddresses,
+            'Loading events for current wallet addresses:',
+            targetAddresses,
             'limit:',
             limit,
             'offset:',
             offset,
-            'tokenFilter:',
-            tokenFilter,
           );
 
           const activeWallet = state.walletManagement.savedWallets.find(
@@ -1335,82 +1284,70 @@ export const createWalletManagementSlice =
           );
           const walletNetwork = activeWallet?.network || 'testnet';
 
-          // Single call passing all saved wallet addresses
+          // Single call passing only the active wallet + its FiWallet
           const response = await state.walletCore.walletKit
             ?.getApiClient(getChainNetwork(walletNetwork))
             .getEvents({
               account:
-                allAddresses.length === 1 ? allAddresses[0] : allAddresses,
+                targetAddresses.length === 1
+                  ? targetAddresses[0]
+                  : targetAddresses,
               limit: Math.max(limit, 15),
               offset,
-              tokenFilter,
             });
 
           if (!response) return;
 
+          const transform = walletKitConfig?.transformEvent;
+
           set((state) => {
-            // Partition events by wallet address
             const newEventsByAddress: Record<string, unknown[]> = {
               ...state.walletManagement.eventsByAddress,
             };
 
-            for (const addr of primaryAddresses) {
-              if (!newEventsByAddress[addr]) {
-                newEventsByAddress[addr] = [];
+            const existingRaw = newEventsByAddress[address] || [];
+            const itemMap = new Map<string, any>();
+
+            // Normalize any existing items in store for this wallet
+            for (const existing of existingRaw) {
+              const normalized = transform
+                ? transform(existing, address, walletNetwork, myAssociated)
+                : existing;
+              if (!normalized) continue;
+              const idKey = String(normalized.eventId ?? normalized.id ?? '');
+              if (idKey && !itemMap.has(idKey)) {
+                itemMap.set(idKey, normalized);
               }
             }
 
+            // Transform and upsert incoming events from network
             for (const ev of (response.events || []) as any[]) {
-              let matched = false;
-              for (const addr of primaryAddresses) {
-                const associated = associatedMap[addr] || [];
-                const belongs =
-                  primaryAddresses.length === 1 ||
-                  isAccountInEvent(ev, addr, associated);
-                if (belongs) {
-                  matched = true;
-                  if (
-                    !newEventsByAddress[addr].some(
-                      (e: any) => e.eventId === ev.eventId,
-                    )
-                  ) {
-                    newEventsByAddress[addr].push(ev);
-                  }
-                }
-              }
-              // If none matched explicitly but it was returned by the indexer during an active wallet query,
-              // attribute it to the active wallet address so that unparsed or unusual transactions are not dropped.
-              if (!matched && address) {
-                if (
-                  !newEventsByAddress[address].some(
-                    (e: any) => e.eventId === ev.eventId,
-                  )
-                ) {
-                  newEventsByAddress[address].push(ev);
-                }
+              const transformed = transform
+                ? transform(ev, address, walletNetwork, myAssociated)
+                : ev;
+              if (!transformed) continue;
+              const idKey = String(
+                transformed.eventId ?? transformed.id ?? ev.eventId ?? '',
+              );
+              if (idKey) {
+                itemMap.set(idKey, transformed);
               }
             }
 
-            // Sort events descending (newest first) and cap to prevent unbounded growth while supporting pagination
+            const mergedList = Array.from(itemMap.values());
+
+            // Sort events descending (newest first) and cap in-memory session cache
             const maxCap = Math.max(limit * 2, 250);
-            for (const addr of primaryAddresses) {
-              if (newEventsByAddress[addr]) {
-                newEventsByAddress[addr].sort((a: any, b: any) => {
-                  const ltA = Number(a?.lt ?? 0);
-                  const ltB = Number(b?.lt ?? 0);
-                  if (ltA && ltB && ltA !== ltB) return ltB - ltA;
-                  const timeA = Number(a?.timestamp ?? 0);
-                  const timeB = Number(b?.timestamp ?? 0);
-                  return timeB - timeA;
-                });
-                if (newEventsByAddress[addr].length > maxCap) {
-                  newEventsByAddress[addr] = newEventsByAddress[addr].slice(
-                    0,
-                    maxCap,
-                  );
-                }
-              }
-            }
+            mergedList.sort((a: any, b: any) => {
+              const timeA = Number(a?.timestamp ?? 0);
+              const timeB = Number(b?.timestamp ?? 0);
+              if (timeA !== timeB) return timeB - timeA;
+              const ltA = Number(a?.lt ?? 0);
+              const ltB = Number(b?.lt ?? 0);
+              return ltB - ltA;
+            });
+
+            newEventsByAddress[address] = mergedList.slice(0, maxCap);
 
             state.walletManagement.eventsByAddress = newEventsByAddress;
             state.walletManagement.events = (
@@ -1418,7 +1355,18 @@ export const createWalletManagementSlice =
             ).slice(0, limit);
             state.walletManagement.hasNextEvents =
               Boolean(response.hasNext) ||
-              (newEventsByAddress[address]?.length ?? 0) >= limit;
+              (newEventsByAddress[address]?.length ?? 0) > limit;
+
+            if (!state.walletManagement.eventsFetchedInSessionByAddress) {
+              state.walletManagement.eventsFetchedInSessionByAddress = {};
+            }
+            state.walletManagement.eventsFetchedInSessionByAddress[address] =
+              true;
+
+            if (!state.walletManagement.eventsStaleByAddress) {
+              state.walletManagement.eventsStaleByAddress = {};
+            }
+            state.walletManagement.eventsStaleByAddress[address] = false;
 
             const eventTraceIds = new Set<string>();
             const eventExtHashes = new Set<string>();
@@ -1426,9 +1374,14 @@ export const createWalletManagementSlice =
               eventId?: string;
               traceExternalHash?: string;
             }>) {
-              if (ev.eventId) eventTraceIds.add(ev.eventId);
-              if (ev.traceExternalHash)
-                eventExtHashes.add(Base64ToHex(ev.traceExternalHash));
+              if (ev.eventId) eventTraceIds.add(String(ev.eventId));
+              if (ev.traceExternalHash) {
+                try {
+                  eventExtHashes.add(Base64ToHex(ev.traceExternalHash));
+                } catch {
+                  eventExtHashes.add(String(ev.traceExternalHash));
+                }
+              }
             }
             state.walletManagement.confirmedTraceIds = [
               ...state.walletManagement.confirmedTraceIds,
@@ -1448,11 +1401,15 @@ export const createWalletManagementSlice =
 
           lastLoadEventsTime = Date.now();
           log.info(
-            `Loaded ${response.events.length} events across all wallets`,
+            `Loaded ${response.events.length} events for current wallet ${address}`,
           );
         } catch (error) {
           log.error('Error loading events:', error);
+          throw error;
         } finally {
+          set((s) => {
+            s.walletManagement.isLoadingEvents = false;
+          });
           if (lastLoadEventsKey === key) {
             inFlightLoadEvents = null;
           }

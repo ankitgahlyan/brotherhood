@@ -148,4 +148,14 @@ export interface WalletKitConfig {
    * Custom fetch implementation (e.g. rateLimitedFetch) passed to underlying ApiClients
    */
   fetchApi?: (input: any, init?: any) => Promise<Response>;
+  /**
+   * Optional transformer to convert raw trace Event objects into normalized, classified rows
+   * at ingestion time before storing in eventsByAddress.
+   */
+  transformEvent?: (
+    event: any,
+    walletAddress: string,
+    network: NetworkType,
+    associatedAddresses?: string[],
+  ) => any;
 }

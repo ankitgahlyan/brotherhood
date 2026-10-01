@@ -136,10 +136,20 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
 
   // 1. Instant in-memory trace DAG derivation (0 network calls)
   const inMemoryTraceDag = useMemo<TraceDagAnalysis | null>(() => {
-    if (!storedEvent) return null;
+    if (transaction?.traceDag && transaction.traceDag.hops.length > 0) {
+      return transaction.traceDag;
+    }
 
     if (
-      storedEvent.transactions &&
+      storedEvent?.traceDag &&
+      Array.isArray(storedEvent.traceDag.hops) &&
+      storedEvent.traceDag.hops.length > 0
+    ) {
+      return storedEvent.traceDag as TraceDagAnalysis;
+    }
+
+    if (
+      storedEvent?.transactions &&
       Object.keys(storedEvent.transactions).length > 0
     ) {
       try {
@@ -201,8 +211,12 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
   }, [storedEvent, myAddress, transaction]);
 
   const hasDetailedInMemory = Boolean(
-    storedEvent?.transactions &&
-    Object.keys(storedEvent.transactions).length > 0,
+    (transaction?.traceDag && transaction.traceDag.hops.length > 0) ||
+    (storedEvent?.traceDag &&
+      Array.isArray(storedEvent.traceDag.hops) &&
+      storedEvent.traceDag.hops.length > 0) ||
+    (storedEvent?.transactions &&
+      Object.keys(storedEvent.transactions).length > 0),
   );
 
   const [fetchedTraceDag, setFetchedTraceDag] =

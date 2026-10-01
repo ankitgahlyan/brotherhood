@@ -9,9 +9,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import { RotateCw, AlertCircle, Inbox } from 'lucide-react';
+import { Address } from '@ton/core';
 import { useActiveJettons, useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 import { cn } from '@/core/lib/utils';
+import { network as defaultNetwork } from '@/lib/brotherhood/config';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 
 import { ActivityList } from '../activity-list';
 import { useTransactionRows } from '../../hooks/use-transaction-rows';
@@ -22,62 +25,128 @@ import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
-/** Full transaction history page: wallet-v2 Activity Feed with date pills, status badges, token filters, and inline navigation. */
+/** Full transaction history page: wallet-v2 Activity Feed with date pills, status badges, local category/token filters, and on-demand trace loading. */
 export const HistoryScreen: FC = () => {
   const navigate = useNavigate();
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | string>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'CONTRACT' | string>(
+    'ALL',
+  );
 
-  const { rows, hasMore } = useTransactionRows(limit, activeFilter);
+  const { rows, allRows, hasMore } = useTransactionRows(limit, activeFilter);
   const loadEvents = useWalletStore((state) => state.loadEvents);
+  const setAssociatedAddresses = useWalletStore(
+    (state) => state.setAssociatedAddresses,
+  );
   const address = useWalletStore((state) => state.walletManagement.address);
-  const rawEvents = useWalletStore((state) => state.walletManagement.events);
   const eventsByAddress = useWalletStore(
     (state) => state.walletManagement.eventsByAddress,
+  );
+  const eventsFetchedInSessionByAddress = useWalletStore(
+    (state) => state.walletManagement.eventsFetchedInSessionByAddress,
+  );
+  const eventsStaleByAddress = useWalletStore(
+    (state) => state.walletManagement.eventsStaleByAddress,
+  );
+  const isLoadingEvents = useWalletStore(
+    (state) => state.walletManagement.isLoadingEvents,
+  );
+  const isWalletKitInitialized = useWalletStore(
+    (state) => state.walletCore.isWalletKitInitialized,
   );
   const activeJettons = useActiveJettons();
   const pendingTransactions = useWalletStore(
     (state) => state.walletManagement.pendingTransactions,
   );
 
+  // Derive deterministic FiWallet address for the current wallet so history fetches always include it
+  const extraAddresses = useMemo<string[] | undefined>(() => {
+    if (!address) return undefined;
+    try {
+      const fiWallet = getFiWalletAddress(
+        Address.parse(address),
+        defaultNetwork,
+      ).toString();
+      return [fiWallet];
+    } catch {
+      return undefined;
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (address && extraAddresses && extraAddresses.length > 0) {
+      setAssociatedAddresses(address, extraAddresses);
+    }
+  }, [address, extraAddresses, setAssociatedAddresses]);
+
   const availableTokens = useMemo(() => {
-    const seen = new Set<string>();
+    const seen = new Set<string>(['TON', 'GRAM']);
     const tokens: Array<{ symbol: string; image?: string }> = [];
     for (const j of activeJettons) {
-      const sym = j.info?.symbol;
+      const sym = j.info?.symbol?.trim();
       if (sym && !seen.has(sym.toUpperCase())) {
         seen.add(sym.toUpperCase());
         tokens.push({ symbol: sym, image: getJettonsImage(j) });
       }
     }
+    for (const row of allRows) {
+      const rowTokens =
+        row.tokens && row.tokens.length > 0
+          ? row.tokens
+          : row.symbol
+            ? [row.symbol]
+            : [];
+      for (const sym of rowTokens) {
+        const clean = sym?.trim();
+        if (clean && !seen.has(clean.toUpperCase())) {
+          seen.add(clean.toUpperCase());
+          tokens.push({ symbol: clean });
+        }
+      }
+    }
     return tokens;
-  }, [activeJettons]);
+  }, [activeJettons, allRows]);
 
   const isAddressEventsLoaded = Boolean(
     address && address in (eventsByAddress || {}),
   );
+  const isFetchedInSession = Boolean(
+    address && eventsFetchedInSessionByAddress?.[address],
+  );
+  const isEventsStale = Boolean(address && eventsStaleByAddress?.[address]);
+  const shouldFetchLatest =
+    !isAddressEventsLoaded || !isFetchedInSession || isEventsStale;
 
-  const isSyncing = pendingTransactions.length > 0;
+  const isSyncing = pendingTransactions.length > 0 || Boolean(isLoadingEvents);
   const isInitialLoading =
-    isRetrying ||
-    (!hasLoadError && (!isAddressEventsLoaded || rawEvents === undefined));
+    (isRetrying || Boolean(isLoadingEvents) || shouldFetchLatest) &&
+    !hasLoadError &&
+    allRows.length === 0;
 
-  // On mount or address switch, load events if not yet fetched for this address
+  // On mount or wallet switch, fetch latest events only if not yet fetched in this session or marked stale.
+  // Cached transformed rows from bro-store are displayed immediately while this runs in the background.
   useEffect(() => {
-    if (!address || isAddressEventsLoaded) return;
-    loadEvents(limit, 0, false).catch(() => setHasLoadError(true));
-  }, [address, loadEvents, limit, isAddressEventsLoaded]);
+    if (!address || !isWalletKitInitialized || !shouldFetchLatest) return;
+    loadEvents(Math.max(limit, PAGE_SIZE), 0, true, undefined, extraAddresses)
+      .then(() => setHasLoadError(false))
+      .catch(() => setHasLoadError(true));
+  }, [
+    address,
+    isWalletKitInitialized,
+    shouldFetchLatest,
+    loadEvents,
+    limit,
+    extraAddresses,
+  ]);
 
+  // Filter selection is 100% local against pre-transformed rows in store (0 network calls)
   const handleFilterSelect = (filter: string) => {
     setActiveFilter(filter);
-    if (address) {
-      void loadEvents(limit, 0, true, filter === 'ALL' ? undefined : filter);
-    }
   };
 
   const handleRetry = async () => {
@@ -86,10 +155,11 @@ export const HistoryScreen: FC = () => {
     setHasLoadError(false);
     try {
       await loadEvents(
-        limit,
+        Math.max(limit, PAGE_SIZE),
         0,
         true,
-        activeFilter === 'ALL' ? undefined : activeFilter,
+        undefined,
+        extraAddresses,
       );
     } catch {
       setHasLoadError(true);
@@ -102,15 +172,13 @@ export const HistoryScreen: FC = () => {
     if (isLoadingMore) return;
     const nextLimit = limit + PAGE_SIZE;
     setLimit(nextLimit);
-    if (address) {
+    const cachedCount = address
+      ? (eventsByAddress?.[address]?.length ?? allRows.length)
+      : allRows.length;
+    if (address && nextLimit > cachedCount) {
       setIsLoadingMore(true);
       try {
-        await loadEvents(
-          nextLimit,
-          0,
-          true,
-          activeFilter === 'ALL' ? undefined : activeFilter,
-        );
+        await loadEvents(nextLimit, 0, true, undefined, extraAddresses);
       } finally {
         setIsLoadingMore(false);
       }
@@ -131,6 +199,19 @@ export const HistoryScreen: FC = () => {
         )}
       >
         All
+      </button>
+      <button
+        key="CONTRACT"
+        type="button"
+        onClick={() => handleFilterSelect('CONTRACT')}
+        className={cn(
+          'px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer',
+          activeFilter === 'CONTRACT'
+            ? 'bg-primary text-primary-foreground shadow-sm'
+            : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground',
+        )}
+      >
+        Contract Calls
       </button>
       <button
         key="TON"
@@ -188,7 +269,7 @@ export const HistoryScreen: FC = () => {
       );
     }
 
-    if (hasLoadError && (!rows || rows.length === 0)) {
+    if (hasLoadError && allRows.length === 0) {
       return (
         <div>
           {filterBar}

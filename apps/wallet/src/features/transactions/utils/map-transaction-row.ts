@@ -6,8 +6,13 @@
  *
  */
 
-import { Base64ToHex } from '@ton/walletkit';
-import type { Action, Event } from '@ton/walletkit';
+import {
+  Base64ToHex,
+  parseTraceDag,
+  type Action,
+  type Event,
+  type TraceDagAnalysis,
+} from '@ton/walletkit';
 
 import { formatLargeValue, formatUnits, sameAddress } from '@/core/utils';
 import { getOpcodeInfo } from '@/core/utils/payload';
@@ -20,12 +25,21 @@ type ExplorerNetwork = NetworkType;
 /** Status badge shown on the transaction icon. */
 export type TransactionRowStatus = 'success' | 'loading' | 'failed';
 
-/** Normalized view-model consumed by {@link TransactionRow}. */
+/** Primary classification category for local history filtering. */
+export type TransactionCategory = 'contract' | 'ton' | 'jetton';
+
+/** Normalized view-model consumed by {@link TransactionRow} and persisted in bro-store. */
 export interface TransactionRowModel {
   /** Unique React key. */
   id: string;
+  /** Canonical event ID for store deduplication. */
+  eventId?: string;
+  /** Logical time for deterministic ordering. */
+  lt?: number | string;
   /** Raw transaction hash or trace ID for explorer lookups. */
   txHash?: string;
+  /** Normalized hex external hash for pending transaction deduplication. */
+  traceExternalHash?: string;
   /** Active blockchain network (e.g. testnet, mainnet). */
   network?: ExplorerNetwork;
   /** Default explorer transaction URL. Undefined for not-yet-on-chain pending transactions. */
@@ -63,6 +77,14 @@ export interface TransactionRowModel {
   date: string;
   /** Exact Tolk struct message name (e.g. "ActInvite", "BuyCredit", "AskToTransfer") when identified. */
   tolkStructName?: string;
+  /** Primary classification category ('contract' | 'ton' | 'jetton'). */
+  category?: TransactionCategory;
+  /** True when classified as a contract call (matches Contract Calls filter). */
+  isContractCall?: boolean;
+  /** Normalized uppercase token symbols transferred in this trace (e.g. ['FI'], ['TON']). */
+  tokens?: string[];
+  /** Pre-parsed multi-hop execution route DAG for 0-network-call modal display. */
+  traceDag?: TraceDagAnalysis;
 }
 
 /** Minimal shape of a streaming pending transaction (structural — avoids a cross-package type import). */
@@ -556,21 +578,236 @@ const selectRelevantAction = (actions: Action[], myAddress: string): Action => {
 const signedAmount = (value: string, isOutgoing: boolean): string =>
   value ? `${isOutgoing ? '-' : '+'}${value}` : '';
 
+const FI_STRUCT_NAMES = new Set([
+  'ActClaimWeeklyGrant',
+  'AskGoldCoinsTransfer',
+  'InternalGoldCoinsTransfer',
+  'MintNewJettons',
+]);
+
 /**
- * Maps a historical event to a row. Returns null for events without actions
- * (rendered elsewhere via the trace fetch — skipped in the dashboard preview).
+ * Classifies a transaction row into primary category ('contract' | 'ton' | 'jetton'),
+ * contract-call flag, and involved token symbols for local filtering.
+ */
+export function classifyTransactionRow(params: {
+  rawType?: string;
+  tolkStructName?: string;
+  symbol?: string;
+  actions?: Action[];
+}): {
+  category: TransactionCategory;
+  isContractCall: boolean;
+  tokens: string[];
+} {
+  const { rawType, tolkStructName, symbol, actions } = params;
+
+  const isContractStruct = Boolean(
+    tolkStructName && tolkStructName !== 'AskToTransfer',
+  );
+  const isContractRawType =
+    rawType === 'SmartContractExec' ||
+    rawType === 'ContractDeploy' ||
+    rawType === 'JettonSwap';
+
+  const isContractCall = isContractStruct || isContractRawType;
+
+  const normalizedSymbol = symbol?.trim().toUpperCase();
+  const isJettonSymbol = Boolean(
+    normalizedSymbol &&
+    normalizedSymbol !== 'TON' &&
+    normalizedSymbol !== 'GRAM',
+  );
+
+  let category: TransactionCategory = 'ton';
+  if (isContractCall) {
+    category = 'contract';
+  } else if (
+    rawType === 'JettonTransfer' ||
+    tolkStructName === 'AskToTransfer' ||
+    isJettonSymbol
+  ) {
+    category = 'jetton';
+  }
+
+  const tokenSet = new Set<string>();
+  if (Array.isArray(actions)) {
+    for (const action of actions) {
+      if (action?.type === 'JettonTransfer' && 'JettonTransfer' in action) {
+        const jettonSym = action.JettonTransfer?.jetton?.symbol
+          ?.trim()
+          .toUpperCase();
+        if (jettonSym) tokenSet.add(jettonSym);
+      }
+    }
+  }
+  if (isJettonSymbol && normalizedSymbol) {
+    tokenSet.add(normalizedSymbol);
+  }
+  if (tolkStructName && FI_STRUCT_NAMES.has(tolkStructName)) {
+    tokenSet.add('FI');
+  }
+  if (category === 'ton') {
+    tokenSet.add('TON');
+  }
+
+  return {
+    category,
+    isContractCall,
+    tokens: Array.from(tokenSet),
+  };
+}
+
+function buildTraceDagFromEvent(
+  event: Event,
+  myAddress: string,
+  fallback: {
+    id: string;
+    txHash?: string;
+    isSuccess: boolean;
+    isOutgoing: boolean;
+    senderAddress?: string;
+    recipientAddress?: string;
+    counterpartyAddress?: string;
+    comment?: string;
+  },
+): TraceDagAnalysis {
+  if (
+    event.transactions &&
+    typeof event.transactions === 'object' &&
+    Object.keys(event.transactions).length > 0
+  ) {
+    try {
+      const traceItem = {
+        trace_id: String(event.eventId),
+        trace: event.trace,
+        transactions: event.transactions,
+        transactions_order: Object.keys(event.transactions),
+        is_incomplete: Boolean(event.inProgress),
+        start_utime: event.timestamp,
+        start_lt: String(event.lt || 0),
+        end_utime: event.timestamp,
+        end_lt: String(event.lt || 0),
+        external_hash: event.traceExternalHash || '',
+        mc_seqno_start: '0',
+        mc_seqno_end: '0',
+        actions: event.actions as any,
+        trace_info: {
+          classification_state: 'parsed',
+          messages: 0,
+          pending_messages: 0,
+          trace_state: 'complete',
+          transactions: Object.keys(event.transactions).length,
+        },
+        warning: '',
+      };
+      const parsed = parseTraceDag(traceItem as any, myAddress);
+      if (parsed && parsed.hops && parsed.hops.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // Fall back to synthetic 1-hop DAG
+    }
+  }
+
+  return {
+    traceId: String(event.eventId || fallback.txHash || fallback.id),
+    isSuccess: fallback.isSuccess,
+    totalNetworkFee: 0n,
+    totalSent: fallback.isOutgoing ? 1n : 0n,
+    totalReceived: !fallback.isOutgoing ? 1n : 0n,
+    hops: [
+      {
+        hash: fallback.txHash || fallback.id,
+        source: fallback.senderAddress,
+        destination:
+          fallback.recipientAddress ||
+          fallback.counterpartyAddress ||
+          myAddress,
+        fee: 0n,
+        comment: fallback.comment,
+        isSuccess: fallback.isSuccess,
+        depth: 0,
+      },
+    ],
+  };
+}
+
+/** Type guard checking if an item in eventsByAddress is already a transformed TransactionRowModel. */
+export function isTransformedRow(item: unknown): item is TransactionRowModel {
+  return Boolean(
+    item &&
+    typeof item === 'object' &&
+    'id' in item &&
+    'title' in item &&
+    'subtitleId' in item &&
+    'status' in item &&
+    !('actions' in item),
+  );
+}
+
+/**
+ * Maps a historical event (or returns an already-transformed row) into a classified TransactionRowModel.
  */
 export const mapEventToRow = (
-  event: Event,
+  eventOrRow: Event | TransactionRowModel,
   myAddress: string,
   network: ExplorerNetwork,
   explorer: ExplorerChoice = 'tonscan',
+  associatedAddresses?: string[],
 ): TransactionRowModel | null => {
+  if (!eventOrRow) return null;
+
+  if (isTransformedRow(eventOrRow)) {
+    const hash = eventOrRow.txHash || eventOrRow.id;
+    const explorerUrl = hash
+      ? getExplorerTxUrl(network, hash, explorer)
+      : eventOrRow.explorerUrl;
+    if (
+      eventOrRow.category &&
+      eventOrRow.tokens &&
+      eventOrRow.explorerUrl === explorerUrl &&
+      eventOrRow.network === network
+    ) {
+      return eventOrRow;
+    }
+    const classification =
+      eventOrRow.category && eventOrRow.tokens
+        ? {
+            category: eventOrRow.category,
+            isContractCall: Boolean(eventOrRow.isContractCall),
+            tokens: eventOrRow.tokens,
+          }
+        : classifyTransactionRow({
+            rawType: eventOrRow.rawType,
+            tolkStructName: eventOrRow.tolkStructName,
+            symbol: eventOrRow.symbol,
+          });
+    return {
+      ...eventOrRow,
+      network,
+      explorerUrl,
+      ...classification,
+    };
+  }
+
+  const event = eventOrRow as Event;
   const eventId = String(event.eventId);
-  const hash =
-    eventId ||
-    (event.traceExternalHash ? Base64ToHex(event.traceExternalHash) : '');
+  const traceExtHex = event.traceExternalHash
+    ? (() => {
+        try {
+          return Base64ToHex(event.traceExternalHash);
+        } catch {
+          return String(event.traceExternalHash);
+        }
+      })()
+    : undefined;
+  const hash = eventId || traceExtHex || '';
   const fee = extractFee(event);
+
+  const candidateMyAddresses = [
+    myAddress,
+    ...(associatedAddresses || []),
+  ].filter(Boolean);
 
   if (!event.actions || event.actions.length === 0) {
     let isOutgoing = false;
@@ -579,39 +816,45 @@ export const mapEventToRow = (
     let actionName = 'Transaction';
     let tolkStructName: string | undefined;
     let isFailed = false;
+    let matchedPerspective = myAddress;
 
     if (event.transactions && typeof event.transactions === 'object') {
-      for (const tx of Object.values(event.transactions) as any[]) {
-        if (sameAddress(tx.account, myAddress)) {
+      const txList = Object.values(event.transactions) as any[];
+      for (const candidateAddr of candidateMyAddresses) {
+        const matchedTx = txList.find((tx) =>
+          sameAddress(tx?.account, candidateAddr),
+        );
+        if (matchedTx) {
+          matchedPerspective = candidateAddr;
           if (
-            tx.description?.compute_ph?.success === false ||
-            tx.description?.action?.success === false
+            matchedTx.description?.compute_ph?.success === false ||
+            matchedTx.description?.action?.success === false
           ) {
             isFailed = true;
           }
-          if (tx.in_msg) {
+          if (matchedTx.in_msg) {
             const inBody =
-              tx.in_msg.body ||
-              tx.in_msg.message_content?.body ||
-              tx.in_msg.msg_data;
-            if (inBody || tx.in_msg.opcode) {
-              const info = getOpcodeInfo(tx.in_msg.opcode, inBody);
+              matchedTx.in_msg.body ||
+              matchedTx.in_msg.message_content?.body ||
+              matchedTx.in_msg.msg_data;
+            if (inBody || matchedTx.in_msg.opcode) {
+              const info = getOpcodeInfo(matchedTx.in_msg.opcode, inBody);
               if (info.isKnown) {
                 actionName = info.title;
                 tolkStructName = info.structName;
               }
             }
-            if (tx.in_msg.source) {
-              counterparty = tx.in_msg.source;
+            if (matchedTx.in_msg.source) {
+              counterparty = matchedTx.in_msg.source;
               isOutgoing = false;
               if (actionName === 'Transaction') actionName = 'Received TON';
             }
-            if (tx.in_msg.value && BigInt(tx.in_msg.value) > 0n) {
-              value = `${formatAmount(tx.in_msg.value, GRAM_DECIMALS)} GRAM`;
+            if (matchedTx.in_msg.value && BigInt(matchedTx.in_msg.value) > 0n) {
+              value = `${formatAmount(matchedTx.in_msg.value, GRAM_DECIMALS)} GRAM`;
             }
           }
-          if (tx.out_msgs && tx.out_msgs.length > 0) {
-            const out = tx.out_msgs[0];
+          if (matchedTx.out_msgs && matchedTx.out_msgs.length > 0) {
+            const out = matchedTx.out_msgs[0];
             if (out?.destination) {
               counterparty = out.destination;
               isOutgoing = true;
@@ -639,10 +882,21 @@ export const mapEventToRow = (
       ? (extractFailureReason(event) ?? 'Transaction Failed')
       : undefined;
     const symbol = value ? value.split(' ').pop() : undefined;
+    const rawType = tolkStructName ? 'SmartContractExec' : 'Transaction';
+    const classification = classifyTransactionRow({
+      rawType,
+      tolkStructName,
+      symbol,
+    });
+    const senderAddr = isOutgoing ? matchedPerspective : counterparty;
+    const recipientAddr = isOutgoing ? counterparty : matchedPerspective;
 
     return {
       id: eventId,
+      eventId,
+      lt: event.lt,
       txHash: hash,
+      traceExternalHash: traceExtHex,
       network,
       explorerUrl: getExplorerTxUrl(network, hash, explorer),
       title: actionName,
@@ -652,11 +906,11 @@ export const mapEventToRow = (
           : `from ${truncateMiddle(counterparty)}`
         : truncateMiddle(eventId),
       counterpartyAddress: counterparty,
-      senderAddress: isOutgoing ? myAddress : counterparty,
-      recipientAddress: isOutgoing ? counterparty : myAddress,
+      senderAddress: senderAddr,
+      recipientAddress: recipientAddr,
       comment: undefined,
       fee,
-      rawType: 'Transaction',
+      rawType,
       cleanAmount: value,
       symbol,
       timestamp: event.timestamp,
@@ -666,11 +920,41 @@ export const mapEventToRow = (
       status: isFailed ? 'failed' : 'success',
       date: formatTxDate(event.timestamp),
       tolkStructName,
+      ...classification,
+      traceDag: buildTraceDagFromEvent(event, matchedPerspective, {
+        id: eventId,
+        txHash: hash,
+        isSuccess: !isFailed,
+        isOutgoing,
+        senderAddress: senderAddr,
+        recipientAddress: recipientAddr,
+        counterpartyAddress: counterparty,
+      }),
     };
   }
 
-  const action = selectRelevantAction(event.actions, myAddress);
-  const isOutgoing = isOutgoingFromAction(action, myAddress);
+  // Pick perspective address: prefer myAddress if involved in actions, otherwise first matching associated address
+  let effectiveMyAddress = myAddress;
+  const hasDirectMatch = event.actions.some((a) =>
+    a.simplePreview?.accounts?.some((acc) =>
+      sameAddress(acc.address, myAddress),
+    ),
+  );
+  if (!hasDirectMatch && associatedAddresses?.length) {
+    const matchedAssoc = associatedAddresses.find((assocAddr) =>
+      event.actions.some((a) =>
+        a.simplePreview?.accounts?.some((acc) =>
+          sameAddress(acc.address, assocAddr),
+        ),
+      ),
+    );
+    if (matchedAssoc) {
+      effectiveMyAddress = matchedAssoc;
+    }
+  }
+
+  const action = selectRelevantAction(event.actions, effectiveMyAddress);
+  const isOutgoing = isOutgoingFromAction(action, effectiveMyAddress);
   const { actionName, transferDetail, value, tolkStructName } = describeAction(
     action,
     isOutgoing,
@@ -680,15 +964,28 @@ export const mapEventToRow = (
     ? (extractFailureReason(event) ?? 'Transaction Failed')
     : undefined;
 
-  const counterparty = getCounterpartyAddress(action, isOutgoing, myAddress);
-  const sender = getSenderAddress(action, isOutgoing, myAddress);
-  const recipient = getRecipientAddress(action, isOutgoing, myAddress);
+  const counterparty = getCounterpartyAddress(
+    action,
+    isOutgoing,
+    effectiveMyAddress,
+  );
+  const sender = getSenderAddress(action, isOutgoing, effectiveMyAddress);
+  const recipient = getRecipientAddress(action, isOutgoing, effectiveMyAddress);
   const comment = getCommentFromAction(action);
   const symbol = value ? value.split(' ').pop() : undefined;
+  const classification = classifyTransactionRow({
+    rawType: action.type,
+    tolkStructName,
+    symbol,
+    actions: event.actions,
+  });
 
   return {
     id: eventId,
+    eventId,
+    lt: event.lt,
     txHash: hash,
+    traceExternalHash: traceExtHex,
     network,
     explorerUrl: getExplorerTxUrl(network, hash, explorer),
     title: actionName,
@@ -708,6 +1005,17 @@ export const mapEventToRow = (
     status: isFailed ? 'failed' : 'success',
     date: formatTxDate(event.timestamp),
     tolkStructName,
+    ...classification,
+    traceDag: buildTraceDagFromEvent(event, effectiveMyAddress, {
+      id: eventId,
+      txHash: hash,
+      isSuccess: !isFailed,
+      isOutgoing,
+      senderAddress: sender,
+      recipientAddress: recipient,
+      counterpartyAddress: counterparty,
+      comment,
+    }),
   };
 };
 
@@ -764,6 +1072,12 @@ export const mapPendingToRow = (
     );
     const comment = getCommentFromAction(pending.action);
     const symbol = value ? value.split(' ').pop() : undefined;
+    const classification = classifyTransactionRow({
+      rawType: pending.action.type,
+      tolkStructName,
+      symbol,
+      actions: [pending.action],
+    });
 
     return {
       ...base,
@@ -779,18 +1093,29 @@ export const mapPendingToRow = (
       amount: signedAmount(value, isOutgoing),
       isOutgoing,
       tolkStructName,
+      ...classification,
     };
   }
 
-  const isOutgoing = pending.preview?.type === 'send';
-  const value = pending.preview
-    ? `${formatAmount(pending.preview.amount, GRAM_DECIMALS)} GRAM`
-    : '';
-  const title = isOutgoing ? 'TonTransfer' : 'TonTransfer';
+  const isContractPreview = pending.preview?.type === 'contract';
+  const isOutgoing =
+    pending.preview?.type === 'send' || pending.preview?.type === 'contract';
+  const value =
+    pending.preview && BigInt(pending.preview.amount || 0) > 0n
+      ? `${formatAmount(pending.preview.amount, GRAM_DECIMALS)} GRAM`
+      : '';
+  const title = isContractPreview ? 'SmartContractExec' : 'TonTransfer';
   const transferDetail = pending.preview
-    ? `${isOutgoing ? 'Sent' : 'Received'} ${value}`
+    ? value
+      ? `${isOutgoing ? 'Sent' : 'Received'} ${value}`
+      : 'Processing'
     : 'Processing';
   const counterparty = pending.preview?.recipient;
+  const rawType = isContractPreview ? 'SmartContractExec' : 'TonTransfer';
+  const classification = classifyTransactionRow({
+    rawType,
+    symbol: value ? 'GRAM' : undefined,
+  });
   return {
     ...base,
     title,
@@ -798,10 +1123,11 @@ export const mapPendingToRow = (
     counterpartyAddress: counterparty,
     senderAddress: isOutgoing ? myAddress : counterparty,
     recipientAddress: isOutgoing ? counterparty : myAddress,
-    rawType: 'TonTransfer',
+    rawType,
     cleanAmount: value,
-    symbol: 'GRAM',
+    symbol: value ? 'GRAM' : undefined,
     amount: signedAmount(value, isOutgoing),
     isOutgoing,
+    ...classification,
   };
 };

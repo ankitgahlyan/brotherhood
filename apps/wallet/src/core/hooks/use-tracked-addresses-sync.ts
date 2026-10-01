@@ -41,20 +41,15 @@ import { Address } from '@ton/core';
  */
 export function useTrackedAddressesSync() {
   const storeApi = useWalletStoreApi();
-  const { address, savedWallets } = useWallet();
+  const { savedWallets } = useWallet();
   const { loadUserJettons } = useJettons();
   const { setBrotherhoodMemberData, addCircleInvites, setLocationContract } =
     useBrotherhood();
 
-  const { loadEvents, setAssociatedAddresses } = useWalletStore(
+  const { setAssociatedAddresses } = useWalletStore(
     useShallow((state) => ({
-      loadEvents: state.loadEvents,
       setAssociatedAddresses: state.setAssociatedAddresses,
     })),
-  );
-
-  const isWalletKitInitialized = useWalletStore(
-    (state) => state.walletCore.isWalletKitInitialized,
   );
 
   const savedWalletsLengthRef = useRef(0);
@@ -96,9 +91,6 @@ export function useTrackedAddressesSync() {
 
       // 2. Fetch jettons for ALL saved wallets (including isMember: false)
       void loadUserJettons(undefined, force).catch(() => {});
-      if (isWalletKitInitialized) {
-        void loadEvents(20, 0, force).catch(() => {});
-      }
 
       try {
         const currentState = storeApi.getState();
@@ -351,8 +343,6 @@ export function useTrackedAddressesSync() {
     [
       storeApi,
       savedWallets,
-      isWalletKitInitialized,
-      loadEvents,
       setAssociatedAddresses,
       loadUserJettons,
       setBrotherhoodMemberData,
@@ -376,15 +366,6 @@ export function useTrackedAddressesSync() {
       savedWalletsLengthRef.current = currentLen;
     }
   }, [savedWallets?.length, hydrateAllSavedWallets]);
-
-  // When WalletKit becomes ready, load initial events once across all saved wallets
-  const initialEventsLoadedRef = useRef(false);
-  useEffect(() => {
-    if (isWalletKitInitialized && address && !initialEventsLoadedRef.current) {
-      initialEventsLoadedRef.current = true;
-      void loadEvents(20, 0).catch(() => {});
-    }
-  }, [isWalletKitInitialized, address, loadEvents]);
 
   // Trigger hydration & auto-funding when wallet becomes unlocked mid-session
   const isUnlocked = useWalletStore((state) => state.auth.isUnlocked);

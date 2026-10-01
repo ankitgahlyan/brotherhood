@@ -36,6 +36,7 @@ import { rateLimitedFetch } from '@/lib/brotherhood/rate-limiter';
 import { useTrackedAddressesSync } from '@/core/hooks/use-tracked-addresses-sync';
 import { useBackgroundSyncCoordinator } from '@/core/sync/background-sync-coordinator';
 import { MotionProvider } from '@/core/motion/motion-provider';
+import { mapEventToRow } from '@/features/transactions/utils/map-transaction-row';
 
 import './App.css';
 import './storePatch';
@@ -74,6 +75,14 @@ function getActiveWalletKitConfig(): WalletKitConfig {
     createLedgerTransport: createWebLedgerTransport,
     disableAutoEmulation: DISABLE_AUTO_EMULATION,
     fetchApi: rateLimitedFetch,
+    transformEvent: (event, walletAddress, network, associatedAddresses) =>
+      mapEventToRow(
+        event,
+        walletAddress,
+        network,
+        'tonscan',
+        associatedAddresses,
+      ),
   };
 }
 

@@ -7,60 +7,47 @@
  */
 
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, History } from 'lucide-react';
 import { useWalletStore } from '@demo/wallet-core';
 import { useNavigate } from '@/core/routing';
 
-import { ActivityList } from '../activity-list';
-import { useTransactionRows } from '../../hooks/use-transaction-rows';
-import { RefreshButton } from '@/core/components/ui/refresh-button';
-
-const PREVIEW_COUNT = 10;
-// Load a few extra so the preview still fills 10 rows after action-less events are skipped.
-const PREVIEW_LOAD = 20;
-
 /**
- * Dashboard "History" block: the latest transactions with wallet-v2 date separators and pill badges.
+ * Dashboard "Transaction History" button row below assets: opens `/wallet/history` without auto-fetching traces on startup.
  */
 export const TransactionHistory: React.FC = () => {
   const navigate = useNavigate();
-  const { rows } = useTransactionRows(PREVIEW_LOAD);
-  const pendingTransactions = useWalletStore(
-    (state) => state.walletManagement.pendingTransactions,
+  const pendingCount = useWalletStore(
+    (state) => state.walletManagement.pendingTransactions.length,
   );
-  const loadEvents = useWalletStore((state) => state.loadEvents);
-  const isSyncing = pendingTransactions.length > 0;
-  const preview = rows.slice(0, PREVIEW_COUNT);
-
-  const handleRefresh = async () => {
-    await loadEvents(PREVIEW_LOAD, 0, true);
-  };
-
-  if (preview.length === 0) {
-    return null;
-  }
 
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate('/wallet/history')}
-          className="flex items-center gap-1 group cursor-pointer"
-          aria-label="View all transactions"
-        >
-          <h2 className="text-base font-semibold text-foreground">History</h2>
-          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
-        <RefreshButton
-          iconOnly
-          onRefresh={handleRefresh}
-          title="Refresh transaction traces"
-          testId="dashboard-history-refresh-btn"
-        />
-      </div>
-
-      <ActivityList rows={preview} isSyncing={isSyncing} />
+      <button
+        type="button"
+        onClick={() => navigate('/wallet/history')}
+        className="w-full flex items-center gap-3 p-3 text-left rounded-2xl bg-card border border-border/60 hover:bg-secondary/50 active:bg-secondary/80 transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Open transaction history"
+        data-testid="dashboard-open-history-btn"
+      >
+        <span className="w-10 h-10 rounded-full flex-shrink-0 bg-secondary border border-border flex items-center justify-center text-primary">
+          <History className="w-5 h-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <span>Transaction History</span>
+            {pendingCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/15 text-primary">
+                <span className="w-2 h-2 rounded-full border-2 border-primary/40 border-t-primary animate-spin" />
+                <span>{pendingCount} pending</span>
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            View transfers & contract calls
+          </div>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
+      </button>
     </section>
   );
 };

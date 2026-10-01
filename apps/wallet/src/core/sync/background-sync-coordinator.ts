@@ -45,9 +45,8 @@ export function useBackgroundSyncCoordinator() {
         void state.startWebSocketStreaming();
       }
 
-      // Refresh balance and events once upon network restoration
+      // Refresh balance once upon network restoration
       void state.updateBalance();
-      void state.loadEvents(15, 0, false);
       if (state.loadRates) {
         void state.loadRates();
       }
