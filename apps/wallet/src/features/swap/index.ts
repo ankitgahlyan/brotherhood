@@ -13,3 +13,4 @@ export * from './components/swap-field';
 export * from './components/swap-info';
 export * from './components/quote-timer';
 export * from './hooks/use-swap-providers';
+export * from './hooks/use-ecosystem-swap';

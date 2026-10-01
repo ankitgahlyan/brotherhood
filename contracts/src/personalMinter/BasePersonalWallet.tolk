@@ -72,7 +72,8 @@ fun onInternalMessage(
             }
 
             assert (
-                (msg.jettonAmount == grams("1")) & (msg.latestWalletCode != null)
+                ((msg.jettonAmount == grams("1")) | msg.transferredAsCredit) &
+                (msg.latestWalletCode != null)
             ) throw Errors.NotOnboardedWallet;
 
             // Set new code postponed

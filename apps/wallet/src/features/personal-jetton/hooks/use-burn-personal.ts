@@ -7,7 +7,7 @@
  */
 
 import { useCallback } from 'react';
-import { Address } from '@ton/core';
+import { Address, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildBurnBody, parseUnits } from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
@@ -19,6 +19,7 @@ export interface UseBurnPersonalParams {
   personalWalletAddress: string;
   amount: string;
   isPayback?: boolean;
+  customPayload?: Cell | null;
 }
 
 export interface UseBurnPersonalResult {
@@ -35,6 +36,7 @@ export function useBurnPersonal({
   personalWalletAddress,
   amount,
   isPayback = true,
+  customPayload = null,
 }: UseBurnPersonalParams): UseBurnPersonalResult {
   const {
     send: sendTx,
@@ -49,13 +51,25 @@ export function useBurnPersonal({
     const amountNano = parseUnits(amount, 9);
 
     // If payback, pass ownerAddr so personal minter triggers Payback to issuer's FI wallet;
-    // otherwise pass null for a standard burn.
-    const payload = buildBurnBody(amountNano, isPayback ? ownerAddr : null);
+    // otherwise pass null for a standard burn (with optional customPayload for off-ramp memo).
+    const payload = buildBurnBody(
+      amountNano,
+      isPayback ? ownerAddr : null,
+      0n,
+      customPayload,
+    );
 
     await sendTx([
       { toAddress: personalWalletAddress, amount: GAS.BURN, payload },
     ]);
-  }, [walletAddress, personalWalletAddress, amount, isPayback, sendTx]);
+  }, [
+    walletAddress,
+    personalWalletAddress,
+    amount,
+    isPayback,
+    customPayload,
+    sendTx,
+  ]);
 
   const isDisabled =
     !wallet ||

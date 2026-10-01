@@ -17,6 +17,7 @@ import { Button } from '@/core/components/ui/button';
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { formatLargeValue } from '@/core/utils';
 import { isFiJetton } from '@/features/jettons';
+import { CommentField } from '@/features/send/components/comment-field';
 import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
 import { usePersonalMinterDetails } from '@/lib/brotherhood/queries';
 import type { AssetRowData } from '../asset-row';
@@ -41,6 +42,8 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
 
   const [amount, setAmount] = useState('');
   const [isPayback, setIsPayback] = useState(true);
+  const [comment, setComment] = useState('');
+  const [isEncrypted, setIsEncrypted] = useState(true);
   const [customGasTon, setCustomGasTon] = useState(DEFAULT_BURN_GAS_TON);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -81,6 +84,10 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
     isOpen && isPersonal,
   );
 
+  const adminAddressStr = useMemo(() => {
+    return personalDetailsQuery.data?.adminAddress?.toString() ?? null;
+  }, [personalDetailsQuery.data]);
+
   const isUserPersonalIssuer = useMemo(() => {
     if (!address || !personalDetailsQuery.data?.adminAddress) return false;
     try {
@@ -97,13 +104,18 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
   const canBurnForPayback =
     isPersonal && !isUserPersonalIssuer && !isFi && !isGram;
 
+  const effectiveIsPayback = canBurnForPayback ? isPayback : false;
+
   const burner = useBurnToken({
     wallet: currentWallet,
     walletKit,
     walletAddress: address,
     asset,
     amount,
-    isPayback: canBurnForPayback ? isPayback : false,
+    isPayback: effectiveIsPayback,
+    comment,
+    isEncrypted,
+    adminAddress: adminAddressStr,
     customGasTon,
     network,
   });
@@ -118,6 +130,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
     try {
       await burner.burn();
       setAmount('');
+      setComment('');
       onClose();
       onSuccess?.();
     } catch {
@@ -216,10 +229,24 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
               <p className="text-muted-foreground leading-relaxed">
                 Sends your wallet address with the burn request to trigger an
                 automatic FI token payback from the issuer's account (requires
-                credit maturity). Uncheck for a simple burn without payback.
+                credit maturity). Uncheck for a normal burn (e.g. off-chain fiat
+                settlement with encrypted bank details).
               </p>
             </div>
           </label>
+        )}
+
+        {/* Encrypted / Plain Comment Field for Normal Burn (Off-Ramp Settlement) */}
+        {isPersonal && !effectiveIsPayback && (
+          <CommentField
+            comment={comment}
+            onChangeComment={setComment}
+            isEncrypted={isEncrypted}
+            onChangeIsEncrypted={setIsEncrypted}
+            recipientAddress={adminAddressStr ?? undefined}
+            network={network}
+            disabled={burner.isSending}
+          />
         )}
 
         {/* Advanced Gas Settings Accordion */}

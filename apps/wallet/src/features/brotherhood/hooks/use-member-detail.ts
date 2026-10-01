@@ -9,6 +9,7 @@
 import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import { useFiWalletStateByContract } from '@/lib/brotherhood/queries';
+import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import type {
   VotedCandidateEntry,
@@ -189,7 +190,7 @@ export function useMemberDetail(
         isPrevilegedAccount: Boolean(rawData.isPrevilegedAccount),
         creditNeed: rawData.creditNeed ?? 0n,
         creditMaturity: Number(rawData.creditMaturity ?? 0),
-        multiplier: Number(rawData.multiplier ?? 1),
+        multiplier: normalizeOnchainMultiplier(rawData.multiplier),
         accumulatedFees: rawData.accumulatedFees ?? 0n,
         debt: rawData.debt ?? 0n,
         allowDeferred: Boolean(rawData.allowDeferred),

@@ -17,7 +17,7 @@ const STORAGE_SIZE_INIT_STATE_WALLET_CELLS = 112 // measured init = 110, rounded
 const STORAGE_SIZE_MAX_MINTER_BITS = 10000
 const STORAGE_SIZE_MAX_MINTER_CELLS = 20
 
-const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 674 // NotifyMinter body, measured in bench-fi-fees.test.tolk
+const MESSAGE_SIZE_BURN_NOTIFICATION_BITS = 675 // NotifyMinter body, measured in bench-fi-fees.test.tolk
 const MESSAGE_SIZE_BURN_NOTIFICATION_CELLS = 1 // body always in ref
 
 // Gas costs

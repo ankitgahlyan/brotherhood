@@ -7,8 +7,14 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { Address, toNano } from '@ton/core';
-import type { ITonWalletKit, Wallet } from '@ton/walletkit';
+import { Address, type Cell, toNano } from '@ton/core';
+import { mnemonicToPrivateKey } from '@ton/crypto';
+import {
+  createCommentPayload,
+  type ITonWalletKit,
+  type Wallet,
+} from '@ton/walletkit';
+import { useWallet, useWalletStore, getChainNetwork } from '@demo/wallet-core';
 import { buildBurnBody, parseUnits } from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction } from '@/features/brotherhood';
 import {
@@ -17,6 +23,11 @@ import {
   isPersonalMinterContract,
 } from '@/lib/brotherhood/ton';
 import { isFiJetton } from '@/features/jettons';
+import {
+  encryptMessageComment,
+  packBytesAsSnakeForEncryptedData,
+} from '@/core/utils/encryption';
+import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
 import type { Network } from '@/lib/brotherhood/config';
 import type { AssetRowData } from '../components/asset-row';
 
@@ -29,6 +40,9 @@ export interface UseBurnTokenParams {
   asset: AssetRowData | null;
   amount: string;
   isPayback?: boolean;
+  comment?: string;
+  isEncrypted?: boolean;
+  adminAddress?: string | null;
   customGasTon?: string;
   network?: Network;
 }
@@ -48,6 +62,9 @@ export function useBurnToken({
   asset,
   amount,
   isPayback = true,
+  comment = '',
+  isEncrypted = true,
+  adminAddress = null,
   customGasTon = DEFAULT_BURN_GAS_TON,
   network = 'testnet',
 }: UseBurnTokenParams): UseBurnTokenResult {
@@ -56,6 +73,10 @@ export function useBurnToken({
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
+  const { getDecryptedMnemonic } = useWallet();
+  const savedWallets = useWalletStore(
+    (state) => state.walletManagement.savedWallets,
+  );
 
   const isFi = useMemo(() => {
     if (!asset) return false;
@@ -120,11 +141,68 @@ export function useBurnToken({
       }
     }
 
+    // Build optional customPayload for normal burn (e.g. encrypted bank details for fiat off-ramp)
+    let customPayload: Cell | null = null;
+    const trimmedComment = comment.trim();
+    if (!isFi && !isPayback && trimmedComment) {
+      let didEncrypt = false;
+      if (isEncrypted && adminAddress) {
+        try {
+          let tonClient: any;
+          if (walletKit) {
+            try {
+              const targetNet = getChainNetwork(network);
+              tonClient =
+                typeof walletKit.getApiClient === 'function'
+                  ? walletKit.getApiClient(targetNet)
+                  : (walletKit as any).getClient?.();
+            } catch {
+              tonClient = undefined;
+            }
+          }
+          const theirPublicKey = await resolveRecipientPublicKey(
+            adminAddress,
+            network,
+            tonClient,
+            savedWallets,
+          );
+          if (theirPublicKey) {
+            const mnemonic = await getDecryptedMnemonic();
+            if (mnemonic && mnemonic.length > 0) {
+              const keyPair = await mnemonicToPrivateKey(mnemonic);
+              const encryptedBytes = await encryptMessageComment(
+                trimmedComment,
+                keyPair.publicKey,
+                theirPublicKey,
+                keyPair.secretKey,
+                walletAddress,
+              );
+              customPayload = packBytesAsSnakeForEncryptedData(encryptedBytes);
+              didEncrypt = true;
+            }
+          }
+        } catch (err) {
+          console.warn(
+            '[useBurnToken] Comment encryption failed, fallback to plain:',
+            err,
+          );
+        }
+      }
+      if (!didEncrypt) {
+        customPayload = createCommentPayload(trimmedComment);
+      }
+    }
+
     // Build AskToBurn payload
     // If payback, pass ownerAddr so personal minter triggers Payback to issuer's FI wallet;
     // otherwise pass null (or ownerAddr for regular FI where it acts as responseAddress).
     const responseAddress = isFi ? ownerAddr : isPayback ? ownerAddr : null;
-    const payload = buildBurnBody(amountNano, responseAddress);
+    const payload = buildBurnBody(
+      amountNano,
+      responseAddress,
+      0n,
+      customPayload,
+    );
 
     await sendTx([
       {
@@ -138,10 +216,16 @@ export function useBurnToken({
     walletAddress,
     asset,
     amount,
+    comment,
+    isEncrypted,
+    adminAddress,
     customGasTon,
     isFi,
     isPayback,
     network,
+    walletKit,
+    savedWallets,
+    getDecryptedMnemonic,
     sendTx,
   ]);
 

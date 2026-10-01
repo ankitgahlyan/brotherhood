@@ -15,7 +15,7 @@ const STORAGE_SIZE_INIT_STATE_PERSONAL_WALLET_CELLS = 18 // measured init state 
 const STORAGE_SIZE_MAX_PERSONAL_MINTER_BITS = 1000 // measured PersonalStore (594), rounded up
 const STORAGE_SIZE_MAX_PERSONAL_MINTER_CELLS = 4 // measured PersonalStore (2), rounded up
 
-const MESSAGE_SIZE_PERSONAL_BURN_NOTIFICATION_BITS = 674 // NotifyMinter body
+const MESSAGE_SIZE_PERSONAL_BURN_NOTIFICATION_BITS = 675 // NotifyMinter body
 const MESSAGE_SIZE_PERSONAL_BURN_NOTIFICATION_CELLS = 1
 
 // Gas costs

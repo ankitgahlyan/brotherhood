@@ -175,6 +175,7 @@ fun onInternalMessage(in: InMessage) {
                     jettonAmount: msg.jettonAmount,
                     burnInitiator: storage.owner,
                     sendExcessesTo: msg.sendExcessesTo,
+                    customPayload: msg.customPayload,
                 },
             });
             notifyMinterMsg.send(

@@ -30,7 +30,7 @@ fun migrateFromInit(
         isPrevilegedAccount: isPrivileged,
         creditNeed: 0,
         creditMaturity: 0,
-        multiplier: 1,
+        multiplier: 1000,
         accumulatedFees: 0,
         debt: 0,
         allowDeferred: false,

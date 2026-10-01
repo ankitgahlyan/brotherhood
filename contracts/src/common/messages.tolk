@@ -89,6 +89,7 @@ struct (0x7bdd97de) NotifyMinter {
     jettonAmount: coins
     burnInitiator: address
     sendExcessesTo: address?
+    customPayload: cell? = null
 }
 
 struct (0x2c76b972) RequestWalletAddress {
@@ -434,6 +435,7 @@ struct (0x00001148) Payback {
     queryId: uint64
     amount: coins
     sender: address
+    swapTargetOwner: address? = null
 }
 
 struct (0x00001149) ActSetPersonalJetton {

@@ -139,3 +139,38 @@ export function broFiTierLabel(charCount: number): string {
   if (charCount <= 8) return '500 FI';
   return '100 FI';
 }
+
+// ============================================================================
+// 5. ECOSYSTEM SWAP & CREDIT MULTIPLIER CONSTANTS
+// ============================================================================
+
+/** 3-decimal fixed-point scale for on-chain FiWalletStore.multiplier (1000 = 1.000x) */
+export const MULTIPLIER_SCALE = 1000;
+
+/** Forward payload opcode for multi-hop P_A -> FI -> P_B atomic swap */
+export const SWAP_CREDIT_FORWARD_OP = 0x0000114f;
+
+/** Placeholder fiat on-ramp URL for purchasing Reserve Token (Treasury Personal Token) */
+export const RESERVE_TOKEN_FIAT_BUY_URL =
+  'https://buy.brotherhood.network/reserve';
+
+/**
+ * Normalizes on-chain uint16 multiplier (scaled by 1000, where 1000 = 1.000x)
+ * into a human-readable float (e.g. 1000 -> 1, 950 -> 0.95, 1250 -> 1.25).
+ */
+export function normalizeOnchainMultiplier(
+  raw: bigint | number | undefined | null,
+): number {
+  if (raw === undefined || raw === null) return 1;
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num <= 0) return 1;
+  return num / MULTIPLIER_SCALE;
+}
+
+/**
+ * Encodes a human-readable decimal multiplier (0.001 to 65.535) into the
+ * on-chain uint16 integer scaled by MULTIPLIER_SCALE (1000).
+ */
+export function encodeOnchainMultiplier(humanMultiplier: number): bigint {
+  return BigInt(Math.round(humanMultiplier * MULTIPLIER_SCALE));
+}

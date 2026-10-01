@@ -110,6 +110,41 @@ contract FossFiWallet {
 }
 
 fun onBouncedMessage(in: InMessageBounced): void {
+    if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
+        val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
+        val bouncedMint = lazy MintNewJettons.fromSlice(rich.originalBody.beginParse());
+        val innerTransfer = lazy bouncedMint.internalTransferMsg.load();
+        var store = lazy FiWalletStore.load();
+        val addrs = lazy store.addresses.load();
+        val refundFi: coins = store.multiplier > 0
+            ? (mulDivFloor(innerTransfer.jettonAmount, MULTIPLIER_SCALE, store.multiplier) as coins)
+            : innerTransfer.jettonAmount;
+        store.creditNeed += refundFi;
+        val actualRefund = min(refundFi, store.jettonBalance);
+        store.jettonBalance -= actualRefund;
+        store.save();
+
+        if (actualRefund > 0) {
+            val refundMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: bouncedMint.mintRecipient.getAddrFiWallet(),
+                value: 0,
+                body: makeInternalTransferStep(
+                    bouncedMint.queryId,
+                    actualRefund,
+                    addrs.owner,
+                    bouncedMint.mintRecipient,
+                    0,
+                    createEmptySlice(),
+                    store.version,
+                    false,
+                ),
+            });
+            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        }
+        return;
+    }
+
     // todo: do we need to check correct sender here?
     in.bouncedBody.skipBouncedPrefix();
     val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
@@ -567,6 +602,11 @@ fun onInternalMessage(in: InMessage): void {
                     trustedAddrs.personalJettonMinter != ZERO_ADDRESS
                 ) throw Errors.CreditNeedExceeded;
                 assert (store.creditNeed > 0) throw Errors.CreditNeedExceeded;
+                if (store.multiplier > MULTIPLIER_SCALE) {
+                    assert (
+                        blockchain.now() < store.creditMaturity
+                    ) throw Errors.CreditNeedExceeded;
+                }
                 val acceptedAmount = min(msg.jettonAmount, store.creditNeed);
                 val refundAmount = msg.jettonAmount - acceptedAmount;
                 store.creditNeed -= acceptedAmount;
@@ -593,8 +633,13 @@ fun onInternalMessage(in: InMessage): void {
                     refundMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
                 }
 
-                // trigger personal token minting
-                val mintPersonalAmount = acceptedAmount * store.multiplier;
+                // trigger personal token minting (3-decimal fixed-point multiplier, 1000 = 1.000x)
+                val mintPersonalAmount = mulDivFloor(
+                    acceptedAmount,
+                    store.multiplier,
+                    MULTIPLIER_SCALE,
+                );
+                assert (mintPersonalAmount > 0) throw Errors.InvalidMessage;
                 val mintBody = MintNewJettons {
                     queryId: msg.queryId,
                     mintRecipient: msg.transferInitiator,
@@ -611,12 +656,54 @@ fun onInternalMessage(in: InMessage): void {
                     ),
                 };
                 val mintMsg = createMessage({
-                    bounce: BounceMode.NoBounce,
+                    bounce: BounceMode.RichBounce,
                     value: grams("0.75"),
                     dest: trustedAddrs.personalJettonMinter, // fails if not set
                     body: mintBody.toCell(),
                 });
-                mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+            } else if (msg.forwardPayload.remainingBitsCount() >= 300) {
+                var fwdSlice = msg.forwardPayload;
+                if (fwdSlice.loadUint(1) == 0) {
+                    if (fwdSlice.preloadUint(32) == SWAP_CREDIT_FORWARD_OP) {
+                        fwdSlice.skipBits(32);
+                        val swapTargetOwner = fwdSlice.loadAddress();
+                        if (
+                            store.active & (store.debt == 0) &
+                            (swapTargetOwner.getWorkchain() == MY_WORKCHAIN)
+                        ) {
+                            store.jettonBalance -= msg.jettonAmount;
+                            val forwardCreditMsg = createMessage({
+                                bounce: BounceMode.Only256BitsOfBody,
+                                dest: swapTargetOwner.getAddrFiWallet(),
+                                value: 0,
+                                body: makeInternalTransferStep(
+                                    msg.queryId,
+                                    msg.jettonAmount,
+                                    addrs.owner,
+                                    addrs.owner,
+                                    0,
+                                    createEmptySlice(),
+                                    store.version,
+                                    true,
+                                ),
+                            });
+                            forwardCreditMsg.send(
+                                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                                    SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                            );
+                            addrs.nomInAddrs = nomins.toCell();
+                            addrs.trustedJettonAddrs = trustedAddrs.toCell();
+                            maps.social = social.toCell();
+                            store.addresses = addrs.toCell();
+                            store.maps = maps.toCell();
+                            store.profile = profile.toCell();
+                            store.timestamps = time.toCell();
+                            store.save();
+                            return;
+                        }
+                    }
+                }
             }
 
             notifyOwner(
@@ -708,6 +795,15 @@ fun onInternalMessage(in: InMessage): void {
             assert (msg.amount <= store.jettonBalance) throw Errors.InsufficientBalance;
             store.jettonBalance -= msg.amount;
 
+            val fwdPayload = msg.swapTargetOwner != null
+                ? beginCell()
+                    .storeUint(0, 1)
+                    .storeUint(SWAP_CREDIT_FORWARD_OP, 32)
+                    .storeAddress(msg.swapTargetOwner)
+                    .endCell()
+                    .beginParse()
+                : createEmptySlice();
+
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: msg.sender.getAddrFiWallet(), // only id accounts allowed
@@ -718,7 +814,7 @@ fun onInternalMessage(in: InMessage): void {
                     addrs.owner,
                     msg.sender,
                     0,
-                    createEmptySlice(),
+                    fwdPayload,
                     store.version,
                 ),
             });
@@ -1441,12 +1537,18 @@ fun onInternalMessage(in: InMessage): void {
                 store.multiplier = msg.multiplier;
             }
 
+            val isBonusMultiplier = store.multiplier > MULTIPLIER_SCALE;
+
             if (msg.amount != null) {
                 if (msg.amount > 0) {
                     val effectiveMaturity = msg.maturityDate != null
                         ? msg.maturityDate
                         : store.creditMaturity;
-                    assert (effectiveMaturity > blockchain.now()) throw Errors.InvalidMessage;
+                    if (isBonusMultiplier) {
+                        assert (effectiveMaturity > blockchain.now()) throw Errors.InvalidMessage;
+                    } else if (msg.maturityDate != null && msg.maturityDate > 0) {
+                        assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
+                    }
                     if (store.creditMaturity > blockchain.now()) {
                         assert (
                             effectiveMaturity >= store.creditMaturity
@@ -1457,14 +1559,20 @@ fun onInternalMessage(in: InMessage): void {
                 store.creditNeed = msg.amount;
             } else if (msg.maturityDate != null) {
                 if (store.creditNeed > 0) {
-                    assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
+                    if (isBonusMultiplier || msg.maturityDate > 0) {
+                        assert (msg.maturityDate > blockchain.now()) throw Errors.InvalidMessage;
+                    }
                     if (store.creditMaturity > blockchain.now()) {
                         assert (
                             msg.maturityDate >= store.creditMaturity
                         ) throw Errors.InvalidMessage;
                     }
                     store.creditMaturity = msg.maturityDate;
+                } else {
+                    store.creditMaturity = msg.maturityDate;
                 }
+            } else if (isBonusMultiplier && store.creditNeed > 0) {
+                assert (store.creditMaturity > blockchain.now()) throw Errors.InvalidMessage;
             }
 
             returnExcessesBack(msg.queryId, addrs.owner);

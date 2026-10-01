@@ -2399,7 +2399,7 @@ export const BrotherhoodScreen: React.FC = () => {
                           <input
                             type="number"
                             step="1"
-                            min="1"
+                            min="0"
                             value={loanMaturityDays}
                             onChange={(e) =>
                               setLoanMaturityDays(e.target.value)
@@ -2407,7 +2407,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             placeholder={
                               account.data?.creditMaturity
                                 ? `Maturity (${formatDate(account.data.creditMaturity)})`
-                                : 'Maturity (Days, e.g. 30)'
+                                : 'Maturity (Days, 0 = Instant)'
                             }
                             disabled={
                               !canOperate ||
@@ -2427,8 +2427,9 @@ export const BrotherhoodScreen: React.FC = () => {
                         <div>
                           <input
                             type="number"
-                            step="1"
-                            min="1"
+                            step="0.001"
+                            min="0.001"
+                            max="65.535"
                             value={loanMultiplierInput}
                             onChange={(e) =>
                               setLoanMultiplierInput(e.target.value)

@@ -38,6 +38,8 @@ const EMI_AMOUNT: coins = grams("2500")
 const EMI_PENALTY_PERCENT: int = 5 // 5% penalty
 const FOLLOW_MINT_AMOUNT: coins = grams("1000") // Minted to followee on following, burnt on unfollow
 const PROPOSAL_FEE: coins = grams("1000")
+const MULTIPLIER_SCALE: int = 1000 // 3-decimal fixed-point scale (1000 = 1.000x)
+const SWAP_CREDIT_FORWARD_OP: int = 0x0000114f // Inline forwardPayload opcode for atomic Payback -> BuyCredit swap
 
 // ----------------------------------------------------------------------------
 // 3. TIMING, INTERVALS & DEADLINES

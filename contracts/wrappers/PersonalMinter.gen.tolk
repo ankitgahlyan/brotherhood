@@ -83,13 +83,14 @@ fun PersonalMinter.sendNotifyMinter(
     jettonAmount: coins,
     burnInitiator: address,
     sendExcessesTo: address?,
+    customPayload: cell?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: NotifyMinter { queryId, jettonAmount, burnInitiator, sendExcessesTo },
+        body: NotifyMinter { queryId, jettonAmount, burnInitiator, sendExcessesTo, customPayload },
     });
     return net.send(from, genericMsg);
 }

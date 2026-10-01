@@ -7,30 +7,24 @@
  */
 
 import type { FC } from 'react';
-import { useEffect } from 'react';
 import { useNavigate } from '@/core/routing';
-import { useSwap } from '@demo/wallet-core';
 
 import { SwapInterface } from '../swap-interface';
-import { USDT_ADDRESS } from '../../constants/swap';
 
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 
 export const Swap: FC = () => {
   const navigate = useNavigate();
-  const { setFromToken, setToToken, clearSwap } = useSwap();
-
-  useEffect(() => {
-    setFromToken({ address: 'ton', decimals: 9, symbol: 'GRAM' });
-    setToToken({ address: USDT_ADDRESS, decimals: 6, symbol: 'USDT' });
-
-    return () => clearSwap();
-  }, [clearSwap, setFromToken, setToToken]);
 
   return (
     <NewLayout
-      header={<ScreenHeader title="Swap" onBack={() => navigate('/wallet')} />}
+      header={
+        <ScreenHeader
+          title="Ecosystem Swap"
+          onBack={() => navigate('/wallet')}
+        />
+      }
     >
       <SwapInterface />
     </NewLayout>

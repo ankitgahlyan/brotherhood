@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
+import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 import {
   getContractCache,
@@ -28,6 +29,7 @@ export interface MemberProfileInfo {
   creditNeed: bigint;
   creditMaturity: number;
   multiplier: number;
+  personalJettonMinter?: string;
   isOutdatedCode?: boolean;
 }
 
@@ -110,6 +112,12 @@ export function useMemberProfiles(
               const ownerAddress = ownerAddr
                 ? formatTonAddress(ownerAddr, { isContract: false, network })
                 : '';
+              const minterAddr =
+                store?.addresses?.ref?.trustedJettonAddrs?.ref
+                  ?.personalJettonMinter ?? null;
+              const personalJettonMinter = minterAddr
+                ? formatTonAddress(minterAddr, { isContract: true, network })
+                : undefined;
               const isOutdated =
                 outdatedSet.has(addrStr) ||
                 (store && Boolean(store.isCodeHashOutdated));
@@ -127,7 +135,8 @@ export function useMemberProfiles(
                 status: store?.status ? Number(store.status) : 0,
                 creditNeed: store?.creditNeed ?? 0n,
                 creditMaturity: Number(store?.creditMaturity ?? 0),
-                multiplier: Number(store?.multiplier ?? 1),
+                multiplier: normalizeOnchainMultiplier(store?.multiplier),
+                personalJettonMinter,
                 isOutdatedCode: isOutdated,
               };
             } catch (e) {

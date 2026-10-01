@@ -480,6 +480,7 @@ export const ReturnExcessesBack = {
  >     jettonAmount: coins
  >     burnInitiator: address
  >     sendExcessesTo: address?
+ >     customPayload: cell?
  > }
  */
 export interface NotifyMinter {
@@ -488,6 +489,7 @@ export interface NotifyMinter {
     jettonAmount: coins
     burnInitiator: c.Address
     sendExcessesTo: c.Address | null
+    customPayload: c.Cell | null /* = null */
 }
 
 export const NotifyMinter = {
@@ -498,9 +500,11 @@ export const NotifyMinter = {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }): NotifyMinter {
         return {
             $: 'NotifyMinter',
+            customPayload: null,
             ...args
         }
     },
@@ -512,6 +516,7 @@ export const NotifyMinter = {
             jettonAmount: s.loadCoins(),
             burnInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
+            customPayload: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: NotifyMinter, b: c.Builder): void {
@@ -520,6 +525,9 @@ export const NotifyMinter = {
         b.storeCoins(self.jettonAmount);
         b.storeAddress(self.burnInitiator);
         b.storeAddress(self.sendExcessesTo);
+        storeTolkNullable<c.Cell>(self.customPayload, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: NotifyMinter): c.Cell {
         return makeCellFrom<NotifyMinter>(self, NotifyMinter.store);
@@ -1521,6 +1529,256 @@ export const AdminHandoff = {
 }
 
 /**
+ > struct (0xd53276db) Excesses {
+ >     queryId: uint64
+ > }
+ */
+export interface Excesses {
+    readonly $: 'Excesses'
+    queryId: uint64
+}
+
+export const Excesses = {
+    PREFIX: 0xd53276db,
+
+    create(args: {
+        queryId: uint64
+    }): Excesses {
+        return {
+            $: 'Excesses',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Excesses {
+        loadAndCheckPrefix32(s, 0xd53276db, 'Excesses');
+        return {
+            $: 'Excesses',
+            queryId: s.loadUintBig(64),
+        }
+    },
+    store(self: Excesses, b: c.Builder): void {
+        b.storeUint(0xd53276db, 32);
+        b.storeUint(self.queryId, 64);
+    },
+    toCell(self: Excesses): c.Cell {
+        return makeCellFrom<Excesses>(self, Excesses.store);
+    }
+}
+
+/**
+ > struct (0x62696431) BidBroDomain {
+ >     queryId: uint64
+ >     bidder: address
+ >     fiAmount: coins
+ >     domain: Cell<RemainingBitsAndRefs>
+ >     collectionAddress: address
+ > }
+ */
+export interface BidBroDomain {
+    readonly $: 'BidBroDomain'
+    queryId: uint64
+    bidder: c.Address
+    fiAmount: coins
+    domain: CellRef<RemainingBitsAndRefs>
+    collectionAddress: c.Address
+}
+
+export const BidBroDomain = {
+    PREFIX: 0x62696431,
+
+    create(args: {
+        queryId: uint64
+        bidder: c.Address
+        fiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+        collectionAddress: c.Address
+    }): BidBroDomain {
+        return {
+            $: 'BidBroDomain',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): BidBroDomain {
+        loadAndCheckPrefix32(s, 0x62696431, 'BidBroDomain');
+        return {
+            $: 'BidBroDomain',
+            queryId: s.loadUintBig(64),
+            bidder: s.loadAddress(),
+            fiAmount: s.loadCoins(),
+            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+            collectionAddress: s.loadAddress(),
+        }
+    },
+    store(self: BidBroDomain, b: c.Builder): void {
+        b.storeUint(0x62696431, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.bidder);
+        b.storeCoins(self.fiAmount);
+        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
+        b.storeAddress(self.collectionAddress);
+    },
+    toCell(self: BidBroDomain): c.Cell {
+        return makeCellFrom<BidBroDomain>(self, BidBroDomain.store);
+    }
+}
+
+/**
+ > struct (0x6f757462) DnsOutbidNotification {
+ >     queryId: uint64
+ >     outbidAddress: address
+ >     fiAmount: coins
+ >     domain: Cell<RemainingBitsAndRefs>
+ > }
+ */
+export interface DnsOutbidNotification {
+    readonly $: 'DnsOutbidNotification'
+    queryId: uint64
+    outbidAddress: c.Address
+    fiAmount: coins
+    domain: CellRef<RemainingBitsAndRefs>
+}
+
+export const DnsOutbidNotification = {
+    PREFIX: 0x6f757462,
+
+    create(args: {
+        queryId: uint64
+        outbidAddress: c.Address
+        fiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }): DnsOutbidNotification {
+        return {
+            $: 'DnsOutbidNotification',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DnsOutbidNotification {
+        loadAndCheckPrefix32(s, 0x6f757462, 'DnsOutbidNotification');
+        return {
+            $: 'DnsOutbidNotification',
+            queryId: s.loadUintBig(64),
+            outbidAddress: s.loadAddress(),
+            fiAmount: s.loadCoins(),
+            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+        }
+    },
+    store(self: DnsOutbidNotification, b: c.Builder): void {
+        b.storeUint(0x6f757462, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.outbidAddress);
+        b.storeCoins(self.fiAmount);
+        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
+    },
+    toCell(self: DnsOutbidNotification): c.Cell {
+        return makeCellFrom<DnsOutbidNotification>(self, DnsOutbidNotification.store);
+    }
+}
+
+/**
+ > struct (0x6275726e) DnsAuctionFinalized {
+ >     queryId: uint64
+ >     winner: address
+ >     winningFiAmount: coins
+ >     domain: Cell<RemainingBitsAndRefs>
+ > }
+ */
+export interface DnsAuctionFinalized {
+    readonly $: 'DnsAuctionFinalized'
+    queryId: uint64
+    winner: c.Address
+    winningFiAmount: coins
+    domain: CellRef<RemainingBitsAndRefs>
+}
+
+export const DnsAuctionFinalized = {
+    PREFIX: 0x6275726e,
+
+    create(args: {
+        queryId: uint64
+        winner: c.Address
+        winningFiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }): DnsAuctionFinalized {
+        return {
+            $: 'DnsAuctionFinalized',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DnsAuctionFinalized {
+        loadAndCheckPrefix32(s, 0x6275726e, 'DnsAuctionFinalized');
+        return {
+            $: 'DnsAuctionFinalized',
+            queryId: s.loadUintBig(64),
+            winner: s.loadAddress(),
+            winningFiAmount: s.loadCoins(),
+            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+        }
+    },
+    store(self: DnsAuctionFinalized, b: c.Builder): void {
+        b.storeUint(0x6275726e, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.winner);
+        b.storeCoins(self.winningFiAmount);
+        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
+    },
+    toCell(self: DnsAuctionFinalized): c.Cell {
+        return makeCellFrom<DnsAuctionFinalized>(self, DnsAuctionFinalized.store);
+    }
+}
+
+/**
+ > struct (0x72656e65) RenewBroDomain {
+ >     queryId: uint64
+ >     renewer: address
+ >     fiAmount: coins
+ >     itemAddress: address
+ > }
+ */
+export interface RenewBroDomain {
+    readonly $: 'RenewBroDomain'
+    queryId: uint64
+    renewer: c.Address
+    fiAmount: coins
+    itemAddress: c.Address
+}
+
+export const RenewBroDomain = {
+    PREFIX: 0x72656e65,
+
+    create(args: {
+        queryId: uint64
+        renewer: c.Address
+        fiAmount: coins
+        itemAddress: c.Address
+    }): RenewBroDomain {
+        return {
+            $: 'RenewBroDomain',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RenewBroDomain {
+        loadAndCheckPrefix32(s, 0x72656e65, 'RenewBroDomain');
+        return {
+            $: 'RenewBroDomain',
+            queryId: s.loadUintBig(64),
+            renewer: s.loadAddress(),
+            fiAmount: s.loadCoins(),
+            itemAddress: s.loadAddress(),
+        }
+    },
+    store(self: RenewBroDomain, b: c.Builder): void {
+        b.storeUint(0x72656e65, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.renewer);
+        b.storeCoins(self.fiAmount);
+        b.storeAddress(self.itemAddress);
+    },
+    toCell(self: RenewBroDomain): c.Cell {
+        return makeCellFrom<RenewBroDomain>(self, RenewBroDomain.store);
+    }
+}
+
+/**
  > struct FiCodes {
  >     totalAccounts: uint33
  >     lotteryCode: cell
@@ -1774,256 +2032,6 @@ export const UpgradeLotteryCode = {
 }
 
 /**
- > struct (0xd53276db) Excesses {
- >     queryId: uint64
- > }
- */
-export interface Excesses {
-    readonly $: 'Excesses'
-    queryId: uint64
-}
-
-export const Excesses = {
-    PREFIX: 0xd53276db,
-
-    create(args: {
-        queryId: uint64
-    }): Excesses {
-        return {
-            $: 'Excesses',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): Excesses {
-        loadAndCheckPrefix32(s, 0xd53276db, 'Excesses');
-        return {
-            $: 'Excesses',
-            queryId: s.loadUintBig(64),
-        }
-    },
-    store(self: Excesses, b: c.Builder): void {
-        b.storeUint(0xd53276db, 32);
-        b.storeUint(self.queryId, 64);
-    },
-    toCell(self: Excesses): c.Cell {
-        return makeCellFrom<Excesses>(self, Excesses.store);
-    }
-}
-
-/**
- > struct (0x62696431) BidBroDomain {
- >     queryId: uint64
- >     bidder: address
- >     fiAmount: coins
- >     domain: Cell<RemainingBitsAndRefs>
- >     collectionAddress: address
- > }
- */
-export interface BidBroDomain {
-    readonly $: 'BidBroDomain'
-    queryId: uint64
-    bidder: c.Address
-    fiAmount: coins
-    domain: CellRef<RemainingBitsAndRefs>
-    collectionAddress: c.Address
-}
-
-export const BidBroDomain = {
-    PREFIX: 0x62696431,
-
-    create(args: {
-        queryId: uint64
-        bidder: c.Address
-        fiAmount: coins
-        domain: CellRef<RemainingBitsAndRefs>
-        collectionAddress: c.Address
-    }): BidBroDomain {
-        return {
-            $: 'BidBroDomain',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): BidBroDomain {
-        loadAndCheckPrefix32(s, 0x62696431, 'BidBroDomain');
-        return {
-            $: 'BidBroDomain',
-            queryId: s.loadUintBig(64),
-            bidder: s.loadAddress(),
-            fiAmount: s.loadCoins(),
-            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
-            collectionAddress: s.loadAddress(),
-        }
-    },
-    store(self: BidBroDomain, b: c.Builder): void {
-        b.storeUint(0x62696431, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.bidder);
-        b.storeCoins(self.fiAmount);
-        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
-        b.storeAddress(self.collectionAddress);
-    },
-    toCell(self: BidBroDomain): c.Cell {
-        return makeCellFrom<BidBroDomain>(self, BidBroDomain.store);
-    }
-}
-
-/**
- > struct (0x6f757462) DnsOutbidNotification {
- >     queryId: uint64
- >     outbidAddress: address
- >     fiAmount: coins
- >     domain: Cell<RemainingBitsAndRefs>
- > }
- */
-export interface DnsOutbidNotification {
-    readonly $: 'DnsOutbidNotification'
-    queryId: uint64
-    outbidAddress: c.Address
-    fiAmount: coins
-    domain: CellRef<RemainingBitsAndRefs>
-}
-
-export const DnsOutbidNotification = {
-    PREFIX: 0x6f757462,
-
-    create(args: {
-        queryId: uint64
-        outbidAddress: c.Address
-        fiAmount: coins
-        domain: CellRef<RemainingBitsAndRefs>
-    }): DnsOutbidNotification {
-        return {
-            $: 'DnsOutbidNotification',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): DnsOutbidNotification {
-        loadAndCheckPrefix32(s, 0x6f757462, 'DnsOutbidNotification');
-        return {
-            $: 'DnsOutbidNotification',
-            queryId: s.loadUintBig(64),
-            outbidAddress: s.loadAddress(),
-            fiAmount: s.loadCoins(),
-            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
-        }
-    },
-    store(self: DnsOutbidNotification, b: c.Builder): void {
-        b.storeUint(0x6f757462, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.outbidAddress);
-        b.storeCoins(self.fiAmount);
-        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
-    },
-    toCell(self: DnsOutbidNotification): c.Cell {
-        return makeCellFrom<DnsOutbidNotification>(self, DnsOutbidNotification.store);
-    }
-}
-
-/**
- > struct (0x6275726e) DnsAuctionFinalized {
- >     queryId: uint64
- >     winner: address
- >     winningFiAmount: coins
- >     domain: Cell<RemainingBitsAndRefs>
- > }
- */
-export interface DnsAuctionFinalized {
-    readonly $: 'DnsAuctionFinalized'
-    queryId: uint64
-    winner: c.Address
-    winningFiAmount: coins
-    domain: CellRef<RemainingBitsAndRefs>
-}
-
-export const DnsAuctionFinalized = {
-    PREFIX: 0x6275726e,
-
-    create(args: {
-        queryId: uint64
-        winner: c.Address
-        winningFiAmount: coins
-        domain: CellRef<RemainingBitsAndRefs>
-    }): DnsAuctionFinalized {
-        return {
-            $: 'DnsAuctionFinalized',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): DnsAuctionFinalized {
-        loadAndCheckPrefix32(s, 0x6275726e, 'DnsAuctionFinalized');
-        return {
-            $: 'DnsAuctionFinalized',
-            queryId: s.loadUintBig(64),
-            winner: s.loadAddress(),
-            winningFiAmount: s.loadCoins(),
-            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
-        }
-    },
-    store(self: DnsAuctionFinalized, b: c.Builder): void {
-        b.storeUint(0x6275726e, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.winner);
-        b.storeCoins(self.winningFiAmount);
-        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
-    },
-    toCell(self: DnsAuctionFinalized): c.Cell {
-        return makeCellFrom<DnsAuctionFinalized>(self, DnsAuctionFinalized.store);
-    }
-}
-
-/**
- > struct (0x72656e65) RenewBroDomain {
- >     queryId: uint64
- >     renewer: address
- >     fiAmount: coins
- >     itemAddress: address
- > }
- */
-export interface RenewBroDomain {
-    readonly $: 'RenewBroDomain'
-    queryId: uint64
-    renewer: c.Address
-    fiAmount: coins
-    itemAddress: c.Address
-}
-
-export const RenewBroDomain = {
-    PREFIX: 0x72656e65,
-
-    create(args: {
-        queryId: uint64
-        renewer: c.Address
-        fiAmount: coins
-        itemAddress: c.Address
-    }): RenewBroDomain {
-        return {
-            $: 'RenewBroDomain',
-            ...args
-        }
-    },
-    fromSlice(s: c.Slice): RenewBroDomain {
-        loadAndCheckPrefix32(s, 0x72656e65, 'RenewBroDomain');
-        return {
-            $: 'RenewBroDomain',
-            queryId: s.loadUintBig(64),
-            renewer: s.loadAddress(),
-            fiAmount: s.loadCoins(),
-            itemAddress: s.loadAddress(),
-        }
-    },
-    store(self: RenewBroDomain, b: c.Builder): void {
-        b.storeUint(0x72656e65, 32);
-        b.storeUint(self.queryId, 64);
-        b.storeAddress(self.renewer);
-        b.storeCoins(self.fiAmount);
-        b.storeAddress(self.itemAddress);
-    },
-    toCell(self: RenewBroDomain): c.Cell {
-        return makeCellFrom<RenewBroDomain>(self, RenewBroDomain.store);
-    }
-}
-
-/**
  > type string_prefixed0x = string
  */
 export type string_prefixed0x = string
@@ -2079,7 +2087,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class FossFi implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -2135,6 +2143,7 @@ export class FossFi implements c.Contract {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }) {
         return NotifyMinter.toCell(NotifyMinter.create(body));
     }
@@ -2334,6 +2343,7 @@ export class FossFi implements c.Contract {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

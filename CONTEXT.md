@@ -81,7 +81,7 @@ _Avoid_: Borrow terms, credit profile, loan application
 **Credit Need** — an Account's recorded amount of FI requested as a loan under its Loan Requirement, checked before an incoming credit transfer is processed. Setting amount to zero cancels active borrowing while preserving maturity for existing loans.
 _Avoid_: Credit score, risk rating
 
-**Credit Multiplier** — the ratio of Personal Tokens minted to a lender per unit of FI credit extended under an Account's Loan Requirement (defaults to 1; e.g. a multiplier of 2 mints 2 Personal Tokens per 1 FI borrowed).
+**Credit Multiplier** — the positive ratio of Personal Tokens minted to a buyer per unit of FI extended under an Account's Loan Requirement (defaults to 1; values above 1 mint bonus tokens for credit risk, while fractional values between 0 and 1 deduct a service charge on token issuance).
 _Avoid_: Interest rate, token bonus, leverage
 
 **Accumulated Fees** — fees an Account collects and forwards to the minter in a single transaction once a threshold is crossed.
@@ -90,8 +90,14 @@ _Avoid_: Fee pool, fees payable
 **Nominee** — the Account designated to receive a Member's remaining tokens when that Member's Account closes on death.
 _Avoid_: Heir, beneficiary (when precision matters), successor
 
-**Personal Token** — a jetton minted by a Member against their own trust. Its minter address is derived deterministically at initialization with empty metadata (`metadataUri: null`), allowing on-chain verification before registration and post-deploy metadata configuration. Buying it is how another Member extends that Member a loan: the buyer's FI flows to the issuer, and the issuer repays by buying back and burning the token.
+**Personal Token** — a jetton minted by a Member against their own trust. Buying it via Credit Need is how another Member extends that Member a loan: the buyer's FI flows to the issuer, and at or after maturity the holder redeems the token by burning it to pull FI from the issuer's Account.
 _Avoid_: Credit token, IOU, social token
+
+**Payback** — the holder-initiated redemption of a Personal Token at or after the issuer's loan maturity, burning the Personal Token to pull FI from the issuer's Account.
+_Avoid_: Buyback, liquidation, standard burn
+
+**Reserve Token** — the Personal Token issued by the Treasury Account, acting as the ecosystem's fiat-backed stable instrument and secondary routing hub alongside FI. It can be purchased with fiat currency or redeemed for fiat off-chain by burning or transferring to the Treasury with encrypted bank details.
+_Avoid_: Admin token, external stablecoin, USDT
 
 **Loan** — FI owed between Members, collateralized by a borrower's Personal Token.
 _Avoid_: Debt (reserved for the Account-level liability below)

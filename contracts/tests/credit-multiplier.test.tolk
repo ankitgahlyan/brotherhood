@@ -18,7 +18,7 @@ get fun `test credit multiplier: allows setting and updating multiplier by owner
         0,
         null,
         null,
-        2,
+        2000,
         { value: grams("0.1") },
     );
 
@@ -36,7 +36,7 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
         0,
         null,
         null,
-        2,
+        2000,
         { value: grams("0.1") },
     );
 
@@ -64,7 +64,7 @@ get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessa
     });
 }
 
-get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
+get fun `test credit multiplier: multiplier=2000 (2.000x) mints 2x personal tokens`() {
     val (
         _minter,
         deployer,
@@ -74,13 +74,13 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
         pm,
     ) = setupPersonalScenario();
 
-    // set multiplier to 2
+    // set multiplier to 2000 (2.000x)
     issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
         null,
         null,
-        2,
+        2000,
         { value: grams("0.1") },
     );
 
@@ -112,6 +112,53 @@ get fun `test credit multiplier: multiplier=2 mints 2x personal tokens`() {
     expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + expectedPersonalMinted);
 }
 
+get fun `test credit multiplier: fractional multiplier=950 (0.950x) deducts 5% service charge`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    // set multiplier to 950 (0.950x = 5% service fee)
+    issuerWallet.sendSetLoanRequirement(
+        notDeployer.address,
+        0,
+        null,
+        null,
+        950,
+        { value: grams("0.1") },
+    );
+
+    val loan = grams("100");
+    val buyerFiBefore = buyerWallet.getJettonBalance();
+    val issuerFiBefore = issuerWallet.getJettonBalance();
+    val supplyBefore = personalSupply(pm);
+
+    val res = buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: grams("1.5") },
+    );
+    expect(res).toHaveSuccessfulTx<BuyCredit>({
+        from: deployer.address,
+        to: buyerWallet.address,
+    });
+
+    expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBefore - loan);
+    expect(issuerWallet.getJettonBalance()).toEqual(issuerFiBefore + loan);
+
+    // 95 Personal Tokens minted for 100 FI
+    val expectedPersonalMinted = grams("95");
+    expect(personalSupply(pm)).toEqual(supplyBefore + expectedPersonalMinted);
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("1") + expectedPersonalMinted);
+}
+
 get fun `test credit multiplier: sent tokens > creditNeed mints required and returns excess`() {
     val (
         _minter,
@@ -122,14 +169,14 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         pm,
     ) = setupPersonalScenario();
 
-    // Set creditNeed to 100 FI and multiplier to 2 in a single atomic transaction
+    // Set creditNeed to 100 FI and multiplier to 2000 (2.000x) in a single atomic transaction
     val creditNeedAmount = grams("100");
     issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
         creditNeedAmount,
         1_800_000_000 + 86400,
-        2,
+        2000,
         { value: grams("0.1") },
     );
 

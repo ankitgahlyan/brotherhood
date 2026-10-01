@@ -93,6 +93,13 @@ fun onInternalMessage(in: InMessage) {
 
             // now transfer MINTS if payback
             if (msg.sendExcessesTo != null) {
+                var swapTargetOwner: address? = null;
+                if (msg.customPayload != null) {
+                    var cs = msg.customPayload.beginParse();
+                    if (cs.remainingBitsCount() >= 267) {
+                        swapTargetOwner = cs.loadAddress();
+                    }
+                }
                 val paybackMsg = createMessage({
                     bounce: BounceMode.RichBounceOnlyRootCell, // todo: ok?
                     value: 0,
@@ -101,10 +108,30 @@ fun onInternalMessage(in: InMessage) {
                         queryId: msg.queryId,
                         amount: msg.jettonAmount,
                         sender: msg.burnInitiator,
+                        swapTargetOwner,
                     },
                 });
                 paybackMsg.send(
                     SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+                );
+            } else if (msg.customPayload != null) {
+                reservePersonalMinterStorageFee();
+                val notifyAdminMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    value: 0,
+                    dest: storage.adminAddress,
+                    body: TransferNotificationForRecipient {
+                        queryId: msg.queryId,
+                        jettonAmount: msg.jettonAmount,
+                        transferInitiator: msg.burnInitiator,
+                        forwardPayload: beginCell()
+                            .storeMaybeRef(msg.customPayload)
+                            .endCell()
+                            .beginParse(),
+                    },
+                });
+                notifyAdminMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                 );
             }
         }
@@ -157,7 +184,10 @@ fun onInternalMessage(in: InMessage) {
             reservePersonalMinterStorageFee();
 
             var internalTransferBody = msg.internalTransferMsg;
-            if (internalTransferMsg.jettonAmount == grams("1")) {
+            if (
+                (internalTransferMsg.jettonAmount == grams("1")) |
+                internalTransferMsg.transferredAsCredit
+            ) {
                 internalTransferBody = makeInternalTransferStep(
                     internalTransferMsg.queryId,
                     internalTransferMsg.jettonAmount,

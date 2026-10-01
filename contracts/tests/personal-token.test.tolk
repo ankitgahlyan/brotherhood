@@ -825,3 +825,201 @@ get fun `test personal minter: stores latest wallet code and handles wallet upgr
         to: deployer.address,
     });
 }
+
+get fun `test personal token: first-time buyer auto-onboards BasePersonalWallet on BuyCredit without 1 GRAM pre-mint`() {
+    testing.setNow(1_800_000_000);
+    val (minter, deployer, notDeployer) = setupTest();
+
+    val buyerWallet = mintTo(minter, deployer, deployer.address, grams("1000"));
+    val issuerWallet = activateUser(minter, buyerWallet, deployer, notDeployer.address);
+
+    val pm = deployPersonalMinter(issuerWallet.address, notDeployer.address);
+    val issuerPersonalWallet = pm.getWalletAddress(notDeployer.address);
+    pointIssuerAtPersonalMinter(
+        issuerWallet,
+        notDeployer.address,
+        pm.address,
+        issuerPersonalWallet,
+    );
+    // Instant maturity (0) allowed for multiplier = 1000 (1.000x)
+    issuerWallet.sendSetLoanRequirement(
+        notDeployer.address,
+        0,
+        grams("500"),
+        0,
+        1000,
+        { value: grams("0.1") },
+    );
+
+    // Notice: we DO NOT call onboardPersonalWallet(pm, notDeployer, deployer.address)!
+    val loan = grams("100");
+    val res = buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        loan,
+        notDeployer.address,
+        deployer.address,
+        { value: grams("1.5") },
+    );
+    expect(res).toHaveSuccessfulTx<BuyCredit>({
+        from: deployer.address,
+        to: buyerWallet.address,
+    });
+
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(loan);
+}
+
+get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce recovery`() {
+    testing.setNow(1_800_000_000);
+    val (minter, deployer, issuerA) = setupTest();
+    val issuerB = testing.treasury("issuerB");
+
+    val buyerWallet = mintTo(minter, deployer, deployer.address, grams("2000"));
+    val walletA = activateUser(minter, buyerWallet, deployer, issuerA.address);
+
+    // Advance time for second invite
+    testing.setNow(1_800_000_000 + 86400);
+    val walletB = activateUser(minter, buyerWallet, deployer, issuerB.address);
+
+    // Setup Personal Token A (instant 1:1 liquidity pool, maturity = 0, multiplier = 1000)
+    val pmA = deployPersonalMinter(walletA.address, issuerA.address);
+    pointIssuerAtPersonalMinter(
+        walletA,
+        issuerA.address,
+        pmA.address,
+        pmA.getWalletAddress(issuerA.address),
+    );
+    walletA.sendSetLoanRequirement(
+        issuerA.address,
+        0,
+        grams("1000"),
+        0,
+        1000,
+        { value: grams("0.1") },
+    );
+
+    // Setup Personal Token B (fractional fee 0.950x, maturity = 0, multiplier = 950)
+    val pmB = deployPersonalMinter(walletB.address, issuerB.address);
+    pointIssuerAtPersonalMinter(
+        walletB,
+        issuerB.address,
+        pmB.address,
+        pmB.getWalletAddress(issuerB.address),
+    );
+    walletB.sendSetLoanRequirement(
+        issuerB.address,
+        0,
+        grams("500"),
+        0,
+        950,
+        { value: grams("0.1") },
+    );
+
+    // Step 1: Buyer buys 200 P_A using FI
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        grams("200"),
+        issuerA.address,
+        deployer.address,
+        { value: grams("1.5") },
+    );
+    expect(personalBalanceOf(pmA, deployer.address)).toEqual(grams("200"));
+
+    // Step 2: Single-signature Multi-Hop Swap: Burn 100 P_A -> FI -> BuyCredit P_B
+    val buyerPriWalletA = personalWalletForOwner(pmA, deployer.address);
+    val swapPayload = beginCell().storeAddress(issuerB.address).endCell();
+    val swapBurnBody = AskToBurn {
+        queryId: 1,
+        jettonAmount: grams("100"),
+        sendExcessesTo: deployer.address,
+        customPayload: swapPayload,
+    }.toCell();
+
+    val swapRes = buyerPriWalletA.sendAny(
+        deployer.address,
+        swapBurnBody,
+        { bounce: false, value: grams("1.5") },
+    );
+    expect(swapRes).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWalletA.address,
+    });
+
+    // Buyer now has 100 P_A left, and received 95 P_B (100 * 950 / 1000)
+    expect(personalBalanceOf(pmA, deployer.address)).toEqual(grams("100"));
+    expect(personalBalanceOf(pmB, deployer.address)).toEqual(grams("95"));
+
+    // Step 3: Leg-2 Bounce recovery when B's creditNeed is set to 0
+    walletB.sendSetLoanRequirement(
+        issuerB.address,
+        0,
+        0,
+        null,
+        null,
+        { value: grams("0.1") },
+    );
+    val buyerFiBeforeBounceSwap = buyerWallet.getJettonBalance();
+
+    val bounceSwapRes = buyerPriWalletA.sendAny(
+        deployer.address,
+        swapBurnBody,
+        { bounce: false, value: grams("1.5") },
+    );
+    expect(bounceSwapRes).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWalletA.address,
+    });
+
+    // Leg 1 succeeded (100 P_A redeemed for 100 FI), Leg 2 bounced at walletB -> buyer keeps the 100 FI!
+    expect(personalBalanceOf(pmA, deployer.address)).toEqual(0);
+    expect(buyerWallet.getJettonBalance()).toEqual(buyerFiBeforeBounceSwap + grams("100"));
+}
+
+get fun `test personal token: normal burn with customPayload notifies adminAddress for fiat off-ramp`() {
+    val (
+        _minter,
+        deployer,
+        notDeployer,
+        buyerWallet,
+        _issuerWallet,
+        pm,
+    ) = setupPersonalScenario();
+
+    buyerWallet.sendBuyCredit(
+        deployer.address,
+        0,
+        grams("100"),
+        notDeployer.address,
+        deployer.address,
+        { value: grams("1.5") },
+    );
+
+    val buyerPriWallet = personalWalletForOwner(pm, deployer.address);
+    val encryptedBankDetails = beginCell()
+        .storeUint(0x2167da4b, 32)
+        .storeUint(0xdeadbeef, 32)
+        .endCell();
+
+    val offRampBurnBody = AskToBurn {
+        queryId: 42,
+        jettonAmount: grams("50"),
+        sendExcessesTo: null, // normal burn (not FI payback)
+        customPayload: encryptedBankDetails,
+    }.toCell();
+
+    val res = buyerPriWallet.sendAny(
+        deployer.address,
+        offRampBurnBody,
+        { bounce: false, value: grams("0.5") },
+    );
+    expect(res).toHaveSuccessfulTx<AskToBurn>({
+        from: deployer.address,
+        to: buyerPriWallet.address,
+    });
+    expect(res).toHaveSuccessfulTx<TransferNotificationForRecipient>({
+        from: pm.address,
+        to: notDeployer.address,
+    });
+    expect(personalBalanceOf(pm, deployer.address)).toEqual(grams("51"));
+}

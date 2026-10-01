@@ -13,7 +13,10 @@ import { toast } from 'sonner';
 import { SetLoanRequirement } from '@wrappers/FossFiWallet.gen';
 import { parseUnits } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import {
+  encodeOnchainMultiplier,
+  type Network,
+} from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction } from './use-brotherhood-transaction';
 import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
 import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
@@ -84,6 +87,16 @@ export function useLoanRequirement({
   const nowSec = useNowSeconds();
   const creditMaturity = accountData?.creditMaturity;
 
+  const effectiveMultiplier = useMemo(() => {
+    if (isMultiplierDirty) {
+      const parsed = parseFloat(trimmedMultiplier);
+      return Number.isFinite(parsed) ? parsed : 1;
+    }
+    return accountData?.multiplier ?? 1;
+  }, [isMultiplierDirty, trimmedMultiplier, accountData?.multiplier]);
+
+  const isBonusMultiplier = effectiveMultiplier > 1;
+
   const amountValidationError = useMemo<string | null>(() => {
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
@@ -93,15 +106,15 @@ export function useLoanRequirement({
     if (isAmountDirty) {
       const num = parseFloat(trimmedAmount);
       if (isNaN(num) || num < 0) return 'Invalid loan amount';
-      if (num > 0) {
+      if (num > 0 && isBonusMultiplier) {
         if (isMaturityDirty) {
           const days = parseInt(trimmedMaturityDays, 10);
           if (isNaN(days) || days <= 0) {
-            return 'Maturity must be at least 1 day when borrowing';
+            return 'Maturity must be at least 1 day when multiplier > 1x';
           }
         } else {
           if (!creditMaturity || creditMaturity <= nowSec) {
-            return 'Maturity date is required when requesting a loan';
+            return 'Maturity date is required when multiplier > 1x';
           }
         }
       }
@@ -114,6 +127,7 @@ export function useLoanRequirement({
     hasPersonalToken,
     isAmountDirty,
     trimmedAmount,
+    isBonusMultiplier,
     isMaturityDirty,
     trimmedMaturityDays,
     creditMaturity,
@@ -123,9 +137,12 @@ export function useLoanRequirement({
   const maturityValidationError = useMemo<string | null>(() => {
     if (!isMaturityDirty) return null;
     const days = parseInt(trimmedMaturityDays, 10);
-    if (isNaN(days) || days <= 0) return 'Maturity must be at least 1 day';
+    if (isNaN(days) || days < 0) return 'Maturity days cannot be negative';
+    if (isBonusMultiplier && days <= 0) {
+      return 'Maturity must be at least 1 day when multiplier > 1x';
+    }
 
-    const targetMaturity = nowSec + days * 86400;
+    const targetMaturity = days === 0 ? 0 : nowSec + days * 86400;
     if (
       creditMaturity &&
       creditMaturity > nowSec &&
@@ -135,20 +152,44 @@ export function useLoanRequirement({
     }
 
     return null;
-  }, [isMaturityDirty, trimmedMaturityDays, creditMaturity, nowSec]);
+  }, [
+    isMaturityDirty,
+    trimmedMaturityDays,
+    isBonusMultiplier,
+    creditMaturity,
+    nowSec,
+  ]);
 
   const multiplierValidationError = useMemo<string | null>(() => {
     if (!isMultiplierDirty) return null;
-    const mult = parseInt(trimmedMultiplier, 10);
+    if (!/^\d+(\.\d{1,3})?$/.test(trimmedMultiplier)) {
+      return 'Multiplier supports up to 3 decimal places (e.g. 0.95, 1, 1.25)';
+    }
+    const mult = parseFloat(trimmedMultiplier);
+    if (isNaN(mult) || mult < 0.001 || mult > 65.535) {
+      return 'Multiplier must be between 0.001x and 65.535x';
+    }
     if (
-      isNaN(mult) ||
-      mult < 1 ||
-      !Number.isInteger(Number(trimmedMultiplier))
+      mult > 1 &&
+      !isMaturityDirty &&
+      (!creditMaturity || creditMaturity <= nowSec) &&
+      (isAmountDirty
+        ? parseFloat(trimmedAmount) > 0
+        : (accountData?.creditNeed ?? 0n) > 0n)
     ) {
-      return 'Multiplier must be an integer >= 1';
+      return 'Future maturity date required when multiplier > 1x';
     }
     return null;
-  }, [isMultiplierDirty, trimmedMultiplier]);
+  }, [
+    isMultiplierDirty,
+    trimmedMultiplier,
+    isMaturityDirty,
+    creditMaturity,
+    nowSec,
+    isAmountDirty,
+    trimmedAmount,
+    accountData?.creditNeed,
+  ]);
 
   const hasValidationError =
     Boolean(amountValidationError) ||
@@ -181,12 +222,13 @@ export function useLoanRequirement({
     let maturitySec: bigint | null = null;
     if (isMaturityDirty) {
       const days = parseInt(trimmedMaturityDays, 10);
-      maturitySec = BigInt(Math.floor(Date.now() / 1000) + days * 86400);
+      maturitySec =
+        days === 0 ? 0n : BigInt(Math.floor(Date.now() / 1000) + days * 86400);
     }
 
     let multBigInt: bigint | null = null;
     if (isMultiplierDirty) {
-      multBigInt = BigInt(parseInt(trimmedMultiplier, 10));
+      multBigInt = encodeOnchainMultiplier(parseFloat(trimmedMultiplier));
     }
 
     const body = SetLoanRequirement.toCell(

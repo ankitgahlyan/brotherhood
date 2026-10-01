@@ -474,13 +474,14 @@ fun FossFiWallet.sendPayback(
     queryId: uint64,
     amount: coins,
     sender: address,
+    swapTargetOwner: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: Payback { queryId, amount, sender },
+        body: Payback { queryId, amount, sender, swapTargetOwner },
     });
     return net.send(from, genericMsg);
 }

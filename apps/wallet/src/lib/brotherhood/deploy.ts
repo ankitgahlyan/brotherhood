@@ -236,15 +236,20 @@ export function buildBurnBody(
   amount: bigint,
   responseAddress?: Address | null,
   queryId = 0n,
+  customPayload: Cell | null = null,
 ): Cell {
   return AskToBurn.toCell(
     AskToBurn.create({
       queryId,
       jettonAmount: amount,
       sendExcessesTo: responseAddress ?? null,
-      customPayload: null,
+      customPayload,
     }),
   );
+}
+
+export function buildSwapTargetPayload(targetOwner: Address): Cell {
+  return beginCell().storeAddress(targetOwner).endCell();
 }
 
 export function buildTransferBody(params: {

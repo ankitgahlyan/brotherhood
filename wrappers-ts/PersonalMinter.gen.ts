@@ -341,6 +341,67 @@ export const PayloadInRef = {
 }
 
 /**
+ > struct (0x7362d09c) TransferNotificationForRecipient {
+ >     queryId: uint64
+ >     jettonAmount: coins
+ >     transferInitiator: address
+ >     forwardPayload: ForwardPayloadRemainder
+ > }
+ */
+export interface TransferNotificationForRecipient {
+    readonly $: 'TransferNotificationForRecipient'
+    queryId: uint64
+    jettonAmount: coins
+    transferInitiator: c.Address
+    forwardPayload: PayloadInline | PayloadInRef
+}
+
+export const TransferNotificationForRecipient = {
+    PREFIX: 0x7362d09c,
+
+    create(args: {
+        queryId: uint64
+        jettonAmount: coins
+        transferInitiator: c.Address
+        forwardPayload: PayloadInline | PayloadInRef
+    }): TransferNotificationForRecipient {
+        return {
+            $: 'TransferNotificationForRecipient',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): TransferNotificationForRecipient {
+        loadAndCheckPrefix32(s, 0x7362d09c, 'TransferNotificationForRecipient');
+        return {
+            $: 'TransferNotificationForRecipient',
+            queryId: s.loadUintBig(64),
+            jettonAmount: s.loadCoins(),
+            transferInitiator: s.loadAddress(),
+            forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
+                lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
+                throwNonePrefixMatch('TransferNotificationForRecipient.forwardPayload'),
+        }
+    },
+    store(self: TransferNotificationForRecipient, b: c.Builder): void {
+        b.storeUint(0x7362d09c, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.jettonAmount);
+        b.storeAddress(self.transferInitiator);
+        switch (self.forwardPayload.$) {
+            case 'PayloadInline':
+                PayloadInline.store(self.forwardPayload, b);
+                break;
+            case 'PayloadInRef':
+                PayloadInRef.store(self.forwardPayload, b);
+                break;
+        }
+    },
+    toCell(self: TransferNotificationForRecipient): c.Cell {
+        return makeCellFrom<TransferNotificationForRecipient>(self, TransferNotificationForRecipient.store);
+    }
+}
+
+/**
  > struct (0x178d4519) InternalTransferStep {
  >     queryId: uint64
  >     jettonAmount: coins
@@ -473,6 +534,7 @@ export const ReturnExcessesBack = {
  >     jettonAmount: coins
  >     burnInitiator: address
  >     sendExcessesTo: address?
+ >     customPayload: cell?
  > }
  */
 export interface NotifyMinter {
@@ -481,6 +543,7 @@ export interface NotifyMinter {
     jettonAmount: coins
     burnInitiator: c.Address
     sendExcessesTo: c.Address | null
+    customPayload: c.Cell | null /* = null */
 }
 
 export const NotifyMinter = {
@@ -491,9 +554,11 @@ export const NotifyMinter = {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }): NotifyMinter {
         return {
             $: 'NotifyMinter',
+            customPayload: null,
             ...args
         }
     },
@@ -505,6 +570,7 @@ export const NotifyMinter = {
             jettonAmount: s.loadCoins(),
             burnInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
+            customPayload: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: NotifyMinter, b: c.Builder): void {
@@ -513,6 +579,9 @@ export const NotifyMinter = {
         b.storeCoins(self.jettonAmount);
         b.storeAddress(self.burnInitiator);
         b.storeAddress(self.sendExcessesTo);
+        storeTolkNullable<c.Cell>(self.customPayload, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: NotifyMinter): c.Cell {
         return makeCellFrom<NotifyMinter>(self, NotifyMinter.store);
@@ -976,6 +1045,7 @@ export const Destroy = {
  >     queryId: uint64
  >     amount: coins
  >     sender: address
+ >     swapTargetOwner: address?
  > }
  */
 export interface Payback {
@@ -983,6 +1053,7 @@ export interface Payback {
     queryId: uint64
     amount: coins
     sender: c.Address
+    swapTargetOwner: c.Address | null /* = null */
 }
 
 export const Payback = {
@@ -992,9 +1063,11 @@ export const Payback = {
         queryId: uint64
         amount: coins
         sender: c.Address
+        swapTargetOwner?: c.Address | null /* = null */
     }): Payback {
         return {
             $: 'Payback',
+            swapTargetOwner: null,
             ...args
         }
     },
@@ -1005,6 +1078,7 @@ export const Payback = {
             queryId: s.loadUintBig(64),
             amount: s.loadCoins(),
             sender: s.loadAddress(),
+            swapTargetOwner: s.loadMaybeAddress(),
         }
     },
     store(self: Payback, b: c.Builder): void {
@@ -1012,6 +1086,7 @@ export const Payback = {
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.amount);
         b.storeAddress(self.sender);
+        b.storeAddress(self.swapTargetOwner);
     },
     toCell(self: Payback): c.Cell {
         return makeCellFrom<Payback>(self, Payback.store);
@@ -1170,7 +1245,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotEnoughGas': 48,
@@ -1222,6 +1297,7 @@ export class PersonalMinter implements c.Contract {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }) {
         return NotifyMinter.toCell(NotifyMinter.create(body));
     }
@@ -1308,6 +1384,7 @@ export class PersonalMinter implements c.Contract {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

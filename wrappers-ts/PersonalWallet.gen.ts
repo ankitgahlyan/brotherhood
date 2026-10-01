@@ -609,6 +609,7 @@ export const AskToBurn = {
  >     jettonAmount: coins
  >     burnInitiator: address
  >     sendExcessesTo: address?
+ >     customPayload: cell?
  > }
  */
 export interface NotifyMinter {
@@ -617,6 +618,7 @@ export interface NotifyMinter {
     jettonAmount: coins
     burnInitiator: c.Address
     sendExcessesTo: c.Address | null
+    customPayload: c.Cell | null /* = null */
 }
 
 export const NotifyMinter = {
@@ -627,9 +629,11 @@ export const NotifyMinter = {
         jettonAmount: coins
         burnInitiator: c.Address
         sendExcessesTo: c.Address | null
+        customPayload?: c.Cell | null /* = null */
     }): NotifyMinter {
         return {
             $: 'NotifyMinter',
+            customPayload: null,
             ...args
         }
     },
@@ -641,6 +645,7 @@ export const NotifyMinter = {
             jettonAmount: s.loadCoins(),
             burnInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
+            customPayload: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: NotifyMinter, b: c.Builder): void {
@@ -649,6 +654,9 @@ export const NotifyMinter = {
         b.storeCoins(self.jettonAmount);
         b.storeAddress(self.burnInitiator);
         b.storeAddress(self.sendExcessesTo);
+        storeTolkNullable<c.Cell>(self.customPayload, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: NotifyMinter): c.Cell {
         return makeCellFrom<NotifyMinter>(self, NotifyMinter.store);
@@ -881,7 +889,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABZUAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAWFwIB1QYHAE+siZj2omh9AH0kfSR9JGuFhOAA+XFvZCgCfQEJfSl9KX0pZYTk9qpAA807aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDwAQXXLCC8aijMjwnXLCB8U/Us4w/jDchQA/oC+lL6UhL6UssJye1UgCAkKAIc7UTQ10mBAyu6jintRND6SPpI+kjTCTHRcHHIz4QgUlD6UlJA+lJSMPpSz4gBgMntVBRDMODtRND6APpI+kj6SNMJ0YAH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BG3Ii4wQhboEemVgD4wRQI6gloIASgR9AcPg8oAFw+DagAXD4NqBygQPoghAJZgGAcPg3oLzysPiSKMcF8uBJU4S+8q9RhKEkghA7msoAugsD7tcsIsr4PeSPbNcsIAAAgESO4dcsIAAAgDSOVtcsIAAAgswxjkI1+JIixwX4kiLHBbH4kibHBbHy4rz4ksjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wCYhA8GxwAW8vTi4w3jDeMNDQ4PA+Y2BdM/+gDTCjH6SPpQ+gD0AfiSK8cFjsn4ku1E0PoAMfpIMfpI+kgwiCfI+lIT+lL6Us+IAIDJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31GEoCGUOBNfA+MNIG6RW+MOERITAv6S+CqRbeLtRND6ADH6SDH6SPpIMIgnyPpSE/pS+lLPiACAyXgsbrOUPIsEDN/Iz5BeNRRmGss/UAj6As+IAEBSoPpSFfpUUAP6AhL0ABjOycjPiYgBVHQlyM+DywTPhaDMzPkWhPewBIALJ9ckNhXOEsv3gRUNzwt5zMzMyYBQEQwABPsAAv42+JIhxwUG0wAx0wn6SPQE9AX4ku1E0PoAMfpIMfpI+kgwiCbI+lIT+lL6Us+IAIDJeFEiyM+DywTPhaDMzPkWhPewFYALUAbXJMjPigBAzhTL989QE8cFGbHy4rxTYbmOGFBWXwUhbpExmSH7BAHQ7R7tU+LxCRPbMeBbNfiXERAAWjA1+JJt+CrIz5AAAEAbJ88LCVJQ+lIS9AD0AMnIz4UIEvpScc8LbszJgFD7AADaNviXghAdzWUAvvKw+Jf4OSBugRI6WOMEcYEConD4OAFw+DaggRL1cPg2oLzysPiSI8cF8uBJBdM/+gD6UDBTUb7yr1FRocjPke92X3oTyz8B+gJSMPpSFPpUycjPhYhSYPpScc8LbszJgFD7AACO+CdvEKL4L6BygQPoghAJZgGAcPg3tgly+wLIz4UIUiD6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCC+wABFP8A9KQT9LzyyAsUAFTIz5HNi0JyJs8LP1AF+gIT+lIXzsnIz4UIUmD6Ulj6AnHPC2rMyXP7AAQAZviX+CdvEKL4L6BygQPoghAJZgGAcPg3tgly+wLIz4UI+lKCENUydtvPC47LP8mBAIL7AAFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/FQDg0z8x+gDTCjH6SPpQMfoAMfQFU1PHBZQ1E18Djjr4KiLI+lIW+lIU+lLPiACAyXhRVcjPg8sEz4WgzMz5FoT3sIALUAXXJMjPigBAzhPL989QE8cF8uBK4oIQO5rKALohbrOw8uL+IPsE0O0e7VPwAAAjv9gXaiaH0AfSR9JBj9JBh8FUACG+t2dqJofQB9JH0kfSRphOjA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABZ4AART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAWFwIB1QYHAE+siZj2omh9AH0kfSR9JGuFhOAA+XFvZCgCfQEJfSl9KX0pZYTk9qpAA807aLt+/iRjjTTHzHXLCC8aijMltM/MfoAMI4R1ywj3uy+9JLyP+HTPzH6ADDi7UTQ+gACoMgB+gLOye1U4CDwAQXXLCC8aijMjwnXLCB8U/Us4w/jDchQA/oC+lL6UhL6UssJye1UgCAkKAIc7UTQ10mBAyu6jintRND6SPpI+kjTCTHRcHHIz4QgUlD6UlJA+lJSMPpSz4gBgMntVBRDMODtRND6APpI+kj6SNMJ0YAH+NgXTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BG3Ii4wQhboEemVgD4wRQI6gloIASgR9AcPg8oAFw+DagAXD4NqBygQPoghAJZgGAcPg3oLzysPiSKMcF8uBJU4S+8q9RhKEkghA7msoAugsD7tcsIsr4PeSPbNcsIAAAgESO4dcsIAAAgDSOVtcsIAAAgswxjkI1+JIixwX4kiLHBbH4kibHBbHy4rz4ksjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wCYhA8GxwAW8vTi4w3jDeMNDQ4PA+Y2BdM/+gDTCjH6SPpQ+gD0AfiSK8cFjsn4ku1E0PoAMfpIMfpI+kgwiCfI+lIT+lL6Us+IAIDJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31GEoCGUOBNfA+MNIG6RW+MOERITAv6S+CqRbeLtRND6ADH6SDH6SPpIMIgnyPpSE/pS+lLPiACAyXgsbrOUPIsEDN/Iz5BeNRRmGss/UAj6As+IAEBSoPpSFfpUUAP6AhL0ABjOycjPiYgBVHQlyM+DywTPhaDMzPkWhPewBIALJ9ckNhXOEsv3gRUNzwt5zMzMyYBQEQwABPsAAv42+JIhxwUG0wAx0wn6SPQE9AX4ku1E0PoAMfpIMfpI+kgwiCbI+lIT+lL6Us+IAIDJeFEiyM+DywTPhaDMzPkWhPewFYALUAbXJMjPigBAzhTL989QE8cFGbHy4rxTYbmOGFBWXwUhbpExmSH7BAHQ7R7tU+LxCRPbMeBbNfiXERAAWjA1+JJt+CrIz5AAAEAbJ88LCVJQ+lIS9AD0AMnIz4UIEvpScc8LbszJgFD7AADgNviXghAdzWUAvvKw+Jf4OSBugRI6WOMEcYECo3D4OAFw+DaggRL1cPg2oLzysPiSI8cF8uBJBdM/+gD6UPQFU2K+8q9RYqHIz5Hvdl96FMs/WPoCUkD6UvpUFPQAycjPhYhSYPpScc8LbszJgFD7AACO+CdvEKL4L6BygQPoghAJZgGAcPg3tgly+wLIz4UIUiD6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCC+wABFP8A9KQT9LzyyAsUAFTIz5HNi0JyJs8LP1AF+gIT+lIXzsnIz4UIUmD6Ulj6AnHPC2rMyXP7AAQAZviX+CdvEKL4L6BygQPoghAJZgGAcPg3tgly+wLIz4UI+lKCENUydtvPC47LP8mBAIL7AAFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/FQDs0z8x+gDTCTHSAPpI+lAx+gAx9AVTZMcFlhA2ECVsQY46+CoiyPpSF/pSFfpSz4gAgMl4UWbIz4PLBM+FoMzM+RaE97CAC1AG1yTIz4oAQM4Uy/fPUBTHBfLgSuICghA7msoAurEhbrOw8uL+IPsE0O0e7VPwAAAjv9gXaiaH0AfSR9JBj9JBh8FUACG+t2dqJofQB9JH0kfSRphOjA==');
 
     static Errors = {
         'Errors.BalanceError': 47,

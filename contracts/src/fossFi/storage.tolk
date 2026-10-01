@@ -87,7 +87,7 @@ struct FiWalletStore {
     isPrevilegedAccount: bool = false // super user
     creditNeed: coins = 0
     creditMaturity: uint32 = 0
-    multiplier: uint16 = 1
+    multiplier: uint16 = 1000
     accumulatedFees: coins = 0        // todo: use fixed no of txnCount instead
     debt: coins = 0                   // or directly set balance -ve (ton supports this?)
     allowDeferred: bool = false       // opt-in toggle for deferred offline payments
