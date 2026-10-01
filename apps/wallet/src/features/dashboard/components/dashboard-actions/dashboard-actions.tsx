@@ -9,7 +9,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 
-import { ArrowUpRight, ArrowDownLeft, Vote } from 'lucide-react';
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowLeftRight,
+  UserPlus,
+  Vote,
+} from 'lucide-react';
 
 import { DashboardActionButton } from '../dashboard-action-button';
 import { ReceiveModal } from '@/features/wallets/components/receive-modal';
@@ -37,6 +43,24 @@ export const DashboardActions: React.FC = () => {
           label="Receive"
           onClick={() => setIsReceiveOpen(true)}
           testId="receive-button"
+          className="min-w-[100px] shrink-0 snap-start"
+        />
+        <DashboardActionButton
+          icon={<ArrowLeftRight className="w-5 h-5" strokeWidth={2.5} />}
+          iconContainerClassName="jewel-btn-swap"
+          label="Swap"
+          onClick={() => navigate('/swap')}
+          testId="swap-button"
+          className="min-w-[100px] shrink-0 snap-start"
+        />
+        <DashboardActionButton
+          icon={<UserPlus className="w-5 h-5" strokeWidth={2.5} />}
+          iconContainerClassName="jewel-btn-invite"
+          label="Invite"
+          onClick={() =>
+            navigate('/brotherhood', { search: { tab: 'invite' } })
+          }
+          testId="invite-button"
           className="min-w-[100px] shrink-0 snap-start"
         />
         <DashboardActionButton
