@@ -66,7 +66,7 @@ fun hotUpgradePersonalWalletData(_additionalData: cell?, version: uint10) {
     // stepwise migration logic goes here:
     var oldStore = lazy PersonalWalletStore.fromCell(contract.getData());
     // update on every upgrade
-    assert (oldStore.version == 1) throw Errors.VersionMismatch;
+    assert (oldStore.version == version - 1) throw Errors.VersionMismatch;
     oldStore.version = version;
     // var storage = FiStore {
     //     supply: oldStorage.totalSupply,

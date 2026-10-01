@@ -84,7 +84,7 @@ fun migrateFiWalletFromPrevious(oldStore: FiWalletStore, version: uint10): void 
     // Current latest store version is 1; when version bumps occur in future,
     // stepwise migration logic goes here:
     // var oldStore = lazy FiWalletStore.fromCell(contract.getData());
-    assert (oldStore.version == 1) throw Errors.VersionMismatch;
+    assert (oldStore.version == version - 1) throw Errors.VersionMismatch;
     oldStore.version = version;
     // var storage = FiStore {
     //     supply: oldStorage.totalSupply,

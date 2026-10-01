@@ -695,7 +695,7 @@ get fun `test personal token: upgrade personal wallet from peer personal wallet 
     val upgradeRes = buyerPriWallet.sendUpgrade(
         peerPriWallet.address,
         true,
-        3,
+        2,
         peer.address,
         null,
         null,
@@ -706,7 +706,7 @@ get fun `test personal token: upgrade personal wallet from peer personal wallet 
         to: buyerPriWallet.address,
     });
 
-    expect(buyerPriWallet.getPersonalWalletState().version).toEqual(3);
+    expect(buyerPriWallet.getPersonalWalletState().version).toEqual(2);
 }
 
 get fun `test personal token: upgrade personal wallet from unauthorized address fails with IncorrectSender`() {
