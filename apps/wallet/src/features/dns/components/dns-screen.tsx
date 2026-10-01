@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@/core/routing';
 import { useWallet } from '@demo/wallet-core';
 import { NewLayout } from '@/core/components/shared/new-layout';
@@ -13,6 +13,7 @@ import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
 import { sameAddress } from '@/core/utils/formatters';
 import { BRO_TREASURY_ADDRESS, type Network } from '@/lib/brotherhood/config';
+import { fetchBroCollectionState } from '@/core/lib/dns';
 import { Compass, Globe, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { ScrollableTabBar } from '@/core/components/ui/tabs';
 import { ExploreTab } from './explore-tab';
@@ -54,9 +55,22 @@ export const DnsScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { address, savedWallets, activeWalletId } = useWallet();
+  const [deploymentTime, setDeploymentTime] = useState<number | undefined>();
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
     'testnet') as Network;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBroCollectionState(network).then((st) => {
+      if (!cancelled && st?.deploymentTime) {
+        setDeploymentTime(st.deploymentTime);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [network]);
 
   const isTreasury = useMemo(() => {
     if (!address) return false;
@@ -108,7 +122,9 @@ export const DnsScreen: React.FC = () => {
       >
         {activeTab === 'explore' && <ExploreTab network={network} />}
         {activeTab === 'my-domains' && <MyDomainsTab network={network} />}
-        {activeTab === 'admin' && isTreasury && <AdminTab network={network} />}
+        {activeTab === 'admin' && isTreasury && (
+          <AdminTab network={network} deploymentTime={deploymentTime} />
+        )}
       </SwipeableSubTabs>
     </NewLayout>
   );

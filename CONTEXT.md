@@ -28,6 +28,12 @@ _Avoid_: Proxy wallet, stub account
 **Username** — the Telegram handle registered in a Member's Account profile (`ProfileInfo`), enabling peer communication and network coordination via Telegram deep-links.
 _Avoid_: Handle, nick, alias
 
+**Domain** — a human-readable `.bro` name (TEP-81 DNS NFT item) owned by a Member, resolving to their Owner address and on-chain records, subject to annual renewal in FI.
+_Avoid_: Handle (reserved for Username), ENS, URL
+
+**Zone Resolver** — the authoritative `.bro` DNS collection contract (`DnsCollection`) that mints Domain items and resolves top-level `.bro` lookups.
+_Avoid_: Registry, DNS server
+
 **Owner** — the external TON address that signs for and controls an Account's wallet contract.
 _Avoid_: Wallet, signer
 

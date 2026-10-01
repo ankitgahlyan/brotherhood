@@ -11,6 +11,7 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { TxButton } from '@/core/components/ui/tx-button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
+import { clearDomainResolutionCache } from '@/core/lib/dns';
 import type { Network } from '@/lib/brotherhood/config';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
@@ -19,7 +20,9 @@ import {
   domainExpirySeconds,
   domainAuctionSecondsLeft,
 } from '../hooks/use-my-domains';
+import { clearDomainLookupCache } from '../hooks/use-domain-lookup';
 import { useDnsTransaction, DNS_GAS } from '../hooks/use-dns-transaction';
+import { useDnsStore } from '../store/dns-store';
 import {
   buildFillUpBody,
   buildChangeDnsRecordBody,
@@ -59,15 +62,15 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
   const { currentWallet, address } = useWallet();
   const walletKit = useWalletKit();
 
-  const { domains, isRefreshing } = useMyDomains(network, address);
+  const { domains, isRefreshing, refresh } = useMyDomains(network, address);
+  const updateDomain = useDnsStore((s) => s.updateDomain);
   const { send, isSending, error } = useDnsTransaction(
     currentWallet,
     walletKit,
   );
 
-  // Per-domain DNS record edit state
-  const [editingRecord, setEditingRecord] = useState<string | null>(null);
-  const [recordValue, setRecordValue] = useState('');
+  // Per-domain inline DNS record draft values
+  const [recordDrafts, setRecordDrafts] = useState<Record<string, string>>({});
   const [sendingFor, setSendingFor] = useState<string | null>(null);
 
   const handleRenew = useCallback(
@@ -78,11 +81,14 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         const amount = fee + DNS_GAS.FILLUP_GAS_BUFFER;
         const payload = buildFillUpBody(BigInt(Date.now()));
         await send([{ toAddress: nftAddress, amount, payload }]);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+        void refresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [send],
+    [refresh, send],
   );
 
   const handleRenewFi = useCallback(
@@ -107,19 +113,24 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+        void refresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [address, network, send],
+    [address, network, refresh, send],
   );
 
   const handleSetRecord = useCallback(
-    async (nftAddress: string) => {
-      if (!recordValue.trim()) return;
+    async (nftAddress: string, rawInput: string) => {
+      const trimmed = rawInput.trim();
+      if (!trimmed) return;
       setSendingFor(nftAddress);
       try {
-        const walletAddr = Address.parse(recordValue.trim());
+        const walletAddr = Address.parse(trimmed);
+        const normalizedAddr = walletAddr.toString();
         const valueCell = buildWalletDnsRecordCell(walletAddr);
         const key = walletDnsKey();
         const payload = buildChangeDnsRecordBody(key, valueCell);
@@ -130,16 +141,22 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
-        setEditingRecord(null);
-        setRecordValue('');
+        updateDomain(nftAddress, { walletRecord: normalizedAddr }, network);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+        setRecordDrafts((prev) => {
+          const next = { ...prev };
+          delete next[nftAddress];
+          return next;
+        });
+        void refresh();
       } catch (e: unknown) {
-        // validation error — keep form open
         console.warn('[MyDomainsTab] set record error:', e);
       } finally {
         setSendingFor(null);
       }
     },
-    [recordValue, send],
+    [network, refresh, send, updateDomain],
   );
 
   const handleFinalizeAuction = useCallback(
@@ -154,11 +171,14 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+        void refresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [send],
+    [refresh, send],
   );
 
   const handleClearRecord = useCallback(
@@ -174,22 +194,44 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
+        updateDomain(nftAddress, { walletRecord: undefined }, network);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+        setRecordDrafts((prev) => {
+          const next = { ...prev };
+          delete next[nftAddress];
+          return next;
+        });
+        void refresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [send],
+    [network, refresh, send, updateDomain],
   );
 
   if (domains.length === 0) {
     return (
-      <div className="p-6 text-center bg-card border border-border rounded-2xl">
-        <p className="text-4xl mb-3">🌐</p>
-        <p className="font-semibold text-sm">No domains yet</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Search for a domain in the Explore tab to register your first{' '}
-          <strong>.bro</strong> handle.
-        </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">My Domains</h3>
+          <RefreshButton
+            onRefresh={() => {
+              void refresh();
+            }}
+            testId="my-domains-refresh"
+          />
+        </div>
+        <div className="p-6 text-center bg-card border border-border rounded-2xl">
+          <p className="text-4xl mb-3">🌐</p>
+          <p className="font-semibold text-sm">
+            {isRefreshing ? 'Checking on-chain domains…' : 'No domains yet'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Search for a domain in the Explore tab to register your first{' '}
+            <strong>.bro</strong> handle.
+          </p>
+        </div>
       </div>
     );
   }
@@ -200,7 +242,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         <h3 className="font-semibold text-sm">My Domains</h3>
         <RefreshButton
           onRefresh={() => {
-            /* refresh triggered by useMyDomains via interval */
+            void refresh();
           }}
           testId="my-domains-refresh"
         />
@@ -219,7 +261,15 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         const isThisSending = sendingFor === domain.nftAddress || isSending;
         const charCount = domain.name.length;
         const renewalFee = broRenewalFee(charCount);
-        const isEditing = editingRecord === domain.nftAddress;
+        const canManageDomain =
+          !domain.isOutdated &&
+          !domain.isAuctionActive &&
+          (domain.hasOwner || !domain.isAuctionEnded);
+        const currentRecordInput =
+          recordDrafts[domain.nftAddress] ??
+          domain.walletRecord ??
+          address ??
+          '';
 
         return (
           <div
@@ -326,90 +376,86 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                   </div>
                 )}
 
-                {!domain.isAuctionActive &&
-                  (domain.hasOwner || !domain.isAuctionEnded) && (
-                    <div className="flex gap-2">
-                      <TxButton
-                        size="sm"
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={isThisSending}
-                        loading={
-                          isThisSending && sendingFor === domain.nftAddress
-                        }
-                        onAction={() =>
-                          domain.zone === 'bro'
-                            ? handleRenewFi(domain.nftAddress, charCount)
-                            : handleRenew(domain.nftAddress, charCount)
-                        }
-                        actionLabel={
-                          domain.zone === 'bro'
-                            ? `Renew (${formatFi(broFiRenewalFee(charCount))}/yr)`
-                            : `Renew (${formatNano(renewalFee)}/yr)`
-                        }
-                        completeLabel="Renewed!"
-                      >
-                        Renew
-                      </TxButton>
-                      <TxButton
-                        size="sm"
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={isThisSending}
-                        onAction={() => {
-                          setEditingRecord(
-                            isEditing ? null : domain.nftAddress,
-                          );
-                          setRecordValue(domain.walletRecord ?? '');
-                        }}
-                        actionLabel="Set DNS Record"
-                      >
-                        {isEditing ? 'Cancel' : 'Set DNS Record'}
-                      </TxButton>
-                    </div>
-                  )}
-              </>
-            )}
-
-            {/* DNS record form */}
-            {isEditing && (
-              <div className="space-y-2 pt-1 border-t border-border/60">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Set wallet address DNS record
-                </p>
-                <input
-                  type="text"
-                  value={recordValue}
-                  onChange={(e) => setRecordValue(e.target.value)}
-                  placeholder="Wallet address (EQ…)"
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  data-testid={`dns-record-input-${domain.nftAddress}`}
-                />
-                <div className="flex gap-2">
-                  <TxButton
-                    size="sm"
-                    className="flex-1"
-                    disabled={!recordValue.trim() || isThisSending}
-                    loading={isThisSending}
-                    onAction={() => handleSetRecord(domain.nftAddress)}
-                    actionLabel="Save DNS Record"
-                    completeLabel="Saved!"
-                  >
-                    Save
-                  </TxButton>
-                  {domain.walletRecord && (
+                {canManageDomain && (
+                  <>
                     <TxButton
                       size="sm"
-                      variant="danger"
+                      variant="secondary"
+                      className="w-full"
                       disabled={isThisSending}
-                      onAction={() => handleClearRecord(domain.nftAddress)}
-                      actionLabel="Clear DNS Record"
+                      loading={
+                        isThisSending && sendingFor === domain.nftAddress
+                      }
+                      onAction={() =>
+                        domain.zone === 'bro'
+                          ? handleRenewFi(domain.nftAddress, charCount)
+                          : handleRenew(domain.nftAddress, charCount)
+                      }
+                      actionLabel={
+                        domain.zone === 'bro'
+                          ? `Renew (${formatFi(broFiRenewalFee(charCount))}/yr)`
+                          : `Renew (${formatNano(renewalFee)}/yr)`
+                      }
+                      completeLabel="Renewed!"
                     >
-                      Clear
+                      Renew
                     </TxButton>
-                  )}
-                </div>
-              </div>
+
+                    {/* Inline DNS wallet record form */}
+                    <div className="space-y-2 pt-2 border-t border-border/60">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Wallet address DNS record
+                      </p>
+                      <input
+                        type="text"
+                        value={currentRecordInput}
+                        onChange={(e) =>
+                          setRecordDrafts((prev) => ({
+                            ...prev,
+                            [domain.nftAddress]: e.target.value,
+                          }))
+                        }
+                        placeholder="Wallet address (EQ…)"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        data-testid={`dns-record-input-${domain.nftAddress}`}
+                      />
+                      <div className="flex gap-2">
+                        <TxButton
+                          size="sm"
+                          className="flex-1"
+                          disabled={!currentRecordInput.trim() || isThisSending}
+                          loading={
+                            isThisSending && sendingFor === domain.nftAddress
+                          }
+                          onAction={() =>
+                            handleSetRecord(
+                              domain.nftAddress,
+                              currentRecordInput,
+                            )
+                          }
+                          actionLabel="Save DNS Record"
+                          completeLabel="Saved!"
+                        >
+                          Save
+                        </TxButton>
+                        {domain.walletRecord && (
+                          <TxButton
+                            size="sm"
+                            variant="danger"
+                            disabled={isThisSending}
+                            onAction={() =>
+                              handleClearRecord(domain.nftAddress)
+                            }
+                            actionLabel="Clear DNS Record"
+                          >
+                            Clear
+                          </TxButton>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
             )}
 
             {error && sendingFor === domain.nftAddress && (

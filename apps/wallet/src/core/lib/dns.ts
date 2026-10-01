@@ -5,12 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Address, beginCell, Builder, Cell, Slice } from '@ton/core';
+import {
+  Address,
+  beginCell,
+  Builder,
+  Cell,
+  Dictionary,
+  Slice,
+} from '@ton/core';
 import { sha256_sync } from '@ton/crypto';
 import type { TonClient } from '@ton/ton';
 import { DnsItem } from '@wrappers/DnsItem.gen';
-import { BRO_COLLECTION_RESOLVER } from '@/lib/brotherhood/config';
+import {
+  BRO_COLLECTION_RESOLVER,
+  ONE_YEAR_SEC,
+  RESERVATION_PERIOD_SEC,
+} from '@/lib/brotherhood/config';
 import { getTonClient, type Network } from '@/lib/brotherhood/ton';
+import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
 
 export enum DnsCategory {
   DnsNextResolver = 'dns_next_resolver',
@@ -367,6 +379,180 @@ export function dnsResolve(
   );
 }
 
+export interface ParsedDnsItemState {
+  isInitialized: boolean;
+  index: bigint;
+  collectionAddress: Address;
+  domainName?: string;
+  ownerAddress?: string | null;
+  walletRecord?: string | null;
+  lastFillUpTime?: number;
+  isExpired?: boolean;
+  auction?: {
+    maxBidAddress: string | null;
+    maxBidAmount: bigint;
+    auctionEndTime: number;
+    isActive: boolean;
+    isEnded: boolean;
+  } | null;
+}
+
+/**
+ * Pure in-memory deserialization of a DnsItem contract's data_boc.
+ * Avoids on-chain runGetMethod RPC calls per Universal Batch Account Ingestion rules.
+ */
+export function parseDnsItemAccountState(
+  dataBoc: string,
+  network: Network = 'testnet',
+): ParsedDnsItemState | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    const s = cell.beginParse();
+    const index = s.loadUintBig(256);
+    const collectionAddress = s.loadAddress();
+
+    if (s.remainingRefs === 0) {
+      return {
+        isInitialized: false,
+        index,
+        collectionAddress,
+      };
+    }
+
+    const testOnly = network === 'testnet';
+    const ownerAddr = s.loadMaybeAddress();
+    const ownerAddress = ownerAddr
+      ? ownerAddr.toString({ bounceable: false, testOnly })
+      : null;
+
+    const contentCell = s.loadRef();
+    const domainCell = s.loadRef();
+    const hasAuction = s.loadBoolean();
+    const auctionCell = hasAuction ? s.loadRef() : null;
+    const lastFillUpTime = Number(s.loadUintBig(64));
+
+    let domainName: string | undefined;
+    try {
+      domainName = domainCell.beginParse().loadStringTail();
+    } catch {
+      /* ignore malformed domain cell */
+    }
+
+    let walletRecord: string | null = null;
+    try {
+      const cs = contentCell.beginParse();
+      if (cs.remainingBits >= 8 && cs.loadUint(8) === 0) {
+        const dict = cs.loadDict(
+          Dictionary.Keys.BigUint(256),
+          Dictionary.Values.Cell(),
+        );
+        const walletCell = dict.get(dnsCategoryToBigInt(DnsCategory.Wallet));
+        if (walletCell) {
+          const parsedWallet = parseSmartContractAddressRecord(walletCell);
+          if (parsedWallet) {
+            walletRecord = parsedWallet.toString({
+              bounceable: false,
+              testOnly,
+            });
+          }
+        }
+      }
+    } catch {
+      /* ignore malformed content dict */
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const isExpired =
+      lastFillUpTime > 0 ? nowSec > lastFillUpTime + ONE_YEAR_SEC : false;
+
+    let auction: ParsedDnsItemState['auction'] = null;
+    if (auctionCell) {
+      try {
+        const as = auctionCell.beginParse();
+        const maxBidAddr = as.loadMaybeAddress();
+        const maxBidAmount = as.loadCoins();
+        const auctionEndTime = Number(as.loadUintBig(64));
+        if (auctionEndTime > 0 || maxBidAmount > 0n) {
+          auction = {
+            maxBidAddress: maxBidAddr
+              ? maxBidAddr.toString({ bounceable: false, testOnly })
+              : null,
+            maxBidAmount,
+            auctionEndTime,
+            isActive: nowSec < auctionEndTime,
+            isEnded: nowSec >= auctionEndTime,
+          };
+        }
+      } catch {
+        /* ignore malformed auction cell */
+      }
+    }
+
+    return {
+      isInitialized: true,
+      index,
+      collectionAddress,
+      domainName,
+      ownerAddress,
+      walletRecord,
+      lastFillUpTime,
+      isExpired,
+      auction,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface BroCollectionState {
+  treasuryAddress: string;
+  deploymentTime: number;
+  isInstantMint: boolean;
+  isInReservationPeriod: boolean;
+  reservationEndsAt: number;
+}
+
+/**
+ * Fetches and deserializes the .bro DnsCollection contract storage in-memory.
+ */
+export async function fetchBroCollectionState(
+  network: Network = 'testnet',
+): Promise<BroCollectionState | null> {
+  try {
+    const batch = await batchFetchAccountStates(
+      [BRO_COLLECTION_RESOLVER],
+      network,
+    );
+    const acc = batch.accounts[0];
+    if (!acc || acc.status !== 'active' || !acc.data_boc) return null;
+
+    const s = Cell.fromBase64(acc.data_boc).beginParse();
+    const treasuryAddr = s.loadAddress();
+    s.loadRef(); // content
+    s.loadRef(); // nftItemCode
+    const deploymentTime = s.remainingBits >= 32 ? s.loadUint(32) : 0;
+    const isInstantMint = s.remainingBits >= 1 ? s.loadBoolean() : false;
+    const reservationEndsAt =
+      deploymentTime > 0 ? deploymentTime + RESERVATION_PERIOD_SEC : 0;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const isInReservationPeriod =
+      isInstantMint && deploymentTime > 0 && nowSec < reservationEndsAt;
+
+    return {
+      treasuryAddress: treasuryAddr.toString({
+        bounceable: false,
+        testOnly: network === 'testnet',
+      }),
+      deploymentTime,
+      isInstantMint,
+      isInReservationPeriod,
+      reservationEndsAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // In-memory TTL cache for resolved domain -> address
 interface CachedDnsEntry {
   address: string | null;
@@ -376,8 +562,9 @@ const DNS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const domainResolutionCache = new Map<string, CachedDnsEntry>();
 
 /**
- * Resolves a TON DNS domain to a user-friendly wallet address using pure on-chain TVM calls.
- * Caches positive and negative results with a 5-minute TTL.
+ * Resolves a TON DNS domain to a user-friendly wallet address.
+ * For .bro domains, checks explicit "wallet" DNS record first and falls back
+ * to the NFT ownerAddress when the domain is active and not expired.
  */
 export async function resolveAddressByDomain(
   domain: string,
@@ -387,16 +574,8 @@ export async function resolveAddressByDomain(
 ): Promise<string | undefined> {
   const trimmed = domain.trim().toLowerCase();
   if (!trimmed.includes('.')) {
-    // Plain username/handle: try resolving .bro first, then fallback to .ton
-    const broResult = await resolveAddressByDomain(
-      `${trimmed}.bro`,
-      network,
-      signal,
-      customClient,
-    );
-    if (broResult) return broResult;
     return resolveAddressByDomain(
-      `${trimmed}.ton`,
+      `${trimmed}.bro`,
       network,
       signal,
       customClient,
@@ -408,7 +587,7 @@ export async function resolveAddressByDomain(
     return undefined;
   }
 
-  const cacheKey = `${network}:${domain.trim().toLowerCase()}`;
+  const cacheKey = `${network}:${trimmed}`;
   const cached = domainResolutionCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < DNS_CACHE_TTL_MS) {
     return cached.address ?? undefined;
@@ -416,6 +595,42 @@ export async function resolveAddressByDomain(
 
   try {
     if (signal?.aborted) return undefined;
+
+    // Fast path for top-level .bro domains when no custom mock client is injected:
+    // Query DnsItem accountState BOC directly and check walletRecord || ownerAddress.
+    if (
+      !customClient &&
+      zoneMatch.zone.suffixes.includes('bro') &&
+      !zoneMatch.base.includes('.')
+    ) {
+      const collectionAddr = Address.parse(zoneMatch.zone.resolver);
+      const itemAddrStr = deriveDnsItemAddress(
+        collectionAddr,
+        zoneMatch.base,
+        network === 'testnet',
+      );
+      const batch = await batchFetchAccountStates([itemAddrStr], network);
+      if (signal?.aborted) return undefined;
+
+      const acc = batch.accounts[0];
+      if (acc && acc.status === 'active' && acc.data_boc) {
+        const parsed = parseDnsItemAccountState(acc.data_boc, network);
+        if (parsed && parsed.isInitialized && !parsed.isExpired) {
+          const resolved = parsed.walletRecord || parsed.ownerAddress || null;
+          domainResolutionCache.set(cacheKey, {
+            address: resolved,
+            timestamp: Date.now(),
+          });
+          return resolved ?? undefined;
+        }
+      }
+
+      domainResolutionCache.set(cacheKey, {
+        address: null,
+        timestamp: Date.now(),
+      });
+      return undefined;
+    }
 
     const client = customClient ?? getTonClient(network);
     const result = await dnsResolve(
@@ -437,6 +652,49 @@ export async function resolveAddressByDomain(
         timestamp: Date.now(),
       });
       return formatted;
+    }
+
+    // Fallback to NFT ownerAddress if dnsResolve returned undefined (record unset)
+    if (
+      zoneMatch.zone.suffixes.includes('bro') &&
+      !zoneMatch.base.includes('.')
+    ) {
+      try {
+        const collectionAddr = Address.parse(zoneMatch.zone.resolver);
+        const itemAddr = Address.parse(
+          deriveDnsItemAddress(
+            collectionAddr,
+            zoneMatch.base,
+            network === 'testnet',
+          ),
+        );
+        const nftData = await client.callGetMethod(
+          itemAddr,
+          'get_nft_data',
+          [],
+        );
+        const isInit = nftData.stack.readBoolean();
+        nftData.stack.readBigNumber();
+        nftData.stack.readCell();
+        const ownerSlice = nftData.stack.readCell().beginParse();
+        const ownerAddr =
+          isInit && ownerSlice.remainingBits > 2
+            ? ownerSlice.loadAddress()
+            : null;
+        if (ownerAddr) {
+          const formatted = ownerAddr.toString({
+            bounceable: false,
+            testOnly: network === 'testnet',
+          });
+          domainResolutionCache.set(cacheKey, {
+            address: formatted,
+            timestamp: Date.now(),
+          });
+          return formatted;
+        }
+      } catch {
+        /* ignore fallback failure */
+      }
     }
 
     domainResolutionCache.set(cacheKey, {

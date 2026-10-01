@@ -12,7 +12,6 @@ import { isValidAddress } from '@ton/walletkit';
 import { useFormatAddress } from '@/core/utils/formatters';
 import {
   getFiWalletState,
-  getFiWalletStateByContractAddress,
   getFiWalletAddress,
   type Network,
 } from '@/lib/brotherhood/ton';
@@ -38,10 +37,11 @@ import {
 import {
   isTonChainDns,
   resolveAddressByDomain,
-  getBroDomainAuctionInfo,
   type BroDomainAuctionInfo,
 } from '@/core/lib/dns';
 import { useContactBookStore } from '@/core/storage/useContactBookStore';
+
+const API_RESOLUTION_DEBOUNCE_MS = 3000;
 
 // In-memory negative cache for addresses without usernames to avoid redundant on-chain calls
 const negativeUsernameCache = new Set<string>();
@@ -143,22 +143,43 @@ export function useAddressUsernameResolution({
     return isTonChainDns(trimmed, net);
   }, [enabled, trimmed, isDirectAddress, net]);
 
-  const [dnsAuctionInfo, setDnsAuctionInfo] =
-    useState<BroDomainAuctionInfo | null>(null);
-
   const [asyncResolvedDns, setAsyncResolvedDns] = useState<{
     domain: string;
     address: string;
   } | null>(null);
 
+  const isUsernameInput = useMemo(() => {
+    if (!enabled || !trimmed || isDirectAddress || isDnsInput) return false;
+    if (trimmed.startsWith('@')) {
+      const handle = trimmed.replace(/^@+/, '');
+      return /^[a-zA-Z0-9_\- ]{1,40}$/.test(handle);
+    }
+    return /^[a-zA-Z0-9_\- ]{1,40}$/.test(trimmed);
+  }, [enabled, trimmed, isDirectAddress, isDnsInput]);
+
+  const canFallbackToBroDns = useMemo(() => {
+    if (!enabled || !isUsernameInput || trimmed.startsWith('@')) return false;
+    return /^[-\da-z]{1,126}$/i.test(trimmed);
+  }, [enabled, isUsernameInput, trimmed]);
+
   const localDnsAddress = useMemo(() => {
-    if (!enabled || !isDnsInput) return null;
-    return useContactBookStore.getState().resolveAddress(trimmed, net);
-  }, [enabled, isDnsInput, trimmed, net]);
+    if (!enabled) return null;
+    if (isDnsInput) {
+      return useContactBookStore.getState().resolveAddress(trimmed, net);
+    }
+    if (canFallbackToBroDns && !getCachedAddressByUsername(trimmed, net)) {
+      return useContactBookStore
+        .getState()
+        .resolveAddress(`${trimmed.toLowerCase()}.bro`, net);
+    }
+    return null;
+  }, [enabled, isDnsInput, canFallbackToBroDns, trimmed, net]);
 
   const resolvedDnsAddress =
     localDnsAddress ||
-    (asyncResolvedDns?.domain.toLowerCase() === trimmed.toLowerCase()
+    (asyncResolvedDns &&
+    (asyncResolvedDns.domain.toLowerCase() === trimmed.toLowerCase() ||
+      asyncResolvedDns.domain.toLowerCase() === `${trimmed.toLowerCase()}.bro`)
       ? asyncResolvedDns.address
       : null);
 
@@ -176,11 +197,6 @@ export function useAddressUsernameResolution({
       setChildContractCorrection(null);
     }
   }, [childContractCorrection, onChange, onResolvedAddressChange]);
-
-  const isUsernameInput = useMemo(() => {
-    if (!enabled || !trimmed || isDirectAddress || isDnsInput) return false;
-    return trimmed.startsWith('@') || /^[a-zA-Z0-9_\- ]{2,40}$/.test(trimmed);
-  }, [enabled, trimmed, isDirectAddress, isDnsInput]);
 
   if ((isUsernameInput || isDnsInput) && childContractCorrection !== null) {
     setChildContractCorrection(null);
@@ -233,10 +249,20 @@ export function useAddressUsernameResolution({
         const eff = getEffectiveUsername(cachedAddr, net);
         return eff || { name: clean, isCustom: false };
       }
+      if (resolvedDnsAddress) {
+        return { name: `${clean.toLowerCase()}.bro`, isCustom: false };
+      }
       return null;
     }
     return null;
-  }, [enabled, trimmed, isDirectAddress, isUsernameInput, net]);
+  }, [
+    enabled,
+    trimmed,
+    isDirectAddress,
+    isUsernameInput,
+    resolvedDnsAddress,
+    net,
+  ]);
 
   const [isResolving, setIsResolving] = useState(false);
   const [onChainUsername, setOnChainUsername] = useState<string | null>(null);
@@ -324,7 +350,7 @@ export function useAddressUsernameResolution({
     if (isDnsInput) return resolvedDnsAddress;
     if (isUsernameInput) {
       const clean = trimmed.replace(/^@+/, '');
-      return getCachedAddressByUsername(clean, net);
+      return getCachedAddressByUsername(clean, net) || resolvedDnsAddress;
     }
     return null;
   }, [
@@ -337,7 +363,7 @@ export function useAddressUsernameResolution({
     net,
   ]);
 
-  // Sync resolution
+  // Sync resolution: instant from local cache (0ms), 3s debounce for single on-chain API call on cache miss
   useEffect(() => {
     if (!enabled || !trimmed) {
       onResolvedAddressChange?.(null);
@@ -357,7 +383,6 @@ export function useAddressUsernameResolution({
         return;
       }
 
-      // Pure on-chain TVM dnsresolve with debounce
       const timer = setTimeout(async () => {
         setIsResolving(true);
         try {
@@ -366,30 +391,15 @@ export function useAddressUsernameResolution({
 
           if (resolved) {
             setAsyncResolvedDns({ domain: trimmed, address: resolved });
-            setDnsAuctionInfo(null);
-            // Auto-save into addressbook non-destructively!
             useContactBookStore
               .getState()
               .saveDnsDomain(resolved, trimmed, net);
             onResolvedAddressChange?.(resolved);
           } else {
-            // Check if domain is in an active or ended auction
-            if (
-              trimmed.toLowerCase().endsWith('.bro') ||
-              !trimmed.includes('.')
-            ) {
-              const auction = await getBroDomainAuctionInfo(trimmed, net);
-              if (!isCancelled) {
-                setDnsAuctionInfo(auction);
-              }
-            } else {
-              setDnsAuctionInfo(null);
-            }
             onResolvedAddressChange?.(null);
           }
         } catch {
           if (!isCancelled) {
-            setDnsAuctionInfo(null);
             onResolvedAddressChange?.(null);
           }
         } finally {
@@ -397,7 +407,7 @@ export function useAddressUsernameResolution({
             setIsResolving(false);
           }
         }
-      }, 350);
+      }, API_RESOLUTION_DEBOUNCE_MS);
 
       return () => {
         isCancelled = true;
@@ -407,7 +417,7 @@ export function useAddressUsernameResolution({
     }
 
     if (isDirectAddress) {
-      // 1. Detect if this is a child contract (FiWallet / PersonalWallet)
+      // 1. Detect if this is a child contract (FiWallet / PersonalWallet) from local cache
       void detectAndResolveOwnerFromChildContract(trimmed, net).then((corr) => {
         if (isCancelled) return;
         if (corr?.isChildContract && corr.ownerAddress) {
@@ -439,33 +449,13 @@ export function useAddressUsernameResolution({
         return;
       }
 
-      // Query on-chain FiWallet with debounce
+      // Single on-chain FiWallet lookup after 3s debounce
       const timer = setTimeout(async () => {
         setIsResolving(true);
         try {
           const parsed = parsedAddress || Address.parse(trimmed);
-
-          // 1. Try resolving directly as contract address
-          let uname: string | null = null;
-          try {
-            const directState = await getFiWalletStateByContractAddress(
-              parsed,
-              net,
-            );
-            uname = extractUsernameFromState(directState);
-          } catch {
-            // Not a direct FiWallet or failed
-          }
-
-          // 2. If not found, try as owner address
-          if (!uname) {
-            try {
-              const ownerFiState = await getFiWalletState(parsed, { net });
-              uname = extractUsernameFromState(ownerFiState);
-            } catch {
-              // Not an owner or failed
-            }
-          }
+          const ownerFiState = await getFiWalletState(parsed, { net });
+          const uname = extractUsernameFromState(ownerFiState);
 
           if (isCancelled) return;
 
@@ -486,7 +476,7 @@ export function useAddressUsernameResolution({
             setIsResolving(false);
           }
         }
-      }, 400);
+      }, API_RESOLUTION_DEBOUNCE_MS);
 
       return () => {
         isCancelled = true;
@@ -496,13 +486,54 @@ export function useAddressUsernameResolution({
     }
 
     if (isUsernameInput) {
-      onResolvedAddressChange?.(resolvedAddress);
+      if (resolvedAddress) {
+        onResolvedAddressChange?.(resolvedAddress);
+        return;
+      }
+
+      if (canFallbackToBroDns) {
+        const broDomain = `${trimmed.toLowerCase()}.bro`;
+        const timer = setTimeout(async () => {
+          setIsResolving(true);
+          try {
+            const resolved = await resolveAddressByDomain(broDomain, net);
+            if (isCancelled) return;
+
+            if (resolved) {
+              setAsyncResolvedDns({ domain: broDomain, address: resolved });
+              useContactBookStore
+                .getState()
+                .saveDnsDomain(resolved, broDomain, net);
+              onResolvedAddressChange?.(resolved);
+            } else {
+              onResolvedAddressChange?.(null);
+            }
+          } catch {
+            if (!isCancelled) {
+              onResolvedAddressChange?.(null);
+            }
+          } finally {
+            if (!isCancelled) {
+              setIsResolving(false);
+            }
+          }
+        }, API_RESOLUTION_DEBOUNCE_MS);
+
+        return () => {
+          isCancelled = true;
+          clearTimeout(timer);
+          setIsResolving(false);
+        };
+      }
+
+      onResolvedAddressChange?.(null);
     }
   }, [
     enabled,
     trimmed,
     isDirectAddress,
     isDnsInput,
+    canFallbackToBroDns,
     localDnsAddress,
     asyncResolvedDns,
     isUsernameInput,
@@ -582,29 +613,11 @@ export function useAddressUsernameResolution({
 
     setIsResolving(true);
     try {
-      let uname: string | null = null;
-      try {
-        const directState = await getFiWalletStateByContractAddress(
-          parsedAddress,
-          net,
-          { forceFresh: true },
-        );
-        uname = extractUsernameFromState(directState);
-      } catch {
-        // Not a direct contract address
-      }
-
-      if (!uname) {
-        try {
-          const fiState = await getFiWalletState(parsedAddress, {
-            net,
-            forceFresh: true,
-          });
-          uname = extractUsernameFromState(fiState);
-        } catch {
-          // Failed owner lookup
-        }
-      }
+      const fiState = await getFiWalletState(parsedAddress, {
+        net,
+        forceFresh: true,
+      });
+      const uname = extractUsernameFromState(fiState);
 
       if (uname) {
         setOnChainUsername(uname);
@@ -650,7 +663,7 @@ export function useAddressUsernameResolution({
     isDnsResolved: Boolean(
       isDnsInput && (resolvedDnsAddress || resolvedAddress),
     ),
-    dnsAuctionInfo,
+    dnsAuctionInfo: null,
     isCustomName,
     onChainUsername: effectiveOnChainUsername,
     isResolving,

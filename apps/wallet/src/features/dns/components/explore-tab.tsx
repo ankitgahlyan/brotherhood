@@ -5,16 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
 import { TxButton } from '@/core/components/ui/tx-button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { useFormatAddress } from '@/core/utils/formatters';
+import {
+  useContactBookStore,
+  EMPTY_CONTACTS_MAP,
+  normalizeContactAddress,
+} from '@/core/storage/useContactBookStore';
 import type { Network } from '@/lib/brotherhood/config';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import { useDomainLookup } from '../hooks/use-domain-lookup';
+import {
+  useDomainLookup,
+  clearDomainLookupCache,
+} from '../hooks/use-domain-lookup';
 import { useDnsTransaction, DNS_GAS } from '../hooks/use-dns-transaction';
 import { useDnsStore } from '../store/dns-store';
 import {
@@ -25,7 +33,7 @@ import {
   BRO_COLLECTION_RESOLVER,
   deriveDnsItemAddress,
 } from '../lib/dns-bodies';
-import { TON_DNS_ZONES } from '@/core/lib/dns';
+import { TON_DNS_ZONES, clearDomainResolutionCache } from '@/core/lib/dns';
 
 interface ExploreTabProps {
   network: Network;
@@ -76,10 +84,39 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   const lookupNet = network;
   const lookup = useDomainLookup(submittedQuery, lookupNet as Network);
 
+  const contactsForNet = useContactBookStore(
+    (s) => s.contactsByNetwork[lookupNet] || EMPTY_CONTACTS_MAP,
+  );
+  const saveDnsDomain = useContactBookStore((s) => s.saveDnsDomain);
+
   const { send, isSending, error } = useDnsTransaction(
     currentWallet,
     walletKit,
   );
+
+  const fullSearchedDomain = useMemo(() => {
+    const q = submittedQuery.trim().toLowerCase();
+    if (!q) return '';
+    return q.includes('.') ? q : `${q}.bro`;
+  }, [submittedQuery]);
+
+  const targetContactAddress = lookup.walletRecord || lookup.owner || null;
+
+  const isSavedInContacts = useMemo(() => {
+    if (!targetContactAddress || !fullSearchedDomain) return false;
+    const raw = normalizeContactAddress(targetContactAddress);
+    const contact = contactsForNet[raw];
+    if (!contact) return false;
+    if (contact.dnsDomain?.toLowerCase() === fullSearchedDomain) return true;
+    return Boolean(
+      contact.dnsDomains?.some((d) => d.toLowerCase() === fullSearchedDomain),
+    );
+  }, [contactsForNet, targetContactAddress, fullSearchedDomain]);
+
+  const handleAddToContacts = useCallback(() => {
+    if (!targetContactAddress || !fullSearchedDomain) return;
+    saveDnsDomain(targetContactAddress, fullSearchedDomain, lookupNet);
+  }, [targetContactAddress, fullSearchedDomain, saveDnsDomain, lookupNet]);
 
   const handleSearch = useCallback(() => {
     setSubmittedQuery(inputValue.trim());
@@ -94,7 +131,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   );
 
   const handleRegister = useCallback(async () => {
-    if (!address || !lookup.nftAddress) return;
+    if (!address || !lookup.nftAddress || lookup.isInReservationPeriod) return;
 
     const query = submittedQuery.trim().toLowerCase();
     const bare = query.includes('.') ? query.split('.')[0] : query;
@@ -131,6 +168,9 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       ]);
     }
 
+    clearDomainLookupCache();
+    clearDomainResolutionCache();
+
     // Optimistic store update
     addDomain(
       {
@@ -152,7 +192,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   }, [address, lookup, submittedQuery, send, addDomain, lookupNet]);
 
   const handlePlaceBid = useCallback(async () => {
-    if (!address || !lookup.nftAddress) return;
+    if (!address || !lookup.nftAddress || lookup.isInReservationPeriod) return;
     const query = submittedQuery.trim().toLowerCase();
     const bare = query.includes('.') ? query.split('.')[0] : query;
     const fiBidAmount = bidInput.trim()
@@ -177,6 +217,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
         payload,
       },
     ]);
+    clearDomainLookupCache();
     setBidInput('');
   }, [address, lookup, submittedQuery, bidInput, send, lookupNet]);
 
@@ -190,6 +231,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
         payload,
       },
     ]);
+    clearDomainLookupCache();
+    clearDomainResolutionCache();
   }, [address, lookup, send]);
 
   const getZoneLabel = () => {
@@ -198,6 +241,24 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
         .{lookup.zoneSuffix}
       </span>
+    );
+  };
+
+  const renderReservationNotice = () => {
+    if (!lookup.isInReservationPeriod) return null;
+    return (
+      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
+        <p className="font-medium">
+          🔒 Initial Admin-Only Period Active
+          {lookup.reservationEndsAt
+            ? ` (${formatCountdown(lookup.reservationEndsAt)} left)`
+            : ''}
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          Public domain registration opens once the initial 30-day reservation
+          window ends.
+        </p>
+      </div>
     );
   };
 
@@ -305,16 +366,31 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               </div>
             )
           )}
-          <TxButton
-            fullWidth
-            disabled={!address || isSending}
-            loading={isSending}
-            onAction={handleRegister}
-            actionLabel={isBro ? 'Start 7-Day Auction' : 'Register Domain'}
-            completeLabel={isBro ? 'Auction Started!' : 'Registered!'}
-          >
-            {isBro ? 'Start 7-Day Auction' : 'Register'}
-          </TxButton>
+          {lookup.nftAddress && (
+            <div className="text-xs text-muted-foreground flex items-center justify-between">
+              <span>NFT contract</span>
+              <div className="flex items-center gap-1">
+                <span className="font-mono">
+                  {formatWalletAddress(lookup.nftAddress, true, 4)}
+                </span>
+                <CopyButton address={lookup.nftAddress} />
+              </div>
+            </div>
+          )}
+          {lookup.isInReservationPeriod ? (
+            renderReservationNotice()
+          ) : (
+            <TxButton
+              fullWidth
+              disabled={!address || isSending}
+              loading={isSending}
+              onAction={handleRegister}
+              actionLabel={isBro ? 'Start 7-Day Auction' : 'Register Domain'}
+              completeLabel={isBro ? 'Auction Started!' : 'Registered!'}
+            >
+              {isBro ? 'Start 7-Day Auction' : 'Register'}
+            </TxButton>
+          )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
         </div>
       );
@@ -376,38 +452,44 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-medium text-muted-foreground">
-              Your Bid (FI tokens)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                placeholder={(Number(minBidNano) / 1e9).toString()}
-                value={bidInput}
-                onChange={(e) => setBidInput(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 pr-12"
-              />
-              <span className="absolute right-3 top-2 text-xs font-semibold text-muted-foreground">
-                FI
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Must be at least {formatFi(minBidNano)}. Fixed 1.0 TON fee is
-              charged alongside bid.
-            </p>
-          </div>
+          {lookup.isInReservationPeriod ? (
+            renderReservationNotice()
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground">
+                  Your Bid (FI tokens)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder={(Number(minBidNano) / 1e9).toString()}
+                    value={bidInput}
+                    onChange={(e) => setBidInput(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 pr-12"
+                  />
+                  <span className="absolute right-3 top-2 text-xs font-semibold text-muted-foreground">
+                    FI
+                  </span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Must be at least {formatFi(minBidNano)}. Fixed 1.0 TON fee is
+                  charged alongside bid.
+                </p>
+              </div>
 
-          <TxButton
-            fullWidth
-            disabled={!address || isSending}
-            loading={isSending}
-            onAction={handlePlaceBid}
-            actionLabel="Place Outbid"
-            completeLabel="Bid Placed!"
-          >
-            Place Bid
-          </TxButton>
+              <TxButton
+                fullWidth
+                disabled={!address || isSending}
+                loading={isSending}
+                onAction={handlePlaceBid}
+                actionLabel="Place Outbid"
+                completeLabel="Bid Placed!"
+              >
+                Place Bid
+              </TxButton>
+            </>
+          )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
         </div>
       );
@@ -511,16 +593,20 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               </span>
             </p>
           )}
-          <TxButton
-            fullWidth
-            disabled={!address || isSending}
-            loading={isSending}
-            onAction={handleRegister}
-            actionLabel="Register Domain"
-            completeLabel="Registered!"
-          >
-            Register Now
-          </TxButton>
+          {lookup.isInReservationPeriod ? (
+            renderReservationNotice()
+          ) : (
+            <TxButton
+              fullWidth
+              disabled={!address || isSending}
+              loading={isSending}
+              onAction={handleRegister}
+              actionLabel="Register Domain"
+              completeLabel="Registered!"
+            >
+              Register Now
+            </TxButton>
+          )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
         </div>
       );
@@ -553,6 +639,17 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             </div>
           </div>
         )}
+        {lookup.walletRecord && (
+          <div className="text-xs text-muted-foreground flex items-center justify-between">
+            <span>DNS wallet</span>
+            <div className="flex items-center gap-1">
+              <span className="font-mono">
+                {formatWalletAddress(lookup.walletRecord, true, 4)}
+              </span>
+              <CopyButton address={lookup.walletRecord} />
+            </div>
+          </div>
+        )}
         {lookup.expiresAt && (
           <p className="text-xs text-muted-foreground">
             Expires: {formatExpiry(lookup.expiresAt)}
@@ -569,6 +666,18 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             </div>
           </div>
         )}
+        {targetContactAddress && (
+          <Button
+            size="sm"
+            variant="secondary"
+            fullWidth
+            disabled={isSavedInContacts}
+            onClick={handleAddToContacts}
+            data-testid="dns-explore-add-to-contacts"
+          >
+            {isSavedInContacts ? '✓ Saved in Contacts' : 'Add to Contacts'}
+          </Button>
+        )}
       </div>
     );
   };
@@ -583,7 +692,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="alice  or  alice.bro  or  alice.ton"
+            placeholder="alice  or  alice.bro"
             className="flex-1 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             data-testid="dns-explore-search-input"
           />
@@ -597,8 +706,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-2">
-          Plain handles (without a dot) try <strong>.bro</strong> first, then{' '}
-          <strong>.ton</strong>.
+          Plain handles (without a dot) automatically resolve under{' '}
+          <strong>.bro</strong>.
         </p>
       </div>
 

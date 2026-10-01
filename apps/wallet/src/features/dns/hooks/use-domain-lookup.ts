@@ -7,9 +7,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Address } from '@ton/core';
-import { getTonClient } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
-import { getDnsDomainZone } from '@/core/lib/dns';
+import { RESERVATION_PERIOD_SEC } from '@/lib/brotherhood/config';
+import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
+import { getDnsDomainZone, parseDnsItemAccountState } from '@/core/lib/dns';
 import {
   deriveDnsItemAddress,
   broTierPrice,
@@ -37,6 +38,8 @@ export interface DomainLookupResult {
   nftAddress?: string;
   /** Current owner address string — set when taken or expired */
   owner?: string;
+  /** Linked wallet record address string — set when DNS wallet record is configured */
+  walletRecord?: string;
   /** Registration price in nanotons (or fixed TON fee for .bro auction) */
   price?: bigint;
   /** Annual renewal fee in nanotons (legacy) */
@@ -47,6 +50,10 @@ export interface DomainLookupResult {
   zoneSuffix?: string;
   /** True if domain can be registered on current network */
   canRegister?: boolean;
+  /** True if collection is currently in the initial 30-day admin-only reservation period */
+  isInReservationPeriod?: boolean;
+  /** Unix timestamp when the 30-day admin reservation period ends */
+  reservationEndsAt?: number;
   /** FI token starting bid for unowned .bro domains */
   fiStartingBid?: bigint;
   /** FI token annual renewal fee for .bro domains */
@@ -73,6 +80,10 @@ interface CachedLookup {
 }
 const lookupCache = new Map<string, CachedLookup>();
 
+export function clearDomainLookupCache(): void {
+  lookupCache.clear();
+}
+
 /**
  * Determines if a zone is registerable on the given network.
  * Only .bro is testnet-native; all others are mainnet.
@@ -88,7 +99,7 @@ function isRegisterableOnNetwork(
 
 /**
  * Debounced hook that looks up a domain name across TON DNS zones.
- * Derives the NFT address off-chain and queries on-chain state.
+ * Derives the NFT address off-chain and queries on-chain state in a single batch.
  */
 export function useDomainLookup(
   rawInput: string,
@@ -155,19 +166,59 @@ export function useDomainLookup(
 
         if (ac.signal.aborted) return;
 
-        const client = getTonClient(network);
-        const itemAddr = Address.parse(nftAddress);
-
-        // Check if contract is deployed
-        let isDeployed = false;
-        try {
-          const state = await client.getContractState(itemAddr);
-          isDeployed = state.state === 'active';
-        } catch {
-          // Not deployed = available
-        }
+        // Fetch both DnsItem and DnsCollection in a single batch request
+        const batch = await batchFetchAccountStates(
+          [nftAddress, zone.resolver],
+          network,
+        );
 
         if (ac.signal.aborted) return;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const itemCanonical = Address.parse(nftAddress).toString();
+        const collCanonical = collectionAddress.toString();
+
+        const itemAcc = batch.accounts.find((a) => {
+          try {
+            return Address.parse(a.address).toString() === itemCanonical;
+          } catch {
+            return false;
+          }
+        });
+        const collAcc = batch.accounts.find((a) => {
+          try {
+            return Address.parse(a.address).toString() === collCanonical;
+          } catch {
+            return false;
+          }
+        });
+
+        let isInReservationPeriod = false;
+        let reservationEndsAt: number | undefined;
+        if (collAcc && collAcc.status === 'active' && collAcc.data_boc) {
+          try {
+            const { Cell } = await import('@ton/core');
+            const cs = Cell.fromBase64(collAcc.data_boc).beginParse();
+            cs.loadAddress(); // treasuryAddress
+            cs.loadRef(); // content
+            cs.loadRef(); // nftItemCode
+            const deploymentTime = cs.remainingBits >= 32 ? cs.loadUint(32) : 0;
+            const isInstantMint =
+              cs.remainingBits >= 1 ? cs.loadBoolean() : false;
+            if (deploymentTime > 0) {
+              reservationEndsAt = deploymentTime + RESERVATION_PERIOD_SEC;
+              isInReservationPeriod =
+                isInstantMint && nowSec < reservationEndsAt;
+            }
+          } catch {
+            /* ignore collection parse errors */
+          }
+        }
+
+        const isDeployed =
+          Boolean(itemAcc) &&
+          itemAcc!.status === 'active' &&
+          Boolean(itemAcc!.data_boc);
 
         if (!isDeployed) {
           const r: DomainLookupResult = {
@@ -180,115 +231,45 @@ export function useDomainLookup(
             fiRenewalFee:
               zoneSuffix === 'bro' ? broFiRenewalFee(charCount) : undefined,
             zoneSuffix,
-            canRegister,
+            canRegister: canRegister && !isInReservationPeriod,
+            isInReservationPeriod,
+            reservationEndsAt,
           };
           lookupCache.set(cacheKey, { result: r, timestamp: Date.now() });
           setResult(r);
           return;
         }
 
-        // Deployed — get owner and lastFillUpTime
-        let ownerAddr: Address | null = null;
-        let lastFillUp = 0;
-        try {
-          const nftData = await client.callGetMethod(
-            itemAddr,
-            'get_nft_data',
-            [],
-          );
-          // Stack: isInitialized, index, collectionAddress, ownerAddress, content
-          nftData.stack.readBoolean(); // isInitialized
-          nftData.stack.readBigNumber(); // index
-          nftData.stack.readCell(); // collectionAddress slice (skip)
-          // ownerAddress — nullable
-          try {
-            const ownerSlice = nftData.stack.readCell().beginParse();
-            ownerAddr =
-              ownerSlice.remainingBits > 2 ? ownerSlice.loadAddress() : null;
-          } catch {
-            ownerAddr = null;
-          }
-        } catch {
-          // contract may throw if data is malformed
-        }
+        const parsedItem = parseDnsItemAccountState(
+          itemAcc!.data_boc!,
+          network,
+        );
+        const ownerStr = parsedItem?.ownerAddress ?? undefined;
+        const walletRecordStr = parsedItem?.walletRecord ?? undefined;
+        const lastFillUp = parsedItem?.lastFillUpTime ?? nowSec;
+        const auction = parsedItem?.auction ?? null;
 
-        if (ac.signal.aborted) return;
-
-        // Check if domain is in an active or ended auction
-        let maxBidAddr: Address | null = null;
-        let maxBidAmount = 0n;
-        let auctionEndTime = 0;
-
-        if (!ownerAddr) {
-          try {
-            const auctionRes = await client.callGetMethod(
-              itemAddr,
-              'get_auction_info',
-              [],
-            );
-            try {
-              const bidAddrSlice = auctionRes.stack.readCell().beginParse();
-              maxBidAddr =
-                bidAddrSlice.remainingBits > 2
-                  ? bidAddrSlice.loadAddress()
-                  : null;
-            } catch {
-              maxBidAddr = null;
-            }
-            maxBidAmount = auctionRes.stack.readBigNumber();
-            auctionEndTime = auctionRes.stack.readNumber();
-          } catch {
-            // no auction info
-          }
-        }
-
-        if (ac.signal.aborted) return;
-
-        try {
-          const fillUpRes = await client.callGetMethod(
-            itemAddr,
-            'get_last_fill_up_time',
-            [],
-          );
-          lastFillUp = fillUpRes.stack.readNumber();
-        } catch {
-          // fallback: treat as freshly filled
-          lastFillUp = Math.floor(Date.now() / 1000);
-        }
-
-        if (ac.signal.aborted) return;
-
-        const nowSec = Math.floor(Date.now() / 1000);
         let status: DomainLookupStatus;
-
-        if (ownerAddr) {
+        if (ownerStr) {
           const expiresAt = lastFillUp + ONE_YEAR_SEC;
           const isExpired = nowSec > expiresAt;
           status = isExpired ? 'expired' : 'taken';
-        } else if (auctionEndTime > 0) {
-          status = nowSec < auctionEndTime ? 'in-auction' : 'auction-ended';
+        } else if (auction && auction.auctionEndTime > 0) {
+          status =
+            nowSec < auction.auctionEndTime ? 'in-auction' : 'auction-ended';
         } else {
           status = 'available';
         }
 
-        const ownerStr = ownerAddr
-          ? ownerAddr.toString({
-              bounceable: false,
-              testOnly: network === 'testnet',
-            })
-          : undefined;
-
-        const maxBidStr = maxBidAddr
-          ? maxBidAddr.toString({
-              bounceable: false,
-              testOnly: network === 'testnet',
-            })
-          : undefined;
+        const maxBidAmount = auction?.maxBidAmount ?? 0n;
+        const maxBidStr = auction?.maxBidAddress ?? undefined;
+        const auctionEndTime = auction?.auctionEndTime ?? 0;
 
         const r: DomainLookupResult = {
           status,
           nftAddress,
           owner: ownerStr,
+          walletRecord: walletRecordStr,
           price:
             status === 'available'
               ? zoneSuffix === 'bro'
@@ -306,13 +287,16 @@ export function useDomainLookup(
           maxBidAddress: maxBidStr,
           auctionEndTime: auctionEndTime > 0 ? auctionEndTime : undefined,
           winner: status === 'auction-ended' ? maxBidStr : undefined,
-          expiresAt: ownerAddr ? lastFillUp + ONE_YEAR_SEC : undefined,
+          expiresAt: ownerStr ? lastFillUp + ONE_YEAR_SEC : undefined,
           zoneSuffix,
           canRegister:
             (status === 'available' ||
               status === 'expired' ||
               status === 'in-auction') &&
-            canRegister,
+            canRegister &&
+            !isInReservationPeriod,
+          isInReservationPeriod,
+          reservationEndsAt,
         };
         lookupCache.set(cacheKey, { result: r, timestamp: Date.now() });
         setResult(r);

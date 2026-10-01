@@ -66,12 +66,13 @@ export const CommentField: React.FC<CommentFieldProps> = ({
     }
   }, [walletKit, network]);
 
-  // Check recipient public key when encryption is selected
+  // Check recipient public key only when an encrypted comment is actually entered
   useEffect(() => {
     let isCancelled = false;
 
     if (
       !isEncrypted ||
+      !comment.trim() ||
       !recipientAddress ||
       !isValidAddress(recipientAddress.trim())
     ) {
@@ -121,7 +122,14 @@ export const CommentField: React.FC<CommentFieldProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [recipientAddress, isEncrypted, network, tonClient, savedWallets]);
+  }, [
+    recipientAddress,
+    isEncrypted,
+    comment,
+    network,
+    tonClient,
+    savedWallets,
+  ]);
 
   const handleToggleEncrypted = (checked: boolean) => {
     onChangeIsEncrypted(checked);

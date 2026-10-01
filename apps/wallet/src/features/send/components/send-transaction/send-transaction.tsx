@@ -164,13 +164,38 @@ export const SendTransaction: React.FC = () => {
 
   const trimmedGranter = granterInput.trim();
   const isGranterDns = isTonChainDns(trimmedGranter);
+  const canGranterFallbackToBro =
+    Boolean(trimmedGranter) &&
+    !isValidAddress(trimmedGranter) &&
+    !isGranterDns &&
+    !trimmedGranter.startsWith('@') &&
+    /^[-\da-z]{1,126}$/i.test(trimmedGranter);
+  const granterBroDomain = isGranterDns
+    ? trimmedGranter.toLowerCase()
+    : canGranterFallbackToBro
+      ? `${trimmedGranter.toLowerCase()}.bro`
+      : null;
 
-  const localGranterDns = useMemo(() => {
-    if (senderMode !== 'other' || !isGranterDns) return null;
-    return useContactBookStore
-      .getState()
-      .resolveAddress(trimmedGranter, network);
-  }, [senderMode, isGranterDns, trimmedGranter, network]);
+  const localGranterAddress = useMemo(() => {
+    if (senderMode !== 'other' || !trimmedGranter) return null;
+    if (isValidAddress(trimmedGranter)) return trimmedGranter;
+    if (isGranterDns) {
+      return useContactBookStore
+        .getState()
+        .resolveAddress(trimmedGranter, network);
+    }
+    const cleanUsername = trimmedGranter.replace(/^@+/, '');
+    if (cleanUsername.length > 0) {
+      const cachedUserAddr = getCachedAddressByUsername(cleanUsername, network);
+      if (cachedUserAddr) return cachedUserAddr;
+    }
+    if (granterBroDomain) {
+      return useContactBookStore
+        .getState()
+        .resolveAddress(granterBroDomain, network);
+    }
+    return null;
+  }, [senderMode, trimmedGranter, isGranterDns, granterBroDomain, network]);
 
   const [asyncResolvedGranter, setAsyncResolvedGranter] = useState<{
     domain: string;
@@ -178,20 +203,18 @@ export const SendTransaction: React.FC = () => {
   } | null>(null);
 
   const dnsResolvedGranterAddress =
-    localGranterDns ||
-    (asyncResolvedGranter?.domain.toLowerCase() === trimmedGranter.toLowerCase()
+    localGranterAddress ||
+    (granterBroDomain &&
+    asyncResolvedGranter?.domain.toLowerCase() === granterBroDomain
       ? asyncResolvedGranter.address
       : null);
 
   useEffect(() => {
-    if (senderMode !== 'other' || !isGranterDns || localGranterDns) {
+    if (senderMode !== 'other' || !granterBroDomain || localGranterAddress) {
       return;
     }
 
-    if (
-      asyncResolvedGranter?.domain.toLowerCase() ===
-      trimmedGranter.toLowerCase()
-    ) {
+    if (asyncResolvedGranter?.domain.toLowerCase() === granterBroDomain) {
       return;
     }
 
@@ -199,22 +222,22 @@ export const SendTransaction: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const resolved = await resolveAddressByDomain(
-          trimmedGranter,
+          granterBroDomain,
           network === 'mainnet' ? 'mainnet' : 'testnet',
         );
         if (!isCancelled && resolved) {
           setAsyncResolvedGranter({
-            domain: trimmedGranter,
+            domain: granterBroDomain,
             address: resolved,
           });
           useContactBookStore
             .getState()
-            .saveDnsDomain(resolved, trimmedGranter, network);
+            .saveDnsDomain(resolved, granterBroDomain, network);
         }
       } catch {
         // Ignore resolution failure
       }
-    }, 350);
+    }, 3000);
 
     return () => {
       isCancelled = true;
@@ -222,30 +245,16 @@ export const SendTransaction: React.FC = () => {
     };
   }, [
     senderMode,
-    isGranterDns,
-    trimmedGranter,
-    localGranterDns,
+    granterBroDomain,
+    localGranterAddress,
     asyncResolvedGranter,
     network,
   ]);
 
   const resolvedGranterAddress = useMemo(() => {
     if (senderMode !== 'other') return null;
-    const trimmed = granterInput.trim();
-    if (!trimmed) return null;
-    if (isValidAddress(trimmed)) return trimmed;
-    if (isTonChainDns(trimmed)) {
-      return (
-        dnsResolvedGranterAddress ||
-        useContactBookStore.getState().resolveAddress(trimmed, network)
-      );
-    }
-    const cleanUsername = trimmed.replace(/^@+/, '');
-    if (cleanUsername.length > 0) {
-      return getCachedAddressByUsername(cleanUsername, network);
-    }
-    return null;
-  }, [senderMode, granterInput, network, dnsResolvedGranterAddress]);
+    return localGranterAddress || dnsResolvedGranterAddress;
+  }, [senderMode, localGranterAddress, dnsResolvedGranterAddress]);
 
   const {
     allowance,
