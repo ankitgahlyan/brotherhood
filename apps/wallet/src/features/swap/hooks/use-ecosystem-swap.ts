@@ -940,6 +940,14 @@ export function useEcosystemSwap() {
     ],
   );
 
+  const userWalletAddress = useMemo(() => {
+    if (!userOwnerAddress) return address ?? '';
+    return formatTonAddress(userOwnerAddress, {
+      isContract: false,
+      network: net,
+    });
+  }, [userOwnerAddress, address, net]);
+
   return {
     tokens,
     fromToken,
@@ -948,6 +956,7 @@ export function useEcosystemSwap() {
     isSwapping,
     txError,
     fiatBuyUrl: RESERVE_TOKEN_FIAT_BUY_URL,
+    userWalletAddress,
     net,
     handleSelectFromToken,
     handleSelectToToken,

@@ -6,20 +6,26 @@
  *
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import {
   ArrowDownUp,
-  ExternalLink,
+  Copy,
   Flame,
   Landmark,
+  QrCode,
   Search,
+  ShieldAlert,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   AlertCircle,
   Check,
   Plus,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import QRCodeStyling from 'qr-code-styling';
+import type { Options as QrOptions } from 'qr-code-styling';
 
 import { SwapField } from '../swap-field';
 import {
@@ -34,8 +40,51 @@ import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { CommentField } from '@/features/send/components/comment-field';
 import { formatFi } from '@/features/brotherhood/components/credit/credit-member-card';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
-import { BRO_TREASURY_ADDRESS } from '@/lib/brotherhood/config';
+import {
+  BRO_TREASURY_ADDRESS,
+  RESERVE_TOKEN_UPI_CONFIG,
+  buildReserveUpiLinks,
+} from '@/lib/brotherhood/config';
 import { cn } from '@/core/lib/utils';
+
+const UPI_QR_OPTIONS: Partial<QrOptions> = {
+  type: 'svg',
+  margin: 0,
+  dotsOptions: { color: '#14181F', type: 'rounded' },
+  cornersSquareOptions: { color: '#14181F', type: 'extra-rounded' },
+  cornersDotOptions: { color: '#14181F', type: 'dot' },
+  backgroundOptions: { color: '#ffffff' },
+  qrOptions: { errorCorrectionLevel: 'M' },
+};
+
+const UpiQrCode: FC<{ value: string; size?: number }> = ({
+  value,
+  size = 180,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !value) return;
+    const qr = new QRCodeStyling({
+      ...UPI_QR_OPTIONS,
+      width: size,
+      height: size,
+      data: value,
+    });
+    const renderQr = () => {
+      if (!containerRef.current) return;
+      containerRef.current.replaceChildren();
+      qr.append(containerRef.current);
+    };
+    if (qr._svgDrawingPromise) {
+      qr._svgDrawingPromise.then(renderQr).catch(renderQr);
+    } else {
+      renderQr();
+    }
+  }, [value, size]);
+
+  return <div ref={containerRef} style={{ width: size, height: size }} />;
+};
 
 interface SwapInterfaceProps {
   className?: string;
@@ -63,7 +112,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     quote,
     isSwapping,
     txError,
-    fiatBuyUrl,
+    userWalletAddress,
     net,
     handleSelectFromToken,
     handleSelectToToken,
@@ -78,6 +127,43 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
   const [selectorSide, setSelectorSide] = useState<'from' | 'to' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fiat On-Ramp (Personal UPI) Modal State
+  const [isOnRampOpen, setIsOnRampOpen] = useState(false);
+  const [upiAmountInr, setUpiAmountInr] = useState<string>(
+    RESERVE_TOKEN_UPI_CONFIG.defaultAmount,
+  );
+  const [showUpiQr, setShowUpiQr] = useState(false);
+  const [upiRefSeed, setUpiRefSeed] = useState<string>(() =>
+    Date.now().toString(36),
+  );
+
+  const upiLinks = useMemo(
+    () =>
+      buildReserveUpiLinks({
+        amountInr: upiAmountInr,
+        walletAddress: userWalletAddress,
+        referenceSeed: upiRefSeed,
+      }),
+    [upiAmountInr, userWalletAddress, upiRefSeed],
+  );
+
+  const handleCopyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Failed to copy ${label}`);
+    }
+  };
+
+  const handleBhimPay = () => {
+    window.location.href = upiLinks.bhimOrOthersUrl;
+  };
+
+  const handleGPay = () => {
+    window.location.href = upiLinks.gPayUrl;
+  };
 
   // Fiat Off-Ramp Modal State
   const [isOffRampOpen, setIsOffRampOpen] = useState(false);
@@ -389,16 +475,18 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-1">
-          <a
-            href={fiatBuyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2.5 px-3 transition-colors"
+          <button
+            type="button"
+            onClick={() => {
+              setUpiRefSeed(Date.now().toString(36));
+              setIsOnRampOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2.5 px-3 transition-colors cursor-pointer"
             data-testid="swap-fiat-buy-link"
           >
-            <span>Buy with Fiat</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Buy via UPI (INR)</span>
+          </button>
 
           <button
             type="button"
@@ -641,6 +729,231 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                 : 'Burn RESERVE & Request Fiat Payout'}
             </span>
           </Button>
+        </Modal.Body>
+      </Modal.Container>
+
+      {/* Buy Reserve Token via Personal UPI (On-Ramp) Modal */}
+      <Modal.Container
+        isOpened={isOnRampOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsOnRampOpen(false);
+          }
+        }}
+        className="px-2"
+      >
+        <Modal.Header onClose={() => setIsOnRampOpen(false)}>
+          <Modal.Title>Buy Reserve Token via Personal UPI</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="space-y-3.5">
+          {/* Verified Payee Summary */}
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between gap-2">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>Verified Payee: {upiLinks.payeeName}</span>
+              </div>
+              <div className="font-mono text-[11px] text-foreground truncate">
+                VPA: {upiLinks.upiId} · Currency: {upiLinks.currency} (Min ₹
+                {upiLinks.minAmount})
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopyText(upiLinks.upiId, 'UPI ID')}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-background/80 hover:bg-background border border-border text-[11px] font-semibold text-foreground shrink-0 cursor-pointer"
+              data-testid="upi-copy-vpa-button"
+            >
+              <Copy className="w-3 h-3" />
+              <span>Copy VPA</span>
+            </button>
+          </div>
+
+          {/* INR Amount Input & Presets */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>Amount to Pay (INR)</span>
+              <span className="font-mono text-[11px]">
+                Min ₹{upiLinks.minAmount}
+              </span>
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              min={upiLinks.minAmount}
+              value={upiAmountInr}
+              onChange={(e) => setUpiAmountInr(e.target.value)}
+              placeholder="1.00"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              data-testid="upi-amount-input"
+            />
+            <div className="flex items-center gap-1.5 pt-0.5">
+              {['1', '100', '500', '2000'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setUpiAmountInr(preset)}
+                  className={cn(
+                    'flex-1 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer',
+                    upiAmountInr === preset
+                      ? 'bg-primary/15 border-primary/40 text-primary'
+                      : 'bg-secondary/60 border-border/60 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  ₹{preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* NPCI > ₹2,000 Deep-Link Cap Warning */}
+          {upiLinks.isOverDeepLinkCap && (
+            <div
+              className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 text-[11px] text-amber-700 dark:text-amber-300"
+              data-testid="upi-cap-warning"
+            >
+              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">
+                  Amount exceeds ₹2,000 NPCI P2P Deep-Link Cap
+                </span>
+                <span>
+                  Google Pay & PhonePe often reject browser deep links over
+                  ₹2,000 for personal VPAs. Use <strong>BHIM</strong>, scan the{' '}
+                  <strong>Live QR Code</strong> below from another screen, or
+                  copy the VPA + Note manually.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Primary UPI Deep-Link Buttons (matching bhimPay() & gPay() from snippet) */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleBhimPay}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              data-testid="upi-bhim-pay-button"
+            >
+              <Smartphone className="w-4 h-4 shrink-0" />
+              <span>BHIM or Others Pay</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGPay}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              data-testid="upi-gpay-button"
+            >
+              <Smartphone className="w-4 h-4 shrink-0" />
+              <span>Google Pay (tez://)</span>
+            </button>
+          </div>
+
+          {/* Secondary App Schemes (PhonePe / Paytm) & QR Toggle */}
+          <div className="grid grid-cols-3 gap-1.5">
+            <a
+              href={upiLinks.phonePeUrl}
+              className="flex items-center justify-center py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-foreground transition-colors"
+              data-testid="upi-phonepe-link"
+            >
+              PhonePe
+            </a>
+            <a
+              href={upiLinks.paytmUrl}
+              className="flex items-center justify-center py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-foreground transition-colors"
+              data-testid="upi-paytm-link"
+            >
+              Paytm
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowUpiQr((prev) => !prev)}
+              className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-primary transition-colors cursor-pointer"
+              data-testid="upi-toggle-qr-button"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>{showUpiQr ? 'Hide QR' : 'Show QR'}</span>
+            </button>
+          </div>
+
+          {/* Dynamic UPI QR Code (Desktop & Anti-Block Fallback) */}
+          {showUpiQr && (
+            <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white border border-border shadow-2xs space-y-1.5">
+              <UpiQrCode value={upiLinks.qrUpiUrl} size={176} />
+              <span className="text-[10px] font-medium text-slate-600 text-center">
+                Scan with any UPI app ({upiLinks.payeeName} · ₹
+                {upiLinks.amountStr})
+              </span>
+            </div>
+          )}
+
+          {/* Embedded Wallet Note (tn) & Order Reference (tr) */}
+          <div className="rounded-xl bg-secondary/40 border border-border/60 p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground font-medium">
+                Required UPI Note (tn)
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCopyText(upiLinks.note, 'UPI Note')}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                data-testid="upi-copy-note-button"
+              >
+                <Copy className="w-3 h-3" />
+                <span>Copy Note</span>
+              </button>
+            </div>
+            <div
+              className="font-mono text-[11px] text-foreground bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/50 break-all select-all"
+              data-testid="upi-note-value"
+            >
+              {upiLinks.note}
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+              <span>Ref ID (tr):</span>
+              <span className="font-mono text-foreground">
+                {upiLinks.txRef}
+              </span>
+            </div>
+          </div>
+
+          {/* Security & Helper Warnings to User */}
+          <div
+            className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-3 space-y-1.5 text-[11px] text-amber-800 dark:text-amber-300"
+            data-testid="upi-security-warnings"
+          >
+            <div className="flex items-center gap-1.5 font-bold text-xs">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>Important Security & Payment Warnings</span>
+            </div>
+            <ul className="list-disc pl-4 space-y-1 leading-relaxed opacity-95">
+              <li>
+                <strong>Do NOT edit the UPI Note (tn):</strong> Personal UPI
+                apps allow modifying the note field before entering your PIN.
+                Keep <code className="font-mono">{upiLinks.notePrefix}</code> +
+                your wallet address intact so your TON wallet is credited
+                accurately.
+              </li>
+              <li>
+                <strong>Verify Payee VPA:</strong> Confirm your UPI app shows{' '}
+                <code className="font-mono">{upiLinks.upiId}</code> (
+                <strong>{upiLinks.payeeName}</strong>) before entering your UPI
+                PIN.
+              </li>
+              <li>
+                <strong>If Google Pay declines redirect:</strong> Some browsers
+                block P2P <code className="font-mono">tez://</code> links on
+                personal VPAs. Use <strong>BHIM</strong>, scan{' '}
+                <strong>Show QR</strong>, or copy the VPA & Note manually.
+              </li>
+              <li>
+                <strong>Save your 12-digit UTR:</strong> Keep the 12-digit UPI
+                reference ID from your payment receipt until Reserve Tokens
+                arrive in your wallet.
+              </li>
+            </ul>
+          </div>
         </Modal.Body>
       </Modal.Container>
     </div>

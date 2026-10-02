@@ -12,7 +12,7 @@ export const FI_ADDRESS = 'kQByVk5DwR_q9O0QECxai3CDpE-7Qimbb4OUE9Bt4Qz0deAE';
 
 /** Brotherhood .bro DNS Collection & Resolver (from deploy-bro.tolk) */
 export const BRO_COLLECTION_RESOLVER =
-  'kQAS7LSASDw_3pv1EpI_qmOtRAQu2TyQhvxyJJmr4GWHlDJe';
+  'kQDqjJ7tPgsD3_s0v_PLzyLKUe1pu-rtOQyk6Tf8NfdgOlli';
 
 /** Alias for collection address in DNS features */
 export const BRO_COLLECTION_ADDRESS = BRO_COLLECTION_RESOLVER;
@@ -128,6 +128,119 @@ export const SWAP_CREDIT_FORWARD_OP = 0x0000114f;
 /** Placeholder fiat on-ramp URL for purchasing Reserve Token (Treasury Personal Token) */
 export const RESERVE_TOKEN_FIAT_BUY_URL =
   'https://buy.brotherhood.network/reserve';
+
+/** Personal UPI On-Ramp configuration for Reserve Token (INR Fiat Gateway) */
+export const RESERVE_TOKEN_UPI_CONFIG = {
+  upiId: 'ankitgahlyan44@okhdfcbank',
+  payeeName: 'Brotherhood Network',
+  defaultAmount: '100',
+  minAmount: '10',
+  currency: 'INR',
+  notePrefix: 'dINR',
+  deepLinkCapInr: 2000,
+} as const;
+
+export interface ReserveUpiLinks {
+  upiId: string;
+  payeeName: string;
+  amountStr: string;
+  minAmount: string;
+  currency: string;
+  notePrefix: string;
+  note: string;
+  txRef: string;
+  isOverDeepLinkCap: boolean;
+  /** Standard UPI deep link: upi://pay?... (BHIM & all UPI apps) */
+  bhimOrOthersUrl: string;
+  /** Google Pay deep link: tez://upi/pay?... */
+  gPayUrl: string;
+  /** PhonePe deep link: phonepe://pay?... */
+  phonePeUrl: string;
+  /** Paytm deep link: paytmmp://pay?... */
+  paytmUrl: string;
+  /** Standard NPCI QR payload (mode=02) for scanning from another device */
+  qrUpiUrl: string;
+}
+
+/**
+ * Builds NPCI-compliant UPI deep links (`upi://pay`, `tez://upi/pay`, etc.)
+ * with embedded TON wallet identification in `tn` (Transaction Note, <= 80 chars)
+ * and a unique `tr` (Transaction Reference ID, <= 35 alphanumeric chars).
+ */
+export function buildReserveUpiLinks(params: {
+  amountInr?: string | number;
+  walletAddress?: string | null;
+  referenceSeed?: string;
+}): ReserveUpiLinks {
+  const {
+    upiId,
+    payeeName,
+    defaultAmount,
+    minAmount,
+    currency,
+    notePrefix,
+    deepLinkCapInr,
+  } = RESERVE_TOKEN_UPI_CONFIG;
+
+  const rawNum =
+    typeof params.amountInr === 'number'
+      ? params.amountInr
+      : parseFloat(String(params.amountInr ?? '').trim());
+  const validNum =
+    Number.isFinite(rawNum) && rawNum >= 0.01
+      ? rawNum
+      : parseFloat(defaultAmount);
+
+  // Format cleanly: integer if whole, otherwise up to 2 decimals
+  const amountStr = Number.isInteger(validNum)
+    ? String(validNum)
+    : validNum.toFixed(2).replace(/\.?0+$/, '');
+
+  const cleanWallet = (params.walletAddress ?? '').trim();
+  // NPCI spec: tn max 80 chars. "dAd " (4 chars) + 48-char TON address = 52 chars.
+  const note = cleanWallet
+    ? `${notePrefix} ${cleanWallet}`.slice(0, 80)
+    : notePrefix;
+
+  // NPCI spec: tr max 35 alphanumeric chars
+  const addrSuffix = cleanWallet
+    ? cleanWallet
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(-8)
+        .toUpperCase()
+    : 'ANON';
+  const seed = (params.referenceSeed ?? Date.now().toString(36))
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase()
+    .slice(-10);
+  const txRef = `BRO${addrSuffix}${seed}`.slice(0, 35);
+
+  const baseQuery =
+    `pa=${upiId}` +
+    `&pn=${encodeURIComponent(payeeName)}` +
+    `&am=${encodeURIComponent(amountStr)}` +
+    `&mam=${encodeURIComponent(minAmount)}` +
+    `&cu=${encodeURIComponent(currency)}` +
+    `&tr=${encodeURIComponent(txRef)}` +
+    `&tn=${encodeURIComponent(note)}`;
+
+  return {
+    upiId,
+    payeeName,
+    amountStr,
+    minAmount,
+    currency,
+    notePrefix,
+    note,
+    txRef,
+    isOverDeepLinkCap: validNum > deepLinkCapInr,
+    bhimOrOthersUrl: `upi://pay?${baseQuery}`,
+    gPayUrl: `tez://upi/pay?${baseQuery}`,
+    phonePeUrl: `phonepe://pay?${baseQuery}`,
+    paytmUrl: `paytmmp://pay?${baseQuery}`,
+    qrUpiUrl: `upi://pay?${baseQuery}&mode=02`,
+  };
+}
 
 /**
  * Normalizes on-chain uint16 multiplier (scaled by 1000, where 1000 = 1.000x)

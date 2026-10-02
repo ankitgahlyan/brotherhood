@@ -51,7 +51,11 @@ fun onInternalMessage(in: InMessage) {
         }
 
         FillUp => {
-            // Top up balance.
+            var storage = CollectionStorage.load();
+            if (storage.deploymentTime == 0 && msg.queryId > 0) {
+                storage.deploymentTime = blockchain.now();
+                storage.save();
+            }
         }
 
         MintDomainFor => {

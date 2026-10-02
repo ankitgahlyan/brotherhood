@@ -9,7 +9,7 @@
 // ----------------------------------------------------------------------------
 
 // Brotherhood .bro DNS Collection & Resolver (from deploy-bro.tolk)
-const DEPLOYED_BRO_COLLECTION_RESOLVER: address = address("kQAS7LSASDw_3pv1EpI_qmOtRAQu2TyQhvxyJJmr4GWHlDJe")
+const DEPLOYED_BRO_COLLECTION_RESOLVER: address = address("kQDqjJ7tPgsD3_s0v_PLzyLKUe1pu-rtOQyk6Tf8NfdgOlli")
 const DEPLOYED_BRO_TREASURY_ADDRESS: address = address("kQCSUhA50ynSi1hxR9KrTLOCOk89iVGHG9wKS_1Agqi-OQF6")
 
 // DAO Proxy address (from deploy-fi.tolk)
