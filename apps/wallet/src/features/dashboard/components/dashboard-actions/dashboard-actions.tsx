@@ -28,7 +28,10 @@ export const DashboardActions: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        className="no-swipe touch-pan-x flex items-stretch gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-swipe-ignore="true"
+      >
         <DashboardActionButton
           icon={<ArrowUpRight className="w-5 h-5" strokeWidth={2.5} />}
           iconContainerClassName="jewel-btn-send"

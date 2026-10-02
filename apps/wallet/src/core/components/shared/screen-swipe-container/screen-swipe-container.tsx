@@ -7,8 +7,21 @@
  */
 
 import React, { useRef, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { useSettingsModal } from '@/core/lib/settings-modal-state';
+import { ECOSYSTEM_NAV_ITEMS } from '../bottom-nav';
+import { PredictiveSwipeOverlay } from '../predictive-swipe-overlay';
+import {
+  createSwipeKinematicState,
+  getActiveSwipePreview,
+  setActiveSwipePreview,
+  shouldIgnoreSwipeStart,
+  SWIPE_COMMIT_DISTANCE_PX,
+  updateSwipeKinematics,
+  useActiveSwipePreview,
+  type SwipeKinematicState,
+} from '@/core/lib/swipe-gesture-store';
 
 export const ECOSYSTEM_SWIPE_ROUTES = [
   '/wallet',
@@ -26,9 +39,29 @@ const SUB_TAB_ROUTES = [
   '/city-network',
   '/dao',
   '/dns',
+  '/staking',
 ];
 
-const SWIPE_THRESHOLD_PX = 50;
+const DRILL_DOWN_BACK_ROUTES: Record<string, { path: string; label: string }> =
+  {
+    '/wallet/nft': { path: '/wallet', label: 'Wallet' },
+    '/wallet/assets': { path: '/wallet', label: 'Wallet' },
+    '/wallet/history': { path: '/wallet', label: 'Wallet' },
+    '/send': { path: '/wallet', label: 'Wallet' },
+    '/swap': { path: '/wallet', label: 'Wallet' },
+    '/settings': { path: '/wallet', label: 'Wallet' },
+  };
+
+export function getEcosystemRouteMeta(routePath: string) {
+  return (
+    ECOSYSTEM_NAV_ITEMS.find((item) => item.path === routePath) ?? {
+      id: routePath.replace('/', ''),
+      label: routePath.replace('/', '') || 'Wallet',
+      path: routePath,
+      icon: undefined,
+    }
+  );
+}
 
 interface ScreenSwipeContainerProps {
   children: React.ReactNode;
@@ -40,13 +73,12 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [isSettingsOpen] = useSettingsModal();
+  const activePreview = useActiveSwipePreview();
 
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const startXRef = useRef<number | null>(null);
-  const startYRef = useRef<number | null>(null);
-  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+  const kinematicsRef = useRef<SwipeKinematicState | null>(null);
   const isIgnoredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -54,69 +86,127 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     pathname.startsWith(route),
   );
 
+  const drillDownBackTarget = DRILL_DOWN_BACK_ROUTES[pathname] ?? null;
+
   const getActiveTabIndex = () => {
-    if (pathname === '/' || pathname.startsWith('/wallet')) return 0;
+    if (pathname === '/' || pathname === '/wallet') return 0;
     if (pathname.startsWith('/brotherhood')) return 1;
     if (pathname.startsWith('/personal-jetton')) return 2;
     if (pathname.startsWith('/city-network')) return 3;
     if (pathname.startsWith('/dao')) return 4;
     if (pathname.startsWith('/lottery')) return 5;
+    if (pathname.startsWith('/dns')) return 6;
     return -1;
   };
 
+  const resolveTargetForDirection = (direction: 'next' | 'prev') => {
+    if (drillDownBackTarget) {
+      // On drill-down screens, only swipe-right ('prev' = left-to-right finger motion) navigates back
+      if (direction === 'prev') {
+        return {
+          scope: 'back' as const,
+          fromId: pathname,
+          toId: drillDownBackTarget.path,
+          toLabel: drillDownBackTarget.label,
+          toSubLabel: 'Navigate Back',
+          toIcon: ArrowLeft,
+          targetPath: drillDownBackTarget.path,
+        };
+      }
+      return null;
+    }
+
+    const currentIdx = getActiveTabIndex();
+    if (currentIdx === -1) return null;
+
+    const total = ECOSYSTEM_SWIPE_ROUTES.length;
+    const targetIdx =
+      direction === 'next'
+        ? (currentIdx + 1) % total
+        : (currentIdx - 1 + total) % total;
+
+    const currentRoute = ECOSYSTEM_SWIPE_ROUTES[currentIdx];
+    const targetRoute = ECOSYSTEM_SWIPE_ROUTES[targetIdx];
+    const meta = getEcosystemRouteMeta(targetRoute);
+
+    return {
+      scope: 'screen' as const,
+      fromId: currentRoute,
+      toId: targetRoute,
+      toLabel: meta.label,
+      toSubLabel: direction === 'next' ? 'Next Screen' : 'Prev Screen',
+      toIcon: meta.icon,
+      targetPath: targetRoute,
+    };
+  };
+
   const onTouchStart = (e: React.TouchEvent) => {
-    // If settings modal is open or the active screen has sub-tabs, don't trigger main ecosystem route swipes
     if (isSettingsOpen || isSubTabScreen) {
       isIgnoredRef.current = true;
       return;
     }
 
     const target = e.target as HTMLElement | null;
-    if (
-      target?.closest('[data-swipe-ignore="true"]') ||
-      target?.closest('.no-swipe') ||
-      target?.closest('nav') ||
-      target?.closest('[aria-label="Bottom Navigation"]') ||
-      target?.closest('.wallet-card-carousel') ||
-      target?.closest('[role="dialog"]')
-    ) {
+    if (shouldIgnoreSwipeStart(target)) {
       isIgnoredRef.current = true;
       return;
     }
 
     isIgnoredRef.current = false;
-    startXRef.current = e.touches[0].clientX;
-    startYRef.current = e.touches[0].clientY;
-    isHorizontalSwipeRef.current = null;
+    kinematicsRef.current = createSwipeKinematicState(
+      e.touches[0].clientX,
+      e.touches[0].clientY,
+    );
     setIsDragging(true);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (
-      isIgnoredRef.current ||
-      startXRef.current === null ||
-      startYRef.current === null
-    ) {
+    if (isIgnoredRef.current || !kinematicsRef.current) {
       return;
     }
 
-    const clientX = e.touches[0].clientX;
-    const clientY = e.touches[0].clientY;
-    const diffX = clientX - startXRef.current;
-    const diffY = clientY - startYRef.current;
+    const step = updateSwipeKinematics(
+      kinematicsRef.current,
+      e.touches[0].clientX,
+      e.touches[0].clientY,
+      SWIPE_COMMIT_DISTANCE_PX,
+    );
 
-    if (isHorizontalSwipeRef.current === null) {
-      if (Math.abs(diffX) > 6 || Math.abs(diffY) > 6) {
-        isHorizontalSwipeRef.current = Math.abs(diffX) > Math.abs(diffY) * 1.1;
-      }
+    if (step.isHorizontal === false) {
+      isIgnoredRef.current = true;
+      setDragOffset(0);
+      setIsDragging(false);
+      setActiveSwipePreview(null);
+      return;
     }
 
-    if (isHorizontalSwipeRef.current) {
+    if (step.isHorizontal) {
+      const targetInfo = resolveTargetForDirection(step.direction);
+      if (!targetInfo) {
+        setDragOffset(0);
+        setActiveSwipePreview(null);
+        return;
+      }
+
+      setActiveSwipePreview({
+        scope: targetInfo.scope,
+        direction: step.direction,
+        fromId: targetInfo.fromId,
+        toId: targetInfo.toId,
+        toLabel: targetInfo.toLabel,
+        toSubLabel: targetInfo.toSubLabel,
+        toIcon: targetInfo.toIcon,
+        progress: step.progress,
+        dragOffset: step.dragOffset,
+        isArmed: step.isArmed,
+        isCanceled: step.isCanceled,
+      });
+
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
       }
       rafRef.current = requestAnimationFrame(() => {
-        setDragOffset(diffX * 0.45);
+        setDragOffset(step.dragOffset);
         rafRef.current = null;
       });
     }
@@ -127,60 +217,57 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (isIgnoredRef.current || !isDragging) {
-      setDragOffset(0);
-      setIsDragging(false);
-      startXRef.current = null;
-      startYRef.current = null;
-      isHorizontalSwipeRef.current = null;
+
+    const kin = kinematicsRef.current;
+    kinematicsRef.current = null;
+
+    const preview = getActiveSwipePreview();
+    setActiveSwipePreview(null);
+    setDragOffset(0);
+    setIsDragging(false);
+
+    if (isIgnoredRef.current || !kin || !kin.isHorizontal) {
       return;
     }
 
-    setIsDragging(false);
+    const direction: 'next' | 'prev' = kin.swipeSign < 0 ? 'next' : 'prev';
+    const isReverseFlick =
+      kin.peakAbsX > 20 && kin.velocityX * kin.swipeSign < -0.18;
 
-    if (
-      isHorizontalSwipeRef.current &&
-      Math.abs(dragOffset) > SWIPE_THRESHOLD_PX * 0.4
-    ) {
-      const currentIdx = getActiveTabIndex();
-      if (currentIdx !== -1) {
-        const total = ECOSYSTEM_SWIPE_ROUTES.length;
-        if (dragOffset < 0) {
-          // Swipe left -> Next tab (endless loop)
-          const nextIdx = (currentIdx + 1) % total;
-          navigate(ECOSYSTEM_SWIPE_ROUTES[nextIdx]);
-        } else if (dragOffset > 0) {
-          // Swipe right -> Prev tab (endless loop)
-          const prevIdx = (currentIdx - 1 + total) % total;
-          navigate(ECOSYSTEM_SWIPE_ROUTES[prevIdx]);
-        }
+    if (preview && preview.isArmed && !preview.isCanceled && !isReverseFlick) {
+      const targetInfo = resolveTargetForDirection(direction);
+      if (targetInfo) {
+        navigate(targetInfo.targetPath);
       }
     }
-
-    setDragOffset(0);
-    startXRef.current = null;
-    startYRef.current = null;
-    isHorizontalSwipeRef.current = null;
   };
 
   return (
     <div
-      className="screen-swipe-container w-full min-h-screen flex flex-col touch-pan-y"
+      className="screen-swipe-container relative w-full min-h-screen flex flex-col touch-pan-y overflow-x-clip"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
-      style={{
-        transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
-        opacity: dragOffset
-          ? Math.max(0.5, 1 - Math.abs(dragOffset) / 300)
-          : undefined,
-        transition: isDragging
-          ? 'none'
-          : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms ease-out',
-      }}
     >
-      {children}
+      <div
+        className="w-full flex-1 flex flex-col"
+        style={{
+          transform: dragOffset
+            ? `translate3d(${dragOffset}px, 0, 0)`
+            : undefined,
+          opacity: dragOffset
+            ? Math.max(0.62, 1 - Math.abs(dragOffset) / 340)
+            : undefined,
+          transition: isDragging
+            ? 'none'
+            : 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out',
+        }}
+      >
+        {children}
+      </div>
+
+      <PredictiveSwipeOverlay preview={activePreview} />
     </div>
   );
 };

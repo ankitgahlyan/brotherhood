@@ -57,86 +57,89 @@ export const DashboardAssets: React.FC = () => {
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div
+          role="tablist"
+          aria-label="Dashboard Asset Type"
+          className="flex items-center gap-1.5 bg-secondary/80 p-1 rounded-2xl border border-border/70"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={assetTab === 'tokens'}
+            onClick={() => setAssetTab('tokens')}
+            aria-label="Tokens"
+            title="Tokens"
+            className={`inline-flex items-center justify-center gap-2 min-h-[38px] px-4 py-1.5 rounded-xl text-sm transition-all cursor-pointer active:scale-[0.97] ${
+              assetTab === 'tokens'
+                ? 'bg-card text-foreground shadow-sm font-bold border border-border/80 ring-1 ring-amber-500/20'
+                : 'text-muted-foreground hover:text-foreground font-semibold hover:bg-secondary/60'
+            }`}
+            data-testid="dashboard-tab-tokens"
+          >
+            <Coins
+              className={`w-4 h-4 shrink-0 ${
+                assetTab === 'tokens'
+                  ? 'text-amber-500 stroke-[2.2]'
+                  : 'text-amber-500/75'
+              }`}
+              aria-hidden="true"
+            />
+            {isPictorial ? (
+              <span className="sr-only">Tokens</span>
+            ) : (
+              <span>Tokens</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={assetTab === 'nfts'}
+            onClick={() => {
+              setAssetTab('nfts');
+              if (lastNftsUpdate === 0 && !isLoadingNfts) {
+                void loadUserNfts();
+              }
+            }}
+            aria-label="NFTs"
+            title="NFTs"
+            className={`inline-flex items-center justify-center gap-2 min-h-[38px] px-4 py-1.5 rounded-xl text-sm transition-all cursor-pointer active:scale-[0.97] ${
+              assetTab === 'nfts'
+                ? 'bg-card text-foreground shadow-sm font-bold border border-border/80 ring-1 ring-purple-500/20'
+                : 'text-muted-foreground hover:text-foreground font-semibold hover:bg-secondary/60'
+            }`}
+            data-testid="dashboard-tab-nfts"
+          >
+            <Image
+              className={`w-4 h-4 shrink-0 ${
+                assetTab === 'nfts'
+                  ? 'text-purple-500 stroke-[2.2]'
+                  : 'text-purple-500/75'
+              }`}
+              aria-hidden="true"
+            />
+            {isPictorial ? (
+              <span className="sr-only">NFTs</span>
+            ) : (
+              <span>NFTs</span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() =>
               navigate(assetTab === 'tokens' ? '/wallet/assets' : '/wallet/nft')
             }
-            className="flex items-center gap-1 group cursor-pointer"
+            className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1.5 rounded-xl bg-secondary/80 hover:bg-secondary text-xs font-semibold text-foreground border border-border/60 transition-colors cursor-pointer active:scale-95"
             aria-label="View all assets"
           >
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-1.5">
-              {assetTab === 'tokens' ? (
-                <>
-                  <Coins className="w-4 h-4 text-amber-500" />
-                  <span>Tokens</span>
-                </>
-              ) : (
-                <>
-                  <Image className="w-4 h-4 text-purple-500" />
-                  <span>NFTs</span>
-                </>
-              )}
-            </h2>
-            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <span>All</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
 
-          <div className="flex bg-secondary/80 p-0.5 rounded-lg border border-border/60 text-xs">
-            <button
-              type="button"
-              onClick={() => setAssetTab('tokens')}
-              aria-label="Tokens"
-              title="Tokens"
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
-                assetTab === 'tokens'
-                  ? 'bg-card text-foreground shadow-xs font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              data-testid="dashboard-tab-tokens"
-            >
-              <Coins
-                className="w-3.5 h-3.5 text-amber-500 shrink-0"
-                aria-hidden="true"
-              />
-              {isPictorial ? (
-                <span className="sr-only">Tokens</span>
-              ) : (
-                <span>Tokens</span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAssetTab('nfts');
-                if (lastNftsUpdate === 0 && !isLoadingNfts) {
-                  void loadUserNfts();
-                }
-              }}
-              aria-label="NFTs"
-              title="NFTs"
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
-                assetTab === 'nfts'
-                  ? 'bg-card text-foreground shadow-xs font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              data-testid="dashboard-tab-nfts"
-            >
-              <Image
-                className="w-3.5 h-3.5 text-purple-500 shrink-0"
-                aria-hidden="true"
-              />
-              {isPictorial ? (
-                <span className="sr-only">NFTs</span>
-              ) : (
-                <span>NFTs</span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
           <RefreshButton
             iconOnly
             onRefresh={async () => {
@@ -146,7 +149,7 @@ export const DashboardAssets: React.FC = () => {
                 await refreshNfts();
               }
             }}
-            className="rounded-full bg-secondary p-1"
+            className="rounded-xl bg-secondary/80 border border-border/60 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center"
             title={
               assetTab === 'tokens'
                 ? 'Refresh and discover tokens'
@@ -163,19 +166,19 @@ export const DashboardAssets: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-secondary/80 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95"
               title="Add personal token by minter address"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={() => navigate('/dns')}
-              className="p-1 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-secondary/80 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95"
               title="Register sovereign .bro domain"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </button>
           )}
         </div>

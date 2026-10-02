@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Copy, Zap, Loader2 } from 'lucide-react';
+import { Copy, Zap, Loader2, Wallet } from 'lucide-react';
 import {
   useWallet,
   useWalletKit,
@@ -16,6 +16,13 @@ import {
 } from '@demo/wallet-core';
 
 import { useCountUp } from '@/core/hooks/use-count-up';
+import {
+  createSwipeKinematicState,
+  getActiveSwipePreview,
+  setActiveSwipePreview,
+  updateSwipeKinematics,
+  type SwipeKinematicState,
+} from '@/core/lib/swipe-gesture-store';
 import { assetUrl, findRate, toDecimal } from '@/core/utils';
 import { useFormatAddress } from '@/core/utils/formatters';
 import { isFiJetton } from '@/features/jettons';
@@ -38,7 +45,7 @@ const formatNumberParts = (
 };
 
 const GRAM_DECIMALS = 9;
-const SWIPE_THRESHOLD_PX = 40;
+const SWIPE_THRESHOLD_PX = 52;
 
 export const WalletCardCarousel: React.FC = () => {
   const {
@@ -62,9 +69,7 @@ export const WalletCardCarousel: React.FC = () => {
   const [isSwitchingAnim, setIsSwitchingAnim] = useState(false);
   const [isTogglingDeferred, setIsTogglingDeferred] = useState(false);
 
-  const startXRef = useRef<number | null>(null);
-  const startYRef = useRef<number | null>(null);
-  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+  const kinematicsRef = useRef<SwipeKinematicState | null>(null);
 
   const currentIndex = useMemo(() => {
     const idx = savedWallets.findIndex((w) => w.id === activeWalletId);
@@ -191,55 +196,84 @@ export const WalletCardCarousel: React.FC = () => {
     [savedWallets, activeWalletId, switchWallet],
   );
 
+  const hasMultipleWallets = savedWallets.length > 1;
+
   const onTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
-    if (savedWallets.length <= 1) return;
+    if (!hasMultipleWallets) return;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    startXRef.current = clientX;
-    startYRef.current = clientY;
-    isHorizontalSwipeRef.current = null;
+    kinematicsRef.current = createSwipeKinematicState(clientX, clientY);
     setIsDragging(true);
   };
 
   const onTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
-    if (startXRef.current === null || startYRef.current === null) return;
+    if (!hasMultipleWallets || !kinematicsRef.current) return;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const diffX = clientX - startXRef.current;
-    const diffY = clientY - startYRef.current;
+    const step = updateSwipeKinematics(
+      kinematicsRef.current,
+      clientX,
+      clientY,
+      SWIPE_THRESHOLD_PX,
+    );
 
-    if (isHorizontalSwipeRef.current === null) {
-      if (Math.abs(diffX) > 6 || Math.abs(diffY) > 6) {
-        isHorizontalSwipeRef.current = Math.abs(diffX) > Math.abs(diffY);
-      }
+    if (step.isHorizontal === false) {
+      kinematicsRef.current = null;
+      setDragOffset(0);
+      setIsDragging(false);
+      setActiveSwipePreview(null);
+      return;
     }
 
-    if (isHorizontalSwipeRef.current) {
-      setDragOffset(diffX);
+    if (step.isHorizontal) {
+      const count = savedWallets.length;
+      const targetIndex =
+        step.direction === 'next'
+          ? (currentIndex + 1) % count
+          : (currentIndex - 1 + count) % count;
+      const targetWallet = savedWallets[targetIndex];
+      setDragOffset(step.dragOffset);
+      if (targetWallet) {
+        setActiveSwipePreview({
+          scope: 'wallet',
+          direction: step.direction,
+          fromId: activeWallet?.id ?? 'wallet',
+          toId: targetWallet.id,
+          toLabel: targetWallet.name || `Wallet ${targetIndex + 1}`,
+          toSubLabel: step.direction === 'next' ? 'Next Wallet' : 'Prev Wallet',
+          toIcon: Wallet,
+          progress: step.progress,
+          dragOffset: step.dragOffset,
+          isArmed: step.isArmed,
+          isCanceled: step.isCanceled,
+        });
+      }
     }
   };
 
   const onTouchEnd = () => {
+    const kin = kinematicsRef.current;
+    kinematicsRef.current = null;
+    const preview = getActiveSwipePreview();
+    if (preview?.scope === 'wallet') {
+      setActiveSwipePreview(null);
+    }
+
     if (!isDragging) return;
     setIsDragging(false);
+    setDragOffset(0);
 
-    if (
-      isHorizontalSwipeRef.current &&
-      Math.abs(dragOffset) > SWIPE_THRESHOLD_PX
-    ) {
-      if (dragOffset < 0) {
-        // Swipe left -> next wallet (endless loop)
+    if (!kin || !kin.isHorizontal) return;
+    const isReverseFlick =
+      kin.peakAbsX > 20 && kin.velocityX * kin.swipeSign < -0.18;
+
+    if (preview && preview.isArmed && !preview.isCanceled && !isReverseFlick) {
+      if (kin.swipeSign < 0) {
         void handleSwitchTo(currentIndex + 1);
-      } else if (dragOffset > 0) {
-        // Swipe right -> prev wallet (endless loop)
+      } else if (kin.swipeSign > 0) {
         void handleSwitchTo(currentIndex - 1);
       }
     }
-
-    setDragOffset(0);
-    startXRef.current = null;
-    startYRef.current = null;
-    isHorizontalSwipeRef.current = null;
   };
 
   const animatedFi = useCountUp(fiAmount);
@@ -250,15 +284,15 @@ export const WalletCardCarousel: React.FC = () => {
   return (
     <section
       className="wallet-card-carousel relative flex flex-col items-center p-4 pt-3 pb-4 rounded-3xl bg-linear-to-b from-card/90 via-card/70 to-card/90 border border-border/80 shadow-md backdrop-blur-xl select-none touch-pan-y transition-all overflow-hidden"
-      data-swipe-ignore="true"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchEnd}
-      onMouseDown={onTouchStart}
-      onMouseMove={isDragging ? onTouchMove : undefined}
-      onMouseUp={onTouchEnd}
-      onMouseLeave={onTouchEnd}
+      data-swipe-ignore={hasMultipleWallets ? 'true' : undefined}
+      onTouchStart={hasMultipleWallets ? onTouchStart : undefined}
+      onTouchMove={hasMultipleWallets ? onTouchMove : undefined}
+      onTouchEnd={hasMultipleWallets ? onTouchEnd : undefined}
+      onTouchCancel={hasMultipleWallets ? onTouchEnd : undefined}
+      onMouseDown={hasMultipleWallets ? onTouchStart : undefined}
+      onMouseMove={hasMultipleWallets && isDragging ? onTouchMove : undefined}
+      onMouseUp={hasMultipleWallets ? onTouchEnd : undefined}
+      onMouseLeave={hasMultipleWallets ? onTouchEnd : undefined}
     >
       {/* Ambient Top Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-12 bg-primary/20 rounded-full blur-2xl pointer-events-none" />

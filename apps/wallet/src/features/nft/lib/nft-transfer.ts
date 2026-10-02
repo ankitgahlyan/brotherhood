@@ -6,8 +6,10 @@
  */
 
 import { Address, beginCell, type Cell, toNano } from '@ton/core';
+import { ZERO_ADDRESS } from '@/lib/brotherhood/ton';
 
 export const NFT_TRANSFER_GAS = toNano('0.08');
+export const NFT_DESTROY_GAS = toNano('0.05');
 
 export interface BuildNftTransferOptions {
   queryId?: bigint;
@@ -35,4 +37,22 @@ export function buildNftTransferBody({
     .storeCoins(forwardAmount)
     .storeBit(0) // forwardPayload: inline empty
     .endCell();
+}
+
+/**
+ * Builds a TEP-62 burn message body by transferring NFT ownership to ZERO_ADDRESS.
+ */
+export function buildNftBurnBody({
+  queryId = 0n,
+  responseDestination,
+}: {
+  queryId?: bigint;
+  responseDestination: Address;
+}): Cell {
+  return buildNftTransferBody({
+    queryId,
+    newOwner: ZERO_ADDRESS,
+    responseDestination,
+    forwardAmount: 0n,
+  });
 }

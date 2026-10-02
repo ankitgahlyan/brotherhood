@@ -2541,6 +2541,8 @@ export const BrotherhoodScreen: React.FC = () => {
               className="min-h-0"
               onBoundaryPrev={() => setActiveTab('credit')}
               onBoundaryNext={() => setActiveTab('gold')}
+              boundaryPrevLabel="Credit"
+              boundaryNextLabel="Gold"
               stickyTabBar={
                 <ScrollableTabBar
                   tabs={[

@@ -9,6 +9,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { usePreferences } from '@demo/wallet-core';
+import { useActiveSwipePreview } from '@/core/lib/swipe-gesture-store';
 import {
   Wallet,
   Coins,
@@ -97,6 +98,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
   const navigate = useNavigate();
   const { viewMode } = usePreferences();
   const isPictorial = viewMode === 'icons_only';
+  const activePreview = useActiveSwipePreview();
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -139,6 +141,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
       >
         {ECOSYSTEM_NAV_ITEMS.map((item) => {
           const isActive = getIsActive(item);
+          const isSwipeTarget =
+            (activePreview?.scope === 'screen' ||
+              activePreview?.scope === 'back') &&
+            activePreview.toId === item.path;
+          const swipeProgress = isSwipeTarget ? activePreview.progress : 0;
+          const isTargetArmed =
+            isSwipeTarget && activePreview.isArmed && !activePreview.isCanceled;
+          const isTargetCanceled = isSwipeTarget && activePreview.isCanceled;
           const Icon = item.icon;
 
           if (isPictorial) {
@@ -148,29 +158,49 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 ref={isActive ? activeBtnRef : null}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`flex-1 min-w-[48px] min-h-[44px] shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`relative flex-1 min-w-[48px] min-h-[44px] shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
                     ? `${item.activeColor || 'text-primary'} scale-105`
-                    : 'text-muted-foreground hover:text-foreground active:scale-95'
+                    : isTargetArmed
+                      ? 'text-emerald-400 scale-105'
+                      : isSwipeTarget
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground active:scale-95'
                 }`}
                 aria-label={item.label}
                 title={item.label}
                 data-testid={`bottom-nav-${item.id}`}
               >
                 <div
-                  className={`relative flex items-center justify-center w-10 h-8 rounded-full transition-all duration-200 ${
+                  className={`relative flex items-center justify-center w-10 h-8 rounded-full transition-all duration-150 ${
                     isActive
                       ? item.activeBg || 'bg-primary/15'
-                      : 'bg-transparent'
+                      : isTargetArmed
+                        ? 'bg-emerald-500/25 ring-1 ring-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.45)]'
+                        : isSwipeTarget && !isTargetCanceled
+                          ? 'bg-primary/15 ring-1 ring-primary/40'
+                          : 'bg-transparent'
                   }`}
                 >
                   <Icon
                     aria-hidden="true"
                     className={`w-5.5 h-5.5 transition-transform duration-200 ${
-                      isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
+                      isActive || isTargetArmed
+                        ? 'scale-110 stroke-[2.2]'
+                        : 'stroke-[1.8]'
                     }`}
                   />
                 </div>
+                {isSwipeTarget && !isTargetCanceled && (
+                  <span
+                    className={`absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full origin-left ${
+                      isTargetArmed ? 'bg-emerald-400' : 'bg-primary'
+                    }`}
+                    style={{
+                      transform: `scaleX(${Math.max(0.15, swipeProgress)})`,
+                    }}
+                  />
+                )}
                 <span className="sr-only">{item.label}</span>
               </button>
             );
@@ -182,33 +212,57 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
               ref={isActive ? activeBtnRef : null}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`flex-1 min-w-[52px] min-h-[44px] shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+              className={`relative flex-1 min-w-[52px] min-h-[44px] shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'text-primary scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground active:scale-95'
+                  : isTargetArmed
+                    ? 'text-emerald-400 scale-[1.04]'
+                    : isSwipeTarget && !isTargetCanceled
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground active:scale-95'
               }`}
               aria-label={item.label}
               data-testid={`bottom-nav-${item.id}`}
             >
               <div
-                className={`relative flex items-center justify-center w-9 h-7 rounded-full transition-all duration-200 ${
-                  isActive ? 'bg-primary/15' : 'bg-transparent'
+                className={`relative flex items-center justify-center w-9 h-7 rounded-full transition-all duration-150 ${
+                  isActive
+                    ? 'bg-primary/15'
+                    : isTargetArmed
+                      ? 'bg-emerald-500/25 ring-1 ring-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.45)]'
+                      : isSwipeTarget && !isTargetCanceled
+                        ? 'bg-primary/15 ring-1 ring-primary/40'
+                        : 'bg-transparent'
                 }`}
               >
                 <Icon
                   aria-hidden="true"
                   className={`w-4.5 h-4.5 transition-transform duration-200 ${
-                    isActive ? 'scale-110 stroke-[2.2]' : 'stroke-[1.8]'
+                    isActive || isTargetArmed
+                      ? 'scale-110 stroke-[2.2]'
+                      : 'stroke-[1.8]'
                   }`}
                 />
               </div>
               <span
                 className={`text-[10px] tracking-tight leading-tight truncate w-full text-center transition-all ${
-                  isActive ? 'font-bold text-foreground' : 'font-medium'
+                  isActive || isTargetArmed
+                    ? 'font-bold text-foreground'
+                    : 'font-medium'
                 }`}
               >
                 {item.label}
               </span>
+              {isSwipeTarget && !isTargetCanceled && (
+                <span
+                  className={`absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full origin-left ${
+                    isTargetArmed ? 'bg-emerald-400' : 'bg-primary'
+                  }`}
+                  style={{
+                    transform: `scaleX(${Math.max(0.15, swipeProgress)})`,
+                  }}
+                />
+              )}
             </button>
           );
         })}
