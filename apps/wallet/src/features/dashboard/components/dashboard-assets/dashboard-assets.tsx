@@ -28,8 +28,7 @@ export const DashboardAssets: React.FC = () => {
   const navigate = useNavigate();
   const { tonRow, jettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
-  const { loadUserNfts, refreshNfts, lastNftsUpdate, isLoadingNfts } =
-    useNfts();
+  const { refreshNfts } = useNfts();
 
   const { viewMode } = usePreferences();
   const isPictorial = viewMode === 'icons_only';
@@ -98,9 +97,6 @@ export const DashboardAssets: React.FC = () => {
             aria-selected={assetTab === 'nfts'}
             onClick={() => {
               setAssetTab('nfts');
-              if (lastNftsUpdate === 0 && !isLoadingNfts) {
-                void loadUserNfts();
-              }
             }}
             aria-label="NFTs"
             title="NFTs"
@@ -146,6 +142,12 @@ export const DashboardAssets: React.FC = () => {
               if (assetTab === 'tokens') {
                 await loadUserJettons();
               } else {
+                const { clearMyDomainsSessionCache } =
+                  await import('@/features/dns/hooks/use-my-domains');
+                const { clearAccountStatesCache } =
+                  await import('@/lib/brotherhood/account-state-hydrator');
+                clearMyDomainsSessionCache();
+                clearAccountStatesCache();
                 await refreshNfts();
               }
             }}

@@ -34,7 +34,7 @@ interface SenderFieldProps {
 
 export const SenderField: React.FC<SenderFieldProps> = ({
   mode,
-  onModeChange,
+  onModeChange: _onModeChange,
   granterInput,
   onGranterInputChange,
   resolvedGranterAddress,
@@ -99,33 +99,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   return (
     <Input.Container error={Boolean(error)}>
       <Input.Header>
-        <Input.Title>Sender</Input.Title>
-        <div className="flex gap-1.5 p-0.5 bg-secondary rounded-lg text-xs font-medium border border-border/50">
-          <button
-            type="button"
-            onClick={() => onModeChange('self')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              mode === 'self'
-                ? 'bg-card shadow-xs text-foreground font-semibold border border-border/60'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            data-testid="sender-mode-self"
-          >
-            Self
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange('other')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              mode === 'other'
-                ? 'bg-card shadow-xs text-foreground font-semibold border border-border/60'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            data-testid="sender-mode-other"
-          >
-            Spend Allowance
-          </button>
-        </div>
+        <Input.Title>Allowance Granter</Input.Title>
       </Input.Header>
 
       {mode === 'self' ? (

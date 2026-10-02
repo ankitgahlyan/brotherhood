@@ -58,7 +58,7 @@ describe('TxButton component', () => {
     expect(html).not.toContain('Hold to Send TON');
   });
 
-  it('renders HoldToSignButton with prefixed label when both holdToSign and showFastSend are true', () => {
+  it('renders HoldToSignButton with concise action name when both holdToSign and showFastSend are true', () => {
     mockAuthState = {
       holdToSign: true,
       showFastSend: true,
@@ -68,10 +68,11 @@ describe('TxButton component', () => {
       <TxButton testId="send-btn">Send TON</TxButton>,
     );
 
-    expect(html).toContain('Hold to Send TON');
+    expect(html).toContain('Send TON');
+    expect(html).not.toContain('Hold to Send TON');
   });
 
-  it('avoids double prefixing if label already starts with Hold to', () => {
+  it('strips legacy Hold to prefix if passed in actionLabel', () => {
     mockAuthState = {
       holdToSign: true,
       showFastSend: true,
@@ -83,7 +84,7 @@ describe('TxButton component', () => {
       </TxButton>,
     );
 
-    expect(html).toContain('Hold to Claim');
-    expect(html).not.toContain('Hold to Hold to');
+    expect(html).toContain('Claim');
+    expect(html).not.toContain('Hold to Claim');
   });
 });

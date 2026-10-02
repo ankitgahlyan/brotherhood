@@ -1,5 +1,3 @@
-import "@stdlib/strings"
-
 import "@acton/build"
 import "@acton/env"
 import "@acton/io"
@@ -80,7 +78,7 @@ fun main() {
     // DnsCollection records blockchain.now() on-chain upon receiving FillUp { queryId: 1 }.
     val collection = DnsCollection.fromStorage(CollectionStorage {
         treasuryAddress: deployer.address,
-        content: collectionUri.prefixWith01().toCell(),
+        content: beginCell().storeUint(1, 8).storeSlice(collectionUri.beginParse()).endCell(),
         nftItemCode: build("DnsItem"),
         deploymentTime: 0,
         fiMinterAddress: DEPLOYED_FI_MINTER_ADDRESS,

@@ -67,11 +67,18 @@ export function cleanTelegramUsername(username: string): string {
 /** Construct a canonical Telegram profile deep-link URL (e.g. https://t.me/username). */
 export function getTelegramProfileUrl(username: string): string {
   const clean = cleanTelegramUsername(username);
-  return clean ? `https://t.me/${clean}` : 'https://t.me';
+  if (!clean || clean.toLowerCase().endsWith('.bro') || clean.includes('.')) {
+    return 'https://t.me';
+  }
+  return `https://t.me/${clean}`;
 }
 
 /** Open a user's Telegram profile/chat via native Telegram Mini App deeplink or browser. */
 export function openTelegramProfile(username: string): void {
-  const url = getTelegramProfileUrl(username);
+  const clean = cleanTelegramUsername(username);
+  if (!clean || clean.toLowerCase().endsWith('.bro') || clean.includes('.')) {
+    return;
+  }
+  const url = getTelegramProfileUrl(clean);
   openTelegramLink(url);
 }

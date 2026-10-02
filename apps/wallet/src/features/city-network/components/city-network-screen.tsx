@@ -42,7 +42,7 @@ import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
 import {
   saveUsernameAddressMappingsBatch,
-  getCachedUsername,
+  getOnChainCachedUsername,
   getEffectiveUsername,
 } from '@/core/lib/contact-storage';
 import { SyncStatusButton } from '@/features/dashboard/components/sync-status-button';
@@ -238,6 +238,9 @@ export const CityNetworkScreen: React.FC = () => {
     for (const [addr, info] of entries) {
       if (info?.username) {
         batch.push({ username: info.username, address: addr });
+        if (info.ownerAddress) {
+          batch.push({ username: info.username, address: info.ownerAddress });
+        }
       }
     }
     if (batch.length > 0) {
@@ -261,8 +264,8 @@ export const CityNetworkScreen: React.FC = () => {
         /* ignore */
       }
       if (!p?.username) {
-        const cached = getCachedUsername(memberAddr, network);
-        if (cached) {
+        const cached = getOnChainCachedUsername(memberAddr, network);
+        if (cached && !cached.toLowerCase().endsWith('.bro')) {
           return { username: cached, h3Cell: '', country: 0 };
         }
       }

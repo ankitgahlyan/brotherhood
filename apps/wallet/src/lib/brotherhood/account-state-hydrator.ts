@@ -140,17 +140,35 @@ export function toCanonicalAddressString(addr: Address | string): string {
   }
 }
 
+export const DEFAULT_ACCOUNT_STATES_TTL_MS = 5 * 60 * 1000; // 5-minute session/TTL cache
+
+interface CachedAccountStateEntry {
+  account: RawAccountStateItem;
+  rawAddressKey?: string;
+  addressBook?: ToncenterAddressBookItem;
+  metadata?: ToncenterMetadataItem;
+  timestamp: number;
+}
+
+const rawAccountStatesCache = new Map<string, CachedAccountStateEntry>();
+
+export function clearAccountStatesCache(): void {
+  rawAccountStatesCache.clear();
+}
+
 /**
  * Fetch raw account states from Toncenter v3 /api/v3/accountStates
  * Chunked into batches of up to 30 addresses per GET request, fetched in parallel.
  * Format-insensitively deduplicates all input addresses to ensure each on-chain contract
  * is requested at most once per chunk with no repeated address query params.
+ * Uses an in-memory TTL cache per session; pass `{ force: true }` to bypass cache on hard refresh.
  * Immediately strips and deletes code_boc to free up memory and prevent main-thread GC pressure.
  */
 export async function batchFetchAccountStates(
   addresses: (Address | string)[],
   net: Network = defaultNetwork,
   chunkSize = 30,
+  options?: { force?: boolean; ttlMs?: number },
 ): Promise<BatchFetchAccountStatesResult> {
   const result: BatchFetchAccountStatesResult = {
     accounts: [],
@@ -164,6 +182,37 @@ export async function batchFetchAccountStates(
     new Set(addresses.map(toCanonicalAddressString).filter(Boolean)),
   );
 
+  const now = Date.now();
+  const ttlMs = options?.ttlMs ?? DEFAULT_ACCOUNT_STATES_TTL_MS;
+  const uncachedAddresses: string[] = [];
+
+  if (!options?.force) {
+    for (const addr of canonicalAddresses) {
+      const cacheKey = `${net}:${addr}`;
+      const cached = rawAccountStatesCache.get(cacheKey);
+      if (cached && now - cached.timestamp < ttlMs) {
+        result.accounts.push(cached.account);
+        const rawKey = cached.rawAddressKey || cached.account.address;
+        if (cached.addressBook) {
+          result.addressBook[rawKey] = cached.addressBook;
+          result.addressBook[addr] = cached.addressBook;
+        }
+        if (cached.metadata) {
+          result.metadata[rawKey] = cached.metadata;
+          result.metadata[addr] = cached.metadata;
+        }
+      } else {
+        uncachedAddresses.push(addr);
+      }
+    }
+  } else {
+    uncachedAddresses.push(...canonicalAddresses);
+  }
+
+  if (uncachedAddresses.length === 0) {
+    return result;
+  }
+
   const base = toncenterV3[net === 'mainnet' ? 'mainnet' : 'testnet'];
   const apiKey = toncenterApiKey(net);
   const headers: Record<string, string> = {};
@@ -172,8 +221,8 @@ export async function batchFetchAccountStates(
   }
 
   const chunks: string[][] = [];
-  for (let i = 0; i < canonicalAddresses.length; i += chunkSize) {
-    chunks.push(canonicalAddresses.slice(i, i + chunkSize));
+  for (let i = 0; i < uncachedAddresses.length; i += chunkSize) {
+    chunks.push(uncachedAddresses.slice(i, i + chunkSize));
   }
 
   const chunkPromises = chunks.map(async (chunk) => {
@@ -218,16 +267,49 @@ export async function batchFetchAccountStates(
   });
 
   const chunkResponses = await Promise.all(chunkPromises);
+  const fetchedAt = Date.now();
+  const returnedCanonicalSet = new Set<string>();
+
   for (const resp of chunkResponses) {
     if (!resp) continue;
-    if (Array.isArray(resp.accounts)) {
-      result.accounts.push(...resp.accounts);
-    }
     if (resp.address_book && typeof resp.address_book === 'object') {
       Object.assign(result.addressBook, resp.address_book);
     }
     if (resp.metadata && typeof resp.metadata === 'object') {
       Object.assign(result.metadata, resp.metadata);
+    }
+    if (Array.isArray(resp.accounts)) {
+      result.accounts.push(...resp.accounts);
+      for (const acc of resp.accounts) {
+        const canonical = toCanonicalAddressString(acc.address);
+        if (canonical) {
+          returnedCanonicalSet.add(canonical);
+          rawAccountStatesCache.set(`${net}:${canonical}`, {
+            account: acc,
+            rawAddressKey: acc.address,
+            addressBook:
+              resp.address_book?.[acc.address] ??
+              resp.address_book?.[canonical],
+            metadata:
+              resp.metadata?.[acc.address] ?? resp.metadata?.[canonical],
+            timestamp: fetchedAt,
+          });
+        }
+      }
+    }
+  }
+
+  // If any requested uncached address was omitted (uninitialized), cache synthetic uninit entry
+  // only when all chunks succeeded
+  if (chunkResponses.every(Boolean)) {
+    for (const addr of uncachedAddresses) {
+      if (!returnedCanonicalSet.has(addr)) {
+        rawAccountStatesCache.set(`${net}:${addr}`, {
+          account: { address: addr, status: 'uninit' },
+          rawAddressKey: addr,
+          timestamp: fetchedAt,
+        });
+      }
     }
   }
 
@@ -327,6 +409,7 @@ export const DEFAULT_HYDRATION_COOLDOWN_MS = 3500;
 
 export function clearHydrationCooldowns(): void {
   hydrationCooldowns.clear();
+  rawAccountStatesCache.clear();
 }
 
 /**
@@ -447,6 +530,10 @@ export function batchHydrateUniversal(
       addressesToFetch,
       net,
       30,
+      {
+        force: options?.force,
+        ttlMs: options?.cooldownMs,
+      },
     );
     const accountMap = new Map<string, RawAccountStateItem>();
 

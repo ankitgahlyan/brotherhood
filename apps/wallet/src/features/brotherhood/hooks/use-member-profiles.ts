@@ -16,6 +16,10 @@ import {
   getContractCache,
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
+import {
+  getOnChainCachedUsername,
+  saveUsernameAddressMapping,
+} from '@/core/lib/contact-storage';
 
 export interface MemberProfileInfo {
   address: string;
@@ -122,10 +126,33 @@ export function useMemberProfiles(
                 outdatedSet.has(addrStr) ||
                 (store && Boolean(store.isCodeHashOutdated));
 
+              const rawProfileUsername = (
+                store?.profile?.ref?.username ?? ''
+              ).trim();
+              if (rawProfileUsername) {
+                saveUsernameAddressMapping(rawProfileUsername, addrStr, net);
+                if (ownerAddress) {
+                  saveUsernameAddressMapping(
+                    rawProfileUsername,
+                    ownerAddress,
+                    net,
+                  );
+                }
+              }
+              const fallbackUsername =
+                rawProfileUsername ||
+                (ownerAddress
+                  ? getOnChainCachedUsername(ownerAddress, net)
+                  : null) ||
+                getOnChainCachedUsername(addrStr, net) ||
+                '';
+
               results[addrStr] = {
                 address: addrStr,
                 ownerAddress,
-                username: store?.profile?.ref?.username ?? '',
+                username: fallbackUsername.toLowerCase().endsWith('.bro')
+                  ? ''
+                  : fallbackUsername,
                 h3Cell: store?.profile?.ref?.h3Cell ?? '',
                 country: store?.profile?.ref?.country
                   ? Number(store.profile.ref.country)

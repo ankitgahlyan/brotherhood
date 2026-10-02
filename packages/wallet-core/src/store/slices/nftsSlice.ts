@@ -15,6 +15,21 @@ import type { SetState, NftsSliceCreator } from '../../types/store';
 
 const log = createComponentLogger('NftsSlice');
 
+const NFTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5-minute session TTL cache
+
+interface CachedNftsEntry {
+  nfts: NFT[];
+  timestamp: number;
+  limit: number;
+}
+
+const nftsSessionCache = new Map<string, CachedNftsEntry>();
+const inFlightNftRequests = new Map<string, Promise<NFTsResponse>>();
+
+function getAddressCacheKey(address: string): string {
+  return address.trim().toLowerCase();
+}
+
 export interface NftsState {
   userNfts: NftItem[];
   nftsByAddress: Record<string, NftItem[]>;
@@ -52,6 +67,31 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       return;
     }
 
+    const cacheKey = getAddressCacheKey(address);
+    const now = Date.now();
+    const cached = nftsSessionCache.get(cacheKey);
+    if (cached && now - cached.timestamp < NFTS_CACHE_TTL_MS) {
+      set((s) => {
+        const targetAddress =
+          userAddress || s.walletManagement.address || address;
+        s.nfts.nftsByAddress[targetAddress] = cached.nfts;
+
+        const currentActiveAddress = s.walletManagement.address;
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, targetAddress)
+        ) {
+          s.nfts.userNfts = cached.nfts;
+          s.nfts.lastNftsUpdate = cached.timestamp;
+          s.nfts.hasMore = cached.nfts.length === cached.limit;
+          s.nfts.offset = cached.nfts.length;
+        }
+        s.nfts.isLoadingNfts = false;
+        s.nfts.error = null;
+      });
+      return;
+    }
+
     set((state) => {
       state.nfts.isLoadingNfts = true;
       state.nfts.error = null;
@@ -66,8 +106,24 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
         throw new Error('Wallet not found');
       }
 
-      const result: NFTsResponse = await wallet.getNfts({
-        pagination: { limit, offset: 0 },
+      let reqPromise = inFlightNftRequests.get(cacheKey);
+      if (!reqPromise) {
+        reqPromise = wallet
+          .getNfts({
+            pagination: { limit, offset: 0 },
+          })
+          .finally(() => {
+            inFlightNftRequests.delete(cacheKey);
+          });
+        inFlightNftRequests.set(cacheKey, reqPromise);
+      }
+
+      const result: NFTsResponse = await reqPromise;
+      const fetchedAt = Date.now();
+      nftsSessionCache.set(cacheKey, {
+        nfts: result.nfts,
+        timestamp: fetchedAt,
+        limit,
       });
 
       set((s) => {
@@ -81,7 +137,7 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
           compareAddress(currentActiveAddress, targetAddress)
         ) {
           s.nfts.userNfts = result.nfts;
-          s.nfts.lastNftsUpdate = Date.now();
+          s.nfts.lastNftsUpdate = fetchedAt;
           s.nfts.hasMore = result.nfts.length === limit;
           s.nfts.offset = result.nfts.length;
         }
@@ -117,6 +173,10 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       return;
     }
 
+    const cacheKey = getAddressCacheKey(address);
+    // Hard refresh bypasses TTL cache
+    nftsSessionCache.delete(cacheKey);
+
     set((state) => {
       state.nfts.isRefreshing = true;
       state.nfts.error = null;
@@ -134,6 +194,12 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       const result: NFTsResponse = await wallet.getNfts({
         pagination: { limit: 20, offset: 0 },
       });
+      const fetchedAt = Date.now();
+      nftsSessionCache.set(cacheKey, {
+        nfts: result.nfts,
+        timestamp: fetchedAt,
+        limit: 20,
+      });
 
       set((s) => {
         const targetAddress =
@@ -146,7 +212,7 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
           compareAddress(currentActiveAddress, targetAddress)
         ) {
           s.nfts.userNfts = result.nfts;
-          s.nfts.lastNftsUpdate = Date.now();
+          s.nfts.lastNftsUpdate = fetchedAt;
           s.nfts.hasMore = result.nfts.length === 20;
           s.nfts.offset = result.nfts.length;
         }
@@ -242,6 +308,7 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
   },
 
   clearNfts: () => {
+    nftsSessionCache.clear();
     set((state) => {
       state.nfts.userNfts = [];
       state.nfts.nftsByAddress = {};

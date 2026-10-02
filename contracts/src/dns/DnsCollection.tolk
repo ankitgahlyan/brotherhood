@@ -216,7 +216,8 @@ fun hotUpgradeDnsCollectionData(additionalData: cell?) {
         contract.setData(additionalData);
         return;
     }
-    val storage = CollectionStorage.load();
+    var storage = CollectionStorage.load();
+    storage.content = makeBroOffchainContentCell(BRO_DEFAULT_COLLECTION_URI.literalSlice());
     storage.save();
 }
 
@@ -240,6 +241,17 @@ get fun get_nft_address_by_index(index: int): address {
 }
 
 get fun get_nft_content(_index: int, individualNftContent: cell): cell {
+    val cs = individualNftContent.beginParse();
+    if (cs.remainingBitsCount() == BYTE_SIZE && cs.preloadUint(BYTE_SIZE) == 0) {
+        var dnsRecords = (individualNftContent as Cell<DnsRecords>).load();
+        if (!dnsRecords.exists("image".sha256())) {
+            dnsRecords.set("image".sha256(), makeBroDomainImageCell());
+        }
+        if (!dnsRecords.exists("description".sha256())) {
+            dnsRecords.set("description".sha256(), makeBroDomainDescriptionCell());
+        }
+        return dnsRecords.toDnsRecordsCell() as cell;
+    }
     return individualNftContent;
 }
 

@@ -41,7 +41,7 @@ jobs:
         run: acton fmt --check
 
       - name: Linter
-        run: acton check
+        run: acton check --output-format github
 
       - name: Test
         run: acton test

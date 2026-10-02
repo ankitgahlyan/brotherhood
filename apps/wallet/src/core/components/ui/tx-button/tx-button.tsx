@@ -79,9 +79,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
   if (shouldHold) {
     const rawLabel =
       actionLabel || (typeof children === 'string' ? children : 'Sign');
-    const idle = rawLabel.toLowerCase().startsWith('hold to ')
-      ? rawLabel
-      : `Hold to ${rawLabel}`;
+    const idle = rawLabel.replace(/^hold to\s+/i, '');
 
     return (
       <div

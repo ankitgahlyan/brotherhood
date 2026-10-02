@@ -57,6 +57,8 @@ fun onInternalMessage(in: InMessage) {
         val _auctionEndTime = now + duration;
         var initialContent: DnsRecords = [];
         initialContent.set("name".sha256(), makeBroDomainNameCell(initData.domain.beginParse()));
+        initialContent.set("image".sha256(), makeBroDomainImageCell());
+        initialContent.set("description".sha256(), makeBroDomainDescriptionCell());
 
         val isInstant = initData.isInstant;
         val bidAmount = initData.fiAmount > 0 ? initData.fiAmount : in.valueCoins;
@@ -251,6 +253,12 @@ fun onInternalMessage(in: InMessage) {
                 dnsRecords.set(msg.key, msg.value.loadRef());
             } else {
                 dnsRecords.delete(msg.key);
+                if (msg.key == "description".sha256() && storage.getFiMinterAddress() != null) {
+                    dnsRecords.set("description".sha256(), makeBroDomainDescriptionCell());
+                }
+            }
+            if (!dnsRecords.exists("image".sha256()) && storage.getFiMinterAddress() != null) {
+                dnsRecords.set("image".sha256(), makeBroDomainImageCell());
             }
 
             storage.content = dnsRecords.toDnsRecordsCell();
@@ -455,7 +463,18 @@ fun hotUpgradeDnsItemData(additionalData: cell?) {
     }
     val loading = startLoadingDnsItemStorage();
     if (loading.isInitialized()) {
-        val st = loading.parseInitialized();
+        var st = loading.parseInitialized();
+        var dnsRecords = st.content.load();
+        if (!dnsRecords.exists("name".sha256())) {
+            dnsRecords.set("name".sha256(), makeBroDomainNameCell(st.domain.beginParse()));
+        }
+        if (!dnsRecords.exists("image".sha256())) {
+            dnsRecords.set("image".sha256(), makeBroDomainImageCell());
+        }
+        if (!dnsRecords.exists("description".sha256())) {
+            dnsRecords.set("description".sha256(), makeBroDomainDescriptionCell());
+        }
+        st.content = dnsRecords.toDnsRecordsCell();
         st.save();
     }
 }

@@ -10,15 +10,24 @@ import React from 'react';
 import type { NFT } from '@ton/walletkit';
 
 import { FallbackImage } from '@/core/components/ui/fallback-image';
+import { BRO_DEFAULT_IMAGE_URI } from '@/core/lib/dns';
 import { tokenImageUrls } from '@/core/utils';
 
 const getNftImageSources = (nft: NFT): string[] => {
   const img = nft.info?.image;
-  if (!img) return [];
-  return [
-    ...tokenImageUrls(img),
-    ...(img.data ? [`data:image/png;base64,${img.data}`] : []),
-  ];
+  const sources = img
+    ? [
+        ...tokenImageUrls(img),
+        ...(img.data ? [`data:image/png;base64,${img.data}`] : []),
+      ]
+    : [];
+  if (
+    nft.info?.name?.toLowerCase().endsWith('.bro') &&
+    !sources.includes(BRO_DEFAULT_IMAGE_URI)
+  ) {
+    sources.push(BRO_DEFAULT_IMAGE_URI);
+  }
+  return sources;
 };
 
 const getNftName = (

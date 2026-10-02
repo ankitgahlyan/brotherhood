@@ -117,7 +117,7 @@ fun ItemStorageInitialized.unpackAuction(self): (bool, AuctionState) {
             {
                 auctionEndTime: 0,
                 maxBidAmount: 0,
-                maxBidAddress: null,
+                maxBidAddress: createAddressNone() as address,
             },
         );
     } else {

@@ -10,12 +10,10 @@ import { ChevronRight, Globe, Plus } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useNfts, useWallet } from '@demo/wallet-core';
 import type { NFT } from '@ton/walletkit';
-import {
-  useDnsStore,
-  selectOwnedDomains,
-} from '@/features/dns/store/dns-store';
+import { useMyDomains } from '@/features/dns/hooks/use-my-domains';
 import type { Network } from '@/lib/brotherhood/config';
 
+import { mergeAndEnrichBroNfts } from '../../lib/nft-transfer';
 import { NftTile } from '../nft-tile';
 import { NftTransferModal } from '../nft-transfer-modal';
 
@@ -27,47 +25,26 @@ interface NftsCardProps {
 /** Dashboard NFTs preview: a horizontal-scroll strip; renders preview or empty state. */
 export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
-  const {
-    userNfts,
-    formatNftIndex,
-    isLoadingNfts,
-    lastNftsUpdate,
-    loadUserNfts,
-  } = useNfts();
-  const { savedWallets, activeWalletId } = useWallet();
+  const { userNfts, formatNftIndex, isLoadingNfts, loadUserNfts } = useNfts();
+  const { address, savedWallets, activeWalletId } = useWallet();
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
     'testnet') as Network;
 
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null);
 
-  const ownedBroDomains = useDnsStore((s) => selectOwnedDomains(s, network));
+  const { domains: ownedBroDomains } = useMyDomains(network, address);
 
-  // Trigger on-demand load if never fetched
+  // Trigger session-cached load on mount
   useEffect(() => {
-    if (lastNftsUpdate === 0 && !isLoadingNfts) {
-      void loadUserNfts();
-    }
-  }, [lastNftsUpdate, isLoadingNfts, loadUserNfts]);
+    void loadUserNfts();
+  }, [loadUserNfts]);
 
-  // Unify standard indexer NFTs with local .bro domains
-  const allNfts = useMemo<NFT[]>(() => {
-    const existingAddresses = new Set(userNfts.map((n) => n.address));
-    const broNfts: NFT[] = ownedBroDomains
-      .filter((d) => !existingAddresses.has(d.nftAddress))
-      .map((d) => ({
-        address: d.nftAddress,
-        index: d.name,
-        info: {
-          name: `${d.name}.${d.zone}`,
-          image: {
-            url: 'https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-logo.png',
-          },
-          description: `Brotherhood .${d.zone} domain`,
-        },
-      }));
-    return [...userNfts, ...broNfts];
-  }, [userNfts, ownedBroDomains]);
+  // Unify standard indexer NFTs with local .bro domains and enrich missing .bro images
+  const allNfts = useMemo<NFT[]>(
+    () => mergeAndEnrichBroNfts(userNfts, ownedBroDomains),
+    [userNfts, ownedBroDomains],
+  );
 
   const header = (
     <button

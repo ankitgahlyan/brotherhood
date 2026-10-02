@@ -22,7 +22,10 @@ import {
   RESERVATION_PERIOD_SEC,
 } from '@/lib/brotherhood/config';
 import { getTonClient, type Network } from '@/lib/brotherhood/ton';
-import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  batchFetchAccountStates,
+  clearAccountStatesCache,
+} from '@/lib/brotherhood/account-state-hydrator';
 
 export enum DnsCategory {
   DnsNextResolver = 'dns_next_resolver',
@@ -34,8 +37,13 @@ export enum DnsCategory {
   Name = 'name',
 }
 
+export const BRO_DEFAULT_IMAGE_URI =
+  'https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-logo.png';
+export const BRO_DEFAULT_DESCRIPTION = 'Brotherhood .bro Decentralized Domain';
+
 export type SocialPlatform =
   | 'thatsapp'
+  | 'briar'
   | 'telegram'
   | 'facebook'
   | 'twitter'
@@ -52,7 +60,7 @@ export interface DetectedSocialLink {
 
 /**
  * Auto-recognizes whether a stored DNS social link is a ThatsApp/SimpleX address,
- * Telegram, Facebook, X/Twitter, Instagram, GitHub, or generic website/social contact link.
+ * Briar link, Telegram, Facebook, X/Twitter, Instagram, GitHub, or generic website/social contact link.
  */
 export function detectSocialPlatform(
   rawLink?: string,
@@ -66,6 +74,7 @@ export function detectSocialPlatform(
     lower.startsWith('smp://') ||
     lower.startsWith('xftp://') ||
     lower.includes('simplex.chat') ||
+    lower.includes('simplex.im') ||
     lower.includes('thatsapp')
   ) {
     return {
@@ -76,6 +85,25 @@ export function detectSocialPlatform(
         lower.startsWith('http://') ||
         lower.startsWith('https://') ||
         lower.startsWith('simplex:')
+          ? trimmed
+          : undefined,
+    };
+  }
+
+  if (
+    lower.startsWith('briar://') ||
+    lower.startsWith('briar:') ||
+    lower.includes('briarproject.org')
+  ) {
+    return {
+      platform: 'briar',
+      label: 'Briar',
+      icon: '🌿',
+      href:
+        lower.startsWith('briar://') ||
+        lower.startsWith('briar:') ||
+        lower.startsWith('http://') ||
+        lower.startsWith('https://')
           ? trimmed
           : undefined,
     };
@@ -645,7 +673,10 @@ export function parseDnsItemAccountState(
           dnsCategoryToBigInt(DnsCategory.ChannelDescription),
         );
         if (descCell) {
-          channelLink = parseSnakeStringCell(descCell);
+          const parsedDesc = parseSnakeStringCell(descCell);
+          if (parsedDesc && parsedDesc !== BRO_DEFAULT_DESCRIPTION) {
+            channelLink = parsedDesc;
+          }
         }
       }
     } catch {
@@ -916,6 +947,7 @@ export async function resolveAddressByDomain(
  */
 export function clearDomainResolutionCache(): void {
   domainResolutionCache.clear();
+  clearAccountStatesCache();
 }
 
 export const clearDnsCache = clearDomainResolutionCache;

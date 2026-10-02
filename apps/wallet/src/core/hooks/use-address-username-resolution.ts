@@ -429,8 +429,8 @@ export function useAddressUsernameResolution({
         }
       });
 
-      // If already cached in localStorage or L1 ContractCache, skip network call
-      if (effectiveInfo?.onChainName || (effectiveInfo && !isCustomName)) {
+      // If on-chain username is already cached in localStorage or L1 ContractCache, skip network call
+      if (effectiveInfo?.onChainName) {
         return;
       }
 

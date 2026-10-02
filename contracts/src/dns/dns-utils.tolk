@@ -16,6 +16,14 @@ fun address.toNextResolver(self): cell {
     return beginCell().storeUint(DNS_NEXT_RESOLVER_PREFIX, 16).storeAddress(self).endCell();
 }
 
+const BRO_DEFAULT_COLLECTION_URI = "https://ankitgahlyan.github.io/brotherhood/dns/bro-collection.json"
+const BRO_DEFAULT_IMAGE_URI = "https://ankitgahlyan.github.io/brotherhood/dns/bro-dns-logo.png"
+const BRO_DEFAULT_DESCRIPTION = "Brotherhood .bro Decentralized Domain"
+
+fun makeBroOffchainContentCell(uri: slice): cell {
+    return beginCell().storeUint(1, BYTE_SIZE).storeSlice(uri).endCell();
+}
+
 fun makeBroDomainNameCell(domain: slice): cell {
     // TEP-64 snake string: 0x00 (8 bits) + domain ASCII + ".bro" (32 bits)
     if (BYTE_SIZE + domain.remainingBitsCount() + 4 * BYTE_SIZE <= 1023) {
@@ -29,6 +37,20 @@ fun makeBroDomainNameCell(domain: slice): cell {
         .storeUint(0, BYTE_SIZE)
         .storeSlice(domain)
         .storeRef(beginCell().storeSlice(".bro".literalSlice()).endCell())
+        .endCell();
+}
+
+fun makeBroDomainImageCell(): cell {
+    return beginCell()
+        .storeUint(0, BYTE_SIZE)
+        .storeSlice(BRO_DEFAULT_IMAGE_URI.literalSlice())
+        .endCell();
+}
+
+fun makeBroDomainDescriptionCell(): cell {
+    return beginCell()
+        .storeUint(0, BYTE_SIZE)
+        .storeSlice(BRO_DEFAULT_DESCRIPTION.literalSlice())
         .endCell();
 }
 

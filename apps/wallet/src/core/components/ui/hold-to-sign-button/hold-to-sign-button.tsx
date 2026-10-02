@@ -27,7 +27,7 @@ export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
   loading = false,
   holdDuration = 3000,
   className = '',
-  idleLabel = 'Hold to Sign',
+  idleLabel = 'Sign',
   completeLabel = 'Signed!',
   testId,
 }) => {
