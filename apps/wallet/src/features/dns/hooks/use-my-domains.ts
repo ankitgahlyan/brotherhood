@@ -63,7 +63,7 @@ function toWalletCacheKey(network: Network, walletAddress: string): string {
   }
 }
 
-async function fetchOwnedBroNftAddresses(
+async function fetchBroCollectionNftAddresses(
   walletAddress: string,
   network: Network,
 ): Promise<string[]> {
@@ -75,49 +75,63 @@ async function fetchOwnedBroNftAddresses(
     headers['X-API-Key'] = apiKey;
   }
 
-  const params = new URLSearchParams({
-    owner_address: walletAddress,
-    collection_address: BRO_COLLECTION_RESOLVER,
-    limit: '100',
-    offset: '0',
-  });
+  const testOnly = network === 'testnet';
+  const result = new Set<string>();
 
-  try {
-    const res = await rateLimitedFetch(
-      `${base}/nft/items?${params.toString()}`,
-      { headers },
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      nft_items?: { address?: string }[];
-    };
-    if (!Array.isArray(data.nft_items)) return [];
-    const testOnly = network === 'testnet';
-    const result: string[] = [];
-    for (const item of data.nft_items) {
-      if (item?.address) {
-        try {
-          result.push(
-            Address.parse(item.address).toString({
-              bounceable: true,
-              testOnly,
-            }),
-          );
-        } catch {
-          /* ignore invalid address */
+  const queries = [
+    new URLSearchParams({
+      owner_address: walletAddress,
+      collection_address: BRO_COLLECTION_RESOLVER,
+      limit: '100',
+      offset: '0',
+    }),
+    // Also fetch recent items in the collection so domains in active/ended auction
+    // (where owner_address is still null on-chain until FinalizeAuction) are discovered
+    new URLSearchParams({
+      collection_address: BRO_COLLECTION_RESOLVER,
+      limit: '100',
+      offset: '0',
+    }),
+  ];
+
+  for (const params of queries) {
+    try {
+      const res = await rateLimitedFetch(
+        `${base}/nft/items?${params.toString()}`,
+        { headers },
+      );
+      if (!res.ok) continue;
+      const data = (await res.json()) as {
+        nft_items?: { address?: string }[];
+      };
+      if (!Array.isArray(data.nft_items)) continue;
+      for (const item of data.nft_items) {
+        if (item?.address) {
+          try {
+            result.add(
+              Address.parse(item.address).toString({
+                bounceable: true,
+                testOnly,
+              }),
+            );
+          } catch {
+            /* ignore invalid address */
+          }
         }
       }
+    } catch {
+      /* ignore network error */
     }
-    return result;
-  } catch {
-    return [];
   }
+
+  return Array.from(result);
 }
 
 /**
  * Returns owned domains from the local Zustand store, discovers any on-chain
- * .bro domains owned by walletAddress (including genesis.bro), and refreshes
- * their on-chain state (owner, walletRecord, lastFillUpTime, auction).
+ * .bro domains owned by walletAddress (including genesis.bro and active/ended auctions),
+ * migrates any stale pre-upgrade NFT addresses by re-deriving from domain name,
+ * and prunes destroyed or non-existent domains from localStorage.
  * Uses a module-level session/TTL cache so tab switches do not re-fetch;
  * explicit `refresh()` (hard refresh) bypasses the TTL cache for both NFTs and accountStates.
  */
@@ -128,6 +142,7 @@ export function useMyDomains(
   const domains = useDnsStore((s) => selectOwnedDomains(s, network));
   const addDomain = useDnsStore((s) => s.addDomain);
   const updateDomain = useDnsStore((s) => s.updateDomain);
+  const removeDomain = useDnsStore((s) => s.removeDomain);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const runRefresh = useCallback(
@@ -161,9 +176,35 @@ export function useMyDomains(
             testOnly,
           );
 
+          // Step 1: Migrate any stored domain whose nftAddress was derived with stale DnsItem code
+          const storedBefore =
+            useDnsStore.getState().domainsByNetwork[network] ?? [];
+          for (const d of storedBefore) {
+            if (!d.name || (d.zone && d.zone !== 'bro')) continue;
+            try {
+              const expectedAddr = deriveDnsItemAddress(
+                collectionAddr,
+                d.name.trim().toLowerCase(),
+                testOnly,
+              );
+              if (!sameRawAddress(d.nftAddress, expectedAddr)) {
+                removeDomain(d.nftAddress, network);
+                addDomain(
+                  {
+                    ...d,
+                    nftAddress: expectedAddr,
+                  },
+                  network,
+                );
+              }
+            } catch {
+              /* ignore invalid domain name */
+            }
+          }
+
           const currentDomains =
             useDnsStore.getState().domainsByNetwork[network] ?? [];
-          const indexedAddresses = await fetchOwnedBroNftAddresses(
+          const indexedAddresses = await fetchBroCollectionNftAddresses(
             walletAddress,
             network,
           );
@@ -184,9 +225,43 @@ export function useMyDomains(
             force,
           });
           const nowSec = Math.floor(Date.now() / 1000);
+          const activeAddressMap = new Map<
+            string,
+            (typeof batch.accounts)[number]
+          >();
 
           for (const acc of batch.accounts) {
-            if (acc.status !== 'active' || !acc.data_boc) continue;
+            if (acc.status === 'active' && acc.data_boc) {
+              try {
+                const raw = Address.parse(acc.address).toRawString();
+                activeAddressMap.set(raw, acc);
+              } catch {
+                /* ignore invalid address */
+              }
+            }
+          }
+
+          // Step 2: Prune stored domains that do not exist on-chain (destroyed or failed tx)
+          // Allow a 45-second grace window for newly broadcast optimistic registrations
+          const latestBeforePrune =
+            useDnsStore.getState().domainsByNetwork[network] ?? [];
+          for (const d of latestBeforePrune) {
+            try {
+              const raw = Address.parse(d.nftAddress).toRawString();
+              if (!activeAddressMap.has(raw)) {
+                const ageSec = nowSec - (d.registeredAt ?? 0);
+                if (ageSec > 45) {
+                  removeDomain(d.nftAddress, network);
+                }
+              }
+            } catch {
+              removeDomain(d.nftAddress, network);
+            }
+          }
+
+          // Step 3: Hydrate active on-chain domains
+          for (const acc of activeAddressMap.values()) {
+            if (!acc.data_boc) continue;
 
             let canonicalBounceable: string;
             try {
@@ -218,18 +293,8 @@ export function useMyDomains(
             const hasOwner = Boolean(parsed.ownerAddress);
 
             if (existing) {
-              if (hasOwner && !isOwnedByMe) {
-                updateDomain(
-                  existing.nftAddress,
-                  {
-                    isOutdated: true,
-                    hasOwner: true,
-                    walletRecord: parsed.walletRecord ?? undefined,
-                    contactLink: parsed.contactLink ?? undefined,
-                    channelLink: parsed.channelLink ?? undefined,
-                  },
-                  network,
-                );
+              if (!isOwnedByMe && !isBidByMe) {
+                removeDomain(existing.nftAddress, network);
                 continue;
               }
 
@@ -283,7 +348,7 @@ export function useMyDomains(
       inFlightMyDomainsRefresh.set(cacheKey, refreshPromise);
       await refreshPromise;
     },
-    [walletAddress, network, addDomain, updateDomain],
+    [walletAddress, network, addDomain, updateDomain, removeDomain],
   );
 
   useEffect(() => {

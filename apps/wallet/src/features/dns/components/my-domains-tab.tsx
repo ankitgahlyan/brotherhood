@@ -87,6 +87,13 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
   >({});
   const [sendingFor, setSendingFor] = useState<string | null>(null);
 
+  const schedulePostTxRefresh = useCallback(() => {
+    void refresh();
+    setTimeout(() => {
+      void refresh();
+    }, 4500);
+  }, [refresh]);
+
   const handleRenewFi = useCallback(
     async (nftAddress: string, charCount: number) => {
       if (!address) return;
@@ -109,14 +116,19 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
+        updateDomain(
+          nftAddress,
+          { lastFillUpTime: Math.floor(Date.now() / 1000) },
+          network,
+        );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        void refresh();
+        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [address, network, refresh, send],
+    [address, network, schedulePostTxRefresh, send, updateDomain],
   );
 
   const handleSaveChanges = useCallback(
@@ -212,7 +224,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
           delete next[nftAddress];
           return next;
         });
-        void refresh();
+        schedulePostTxRefresh();
       } catch (e: unknown) {
         console.warn('[MyDomainsTab] batch save records error:', e);
       } finally {
@@ -224,7 +236,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       contactDrafts,
       channelDrafts,
       network,
-      refresh,
+      schedulePostTxRefresh,
       send,
       updateDomain,
     ],
@@ -259,12 +271,12 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        void refresh();
+        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [network, refresh, send, updateDomain],
+    [network, schedulePostTxRefresh, send, updateDomain],
   );
 
   const handleFinalizeAuction = useCallback(
@@ -279,14 +291,23 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             payload,
           },
         ]);
+        updateDomain(
+          nftAddress,
+          {
+            isAuctionActive: false,
+            isAuctionEnded: false,
+            hasOwner: true,
+          },
+          network,
+        );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        void refresh();
+        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [refresh, send],
+    [network, schedulePostTxRefresh, send, updateDomain],
   );
 
   const handleDestroyDomain = useCallback(
@@ -308,12 +329,12 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         removeDomain(nftAddress, network);
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        void refresh();
+        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [address, network, refresh, removeDomain, send],
+    [address, network, removeDomain, schedulePostTxRefresh, send],
   );
 
   if (domains.length === 0) {
@@ -364,12 +385,25 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         const expired = isDomainExpired(domain);
         const secondsLeft = domainExpirySeconds(domain);
         const auctionSecondsLeft = domainAuctionSecondsLeft(domain);
+        const isLiveAuctionActive =
+          !domain.hasOwner &&
+          Boolean(
+            (domain.isAuctionActive || domain.auctionEndTime) &&
+            auctionSecondsLeft > 0,
+          );
+        const isLiveAuctionEnded =
+          !domain.hasOwner &&
+          Boolean(
+            domain.isAuctionEnded ||
+            (domain.auctionEndTime && auctionSecondsLeft <= 0),
+          );
         const isThisSending = sendingFor === domain.nftAddress || isSending;
         const charCount = domain.name.length;
         const canManageDomain =
           !domain.isOutdated &&
-          !domain.isAuctionActive &&
-          (domain.hasOwner || !domain.isAuctionEnded);
+          !isLiveAuctionActive &&
+          !isLiveAuctionEnded &&
+          domain.hasOwner !== false;
 
         const walletDraft = recordDrafts[domain.nftAddress] ?? '';
         const contactDraft = contactDrafts[domain.nftAddress] ?? '';
@@ -412,9 +446,9 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
               </div>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded shrink-0 ${
-                  domain.isAuctionActive
+                  isLiveAuctionActive
                     ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                    : domain.isAuctionEnded && !domain.hasOwner
+                    : isLiveAuctionEnded
                       ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
                       : expired
                         ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
@@ -423,9 +457,9 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                           : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                 }`}
               >
-                {domain.isAuctionActive
+                {isLiveAuctionActive
                   ? `Auction (${formatDuration(auctionSecondsLeft)})`
-                  : domain.isAuctionEnded && !domain.hasOwner
+                  : isLiveAuctionEnded
                     ? 'Auction Ended'
                     : expired
                       ? 'Expired'
@@ -436,7 +470,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
             {/* Actions */}
             {!domain.isOutdated && (
               <>
-                {domain.isAuctionActive && (
+                {isLiveAuctionActive && (
                   <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
                     <p className="font-medium">Active 5-Minute Auction</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -446,7 +480,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                   </div>
                 )}
 
-                {domain.isAuctionEnded && !domain.hasOwner && (
+                {isLiveAuctionEnded && (
                   <div className="space-y-2">
                     <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-600 dark:text-purple-400">
                       <p className="font-medium">Auction Completed!</p>

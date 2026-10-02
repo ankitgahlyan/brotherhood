@@ -119,7 +119,7 @@ depends = []
 # test-output-dir = "tests/generated-tests"
 
 [wrappers.typescript]
-# output-dir = "./wrappers-ts"
+output-dir = "./wrappers-ts"
 
 [fmt]
 width = 100

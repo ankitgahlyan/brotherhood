@@ -96,6 +96,11 @@ type BounceOpToHandle =
     | BouncedUnfollow
     | InitPoll
 
+type BounceRichWalletOpToHandle =
+    | MintNewJettons
+    | BidBroDomain
+    | RenewBroDomain
+
 // type BounceRich = InternalInvite
 // global store: FiWalletStore = lazy FiWalletStore.load();
 // global code: cell?; // todo: authorityActionUpgradables 
@@ -112,35 +117,58 @@ contract FossFiWallet {
 fun onBouncedMessage(in: InMessageBounced): void {
     if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
         val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
-        val bouncedMint = lazy MintNewJettons.fromSlice(rich.originalBody.beginParse());
-        val innerTransfer = lazy bouncedMint.internalTransferMsg.load();
+        val bouncedRich = lazy BounceRichWalletOpToHandle.fromSlice(
+            rich.originalBody.beginParse(),
+        );
         var store = lazy FiWalletStore.load();
-        val addrs = lazy store.addresses.load();
-        val refundFi: coins = store.multiplier > 0
-            ? (mulDivFloor(innerTransfer.jettonAmount, MULTIPLIER_SCALE, store.multiplier) as coins)
-            : innerTransfer.jettonAmount;
-        store.creditNeed += refundFi;
-        val actualRefund = min(refundFi, store.jettonBalance);
-        store.jettonBalance -= actualRefund;
-        store.save();
 
-        if (actualRefund > 0) {
-            val refundMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: bouncedMint.mintRecipient.getAddrFiWallet(),
-                value: 0,
-                body: makeInternalTransferStep(
-                    bouncedMint.queryId,
-                    actualRefund,
-                    addrs.owner,
-                    bouncedMint.mintRecipient,
-                    0,
-                    createEmptySlice(),
-                    store.version,
-                    false,
-                ),
-            });
-            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+        match (bouncedRich) {
+            MintNewJettons => {
+                val innerTransfer = lazy bouncedRich.internalTransferMsg.load();
+                val addrs = lazy store.addresses.load();
+                val refundFi: coins = store.multiplier > 0
+                    ? (mulDivFloor(
+                        innerTransfer.jettonAmount,
+                        MULTIPLIER_SCALE,
+                        store.multiplier,
+                    ) as coins)
+                    : innerTransfer.jettonAmount;
+                store.creditNeed += refundFi;
+                val actualRefund = min(refundFi, store.jettonBalance);
+                store.jettonBalance -= actualRefund;
+                store.save();
+
+                if (actualRefund > 0) {
+                    val refundMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: bouncedRich.mintRecipient.getAddrFiWallet(),
+                        value: 0,
+                        body: makeInternalTransferStep(
+                            bouncedRich.queryId,
+                            actualRefund,
+                            addrs.owner,
+                            bouncedRich.mintRecipient,
+                            0,
+                            createEmptySlice(),
+                            store.version,
+                            false,
+                        ),
+                    });
+                    refundMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                }
+            }
+
+            BidBroDomain => {
+                store.jettonBalance += bouncedRich.fiAmount;
+                store.save();
+            }
+
+            RenewBroDomain => {
+                store.jettonBalance += bouncedRich.fiAmount;
+                store.save();
+            }
         }
         return;
     }
@@ -1134,7 +1162,7 @@ fun onInternalMessage(in: InMessage): void {
             store.jettonBalance -= msg.fiBidAmount;
 
             val bidMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.RichBounce,
                 dest: trustedAddrs.minterAddr,
                 value: 0,
                 body: BidBroDomain {
@@ -1156,7 +1184,7 @@ fun onInternalMessage(in: InMessage): void {
             store.jettonBalance -= msg.fiAmount;
 
             val renewMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.RichBounce,
                 dest: trustedAddrs.minterAddr,
                 value: 0,
                 body: RenewBroDomain {

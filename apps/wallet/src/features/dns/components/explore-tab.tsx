@@ -23,6 +23,7 @@ import {
   useDomainLookup,
   clearDomainLookupCache,
 } from '../hooks/use-domain-lookup';
+import { clearMyDomainsSessionCache } from '../hooks/use-my-domains';
 import { useDnsTransaction } from '../hooks/use-dns-transaction';
 import { useDnsStore } from '../store/dns-store';
 import {
@@ -77,6 +78,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   const walletKit = useWalletKit();
   const { formatWalletAddress } = useFormatAddress();
   const addDomain = useDnsStore((s) => s.addDomain);
+  const updateDomain = useDnsStore((s) => s.updateDomain);
 
   const lookupNet = network;
   const lookup = useDomainLookup(submittedQuery, lookupNet as Network);
@@ -160,8 +162,10 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
     clearDomainLookupCache();
     clearDomainResolutionCache();
+    clearMyDomainsSessionCache();
 
-    // Optimistic store update
+    const nowSec = Math.floor(Date.now() / 1000);
+    // Optimistic store update: new .bro registrations start in a 5-minute English auction
     addDomain(
       {
         name: bare,
@@ -171,8 +175,13 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           bare,
           lookupNet === 'testnet',
         ),
-        registeredAt: Math.floor(Date.now() / 1000),
-        lastFillUpTime: Math.floor(Date.now() / 1000),
+        registeredAt: nowSec,
+        lastFillUpTime: nowSec,
+        auctionEndTime: nowSec + 300,
+        maxBidAddress: address,
+        isAuctionActive: true,
+        isAuctionEnded: false,
+        hasOwner: false,
       },
       lookupNet as Network,
     );
@@ -208,6 +217,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       },
     ]);
     clearDomainLookupCache();
+    clearMyDomainsSessionCache();
     setBidInput('');
   }, [address, lookup, submittedQuery, bidInput, send, lookupNet]);
 
@@ -221,9 +231,19 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
         payload,
       },
     ]);
+    updateDomain(
+      lookup.nftAddress,
+      {
+        isAuctionActive: false,
+        isAuctionEnded: false,
+        hasOwner: true,
+      },
+      lookupNet as Network,
+    );
     clearDomainLookupCache();
     clearDomainResolutionCache();
-  }, [address, lookup, send]);
+    clearMyDomainsSessionCache();
+  }, [address, lookup, lookupNet, send, updateDomain]);
 
   const getZoneLabel = () => {
     if (!lookup.zoneSuffix) return null;

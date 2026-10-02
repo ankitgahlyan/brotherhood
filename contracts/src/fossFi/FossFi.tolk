@@ -49,6 +49,10 @@ type BounceOpToHandle =
     | InternalTransferStep
     | TopUpTons
 
+type BounceRichOpToHandle =
+    | BidBroDomain
+    | RenewBroDomain
+
 contract FossFi {
     author: "zeta"
     version: "0.1.0"
@@ -58,6 +62,54 @@ contract FossFi {
 }
 
 fun onBouncedMessage(in: InMessageBounced): void {
+    if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
+        val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
+        val bouncedMsg = lazy BounceRichOpToHandle.fromSlice(rich.originalBody.beginParse());
+        var store = lazy FiStore.load();
+
+        match (bouncedMsg) {
+            BidBroDomain => {
+                val refundWallet = getAutoAddress(bouncedMsg.bidder).calculateAddress();
+                val refundMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: refundWallet,
+                    value: 0,
+                    body: makeInternalTransferStep(
+                        bouncedMsg.queryId,
+                        bouncedMsg.fiAmount,
+                        contract.getAddress(),
+                        bouncedMsg.bidder,
+                    ),
+                });
+                refundMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+
+            RenewBroDomain => {
+                store.totalSupply += bouncedMsg.fiAmount;
+                store.save();
+
+                val refundWallet = getAutoAddress(bouncedMsg.renewer).calculateAddress();
+                val refundMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: refundWallet,
+                    value: 0,
+                    body: makeInternalTransferStep(
+                        bouncedMsg.queryId,
+                        bouncedMsg.fiAmount,
+                        contract.getAddress(),
+                        bouncedMsg.renewer,
+                    ),
+                });
+                refundMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+        }
+        return;
+    }
+
     in.bouncedBody.skipBouncedPrefix();
     val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
     var store = lazy FiStore.load();
@@ -480,7 +532,7 @@ fun onInternalMessage(in: InMessage): void {
             assert (in.valueCoins >= grams("1.0")) throw Errors.InsufficientGasSent;
 
             val collectionMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.RichBounce,
                 dest: msg.collectionAddress,
                 value: 0,
                 body: msg,
@@ -522,7 +574,7 @@ fun onInternalMessage(in: InMessage): void {
             store.totalSupply -= msg.fiAmount;
 
             val itemMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.RichBounce,
                 dest: msg.itemAddress,
                 value: 0,
                 body: msg,
