@@ -103,75 +103,19 @@ const BROTHERHOOD_TAB_CONFIG: Record<
   {
     label: string;
     icon: LucideIcon | React.ComponentType<{ className?: string }>;
-    activeColorClass?: string;
   }
 > = {
-  account: {
-    label: 'Account',
-    icon: User,
-    activeColorClass:
-      'bg-card text-blue-500 font-semibold border border-border shadow-xs',
-  },
-  network: {
-    label: 'Network',
-    icon: Users,
-    activeColorClass:
-      'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
-  },
-  claim: {
-    label: 'Claim',
-    icon: Gift,
-    activeColorClass:
-      'bg-card text-amber-500 font-semibold border border-border shadow-xs',
-  },
-  invite: {
-    label: 'Invite',
-    icon: UserPlus,
-    activeColorClass:
-      'bg-card text-purple-500 font-semibold border border-border shadow-xs',
-  },
-  vote: {
-    label: 'Vote',
-    icon: Vote,
-    activeColorClass:
-      'bg-card text-indigo-500 font-semibold border border-border shadow-xs',
-  },
-  credit: {
-    label: 'Credit',
-    icon: CreditCard,
-    activeColorClass:
-      'bg-card text-cyan-500 font-semibold border border-border shadow-xs',
-  },
-  allowance: {
-    label: 'Allowance',
-    icon: KeyRound,
-    activeColorClass:
-      'bg-card text-teal-500 font-semibold border border-border shadow-xs',
-  },
-  gold: {
-    label: 'Gold',
-    icon: Sparkles,
-    activeColorClass:
-      'bg-card text-yellow-500 font-semibold border border-border shadow-xs',
-  },
-  profile: {
-    label: 'Profile',
-    icon: IdCard,
-    activeColorClass:
-      'bg-card text-rose-500 font-semibold border border-border shadow-xs',
-  },
-  deferred: {
-    label: 'Deferred',
-    icon: Clock,
-    activeColorClass:
-      'bg-card text-orange-500 font-semibold border border-border shadow-xs',
-  },
-  authority: {
-    label: 'Authority',
-    icon: Crown,
-    activeColorClass:
-      'bg-card text-red-500 font-semibold border border-border shadow-xs',
-  },
+  account: { label: 'Account', icon: User },
+  network: { label: 'Network', icon: Users },
+  claim: { label: 'Claim', icon: Gift },
+  invite: { label: 'Invite', icon: UserPlus },
+  vote: { label: 'Vote', icon: Vote },
+  credit: { label: 'Credit', icon: CreditCard },
+  allowance: { label: 'Allowance', icon: KeyRound },
+  gold: { label: 'Gold', icon: Sparkles },
+  profile: { label: 'Profile', icon: IdCard },
+  deferred: { label: 'Deferred', icon: Clock },
+  authority: { label: 'Authority', icon: Crown },
 };
 
 function formatFi(amountNano: bigint | undefined | null): string {
@@ -721,7 +665,6 @@ export const BrotherhoodScreen: React.FC = () => {
               label: BROTHERHOOD_TAB_CONFIG[tab].label,
               icon: BROTHERHOOD_TAB_CONFIG[tab].icon,
               testId: `brotherhood-tab-${tab}`,
-              activeColorClass: BROTHERHOOD_TAB_CONFIG[tab].activeColorClass,
             }))}
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as Tab)}
@@ -867,7 +810,7 @@ export const BrotherhoodScreen: React.FC = () => {
                         href={getH3ViewerUrl(account.data.h3Cell)}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-blue-500 hover:underline text-[11px]"
+                        className="font-mono text-primary hover:underline text-[11px]"
                       >
                         {account.data.h3Cell} ↗
                       </a>
@@ -969,7 +912,7 @@ export const BrotherhoodScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setIsPushUpgradeOpen(true)}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition cursor-pointer"
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition cursor-pointer"
                         title="Push latest contract upgrade code to any target wallet"
                       >
                         Push Upgrade ↗
@@ -1226,7 +1169,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={inviteUsername}
                   onChange={(e) => setInviteUsername(e.target.value)}
                   placeholder="@username or username"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-invite-username"
                 />
                 <p className="text-[11px] text-muted-foreground">
@@ -1244,7 +1187,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     href={getH3ViewerUrl(inviteH3Cell)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
+                    className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
                   >
                     <span>Get H3 Cell</span> ↗
                   </a>
@@ -1254,7 +1197,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={inviteH3Cell}
                   onChange={(e) => setInviteH3Cell(e.target.value)}
                   placeholder="enter level 9 cell e.g. 882681a339fffff"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-invite-h3cell"
                 />
               </div>
@@ -2262,7 +2205,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Credit Amount (FI)"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-credit-amount"
                 />
 
@@ -2384,7 +2327,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             !loanRequirement.hasPersonalToken ||
                             loanRequirement.isSending
                           }
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                           data-testid="brotherhood-loan-amount-input"
                         />
                         {loanRequirement.amountValidationError && (
@@ -2414,7 +2357,7 @@ export const BrotherhoodScreen: React.FC = () => {
                               !loanRequirement.hasPersonalToken ||
                               loanRequirement.isSending
                             }
-                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                             data-testid="brotherhood-loan-maturity-input"
                           />
                           {loanRequirement.maturityValidationError && (
@@ -2440,7 +2383,7 @@ export const BrotherhoodScreen: React.FC = () => {
                               !loanRequirement.hasPersonalToken ||
                               loanRequirement.isSending
                             }
-                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                             data-testid="brotherhood-loan-multiplier-input"
                           />
                           {loanRequirement.multiplierValidationError && (
@@ -2494,7 +2437,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             (Number(account.data?.debt ?? 0n) / 1e9).toString(),
                           )
                         }
-                        className="text-[11px] text-blue-500 hover:underline font-medium cursor-pointer"
+                        className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
                       >
                         Repay All Debt
                       </button>
@@ -2505,7 +2448,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="Repayment Amount (FI)"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     data-testid="brotherhood-repay-amount"
                   />
 
@@ -2551,24 +2494,18 @@ export const BrotherhoodScreen: React.FC = () => {
                       label: `Active (${account.data?.allowances.length ?? 0})`,
                       icon: CheckCircle2,
                       testId: 'brotherhood-allowance-subtab-active',
-                      activeColorClass:
-                        'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
                     },
                     {
                       id: 'grant',
                       label: 'Grant Allowance',
                       icon: PlusCircle,
                       testId: 'brotherhood-allowance-subtab-grant',
-                      activeColorClass:
-                        'bg-card text-blue-500 font-semibold border border-border shadow-xs',
                     },
                     {
                       id: 'spend',
                       label: 'Spend Allowance',
                       icon: Send,
                       testId: 'brotherhood-allowance-subtab-spend',
-                      activeColorClass:
-                        'bg-card text-purple-500 font-semibold border border-border shadow-xs',
                     },
                   ]}
                   activeTab={allowanceSubTab}
@@ -2703,7 +2640,7 @@ export const BrotherhoodScreen: React.FC = () => {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="Allowance Amount (FI)"
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       data-testid="brotherhood-allowance-amount"
                     />
 
@@ -2755,7 +2692,7 @@ export const BrotherhoodScreen: React.FC = () => {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="Amount to Spend (FI)"
-                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       data-testid="brotherhood-spend-amount"
                     />
 
@@ -2816,7 +2753,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 value={goldAmount}
                 onChange={(e) => setGoldAmount(parseInt(e.target.value) || 0)}
                 placeholder="1"
-                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 data-testid="brotherhood-gold-amount"
               />
             </div>
@@ -2868,7 +2805,7 @@ export const BrotherhoodScreen: React.FC = () => {
                       ? `@${account.data.username}`
                       : '@username or username'
                   }
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-profile-username"
                 />
                 {profile.usernameValidationError && (
@@ -2890,7 +2827,7 @@ export const BrotherhoodScreen: React.FC = () => {
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
+                    className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
                   >
                     <span>H3 Converter</span> ↗
                   </a>
@@ -2900,7 +2837,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={profileH3Cell}
                   onChange={(e) => setProfileH3Cell(e.target.value)}
                   placeholder={account.data?.h3Cell || '882681a339fffff'}
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-profile-location"
                 />
                 {profile.locationValidationError && (
@@ -3119,7 +3056,7 @@ export const BrotherhoodScreen: React.FC = () => {
                   value={authStatus}
                   onChange={(e) => setAuthStatus(parseInt(e.target.value) || 0)}
                   placeholder="0 = active, 1 = suspended, 2 = review"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-authority-status-input"
                 />
                 <Button

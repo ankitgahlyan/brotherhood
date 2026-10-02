@@ -74,6 +74,12 @@ export function mergeAndEnrichBroNfts(
     return {
       ...nft,
       index: bareName || nft.index,
+      collection: nft.collection?.address
+        ? nft.collection
+        : {
+            address: BRO_COLLECTION_RESOLVER,
+            name: '.bro Sovereign Domains',
+          },
       info: {
         ...nft.info,
         name: domainFullName,
@@ -96,6 +102,10 @@ export function mergeAndEnrichBroNfts(
     extraBroNfts.push({
       address: d.nftAddress,
       index: d.name,
+      collection: {
+        address: BRO_COLLECTION_RESOLVER,
+        name: '.bro Sovereign Domains',
+      },
       info: {
         name: `${d.name}.${d.zone}`,
         image: {

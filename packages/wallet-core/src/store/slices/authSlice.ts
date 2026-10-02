@@ -24,6 +24,7 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
     passwordSalt: undefined,
     persistPassword: false,
     holdToSign: true, // Default to true for better security
+    slideToSign: false,
     showFastSend: false,
     useWalletInterfaceType: 'mnemonic',
     ledgerAccountNumber: 0,
@@ -175,16 +176,24 @@ export const createAuthSlice: AuthSliceCreator = (set: SetState, get) => ({
   setPersistPassword: (persist: boolean) => {
     set((state) => {
       state.auth.persistPassword = persist;
-      // If disabling persistence, clear the persisted password
-      if (!persist) {
-        state.auth.currentPassword = undefined;
-      }
     });
   },
 
   setHoldToSign: (enabled: boolean) => {
     set((state) => {
       state.auth.holdToSign = enabled;
+      if (enabled) {
+        state.auth.slideToSign = false;
+      }
+    });
+  },
+
+  setSlideToSign: (enabled: boolean) => {
+    set((state) => {
+      state.auth.slideToSign = enabled;
+      if (enabled) {
+        state.auth.holdToSign = false;
+      }
     });
   },
 

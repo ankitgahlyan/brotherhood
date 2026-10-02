@@ -98,8 +98,7 @@ export function ScrollableTabBar<T extends string = string>({
                 'relative flex items-center justify-center shrink-0 snap-center rounded-lg transition-all duration-200 cursor-pointer overflow-hidden',
                 size === 'sm' ? 'w-8 h-8' : 'w-10 h-9 px-2',
                 isActive
-                  ? tab.activeColorClass ||
-                      'bg-card text-primary shadow-xs font-semibold border border-border scale-[1.03]'
+                  ? 'bg-card text-primary shadow-xs font-semibold border border-border scale-[1.03]'
                   : isTargetArmed
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.35)] scale-[1.03]'
                     : isSwipeTarget && !isTargetCanceled
@@ -156,8 +155,7 @@ export function ScrollableTabBar<T extends string = string>({
               'relative inline-flex items-center justify-center gap-1.5 shrink-0 snap-center rounded-lg font-medium transition-all duration-150 cursor-pointer overflow-hidden',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-xs',
               isActive
-                ? tab.activeColorClass ||
-                    'bg-card text-foreground font-semibold border border-border shadow-xs scale-[1.01]'
+                ? 'bg-card text-foreground font-semibold border border-border shadow-xs scale-[1.01]'
                 : isTargetArmed
                   ? 'bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.35)] scale-[1.02]'
                   : isSwipeTarget && !isTargetCanceled

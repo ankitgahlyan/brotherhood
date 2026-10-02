@@ -7,6 +7,7 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import type { ButtonSize, ButtonVariant } from '../button';
 
 interface HoldToSignButtonProps {
   onComplete: () => void;
@@ -18,8 +19,35 @@ interface HoldToSignButtonProps {
   idleLabel?: string;
   /** Label shown once the hold completes. */
   completeLabel?: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   testId?: string;
 }
+
+const HOLD_VARIANT_IDLE: Record<ButtonVariant, string> = {
+  primary: 'bg-primary text-primary-foreground hover:opacity-90 shadow-sm',
+  secondary:
+    'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20',
+  gray: 'bg-secondary text-foreground hover:bg-secondary/80 border border-border',
+  danger: 'bg-destructive text-white hover:opacity-90 shadow-sm',
+  ghost:
+    'bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/50',
+};
+
+const HOLD_VARIANT_ACTIVE: Record<ButtonVariant, string> = {
+  primary: 'bg-primary/90 text-primary-foreground scale-[0.98]',
+  secondary: 'bg-primary/25 text-primary border border-primary/30 scale-[0.98]',
+  gray: 'bg-secondary/90 text-foreground border border-border scale-[0.98]',
+  danger: 'bg-destructive/90 text-white scale-[0.98]',
+  ghost: 'bg-secondary/60 text-foreground scale-[0.98]',
+};
+
+const HOLD_SIZE_CLASS: Record<ButtonSize, string> = {
+  lg: 'px-5 py-3.5 text-base font-bold rounded-2xl',
+  md: 'px-4 py-2.5 text-sm font-semibold rounded-xl',
+  sm: 'px-4 py-2 text-sm font-semibold rounded-full',
+  icon: 'h-9 w-9 rounded-full',
+};
 
 export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
   onComplete,
@@ -29,6 +57,8 @@ export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
   className = '',
   idleLabel = 'Sign',
   completeLabel = 'Signed!',
+  variant = 'primary',
+  size = 'md',
   testId,
 }) => {
   const [isHolding, setIsHolding] = useState(false);
@@ -129,10 +159,10 @@ export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
   }, [clearTimers]);
 
   const buttonClasses = `
-        relative flex-1 px-4 py-3 rounded-lg font-medium text-white
+        relative flex-1 ${HOLD_SIZE_CLASS[size]}
         overflow-hidden transition-all duration-300 select-none
         ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        ${isComplete ? 'bg-green-600' : isHolding ? 'bg-blue-700 scale-[0.98]' : 'bg-blue-600 hover:bg-blue-700'}
+        ${isComplete ? 'bg-emerald-600 text-white' : isHolding ? HOLD_VARIANT_ACTIVE[variant] : HOLD_VARIANT_IDLE[variant]}
         ${className}
     `;
 

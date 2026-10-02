@@ -326,16 +326,12 @@ export const CityNetworkScreen: React.FC = () => {
                   label: 'Explore & Search',
                   icon: Compass,
                   testId: 'city-tab-explore',
-                  activeColorClass:
-                    'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
                 },
                 {
                   id: 'tracked',
                   label: `Tracked (${watchedLocations.length})`,
                   icon: BookmarkCheck,
                   testId: 'city-tab-tracked',
-                  activeColorClass:
-                    'bg-card text-blue-500 font-semibold border border-border shadow-xs',
                 },
               ]}
               activeTab={activeTab}
@@ -377,7 +373,7 @@ export const CityNetworkScreen: React.FC = () => {
                         href={getH3ViewerUrl(queriedH3Cell || h3CellInput)}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[11px] font-medium text-blue-500 hover:underline flex items-center gap-0.5"
+                        className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5"
                       >
                         <span>Viewer</span> ↗
                       </a>
@@ -385,7 +381,7 @@ export const CityNetworkScreen: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleResetToMyCell}
-                          className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors"
+                          className="text-[11px] font-medium text-primary hover:opacity-80 transition-opacity"
                         >
                           Reset to My Cell
                         </button>
@@ -406,7 +402,7 @@ export const CityNetworkScreen: React.FC = () => {
                       className={`w-full p-2.5 border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 ${
                         showValidationError
                           ? 'border-destructive focus:ring-destructive'
-                          : 'border-border focus:ring-blue-500'
+                          : 'border-border focus:ring-ring'
                       }`}
                       data-testid="city-location-input"
                     />
@@ -480,7 +476,7 @@ export const CityNetworkScreen: React.FC = () => {
                         >
                           {isCurrentLocationWatched ? (
                             <>
-                              <EyeOff className="w-3 h-3 text-blue-500" />
+                              <EyeOff className="w-3 h-3 text-primary" />
                               <span>Watching</span>
                             </>
                           ) : (
@@ -562,7 +558,7 @@ export const CityNetworkScreen: React.FC = () => {
                             value={memberSearch}
                             onChange={(e) => setMemberSearch(e.target.value)}
                             placeholder="Search member by username or address..."
-                            className="w-full pl-8 pr-8 py-1.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full pl-8 pr-8 py-1.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                           />
                           {memberSearch && (
                             <button
@@ -608,7 +604,7 @@ export const CityNetworkScreen: React.FC = () => {
                                         onClick={() =>
                                           openTelegramProfile(username)
                                         }
-                                        className="inline-flex items-center gap-0.5 font-medium text-blue-500 hover:underline shrink-0 text-[11px] cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline shrink-0 text-[11px] cursor-pointer"
                                         title={`Open @${username} on Telegram`}
                                       >
                                         <span>@{username}</span>
@@ -619,7 +615,7 @@ export const CityNetworkScreen: React.FC = () => {
                                       {formatWalletAddress(m)}
                                     </span>
                                     {isYou && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20 shrink-0">
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
                                         You
                                       </span>
                                     )}

@@ -92,7 +92,7 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
           <button
             type="button"
             onClick={onUseMyAddress}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
             data-testid="use-my-address"
           >
             Use my address

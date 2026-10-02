@@ -12,7 +12,7 @@ fun main() {
     val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
     val minter = FossFi.fromAddress(address(FI_ADDRESS));
 
-    minter.sendApproveUpgrade(admin.address, { bounce: true });
+    minter.sendApproveUpgrade(admin.address, { bounce: true }).waitForTrace();
 
     println("now update the code hash of upgraded contract in frontend for boc decoding");
 }

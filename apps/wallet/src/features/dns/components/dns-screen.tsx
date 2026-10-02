@@ -28,26 +28,19 @@ const DNS_TAB_CONFIG: Record<
   {
     label: string;
     icon: LucideIcon | React.ComponentType<{ className?: string }>;
-    activeColorClass?: string;
   }
 > = {
   explore: {
     label: 'Explore',
     icon: Compass,
-    activeColorClass:
-      'bg-card text-cyan-500 font-semibold border border-border shadow-xs',
   },
   'my-domains': {
     label: 'My Domains',
     icon: Globe,
-    activeColorClass:
-      'bg-card text-blue-500 font-semibold border border-border shadow-xs',
   },
   admin: {
     label: 'Admin',
     icon: ShieldCheck,
-    activeColorClass:
-      'bg-card text-purple-500 font-semibold border border-border shadow-xs',
   },
 };
 
@@ -113,7 +106,6 @@ export const DnsScreen: React.FC = () => {
               label: DNS_TAB_CONFIG[tab].label,
               icon: DNS_TAB_CONFIG[tab].icon,
               testId: `dns-tab-${tab}`,
-              activeColorClass: DNS_TAB_CONFIG[tab].activeColorClass,
             }))}
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as Tab)}

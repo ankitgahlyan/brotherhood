@@ -63,7 +63,7 @@ export function Segmented<T extends string>({
               'px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer',
               index > 0 && 'border-l border-border',
               isSelected
-                ? 'bg-blue-500 text-white shadow-xs font-semibold'
+                ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
                 : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/60',
             )}
           >

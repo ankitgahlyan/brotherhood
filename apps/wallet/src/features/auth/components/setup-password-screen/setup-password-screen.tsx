@@ -20,7 +20,7 @@ import type { WalletSetupMode } from '@/features/wallet-setup';
 const MIN_LENGTH = 4;
 
 const INPUT_CLASS =
-  'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+  'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary';
 
 export const SetupPasswordScreen: React.FC = () => {
   const [password, setPassword] = useState('');

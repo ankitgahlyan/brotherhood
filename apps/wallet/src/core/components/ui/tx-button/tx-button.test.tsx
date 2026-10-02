@@ -12,6 +12,7 @@ import { renderToString } from 'react-dom/server';
 
 let mockAuthState = {
   holdToSign: true,
+  slideToSign: false,
   showFastSend: false,
 };
 
@@ -25,6 +26,7 @@ describe('TxButton component', () => {
   beforeEach(() => {
     mockAuthState = {
       holdToSign: true,
+      slideToSign: false,
       showFastSend: false,
     };
   });
@@ -32,6 +34,7 @@ describe('TxButton component', () => {
   it('renders standard Button when fast send is disabled', () => {
     mockAuthState = {
       holdToSign: true,
+      slideToSign: false,
       showFastSend: false,
     };
 
@@ -47,6 +50,7 @@ describe('TxButton component', () => {
   it('renders standard Button when holdToSign is disabled even if fast send is enabled', () => {
     mockAuthState = {
       holdToSign: false,
+      slideToSign: false,
       showFastSend: true,
     };
 
@@ -61,6 +65,7 @@ describe('TxButton component', () => {
   it('renders HoldToSignButton with concise action name when both holdToSign and showFastSend are true', () => {
     mockAuthState = {
       holdToSign: true,
+      slideToSign: false,
       showFastSend: true,
     };
 
@@ -72,9 +77,25 @@ describe('TxButton component', () => {
     expect(html).not.toContain('Hold to Send TON');
   });
 
+  it('renders SlideToSignButton when both slideToSign and showFastSend are true', () => {
+    mockAuthState = {
+      holdToSign: false,
+      slideToSign: true,
+      showFastSend: true,
+    };
+
+    const html = renderToString(
+      <TxButton testId="send-btn">Send TON</TxButton>,
+    );
+
+    expect(html).toContain('Slide to Send TON');
+    expect(html).toContain('data-swipe-ignore="true"');
+  });
+
   it('strips legacy Hold to prefix if passed in actionLabel', () => {
     mockAuthState = {
       holdToSign: true,
+      slideToSign: false,
       showFastSend: true,
     };
 

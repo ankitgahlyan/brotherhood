@@ -246,7 +246,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-blue-400" />
+          <Camera className="w-5 h-5 text-primary" />
           <span className="font-semibold text-sm text-white tracking-tight">
             {title}
           </span>
@@ -292,14 +292,14 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Scanner Corner Reticles */}
-          <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-blue-400 rounded-tl-lg z-20" />
-          <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-blue-400 rounded-tr-lg z-20" />
-          <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl-lg z-20" />
-          <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-blue-400 rounded-br-lg z-20" />
+          <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg z-20" />
+          <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg z-20" />
+          <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg z-20" />
+          <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-lg z-20" />
 
           {isLoading && !errorMessage && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70 bg-black/80 z-10 pointer-events-none">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <span className="text-xs font-medium">
                 Initializing camera...
               </span>

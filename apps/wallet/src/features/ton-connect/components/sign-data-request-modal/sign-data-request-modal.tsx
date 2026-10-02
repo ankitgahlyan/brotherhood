@@ -17,6 +17,7 @@ import { WalletPlate } from '../wallet-plate';
 
 import { Button } from '@/core/components/ui/button';
 import { HoldToSignButton } from '@/core/components/ui/hold-to-sign-button';
+import { SlideToSignButton } from '@/core/components/ui/slide-to-sign-button';
 import { createComponentLogger } from '@/core/lib/logger';
 
 const log = createComponentLogger('SignDataRequestModal');
@@ -95,7 +96,7 @@ export const SignDataRequestModal: React.FC<SignDataRequestModalProps> = ({
   onApprove,
   onReject,
 }) => {
-  const { holdToSign } = useAuth();
+  const { holdToSign, slideToSign } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const currentWallet = useMemo(
@@ -137,7 +138,16 @@ export const SignDataRequestModal: React.FC<SignDataRequestModalProps> = ({
         />
       }
       primary={
-        holdToSign ? (
+        slideToSign ? (
+          <SlideToSignButton
+            onComplete={handleApprove}
+            loading={isLoading}
+            disabled={isLoading}
+            idleLabel="Sign data"
+            completeLabel="Signed!"
+            testId="sign-data-approve"
+          />
+        ) : holdToSign ? (
           <HoldToSignButton
             onComplete={handleApprove}
             loading={isLoading}

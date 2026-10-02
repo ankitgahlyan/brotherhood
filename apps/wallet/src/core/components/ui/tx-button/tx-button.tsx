@@ -10,6 +10,7 @@ import React, { useRef } from 'react';
 import { useAuth } from '@demo/wallet-core';
 import { Button, type ButtonProps } from '../button';
 import { HoldToSignButton } from '../hold-to-sign-button';
+import { SlideToSignButton } from '../slide-to-sign-button';
 import { cn } from '@/core/lib/utils';
 
 export interface TxButtonProps extends ButtonProps {
@@ -37,8 +38,8 @@ export interface TxButtonProps extends ButtonProps {
 }
 
 /**
- * Universal transaction button that automatically swaps between a standard Button
- * and a HoldToSignButton when Fast Send + Hold to Sign are enabled in settings.
+ * Universal transaction button that automatically swaps between a standard Button,
+ * HoldToSignButton, or SlideToSignButton when Fast Send + Hold/Slide to Sign are enabled in settings.
  */
 export const TxButton: React.FC<TxButtonProps> = ({
   actionLabel,
@@ -55,8 +56,9 @@ export const TxButton: React.FC<TxButtonProps> = ({
   testId,
   ...props
 }) => {
-  const { holdToSign, showFastSend } = useAuth();
-  const shouldHold = Boolean(holdToSign && showFastSend);
+  const { holdToSign, slideToSign, showFastSend } = useAuth();
+  const shouldSlide = Boolean(slideToSign && showFastSend);
+  const shouldHold = Boolean(!shouldSlide && holdToSign && showFastSend);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const resolvedTestId = testId || (props as any)['data-testid'];
@@ -76,6 +78,31 @@ export const TxButton: React.FC<TxButtonProps> = ({
     }
   };
 
+  if (shouldSlide) {
+    const rawLabel =
+      actionLabel || (typeof children === 'string' ? children : 'Sign');
+    const idle = rawLabel.replace(/^(hold|slide) to\s+/i, '');
+
+    return (
+      <div
+        ref={containerRef}
+        className={cn(fullWidth && 'w-full', 'inline-flex')}
+      >
+        <SlideToSignButton
+          onComplete={handleAction}
+          disabled={disabled}
+          loading={loading}
+          idleLabel={idle}
+          completeLabel={completeLabel}
+          variant={props.variant}
+          size={props.size}
+          className={cn(fullWidth && 'w-full', className)}
+          testId={resolvedTestId}
+        />
+      </div>
+    );
+  }
+
   if (shouldHold) {
     const rawLabel =
       actionLabel || (typeof children === 'string' ? children : 'Sign');
@@ -93,6 +120,8 @@ export const TxButton: React.FC<TxButtonProps> = ({
           holdDuration={holdDuration}
           idleLabel={idle}
           completeLabel={completeLabel}
+          variant={props.variant}
+          size={props.size}
           className={cn(fullWidth && 'w-full', className)}
           testId={resolvedTestId}
         />

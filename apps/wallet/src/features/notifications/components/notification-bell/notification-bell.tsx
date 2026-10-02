@@ -13,6 +13,7 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
   BellRing,
@@ -36,7 +37,7 @@ import {
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import { Button } from '@/core/components/ui/button';
 import { Modal } from '@/core/components/ui/modal';
-import { useFiMinterState } from '@/lib/brotherhood/queries';
+import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { useRequestUpgrade } from '@/features/brotherhood/hooks/use-request-upgrade';
 import {
@@ -53,6 +54,16 @@ import {
   sendNativeNotification,
   type NativeNotificationPermission,
 } from '../../lib/native-notifications';
+import {
+  CONTRACT_CODE_HASHES,
+  normalizeCodeHash,
+} from '@/lib/brotherhood/account-hydrator.worker';
+import type { Network } from '@/lib/brotherhood/config';
+
+import { isZeroAddress } from '@/lib/brotherhood/ton';
+import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
+import { GAS, useBrotherhoodTransaction } from '@/features/brotherhood';
+import { Address } from '@ton/core';
 
 const DISMISSED_STORAGE_PREFIX = 'brotherhood-dismissed-notifications';
 
@@ -177,7 +188,11 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
 };
 
 export type NotificationType =
-  'upgrade' | 'claim' | 'deferred_payer_review' | 'deferred_payee_claim';
+  | 'upgrade'
+  | 'personal_upgrade'
+  | 'claim'
+  | 'deferred_payer_review'
+  | 'deferred_payee_claim';
 
 export interface WalletNotificationItem {
   id: string;
@@ -319,8 +334,111 @@ const WalletNotificationCollector: React.FC<
   return null;
 };
 
+interface PersonalUpgradeCollectorProps {
+  wallet: SavedWallet;
+  isActive: boolean;
+  onNotificationChange: (key: string, notifs: WalletNotificationItem[]) => void;
+}
+
+/** Checks if a wallet's PersonalMinter code is outdated via on-chain code_hash and emits a personal_upgrade notification */
+const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
+  wallet,
+  isActive,
+  onNotificationChange,
+}) => {
+  const ownerAddress = useMemo(() => {
+    try {
+      return Address.parse(wallet.address);
+    } catch {
+      return null;
+    }
+  }, [wallet.address]);
+
+  const fiWalletQuery = useFiWalletState(
+    ownerAddress,
+    wallet.network as Network,
+  );
+
+  const personalMinterAddr = useMemo(() => {
+    const minter =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonMinter;
+    return minter && !isZeroAddress(minter) ? minter : null;
+  }, [fiWalletQuery.data]);
+
+  const notifKey = `personal-upgrade-${wallet.id}`;
+
+  // Fetch on-chain code_hash for the personal minter and compare against expected hash
+  const { data: isOutdated } = useQuery({
+    queryKey: [
+      'personal-minter-outdated',
+      personalMinterAddr?.toRawString(),
+      wallet.network,
+    ],
+    queryFn: async () => {
+      if (!personalMinterAddr) return false;
+      const { batchFetchAccountStates } =
+        await import('@/lib/brotherhood/account-state-hydrator');
+      const result = await batchFetchAccountStates(
+        [personalMinterAddr],
+        wallet.network ?? 'testnet',
+      );
+      const rawAcc = result.accounts.find(
+        (a) =>
+          a.address === personalMinterAddr.toRawString() ||
+          a.address === personalMinterAddr.toString(),
+      );
+      if (!rawAcc?.code_hash) return false;
+      const liveHash = normalizeCodeHash(rawAcc.code_hash);
+      const expectedHash = normalizeCodeHash(
+        CONTRACT_CODE_HASHES.personalMinter,
+      );
+      return liveHash !== expectedHash;
+    },
+    enabled: Boolean(personalMinterAddr),
+    staleTime: 5 * 60 * 1000, // 5 min — no need to hammer Toncenter
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (!personalMinterAddr || isOutdated === undefined) {
+      onNotificationChange(notifKey, []);
+      return;
+    }
+    if (isOutdated) {
+      onNotificationChange(notifKey, [
+        {
+          id: `personal-upgrade-${wallet.address}`,
+          type: 'personal_upgrade',
+          walletId: wallet.id,
+          walletName: wallet.name || 'Wallet',
+          walletAddress: wallet.address,
+          isActive,
+          data: {
+            personalMinterAddress: personalMinterAddr.toString(),
+          },
+        },
+      ]);
+    } else {
+      onNotificationChange(notifKey, []);
+    }
+  }, [
+    wallet.id,
+    wallet.name,
+    wallet.address,
+    isActive,
+    personalMinterAddr,
+    isOutdated,
+    notifKey,
+    onNotificationChange,
+  ]);
+
+  return null;
+};
+
 export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+
   const [notificationPerm, setNotificationPerm] =
     useState<NativeNotificationPermission>(() =>
       getBrowserNotificationPermission(),
@@ -403,6 +521,10 @@ export const NotificationBell: React.FC = () => {
     accountData: activeAccount.data,
   });
 
+  // For personal upgrade: send RequestUpgradeCode to personalMinterAddress
+  const { send: sendPersonalUpgradeTx, isSending: isPersonalUpgradeSending } =
+    useBrotherhoodTransaction(currentWallet, walletKit);
+
   // Track pending transaction target per action
   const [actionInProgressId, setActionInProgressId] = useState<string | null>(
     null,
@@ -473,6 +595,14 @@ export const NotificationBell: React.FC = () => {
             key: `native-${item.id}`,
           },
         );
+      } else if (item.type === 'personal_upgrade') {
+        sendNativeNotification(
+          `Personal Token Upgrade Available (${item.walletName})`,
+          {
+            body: `New PersonalMinter/Wallet contract code is available. Pull the upgrade for ${item.walletName}.`,
+            key: `native-${item.id}`,
+          },
+        );
       }
     });
   }, [allWalletNotifs]);
@@ -535,6 +665,32 @@ export const NotificationBell: React.FC = () => {
       await upgrade.send(targetAddress);
       handleDismissOne(notifId);
       toast.success('Upgrade transaction dispatched');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upgrade failed';
+      toast.error(msg);
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  // Execute personal contract upgrade — sends RequestUpgradeCode to personalMinterAddress
+  const handlePersonalUpgradeTarget = async (
+    notifId: string,
+    personalMinterAddress: string,
+  ) => {
+    if (!address) return;
+    setActionInProgressId(notifId);
+    try {
+      const payload = buildRequestUpgradeBody(Address.parse(address));
+      await sendPersonalUpgradeTx([
+        {
+          toAddress: personalMinterAddress,
+          amount: GAS.REQUEST_UPGRADE,
+          payload,
+        },
+      ]);
+      handleDismissOne(notifId);
+      toast.success('Personal upgrade request sent');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upgrade failed';
       toast.error(msg);
@@ -612,6 +768,16 @@ export const NotificationBell: React.FC = () => {
           minterVersion={minterVersion}
           pendingDeferredByAddress={pendingDeferredByAddress}
           nowSec={nowSec}
+          onNotificationChange={handleNotificationChange}
+        />
+      ))}
+
+      {/* Personal contract upgrade collectors */}
+      {savedWallets.map((w) => (
+        <PersonalUpgradeCollector
+          key={`personal-${w.id}`}
+          wallet={w}
+          isActive={w.id === activeWalletId}
           onNotificationChange={handleNotificationChange}
         />
       ))}
@@ -753,6 +919,53 @@ export const NotificationBell: React.FC = () => {
                       {actionInProgressId === item.id
                         ? 'Sending Upgrade...'
                         : 'Upgrade Contract'}
+                    </Button>
+                  </div>
+                </SwipeableCard>
+              );
+            }
+
+            if (item.type === 'personal_upgrade') {
+              return (
+                <SwipeableCard
+                  key={item.id}
+                  id={item.id}
+                  onDismiss={handleDismissOne}
+                >
+                  <div className="p-3.5 bg-violet-500/10 border border-violet-500/30 rounded-2xl flex flex-col gap-2.5 shadow-2xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center flex-shrink-0 text-violet-500">
+                          <Zap className="w-4 h-4 fill-violet-500/30" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-foreground text-sm">
+                              Personal Token Upgrade
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-secondary text-foreground border border-border/80">
+                              {item.walletName}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground block truncate">
+                            New contract code available • Pull upgrade to your
+                            personal wallet
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={isProcessing || isPersonalUpgradeSending}
+                      onClick={() =>
+                        handlePersonalUpgradeTarget(
+                          item.id,
+                          item.data.personalMinterAddress,
+                        )
+                      }
+                      className="w-full text-xs font-semibold py-2 rounded-xl cursor-pointer bg-violet-600 hover:bg-violet-700 text-white"
+                    >
+                      {isProcessing ? 'Requesting Upgrade…' : 'Pull Upgrade'}
                     </Button>
                   </div>
                 </SwipeableCard>

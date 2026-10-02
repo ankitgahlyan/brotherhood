@@ -318,7 +318,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         <button
           type="button"
           onClick={flipDirection}
-          className="absolute left-1/2 top-1/2 z-10 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-background bg-blue-600 text-white shadow-md transition-colors hover:bg-blue-700 cursor-pointer"
+          className="absolute left-1/2 top-1/2 z-10 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-md transition-opacity hover:opacity-90 cursor-pointer"
           aria-label="Swap direction"
           data-testid="swap-flip-button"
         >
@@ -842,7 +842,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             <button
               type="button"
               onClick={handleGPay}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity cursor-pointer"
               data-testid="upi-gpay-button"
             >
               <Smartphone className="w-4 h-4 shrink-0" />

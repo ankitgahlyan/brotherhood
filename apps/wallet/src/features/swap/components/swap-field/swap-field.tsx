@@ -61,7 +61,7 @@ export const SwapField: React.FC<SwapFieldProps> = ({
           <button
             type="button"
             onClick={onMax}
-            className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+            className="font-semibold text-primary hover:opacity-80 cursor-pointer"
             data-testid={`${testIdPrefix}-max`}
           >
             Max

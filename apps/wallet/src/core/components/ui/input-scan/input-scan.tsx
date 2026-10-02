@@ -184,7 +184,7 @@ export const InputScan: React.FC<InputScanProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       {item.isDns ? (
-                        <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
                       ) : (
                         <User className="w-3.5 h-3.5 text-primary shrink-0" />
                       )}
@@ -192,7 +192,7 @@ export const InputScan: React.FC<InputScanProps> = ({
                         {item.isDns ? item.username : `@${item.username}`}
                       </span>
                       {item.isDns && (
-                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-normal">
+                        <span className="text-[9px] bg-primary/15 text-primary px-1 py-0.5 rounded font-normal">
                           DNS
                         </span>
                       )}

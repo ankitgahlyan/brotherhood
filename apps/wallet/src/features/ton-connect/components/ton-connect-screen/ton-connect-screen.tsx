@@ -34,8 +34,10 @@ export const TonConnectRoute: React.FC = () => {
   return (
     <CenteredScreen>
       <div className="flex flex-col items-center gap-4 px-4 text-center">
-        <LoaderCircle size="lg" className="text-blue-500" />
-        <p className="text-base font-medium text-gray-500">Connecting…</p>
+        <LoaderCircle size="lg" className="text-primary" />
+        <p className="text-base font-medium text-muted-foreground">
+          Connecting…
+        </p>
       </div>
     </CenteredScreen>
   );

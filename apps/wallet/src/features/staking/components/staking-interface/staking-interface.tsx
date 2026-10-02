@@ -152,16 +152,12 @@ export const StakingInterface: FC = () => {
               label: 'Stake',
               icon: Layers,
               testId: 'staking-tab-stake',
-              activeColorClass:
-                'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
             },
             {
               id: 'unstake',
               label: 'Unstake',
               icon: Layers2,
               testId: 'staking-tab-unstake',
-              activeColorClass:
-                'bg-card text-amber-500 font-semibold border border-border shadow-xs',
             },
           ]}
           activeTab={tab}
@@ -192,7 +188,7 @@ export const StakingInterface: FC = () => {
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-semibold text-blue-600 hover:text-blue-700"
+                  className="font-semibold text-primary hover:opacity-80"
                 >
                   Max
                 </button>
@@ -209,7 +205,7 @@ export const StakingInterface: FC = () => {
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-semibold text-blue-600 hover:text-blue-700"
+                  className="font-semibold text-primary hover:opacity-80"
                 >
                   Max
                 </button>
@@ -233,7 +229,7 @@ export const StakingInterface: FC = () => {
                   className={cn(
                     'rounded-xl border-2 py-2 text-xs font-semibold transition-colors',
                     unstakeMode === mode
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                      ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border bg-secondary text-foreground hover:bg-secondary/80',
                   )}
                 >

@@ -387,7 +387,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Holding implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECBgEAATMAART/APSkE/S88sgLAQIBYgIDAqTQ+JGRMODtRND6SPpI+gDTP9cLHyXHAI4dNQTAAI4U+CMDyPpSEvpSAfoCEss/yx/J7VTgXwTgJdcsI4tSaQzjAtcsIcWmQNQx4wJfBccA8uBIBAUAIaAggdqJofSR9JH0AaZ/pj+jAJAwNfiSI8cF8uK8JMIAnPgjBYID9ICgFb7DAJI0cOLy4t/Iz5FMbcKKFMs/EvpSUhD6Ulj6AsnIz4UIEvpScc8LbszJgQCg+wAA2DX4kiTHBfLivCSc+CMFggP0gKAVucMAkjR/4vLi34IK+vCAyM+FCFIw+lIB+gKCECTYueHPC4okzws/UjD6UiH6Aslz+wDIz5FMbcKKFMs/UiD6UvpSWPoCycjPhQgS+lJxzwtuzMmBAKD7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECBgEAATAAART/APSkE/S88sgLAQIBYgIDAp7Q+JGRMODtRND6SPpI+gDTP9cLHyXHAI4aNQSSXwTg+CMDyPpSEvpSAfoCEss/yx/J7VTgJdcsI4tSaQzjAtcsIcWmQNQx4wJfBccA8uBIBAUAIaAggdqJofSR9JH0AaZ/pj+jAJAwNfiSI8cF8uK8JMIAnPgjBYID9ICgFb7DAJI0cOLy4t/Iz5FMbcKKFMs/EvpSUhD6Ulj6AsnIz4UIEvpScc8LbszJgQCg+wAA2DX4kiTHBfLivCSc+CMFggP0gKAVucMAkjR/4vLi34IK+vCAyM+FCFIw+lIB+gKCECTYueHPC4okzws/UjD6UiH6Aslz+wDIz5FMbcKKFMs/UiD6UvpSWPoCycjPhQgS+lJxzwtuzMmBAKD7AA==');
 
     static Errors = {
         'Errors.InvalidOp': 72,

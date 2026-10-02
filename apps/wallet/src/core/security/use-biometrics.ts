@@ -14,6 +14,7 @@ import {
   authenticateBiometrics,
   clearBiometrics,
   isInsecureWebContext,
+  BIOMETRICS_CHANGED_EVENT,
 } from './biometrics';
 
 export interface UseBiometricsResult {
@@ -30,7 +31,7 @@ export interface UseBiometricsResult {
 
 export function useBiometrics(): UseBiometricsResult {
   const [isSupported, setIsSupported] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(() => isBiometricsRegistered());
   const [isInsecureContext, setIsInsecureContext] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,13 @@ export function useBiometrics(): UseBiometricsResult {
     void Promise.resolve().then(() => {
       void refresh();
     });
+    const handleSync = () => {
+      setIsEnabled(isBiometricsRegistered());
+    };
+    window.addEventListener(BIOMETRICS_CHANGED_EVENT, handleSync);
+    return () => {
+      window.removeEventListener(BIOMETRICS_CHANGED_EVENT, handleSync);
+    };
   }, [refresh]);
 
   const register = useCallback(async (password: string) => {

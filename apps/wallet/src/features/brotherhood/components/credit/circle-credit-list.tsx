@@ -41,7 +41,7 @@ export const CircleCreditList: React.FC<CircleCreditListProps> = ({
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <div className="p-1 rounded-lg bg-primary/10 text-primary">
             <Users className="w-4 h-4" />
           </div>
           <div>

@@ -4,6 +4,7 @@
 // stale-while-revalidates the hashed static assets emitted by the build.
 const VERSION = 'v1';
 const CACHE = `brotherhood-pwa-${VERSION}`;
+const IMAGE_CACHE = 'brotherhood-images';
 
 // The URL prefix under which the app is served (matches Vite `base` / SW scope).
 const basePath = (() => {
@@ -16,11 +17,40 @@ const PRECACHE = [
   './index.html',
   './manifest.webmanifest',
   './favicon.svg',
+  './ton.png',
+  './fi.svg',
+  './bro-domain-nft.svg',
 ];
 
 function isApiRequest(url) {
   const path = url.pathname.replace(basePath, '/');
   return path.startsWith('/api/') || path.startsWith('/_server/');
+}
+
+function isImageRequest(request, url) {
+  if (request.destination === 'image') return true;
+  return /\.(?:png|jpe?g|gif|webp|svg|avif|ico)$/i.test(url.pathname);
+}
+
+// Cache-first for images (both same-origin and cross-origin token/NFT assets).
+async function imageCacheFirst(event) {
+  const cache = await caches.open(IMAGE_CACHE);
+  const cached =
+    (await cache.match(event.request, { ignoreVary: true })) ||
+    (await cache.match(event.request.url, { ignoreVary: true }));
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(event.request);
+    if (response && (response.ok || response.status === 0)) {
+      cache.put(event.request, response.clone());
+    }
+    return response;
+  } catch {
+    return Response.error();
+  }
 }
 
 // Cache-first with background refresh. Fast, and every GET that has been seen
@@ -69,7 +99,9 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
+          keys
+            .filter((k) => k !== CACHE && k !== IMAGE_CACHE)
+            .map((k) => caches.delete(k)),
         ),
       ),
   );
@@ -80,6 +112,10 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (isImageRequest(request, url)) {
+    event.respondWith(imageCacheFirst(event));
+    return;
+  }
   if (url.origin !== self.location.origin) return;
   if (isApiRequest(url)) {
     // Never intercept API routes; always hit the network/server.

@@ -27,11 +27,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground shadow-sm',
+    'bg-primary text-primary-foreground hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground shadow-sm',
   secondary:
-    'bg-blue-500/15 text-blue-500 hover:bg-blue-500/25 disabled:opacity-60',
+    'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20 disabled:opacity-60',
   gray: 'bg-secondary text-foreground hover:bg-secondary/80 border border-border disabled:opacity-50',
-  danger: 'bg-red-500 text-white hover:bg-red-600 disabled:opacity-60',
+  danger:
+    'bg-destructive text-white hover:opacity-90 disabled:opacity-60 shadow-sm',
   ghost:
     'bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50',
 };
@@ -68,7 +69,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       type={type ?? 'button'}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring disabled:cursor-not-allowed',
         VARIANT_CLASS[variant],
         SIZE_CLASS[size],
         fullWidth && 'w-full',

@@ -130,7 +130,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search country or code (e.g. 840, India)..."
               aria-label="Search countries"
-              className="w-full p-2 text-xs bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full p-2 text-xs bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               data-testid={`${testId}-search`}
             />
             {search && (
@@ -153,7 +153,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
                   onClick={() => handleSelect(c)}
                   className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left ${
                     c.code === value
-                      ? 'bg-blue-500/15 text-blue-600 font-semibold dark:text-blue-400'
+                      ? 'bg-primary/15 text-primary font-semibold'
                       : 'text-foreground hover:bg-secondary/70'
                   }`}
                   data-testid={`${testId}-option-${c.code}`}
@@ -177,7 +177,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
                       onChange(parseInt(search.trim(), 10));
                       setIsOpen(false);
                     }}
-                    className="block w-full mt-2 py-1 text-xs text-blue-500 hover:underline"
+                    className="block w-full mt-2 py-1 text-xs text-primary hover:underline"
                   >
                     Use custom code #{search.trim()}
                   </button>

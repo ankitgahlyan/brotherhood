@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import {
   Sparkles,
@@ -21,6 +22,7 @@ import {
   Wallet,
   ShieldCheck,
   PlusCircle,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
@@ -67,6 +69,12 @@ import {
 import { usePersonalJettonInfo } from '../hooks/use-personal-jetton-info';
 import { TokenImagePicker } from './token-image-picker';
 import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
+import {
+  CONTRACT_CODE_HASHES,
+  normalizeCodeHash,
+} from '@/lib/brotherhood/account-hydrator.worker';
+import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
+import { GAS, useBrotherhoodTransaction } from '@/features/brotherhood';
 
 type Tab =
   'info' | 'deploy' | 'mint' | 'addresses' | 'admin' | 'topup' | 'destroy';
@@ -196,6 +204,63 @@ export const PersonalJettonScreen: React.FC = () => {
 
   // Deploy tab initial mint amount
   const [initialMintAmount, setInitialMintAmount] = useState('1000');
+
+  // Personal contract upgrade availability check
+  const activeMinterAddress = activeMinter
+    ? (() => {
+        try {
+          return Address.parse(activeMinter);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
+  const { data: isMinterCodeOutdated, isLoading: isOutdatedChecking } =
+    useQuery({
+      queryKey: [
+        'personal-minter-outdated',
+        activeMinterAddress?.toRawString(),
+        network,
+      ],
+      queryFn: async () => {
+        if (!activeMinterAddress) return false;
+        const { batchFetchAccountStates } =
+          await import('@/lib/brotherhood/account-state-hydrator');
+        const result = await batchFetchAccountStates(
+          [activeMinterAddress],
+          network,
+        );
+        const rawAcc = result.accounts.find(
+          (a) =>
+            a.address === activeMinterAddress.toRawString() ||
+            a.address === activeMinterAddress.toString(),
+        );
+        if (!rawAcc?.code_hash) return false;
+        const liveHash = normalizeCodeHash(rawAcc.code_hash);
+        const expectedHash = normalizeCodeHash(
+          CONTRACT_CODE_HASHES.personalMinter,
+        );
+        return liveHash !== expectedHash;
+      },
+      enabled: Boolean(activeMinterAddress) && info.isDeployedOnChain,
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    });
+
+  const showUpgradeBanner =
+    info.isDeployedOnChain && !isOutdatedChecking && isMinterCodeOutdated;
+
+  const { send: sendPersonalUpgradeTx, isSending: isPersonalUpgradeSending } =
+    useBrotherhoodTransaction(currentWallet, walletKit);
+
+  const handlePersonalUpgrade = async () => {
+    if (!address || !activeMinter) return;
+    const payload = buildRequestUpgradeBody(Address.parse(address));
+    await sendPersonalUpgradeTx([
+      { toAddress: activeMinter, amount: GAS.REQUEST_UPGRADE, payload },
+    ]);
+  };
 
   const deployer = useDeployPersonalJetton({
     wallet: currentWallet,
@@ -583,6 +648,36 @@ export const PersonalJettonScreen: React.FC = () => {
                           : '0.0000'}
                       </span>
                     </div>
+
+                    {/* Personal contract upgrade banner */}
+                    {showUpgradeBanner && (
+                      <div className="p-3.5 bg-violet-500/10 border border-violet-500/30 rounded-xl flex flex-col gap-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/30 flex items-center justify-center flex-shrink-0 text-violet-500">
+                            <Zap className="w-3.5 h-3.5 fill-violet-500/30" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-foreground leading-tight">
+                              Contract Upgrade Available
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              New PersonalMinter code is ready. Pull the upgrade
+                              to keep your token contracts up to date.
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={isPersonalUpgradeSending}
+                          onClick={handlePersonalUpgrade}
+                          className="w-full text-xs font-semibold py-2 rounded-xl cursor-pointer bg-violet-600 hover:bg-violet-700 text-white"
+                        >
+                          {isPersonalUpgradeSending
+                            ? 'Sending…'
+                            : 'Pull Upgrade'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -9,6 +9,7 @@
 import React from 'react';
 import type { Jetton } from '@ton/walletkit';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { FallbackImage } from '@/core/components/ui/fallback-image';
 
 import { useFormattedJetton } from '@/features/jettons';
 
@@ -33,21 +34,6 @@ export const JettonRow: React.FC<JettonRowProps> = ({
     ((addr: string) => formatContractAddress(addr, true, 4));
   const jettonInfo = useFormattedJetton(jetton);
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = e.target as HTMLImageElement;
-    target.style.display = 'none';
-    const parent = target.parentElement;
-    if (parent) {
-      parent.innerHTML = jettonInfo?.symbol?.slice(0, 2)?.toUpperCase() || '';
-      parent.className = parent.className.replace(
-        'bg-gray-100',
-        'bg-gradient-to-br from-blue-500 to-purple-600',
-      );
-      parent.className +=
-        ' text-xs font-bold text-white flex items-center justify-center';
-    }
-  };
-
   if (!jettonInfo) {
     return null;
   }
@@ -71,20 +57,18 @@ export const JettonRow: React.FC<JettonRowProps> = ({
         onClick={onClick}
       >
         <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-          {jettonInfo.image ? (
-            <img
-              src={jettonInfo.image}
-              alt={jettonInfo.symbol || jettonInfo.name || 'Token icon'}
-              width={20}
-              height={20}
-              className="w-5 h-5 rounded-full object-cover"
-              onError={handleImageError}
-            />
-          ) : (
-            <span className="text-[10px] font-bold text-white bg-gradient-to-br from-blue-500 to-purple-600 rounded-full w-5 h-5 flex items-center justify-center">
-              {jettonInfo.symbol?.slice(0, 2).toUpperCase()}
-            </span>
-          )}
+          <FallbackImage
+            src={jettonInfo.image}
+            alt={jettonInfo.symbol || jettonInfo.name || 'Token icon'}
+            width={20}
+            height={20}
+            className="w-5 h-5 rounded-full object-cover"
+            fallback={
+              <span className="text-[10px] font-bold text-primary-foreground bg-primary rounded-full w-5 h-5 flex items-center justify-center">
+                {jettonInfo.symbol?.slice(0, 2).toUpperCase()}
+              </span>
+            }
+          />
         </div>
         <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
           {jettonInfo.name || jettonInfo.symbol}
@@ -119,22 +103,20 @@ export const JettonRow: React.FC<JettonRowProps> = ({
       <div className="flex items-center space-x-3 flex-1 min-w-0">
         <div className="relative flex-shrink-0 select-none">
           <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center overflow-hidden ring-2 ring-border/50 group-hover:ring-border transition-all duration-200">
-            {jettonInfo.image ? (
-              <img
-                src={jettonInfo.image}
-                alt={jettonInfo.name}
-                width={40}
-                height={40}
-                className="w-10 h-10 rounded-full object-cover"
-                onError={handleImageError}
-              />
-            ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-sm font-bold text-white">
-                  {jettonInfo.symbol?.slice(0, 2).toUpperCase()}
-                </span>
-              </div>
-            )}
+            <FallbackImage
+              src={jettonInfo.image}
+              alt={jettonInfo.name}
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-full object-cover"
+              fallback={
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary-foreground">
+                    {jettonInfo.symbol?.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              }
+            />
           </div>
         </div>
         <div className="flex-1 min-w-0 overflow-hidden">

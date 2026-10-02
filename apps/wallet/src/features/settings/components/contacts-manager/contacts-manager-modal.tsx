@@ -399,7 +399,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
                 value={formAddress}
                 onChange={(e) => setFormAddress(e.target.value)}
                 disabled={Boolean(editingContact)}
-                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                 required
               />
             </div>
@@ -413,7 +413,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
                 placeholder="e.g. Alice"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
                 autoFocus
               />
@@ -428,7 +428,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
                 placeholder="e.g. Work wallet"
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 

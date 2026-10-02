@@ -9,7 +9,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from '@/core/routing';
 import { isValidAddress } from '@ton/walletkit';
-import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { useAuth, useWallet, useWalletKit } from '@demo/wallet-core';
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
 import { notifyTransactionSent } from '@/core/utils/transaction-toast';
@@ -47,6 +47,7 @@ import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/core/components/ui/button';
 import { TxButton } from '@/core/components/ui/tx-button';
+import { SlideToSignButton } from '@/core/components/ui/slide-to-sign-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -86,6 +87,7 @@ export const SendTransaction: React.FC = () => {
   const [senderMode, setSenderMode] = useState<SenderMode>('self');
   const [granterInput, setGranterInput] = useState('');
   const [isDeveloperMode] = useDeveloperMode();
+  const { slideToSign, showFastSend } = useAuth();
 
   const options = useSendTokens();
 
@@ -142,7 +144,9 @@ export const SendTransaction: React.FC = () => {
   }
 
   useEffect(() => {
-    if (!address || tokenContext.tokenType !== 'JETTON') return;
+    if (!isDeveloperMode || !address || tokenContext.tokenType !== 'JETTON') {
+      return;
+    }
 
     let isCancelled = false;
     void deriveTokenWalletAddressOffchain({
@@ -160,7 +164,7 @@ export const SendTransaction: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [address, tokenContext, network]);
+  }, [isDeveloperMode, address, tokenContext, network]);
 
   const trimmedGranter = granterInput.trim();
   const isGranterDns = isTonChainDns(trimmedGranter);
@@ -320,8 +324,11 @@ export const SendTransaction: React.FC = () => {
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = async (
+    e?: React.FormEvent,
+    options?: { fastSend?: boolean },
+  ) => {
+    e?.preventDefault();
     setError('');
 
     if (!isOnline()) {
@@ -358,7 +365,7 @@ export const SendTransaction: React.FC = () => {
           throw new Error('Insufficient balance');
         }
 
-        if (tokenContext.tokenType === 'JETTON' && address) {
+        if (isDeveloperMode && tokenContext.tokenType === 'JETTON' && address) {
           await deriveTokenWalletAddressOffchain({
             minterAddress: tokenContext.minterAddress,
             ownerAddress: address,
@@ -368,7 +375,7 @@ export const SendTransaction: React.FC = () => {
           });
         }
 
-        const result = await sender.send();
+        const result = await sender.send(options);
         addRecentTransacted({ address: targetRecipient }, network);
         if (result?.normalizedHash) {
           notifySent(result.normalizedHash);
@@ -440,6 +447,17 @@ export const SendTransaction: React.FC = () => {
       ? isSpendAllowanceDisabled
       : sender.isDisabled || Boolean(recipientError);
 
+  const isSendingAny =
+    isLoading ||
+    (senderMode === 'self' ? gasless.isSending : spendAllowance.isSending);
+
+  const sendActionLabel =
+    senderMode === 'other'
+      ? 'Spend Allowance'
+      : effectiveGasless
+        ? 'Send Gasless'
+        : `Send ${selected.symbol}`;
+
   return (
     <NewLayout
       header={<ScreenHeader title="Send" onBack={() => navigate('/wallet')} />}
@@ -456,7 +474,10 @@ export const SendTransaction: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSend} className="flex flex-col gap-6">
+        <form
+          onSubmit={(e) => void handleSend(e)}
+          className="flex flex-col gap-6"
+        >
           <TokenSelectButton
             token={selected}
             onClick={() => setShowTokenModal(true)}
@@ -549,7 +570,7 @@ export const SendTransaction: React.FC = () => {
             onResolvedAddressChange={setEffectiveRecipientAddress}
             error={recipientError}
             onUseMyAddress={address ? handleSendToSelf : undefined}
-            tokenContext={tokenContext}
+            tokenContext={isDeveloperMode ? tokenContext : undefined}
             onDerivedTokenWalletChange={setDerivedRecipientTokenWallet}
           />
 
@@ -637,30 +658,16 @@ export const SendTransaction: React.FC = () => {
 
           {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             <TxButton
               type="submit"
               fullWidth
-              loading={
-                isLoading ||
-                (senderMode === 'self'
-                  ? gasless.isSending
-                  : spendAllowance.isSending)
-              }
+              loading={isSendingAny}
               disabled={isSendDisabled}
               data-testid="send-submit"
-              actionLabel={
-                senderMode === 'other'
-                  ? 'Spend Allowance'
-                  : effectiveGasless
-                    ? 'Send Gasless'
-                    : `Send ${selected.symbol}`
-              }
+              actionLabel={sendActionLabel}
               onAction={() => {
-                const syntheticEvent = {
-                  preventDefault: () => {},
-                } as unknown as React.FormEvent;
-                void handleSend(syntheticEvent);
+                void handleSend();
               }}
             >
               {senderMode === 'other'
@@ -679,6 +686,21 @@ export const SendTransaction: React.FC = () => {
                     ? 'Sending…'
                     : `Send ${selected.symbol}`}
             </TxButton>
+
+            {!(slideToSign && showFastSend) && (
+              <SlideToSignButton
+                onComplete={() => {
+                  void handleSend(undefined, { fastSend: true });
+                }}
+                disabled={isSendDisabled}
+                loading={isSendingAny}
+                idleLabel={sendActionLabel}
+                completeLabel="Sent!"
+                size="lg"
+                className="w-full"
+                testId="slide-to-send-submit"
+              />
+            )}
           </div>
 
           {/* Vertical list of recent transacted members */}

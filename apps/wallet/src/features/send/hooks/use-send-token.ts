@@ -54,7 +54,9 @@ interface UseSendTokenParams {
 }
 
 export interface UseSendTokenResult {
-  send: () => Promise<SendTransactionResponse | undefined>;
+  send: (options?: {
+    fastSend?: boolean;
+  }) => Promise<SendTransactionResponse | undefined>;
   isDisabled: boolean;
   gasless: UseGaslessJettonSendResult;
 }
@@ -85,180 +87,183 @@ export const useSendToken = ({
 
   const { effective: gaslessEffective, send: gaslessSend } = gasless;
 
-  const send = useCallback(async (): Promise<
-    SendTransactionResponse | undefined
-  > => {
-    if (!wallet) throw new Error('No wallet available');
+  const send = useCallback(
+    async (options?: {
+      fastSend?: boolean;
+    }): Promise<SendTransactionResponse | undefined> => {
+      if (!wallet) throw new Error('No wallet available');
 
-    // Gasless jetton transfer
-    if (gaslessEffective && jetton) {
-      return gaslessSend();
-    }
+      // Gasless jetton transfer
+      if (gaslessEffective && jetton) {
+        return gaslessSend();
+      }
 
-    const senderAddress = wallet.getAddress();
-    const net =
-      String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
+      const senderAddress = wallet.getAddress();
+      const net =
+        String(wallet.getNetwork()?.chainId) === '-239' ? 'mainnet' : 'testnet';
 
-    // Build comment payload (plain vs encrypted)
-    let payloadCell: Cell | undefined;
-    let payloadBase64: string | undefined;
+      // Build comment payload (plain vs encrypted)
+      let payloadCell: Cell | undefined;
+      let payloadBase64: string | undefined;
 
-    const trimmedComment = comment.trim();
-    if (trimmedComment) {
-      let didEncrypt = false;
+      const trimmedComment = comment.trim();
+      if (trimmedComment) {
+        let didEncrypt = false;
 
-      if (isEncrypted && senderAddress) {
-        try {
-          let tonClient: any;
-          if (walletKit) {
-            try {
-              const targetNet = getChainNetwork(net || 'testnet');
-              tonClient =
-                typeof walletKit.getApiClient === 'function'
-                  ? walletKit.getApiClient(targetNet)
-                  : (walletKit as any).getClient?.();
-            } catch {
-              tonClient = undefined;
+        if (isEncrypted && senderAddress) {
+          try {
+            let tonClient: any;
+            if (walletKit) {
+              try {
+                const targetNet = getChainNetwork(net || 'testnet');
+                tonClient =
+                  typeof walletKit.getApiClient === 'function'
+                    ? walletKit.getApiClient(targetNet)
+                    : (walletKit as any).getClient?.();
+              } catch {
+                tonClient = undefined;
+              }
             }
-          }
-          const theirPublicKey = await resolveRecipientPublicKey(
-            recipient,
-            net,
-            tonClient,
-            savedWallets,
-          );
+            const theirPublicKey = await resolveRecipientPublicKey(
+              recipient,
+              net,
+              tonClient,
+              savedWallets,
+            );
 
-          if (theirPublicKey) {
-            const mnemonic = await getDecryptedMnemonic();
-            if (mnemonic && mnemonic.length > 0) {
-              const keyPair = await mnemonicToPrivateKey(mnemonic);
-              const encryptedBytes = await encryptMessageComment(
-                trimmedComment,
-                keyPair.publicKey,
-                theirPublicKey,
-                keyPair.secretKey,
-                senderAddress.toString(),
-              );
-              payloadCell = packBytesAsSnakeForEncryptedData(encryptedBytes);
-              payloadBase64 = payloadCell.toBoc().toString('base64');
-              didEncrypt = true;
+            if (theirPublicKey) {
+              const mnemonic = await getDecryptedMnemonic();
+              if (mnemonic && mnemonic.length > 0) {
+                const keyPair = await mnemonicToPrivateKey(mnemonic);
+                const encryptedBytes = await encryptMessageComment(
+                  trimmedComment,
+                  keyPair.publicKey,
+                  theirPublicKey,
+                  keyPair.secretKey,
+                  senderAddress.toString(),
+                );
+                payloadCell = packBytesAsSnakeForEncryptedData(encryptedBytes);
+                payloadBase64 = payloadCell.toBoc().toString('base64');
+                didEncrypt = true;
+              }
             }
+          } catch (err) {
+            console.warn(
+              '[useSendToken] Comment encryption failed, fallback to plain:',
+              err,
+            );
           }
-        } catch (err) {
-          console.warn(
-            '[useSendToken] Comment encryption failed, fallback to plain:',
-            err,
-          );
+        }
+
+        if (!didEncrypt) {
+          payloadCell = createCommentPayload(trimmedComment);
+          payloadBase64 = createCommentPayloadBase64(trimmedComment);
         }
       }
 
-      if (!didEncrypt) {
-        payloadCell = createCommentPayload(trimmedComment);
-        payloadBase64 = createCommentPayloadBase64(trimmedComment);
+      let sendResult: SendTransactionResponse | undefined;
+
+      if ((showFastSend || options?.fastSend) && isUnlocked) {
+        if (tokenType === 'TON') {
+          const tx = await wallet.createTransferTonTransaction({
+            recipientAddress: recipient,
+            transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+            payload: payloadBase64,
+          });
+          sendResult = await wallet.sendTransaction(tx);
+        } else if (jetton) {
+          const decimals = jetton.decimalsNumber;
+          if (decimals == null) throw new Error('Jetton decimals not found');
+
+          const tx = await wallet.createTransferJettonTransaction({
+            recipientAddress: recipient,
+            jettonAddress: jetton.address,
+            transferAmount: parseUnits(amount, decimals).toString(),
+            forwardPayload: payloadCell,
+          });
+          sendResult = await wallet.sendTransaction(tx);
+        }
+      } else {
+        if (!walletKit) {
+          toast.error('Cannot send transaction', {
+            description: 'WalletKit is not initialized yet.',
+          });
+          throw new Error('WalletKit is not initialized');
+        }
+
+        if (tokenType === 'TON') {
+          const tx = await wallet.createTransferTonTransaction({
+            recipientAddress: recipient,
+            transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
+            payload: payloadBase64,
+          });
+          await walletKit.handleNewTransaction(wallet, tx);
+        } else if (jetton) {
+          const decimals = jetton.decimalsNumber;
+          if (decimals == null) throw new Error('Jetton decimals not found');
+
+          const tx = await wallet.createTransferJettonTransaction({
+            recipientAddress: recipient,
+            jettonAddress: jetton.address,
+            transferAmount: parseUnits(amount, decimals).toString(),
+            forwardPayload: payloadCell,
+          });
+          await walletKit.handleNewTransaction(wallet, tx);
+        }
       }
-    }
 
-    let sendResult: SendTransactionResponse | undefined;
-
-    if (showFastSend && isUnlocked) {
-      if (tokenType === 'TON') {
-        const tx = await wallet.createTransferTonTransaction({
-          recipientAddress: recipient,
-          transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
-          payload: payloadBase64,
-        });
-        sendResult = await wallet.sendTransaction(tx);
-      } else if (jetton) {
-        const decimals = jetton.decimalsNumber;
-        if (decimals == null) throw new Error('Jetton decimals not found');
-
-        const tx = await wallet.createTransferJettonTransaction({
-          recipientAddress: recipient,
-          jettonAddress: jetton.address,
-          transferAmount: parseUnits(amount, decimals).toString(),
-          forwardPayload: payloadCell,
-        });
-        sendResult = await wallet.sendTransaction(tx);
-      }
-    } else {
-      if (!walletKit) {
-        toast.error('Cannot send transaction', {
-          description: 'WalletKit is not initialized yet.',
-        });
-        throw new Error('WalletKit is not initialized');
-      }
-
-      if (tokenType === 'TON') {
-        const tx = await wallet.createTransferTonTransaction({
-          recipientAddress: recipient,
-          transferAmount: parseUnits(amount, GRAM_DECIMALS).toString(),
-          payload: payloadBase64,
-        });
-        await walletKit.handleNewTransaction(wallet, tx);
-      } else if (jetton) {
-        const decimals = jetton.decimalsNumber;
-        if (decimals == null) throw new Error('Jetton decimals not found');
-
-        const tx = await wallet.createTransferJettonTransaction({
-          recipientAddress: recipient,
-          jettonAddress: jetton.address,
-          transferAmount: parseUnits(amount, decimals).toString(),
-          forwardPayload: payloadCell,
-        });
-        await walletKit.handleNewTransaction(wallet, tx);
-      }
-    }
-
-    if (senderAddress) {
-      const scheduleRevalidation = (delayMs: number) => {
-        setTimeout(async () => {
-          try {
-            await invalidateContractState(
-              senderAddress.toString(),
-              net,
-              queryClient,
-            );
+      if (senderAddress) {
+        const scheduleRevalidation = (delayMs: number) => {
+          setTimeout(async () => {
             try {
-              const userFiWallet = getFiWalletAddress(
-                Address.parse(senderAddress.toString()),
-                net,
-              );
               await invalidateContractState(
-                userFiWallet.toString(),
+                senderAddress.toString(),
                 net,
                 queryClient,
               );
+              try {
+                const userFiWallet = getFiWalletAddress(
+                  Address.parse(senderAddress.toString()),
+                  net,
+                );
+                await invalidateContractState(
+                  userFiWallet.toString(),
+                  net,
+                  queryClient,
+                );
+              } catch {
+                // Ignore non-member wallet errors
+              }
             } catch {
-              // Ignore non-member wallet errors
+              // Ignore invalidation errors
             }
-          } catch {
-            // Ignore invalidation errors
-          }
-        }, delayMs);
-      };
+          }, delayMs);
+        };
 
-      scheduleRevalidation(2000);
-      scheduleRevalidation(5000);
-    }
+        scheduleRevalidation(2000);
+        scheduleRevalidation(5000);
+      }
 
-    return sendResult;
-  }, [
-    wallet,
-    walletKit,
-    tokenType,
-    jetton,
-    recipient,
-    amount,
-    comment,
-    isEncrypted,
-    showFastSend,
-    isUnlocked,
-    gaslessEffective,
-    gaslessSend,
-    getDecryptedMnemonic,
-    savedWallets,
-    queryClient,
-  ]);
+      return sendResult;
+    },
+    [
+      wallet,
+      walletKit,
+      tokenType,
+      jetton,
+      recipient,
+      amount,
+      comment,
+      isEncrypted,
+      showFastSend,
+      isUnlocked,
+      gaslessEffective,
+      gaslessSend,
+      getDecryptedMnemonic,
+      savedWallets,
+      queryClient,
+    ],
+  );
 
   const isDisabled =
     !wallet ||

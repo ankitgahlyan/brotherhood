@@ -92,6 +92,8 @@ export const SettingsDropdown: React.FC = () => {
     setPersistPassword,
     holdToSign,
     setHoldToSign,
+    slideToSign,
+    setSlideToSign,
     showFastSend,
     setShowFastSend,
   } = useAuth();
@@ -132,7 +134,7 @@ export const SettingsDropdown: React.FC = () => {
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
 
-  const [, setDeveloperMode] = useDeveloperMode();
+  const [isDeveloperMode, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
   const devTapTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -150,14 +152,20 @@ export const SettingsDropdown: React.FC = () => {
 
     if (nextCount >= 7) {
       setDevTapCount(0);
-      setDeveloperMode(true);
-      setDeveloperModalOpen(true);
-      toast.success('Developer Mode enabled!');
+      const nextDevMode = !isDeveloperMode;
+      setDeveloperMode(nextDevMode);
+      if (nextDevMode) {
+        setDeveloperModalOpen(true);
+        toast.success('Developer Mode enabled!');
+      } else {
+        setDeveloperModalOpen(false);
+        toast.info('Developer Mode disabled');
+      }
       setPanel(null);
     } else if (nextCount >= 4) {
       const remaining = 7 - nextCount;
       toast.info(
-        `You are ${remaining} ${remaining === 1 ? 'step' : 'steps'} away from Developer Mode`,
+        `You are ${remaining} ${remaining === 1 ? 'step' : 'steps'} away from ${isDeveloperMode ? 'disabling' : 'enabling'} Developer Mode`,
       );
     }
   };
@@ -254,7 +262,7 @@ export const SettingsDropdown: React.FC = () => {
           {/* Header */}
           <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3 pt-[calc(0.75rem+var(--tg-safe-area-top,0px))] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <SettingsIcon className="w-5 h-5 text-blue-500" />
+              <SettingsIcon className="w-5 h-5 text-primary" />
               <h2 className="text-base font-bold text-foreground">Settings</h2>
             </div>
             <button
@@ -277,7 +285,7 @@ export const SettingsDropdown: React.FC = () => {
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
-                  icon={<Palette className="w-5 h-5 text-pink-500" />}
+                  icon={<Palette className="w-5 h-5 text-primary" />}
                   label="Appearance & Animations"
                   subtitle="Theme mode, color accents & motion physics"
                   onClick={() => {
@@ -326,8 +334,15 @@ export const SettingsDropdown: React.FC = () => {
                   testId="hold-to-sign"
                   label="Hold to Sign"
                   description="Hold action buttons to approve sends and signing"
-                  checked={holdToSign ?? true}
+                  checked={Boolean(holdToSign && !slideToSign)}
                   onChange={setHoldToSign}
+                />
+                <ToggleRow
+                  testId="slide-to-sign"
+                  label="Slide to Sign"
+                  description="Slide left to right to approve sends and signing"
+                  checked={Boolean(slideToSign)}
+                  onChange={setSlideToSign}
                 />
                 <ToggleRow
                   testId="show-fast-send"
@@ -336,8 +351,23 @@ export const SettingsDropdown: React.FC = () => {
                   checked={showFastSend ?? false}
                   onChange={setShowFastSend}
                 />
+                {isDeveloperMode && (
+                  <ToggleRow
+                    testId="developer-mode-toggle"
+                    label="Developer Mode"
+                    description="Show contract routing details & diagnostics"
+                    checked={isDeveloperMode}
+                    onChange={(checked) => {
+                      setDeveloperMode(checked);
+                      if (!checked) {
+                        setDeveloperModalOpen(false);
+                        toast.info('Developer Mode disabled');
+                      }
+                    }}
+                  />
+                )}
                 <ActionRow
-                  icon={<KeyRound className="w-5 h-5 text-blue-400" />}
+                  icon={<KeyRound className="w-5 h-5 text-primary" />}
                   label={
                     isLoadingMnemonic ? 'Decrypting…' : 'View Recovery Phrase'
                   }
@@ -361,7 +391,7 @@ export const SettingsDropdown: React.FC = () => {
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
-                  icon={<Radio className="w-5 h-5 text-cyan-400" />}
+                  icon={<Radio className="w-5 h-5 text-primary" />}
                   label="Connected dApps"
                   subtitle="Manage TonConnect active sessions"
                   onClick={() => {
@@ -370,7 +400,7 @@ export const SettingsDropdown: React.FC = () => {
                   }}
                 />
                 <ActionRow
-                  icon={<Users className="w-5 h-5 text-amber-400" />}
+                  icon={<Users className="w-5 h-5 text-primary" />}
                   label="Address Book & Contacts"
                   subtitle="Manage and export saved contacts"
                   onClick={() => {
@@ -379,7 +409,7 @@ export const SettingsDropdown: React.FC = () => {
                   }}
                 />
                 <ActionRow
-                  icon={<DatabaseZap className="w-5 h-5 text-purple-400" />}
+                  icon={<DatabaseZap className="w-5 h-5 text-primary" />}
                   label="Storage & Cache Manager"
                   subtitle="Manage local storage, history & traces"
                   onClick={() => {
@@ -388,7 +418,7 @@ export const SettingsDropdown: React.FC = () => {
                   }}
                 />
                 <ActionRow
-                  icon={<Download className="w-5 h-5 text-emerald-400" />}
+                  icon={<Download className="w-5 h-5 text-primary" />}
                   label="Install App / Shortcut"
                   subtitle="Add to home screen or desktop"
                   onClick={() => {
@@ -456,7 +486,7 @@ export const SettingsDropdown: React.FC = () => {
               setBiometricError('');
             }}
             placeholder="Enter Passcode"
-            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {biometricError && (
             <p className="text-xs text-red-500">{biometricError}</p>

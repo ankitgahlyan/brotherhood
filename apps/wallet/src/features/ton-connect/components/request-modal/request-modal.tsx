@@ -21,6 +21,7 @@ import { WalletPlate } from '../wallet-plate';
 
 import { Button } from '@/core/components/ui/button';
 import { HoldToSignButton } from '@/core/components/ui/hold-to-sign-button';
+import { SlideToSignButton } from '@/core/components/ui/slide-to-sign-button';
 import { JettonFlow } from '@/features/jettons';
 import { createComponentLogger } from '@/core/lib/logger';
 import { useNowSeconds } from '@/core/hooks';
@@ -66,7 +67,7 @@ export const RequestModal: React.FC<RequestModalProps> = ({
   const isAuthenticated = useWalletStore(
     (state) => state.walletManagement.isAuthenticated,
   );
-  const { holdToSign } = useAuth();
+  const { holdToSign, slideToSign } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   if (prevIsOpen !== isOpen) {
@@ -148,6 +149,15 @@ export const RequestModal: React.FC<RequestModalProps> = ({
     <Button fullWidth disabled data-testid={testIds.approve}>
       Expired
     </Button>
+  ) : slideToSign ? (
+    <SlideToSignButton
+      onComplete={handleApprove}
+      loading={isLoading}
+      disabled={isLoading}
+      idleLabel={approveLabel}
+      completeLabel="Signed!"
+      testId={testIds.approve}
+    />
   ) : holdToSign ? (
     <HoldToSignButton
       onComplete={handleApprove}

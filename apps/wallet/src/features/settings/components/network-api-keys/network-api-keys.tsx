@@ -207,7 +207,7 @@ export const NetworkApiKeys: React.FC = () => {
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                 hasAnyCustom
-                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                  ? 'bg-primary/15 text-primary border border-primary/30'
                   : 'bg-muted text-muted-foreground'
               }`}
             >
@@ -245,7 +245,7 @@ export const NetworkApiKeys: React.FC = () => {
               >
                 <span>Toncenter</span>
                 {provider === 'toncenter' && (
-                  <Check className="w-3 h-3 text-blue-500" />
+                  <Check className="w-3 h-3 text-primary" />
                 )}
               </button>
               <button
@@ -259,7 +259,7 @@ export const NetworkApiKeys: React.FC = () => {
               >
                 <span>TonAPI</span>
                 {provider === 'tonapi' && (
-                  <Check className="w-3 h-3 text-blue-500" />
+                  <Check className="w-3 h-3 text-primary" />
                 )}
               </button>
               <button
@@ -273,7 +273,7 @@ export const NetworkApiKeys: React.FC = () => {
               >
                 <span>Orbs</span>
                 {provider === 'orbs' && (
-                  <Check className="w-3 h-3 text-blue-500" />
+                  <Check className="w-3 h-3 text-primary" />
                 )}
               </button>
             </div>
@@ -283,7 +283,7 @@ export const NetworkApiKeys: React.FC = () => {
           <div className="p-3 bg-background/40 border border-border/70 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 font-medium text-foreground text-[11px]">
-                <Globe className="w-3.5 h-3.5 text-blue-400" />
+                <Globe className="w-3.5 h-3.5 text-primary" />
                 <span>Toncenter (JSON-RPC)</span>
               </div>
               <span
@@ -307,7 +307,7 @@ export const NetworkApiKeys: React.FC = () => {
                 value={toncenterUrl}
                 onChange={(e) => setToncenterUrlState(e.target.value)}
                 placeholder="https://testnet.toncenter.com/api/v2/jsonRPC"
-                className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500"
+                className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary"
               />
             </div>
 
@@ -322,7 +322,7 @@ export const NetworkApiKeys: React.FC = () => {
                   value={toncenterKey}
                   onChange={(e) => setToncenterKeyState(e.target.value)}
                   placeholder="Enter Toncenter API Key..."
-                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono pr-8 placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono pr-8 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary"
                 />
                 <button
                   type="button"
@@ -358,7 +358,7 @@ export const NetworkApiKeys: React.FC = () => {
           <div className="p-3 bg-background/40 border border-border/70 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 font-medium text-foreground text-[11px]">
-                <Globe className="w-3.5 h-3.5 text-purple-400" />
+                <Globe className="w-3.5 h-3.5 text-primary" />
                 <span>TonAPI (REST)</span>
               </div>
               <span
@@ -382,7 +382,7 @@ export const NetworkApiKeys: React.FC = () => {
                 value={tonApiUrl}
                 onChange={(e) => setTonApiUrlState(e.target.value)}
                 placeholder="https://testnet.tonapi.io"
-                className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500"
+                className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary"
               />
             </div>
 
@@ -397,7 +397,7 @@ export const NetworkApiKeys: React.FC = () => {
                   value={tonApiKey}
                   onChange={(e) => setTonApiKeyState(e.target.value)}
                   placeholder="Enter TonAPI Bearer Token..."
-                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono pr-8 placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono pr-8 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary"
                 />
                 <button
                   type="button"

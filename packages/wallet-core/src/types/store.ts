@@ -54,6 +54,7 @@ export interface AuthSlice extends AuthState {
   reset: () => void;
   setPersistPassword: (persist: boolean) => void;
   setHoldToSign: (enabled: boolean) => void;
+  setSlideToSign: (enabled: boolean) => void;
   setShowFastSend: (enabled: boolean) => void;
   setUseWalletInterfaceType: (
     interfaceType: 'signer' | 'mnemonic' | 'ledger',

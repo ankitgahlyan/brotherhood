@@ -275,9 +275,14 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                 passwordSalt: state.auth.passwordSalt,
                 persistPassword: state.auth.persistPassword,
                 holdToSign: state.auth.holdToSign,
+                slideToSign: state.auth.slideToSign,
                 showFastSend: state.auth.showFastSend,
                 useWalletInterfaceType: state.auth.useWalletInterfaceType,
                 ledgerAccountNumber: state.auth.ledgerAccountNumber,
+                ...(state.auth.persistPassword &&
+                  state.auth.currentPassword && {
+                    currentPassword: state.auth.currentPassword,
+                  }),
               },
               walletManagement: {
                 hasWallet: state.walletManagement.hasWallet,
@@ -352,7 +357,10 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   w.id === persisted?.walletManagement?.activeWalletId,
               );
 
-              const effectivePassword = currentState?.auth?.currentPassword;
+              const effectivePassword =
+                (persisted?.auth?.persistPassword
+                  ? persisted?.auth?.currentPassword
+                  : undefined) || currentState?.auth?.currentPassword;
               const isUnlocked = Boolean(
                 persisted?.auth?.isPasswordSet && effectivePassword,
               );

@@ -116,24 +116,18 @@ export const DaoScreen: React.FC = () => {
                   label: 'Proposals',
                   icon: FileText,
                   testId: 'dao-tab-proposals',
-                  activeColorClass:
-                    'bg-card text-blue-500 font-semibold border border-border shadow-xs',
                 },
                 {
                   id: 'submit',
                   label: 'Submit',
                   icon: PlusCircle,
                   testId: 'dao-tab-submit',
-                  activeColorClass:
-                    'bg-card text-emerald-500 font-semibold border border-border shadow-xs',
                 },
                 {
                   id: 'vote',
                   label: 'Vote',
                   icon: Vote,
                   testId: 'dao-tab-vote',
-                  activeColorClass:
-                    'bg-card text-purple-500 font-semibold border border-border shadow-xs',
                 },
               ]}
               activeTab={activeTab}
@@ -229,7 +223,7 @@ export const DaoScreen: React.FC = () => {
                   value={voteProposalId}
                   onChange={(e) => setVoteProposalId(e.target.value)}
                   placeholder="0"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="dao-vote-proposal-id"
                 />
               </div>

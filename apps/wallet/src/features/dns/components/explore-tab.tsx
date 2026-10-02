@@ -498,7 +498,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               </span>
               {getZoneLabel()}
             </div>
-            <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20 font-semibold">
+            <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">
               🏆 Auction Ended
             </span>
           </div>

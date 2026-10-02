@@ -52,10 +52,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <button
         type="button"
         onClick={onConfirm}
-        className={`w-full py-4 rounded-2xl text-base font-bold text-white transition-colors ${
+        className={`w-full py-4 rounded-2xl text-base font-bold transition-all cursor-pointer ${
           danger
-            ? 'bg-red-500 hover:bg-red-600'
-            : 'bg-blue-600 hover:bg-blue-700'
+            ? 'bg-destructive text-white hover:opacity-90'
+            : 'bg-primary text-primary-foreground hover:opacity-90'
         }`}
       >
         {confirmLabel}

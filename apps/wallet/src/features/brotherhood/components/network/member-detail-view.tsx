@@ -578,7 +578,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                   href={getH3ViewerUrl(data.h3Cell)}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-mono text-blue-500 hover:underline text-[11px]"
+                  className="font-mono text-primary hover:underline text-[11px]"
                 >
                   {data.h3Cell} ↗
                 </a>

@@ -53,7 +53,7 @@ function CircleLogoFallback({ className, ...props }: ComponentProps<'div'>) {
     <p
       data-slot="avatar-fallback"
       className={cn(
-        'bg-muted flex size-full items-center justify-center rounded-full text-sm font-bold text-blue-600',
+        'bg-muted flex size-full items-center justify-center rounded-full text-sm font-bold text-primary',
         className,
       )}
       {...props}

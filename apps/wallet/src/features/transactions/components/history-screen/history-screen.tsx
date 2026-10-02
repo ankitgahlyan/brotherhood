@@ -21,6 +21,7 @@ import { useTransactionRows } from '../../hooks/use-transaction-rows';
 import { getJettonsImage } from '@/features/jettons/utils/jetton';
 
 import { Button } from '@/core/components/ui/button';
+import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
@@ -241,7 +242,7 @@ export const HistoryScreen: FC = () => {
             )}
           >
             {token.image && (
-              <img
+              <FallbackImage
                 src={token.image}
                 alt={token.symbol}
                 className="w-3.5 h-3.5 rounded-full object-cover"

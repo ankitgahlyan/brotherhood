@@ -125,9 +125,9 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
           className={`flex items-center space-x-3 ${compact ? 'min-w-0 flex-1' : ''}`}
         >
           {!compact && (
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               <svg
-                className="w-5 h-5 text-blue-500"
+                className="w-5 h-5 text-primary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -155,7 +155,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                       ? 'bg-emerald-500/10 text-emerald-500'
                       : activeWallet.network === 'tetra'
                         ? 'bg-purple-500/10 text-purple-500'
-                        : 'bg-blue-500/10 text-blue-500'
+                        : 'bg-primary/10 text-primary'
                   }`}
                 >
                   {getNetworkLabel(activeWallet.network)}
@@ -205,7 +205,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                 <div
                   key={wallet.id}
                   className={`px-4 py-3 border-b border-border/60 last:border-b-0 ${
-                    isActive ? 'bg-blue-500/10' : 'hover:bg-secondary/50'
+                    isActive ? 'bg-primary/10' : 'hover:bg-secondary/50'
                   }`}
                 >
                   <div className="flex items-start justify-between">
@@ -216,7 +216,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                             type="text"
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex-1 px-2 py-1 text-sm border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') handleSaveEdit();
@@ -273,13 +273,13 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                 ? 'bg-emerald-500/10 text-emerald-500'
                                 : wallet.network === 'tetra'
                                   ? 'bg-purple-500/10 text-purple-500'
-                                  : 'bg-blue-500/10 text-blue-500'
+                                  : 'bg-primary/10 text-primary'
                             }`}
                           >
                             {getNetworkLabel(wallet.network)}
                           </span>
                           {isActive && (
-                            <span className="text-xs text-blue-500 font-medium">
+                            <span className="text-xs text-primary font-medium">
                               Active
                             </span>
                           )}
@@ -297,7 +297,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                                 : wallet.id,
                             )
                           }
-                          className="hover:text-blue-500 transition-colors flex items-center space-x-1"
+                          className="hover:text-primary transition-colors flex items-center space-x-1"
                         >
                           <span className="capitalize">
                             {formatWalletType(wallet.walletInterfaceType)}
@@ -367,7 +367,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                               log.info(`Switching to wallet ${wallet.id}`);
                               onSwitchWallet(wallet.id);
                             }}
-                            className="p-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                             title="Switch to this wallet"
                           >
                             <svg
@@ -387,7 +387,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
                         )}
                         <button
                           onClick={() => handleStartEdit(wallet)}
-                          className="p-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                           title="Rename wallet"
                         >
                           <svg

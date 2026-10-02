@@ -30,6 +30,14 @@ function hasTelegramBiometricManager(): boolean {
 }
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
+const BIOMETRIC_DISABLED_KEY = 'brotherhood_biometrics_disabled';
+export const BIOMETRICS_CHANGED_EVENT = 'brotherhood:biometrics-changed';
+
+function notifyBiometricsChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(BIOMETRICS_CHANGED_EVENT));
+  }
+}
 
 interface BiometricVaultData {
   credentialId: string;
@@ -119,6 +127,14 @@ export async function isBiometricsSupported(): Promise<boolean> {
 export function isBiometricsRegistered(): boolean {
   if (typeof window === 'undefined') return false;
 
+  try {
+    if (localStorage.getItem(BIOMETRIC_DISABLED_KEY) === 'true') {
+      return false;
+    }
+  } catch {
+    // ignore storage access errors
+  }
+
   if (hasTelegramBiometricManager()) {
     return isTelegramBiometricsRegistered();
   }
@@ -182,7 +198,15 @@ export async function registerBiometrics(
   }
 
   if (hasTelegramBiometricManager()) {
-    return await saveTelegramBiometricsPassword(password, 'BrotherHood Wallet');
+    const saved = await saveTelegramBiometricsPassword(
+      password,
+      'BrotherHood Wallet',
+    );
+    if (saved) {
+      localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
+      notifyBiometricsChanged();
+    }
+    return saved;
   }
 
   try {
@@ -235,7 +259,9 @@ export async function registerBiometrics(
       iv: bufferToBase64(iv),
     };
 
+    localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
     localStorage.setItem(BIOMETRIC_VAULT_KEY, JSON.stringify(vaultData));
+    notifyBiometricsChanged();
     return true;
   } catch (err) {
     if (
@@ -254,12 +280,12 @@ export async function registerBiometrics(
  * Authenticate with platform biometrics (Fingerprint / Face ID / Touch ID) and return the decrypted password.
  */
 export async function authenticateBiometrics(): Promise<string | null> {
-  if (hasTelegramBiometricManager()) {
-    return await authenticateTelegramBiometrics('Unlock BrotherHood Wallet');
-  }
-
   if (!isBiometricsRegistered()) {
     return null;
+  }
+
+  if (hasTelegramBiometricManager()) {
+    return await authenticateTelegramBiometrics('Unlock BrotherHood Wallet');
   }
 
   if (!isSecureContextAvailable()) {
@@ -324,8 +350,14 @@ export async function authenticateBiometrics(): Promise<string | null> {
  */
 export function clearBiometrics(): void {
   if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(BIOMETRIC_DISABLED_KEY, 'true');
+    localStorage.removeItem(BIOMETRIC_VAULT_KEY);
+  } catch {
+    // ignore storage errors
+  }
   if (hasTelegramBiometricManager()) {
     void clearTelegramBiometrics();
   }
-  localStorage.removeItem(BIOMETRIC_VAULT_KEY);
+  notifyBiometricsChanged();
 }

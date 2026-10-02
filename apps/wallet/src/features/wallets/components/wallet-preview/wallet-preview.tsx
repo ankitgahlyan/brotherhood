@@ -217,7 +217,7 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
       onClick={onClick}
       className={`border rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         isActive
-          ? 'border-blue-500 bg-blue-500/10 shadow-md ring-1 ring-blue-500'
+          ? 'border-primary bg-primary/10 shadow-md ring-1 ring-primary'
           : 'border-border bg-card text-card-foreground hover:border-border/80 hover:shadow-sm'
       } ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
@@ -228,7 +228,7 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center ${
                 isActive
-                  ? 'bg-blue-500/20 text-blue-500'
+                  ? 'bg-primary/20 text-primary'
                   : 'bg-secondary text-muted-foreground'
               }`}
             >
@@ -239,7 +239,7 @@ export const WalletPreview: React.FC<WalletPreviewProps> = ({
                 {wallet.name}
               </h3>
               {isActive && (
-                <span className="inline-block px-2 py-0.5 text-xs font-medium text-blue-500 bg-blue-500/10 rounded-full">
+                <span className="inline-block px-2 py-0.5 text-xs font-medium text-primary bg-primary/10 rounded-full">
                   Active
                 </span>
               )}

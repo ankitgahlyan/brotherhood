@@ -128,7 +128,7 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
               onClick={() => void handleBiometricUnlock()}
               className="flex items-center justify-center gap-2"
             >
-              <FingerprintIcon className="w-5 h-5 text-blue-500" />
+              <FingerprintIcon className="w-5 h-5 text-primary" />
               Unlock with Biometrics
             </Button>
             <div className="flex items-center gap-2 my-3 text-xs text-muted-foreground">
@@ -150,7 +150,7 @@ export const WalletUnlockModal: React.FC<WalletUnlockModalProps> = ({
             }}
             placeholder="Enter wallet password"
             autoComplete="current-password"
-            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
           />
 
           {error && (

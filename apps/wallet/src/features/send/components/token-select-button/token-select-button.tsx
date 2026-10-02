@@ -37,7 +37,7 @@ export const TokenSelectButton: React.FC<TokenSelectButtonProps> = ({
           alt=""
           className="h-full w-full object-cover"
           fallback={
-            <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-bold text-white">
+            <span className="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-primary-foreground">
               {token.fallbackText}
             </span>
           }

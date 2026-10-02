@@ -56,7 +56,7 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
           onClick={() => onChange('mainnet')}
           className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
             value === 'mainnet'
-              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              ? 'bg-primary/10 text-primary border-primary'
               : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
           }`}
         >
@@ -73,7 +73,7 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
           onClick={() => onChange('testnet')}
           className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
             value === 'testnet'
-              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              ? 'bg-primary/10 text-primary border-primary'
               : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
           }`}
         >
@@ -90,7 +90,7 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({
           onClick={() => onChange('tetra')}
           className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
             value === 'tetra'
-              ? 'bg-blue-500/10 text-blue-500 border-blue-500'
+              ? 'bg-primary/10 text-primary border-primary'
               : 'bg-secondary/70 text-foreground border-border hover:bg-secondary'
           }`}
         >

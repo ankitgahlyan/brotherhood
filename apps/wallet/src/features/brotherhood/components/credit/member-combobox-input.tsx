@@ -138,7 +138,7 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
             placeholder={placeholder}
             disabled={disabled}
             data-testid={dataTestId}
-            className="w-full p-2.5 pr-8 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2.5 pr-8 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {value && (
             <button
@@ -185,7 +185,7 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
           title="Scan QR code"
           className="shrink-0 p-2.5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 transition-colors flex items-center justify-center cursor-pointer"
         >
-          <QrCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <QrCode className="w-4 h-4 text-primary" />
         </button>
       </div>
 
@@ -229,7 +229,7 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
                 {/* Circle Section */}
                 {filteredCircle.length > 0 && (
                   <div className="pt-1 space-y-1">
-                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                       <Users className="w-3 h-3" />
                       Circle Members ({filteredCircle.length})
                     </div>

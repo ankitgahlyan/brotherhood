@@ -34,8 +34,8 @@ export const QuoteTimer: FC<QuoteTimerProps> = ({
 
   if (isExpired) {
     return (
-      <div className="flex items-center justify-between rounded-2xl bg-yellow-50 px-4 py-3">
-        <span className="text-sm font-medium text-yellow-800">
+      <div className="flex items-center justify-between rounded-2xl bg-amber-500/10 border border-amber-500/20 px-4 py-3">
+        <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
           Quote expired
         </span>
         <Button
@@ -52,8 +52,8 @@ export const QuoteTimer: FC<QuoteTimerProps> = ({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3">
-      <span className="text-sm text-blue-800">
+    <div className="flex items-center justify-between rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3">
+      <span className="text-sm text-primary">
         Quote valid for{' '}
         <span className="font-semibold">
           {minutes > 0 && `${minutes}m `}

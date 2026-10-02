@@ -140,7 +140,7 @@ api.v3 = "http://127.0.0.1:3015/api/v1/environments/environment-1/rpc/api/v3"
 explorer = "http://127.0.0.1:3015/virtual-environments/environment-1/explorer"
 
 [scripts]
-loop = "acton check --fix && acton fmt && acton build && acton wrapper --all && acton test"
+loop = "acton check --fix && acton fmt && acton build && acton wrapper --all && acton test && acton wrapper --all --ts"
 deploy-libs = "acton library publish FossFiWallet --duration 99d --wallet teleg --net testnet --local && acton library publish Voter --wallet teleg -y && acton library publish Poll --duration 99d -y && acton library publish Location --wallet teleg -y && acton library publish PersonalMinter --wallet teleg -y && acton library publish PersonalWallet --wallet teleg -y && acton library publish Following --wallet teleg -y"
 deploy-emulation = "acton script contracts/scripts/deploy-fi.tolk"
 deploy-testnet = "acton script contracts/scripts/deploy-fi.tolk --net testnet"

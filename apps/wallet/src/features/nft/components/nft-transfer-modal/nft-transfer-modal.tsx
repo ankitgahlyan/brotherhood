@@ -9,7 +9,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { isValidAddress, type NFT } from '@ton/walletkit';
 import { useWallet, useWalletKit, useNfts } from '@demo/wallet-core';
-import { Flame, Send, AlertTriangle } from 'lucide-react';
+import { Flame, Send, AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   ModalContainer,
   ModalHeader,
@@ -19,6 +19,7 @@ import {
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TxButton } from '@/core/components/ui/tx-button';
+import { useExplorer, getExplorerAddressUrl } from '@/core/explorer';
 import { tokenImageUrls } from '@/core/utils';
 import { useBrotherhoodTransaction } from '@/features/brotherhood/hooks/use-brotherhood-transaction';
 import { RecipientField } from '@/features/send/components/recipient-field/recipient-field';
@@ -35,7 +36,10 @@ import {
 } from '@/features/dns/store/dns-store';
 import { clearDomainResolutionCache } from '@/core/lib/dns';
 import { clearDomainLookupCache } from '@/features/dns/hooks/use-domain-lookup';
-import type { Network } from '@/lib/brotherhood/config';
+import {
+  BRO_COLLECTION_RESOLVER,
+  type Network,
+} from '@/lib/brotherhood/config';
 
 interface NftTransferModalProps {
   nft: NFT | null;
@@ -62,6 +66,7 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const walletKit = useWalletKit();
   const { refreshNfts } = useNfts();
+  const { explorer } = useExplorer();
   const updateDomain = useDnsStore((s) => s.updateDomain);
   const removeDomain = useDnsStore((s) => s.removeDomain);
 
@@ -204,6 +209,14 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
       ? formatNftIndex(nft.index)
       : (nft.index ?? null);
 
+  const collectionAddress =
+    nft.collection?.address ||
+    (isBroDomain ? BRO_COLLECTION_RESOLVER : undefined);
+  const itemExplorerUrl = getExplorerAddressUrl(network, nft.address, explorer);
+  const collectionExplorerUrl = collectionAddress
+    ? getExplorerAddressUrl(network, collectionAddress, explorer)
+    : null;
+
   return (
     <ModalContainer
       isOpened={isOpen}
@@ -255,28 +268,74 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
         </div>
 
         {/* NFT Preview banner */}
-        <div className="flex items-center gap-3 p-3 bg-secondary/50 border border-border rounded-2xl">
-          <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-            <FallbackImage
-              src={getNftImageSources(nft)}
-              alt={name}
-              className="w-full h-full object-cover"
-            />
+        <div className="p-3 bg-secondary/50 border border-border rounded-2xl space-y-2.5">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+              <FallbackImage
+                src={getNftImageSources(nft)}
+                alt={name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-foreground truncate">
+                {name}
+              </h4>
+              {nft.collection?.name && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {nft.collection.name}
+                </p>
+              )}
+              {indexLabel && (
+                <p className="text-xs text-muted-foreground truncate">
+                  Index: {indexLabel}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-bold text-foreground truncate">
-              {name}
-            </h4>
-            {indexLabel && (
-              <p className="text-xs text-muted-foreground truncate">
-                Index: {indexLabel}
-              </p>
+
+          <div className="pt-2 border-t border-border/60 space-y-1.5 text-xs">
+            {collectionAddress && collectionExplorerUrl && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Collection</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <a
+                    href={collectionExplorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-primary hover:underline truncate cursor-pointer"
+                    data-testid="nft-collection-explorer-link"
+                    title="Open collection in explorer"
+                  >
+                    <span>
+                      {collectionAddress.slice(0, 6)}…
+                      {collectionAddress.slice(-4)}
+                    </span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                  <CopyButton address={collectionAddress} />
+                </div>
+              </div>
             )}
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[11px] font-mono text-muted-foreground truncate">
-                {nft.address.slice(0, 6)}…{nft.address.slice(-4)}
-              </span>
-              <CopyButton address={nft.address} />
+
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Item Address</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <a
+                  href={itemExplorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-mono text-primary hover:underline truncate cursor-pointer"
+                  data-testid="nft-item-explorer-link"
+                  title="Open item in explorer"
+                >
+                  <span>
+                    {nft.address.slice(0, 6)}…{nft.address.slice(-4)}
+                  </span>
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                </a>
+                <CopyButton address={nft.address} />
+              </div>
             </div>
           </div>
         </div>

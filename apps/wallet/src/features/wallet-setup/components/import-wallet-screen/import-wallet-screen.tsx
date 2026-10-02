@@ -207,7 +207,7 @@ export const ImportWalletScreen: React.FC = () => {
     if (words[index])
       return 'border-emerald-500/60 bg-emerald-500/10 text-emerald-500';
     if (activeInput === index)
-      return 'border-blue-500/60 bg-blue-500/10 text-foreground';
+      return 'border-primary/60 bg-primary/10 text-foreground';
     return 'border-border bg-card text-foreground';
   };
 
@@ -281,7 +281,7 @@ export const ImportWalletScreen: React.FC = () => {
             <button
               type="button"
               onClick={handleClickPaste}
-              className="text-xs text-blue-600 hover:text-blue-800"
+              className="text-xs text-primary hover:opacity-80 font-medium"
               data-testid="paste-mnemonic"
             >
               Paste
@@ -304,7 +304,7 @@ export const ImportWalletScreen: React.FC = () => {
                 onPaste={(e) => handlePaste(index, e)}
                 onFocus={() => setActiveInput(index)}
                 placeholder={`${index + 1}`}
-                className={`w-full px-1.5 py-1.5 text-xs border rounded text-center font-mono transition-colors ${cellClassName(index)} focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500`}
+                className={`w-full px-1.5 py-1.5 text-xs border rounded text-center font-mono transition-colors ${cellClassName(index)} focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary`}
                 autoComplete="off"
                 spellCheck={false}
               />
