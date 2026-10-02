@@ -2,16 +2,6 @@ import "storage"
 
 type TransferForwardPayload = RemainingBitsAndRefs
 
-// type InlineString = string
-
-// fun InlineString.unpackFromSlice(mutate s: slice): InlineString {
-//     return s.loadRef().beginParse() as InlineString;
-// }
-
-struct (0x00000000) DeployDnsDomain {
-    payload: RemainingBitsAndRefs
-}
-
 struct (0x370fec51) FillUp {
     queryId: uint64
 }
@@ -88,6 +78,24 @@ struct (0x2c159bf4) MintDomainFor {
     queryId: uint64
     targetOwner: address
     payload: RemainingBitsAndRefs
+}
+
+struct (0x646e7375) UpgradeDnsItem {
+    queryId: uint64 = 0
+    itemAddress: address
+    code: cell
+    additionalData: cell? = null
+}
+
+struct (0x646e7364) DestroyContract {
+    queryId: uint64 = 0
+    recipient: address? = null
+}
+
+struct (0x646e7378) DestroyDnsItem {
+    queryId: uint64 = 0
+    itemAddress: address
+    recipient: address? = null
 }
 
 struct ItemInitData {

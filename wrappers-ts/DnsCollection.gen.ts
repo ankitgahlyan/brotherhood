@@ -142,39 +142,46 @@ type uint32 = bigint
 type uint64 = bigint
 
 /**
- > struct (0x00000000) DeployDnsDomain {
- >     payload: RemainingBitsAndRefs
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
  > }
  */
-export interface DeployDnsDomain {
-    readonly $: 'DeployDnsDomain'
-    payload: RemainingBitsAndRefs
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
 }
 
-export const DeployDnsDomain = {
-    PREFIX: 0x00000000,
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
 
     create(args: {
-        payload: RemainingBitsAndRefs
-    }): DeployDnsDomain {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
         return {
-            $: 'DeployDnsDomain',
+            $: 'HotUpgrade',
             ...args
         }
     },
-    fromSlice(s: c.Slice): DeployDnsDomain {
-        loadAndCheckPrefix32(s, 0x00000000, 'DeployDnsDomain');
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
         return {
-            $: 'DeployDnsDomain',
-            payload: loadTolkRemaining(s),
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
         }
     },
-    store(self: DeployDnsDomain, b: c.Builder): void {
-        b.storeUint(0x00000000, 32);
-        storeTolkRemaining(self.payload, b);
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
     },
-    toCell(self: DeployDnsDomain): c.Cell {
-        return makeCellFrom<DeployDnsDomain>(self, DeployDnsDomain.store);
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
     }
 }
 
@@ -347,6 +354,155 @@ export const MintDomainFor = {
 }
 
 /**
+ > struct (0x646e7375) UpgradeDnsItem {
+ >     queryId: uint64
+ >     itemAddress: address
+ >     code: cell
+ >     additionalData: cell?
+ > }
+ */
+export interface UpgradeDnsItem {
+    readonly $: 'UpgradeDnsItem'
+    queryId: uint64 /* = 0 */
+    itemAddress: c.Address
+    code: c.Cell
+    additionalData: c.Cell | null /* = null */
+}
+
+export const UpgradeDnsItem = {
+    PREFIX: 0x646e7375,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        code: c.Cell
+        additionalData?: c.Cell | null /* = null */
+    }): UpgradeDnsItem {
+        return {
+            $: 'UpgradeDnsItem',
+            queryId: 0n,
+            additionalData: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): UpgradeDnsItem {
+        loadAndCheckPrefix32(s, 0x646e7375, 'UpgradeDnsItem');
+        return {
+            $: 'UpgradeDnsItem',
+            queryId: s.loadUintBig(64),
+            itemAddress: s.loadAddress(),
+            code: s.loadRef(),
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+        }
+    },
+    store(self: UpgradeDnsItem, b: c.Builder): void {
+        b.storeUint(0x646e7375, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.itemAddress);
+        b.storeRef(self.code);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+    },
+    toCell(self: UpgradeDnsItem): c.Cell {
+        return makeCellFrom<UpgradeDnsItem>(self, UpgradeDnsItem.store);
+    }
+}
+
+/**
+ > struct (0x646e7364) DestroyContract {
+ >     queryId: uint64
+ >     recipient: address?
+ > }
+ */
+export interface DestroyContract {
+    readonly $: 'DestroyContract'
+    queryId: uint64 /* = 0 */
+    recipient: c.Address | null /* = null */
+}
+
+export const DestroyContract = {
+    PREFIX: 0x646e7364,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }): DestroyContract {
+        return {
+            $: 'DestroyContract',
+            queryId: 0n,
+            recipient: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DestroyContract {
+        loadAndCheckPrefix32(s, 0x646e7364, 'DestroyContract');
+        return {
+            $: 'DestroyContract',
+            queryId: s.loadUintBig(64),
+            recipient: s.loadMaybeAddress(),
+        }
+    },
+    store(self: DestroyContract, b: c.Builder): void {
+        b.storeUint(0x646e7364, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.recipient);
+    },
+    toCell(self: DestroyContract): c.Cell {
+        return makeCellFrom<DestroyContract>(self, DestroyContract.store);
+    }
+}
+
+/**
+ > struct (0x646e7378) DestroyDnsItem {
+ >     queryId: uint64
+ >     itemAddress: address
+ >     recipient: address?
+ > }
+ */
+export interface DestroyDnsItem {
+    readonly $: 'DestroyDnsItem'
+    queryId: uint64 /* = 0 */
+    itemAddress: c.Address
+    recipient: c.Address | null /* = null */
+}
+
+export const DestroyDnsItem = {
+    PREFIX: 0x646e7378,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        recipient?: c.Address | null /* = null */
+    }): DestroyDnsItem {
+        return {
+            $: 'DestroyDnsItem',
+            queryId: 0n,
+            recipient: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DestroyDnsItem {
+        loadAndCheckPrefix32(s, 0x646e7378, 'DestroyDnsItem');
+        return {
+            $: 'DestroyDnsItem',
+            queryId: s.loadUintBig(64),
+            itemAddress: s.loadAddress(),
+            recipient: s.loadMaybeAddress(),
+        }
+    },
+    store(self: DestroyDnsItem, b: c.Builder): void {
+        b.storeUint(0x646e7378, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.itemAddress);
+        b.storeAddress(self.recipient);
+    },
+    toCell(self: DestroyDnsItem): c.Cell {
+        return makeCellFrom<DestroyDnsItem>(self, DestroyDnsItem.store);
+    }
+}
+
+/**
  > struct ItemInitData {
  >     fromAddress: address
  >     domain: Cell<RemainingBitsAndRefs>
@@ -465,7 +621,6 @@ export const BidBroDomain = {
  >     content: cell
  >     nftItemCode: cell
  >     deploymentTime: uint32
- >     isInstantMint: bool
  >     fiMinterAddress: address?
  > }
  */
@@ -475,7 +630,6 @@ export interface CollectionStorage {
     content: c.Cell
     nftItemCode: c.Cell
     deploymentTime: uint32 /* = 0 */
-    isInstantMint: boolean /* = false */
     fiMinterAddress: c.Address | null /* = null */
 }
 
@@ -485,13 +639,11 @@ export const CollectionStorage = {
         content: c.Cell
         nftItemCode: c.Cell
         deploymentTime?: uint32 /* = 0 */
-        isInstantMint?: boolean /* = false */
         fiMinterAddress?: c.Address | null /* = null */
     }): CollectionStorage {
         return {
             $: 'CollectionStorage',
             deploymentTime: 0n,
-            isInstantMint: false,
             fiMinterAddress: null,
             ...args
         }
@@ -503,7 +655,6 @@ export const CollectionStorage = {
             content: s.loadRef(),
             nftItemCode: s.loadRef(),
             deploymentTime: s.loadUintBig(32),
-            isInstantMint: s.loadBoolean(),
             fiMinterAddress: s.loadMaybeAddress(),
         }
     },
@@ -512,7 +663,6 @@ export const CollectionStorage = {
         b.storeRef(self.content);
         b.storeRef(self.nftItemCode);
         b.storeUint(self.deploymentTime, 32);
-        b.storeBit(self.isInstantMint);
         b.storeAddress(self.fiMinterAddress);
     },
     toCell(self: CollectionStorage): c.Cell {
@@ -628,22 +778,22 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DnsCollection implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECHAEABasAART/APSkE/S88sgLAQIBYgIDAgLNBAUCASAUFQIBIAYHAJHRBggUyYQRAEjCc5UABwEGABTJhBEAJGE5yoAHAQYAHMGEENIwnOVABwEGACTBhBDHRqUogAcGCEy8EMOjUpRABwQQwLpDt0AEAgEgCAkAiVIMECmDCCGC6Q7dAA4CDAApgwghgXSHboAOAgwAOYMIIYC6Q7dADgIMAEmDCCGASoF8gA4MEJloISVAvkAOCCESoF8gCAT3PiR8kDXLCAAAAAE4wLXLCLNHkEMjkjtRND6SDD4kscF8uGhghAF9eEA+CdvEKIB0z/6APpIMFMTvJIxApEz4iDCAPLhksjPhQgT+lJY+gKCENUydtvPC4rLP8lx+wDg1ywhuH9ijJEw4NcsIWCs36TjAtcsIxNLIYzjAoAoLDA0ASTIIddJEtcYAs4h12SOEyHXSsAB8uDKAddM0CDXSdcYAs7kz1CAD/O1E0PgjIIIQYuTzELzy4McB+kjUMdTTH9cKACCVIcIAwwCRcOKOFgGCCCeNAKAkvJn4klADxwXy4aKRMuKSMzDiA/ABMSDXSSJwc+MEqgIhufLgyCCBA/C78uDJIKk4AvLQylzbPPLgyyCrAiOVMTMC8APjDviXu/LgzCHIzhIODwL+7UTQ+kjUMdTTHzHXCgD4klADxwXy4aEC0z8x+kjwATEg10kjcHPjBKoCIbny4MgggQPwu/LgySCpOALy0MpSENs88uDLIMjO+RaAUPgzIG6RMJ/Q9AVSEIMH9A5voTHy0M3ighAL68IA+CgCyMv/EvpSyVJCcOMEAsjOyW0lBRIRAv7tRND6SDHUMdTTHzHSAPpQMCBukTCX+JLHBfLhqOIC0z8x+kj6ANdM0PABMSDXSQVwc+MEqgIlufLgyCSBA/C78uDJJKk4AvLQylME2zzy4MsEqwLwBCG78uDMI8jO+RaAUPgzIG6RMJ/Q9AVSEIMH9A5voTHy0M3i+CgByMv/EhMACIQP8vAB6jCrAnpxIsAElluBA+iAZN4iwAWWW4EB9IAy3iLABpZbgQGQgCjeIsAHlluBASyAHt4iwAiWW4EAyIAU3iLACZRbgGR63gLACpVbgDJ1Ad6CEDuaygCoAYIQO5rKAKgEghBi5PMQoYIIJ40AqQQgwhWRW+MOAhAA6vkWgFD4MyBukTCf0PQFUhCDB/QOb6Ex8tDN4oIQC+vCAPgoAsjL/xL6UslSInDjBPiSBMjOyW0kBsj6UhLMFcoAz4QgFPpUycjPiYgBUyXIz4TQzMz5Fs8L/1AE+gKBAI3PC3AUzBPMzMkBk3H7AJSAQPsA4gAYNAOYAqdagGSpBALkAHbI+lISzBTKAM+EIBP6VMnIz4mIAVM1yM+E0MzM+RbPC/9Y+gKBAI3PC3AUzMwSzMkBk3H7AJSAQPsA4gC47aLt+3ABqwIgpQGOSwLTByHCL5UhwTrDAJFw4iLCYJUiwXvDAJFw4gGSMH+SwwDiIJEyjhcwAcAtlSHCAMMAkXDilVMSucMAkXDiAeIBlV8DcNsx4QGkWORfA38AbvpSyQTIzsn4kgPI+lLMz4EB+gL6VMnIz4mIAV3Iz4TQzMz5Fs8L/4EAjc8LdBLMEszMyYBA+wACASAWFwIBIBgZAAe4tdMYAGO6ej7UTQ+kgx1DHU0x8x0gAx+lAx0fgoAsjL/xL6UskByM+E0MzM+RbIz4oAQMv/z1CAAxuQW+1E0PpI1NQx0x8x0gD6UDHRfwNt4wSAIBWBobAM+wwwwINdJqTgC8tBGINcKByDAAAGRcJch10nACMMA4pNbeG3gIJUB0wcxAd4hcHCRs54B0wchwAAClAKmCALeWegxIMIA8uDJUSLXGcjO+RaCAWej7UPYAXhw4wQSoMjPiupOEvpSyYAAzsWb7UTQ+kjUMdQx0x8x0gAx+lAx0XWAZFiA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECHAEABQoAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAUFQIB0wYHAEesJJA3SXaqcJh2omh9JGpqaY/9KGiCZH0pCeZmZY/9KmT2qkAE90+JHyQNcsIs0eQQyOSO1E0PpIMPiSxwXy4aGCEAX14QD4J28QogHTP/oA+kgwUxO8kjECkTPiIMIA8uGSyM+FCBP6Ulj6AoIQ1TJ2288Liss/yXH7AODXLCG4f2KMkTDg1ywhYKzfpOMC1ywjE0shjOMC1ywgAACAXOMCgICQoLAJFCDBApkwgiAJGE5yoADgIMACmTCCIASMJzlQAOAgwAOYMIIaRhOcqADgIMAEmDCCGOjUpRAA4MEJl4IYdGpSiADgghgXSHboAIA/ztRND6SNQx1NMfMfpQMPiSUAPHBfLhoQLTPzH6SMgh10kS1xgCziHXZI4TIddKwAHy4MoB10zQINdJ1xgCzuQxz1Ag10kgwgDy4MgggQPwu/LgySCpOALy0MpSENs88uDLIMjO+RaAUPgzIG6f0PQFUhCDB/QOb6Ex8tDN4w0PDA0B+u1E0PpI1DHU0x/6UDAgbpj4kiHHBfLhqN/4IyCCEGLk8xC88uDHBdM/MfpI+gDXTCTCAI4UBIECWKAXuZdSBccF8uGikTTiEDSVECc0NTDiAdDIIddJEtcYAs4h12SOEyHXSsAB8uDKAddM0CDXSdcYAs7kMc9QINdJIMIADgA47UTQ+kgw+JLHBfLhofQE10wg+wTQ7R7tU/EISQP8idcnjjHtRND6SDD4kscF8uGh0z8x+kjU9AXIz5AAAEAu9ADMycjPhQgS+lJxzwtuzMmAQPsA4NcsIyNzmySOMu1E0PpIMPiSIccF8uGhAdM/+lAwIG6zQBPjBMjPhQj6UoIQ1TJ2288Ljss/yYEAoPsA4NcsIyNzm8TjAoQPERITAAIwAIiCEAvrwgD4KALIy/8S+lLJAsjOyQPI+lITzM+GEBP6VMnIz4mIAVM0yM+E0MzM+RbPC/9Y+gKBAI3PC3ATzMzMyXH7AAL+8uDIIIED8Lvy4MkgqTgC8tDKXNs88uDLqwLwAiS78uDMIMjO+RaAUPgzIG6RMJ/Q9AVSEIMH9A5voTHy0M3ighAL68IA+CgCyMv/EvpSyQLIzskGyPpSFszPgVAE+gL6VMnIz4mIAV3Iz4TQzMz5Fs8L/1AE+gKBAI3PC3DMzA8QALjtou37cAGrAiClAY5LAtMHIcIvlSHBOsMAkXDiIsJglSLBe8MAkXDiAZIwf5LDAOIgkTKOFzABwC2VIcIAwwCRcOKVUxK5wwCRcOIB4gGVXwNw2zHhAaRY5F8DfwAKzMlx+wAACGRuc3UAbO1E0PpIMPiSIccF8uGhAdM/+kj6UDAgbrNAFOMEyM+FCBP6UoIQZG5zZM8Ljss/+lTJgED7AAAE8vACASAWFwIBIBgZAAe4tdMYAF26ej7UTQ+kgx1DHU0x8x+lAx0fgoAsjL/xL6UskByM+E0MzM+RbIz4oAQMv/z1CAAnuQW+1E0PpI1NQx0x8x+lAx0X8CgCAVgaGwDPsMMMCDXSak4AvLQRiDXCgcgwAABkXCXIddJwAjDAOKTW3ht4CCVAdMHMQHeIXBwkbOeAdMHIcAAApQCpggC3lnoMSDCAPLgyVEi1xnIzvkWggFno+1D2AF4cOMEEqDIz4rqThL6UsmAALbFm+1E0PpI1DHUMdMfMfpQMdF1gGRYg');
 
     static Errors = {
-        'ERROR_DNS_INVALID_SUBDOMAIN_BITS': 70,
-        'ERROR_AUCTION_NOT_STARTED': 199,
-        'ERROR_DOMAIN_TOO_SHORT': 200,
-        'ERROR_DOMAIN_TOO_LONG': 201,
-        'ERROR_DOMAIN_FORMAT_INVALID': 202,
-        'ERROR_DOMAIN_HAS_INVALID_CHARS': 203,
-        'ERROR_BID_BELOW_MIN_PRICE': 204,
-        'ERROR_DOMAIN_IS_BLACKLISTED': 205,
-        'ERROR_NOT_ENOUGH_BALANCE': 402,
-        'ERROR_NOT_AUTHORIZED_TREASURY': 417,
-        'ERROR_RESERVATION_PERIOD_ACTIVE': 418,
-        'ERROR_INCORRECT_SENDER': 424,
-        'ERROR_UNKNOWN_OP': 65535,
+        'Errors.DnsInvalidSubdomainBits': 70,
+        'Errors.AuctionNotStarted': 199,
+        'Errors.DomainTooShort': 200,
+        'Errors.DomainTooLong': 201,
+        'Errors.DomainFormatInvalid': 202,
+        'Errors.DomainHasInvalidChars': 203,
+        'Errors.BidBelowMinPrice': 204,
+        'Errors.DomainIsBlacklisted': 205,
+        'Errors.NotEnoughBalance': 402,
+        'Errors.NotAuthorizedTreasury': 417,
+        'Errors.ReservationPeriodActive': 418,
+        'Errors.DnsIncorrectSender': 424,
+        'Errors.UnknownOp': 65535,
     }
 
     readonly address: c.Address
@@ -663,7 +813,6 @@ export class DnsCollection implements c.Contract {
         content: c.Cell
         nftItemCode: c.Cell
         deploymentTime?: uint32 /* = 0 */
-        isInstantMint?: boolean /* = false */
         fiMinterAddress?: c.Address | null /* = null */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
@@ -672,12 +821,6 @@ export class DnsCollection implements c.Contract {
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
         return new DnsCollection(address, initialState);
-    }
-
-    static createCellOfDeployDnsDomain(body: {
-        payload: RemainingBitsAndRefs
-    }) {
-        return DeployDnsDomain.toCell(DeployDnsDomain.create(body));
     }
 
     static createCellOfFillUp(body: {
@@ -712,20 +855,41 @@ export class DnsCollection implements c.Contract {
         return BidBroDomain.toCell(BidBroDomain.create(body));
     }
 
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfUpgradeDnsItem(body: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        code: c.Cell
+        additionalData?: c.Cell | null /* = null */
+    }) {
+        return UpgradeDnsItem.toCell(UpgradeDnsItem.create(body));
+    }
+
+    static createCellOfDestroyContract(body: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }) {
+        return DestroyContract.toCell(DestroyContract.create(body));
+    }
+
+    static createCellOfDestroyDnsItem(body: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        recipient?: c.Address | null /* = null */
+    }) {
+        return DestroyDnsItem.toCell(DestroyDnsItem.create(body));
+    }
+
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
             body: c.Cell.EMPTY,
-            ...extraOptions
-        });
-    }
-
-    async sendDeployDnsDomain(provider: ContractProvider, via: Sender, msgValue: coins, body: {
-        payload: RemainingBitsAndRefs
-    }, extraOptions?: ExtraSendOptions) {
-        return provider.internal(via, {
-            value: msgValue,
-            body: DeployDnsDomain.toCell(DeployDnsDomain.create(body)),
             ...extraOptions
         });
     }
@@ -774,6 +938,53 @@ export class DnsCollection implements c.Contract {
         return provider.internal(via, {
             value: msgValue,
             body: BidBroDomain.toCell(BidBroDomain.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendUpgradeDnsItem(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        code: c.Cell
+        additionalData?: c.Cell | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: UpgradeDnsItem.toCell(UpgradeDnsItem.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendDestroyContract(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: DestroyContract.toCell(DestroyContract.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendDestroyDnsItem(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        itemAddress: c.Address
+        recipient?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: DestroyDnsItem.toCell(DestroyDnsItem.create(body)),
             ...extraOptions
         });
     }

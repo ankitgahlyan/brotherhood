@@ -12,6 +12,7 @@ import {
   encodeDomainCell,
   domainItemIndex,
   deriveDnsItemAddress,
+  buildSnakeStringCell,
 } from '@/core/lib/dns';
 
 // ─── Pricing & Timing (re-exported from centralized config.ts) ───────────────
@@ -27,11 +28,8 @@ export {
   broFiRenewalFee,
   broFiStartingBid,
   broFiTierLabel,
-  broRenewalFee,
   BRO_TREASURY_ADDRESS,
   BRO_TREASURY_TON_FEE,
-  broTierLabel,
-  broTierPrice,
   DNS_GAS,
   MIN_TONS_FOR_STORAGE,
   ONE_DAY_SEC,
@@ -42,25 +40,14 @@ export {
 
 // ─── Domain encoding & derivation (re-exported from centralized @/core/lib/dns) ─
 
-export { encodeDomainCell, domainItemIndex, deriveDnsItemAddress };
+export {
+  encodeDomainCell,
+  domainItemIndex,
+  deriveDnsItemAddress,
+  buildSnakeStringCell,
+};
 
 // ─── Message body builders ────────────────────────────────────────────────────
-
-/**
- * Builds the body for DeployDnsDomain (opcode 0x00000000).
- * The domain name is appended as raw ASCII bytes after the opcode.
- *
- * Contract reads: `readDomainFromComment(mutate msg.payload)` which reads
- * all remaining bits/refs from the payload slice.
- */
-export function buildDeployDnsDomainBody(domainName: string): Cell {
-  const lower = domainName.toLowerCase();
-  const b = beginCell().storeUint(0x00000000, 32);
-  for (let i = 0; i < lower.length; i++) {
-    b.storeUint(lower.charCodeAt(i), 8);
-  }
-  return b.endCell();
-}
 
 /**
  * Builds the body for FillUp (opcode 0x370fec51).
@@ -72,8 +59,9 @@ export function buildFillUpBody(queryId: bigint): Cell {
 /**
  * Builds the body for ChangeDnsRecord (opcode 0x4eb1f0f9).
  * For the wallet record, key = sha256BigInt(DnsCategory.Wallet).
- * valueCell: the smart-contract-address record cell (0x9fd3 prefix + address),
- * or null to delete the record.
+ * For social contact link, key = sha256BigInt(DnsCategory.ContactUri).
+ * For channel/group link, key = sha256BigInt(DnsCategory.ChannelDescription).
+ * valueCell: the record cell, or null to delete the record.
  */
 export function buildChangeDnsRecordBody(
   key: bigint,
@@ -103,10 +91,31 @@ export function buildWalletDnsRecordCell(walletAddress: Address): Cell {
 }
 
 /**
+ * Builds a TEP-64 snake-string cell (0x00 prefix + UTF-8 bytes) for social links.
+ */
+export function buildTextDnsRecordCell(text: string): Cell {
+  return buildSnakeStringCell(text);
+}
+
+/**
  * The sha256 key for the DNS wallet category — mirrors dnsCategoryToBigInt(DnsCategory.Wallet).
  */
 export function walletDnsKey(): bigint {
   return dnsCategoryToBigInt(DnsCategory.Wallet);
+}
+
+/**
+ * The sha256("uri") key for the primary social/contact link (ThatsApp, Telegram, Facebook, etc.).
+ */
+export function contactUriDnsKey(): bigint {
+  return dnsCategoryToBigInt(DnsCategory.ContactUri);
+}
+
+/**
+ * The sha256("description") key for the secondary channel/group link.
+ */
+export function channelDescriptionDnsKey(): bigint {
+  return dnsCategoryToBigInt(DnsCategory.ChannelDescription);
 }
 
 /**
@@ -127,7 +136,7 @@ export function buildWithdrawFeesBody(
 
 /**
  * Builds the body for MintDomainFor (opcode 0x2c159bf4).
- * Domain name appended as ASCII bytes in payload (same as DeployDnsDomain).
+ * Domain name appended as ASCII bytes in payload.
  */
 export function buildMintDomainForBody(
   queryId: bigint,
@@ -185,5 +194,35 @@ export function buildDnsRenewRequestBody(
     .storeUint(queryId, 64)
     .storeAddress(itemAddress)
     .storeCoins(fiAmount)
+    .endCell();
+}
+
+/**
+ * Builds the body for DestroyContract (opcode 0x646e7364) sent to DnsCollection or DnsItem.
+ */
+export function buildDestroyContractBody(
+  queryId = 0n,
+  recipient: Address | null = null,
+): Cell {
+  return beginCell()
+    .storeUint(0x646e7364, 32)
+    .storeUint(queryId, 64)
+    .storeAddress(recipient)
+    .endCell();
+}
+
+/**
+ * Builds the body for DestroyDnsItem (opcode 0x646e7378) sent to DnsCollection by Treasury.
+ */
+export function buildDestroyDnsItemBody(
+  queryId: bigint,
+  itemAddress: Address,
+  recipient: Address | null = null,
+): Cell {
+  return beginCell()
+    .storeUint(0x646e7378, 32)
+    .storeUint(queryId, 64)
+    .storeAddress(itemAddress)
+    .storeAddress(recipient)
     .endCell();
 }

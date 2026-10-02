@@ -24,7 +24,6 @@ fun deployBroFiCollection(minterAddr: address): (DnsCollection, Treasury, Treasu
         content: makeCollectionContentCell(),
         nftItemCode: build("DnsItem"),
         deploymentTime: 0,
-        isInstantMint: false,
         fiMinterAddress: minterAddr,
     });
 
@@ -44,7 +43,7 @@ fun makeBroDomain(name: string): Cell<RemainingBitsAndRefs> {
     return makeDomainCell(name) as Cell<RemainingBitsAndRefs>;
 }
 
-get fun `test bro-fi: starting bid initiates 7-day auction in FI tokens`() {
+get fun `test bro-fi: starting bid initiates 5-minute auction in FI tokens`() {
     val now = AUCTION_START_TIME + 100;
     testing.setNow(now);
 
@@ -172,7 +171,7 @@ get fun `test bro-fi: outbid requires at least 105 percent and sends outbid noti
     expect(auction.maxBidAmount).toEqual(validOutbidFi);
 }
 
-get fun `test bro-fi: anti-sniping prolongation extends auction if bid placed in last hour`() {
+get fun `test bro-fi: anti-sniping prolongation extends auction if bid placed in last minute`() {
     var now = AUCTION_START_TIME + 100;
     testing.setNow(now);
 
@@ -197,9 +196,9 @@ get fun `test bro-fi: anti-sniping prolongation extends auction if bid placed in
     val itemDeployTx = res1.findTransaction({ from: collection.address, deploy: true })!;
     val item = DnsItem.fromAddress(itemDeployTx.getAccountAddress());
 
-    // Advance time to 10 minutes before auction end
+    // Advance time to 20 seconds before auction end (within 60s prolongation window)
     val initialEndTime = now + AUCTION_START_DURATION;
-    now = initialEndTime - 600; // 10 mins before end
+    now = initialEndTime - 20;
     testing.setNow(now);
 
     val resOutbid = net.send(
@@ -223,8 +222,10 @@ get fun `test bro-fi: anti-sniping prolongation extends auction if bid placed in
     val itemStore = ItemStorageInitialized.fromCell(rawData);
     val (_, auction) = itemStore.unpackAuction();
 
-    // End time should be extended by (3600 - 600) = 3000 seconds
-    expect(auction.auctionEndTime).toEqual((initialEndTime + 3000) as uint64);
+    // End time should be extended by (AUCTION_PROLONGATION - 20) = 40 seconds
+    expect(auction.auctionEndTime).toEqual(
+        (initialEndTime + (AUCTION_PROLONGATION - 20)) as uint64,
+    );
 }
 
 get fun `test bro-fi: auction finalization grants ownership and triggers minter burn`() {

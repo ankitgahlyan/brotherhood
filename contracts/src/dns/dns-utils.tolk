@@ -9,11 +9,27 @@ const DNS_CONFIG_ID = 80
 const TON_WWW_DOMAIN_SIZE = 8 // "ton.www" (6) + 2 null-encoding symbols
 const TON_DOMAIN_SIZE = 4 // "ton" (3) + 1 null-encoding symbol
 const TELEGRAM_DOMAIN_SIZE = 5 // "t.me" (3) + 2 null-encoding symbols
-const MIN_DOMAIN_SIZE = 3
+const MIN_DOMAIN_SIZE = 0
 const MAX_DOMAIN_SIZE = 126
 
 fun address.toNextResolver(self): cell {
     return beginCell().storeUint(DNS_NEXT_RESOLVER_PREFIX, 16).storeAddress(self).endCell();
+}
+
+fun makeBroDomainNameCell(domain: slice): cell {
+    // TEP-64 snake string: 0x00 (8 bits) + domain ASCII + ".bro" (32 bits)
+    if (BYTE_SIZE + domain.remainingBitsCount() + 4 * BYTE_SIZE <= 1023) {
+        return beginCell()
+            .storeUint(0, BYTE_SIZE)
+            .storeSlice(domain)
+            .storeSlice(".bro".literalSlice())
+            .endCell();
+    }
+    return beginCell()
+        .storeUint(0, BYTE_SIZE)
+        .storeSlice(domain)
+        .storeRef(beginCell().storeSlice(".bro".literalSlice()).endCell())
+        .endCell();
 }
 
 // Snake-like domain in remaining bits/refs.
@@ -153,29 +169,6 @@ fun getMinPrice(domainBitsLength: int, nowTime: int): int {
     }
 
     return res;
-}
-
-fun getBroMinPrice(charCount: int): int {
-    if (charCount <= 1) {
-        return grams("200");
-    }
-    if (charCount == 2) {
-        return grams("100");
-    }
-    if (charCount == 3) {
-        return grams("50");
-    }
-    if (charCount == 4) {
-        return grams("20");
-    }
-    if (charCount <= 8) {
-        return grams("10");
-    }
-    return grams("5");
-}
-
-fun getBroRenewalFee(charCount: int): int {
-    return getBroMinPrice(charCount) / 10;
 }
 
 fun getBroFiStartingBid(charCount: int): coins {

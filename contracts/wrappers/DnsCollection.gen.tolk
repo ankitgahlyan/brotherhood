@@ -7,6 +7,7 @@ import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/testing/assert"
 
+import "@contracts/common/messages"
 import "@contracts/dns/messages"
 import "@contracts/dns/storage"
 
@@ -49,21 +50,6 @@ fun DnsCollection.deploy(self, from: address, config: SendParams = {}): SendResu
             stateInit: self.stateInit,
             toShard: self.toShard,
         },
-    });
-    return net.send(from, genericMsg);
-}
-
-fun DnsCollection.sendDeployDnsDomain(
-    self,
-    from: address,
-    payload: RemainingBitsAndRefs,
-    config: SendParams = {},
-): SendResultList {
-    val genericMsg = createMessage({
-        bounce: config.bounce,
-        value: config.value,
-        dest: self.address,
-        body: DeployDnsDomain { payload },
     });
     return net.send(from, genericMsg);
 }
@@ -138,6 +124,73 @@ fun DnsCollection.sendBidBroDomain(
             domain: domain.toCell(),
             collectionAddress,
         },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendUpgradeDnsItem(
+    self,
+    from: address,
+    queryId: uint64,
+    itemAddress: address,
+    code: cell,
+    additionalData: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: UpgradeDnsItem { queryId, itemAddress, code, additionalData },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendDestroyContract(
+    self,
+    from: address,
+    queryId: uint64,
+    recipient: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DestroyContract { queryId, recipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendDestroyDnsItem(
+    self,
+    from: address,
+    queryId: uint64,
+    itemAddress: address,
+    recipient: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DestroyDnsItem { queryId, itemAddress, recipient },
     });
     return net.send(from, genericMsg);
 }

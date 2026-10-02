@@ -7,6 +7,7 @@ import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
 import "@wrappers/DnsCollection.gen"
+import "@contracts/common/constants"
 import "@contracts/dns/messages"
 import "@contracts/dns/storage"
 
@@ -25,12 +26,13 @@ fun main() {
         content: collectionUri.prefixWith01().toCell(),
         nftItemCode: build("DnsItem"),
         deploymentTime: nowTime,
-        isInstantMint: true,
+        fiMinterAddress: DEPLOYED_FI_MINTER_ADDRESS,
     });
 
     println("==================================================");
     println("Deploying Brotherhood .bro Authoritative DNS Zone");
     println("Deployer / Treasury: {}", deployer.address);
+    println("FI Minter Address: {}", DEPLOYED_FI_MINTER_ADDRESS);
     println("Collection URI: {}", collectionUri);
     println("Deployment Time: {}", nowTime);
     println("==================================================");
@@ -56,17 +58,19 @@ fun main() {
     val data = collection.getCollectionData();
     println("Treasury/Owner Address: {}", data.ownerAddress);
 
-    // Pre-mint genesis domain "genesis.bro" to the Treasury
+    // Pre-mint genesis domain "genesis.bro" to the Treasury via MintDomainFor
     println("Registering genesis domain: genesis.bro");
-    val genesisBody = beginCell().storeUint(0, 32).storeSlice("genesis".beginParse()).endCell();
-
     val mintRes = net.send(
         deployer.address,
         createMessage({
             bounce: true,
-            value: grams("10"),
+            value: grams("0.5"),
             dest: collection.address,
-            body: genesisBody,
+            body: MintDomainFor {
+                queryId: 1,
+                targetOwner: deployer.address,
+                payload: "genesis".beginParse(),
+            },
         }),
     );
 

@@ -26,12 +26,12 @@ fun deployDnsDomainStage(domain: string = E2E_DOMAIN, value: coins = E2E_INITIAL
     val governanceCaller = newActor("dns_e2e_governance_caller", grams("100000"));
     testing.setNow((AUCTION_START_TIME + 1));
 
-    val deploy = collection.sendDeployDnsDomain(
+    val deploy = collection.sendAny(
         deployer.address,
-        makeDomainCell(domain).beginParse(),
-        { value, bounce: true },
+        makeBidBody(deployer.address, domain, value, collection.address),
+        { value: grams("10"), bounce: true },
     );
-    expect(deploy).toHaveSuccessfulTx<DeployDnsDomain>({
+    expect(deploy).toHaveSuccessfulTx<BidBroDomain>({
         from: deployer.address,
         to: collection.address,
     });

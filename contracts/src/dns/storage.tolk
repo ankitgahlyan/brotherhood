@@ -9,6 +9,12 @@ fun DnsRecords.packToBuilder(self, mutate b: builder) {
     b.storeDict(self.toLowLevelDict());
 }
 
+fun DnsRecords.toDnsRecordsCell(self): Cell<DnsRecords> {
+    var b = beginCell();
+    self.packToBuilder(mutate b);
+    return b.endCell() as Cell<DnsRecords>;
+}
+
 fun DnsRecords.unpackFromSlice(mutate s: slice): DnsRecords {
     assert (s.loadUint(BYTE_SIZE) == 0) throw Errors.ContentTagInvalid;
     return createMapFromLowLevelDict<uint256, cell>(s.loadDict());
@@ -26,7 +32,6 @@ struct CollectionStorage {
     content: cell
     nftItemCode: cell
     deploymentTime: uint32 = 0
-    isInstantMint: bool = false
     fiMinterAddress: address? = null
 }
 
@@ -38,6 +43,10 @@ struct CollectionDataReply {
 
 fun CollectionStorage.load(): CollectionStorage {
     return CollectionStorage.fromCell(contract.getData());
+}
+
+fun CollectionStorage.save(self) {
+    contract.setData(self.toCell());
 }
 
 struct RootDnsStorage {

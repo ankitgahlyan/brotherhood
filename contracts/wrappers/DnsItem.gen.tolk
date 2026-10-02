@@ -7,6 +7,7 @@ import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/testing/assert"
 
+import "@contracts/common/messages"
 import "@contracts/dns/messages"
 import "@contracts/dns/storage"
 
@@ -194,6 +195,38 @@ fun DnsItem.sendRenewBroDomain(
         value: config.value,
         dest: self.address,
         body: RenewBroDomain { queryId, renewer, fiAmount, itemAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsItem.sendHotUpgrade(
+    self,
+    from: address,
+    additionalData: cell?,
+    code: cell,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: HotUpgrade { additionalData, code },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsItem.sendDestroyContract(
+    self,
+    from: address,
+    queryId: uint64,
+    recipient: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DestroyContract { queryId, recipient },
     });
     return net.send(from, genericMsg);
 }

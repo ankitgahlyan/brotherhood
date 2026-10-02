@@ -12,7 +12,7 @@ export const FI_ADDRESS = 'kQByVk5DwR_q9O0QECxai3CDpE-7Qimbb4OUE9Bt4Qz0deAE';
 
 /** Brotherhood .bro DNS Collection & Resolver (from deploy-bro.tolk) */
 export const BRO_COLLECTION_RESOLVER =
-  'kQCKrNefTDKT8hNkJ-wxxANdn6KXLa_3VqsRKFKEXyFUchTa';
+  'kQAS7LSASDw_3pv1EpI_qmOtRAQu2TyQhvxyJJmr4GWHlDJe';
 
 /** Alias for collection address in DNS features */
 export const BRO_COLLECTION_ADDRESS = BRO_COLLECTION_RESOLVER;
@@ -37,7 +37,7 @@ export const ZERO_ADDRESS =
 export const ONE_DAY_SEC = 60 * 60 * 24;
 export const ONE_MONTH_SEC = 60 * 60 * 24 * 30;
 export const ONE_YEAR_SEC = 60 * 60 * 24 * 366;
-export const RESERVATION_PERIOD_SEC = 30 * 24 * 60 * 60; // 30 days
+export const RESERVATION_PERIOD_SEC = 10 * 60; // 10 minutes
 export const CLAIM_INTERVAL_SEC = 604800; // 1 week
 export const ACTIVATION_WAIT_SEC = 86400; // 1 day
 export const INVITE_WAIT_SEC = 14400; // 4 hours
@@ -49,9 +49,9 @@ export const HOLDING_CHALLENGE_DURATION_SEC = 72 * 3600; // 72 hours
 // ============================================================================
 
 export const AUCTION_START_TIME = 1659171600; // GMT: Monday, 30 July 2022
-export const AUCTION_START_DURATION_SEC = 60 * 60 * 24 * 7; // 7 days
-export const AUCTION_END_DURATION_SEC = 60 * 60; // 1 hour
-export const AUCTION_PROLONGATION_SEC = 60 * 60; // 1 hour
+export const AUCTION_START_DURATION_SEC = 5 * 60; // 5 minutes
+export const AUCTION_END_DURATION_SEC = 60; // 1 minute
+export const AUCTION_PROLONGATION_SEC = 60; // 1 minute
 
 // ============================================================================
 // 4. PROTOCOL AMOUNTS & FEES
@@ -89,31 +89,6 @@ export const DNS_GAS = {
   RENEW: 200_000_000n, // 0.20 TON
   CHANGE_RECORD: 50_000_000n, // 0.05 TON
 } as const;
-
-/** Mirrors getBroMinPrice(charCount) in dns-utils.tolk */
-export function broTierPrice(charCount: number): bigint {
-  if (charCount <= 1) return 200_000_000_000n; // 200 TON
-  if (charCount === 2) return 100_000_000_000n;
-  if (charCount === 3) return 50_000_000_000n;
-  if (charCount === 4) return 20_000_000_000n;
-  if (charCount <= 8) return 10_000_000_000n;
-  return 5_000_000_000n;
-}
-
-/** Mirrors getBroRenewalFee(charCount) — 10% of tier price */
-export function broRenewalFee(charCount: number): bigint {
-  return broTierPrice(charCount) / 10n;
-}
-
-/** Human-readable tier label */
-export function broTierLabel(charCount: number): string {
-  if (charCount <= 1) return '200 TON';
-  if (charCount === 2) return '100 TON';
-  if (charCount === 3) return '50 TON';
-  if (charCount === 4) return '20 TON';
-  if (charCount <= 8) return '10 TON';
-  return '5 TON';
-}
 
 /** Mirrors getBroFiStartingBid(charCount) in dns-utils.tolk */
 export function broFiStartingBid(charCount: number): bigint {

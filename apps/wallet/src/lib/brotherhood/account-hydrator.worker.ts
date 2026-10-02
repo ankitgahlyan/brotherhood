@@ -20,13 +20,13 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'kVZteBaArFEXT5Q7MW13x8s1ktr4KKlne+BoKAIvhxM=',
-  fiMinter: 'HfRbbtUw0OmTktmgiANPBMA0839NzO3js4oa7t4kwGY=',
-  personalMinter: 'lbqzMO7PI8GDslc3doCi+/Eu+QPLJQacSSP5vN4gRoQ=',
-  personalWallet: '3GwidTYhmxSYR0rXIeDHqtQzvqlkwQu4X/q7dt3PJ5A=',
-  location: 'xB9hKP2yNL+B4skAr4q26SlNqHXwsva1XFn8Ib3MjkU=',
+  fiWallet: 'W8uzdIzxkGcaSgi7I3MyTXxHSIAVUxCjVonYU5ITr70=',
+  fiMinter: 'ts0G8Z9Rc28eO8KYK92S/XohVx41ggrguj0O+eeWZnk=',
+  personalMinter: 'U/QyE/5TqhunxjK05HRbhYNk83F5sHH8IVV7uB1nytw=',
+  personalWallet: 'Vs+H1SOfVRSokrDzIEvA65y5RJPodGuZ32uaKbptYFo=',
+  location: '2S+Rb2DNlMrURQC76YmymewwVzGf4crXoafwIknNARc=',
   lottery: 'HHh95xA0sDcOowpVnyULcDbZczqe0zk2oAw8x+ulo9M=',
-  poll: 'Y4S1BhWmVTOpAVHeDqaFUTUPnHay+aFyF+gjFZx9l8Q=',
+  poll: 'XECcPFmvdBODJApBlQTvvvUxjHqt3iB5Rb6E0aikhME=',
   walletV5R1: 'IINLe3KxEhR+Gy+0V7hOdNGjDwT3N9T2KmaOlVLSty8=',
 } as const;
 

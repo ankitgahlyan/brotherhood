@@ -1,5 +1,8 @@
+import "@stdlib/tvm-lowlevel"
+
 import "@contracts/common/constants"
 import "@contracts/common/errors"
+import "@contracts/common/messages"
 
 import "auction"
 import "dns-utils"
@@ -25,6 +28,8 @@ type AllowedItemMessage =
     | FillUp
     | FinalizeAuction
     | RenewBroDomain
+    | HotUpgrade
+    | DestroyContract
 
 type GovernanceDecision = GovernanceTransfer | GovernanceRelease
 
@@ -35,7 +40,7 @@ fun onInternalMessage(in: InMessage) {
         val uninitStorage = loadingStorage.parseNotInitialized();
         assert (in.senderAddress == uninitStorage.collectionAddress) throw Errors.NotFromCollection;
 
-        val initData = lazy ItemInitData.fromSlice(in.body);
+        val initData = ItemInitData.fromSlice(in.body);
 
         val now = blockchain.now();
 
@@ -50,7 +55,8 @@ fun onInternalMessage(in: InMessage) {
             (AUCTION_START_DURATION - AUCTION_END_DURATION) * months / 12;
 
         val _auctionEndTime = now + duration;
-        val initialContent: DnsRecords = [];
+        var initialContent: DnsRecords = [];
+        initialContent.set("name".sha256(), makeBroDomainNameCell(initData.domain.beginParse()));
 
         val isInstant = initData.isInstant;
         val bidAmount = initData.fiAmount > 0 ? initData.fiAmount : in.valueCoins;
@@ -58,7 +64,7 @@ fun onInternalMessage(in: InMessage) {
             index: uninitStorage.index,
             collectionAddress: uninitStorage.collectionAddress,
             ownerAddress: isInstant ? initData.fromAddress : null,
-            content: initialContent.toCell(),
+            content: initialContent.toDnsRecordsCell(),
             domain: initData.domain,
             auction: isInstant
                 ? null
@@ -80,6 +86,33 @@ fun onInternalMessage(in: InMessage) {
     var storage = loadingStorage.parseInitialized();
 
     if (in.senderAddress == storage.collectionAddress) {
+        if (in.body.remainingBitsCount() >= 32) {
+            val op = in.body.preloadUint(32);
+            if (op == 0x0000100b) {
+                val upgrade = HotUpgrade.fromSlice(in.body);
+                contract.setCodePostponed(upgrade.code);
+                // SAFETY: updating continuation register C3 for new code
+                setTvmRegisterC3(transformSliceToContinuation(upgrade.code.beginParse()));
+                hotUpgradeDnsItemData(upgrade.additionalData);
+                return;
+            }
+            if (op == 0x646e7364) {
+                val destroy = DestroyContract.fromSlice(in.body);
+                val target = destroy.recipient != null
+                    ? destroy.recipient
+                    : storage.collectionAddress;
+                val destroyMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: target,
+                    value: 0,
+                    body: Excesses { queryId: destroy.queryId },
+                });
+                // SAFETY: intentional admin contract destruction returning all remaining TON balance
+                destroyMsg.send(SEND_MODE_CARRY_ALL_BALANCE + SEND_MODE_DESTROY);
+                return;
+            }
+        }
+
         val initData = ItemInitData.fromSlice(in.body);
 
         if (initData.fiAmount == 0 && initData.fiMinterAddress == null) {
@@ -200,7 +233,10 @@ fun onInternalMessage(in: InMessage) {
             ) throw Errors.OnlyOwnerCanEditContent;
 
             storage.content = msg.newContent;
-            storage.lastFillUpTime = blockchain.now();
+            val now = blockchain.now();
+            if (now > (storage.lastFillUpTime as int)) {
+                storage.lastFillUpTime = now;
+            }
             storage.save();
         }
 
@@ -217,8 +253,11 @@ fun onInternalMessage(in: InMessage) {
                 dnsRecords.delete(msg.key);
             }
 
-            storage.content = dnsRecords.toCell();
-            storage.lastFillUpTime = blockchain.now();
+            storage.content = dnsRecords.toDnsRecordsCell();
+            val now = blockchain.now();
+            if (now > (storage.lastFillUpTime as int)) {
+                storage.lastFillUpTime = now;
+            }
             storage.save();
         }
 
@@ -317,24 +356,8 @@ fun onInternalMessage(in: InMessage) {
                 storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
             ) throw Errors.OnlyOwnerCanFillUpAfterAuction;
 
-            val domainLen = storage.domain.beginParse().remainingBitsCount();
-            val charCount = domainLen / BYTE_SIZE;
-            val renewalFee = getBroRenewalFee(charCount);
-
             val now = blockchain.now();
-            val maxFuture = now + 5 * ONE_YEAR;
-            if (in.valueCoins >= renewalFee && renewalFee > 0) {
-                val yearsToAdd = in.valueCoins / renewalFee;
-                var newExpiry = (storage.lastFillUpTime as int) > now
-                    ? (storage.lastFillUpTime as int)
-                    : now;
-                // check-disable-next-line divide-before-multiply
-                newExpiry += yearsToAdd * ONE_YEAR;
-                if (newExpiry > maxFuture) {
-                    newExpiry = maxFuture;
-                }
-                storage.lastFillUpTime = newExpiry;
-            } else {
+            if (now > (storage.lastFillUpTime as int)) {
                 storage.lastFillUpTime = now;
             }
             storage.save();
@@ -396,7 +419,44 @@ fun onInternalMessage(in: InMessage) {
             storage.save();
         }
 
+        HotUpgrade => {
+            assert (in.senderAddress == storage.collectionAddress) throw Errors.NotFromCollection;
+            contract.setCodePostponed(msg.code);
+            // SAFETY: updating continuation register C3 for new code
+            setTvmRegisterC3(transformSliceToContinuation(msg.code.beginParse()));
+            hotUpgradeDnsItemData(msg.additionalData);
+            return;
+        }
+
+        DestroyContract => {
+            assert (
+                storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
+            ) throw Errors.DnsNotOwner;
+            val target = msg.recipient != null ? msg.recipient : in.senderAddress;
+            val destroyMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: target,
+                value: 0,
+                body: Excesses { queryId: msg.queryId },
+            });
+            // SAFETY: intentional owner contract destruction returning all remaining TON balance
+            destroyMsg.send(SEND_MODE_CARRY_ALL_BALANCE + SEND_MODE_DESTROY);
+        }
+
         else => throw Errors.UnknownOp,
+    }
+}
+
+@method_id(2121)
+fun hotUpgradeDnsItemData(additionalData: cell?) {
+    if (additionalData != null) {
+        contract.setData(additionalData);
+        return;
+    }
+    val loading = startLoadingDnsItemStorage();
+    if (loading.isInitialized()) {
+        val st = loading.parseInitialized();
+        st.save();
     }
 }
 

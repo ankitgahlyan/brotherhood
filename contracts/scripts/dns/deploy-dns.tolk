@@ -21,7 +21,6 @@ fun main() {
         content: collectionUri.prefixWith01().toCell(),
         nftItemCode: build("DnsItem"),
         deploymentTime: 0,
-        isInstantMint: false,
     });
 
     println("Using wallet: deployer-2");

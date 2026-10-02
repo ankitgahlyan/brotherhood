@@ -9,8 +9,8 @@
 // ----------------------------------------------------------------------------
 
 // Brotherhood .bro DNS Collection & Resolver (from deploy-bro.tolk)
-const DEPLOYED_BRO_COLLECTION_RESOLVER: address = address("kQDechleN24a8vT3HHBwF-xUK4aUkMXJPA63IhBemZJoJbpd")
-const DEPLOYED_BRO_TREASURY_ADDRESS: address = address("kQDechleN24a8vT3HHBwF-xUK4aUkMXJPA63IhBemZJoJbpd")
+const DEPLOYED_BRO_COLLECTION_RESOLVER: address = address("kQAS7LSASDw_3pv1EpI_qmOtRAQu2TyQhvxyJJmr4GWHlDJe")
+const DEPLOYED_BRO_TREASURY_ADDRESS: address = address("kQCSUhA50ynSi1hxR9KrTLOCOk89iVGHG9wKS_1Agqi-OQF6")
 
 // DAO Proxy address (from deploy-fi.tolk)
 const DAO_PROXY_ADDR = "kQBs0efjOXMJ_mTYkUqB16JynaYqMNpt2eTNzy79Ge0eLGk7"
@@ -65,11 +65,11 @@ const REVEAL_DEADLINE_SECONDS: int = 3600 // 1 hour to reveal lottery
 // 4. DNS, AUCTIONS & FEES
 // ----------------------------------------------------------------------------
 
-const RESERVATION_PERIOD = 30 * ONE_DAY
+const RESERVATION_PERIOD = 10 * 60 // 10 minutes
 const AUCTION_START_TIME = 1659171600 // GMT: Monday, 30 July 2022 г., 09:00:00
-const AUCTION_START_DURATION = 60 * 60 * 24 * 7 // 7 days
-const AUCTION_END_DURATION = 60 * 60 // 1 hour
-const AUCTION_PROLONGATION = 60 * 60 // 1 hour
+const AUCTION_START_DURATION = 5 * 60 // 5 minutes
+const AUCTION_END_DURATION = 60 // 1 minute
+const AUCTION_PROLONGATION = 60 // 1 minute
 
 const BRO_FIXED_TON_FEE: coins = grams("1.0")
 const BRO_TREASURY_TON_FEE: coins = grams("0.5")

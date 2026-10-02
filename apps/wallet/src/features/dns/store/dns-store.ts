@@ -22,15 +22,19 @@ export interface OwnedDomain {
   lastFillUpTime?: number;
   /** Resolved wallet address from DNS record, if set */
   walletRecord?: string;
+  /** Social contact link (ThatsApp, Telegram, Facebook, etc.) stored under sha256("uri") */
+  contactLink?: string;
+  /** Secondary channel / group link stored under sha256("description") */
+  channelLink?: string;
   /** True if on-chain code hash does not match current DnsItem code */
   isOutdated?: boolean;
   /** Unix timestamp (seconds) when auction ends, if in auction */
   auctionEndTime?: number;
   /** Address of the current highest bidder, if in auction */
   maxBidAddress?: string | null;
-  /** True if the domain is currently in active 7-day auction */
+  /** True if the domain is currently in active 5-minute auction */
   isAuctionActive?: boolean;
-  /** True if the 7-day auction duration has passed but FinalizeAuction hasn't been called yet */
+  /** True if the auction duration has passed but FinalizeAuction hasn't been called yet */
   isAuctionEnded?: boolean;
   /** True if domain has an assigned owner on-chain */
   hasOwner?: boolean;

@@ -13,8 +13,6 @@ import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrato
 import { getDnsDomainZone, parseDnsItemAccountState } from '@/core/lib/dns';
 import {
   deriveDnsItemAddress,
-  broTierPrice,
-  broRenewalFee,
   broFiStartingBid,
   broFiRenewalFee,
   BRO_FIXED_TON_FEE,
@@ -40,19 +38,21 @@ export interface DomainLookupResult {
   owner?: string;
   /** Linked wallet record address string — set when DNS wallet record is configured */
   walletRecord?: string;
-  /** Registration price in nanotons (or fixed TON fee for .bro auction) */
+  /** Linked primary social/contact link (sha256("uri")) */
+  contactLink?: string;
+  /** Linked secondary channel/group link (sha256("description")) */
+  channelLink?: string;
+  /** Fixed TON fee for .bro auction */
   price?: bigint;
-  /** Annual renewal fee in nanotons (legacy) */
-  renewalFee?: bigint;
   /** Expiry timestamp in seconds — set when taken or expired */
   expiresAt?: number;
   /** Zone suffix matched, e.g. "bro" */
   zoneSuffix?: string;
   /** True if domain can be registered on current network */
   canRegister?: boolean;
-  /** True if collection is currently in the initial 30-day admin-only reservation period */
+  /** True if collection is currently in the initial 10-minute admin-only reservation period */
   isInReservationPeriod?: boolean;
-  /** Unix timestamp when the 30-day admin reservation period ends */
+  /** Unix timestamp when the 10-minute admin reservation period ends */
   reservationEndsAt?: number;
   /** FI token starting bid for unowned .bro domains */
   fiStartingBid?: bigint;
@@ -159,10 +159,6 @@ export function useDomainLookup(
           network === 'testnet',
         );
         const charCount = base.length;
-        const price =
-          zoneSuffix === 'bro' ? broTierPrice(charCount) : undefined;
-        const renewal =
-          zoneSuffix === 'bro' ? broRenewalFee(charCount) : undefined;
 
         if (ac.signal.aborted) return;
 
@@ -203,12 +199,9 @@ export function useDomainLookup(
             cs.loadRef(); // content
             cs.loadRef(); // nftItemCode
             const deploymentTime = cs.remainingBits >= 32 ? cs.loadUint(32) : 0;
-            const isInstantMint =
-              cs.remainingBits >= 1 ? cs.loadBoolean() : false;
             if (deploymentTime > 0) {
               reservationEndsAt = deploymentTime + RESERVATION_PERIOD_SEC;
-              isInReservationPeriod =
-                isInstantMint && nowSec < reservationEndsAt;
+              isInReservationPeriod = nowSec < reservationEndsAt;
             }
           } catch {
             /* ignore collection parse errors */
@@ -224,8 +217,7 @@ export function useDomainLookup(
           const r: DomainLookupResult = {
             status: 'available',
             nftAddress,
-            price: zoneSuffix === 'bro' ? BRO_FIXED_TON_FEE : price,
-            renewalFee: renewal,
+            price: BRO_FIXED_TON_FEE,
             fiStartingBid:
               zoneSuffix === 'bro' ? broFiStartingBid(charCount) : undefined,
             fiRenewalFee:
@@ -246,6 +238,8 @@ export function useDomainLookup(
         );
         const ownerStr = parsedItem?.ownerAddress ?? undefined;
         const walletRecordStr = parsedItem?.walletRecord ?? undefined;
+        const contactLinkStr = parsedItem?.contactLink ?? undefined;
+        const channelLinkStr = parsedItem?.channelLink ?? undefined;
         const lastFillUp = parsedItem?.lastFillUpTime ?? nowSec;
         const auction = parsedItem?.auction ?? null;
 
@@ -270,13 +264,9 @@ export function useDomainLookup(
           nftAddress,
           owner: ownerStr,
           walletRecord: walletRecordStr,
-          price:
-            status === 'available'
-              ? zoneSuffix === 'bro'
-                ? BRO_FIXED_TON_FEE
-                : price
-              : BRO_FIXED_TON_FEE,
-          renewalFee: renewal,
+          contactLink: contactLinkStr,
+          channelLink: channelLinkStr,
+          price: BRO_FIXED_TON_FEE,
           fiStartingBid:
             zoneSuffix === 'bro' ? broFiStartingBid(charCount) : undefined,
           fiRenewalFee:

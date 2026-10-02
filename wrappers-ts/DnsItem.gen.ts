@@ -171,6 +171,50 @@ type uint64 = bigint
 type uint256 = bigint
 
 /**
+ > struct (0x0000100b) HotUpgrade {
+ >     additionalData: cell?
+ >     code: cell
+ > }
+ */
+export interface HotUpgrade {
+    readonly $: 'HotUpgrade'
+    additionalData: c.Cell | null
+    code: c.Cell
+}
+
+export const HotUpgrade = {
+    PREFIX: 0x0000100b,
+
+    create(args: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }): HotUpgrade {
+        return {
+            $: 'HotUpgrade',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): HotUpgrade {
+        loadAndCheckPrefix32(s, 0x0000100b, 'HotUpgrade');
+        return {
+            $: 'HotUpgrade',
+            additionalData: s.loadBoolean() ? s.loadRef() : null,
+            code: s.loadRef(),
+        }
+    },
+    store(self: HotUpgrade, b: c.Builder): void {
+        b.storeUint(0x0000100b, 32);
+        storeTolkNullable<c.Cell>(self.additionalData, b,
+            (v,b) => b.storeRef(v)
+        );
+        b.storeRef(self.code);
+    },
+    toCell(self: HotUpgrade): c.Cell {
+        return makeCellFrom<HotUpgrade>(self, HotUpgrade.store);
+    }
+}
+
+/**
  > type TransferForwardPayload = RemainingBitsAndRefs
  */
 export type TransferForwardPayload = RemainingBitsAndRefs
@@ -686,6 +730,50 @@ export const DnsRecordRelease = {
     },
     toCell(self: DnsRecordRelease): c.Cell {
         return makeCellFrom<DnsRecordRelease>(self, DnsRecordRelease.store);
+    }
+}
+
+/**
+ > struct (0x646e7364) DestroyContract {
+ >     queryId: uint64
+ >     recipient: address?
+ > }
+ */
+export interface DestroyContract {
+    readonly $: 'DestroyContract'
+    queryId: uint64 /* = 0 */
+    recipient: c.Address | null /* = null */
+}
+
+export const DestroyContract = {
+    PREFIX: 0x646e7364,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }): DestroyContract {
+        return {
+            $: 'DestroyContract',
+            queryId: 0n,
+            recipient: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DestroyContract {
+        loadAndCheckPrefix32(s, 0x646e7364, 'DestroyContract');
+        return {
+            $: 'DestroyContract',
+            queryId: s.loadUintBig(64),
+            recipient: s.loadMaybeAddress(),
+        }
+    },
+    store(self: DestroyContract, b: c.Builder): void {
+        b.storeUint(0x646e7364, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.recipient);
+    },
+    toCell(self: DestroyContract): c.Cell {
+        return makeCellFrom<DestroyContract>(self, DestroyContract.store);
     }
 }
 
@@ -1214,30 +1302,30 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DnsItem implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECMQEACrkAART/APSkE/S88sgLAQIBYgIDAgLOBAUCASAlJgIBIAYHAgEgIyQE2T4kfJA7UTQINdKwgDjA9P/+kj6UNTU9ATTP/QE0fiSJ8cF4wIibpR/bXAgmnAj0PpQ+gDTP9Hi+CMhvC3HAJF/mC3XCx/AAMMA4uMCbCH4J28QAZQis8MAkXDinVR6mFR6mFOp8ANuwwCRcOKAICQoLAIkIMECmDCCGC6Q7dAA4CDAApgwghgXSHboAOAgwAOYMIIYC6Q7dADgIMAEmDCCGASoF8gA4MEJloISVAvkAOCCESoF8gCAB/tP/+kjR+JIhxwXy4ZX4IyCCEGLk8xChgggnjQCpBCDCDDEwbQT6SNTSAPoA+lAwIcIAlDH4lwHfUyRt4wTIz4QCGvQAyQOTMTNtjhIlgggJOoCgBcj6VFj6AhTLP8niI26zlQPI+lTJkjNt4gbIy/8V+lIW+lQTzBTM9AASyz8MA/4I+kjUMdIAMfoA+lDRIZIwcJNuwwDikl8K4CNulH9tcCCacCTQ+lD6ANM/0eL4IyG8BPLRpgPy0aYjwgCUM/iXA98ggGmAZKmEJLvy4ZcrVEswK1RLMFRLulYR8AMgbrOVJG6zwwCRcOKTMDMz4w2BDhAi+COhoSDCAJEw4w3IDQ4PAYA0NTv4kviXA440NFs4JMcF8uGW+CMmyMv/N1JX+lI1UjX6VDNSE8wxIc8UMVIQ9AAxIc8LPzFSEPQAMcntVOMOEAT8jmU1Nyn4lyWiIIIQO5rKAKFcvJExkTDiIMIAjiQB0x8x1ws/yM+FCFKg+lIi+gKCEDcP7FHPC4rLP8ly+wAUoQORW+JtKcjL/1KQ+lJSgPpUJ88UJs8UUhD0ACTPCz9SMPQAye1UBJEx4grXLCL+Yeik4wLXLCDQXOqM4wKJEhMUFQAK9ADJ7VQAVIIK+vCA+CXIz4UIE/pSAfoCghBvdXRizwuKyz8U+lJQBPoCJM8UyXH7AAAGEqABAD76VFj6Ass/yfgjBsjL/xX6UhP6VMzM9ADLP/QAye1UAf41KoBpgGSphCK78uGX+CdvEIIQO5rKAKFTsLyRO5Ew4irCAI4d+CXIz4UIEvpSUAv6AoIQVXzqIM8LihrLP8lx+wCSMDnigQ4QIvgjoaEgwgCTEqABkTDiIsj6VDNRKPoCOFIIyz83Bsn4IybIy/83Ulf6UjVSNfpUM1ITzDEhEQAqzxQxUhD0ADEhzws/MVIQ9AAxye1UAv4xMviSJscF8uGRAdM/+kj6UPQEMfoA+JNw+Dok+kQw8tFNDYIQO5rKAKEiwgCUUy2god4jbrMgkg6hkT7iIML/8uGSIsIAjiTIz5AUTjZGJs8LPxv6VM7JyM+FCFJA+lJY+gJxzwtqzMlx+wCSOlviCpQQKTZb4w34IybIy/83FhcAUDEyNDf4kiTHBfLhmgbXTPgjBsjL/xX6UhP6VBPMzBP0AMs/9ADJ7VQACE6x8PkE+tcnjlMxMjj4kiXHBfLhmwPQ0wcB8tGc9ATRA9M/MdP/INdKwgCY10xAFIMH9BeYMFADgwf0WzDiyM+EAvQAyfgjBsjL/xX6UhP6VBPMzPQAyz/0AMntVODXLCIl9XIM4wLXLCJ2ilss4wIxOQjXLCF+WTUU4wLXLCG4f2KMGBkaGwBIKfpEMPLRTcjPhQga+lJQBvoCghDVMnbbzwuKFcs/yXH7ABA2AEhSV/pSNVI1+lQzUhPMMSHPFDFSEPQAMSHPCz8xUhD0ADHJ7VQB4DPy4Z2AUPgzIG7y0Z/Q9AVSgIMH9A7y4Z/XLAgEnvpI+lD0BDH6AIsIgQCFjhPXLAgMk/LBoOFtAW1tbVgDgQCG4gHRBtcLP4EAhVAHuo4eEFlfCWwiyM+FCBL6UoIQNw/sUc8Ljss/yYEAoPsA4w0cAf40+CNSBKGCCeKFALySwwCSMHDi8uGeI9DXSasCenEiwASWW4ED6IBk3iLABZZbgQH0gDLeIsAGlluBAZCAKN4iwAeWW4EBLIAe3iLACJZbgQDIgBTeIsAJlFuAZHreAsAKlVuAMnUB3oIQO5rKAKgBghA7msoAqCOCEGLk8xChHwBWOF8FAtcLP/iSyM+SLdxc1hLLPxLL/xL6UsnIz4UIEvpScc8LbszJgED7AAL+jmYw+JIlxwXy4ZYi0NdJqwLwAXqpBPgjIIIQCWyZAKD4lyO+lSLCAMMAkXDijh/4l1ADqQRTMbyRMZIzAuKCCeKFAKgSoFMBvJEwkTHikxNfA+IGyMv/FfpSE/pUzMz0AMs/9ADJ7VTg1ywjM0tzDOMC1ywjkytzLOMChA/y8CAhAv74k3D4OiT6RDDy0U0NghA7msoAoSLCAJRTLaCh3iNusyCSDqGRPuIgwv/y4ZIiwgCOJMjPkBRONkYnzws/G/pUzsnIz4UIUkD6Ulj6AnHPC2rMyXH7AJI6W+IKkzk1MOMN+CMmyMv/N1JX+lI1UmX6VDZSFswxJM8UNFIU9AAxHR4AQin6RDDy0U3Iz4UIGvpSUAb6AoIQ1TJ2288Liss/yXH7AAAaIc8LPzFSEPQAMcntVAD8gggnjQCpBCDCFZIwMZkxlqdagGSpBOTi+Je78uGX+JcZoYIQO5rKAKEgwgCOHgLXCz/Iz4UIFvpSWPoCghBO0UtlzwuKFMs/yXL7AJMwNDDibfiS+JclgggJOoCgAsj6VAH6Ass/yQbIy/8V+lIU+lTMEswS9ADLP/QAye1UAcwxNCBulTB/bXAgmnAB0PpQ+gDTP9HiA/LRpPgjUAO+8uGlIG7y0adt+COCCeKFAKAoyMv/UoD6UlIw+lQmzxQlzxRSIPQAIc8LP1Kg9ADJ7VQiEGkQWFFIEEpVIAvwAyBukl8F4w4iAN5Ud2VUd2VTfvADIG6ZMPiSJscF8uGWl/iSxwXy4ajiI9DXSasC8AJ6qQQB0z8x+kgx+gAwu/LgzPgjIIIQCWyZAKBTIbyRMZJsEuIBggnihQCgUwG8kTCRMeIGyMv/FfpSE/pUzMz0AMs/9ADJ7VQAVAHXCz+CEB3NZQDIz4UIE/pSWPoCghBidXJuzwuKyz8S+lJY+gLMyXH7AACRCDBApkwgiAJGE5yoADgIMACmTCCIASMJzlQAOAgwAOYMIIaRhOcqADgIMAEmDCCGOjUpRAA4MEJl4IYdGpSiADgghgXSHboAIAAZGxxIG6SMG3g0PpQ0YAIBICcoAgEgKywAWbuzntRNDT/zH6SDH6UDHUMdQx9ATTPzH0BDHRIG6UMG1wIJjQ+lD6ANM/0eKAICdCkqAEiodO1E0CDXSsIAkjBt4dP/MfpIMfpQ1DHUMfQEMdM/MfQEMdEANqlZ7UTQ0/8x+kgx+lAx1DHUMfQEMdM/9AQx0QBXuPz+1E0CDXSsIAmdP/+kjRcFltbeHT//pI+lDU1DH0BDHTPzH0BDHRf1UwgCASAtLgA5tkpdqJoaf+Y/SQY/SgY6hjqegIY6Z+Y+gIY6OhAC+7RhhDrpJBUnAF5aCN2omhp/5j9JBj9KBjqahj6Ahjpn/oCGOj8EdFBBPFCgF5KL4I8NvBoaYOA+WjOegJogeuFA/lozuEERxGYQXgM+BIg9yxH7ZN3ElkrRuga4eSQNwjVy83zFyqqxQ6L/+8QSZg8APCAwYP6BzfQ8YG8AMC8wAAYweG0ABNTR');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
-        'ERROR_DNS_INVALID_SUBDOMAIN_BITS': 70,
-        'ERROR_BID_BELOW_MIN_PRICE': 204,
-        'ERROR_WRONG_WORKCHAIN': 333,
-        'ERROR_NOT_OWNER': 401,
-        'ERROR_NOT_ENOUGH_BALANCE': 402,
-        'ERROR_NOT_FROM_COLLECTION': 405,
-        'ERROR_ONLY_OWNER_CAN_FILL_UP_AFTER_AUCTION': 406,
-        'ERROR_BID_TOO_LOW': 407,
-        'ERROR_ONLY_OWNER_CAN_EDIT_CONTENT': 410,
-        'ERROR_ONLY_OWNER_CAN_CHANGE_DNS': 411,
-        'ERROR_CONTENT_TAG_INVALID': 412,
-        'ERROR_GOVERNANCE_REQUIRES_NO_AUCTION': 413,
-        'ERROR_DNS_BALANCE_RELEASE_FORBIDDEN': 414,
-        'ERROR_CONFIG_ENTRY_NOT_FOUND': 415,
-        'ERROR_CONFIG_OPERATION_INVALID': 416,
-        'ERROR_NO_ACTIVE_AUCTION': 420,
-        'ERROR_AUCTION_NOT_FINISHED': 421,
-        'ERROR_AUCTION_ALREADY_FINISHED': 422,
-        'ERROR_NO_WINNER': 423,
-        'ERROR_INCORRECT_SENDER': 424,
-        'ERROR_UNKNOWN_OP': 65535,
+        'Errors.DnsInvalidSubdomainBits': 70,
+        'Errors.BidBelowMinPrice': 204,
+        'Errors.WrongWorkchain': 333,
+        'Errors.DnsNotOwner': 401,
+        'Errors.NotEnoughBalance': 402,
+        'Errors.NotFromCollection': 405,
+        'Errors.OnlyOwnerCanFillUpAfterAuction': 406,
+        'Errors.BidTooLow': 407,
+        'Errors.OnlyOwnerCanEditContent': 410,
+        'Errors.OnlyOwnerCanChangeDns': 411,
+        'Errors.ContentTagInvalid': 412,
+        'Errors.GovernanceRequiresNoAuction': 413,
+        'Errors.DnsBalanceReleaseForbidden': 414,
+        'Errors.ConfigEntryNotFound': 415,
+        'Errors.ConfigOperationInvalid': 416,
+        'Errors.NoActiveAuction': 420,
+        'Errors.AuctionNotFinished': 421,
+        'Errors.AuctionAlreadyFinished': 422,
+        'Errors.NoWinner': 423,
+        'Errors.DnsIncorrectSender': 424,
+        'Errors.UnknownOp': 65535,
     }
 
     readonly address: c.Address
@@ -1334,6 +1422,20 @@ export class DnsItem implements c.Contract {
         itemAddress: c.Address
     }) {
         return RenewBroDomain.toCell(RenewBroDomain.create(body));
+    }
+
+    static createCellOfHotUpgrade(body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }) {
+        return HotUpgrade.toCell(HotUpgrade.create(body));
+    }
+
+    static createCellOfDestroyContract(body: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }) {
+        return DestroyContract.toCell(DestroyContract.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -1437,6 +1539,28 @@ export class DnsItem implements c.Contract {
         return provider.internal(via, {
             value: msgValue,
             body: RenewBroDomain.toCell(RenewBroDomain.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        additionalData: c.Cell | null
+        code: c.Cell
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: HotUpgrade.toCell(HotUpgrade.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendDestroyContract(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        recipient?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: DestroyContract.toCell(DestroyContract.create(body)),
             ...extraOptions
         });
     }

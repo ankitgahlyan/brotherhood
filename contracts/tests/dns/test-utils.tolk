@@ -10,6 +10,7 @@ import "@acton/types/transaction"
 import "@wrappers/DnsCollection.gen"
 import "@wrappers/DnsItem.gen"
 import "@wrappers/RootDns.gen"
+import "@wrappers/utils"
 import "@contracts/common/constants"
 import "@contracts/dns/dns-utils"
 import "@contracts/dns/messages"
@@ -65,13 +66,14 @@ fun makeCollectionContentCell(): cell {
         .endCell();
 }
 
-fun makeCollectionStorage(isInstantMint: bool = false): CollectionStorage {
+fun makeCollectionStorage(treasuryAddress: address = ZERO_ADDRESS): CollectionStorage {
     return {
-        treasuryAddress: testing.treasury("dns-treasury").address,
+        treasuryAddress: treasuryAddress == ZERO_ADDRESS
+            ? testing.treasury("dns-treasury").address
+            : treasuryAddress,
         content: makeCollectionContentCell(),
         nftItemCode: build("DnsItem"),
-        deploymentTime: 1_700_000_000,
-        isInstantMint,
+        deploymentTime: 0,
     };
 }
 
@@ -146,6 +148,42 @@ fun makeDeployBodyFromDomain(domain: slice): cell {
 
 fun makeDeployBody(domain: string): cell {
     return makeDeployBodyFromDomain(domain.beginParse());
+}
+
+fun makeBidBodyFromDomain(
+    bidder: address,
+    domain: slice,
+    fiAmount: coins,
+    collectionAddress: address,
+    queryId: uint64 = 1,
+): cell {
+    var rem = domain;
+    val domainCell = (rem.remainingBitsCount() <= 1023
+        ? beginCell().storeSlice(rem).endCell()
+        : makeSnakeTail(mutate rem)) as Cell<RemainingBitsAndRefs>;
+    return BidBroDomain {
+        queryId,
+        bidder,
+        fiAmount,
+        domain: domainCell,
+        collectionAddress,
+    }.toCell();
+}
+
+fun makeBidBody(
+    bidder: address,
+    domain: string,
+    fiAmount: coins,
+    collectionAddress: address,
+    queryId: uint64 = 1,
+): cell {
+    return makeBidBodyFromDomain(
+        bidder,
+        domain.beginParse(),
+        fiAmount,
+        collectionAddress,
+        queryId,
+    );
 }
 
 fun makeDotSlice(): slice {
@@ -239,7 +277,7 @@ fun deployCollectionContract(): (DnsCollection, Treasury, Treasury) {
     val deployer = newActor("dns_collection_deployer", grams("100000"));
     val user = newActor("dns_collection_user", grams("100000"));
 
-    val collection = DnsCollection.fromStorage(makeCollectionStorage());
+    val collection = DnsCollection.fromStorage(makeCollectionStorage(deployer.address));
     expect(collection.stateInit).toBeNotNull();
     val deployMsg = createMessage({
         bounce: false,
@@ -264,19 +302,28 @@ fun deployItemThroughCollection(domain: string = DEFAULT_DOMAIN, value: coins = 
 ) {
     val (collection, deployer, bidder) = deployCollectionContract();
     testing.setNow((AUCTION_START_TIME + 1));
+    testing.topUp(collection.address, value + grams("10"));
 
-    val deployRes = collection.sendAny(
-        deployer.address,
-        makeDeployBody(domain),
-        { value, bounce: true },
+    val itemTemplate = DnsItem.fromNotInitializedStorage(
+        makeItemStorageNonInit(collection.address, domain),
     );
-    expect(deployRes).toHaveSuccessfulTx({ to: collection.address });
+    expect(itemTemplate.stateInit).toBeNotNull();
 
-    val itemDeployTx = deployRes.findTransaction({ from: collection.address, deploy: true });
-    expect(itemDeployTx).toBeNotNull();
+    val deployRes = net.send(
+        collection.address,
+        createMessage({
+            bounce: true,
+            value,
+            dest: { stateInit: itemTemplate.stateInit! },
+            body: makeItemInitBody(deployer.address, domain),
+        }),
+    );
+    expect(deployRes).toHaveSuccessfulTx({
+        from: collection.address,
+        to: itemTemplate.address,
+    });
 
-    val itemAddress = itemDeployTx!.getAccountAddress();
-    val item = DnsItem.fromAddress(itemAddress);
+    val item = DnsItem.fromAddress(itemTemplate.address);
 
     return (item, collection, deployer, bidder);
 }
@@ -397,7 +444,6 @@ fun deployBroCollectionContract(deploymentTime: uint32 = 0): (DnsCollection, Tre
         content: makeCollectionContentCell(),
         nftItemCode: build("DnsItem"),
         deploymentTime,
-        isInstantMint: true,
     });
     val deployMsg = createMessage({
         bounce: false,

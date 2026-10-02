@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Address } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { TxButton } from '@/core/components/ui/tx-button';
 import type { Network } from '@/lib/brotherhood/config';
@@ -15,8 +15,9 @@ import { useDnsStore } from '../store/dns-store';
 import {
   buildWithdrawFeesBody,
   buildMintDomainForBody,
+  buildDestroyContractBody,
+  buildDestroyDnsItemBody,
   deriveDnsItemAddress,
-  broTierPrice,
   RESERVATION_PERIOD_SEC,
   BRO_COLLECTION_RESOLVER,
 } from '../lib/dns-bodies';
@@ -29,9 +30,9 @@ interface AdminTabProps {
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return 'Reservation period ended';
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  return `${d}d ${h}h remaining`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s remaining`;
 }
 
 export const AdminTab: React.FC<AdminTabProps> = ({
@@ -53,6 +54,9 @@ export const AdminTab: React.FC<AdminTabProps> = ({
   // MintDomainFor state
   const [mintTarget, setMintTarget] = useState('');
   const [mintDomain, setMintDomain] = useState('');
+
+  // Destroy DNS Item state
+  const [destroyItemDomain, setDestroyItemDomain] = useState('');
 
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
@@ -102,8 +106,6 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       .trim()
       .toLowerCase()
       .replace(/\.bro$/, '');
-    const price = broTierPrice(bare.length);
-    const gasBuffer = DNS_GAS.REGISTER_GAS_BUFFER;
 
     const payload = buildMintDomainForBody(
       BigInt(Date.now()),
@@ -113,7 +115,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
     await send([
       {
         toAddress: BRO_COLLECTION_RESOLVER,
-        amount: price + gasBuffer,
+        amount: toNano('0.25'),
         payload,
       },
     ]);
@@ -136,6 +138,53 @@ export const AdminTab: React.FC<AdminTabProps> = ({
 
     setMintDomain('');
     setMintTarget('');
+  };
+
+  const handleDestroyItem = async () => {
+    if (!address || !destroyItemDomain.trim()) return;
+    const raw = destroyItemDomain
+      .trim()
+      .toLowerCase()
+      .replace(/\.bro$/, '');
+    let itemAddr: Address;
+    try {
+      itemAddr = Address.parse(destroyItemDomain.trim());
+    } catch {
+      const derived = deriveDnsItemAddress(
+        Address.parse(BRO_COLLECTION_RESOLVER),
+        raw,
+        network === 'testnet',
+      );
+      itemAddr = Address.parse(derived);
+    }
+    const payload = buildDestroyDnsItemBody(
+      BigInt(Date.now()),
+      itemAddr,
+      Address.parse(address),
+    );
+    await send([
+      {
+        toAddress: BRO_COLLECTION_RESOLVER,
+        amount: toNano('0.1'),
+        payload,
+      },
+    ]);
+    setDestroyItemDomain('');
+  };
+
+  const handleDestroyCollection = async () => {
+    if (!address) return;
+    const payload = buildDestroyContractBody(
+      BigInt(Date.now()),
+      Address.parse(address),
+    );
+    await send([
+      {
+        toAddress: BRO_COLLECTION_RESOLVER,
+        amount: toNano('0.05'),
+        payload,
+      },
+    ]);
   };
 
   return (
@@ -164,7 +213,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          During the first 30 days only treasury can register domains. After
+          During the first 10 minutes only treasury can register domains. After
           that, registration opens to all users.
         </p>
       </div>
@@ -173,14 +222,15 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       <div className="p-4 bg-card border border-border rounded-2xl space-y-3">
         <h3 className="font-semibold text-sm">Mint Domain For</h3>
         <p className="text-xs text-muted-foreground">
-          Register a .bro domain on behalf of any address (treasury-only).
+          Instant-mint a .bro domain (1+ chars) on behalf of any address
+          (treasury-only).
         </p>
         <div className="space-y-2">
           <input
             type="text"
             value={mintDomain}
             onChange={(e) => setMintDomain(e.target.value)}
-            placeholder="Domain name (e.g. brotherhood)"
+            placeholder="Domain name (e.g. a or brotherhood)"
             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             data-testid="admin-mint-domain-input"
           />
@@ -194,14 +244,8 @@ export const AdminTab: React.FC<AdminTabProps> = ({
           />
           {mintDomain.trim() && (
             <p className="text-xs text-muted-foreground">
-              Fee:{' '}
-              <span className="font-medium text-foreground">
-                {Number(
-                  broTierPrice(mintDomain.trim().replace(/\.bro$/, '').length),
-                ) / 1e9}{' '}
-                TON
-              </span>{' '}
-              + 1 TON gas
+              Deploy gas:{' '}
+              <span className="font-medium text-foreground">0.25 TON</span>
             </p>
           )}
           <TxButton
@@ -209,7 +253,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
             disabled={!mintDomain.trim() || !mintTarget.trim() || isSending}
             loading={isSending}
             onAction={handleMintFor}
-            actionLabel="Mint Domain For"
+            actionLabel="Mint Domain For (0.25 TON)"
             completeLabel="Minted!"
           >
             Mint Domain For
@@ -221,7 +265,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       <div className="p-4 bg-card border border-border rounded-2xl space-y-3">
         <h3 className="font-semibold text-sm">Withdraw Collection Fees</h3>
         <p className="text-xs text-muted-foreground">
-          Send collected registration fees from the collection contract to any
+          Send collected TON balance from the collection contract to any
           address.
         </p>
         <div className="space-y-2">
@@ -256,6 +300,46 @@ export const AdminTab: React.FC<AdminTabProps> = ({
             completeLabel="Withdrawn!"
           >
             Withdraw
+          </TxButton>
+        </div>
+      </div>
+
+      {/* Destroy Domain or Collection & Recover TON */}
+      <div className="p-4 bg-card border border-border rounded-2xl space-y-3">
+        <h3 className="font-semibold text-sm">Destroy & Recover TON</h3>
+        <p className="text-xs text-muted-foreground">
+          Destroy a domain item or the collection contract to reclaim all locked
+          TON before redeploying (treasury-only).
+        </p>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={destroyItemDomain}
+            onChange={(e) => setDestroyItemDomain(e.target.value)}
+            placeholder="Domain name (e.g. genesis) or NFT address"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <TxButton
+            fullWidth
+            variant="danger"
+            disabled={!destroyItemDomain.trim() || isSending}
+            loading={isSending}
+            onAction={handleDestroyItem}
+            actionLabel="Destroy Domain Item"
+            completeLabel="Destroyed!"
+          >
+            Destroy Domain Item
+          </TxButton>
+          <TxButton
+            fullWidth
+            variant="danger"
+            disabled={isSending}
+            loading={isSending}
+            onAction={handleDestroyCollection}
+            actionLabel="Destroy Collection Contract"
+            completeLabel="Destroyed!"
+          >
+            Destroy Collection Contract
           </TxButton>
         </div>
       </div>

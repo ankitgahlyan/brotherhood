@@ -29,6 +29,183 @@ export enum DnsCategory {
   Wallet = 'wallet',
   Site = 'site',
   BagId = 'storage',
+  ContactUri = 'uri',
+  ChannelDescription = 'description',
+  Name = 'name',
+}
+
+export type SocialPlatform =
+  | 'thatsapp'
+  | 'telegram'
+  | 'facebook'
+  | 'twitter'
+  | 'instagram'
+  | 'github'
+  | 'website';
+
+export interface DetectedSocialLink {
+  platform: SocialPlatform;
+  label: string;
+  icon: string;
+  href?: string;
+}
+
+/**
+ * Auto-recognizes whether a stored DNS social link is a ThatsApp/SimpleX address,
+ * Telegram, Facebook, X/Twitter, Instagram, GitHub, or generic website/social contact link.
+ */
+export function detectSocialPlatform(
+  rawLink?: string,
+): DetectedSocialLink | null {
+  const trimmed = rawLink?.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+
+  if (
+    lower.startsWith('simplex:') ||
+    lower.startsWith('smp://') ||
+    lower.startsWith('xftp://') ||
+    lower.includes('simplex.chat') ||
+    lower.includes('thatsapp')
+  ) {
+    return {
+      platform: 'thatsapp',
+      label: 'ThatsApp',
+      icon: '💬',
+      href:
+        lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('simplex:')
+          ? trimmed
+          : undefined,
+    };
+  }
+
+  if (
+    lower.startsWith('tg://') ||
+    lower.includes('t.me/') ||
+    lower.includes('telegram.me/') ||
+    lower.includes('telegram.org/') ||
+    trimmed.startsWith('@')
+  ) {
+    const href = trimmed.startsWith('@')
+      ? `https://t.me/${trimmed.slice(1)}`
+      : lower.startsWith('http://') ||
+          lower.startsWith('https://') ||
+          lower.startsWith('tg://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return { platform: 'telegram', label: 'Telegram', icon: '✈️', href };
+  }
+
+  if (
+    lower.includes('facebook.com/') ||
+    lower.includes('fb.com/') ||
+    lower.includes('fb.me/')
+  ) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return { platform: 'facebook', label: 'Facebook', icon: '📘', href };
+  }
+
+  if (lower.includes('x.com/') || lower.includes('twitter.com/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return { platform: 'twitter', label: 'X / Twitter', icon: '🐦', href };
+  }
+
+  if (lower.includes('instagram.com/') || lower.includes('instagr.am/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return { platform: 'instagram', label: 'Instagram', icon: '📸', href };
+  }
+
+  if (lower.includes('github.com/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return { platform: 'github', label: 'GitHub', icon: '🐙', href };
+  }
+
+  const href =
+    lower.startsWith('http://') || lower.startsWith('https://')
+      ? trimmed
+      : undefined;
+  return { platform: 'website', label: 'Social Link', icon: '🔗', href };
+}
+
+/**
+ * Builds a TEP-64 snake-formatted string cell (0x00 prefix byte + UTF-8 bytes chained across refs).
+ * Compatible with Toncenter v3 NFT metadata decoder and ThatsApp BroDnsResolver.
+ */
+export function buildSnakeStringCell(text: string): Cell {
+  const bytes = Buffer.from(text, 'utf8');
+  // First cell holds 1 byte prefix (0x00) + up to 126 bytes (1016 bits <= 1023 bits)
+  const firstChunkMax = 126;
+  const tailChunkMax = 127;
+
+  if (bytes.length <= firstChunkMax) {
+    return beginCell().storeUint(0, 8).storeBuffer(bytes).endCell();
+  }
+
+  const chunks: Buffer[] = [bytes.subarray(0, firstChunkMax)];
+  let offset = firstChunkMax;
+  while (offset < bytes.length) {
+    chunks.push(bytes.subarray(offset, offset + tailChunkMax));
+    offset += tailChunkMax;
+  }
+
+  let currentCell: Cell | null = null;
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const b = beginCell();
+    if (i === 0) {
+      b.storeUint(0, 8);
+    }
+    b.storeBuffer(chunks[i]);
+    if (currentCell) {
+      b.storeRef(currentCell);
+    }
+    currentCell = b.endCell();
+  }
+
+  return currentCell!;
+}
+
+/**
+ * Parses a TEP-64 snake-formatted string cell (0x00 prefix byte + UTF-8 bytes across refs).
+ */
+export function parseSnakeStringCell(cell: Cell): string | null {
+  try {
+    const s = cell.beginParse();
+    if (s.remainingBits < 8) return null;
+    const prefix = s.loadUint(8);
+    if (prefix !== 0) return null;
+
+    const parts: Buffer[] = [];
+    let cur = s;
+    while (true) {
+      const remBytes = Math.floor(cur.remainingBits / 8);
+      if (remBytes > 0) {
+        parts.push(cur.loadBuffer(remBytes));
+      }
+      if (cur.remainingRefs > 0) {
+        cur = cur.loadRef().beginParse();
+      } else {
+        break;
+      }
+    }
+    const text = Buffer.concat(parts).toString('utf8').trim();
+    return text || null;
+  } catch {
+    return null;
+  }
 }
 
 export interface DnsZone {
@@ -386,6 +563,8 @@ export interface ParsedDnsItemState {
   domainName?: string;
   ownerAddress?: string | null;
   walletRecord?: string | null;
+  contactLink?: string | null;
+  channelLink?: string | null;
   lastFillUpTime?: number;
   isExpired?: boolean;
   auction?: {
@@ -439,6 +618,8 @@ export function parseDnsItemAccountState(
     }
 
     let walletRecord: string | null = null;
+    let contactLink: string | null = null;
+    let channelLink: string | null = null;
     try {
       const cs = contentCell.beginParse();
       if (cs.remainingBits >= 8 && cs.loadUint(8) === 0) {
@@ -455,6 +636,16 @@ export function parseDnsItemAccountState(
               testOnly,
             });
           }
+        }
+        const uriCell = dict.get(dnsCategoryToBigInt(DnsCategory.ContactUri));
+        if (uriCell) {
+          contactLink = parseSnakeStringCell(uriCell);
+        }
+        const descCell = dict.get(
+          dnsCategoryToBigInt(DnsCategory.ChannelDescription),
+        );
+        if (descCell) {
+          channelLink = parseSnakeStringCell(descCell);
         }
       }
     } catch {
@@ -495,6 +686,8 @@ export function parseDnsItemAccountState(
       domainName,
       ownerAddress,
       walletRecord,
+      contactLink,
+      channelLink,
       lastFillUpTime,
       isExpired,
       auction,
@@ -507,7 +700,6 @@ export function parseDnsItemAccountState(
 export interface BroCollectionState {
   treasuryAddress: string;
   deploymentTime: number;
-  isInstantMint: boolean;
   isInReservationPeriod: boolean;
   reservationEndsAt: number;
 }
@@ -531,12 +723,11 @@ export async function fetchBroCollectionState(
     s.loadRef(); // content
     s.loadRef(); // nftItemCode
     const deploymentTime = s.remainingBits >= 32 ? s.loadUint(32) : 0;
-    const isInstantMint = s.remainingBits >= 1 ? s.loadBoolean() : false;
     const reservationEndsAt =
       deploymentTime > 0 ? deploymentTime + RESERVATION_PERIOD_SEC : 0;
     const nowSec = Math.floor(Date.now() / 1000);
     const isInReservationPeriod =
-      isInstantMint && deploymentTime > 0 && nowSec < reservationEndsAt;
+      deploymentTime > 0 && nowSec < reservationEndsAt;
 
     return {
       treasuryAddress: treasuryAddr.toString({
@@ -544,7 +735,6 @@ export async function fetchBroCollectionState(
         testOnly: network === 'testnet',
       }),
       deploymentTime,
-      isInstantMint,
       isInReservationPeriod,
       reservationEndsAt,
     };

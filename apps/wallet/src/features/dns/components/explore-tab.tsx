@@ -23,25 +23,22 @@ import {
   useDomainLookup,
   clearDomainLookupCache,
 } from '../hooks/use-domain-lookup';
-import { useDnsTransaction, DNS_GAS } from '../hooks/use-dns-transaction';
+import { useDnsTransaction } from '../hooks/use-dns-transaction';
 import { useDnsStore } from '../store/dns-store';
 import {
-  buildDeployDnsDomainBody,
   buildDnsBidRequestBody,
   buildFinalizeAuctionBody,
-  broTierPrice,
   BRO_COLLECTION_RESOLVER,
   deriveDnsItemAddress,
 } from '../lib/dns-bodies';
-import { TON_DNS_ZONES, clearDomainResolutionCache } from '@/core/lib/dns';
+import {
+  TON_DNS_ZONES,
+  clearDomainResolutionCache,
+  detectSocialPlatform,
+} from '@/core/lib/dns';
 
 interface ExploreTabProps {
   network: Network;
-}
-
-function formatNano(nano: bigint): string {
-  const ton = Number(nano) / 1e9;
-  return ton % 1 === 0 ? `${ton} TON` : `${ton.toFixed(2)} TON`;
 }
 
 function formatFi(nano: bigint): string {
@@ -131,42 +128,35 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   );
 
   const handleRegister = useCallback(async () => {
-    if (!address || !lookup.nftAddress || lookup.isInReservationPeriod) return;
+    if (
+      !address ||
+      !lookup.nftAddress ||
+      lookup.isInReservationPeriod ||
+      !lookup.fiStartingBid
+    ) {
+      return;
+    }
 
     const query = submittedQuery.trim().toLowerCase();
     const bare = query.includes('.') ? query.split('.')[0] : query;
 
-    if (lookup.zoneSuffix === 'bro' && lookup.fiStartingBid) {
-      const fiWalletAddress = getFiWalletAddress(
-        Address.parse(address),
-        lookupNet,
-      );
-      const payload = buildDnsBidRequestBody(
-        BigInt(Date.now()),
-        bare,
-        lookup.fiStartingBid,
-        Address.parse(BRO_COLLECTION_RESOLVER),
-      );
-      await send([
-        {
-          toAddress: fiWalletAddress.toString(),
-          amount: toNano('1.05'),
-          payload,
-        },
-      ]);
-    } else {
-      const price = broTierPrice(bare.length);
-      const gasBuffer = DNS_GAS.REGISTER_GAS_BUFFER;
-      const totalAmount = price + gasBuffer;
-      const payload = buildDeployDnsDomainBody(bare);
-      await send([
-        {
-          toAddress: BRO_COLLECTION_RESOLVER,
-          amount: totalAmount,
-          payload,
-        },
-      ]);
-    }
+    const fiWalletAddress = getFiWalletAddress(
+      Address.parse(address),
+      lookupNet,
+    );
+    const payload = buildDnsBidRequestBody(
+      BigInt(Date.now()),
+      bare,
+      lookup.fiStartingBid,
+      Address.parse(BRO_COLLECTION_RESOLVER),
+    );
+    await send([
+      {
+        toAddress: fiWalletAddress.toString(),
+        amount: toNano('1.05'),
+        payload,
+      },
+    ]);
 
     clearDomainLookupCache();
     clearDomainResolutionCache();
@@ -255,8 +245,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             : ''}
         </p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
-          Public domain registration opens once the initial 30-day reservation
-          window ends.
+          Public domain registration opens once the initial 10-minute
+          reservation window ends.
         </p>
       </div>
     );
@@ -278,7 +268,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       return (
         <div className="mt-3 p-4 bg-card border border-border rounded-2xl">
           <p className="text-sm text-muted-foreground">
-            Invalid domain format. Use lowercase letters, digits, or hyphens.
+            Invalid domain format. Use 1–126 lowercase letters, digits, or
+            hyphens.
           </p>
         </div>
       );
@@ -303,7 +294,6 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
     }
 
     if (lookup.status === 'available') {
-      const isBro = lookup.zoneSuffix === 'bro';
       return (
         <div className="mt-3 p-4 bg-card border border-border rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
@@ -319,7 +309,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               ✓ Available
             </span>
           </div>
-          {isBro && lookup.fiStartingBid ? (
+          {lookup.fiStartingBid && (
             <div className="text-xs text-muted-foreground space-y-1.5 p-2.5 rounded-xl bg-muted/40 border border-border/50">
               <div className="flex justify-between">
                 <span>Starting bid</span>
@@ -343,28 +333,9 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Auction duration</span>
-                <span>7 Days (English auction)</span>
+                <span>5 Minutes (English auction)</span>
               </div>
             </div>
-          ) : (
-            lookup.price !== undefined && (
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div className="flex justify-between">
-                  <span>Registration fee</span>
-                  <span className="font-medium text-foreground">
-                    {formatNano(lookup.price)}
-                  </span>
-                </div>
-                {lookup.renewalFee !== undefined && (
-                  <div className="flex justify-between">
-                    <span>Annual renewal</span>
-                    <span className="font-medium text-foreground">
-                      {formatNano(lookup.renewalFee)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )
           )}
           {lookup.nftAddress && (
             <div className="text-xs text-muted-foreground flex items-center justify-between">
@@ -385,10 +356,10 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               disabled={!address || isSending}
               loading={isSending}
               onAction={handleRegister}
-              actionLabel={isBro ? 'Start 7-Day Auction' : 'Register Domain'}
-              completeLabel={isBro ? 'Auction Started!' : 'Registered!'}
+              actionLabel="Start 5-Minute Auction"
+              completeLabel="Auction Started!"
             >
-              {isBro ? 'Start 7-Day Auction' : 'Register'}
+              Start 5-Minute Auction
             </TxButton>
           )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
@@ -533,8 +504,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            The 7-day auction period has elapsed. Finalizing assigns the domain
-            NFT to the winner and permanently burns the winning FI bid.
+            The 5-minute auction period has elapsed. Finalizing assigns the
+            domain NFT to the winner and permanently burns the winning FI bid.
           </p>
 
           <TxButton
@@ -585,11 +556,11 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               re-registration.
             </p>
           )}
-          {lookup.price !== undefined && (
+          {lookup.fiStartingBid && (
             <p className="text-xs text-muted-foreground">
-              Fee:{' '}
+              Starting bid:{' '}
               <span className="font-medium text-foreground">
-                {formatNano(lookup.price)}
+                {formatFi(lookup.fiStartingBid)}
               </span>
             </p>
           )}
@@ -601,10 +572,10 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               disabled={!address || isSending}
               loading={isSending}
               onAction={handleRegister}
-              actionLabel="Register Domain"
-              completeLabel="Registered!"
+              actionLabel="Start 5-Minute Auction"
+              completeLabel="Auction Started!"
             >
-              Register Now
+              Start 5-Minute Auction
             </TxButton>
           )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
@@ -613,6 +584,9 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
     }
 
     // taken
+    const contactPlatform = detectSocialPlatform(lookup.contactLink);
+    const channelPlatform = detectSocialPlatform(lookup.channelLink);
+
     return (
       <div className="mt-3 p-4 bg-card border border-border rounded-2xl space-y-3">
         <div className="flex items-center justify-between">
@@ -647,6 +621,30 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
                 {formatWalletAddress(lookup.walletRecord, true, 4)}
               </span>
               <CopyButton address={lookup.walletRecord} />
+            </div>
+          </div>
+        )}
+        {lookup.contactLink && contactPlatform && (
+          <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+            <span className="shrink-0">
+              {contactPlatform.icon} {contactPlatform.label}
+            </span>
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="font-mono truncate max-w-[180px] text-foreground">
+                {lookup.contactLink}
+              </span>
+              <CopyButton address={lookup.contactLink} />
+            </div>
+          </div>
+        )}
+        {lookup.channelLink && channelPlatform && (
+          <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+            <span className="shrink-0">📢 {channelPlatform.label} Channel</span>
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="font-mono truncate max-w-[180px] text-foreground">
+                {lookup.channelLink}
+              </span>
+              <CopyButton address={lookup.channelLink} />
             </div>
           </div>
         )}
@@ -692,7 +690,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="alice  or  alice.bro"
+            placeholder="a  or  alice.bro"
             className="flex-1 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             data-testid="dns-explore-search-input"
           />
@@ -706,7 +704,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-2">
-          Plain handles (without a dot) automatically resolve under{' '}
+          Plain handles (1+ chars, without a dot) automatically resolve under{' '}
           <strong>.bro</strong>.
         </p>
       </div>
