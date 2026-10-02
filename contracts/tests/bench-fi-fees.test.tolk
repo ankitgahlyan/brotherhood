@@ -1,3 +1,4 @@
+import "@acton/build"
 import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
@@ -5,7 +6,6 @@ import "@acton/testing/expect"
 import "@acton/types/big_array"
 import "@acton/types/transaction"
 
-import "@gen/FossFiWallet.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
@@ -121,7 +121,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     val (storeCells, storeBits, _) = storeCell.calculateSizeStrict(4096);
 
     val walletInitStateCell = AutoDeployAddress {
-        stateInit: { code: fossFiWalletCompiledCodeLibraryRef(), data: storeCell },
+        stateInit: { code: build("FossFiWallet"), data: storeCell },
         toShard: { fixedPrefixLength: 8, closeTo: deployer.address },
     }.toCell();
     val (initCells, initBits, _) = walletInitStateCell.calculateSizeStrict(4096);

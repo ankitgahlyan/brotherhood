@@ -1,3 +1,4 @@
+import "@acton/build"
 import "@acton/io"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
@@ -5,7 +6,6 @@ import "@acton/testing/expect"
 import "@acton/types/big_array"
 import "@acton/types/transaction"
 
-import "@gen/PersonalWallet.code"
 import "@wrappers/Personal.gen"
 import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
@@ -55,7 +55,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
 
     // ---- 2. PersonalWallet stateInit size ----
     val walletInitStateCell = AutoDeployAddress {
-        stateInit: { code: personalWalletCompiledCodeLibraryRef(), data: walletStoreCell },
+        stateInit: { code: build("PersonalWallet"), data: walletStoreCell },
         toShard: { fixedPrefixLength: 8, closeTo: recipient.address },
     }.toCell();
     val (initCells, initBits, _) = walletInitStateCell.calculateSizeStrict(4096);
@@ -66,7 +66,7 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
         fiJettonAddress: deployer.address,
         adminAddress: deployer.address,
         metadataUri: null,
-        codes: { latestPersonalWalletCode: personalWalletCompiledCodeLibraryRef() },
+        codes: { latestPersonalWalletCode: build("PersonalWallet") },
     };
     val minterStoreCell = personalMinterStore.toCell();
     val (minterCells, minterBits, _) = minterStoreCell.calculateSizeStrict(4096);

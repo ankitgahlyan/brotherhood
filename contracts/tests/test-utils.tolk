@@ -6,13 +6,6 @@ import "@acton/types/big_array"
 import "@acton/types/out_actions"
 import "@acton/types/transaction"
 
-import "@gen/Following.code"
-import "@gen/FossFiWallet.code"
-import "@gen/Location.code"
-import "@gen/Lottery.code"
-import "@gen/PersonalWallet.code"
-import "@gen/Poll.code"
-import "@gen/Voter.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -146,7 +139,7 @@ fun activateUser(
 
 fun walletStateInit(storage: FiWalletStore): ContractState {
     return ContractState {
-        code: fossFiWalletCompiledCodeLibraryRef(),
+        code: build("FossFiWallet"),
         data: storage.toCell(),
     };
 }
@@ -160,7 +153,7 @@ fun deployWalletFromStorage(
         ? calcDeployBaseFiWallet(
             storage.addresses.load().owner,
             storage.addresses.load().trustedJettonAddrs.load().minterAddr,
-            fossFiWalletCompiledCodeLibraryRef(),
+            build("BaseFiWallet"),
         )
         : AutoDeployAddress { stateInit: walletStateInit(storage) };
     val address = init.calculateAddress();
@@ -171,7 +164,7 @@ fun deployWalletFromStorage(
             bounce: false,
             value,
             dest: init,
-            body: TopUpTons {},
+            body: TopUpTons { latestFiWalletCode: build("FossFiWallet") },
         }),
     );
     expect(deployResult).toHaveSuccessfulDeploy({
@@ -183,15 +176,18 @@ fun deployWalletFromStorage(
 
 fun registerAllTestLibraries(): void {
     testing.loadAndRegisterLibrary("c41f6128fdb234bf81e2c900af8ab6e9294da875f0b2f6b55c59fc21bdcc8e45");
-    testing.registerLibrary(pollCompiledCodeLibraryRef());
-    testing.registerLibrary(voterCompiledCodeLibraryRef());
-    testing.registerLibrary(followingCompiledCodeLibraryRef());
-    testing.registerLibrary(fossFiWalletCompiledCodeLibraryRef());
-    testing.registerLibrary(locationCompiledCodeLibraryRef());
-    testing.registerLibrary(personalWalletCompiledCodeLibraryRef());
+    testing.registerLibrary(build("Poll"));
+    testing.registerLibrary(build("Voter"));
+    testing.registerLibrary(build("Following"));
+    testing.registerLibrary(build("FossFiWallet"));
+    testing.registerLibrary(build("Location"));
+    testing.registerLibrary(build("PersonalWallet"));
 }
 
 fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treasury, Treasury) {
+    if (testing.getNow() == 0) {
+        testing.setNow(TEST_NOW_BASELINE);
+    }
     registerAllTestLibraries();
     val owner = testing.treasury("direct-wallet-owner");
     val minter = testing.treasury("direct-wallet-minter");
@@ -200,7 +196,6 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
         FiWalletStore {
             addresses: Addresses {
                 owner: owner.address,
-                // baseFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
                 nomInAddrs: NomInAddrs {}.toCell(),
                 trustedJettonAddrs: TrustedAddrs {
                     minterAddr: minter.address,
@@ -233,6 +228,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
                     null,
                     0,
                     makeTinyForwardPayload(),
+                    1,
                 ),
             }),
         );
@@ -358,7 +354,7 @@ fun setupTest(initialSupply: int = 0): (FossFi, Treasury, Treasury) {
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(), // less than 1000 contracts expected
+            lotteryCode: build("Lottery"), // less than 1000 contracts expected
             latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });

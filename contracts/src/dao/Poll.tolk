@@ -52,7 +52,7 @@ fun onInternalMessage(in: InMessage): void {
             val expectedWallet = calcDeployBaseFiWallet(
                 msg.voterOwner,
                 addrs.fiAddress,
-                getFiWalletCode(),
+                getBaseFiWalletCode(),
             ).calculateAddress();
             assert (in.senderAddress == expectedWallet) throw Errors.IncorrectSender;
 
@@ -109,7 +109,7 @@ fun onInternalMessage(in: InMessage): void {
                         proposalId: store.proposalId,
                         proposerOwner: addrs.proposerOwner,
                         expiresAt: store.expiresAt,
-                        walletLibRef: getFiWalletCode(),
+                        walletLibRef: getBaseFiWalletCode(),
                         targetMsg: store.targetMsg,
                     },
                 });

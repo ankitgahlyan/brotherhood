@@ -1,8 +1,8 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@gen/Holding.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Holding.gen"
@@ -102,7 +102,7 @@ get fun `test deferred payment: early claim fails with WaitMore`() {
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
-        holdingCompiledCodeLibraryRef(),
+        build("Holding"),
         amount,
         queryId,
     );
@@ -143,7 +143,7 @@ get fun `test deferred payment: claim after 72 hours transfers funds to payee an
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
-        holdingCompiledCodeLibraryRef(),
+        build("Holding"),
         amount,
         queryId,
     );
@@ -184,7 +184,7 @@ get fun `test deferred payment: cancel by payer refunds 1x and penalizes payee w
     val holdingAddr = calculateHoldingAddress(
         payerWallet.address,
         payeeWallet.address,
-        holdingCompiledCodeLibraryRef(),
+        build("Holding"),
         amount,
         queryId,
     );

@@ -566,7 +566,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,                                              // but by peers only & not minter
         adminAddress: store.adminAddress,
         jettonContent: store.metadata as Cell<OnchainMetadataReply>, // metadata.toCell(),
-        jettonWalletCode: getFiWalletCode(),
+        jettonWalletCode: getBaseFiWalletCode(),
     };
 }
 
@@ -586,7 +586,7 @@ fun getAutoAddress(owner: address): AutoDeployAddress {
     return calcDeployBaseFiWallet(
         owner,
         contract.getAddress(),
-        getFiWalletCode(),
+        getBaseFiWalletCode(),
     );
 }
 

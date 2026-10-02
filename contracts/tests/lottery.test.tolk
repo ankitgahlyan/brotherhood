@@ -3,7 +3,6 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@gen/Lottery.code"
 import "@wrappers/FossFi.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
@@ -118,7 +117,7 @@ get fun `test lottery: draw winner mints FI to the winner`() {
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(),
+            lotteryCode: build("Lottery"),
             latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });

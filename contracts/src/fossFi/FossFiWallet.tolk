@@ -424,7 +424,7 @@ fun onInternalMessage(in: InMessage): void {
                 dest: calcDeployBaseFiWallet(
                     msg.transferRecipient,
                     trustedAddrs.minterAddr,
-                    getFiWalletCode(),
+                    getBaseFiWalletCode(),
                 ),
                 // deploy in invite + standalone for idLess accounts
                 value: 0,
@@ -1996,7 +1996,7 @@ get fun get_wallet_data(): JettonWalletDataReply {
         jettonBalance: store.jettonBalance,
         ownerAddress: addrs.owner,
         minterAddress: addrs.trustedJettonAddrs.load().minterAddr,
-        jettonWalletCode: getFiWalletCode(),
+        jettonWalletCode: getBaseFiWalletCode(),
     };
 }
 

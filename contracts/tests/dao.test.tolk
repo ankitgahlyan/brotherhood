@@ -3,10 +3,6 @@ import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 
-import "@gen/FossFiWallet.code"
-import "@gen/Lottery.code"
-import "@gen/Poll.code"
-import "@gen/Voter.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -49,7 +45,7 @@ fun setupDaoTest(): TestSetup {
         metadata: buildTestMetadata("dao-test"),
         adminHandoff: null,
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(),
+            lotteryCode: build("Lottery"),
             latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });
@@ -66,9 +62,9 @@ fun setupDaoTest(): TestSetup {
         daoProxy,
         deployer,
         deployerWallet,
-        walletLibRef: fossFiWalletCompiledCodeLibraryRef(),
-        pollCodeLibRef: pollCompiledCodeLibraryRef(),
-        voterCodeLibRef: voterCompiledCodeLibraryRef(),
+        walletLibRef: build("FossFiWallet"),
+        pollCodeLibRef: build("Poll"),
+        voterCodeLibRef: build("Voter"),
     };
 }
 

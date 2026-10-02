@@ -150,7 +150,7 @@ get fun `test : addrs r same`() {
     val calcAddr = calcDeployBaseFiWallet(
         deployer.address,
         minter.address,
-        getFiWalletCode(),
+        getBaseFiWalletCode(),
     ).calculateAddress();
 
     expect(wallet.address).toEqual(calcAddr);

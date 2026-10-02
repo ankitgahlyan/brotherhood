@@ -8,7 +8,6 @@ import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
-import "@gen/Lottery.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -133,7 +132,7 @@ fun promptJettonMinterStorage(admin: address): FiStore {
         daoAddress: daoProxy.address,
         metadata: buildJettonMetadataCell(promptJettonMetadata(JETTON_DEFAULT_DESCRIPTION)),
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(),
+            lotteryCode: build("Lottery"),
             latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     };

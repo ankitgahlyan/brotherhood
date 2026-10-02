@@ -1,10 +1,9 @@
+import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
 import "@acton/types/transaction"
 
-import "@gen/FossFiWallet.code"
-import "@gen/Lottery.code"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -33,8 +32,8 @@ get fun `test admin: deploy should create minter without bounce`() {
         metadata: buildTestMetadata("link"),
         adminHandoff: null,
         others: FiCodes {
-            lotteryCode: lotteryCompiledCode(),
-            latestFiWalletCode: fossFiWalletCompiledCodeLibraryRef(),
+            lotteryCode: build("Lottery"),
+            latestFiWalletCode: build("FossFiWallet"),
         }.toCell(),
     });
 

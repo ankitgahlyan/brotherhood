@@ -15,7 +15,7 @@ fun address.getAddrFiWallet(self): address {
     return calcDeployBaseFiWallet(
         self,
         addrs.trustedJettonAddrs.load().minterAddr,
-        getFiWalletCode(),
+        getBaseFiWalletCode(),
     ).calculateAddress();
 }
 
