@@ -3,6 +3,8 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
+const stagedOnly = process.argv.includes('--staged');
+
 function getChangedFiles() {
   const fileSet = new Set();
 
@@ -20,6 +22,10 @@ function getChangedFiles() {
         .map((f) => f.trim())
         .filter(Boolean)
         .forEach((f) => fileSet.add(f));
+    }
+
+    if (stagedOnly) {
+      return Array.from(fileSet);
     }
 
     // 2. Unstaged changes in working tree

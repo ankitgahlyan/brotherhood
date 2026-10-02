@@ -1,5 +1,5 @@
 #!/bin/sh
 set -e
 
-# Run tests and checks only on changed/affected (git diff) files
-bun run test:changed
+# Run pre-commit formatting, linting, typechecks, and tests strictly on staged files
+node scripts/pre-commit-tests.mjs --staged

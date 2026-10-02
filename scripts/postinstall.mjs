@@ -1,5 +1,15 @@
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+
+// Ensure git hooks path points to .githooks automatically on install
+try {
+  if (fs.existsSync(path.resolve(process.cwd(), '.git'))) {
+    execSync('git config core.hooksPath .githooks', { stdio: 'ignore' });
+  }
+} catch {
+  // Ignore if git is unavailable
+}
 
 // Under the TS7 dual-alias setup, typescript-7 brings in TS7 (native compiler without JS API).
 // ts-api-utils's peer dependency has no upper bound, so Bun may resolve it to TS7.
