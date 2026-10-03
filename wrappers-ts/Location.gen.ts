@@ -281,6 +281,7 @@ export const HotUpgrade = {
  >     queryId: uint64
  >     userAddress: address
  >     sendExcessesTo: address?
+ >     latestLocationCode: cell?
  > }
  */
 export interface LocationAddMember {
@@ -288,6 +289,7 @@ export interface LocationAddMember {
     queryId: uint64
     userAddress: c.Address
     sendExcessesTo: c.Address | null
+    latestLocationCode: c.Cell | null /* = null */
 }
 
 export const LocationAddMember = {
@@ -297,9 +299,11 @@ export const LocationAddMember = {
         queryId: uint64
         userAddress: c.Address
         sendExcessesTo: c.Address | null
+        latestLocationCode?: c.Cell | null /* = null */
     }): LocationAddMember {
         return {
             $: 'LocationAddMember',
+            latestLocationCode: null,
             ...args
         }
     },
@@ -310,6 +314,7 @@ export const LocationAddMember = {
             queryId: s.loadUintBig(64),
             userAddress: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
+            latestLocationCode: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: LocationAddMember, b: c.Builder): void {
@@ -317,6 +322,9 @@ export const LocationAddMember = {
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.userAddress);
         b.storeAddress(self.sendExcessesTo);
+        storeTolkNullable<c.Cell>(self.latestLocationCode, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: LocationAddMember): c.Cell {
         return makeCellFrom<LocationAddMember>(self, LocationAddMember.store);
@@ -464,10 +472,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Location implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFQEAAhMAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASALDAL31/Ej5IBB2omhqfSRpj/oCa4WEguuWEAAAQpJHLpt8SRHjgvlwJILpn/0kfSgYKYvAgIX6BTfQmMobiq+Cxw9kZ8GgBECAhfoggVICZGYJ/SkJ5Y+JegAJZYTk9qpxELdIrfBkZ8KECX0pQQhqmTtt54XHZZ/kwCF9gHBEwYHAEGsiZh2omhqfSRpj/oCaYTo0gJkZgn9KWWP+gBlhOT2qkAACAAAEKUD/Ncnjl82+JIjxwXy4EkF0z/6SPpQMFMXgQEL9ApvoTGOIAeBAQv0WTAiwgCTAqUC3gTIzBP6UssfEvQAEssJye1UlDcVXwXiIW6RW+DIz4UIEvpSghDVMnbbzwuOyz/JgEL7AOA0WwHXLCAAAIBc4wLXLCAAAIA04wJfA4QPAQgJCgAybCL4kljHBfLgSfQE10wg+wTQ7R7tU/EJEwBgM/iSxwXy4EkB0wAx0wn6SDH0BPQFUTK5bBKOEiFukTGZIfsEAdDtHu1T4vEJE+BbAAjHAPL0AgEgDQ4CASAPEAAvu2e+1E0NQx+kgx0x8x9AWBAQv0Cm+hMYACW4GQ7UTQ1DH6SDHTHzH0AdcLCYAA+4sP7UTQ10yAIBIBESABe25b2omh9JBjrhY/ACASATFAARsis7UTQ+kgwgAB+wqbtRNDUMfpIMdMfMfQFg');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFwEAAnMAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASANDgL31/Ej5IBB2omhqfSRpj/oCa4WEguuWEAAAQpJHLpt8SRHjgvlwJILpn/0kfSgYKYvAgIX6BTfQmMobiq+Cxw9kZ8GgBECAhfoggVICZGYJ/SkJ5Y+JegAJZYTk9qpxELdIrfBkZ8KECX0pQQhqmTtt54XHZZ/kwCF9gHBEwYHAgFiCwwACAAAEKUD/Ncnjl82+JIjxwXy4EkF0z/6SPpQMFMXgQEL9ApvoTGOIAeBAQv0WTAiwgCTAqUC3gTIzBP6UssfEvQAEssJye1UlDcVXwXiIW6RW+DIz4UIEvpSghDVMnbbzwuOyz/JgEL7AOA0WwHXLCAAAIBc4wLXLCAAAIA04wJfA4QPAQgJCgAybCL4kljHBfLgSfQE10wg+wTQ7R7tU/EJEwBgM/iSxwXy4EkB0wAx0wn6SDH0BPQFUTK5bBKOEiFukTGZIfsEAdDtHu1T4vEJE+BbAAjHAPL0ALOivUTHHBfLgSQLy0t5tA9csIAAAhSTyv9M/+kj6UDDIz4NABoEBC/RBAsjME/pSz5AAAAAG9ADPiAGAye1UIW6RW+DIz4UIEvpSghDVMnbbzwuOyz/JgEL7AIAP6BMw7UTQ1PpI0x/0BNMJ0aQEyMwT+lLLH/QAywnJ7VSAgEgDxACASAREgAvu2e+1E0NQx+kgx0x8x9AWBAQv0Cm+hMYACW4GQ7UTQ1DH6SDHTHzH0AdcLCYAA+4sP7UTQ10yAIBIBMUABe25b2omh9JBjrhY/ACASAVFgARsis7UTQ+kgwgAB+wqbtRNDUMfpIMdMfMfQFg');
 
     static Errors = {
         'Errors.NotOwner': 73,
+        'Errors.VersionMismatch': 734,
     }
 
     readonly address: c.Address
@@ -501,6 +510,7 @@ export class Location implements c.Contract {
         queryId: uint64
         userAddress: c.Address
         sendExcessesTo: c.Address | null
+        latestLocationCode?: c.Cell | null /* = null */
     }) {
         return LocationAddMember.toCell(LocationAddMember.create(body));
     }
@@ -542,6 +552,7 @@ export class Location implements c.Contract {
         queryId: uint64
         userAddress: c.Address
         sendExcessesTo: c.Address | null
+        latestLocationCode?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

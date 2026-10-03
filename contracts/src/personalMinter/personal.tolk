@@ -1,5 +1,6 @@
 import "@stdlib/tvm-lowlevel"
 
+import "@gen/PersonalWallet.code"
 import "@contracts/common/errors"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
@@ -186,7 +187,8 @@ fun onInternalMessage(in: InMessage) {
             var internalTransferBody = msg.internalTransferMsg;
             if (
                 (internalTransferMsg.jettonAmount == grams("1")) |
-                internalTransferMsg.transferredAsCredit
+                internalTransferMsg.transferredAsCredit |
+                (in.senderAddress == storage.adminAddress)
             ) {
                 internalTransferBody = makeInternalTransferStep(
                     internalTransferMsg.queryId,
@@ -196,7 +198,8 @@ fun onInternalMessage(in: InMessage) {
                     internalTransferMsg.forwardTonAmount,
                     internalTransferMsg.forwardPayload,
                     internalTransferMsg.version,
-                    internalTransferMsg.transferredAsCredit,
+                    internalTransferMsg.transferredAsCredit |
+                        (in.senderAddress == storage.adminAddress),
                     storage.codes.latestPersonalWalletCode,
                 );
             }
@@ -252,6 +255,8 @@ fun onInternalMessage(in: InMessage) {
 
                 if (storage.version < msg.walletVersion) {
                     storage.version = msg.walletVersion;
+                } else {
+                    storage.version += 1;
                 }
 
                 val upgradeMsg = createMessage({
@@ -281,6 +286,8 @@ fun onInternalMessage(in: InMessage) {
 
                 if (storage.version < msg.walletVersion) {
                     storage.version = msg.walletVersion;
+                } else {
+                    storage.version += 1;
                 }
             }
         }
@@ -321,6 +328,82 @@ fun onInternalMessage(in: InMessage) {
             assert (in.body.isEmpty()) throw 0xFFFF;
         }
     }
+    storage.save();
+}
+
+type AllowedBasePersonalMinterMsg =
+    | MintNewJettons
+    | TopUpTons
+
+@method_id(2223)
+fun migratePersonalMinterFromBase(
+    body: slice,
+    _senderAddress: address,
+    baseStore: BasePersonalMinterStore,
+): void {
+    assert (baseStore.version == 0) throw Errors.VersionMismatch;
+    var storage: PersonalStore = {
+        totalSupply: 0,
+        fiJettonAddress: baseStore.fiJettonAddress,
+        adminAddress: baseStore.adminAddress,
+        metadataUri: null,
+        version: 1,
+        codes: { latestPersonalWalletCode: personalWalletCompiledCodeLibraryRef() },
+    };
+
+    val msg = lazy AllowedBasePersonalMinterMsg.fromSlice(body);
+    match (msg) {
+        MintNewJettons => {
+            assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
+            val internalTransferMsg = lazy msg
+                .internalTransferMsg
+                .load({
+                    throwIfOpcodeDoesNotMatch: Errors.InvalidMessage,
+                });
+            internalTransferMsg.forwardPayload.checkIsCorrectTlbEither();
+
+            var fwdCopy = internalTransferMsg.forwardPayload;
+            val maybeMeta = fwdCopy.loadMaybeRef();
+            if (maybeMeta != null) {
+                storage.metadataUri = maybeMeta;
+            }
+
+            storage.totalSupply += internalTransferMsg.jettonAmount;
+            reservePersonalMinterStorageFee();
+
+            val internalTransferBody = makeInternalTransferStep(
+                internalTransferMsg.queryId,
+                internalTransferMsg.jettonAmount,
+                internalTransferMsg.transferInitiator,
+                internalTransferMsg.sendExcessesTo,
+                internalTransferMsg.forwardTonAmount,
+                beginCell().storeMaybeRef(null).endCell().beginParse(),
+                internalTransferMsg.version,
+                true,
+                storage.codes.latestPersonalWalletCode,
+            );
+
+            val deployMsg = createMessage({
+                bounce: BounceMode.Only256BitsOfBody,
+                dest: calcDeployPriWallet(
+                    msg.mintRecipient,
+                    storage.adminAddress,
+                    contract.getAddress(),
+                    getPersonalWalletCode(),
+                ),
+                value: msg.tonAmount,
+                body: internalTransferBody,
+            });
+            deployMsg.send(
+                SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+            );
+        }
+
+        TopUpTons => {
+            // Migrated from BasePersonalMinterStore to PersonalStore v1
+        }
+    }
+
     storage.save();
 }
 

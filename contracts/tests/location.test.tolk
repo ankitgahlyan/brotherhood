@@ -16,7 +16,7 @@ const H3_NYC = "882a100d31fffff"
 const H3_SF = "8828308281fffff"
 
 fun getLocationContract(minterAddress: address, h3Cell: string): Location {
-    val deployInfo = calcDeployLocation(h3Cell, minterAddress, build("Location"));
+    val deployInfo = calcDeployLocation(h3Cell, minterAddress, build("BaseLocation"));
     return Location.fromAddress(deployInfo.calculateAddress());
 }
 
@@ -151,6 +151,7 @@ get fun `test location: reject direct unauthorized member addition`() {
         1,
         targetUser.address,
         imposter.address,
+        null,
         { value: grams("0.1") },
     );
     expect(unauthorizedRes).toHaveFailedTx<LocationAddMember>({

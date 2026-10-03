@@ -83,13 +83,14 @@ fun Personal.sendNotifyMinter(
     jettonAmount: coins,
     burnInitiator: address,
     sendExcessesTo: address?,
+    customPayload: cell?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: NotifyMinter { queryId, jettonAmount, burnInitiator, sendExcessesTo },
+        body: NotifyMinter { queryId, jettonAmount, burnInitiator, sendExcessesTo, customPayload },
     });
     return net.send(from, genericMsg);
 }
@@ -178,12 +179,32 @@ fun Personal.sendHotUpgrade(
     return net.send(from, genericMsg);
 }
 
-fun Personal.sendTopUpTons(self, from: address, config: SendParams = {}): SendResultList {
+fun Personal.sendRequestUpgradeCode(
+    self,
+    from: address,
+    targetAddress: address?,
+    config: SendParams = {},
+): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: TopUpTons {},
+        body: RequestUpgradeCode { targetAddress },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun Personal.sendTopUpTons(
+    self,
+    from: address,
+    latestFiWalletCode: cell?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: TopUpTons { latestFiWalletCode },
     });
     return net.send(from, genericMsg);
 }
@@ -199,7 +220,12 @@ fun Personal.sendDestroy(self, from: address, config: SendParams = {}): SendResu
 }
 
 /// Send message to the contract with a custom body cell
-fun Personal.sendAny(self, from: address, body: cell, config: SendParams = {}): SendResultList {
+fun Personal.sendAny(
+    self,
+    from: address,
+    body: cell,
+    config: SendParams = {},
+): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,

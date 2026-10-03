@@ -15,20 +15,36 @@ import "@contracts/personalMinter/storage"
 
 import "test-utils"
 
-// Deploy an issuer's Personal Token minter backed by the issuer's FI account.
+// Deploy an issuer's Personal Token minter backed by the issuer's FI account via BasePersonalMinter proxy.
 fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
-    val personalStore: PersonalStore = {
-        totalSupply: 0,
+    val baseStore: BasePersonalMinterStore = {
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        metadataUri: null,
-        codes: { latestPersonalWalletCode: build("PersonalWallet") },
+        version: 0,
+    };
+    val stateInit = ContractState {
+        code: build("BasePersonalMinter"),
+        data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
-    val pm = Personal.fromStorage(personalStore, toShard);
-    val res = pm.deploy(admin, { value: grams("1") });
-    expect(res).toHaveSuccessfulDeploy({ to: pm.address });
-    return pm;
+    val pmAddress = AutoDeployAddress {
+        workchain: BASECHAIN,
+        stateInit,
+        toShard,
+    }.calculateAddress();
+    val deployMsg = createMessage({
+        bounce: false,
+        value: grams("1"),
+        dest: {
+            workchain: BASECHAIN,
+            stateInit,
+            toShard,
+        },
+        body: TopUpTons { latestFiWalletCode: build("PersonalMinter") },
+    });
+    val res = net.send(admin, deployMsg);
+    expect(res).toHaveSuccessfulDeploy({ to: pmAddress });
+    return Personal.fromAddress(pmAddress);
 }
 
 // Point the issuer's FI wallet at its Personal Token minter and personal wallet (ton("0.6") owner message).

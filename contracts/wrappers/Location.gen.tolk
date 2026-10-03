@@ -59,13 +59,14 @@ fun Location.sendLocationAddMember(
     queryId: uint64,
     userAddress: address,
     sendExcessesTo: address?,
+    latestLocationCode: cell?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: LocationAddMember { queryId, userAddress, sendExcessesTo },
+        body: LocationAddMember { queryId, userAddress, sendExcessesTo, latestLocationCode },
     });
     return net.send(from, genericMsg);
 }

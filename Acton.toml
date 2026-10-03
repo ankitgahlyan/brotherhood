@@ -31,6 +31,11 @@ display-name = "BaseFiWallet Proxy"
 src = "contracts/src/fossFi/BaseFiWallet.tolk"
 depends = []
 
+[contracts.BaseFollowing]
+display-name = "BaseFollowing Proxy"
+src = "contracts/src/followers/BaseFollowing.tolk"
+depends = []
+
 [contracts.Following]
 display-name = "Following Child"
 src = "contracts/src/followers/followers.tolk"
@@ -41,6 +46,10 @@ display-name = "Holding Child"
 src = "contracts/src/holding/holding.tolk"
 depends = []
 
+[contracts.BaseLocation]
+display-name = "BaseLocation Proxy"
+src = "contracts/src/location/BaseLocation.tolk"
+depends = []
 
 [contracts.Location]
 display-name = "Location Child"
@@ -50,6 +59,11 @@ depends = []
 [contracts.Lottery]
 display-name = "Lottery"
 src = "contracts/src/lottery/lottery.tolk"
+depends = []
+
+[contracts.BasePersonalMinter]
+display-name = "BasePersonalMinter Proxy"
+src = "contracts/src/personalMinter/BasePersonalMinter.tolk"
 depends = []
 
 [contracts.PersonalMinter]

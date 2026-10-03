@@ -7,8 +7,9 @@
  */
 
 import { useMemo, useEffect } from 'react';
-import { Address, Dictionary } from '@ton/core';
-import { Location, type LocationStore } from '@wrappers/Location.gen';
+import { Address } from '@ton/core';
+import { BaseLocation } from '@wrappers/BaseLocation.gen';
+import { type LocationStore } from '@wrappers/Location.gen';
 import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 import {
@@ -52,22 +53,16 @@ export interface UseLocationByH3CellResult {
 
 /**
  * Calculates the deterministic child Location contract address for an H3 spatial cell
- * using StateInit (code + initial storage data) and 8-bit shard depth prefix matching the Minter.
+ * using BaseLocation StateInit (code + initial storage data) and 8-bit shard depth prefix matching the Minter.
  */
 export function calculateLocationAddress(
   h3Cell: string,
   minterAddress: Address = Address.parse(FI_ADDRESS),
 ): Address {
-  const loc = Location.fromStorage(
+  const loc = BaseLocation.fromStorage(
     {
       h3Cell,
       minterAddress,
-      memberCount: 0n,
-      members: Dictionary.empty(
-        Dictionary.Keys.Address(),
-        Dictionary.Values.Bool(),
-      ),
-      version: 0n,
     },
     {
       toShard: { fixedPrefixLength: 8, closeTo: minterAddress },

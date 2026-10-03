@@ -1,3 +1,9 @@
+struct BaseFollowingStore {
+    follower: address
+    followee: address
+    version: uint10 = 0
+}
+
 struct FollowingStore {
     follower: address
     followee: address

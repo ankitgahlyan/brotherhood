@@ -31,7 +31,8 @@ import {
 } from '@wrappers/FossFiWallet.gen';
 import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
-import { PersonalMinter, PersonalCodes } from '@wrappers/Personal.gen';
+import { BasePersonalMinter } from '@wrappers/BasePersonalMinter.gen';
+import { PersonalMinter, Upgrade } from '@wrappers/PersonalMinter.gen';
 import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
@@ -89,6 +90,8 @@ export function buildMintBody(params: {
   forwardTonAmount: bigint;
   totalTonAmount: bigint;
   queryId?: bigint;
+  latestWalletCode?: Cell | null;
+  forwardPayload?: Cell | null;
 }): Cell {
   const {
     toAddress,
@@ -96,6 +99,8 @@ export function buildMintBody(params: {
     forwardTonAmount,
     totalTonAmount,
     queryId = 0n,
+    latestWalletCode = null,
+    forwardPayload = null,
   } = params;
 
   return MintNewJettons.toCell(
@@ -107,13 +112,18 @@ export function buildMintBody(params: {
         ref: InternalTransferStep.create({
           queryId,
           jettonAmount,
-          version: 0n, // todo: need fix? for further/future mints
+          version: 0n,
           transferInitiator: toAddress,
           sendExcessesTo: null,
           forwardTonAmount,
-          forwardPayload: PayloadInline.create({
-            value: beginCell().asSlice(),
-          }),
+          latestWalletCode,
+          forwardPayload: forwardPayload
+            ? PayloadInRef.create({
+                value: { ref: forwardPayload.beginParse() },
+              })
+            : PayloadInline.create({
+                value: beginCell().asSlice(),
+              }),
         }),
       },
     }),
@@ -136,22 +146,15 @@ export async function buildChangeContentBody(
   );
 }
 
-// Deploy a Personal Token minter backed by the issuer's FI wallet.
-// PersonalStore layout: totalSupply (coins), fiJettonAddress, adminAddress, metadataUri (null on initial deterministic deploy).
-// This guarantees deterministic address calculation independent of metadata.
+// Deploy a Personal Token minter backed by the issuer's FI wallet using the deterministic BasePersonalMinter proxy.
 export function getPersonalMinter(params: {
   issuerWallet: Address;
   adminAddress: Address;
 }) {
-  const minter = PersonalMinter.fromStorage(
+  const minter = BasePersonalMinter.fromStorage(
     {
-      totalSupply: 0n,
       fiJettonAddress: params.issuerWallet,
       adminAddress: params.adminAddress,
-      metadataUri: null,
-      codes: PersonalCodes.create({
-        latestPersonalWalletCode: PersonalWallet.CodeCell,
-      }),
     },
     {
       toShard: { fixedPrefixLength: 8, closeTo: params.adminAddress },
@@ -364,8 +367,27 @@ export function buildRequestUpgradeBody(targetAddress?: Address): Cell {
   );
 }
 
-export function buildTopUpTonsBody(): Cell {
-  return TopUpTons.toCell(TopUpTons.create({}));
+export function buildPersonalUpgradeBody(params: {
+  walletUpgrade: boolean;
+  walletVersion?: bigint;
+  sender: Address;
+}): Cell {
+  return Upgrade.toCell(
+    Upgrade.create({
+      walletUpgrade: params.walletUpgrade,
+      walletVersion: params.walletVersion ?? 1n,
+      sender: params.sender,
+      newCode: params.walletUpgrade
+        ? PersonalWallet.CodeCell
+        : PersonalMinter.CodeCell,
+    }),
+  );
+}
+
+export function buildTopUpTonsBody(
+  latestFiWalletCode: Cell | null = null,
+): Cell {
+  return TopUpTons.toCell(TopUpTons.create({ latestFiWalletCode }));
 }
 
 export function buildApproveUpgradeBody(): Cell {

@@ -137,6 +137,37 @@ fun onInternalMessage(in: InMessage) {
     store.save();
 }
 
+@method_id(2223)
+fun migrateFollowingFromBase(
+    body: slice,
+    senderAddress: address,
+    baseStore: BaseFollowingStore,
+): void {
+    assert (
+        (senderAddress == baseStore.followee) | (senderAddress == baseStore.follower)
+    ) throw Errors.IncorrectSender;
+    assert (baseStore.version == 0) throw Errors.VersionMismatch;
+
+    val msg = lazy InitFollow.fromSlice(body);
+    val store: FollowingStore = {
+        follower: baseStore.follower,
+        followee: baseStore.followee,
+        mintAmount: msg.mintAmount,
+        isFollowing: true,
+    };
+    store.save();
+
+    val refundMsg = createMessage({
+        bounce: BounceMode.NoBounce,
+        dest: msg.followerOwner,
+        value: 0,
+        body: createEmptySlice(),
+    });
+    refundMsg.send(
+        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
+    );
+}
+
 @method_id(2828)
 fun hotUpgradeFollowingData(_additionalData: cell?) {
     val oldStore = FollowingStore.load();

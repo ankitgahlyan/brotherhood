@@ -71,7 +71,7 @@ get fun `test follow: follower deploys following child, followee receives 1000 F
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("Following"),
+        build("BaseFollowing"),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
     val followingChild = Followers.fromAddress(followingChildAddr);
@@ -86,7 +86,7 @@ get fun `test follow: following child contract data and lifecycle`() {
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("Following"),
+        build("BaseFollowing"),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
 
@@ -126,7 +126,7 @@ get fun `test follow: unfollow burns 1000 FI from followee and decrements counte
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("Following"),
+        build("BaseFollowing"),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
     val followingChild = Followers.fromAddress(followingChildAddr);

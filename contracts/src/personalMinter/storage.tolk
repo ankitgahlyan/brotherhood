@@ -5,6 +5,12 @@ struct BasePersonalWalletStore {
     version: uint10 = 0
 }
 
+struct BasePersonalMinterStore {
+    fiJettonAddress: address
+    adminAddress: address
+    version: uint10 = 0
+}
+
 struct PersonalWalletStore {
     jettonBalance: coins = 0
     owner: address

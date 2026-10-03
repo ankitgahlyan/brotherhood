@@ -12,6 +12,7 @@ import "@contracts/common/utils"
 import "@contracts/dao/dao-utils"
 import "@contracts/dns/messages"
 
+import "@contracts/followers/base-following-code"
 import "@contracts/followers/consts"
 import "@contracts/followers/following-utils"
 import "@contracts/followers/messages"
@@ -1275,7 +1276,7 @@ fun onInternalMessage(in: InMessage): void {
             val followingChild = calcDeployFollowing(
                 in.senderAddress,
                 contract.getAddress(),
-                getFollowingCode(),
+                getBaseFollowingCode(),
                 msg.mintAmount,
             );
 
@@ -1286,6 +1287,8 @@ fun onInternalMessage(in: InMessage): void {
                 body: InitFollow {
                     queryId: msg.queryId,
                     followerOwner: msg.followerOwner,
+                    mintAmount: msg.mintAmount,
+                    latestFollowingCode: getFollowingCode(),
                 },
             });
             // SAFETY: forward remaining balance to deploy and initialize following child contract
@@ -1355,7 +1358,7 @@ fun onInternalMessage(in: InMessage): void {
             val followingChild = calcDeployFollowing(
                 in.senderAddress,
                 contract.getAddress(),
-                getFollowingCode(),
+                getBaseFollowingCode(),
                 msg.burnAmount,
             ).calculateAddress();
 

@@ -53,17 +53,15 @@ fun main() {
     println("MINTER={}", minter.address);
     println("ISSUER_WALLET={}", issuerWallet);
 
-    // 2. the deploy-personal recipe steps: deploy the PM and point the issuer wallet at it
-    val personalStore: PersonalStore = {
-        totalSupply: 0,
+    // 2. the deploy-personal recipe steps: deploy the PM via BasePersonalMinter proxy and point the issuer wallet at it
+    val baseStore: BasePersonalMinterStore = {
         fiJettonAddress: issuerWallet,
         adminAddress: issuerOwner,
-        metadataUri: null,
-        codes: { latestPersonalWalletCode: build("PersonalWallet") },
+        version: 0,
     };
     val stateInit = ContractState {
-        code: build("PersonalMinter"),
-        data: personalStore.toCell(),
+        code: build("BasePersonalMinter"),
+        data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: issuerOwner };
     val pmAddress = AutoDeployAddress {
@@ -80,6 +78,7 @@ fun main() {
             stateInit,
             toShard,
         },
+        body: TopUpTons { latestFiWalletCode: build("PersonalMinter") },
     });
     net.send(issuerOwner, deployMsg).waitForFirstTransaction();
     val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);

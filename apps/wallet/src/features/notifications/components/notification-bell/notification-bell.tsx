@@ -57,11 +57,15 @@ import {
 import {
   CONTRACT_CODE_HASHES,
   normalizeCodeHash,
+  deserializePersonalStoreDataBoc,
 } from '@/lib/brotherhood/account-hydrator.worker';
 import type { Network } from '@/lib/brotherhood/config';
 
 import { isZeroAddress } from '@/lib/brotherhood/ton';
-import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
+import {
+  buildRequestUpgradeBody,
+  buildPersonalUpgradeBody,
+} from '@/lib/brotherhood/deploy';
 import { GAS, useBrotherhoodTransaction } from '@/features/brotherhood';
 import { Address } from '@ton/core';
 
@@ -366,34 +370,86 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
     return minter && !isZeroAddress(minter) ? minter : null;
   }, [fiWalletQuery.data]);
 
+  const personalWalletAddr = useMemo(() => {
+    const pw =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonWallet;
+    return pw && !isZeroAddress(pw) ? pw : null;
+  }, [fiWalletQuery.data]);
+
   const notifKey = `personal-upgrade-${wallet.id}`;
 
-  // Fetch on-chain code_hash for the personal minter and compare against expected hash
-  const { data: isOutdated } = useQuery({
+  // Fetch on-chain code_hash for the personal minter and personal wallet and compare against expected hashes
+  const { data: outdatedState } = useQuery({
     queryKey: [
       'personal-minter-outdated',
       personalMinterAddr?.toRawString(),
+      personalWalletAddr?.toRawString(),
       wallet.network,
     ],
     queryFn: async () => {
-      if (!personalMinterAddr) return false;
+      if (!personalMinterAddr) {
+        return {
+          minterOutdated: false,
+          walletOutdated: false,
+          isMinterAdmin: false,
+          nextVersion: 2n,
+        };
+      }
       const { batchFetchAccountStates } =
         await import('@/lib/brotherhood/account-state-hydrator');
+      const addrs = [
+        personalMinterAddr,
+        ...(personalWalletAddr ? [personalWalletAddr] : []),
+      ];
       const result = await batchFetchAccountStates(
-        [personalMinterAddr],
+        addrs,
         wallet.network ?? 'testnet',
       );
-      const rawAcc = result.accounts.find(
-        (a) =>
-          a.address === personalMinterAddr.toRawString() ||
-          a.address === personalMinterAddr.toString(),
+      const findAccount = (target: Address) =>
+        result.accounts.find((a) => {
+          try {
+            return Address.parse(a.address).equals(target);
+          } catch {
+            return (
+              a.address === target.toRawString() ||
+              a.address === target.toString()
+            );
+          }
+        });
+
+      const rawMinter = findAccount(personalMinterAddr);
+      const rawWallet = personalWalletAddr
+        ? findAccount(personalWalletAddr)
+        : undefined;
+
+      const minterOutdated = Boolean(
+        rawMinter?.code_hash &&
+        normalizeCodeHash(rawMinter.code_hash) !==
+          normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
       );
-      if (!rawAcc?.code_hash) return false;
-      const liveHash = normalizeCodeHash(rawAcc.code_hash);
-      const expectedHash = normalizeCodeHash(
-        CONTRACT_CODE_HASHES.personalMinter,
+      const walletOutdated = Boolean(
+        rawWallet?.code_hash &&
+        normalizeCodeHash(rawWallet.code_hash) !==
+          normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
       );
-      return liveHash !== expectedHash;
+
+      const minterStore = rawMinter?.data_boc
+        ? deserializePersonalStoreDataBoc(rawMinter.data_boc)
+        : null;
+      const isMinterAdmin = Boolean(
+        ownerAddress &&
+        minterStore?.adminAddress &&
+        minterStore.adminAddress.equals(ownerAddress),
+      );
+      const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
+
+      return {
+        minterOutdated,
+        walletOutdated,
+        isMinterAdmin,
+        nextVersion,
+      };
     },
     enabled: Boolean(personalMinterAddr),
     staleTime: 5 * 60 * 1000, // 5 min — no need to hammer Toncenter
@@ -401,11 +457,17 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
   });
 
   useEffect(() => {
-    if (!personalMinterAddr || isOutdated === undefined) {
+    if (!personalMinterAddr || !outdatedState) {
       onNotificationChange(notifKey, []);
       return;
     }
-    if (isOutdated) {
+    const { minterOutdated, walletOutdated, isMinterAdmin, nextVersion } =
+      outdatedState;
+    const isActionable = isMinterAdmin
+      ? minterOutdated || walletOutdated
+      : walletOutdated && Boolean(personalWalletAddr);
+
+    if (isActionable) {
       onNotificationChange(notifKey, [
         {
           id: `personal-upgrade-${wallet.address}`,
@@ -416,6 +478,11 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
           isActive,
           data: {
             personalMinterAddress: personalMinterAddr.toString(),
+            personalWalletAddress: personalWalletAddr?.toString() ?? null,
+            minterOutdated,
+            walletOutdated,
+            isMinterAdmin,
+            nextVersion: nextVersion.toString(),
           },
         },
       ]);
@@ -428,7 +495,8 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
     wallet.address,
     isActive,
     personalMinterAddr,
-    isOutdated,
+    personalWalletAddr,
+    outdatedState,
     notifKey,
     onNotificationChange,
   ]);
@@ -673,24 +741,61 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  // Execute personal contract upgrade — sends RequestUpgradeCode to personalMinterAddress
-  const handlePersonalUpgradeTarget = async (
-    notifId: string,
-    personalMinterAddress: string,
-  ) => {
+  // Execute personal contract upgrade — Admin pushes Upgrade(walletUpgrade=false/true), Holder sends RequestUpgradeCode(personalWalletAddress)
+  const handlePersonalUpgradeTarget = async (item: WalletNotificationItem) => {
     if (!address) return;
-    setActionInProgressId(notifId);
+    setActionInProgressId(item.id);
     try {
-      const payload = buildRequestUpgradeBody(Address.parse(address));
-      await sendPersonalUpgradeTx([
-        {
+      const ownerAddr = Address.parse(address);
+      const {
+        personalMinterAddress,
+        personalWalletAddress,
+        minterOutdated,
+        walletOutdated,
+        isMinterAdmin,
+        nextVersion,
+      } = item.data;
+      const versionToUse = BigInt(nextVersion || '2');
+      const messages = [];
+
+      if (isMinterAdmin) {
+        if (minterOutdated) {
+          messages.push({
+            toAddress: personalMinterAddress,
+            amount: GAS.REQUEST_UPGRADE,
+            payload: buildPersonalUpgradeBody({
+              walletUpgrade: false,
+              walletVersion: versionToUse,
+              sender: ownerAddr,
+            }),
+          });
+        }
+        if (walletOutdated) {
+          messages.push({
+            toAddress: personalMinterAddress,
+            amount: GAS.REQUEST_UPGRADE,
+            payload: buildPersonalUpgradeBody({
+              walletUpgrade: true,
+              walletVersion: versionToUse,
+              sender: ownerAddr,
+            }),
+          });
+        }
+      } else if (personalWalletAddress) {
+        messages.push({
           toAddress: personalMinterAddress,
           amount: GAS.REQUEST_UPGRADE,
-          payload,
-        },
-      ]);
-      handleDismissOne(notifId);
-      toast.success('Personal upgrade request sent');
+          payload: buildRequestUpgradeBody(
+            Address.parse(personalWalletAddress),
+          ),
+        });
+      }
+
+      if (messages.length === 0) return;
+
+      await sendPersonalUpgradeTx(messages);
+      handleDismissOne(item.id);
+      toast.success('Personal contract upgrade sent');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upgrade failed';
       toast.error(msg);
@@ -948,8 +1053,9 @@ export const NotificationBell: React.FC = () => {
                             </span>
                           </div>
                           <span className="text-[11px] text-muted-foreground block truncate">
-                            New contract code available • Pull upgrade to your
-                            personal wallet
+                            {item.data.isMinterAdmin
+                              ? 'New contract code available • Upgrade minter & wallet'
+                              : 'New contract code available • Pull upgrade to your personal wallet'}
                           </span>
                         </div>
                       </div>
@@ -957,15 +1063,14 @@ export const NotificationBell: React.FC = () => {
                     <Button
                       size="sm"
                       disabled={isProcessing || isPersonalUpgradeSending}
-                      onClick={() =>
-                        handlePersonalUpgradeTarget(
-                          item.id,
-                          item.data.personalMinterAddress,
-                        )
-                      }
+                      onClick={() => handlePersonalUpgradeTarget(item)}
                       className="w-full text-xs font-semibold py-2 rounded-xl cursor-pointer bg-violet-600 hover:bg-violet-700 text-white"
                     >
-                      {isProcessing ? 'Requesting Upgrade…' : 'Pull Upgrade'}
+                      {isProcessing
+                        ? 'Upgrading…'
+                        : item.data.isMinterAdmin
+                          ? 'Upgrade Personal Token'
+                          : 'Pull Upgrade'}
                     </Button>
                   </div>
                 </SwipeableCard>

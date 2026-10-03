@@ -20,11 +20,11 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'KpV3Cx3DpOskowldVQLfj6/sxim212S0A8pNxe24DXY=',
-  fiMinter: 'CyoXRUob//Pk89kDmfPppu+0bGzN4wHqBHFD8+MWjaw=',
-  personalMinter: 'U/QyE/5TqhunxjK05HRbhYNk83F5sHH8IVV7uB1nytw=',
-  personalWallet: 'Vs+H1SOfVRSokrDzIEvA65y5RJPodGuZ32uaKbptYFo=',
-  location: '2S+Rb2DNlMrURQC76YmymewwVzGf4crXoafwIknNARc=',
+  fiWallet: 'PUAtQpZZh3ZwdBahSYo9P6pM95WvM5+XJSReG28w9Ts=',
+  fiMinter: 'lNpfoDjRpdGGFt30XrcOp1ZHwsY3lnwK/ELIspsk2Og=',
+  personalMinter: 'uIo/piJt/CPV3fbMWtRKRlmQ0OiHAXBEURRqyU+PX5E=',
+  personalWallet: '3pOnjVQx1OUtTsVIPCLBNVbHHuPlwUPcaSgRc96xddY=',
+  location: 'a+VjihVq3hagTGhnUOf7HBS14S4w9KCe9ocolrfxx/E=',
   lottery: 'HHh95xA0sDcOowpVnyULcDbZczqe0zk2oAw8x+ulo9M=',
   poll: 'XECcPFmvdBODJApBlQTvvvUxjHqt3iB5Rb6E0aikhME=',
   walletV5R1: 'IINLe3KxEhR+Gy+0V7hOdNGjDwT3N9T2KmaOlVLSty8=',
@@ -264,8 +264,11 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
       continue;
     }
 
-    const hashDetectedType = detectKnownType(item.code_hash, item.interfaces);
-    const detectedType = hashDetectedType || item.explicitType;
+    const exactHashType = detectKnownType(item.code_hash);
+    const detectedType =
+      exactHashType ||
+      item.explicitType ||
+      detectKnownType(undefined, item.interfaces);
 
     const expectedHash = detectedType
       ? CONTRACT_CODE_HASHES[detectedType]
@@ -290,9 +293,13 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
       } else if (detectedType === 'poll') {
         decodedStore = deserializePollDataBoc(dataBoc);
       } else if (detectedType === 'fiMinter') {
-        decodedStore = deserializeFiMinterDataBoc(dataBoc);
+        decodedStore =
+          deserializeFiMinterDataBoc(dataBoc) ||
+          deserializePersonalStoreDataBoc(dataBoc);
       } else if (detectedType === 'fiWallet') {
-        decodedStore = deserializeFiWalletDataBoc(dataBoc);
+        decodedStore =
+          deserializeFiWalletDataBoc(dataBoc) ||
+          deserializePersonalWalletDataBoc(dataBoc);
       } else if (detectedType === 'walletV5R1') {
         decodedStore = deserializeWalletV5R1DataBoc(dataBoc);
       } else {

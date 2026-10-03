@@ -4,17 +4,17 @@ import "@contracts/followers/store"
 fun calcDeployFollowing(
     follower: address,
     followee: address,
-    followingCodeLibRef: cell,
-    mintAmount: coins = grams("1000"),
+    baseFollowingCode: cell,
+    _mintAmount: coins = grams("1000"),
 ): AutoDeployAddress {
-    val store: FollowingStore = {
+    val store: BaseFollowingStore = {
         follower,
         followee,
-        mintAmount,
-        isFollowing: false,
+        version: 0,
     };
     return {
-        stateInit: { code: followingCodeLibRef, data: store.toCell() },
+        workchain: MY_WORKCHAIN,
+        stateInit: { code: baseFollowingCode, data: store.toCell() },
         toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: follower },
     };
 }

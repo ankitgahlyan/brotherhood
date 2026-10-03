@@ -1,5 +1,11 @@
 import "@contracts/common/sharding"
 
+struct BaseLocationStore {
+    h3Cell: string
+    minterAddress: address
+    version: uint10 = 0
+}
+
 struct LocationStore {
     h3Cell: string
     minterAddress: address
@@ -19,17 +25,16 @@ fun LocationStore.save(self): void {
 fun calcDeployLocation(
     h3Cell: string,
     minterAddress: address,
-    locationCodeLibRef: cell,
+    baseLocationCode: cell,
 ): AutoDeployAddress {
-    val store: LocationStore = {
+    val store: BaseLocationStore = {
         h3Cell,
         minterAddress,
-        memberCount: 0,
-        members: [],
         version: 0,
     };
     return {
-        stateInit: { code: locationCodeLibRef, data: store.toCell() },
+        workchain: MY_WORKCHAIN,
+        stateInit: { code: baseLocationCode, data: store.toCell() },
         toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: minterAddress },
     };
 }

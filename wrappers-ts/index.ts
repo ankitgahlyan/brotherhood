@@ -1,3 +1,8 @@
+export * as BaseFiWalletContract from './BaseFiWallet.gen';
+export * as BaseFollowingContract from './BaseFollowing.gen';
+export * as BaseLocationContract from './BaseLocation.gen';
+export * as BasePersonalMinterContract from './BasePersonalMinter.gen';
+export * as BasePersonalWalletContract from './BasePersonalWallet.gen';
 export * as DaoProxyContract from './DaoProxy.gen';
 export * as FollowersContract from './Followers.gen';
 export * as FossFiContract from './FossFi.gen';
@@ -10,6 +15,11 @@ export * as PollContract from './Poll.gen';
 export * as VoterContract from './Voter.gen';
 export * as HoldingContract from './Holding.gen';
 
+export { BaseFiWallet } from './BaseFiWallet.gen';
+export { BaseFollowing } from './BaseFollowing.gen';
+export { BaseLocation } from './BaseLocation.gen';
+export { BasePersonalMinter } from './BasePersonalMinter.gen';
+export { BasePersonalWallet } from './BasePersonalWallet.gen';
 export { DaoProxy } from './DaoProxy.gen';
 export { Following, Following as Followers } from './Followers.gen';
 export { FossFi } from './FossFi.gen';

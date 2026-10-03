@@ -59,13 +59,15 @@ fun Following.sendInitFollow(
     from: address,
     queryId: uint64,
     followerOwner: address,
+    mintAmount: coins,
+    latestFollowingCode: cell?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: InitFollow { queryId, followerOwner },
+        body: InitFollow { queryId, followerOwner, mintAmount, latestFollowingCode },
     });
     return net.send(from, genericMsg);
 }

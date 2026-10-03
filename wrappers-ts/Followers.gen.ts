@@ -213,12 +213,16 @@ export const Unfollow = {
  > struct (0x00001201) InitFollow {
  >     queryId: uint64
  >     followerOwner: address
+ >     mintAmount: coins
+ >     latestFollowingCode: cell?
  > }
  */
 export interface InitFollow {
     readonly $: 'InitFollow'
     queryId: uint64
     followerOwner: c.Address
+    mintAmount: coins /* = 0 */
+    latestFollowingCode: c.Cell | null /* = null */
 }
 
 export const InitFollow = {
@@ -227,9 +231,13 @@ export const InitFollow = {
     create(args: {
         queryId: uint64
         followerOwner: c.Address
+        mintAmount?: coins /* = 0 */
+        latestFollowingCode?: c.Cell | null /* = null */
     }): InitFollow {
         return {
             $: 'InitFollow',
+            mintAmount: 0n,
+            latestFollowingCode: null,
             ...args
         }
     },
@@ -239,12 +247,18 @@ export const InitFollow = {
             $: 'InitFollow',
             queryId: s.loadUintBig(64),
             followerOwner: s.loadAddress(),
+            mintAmount: s.loadCoins(),
+            latestFollowingCode: s.loadBoolean() ? s.loadRef() : null,
         }
     },
     store(self: InitFollow, b: c.Builder): void {
         b.storeUint(0x00001201, 32);
         b.storeUint(self.queryId, 64);
         b.storeAddress(self.followerOwner);
+        b.storeCoins(self.mintAmount);
+        storeTolkNullable<c.Cell>(self.latestFollowingCode, b,
+            (v,b) => b.storeRef(v)
+        );
     },
     toCell(self: InitFollow): c.Cell {
         return makeCellFrom<InitFollow>(self, InitFollow.store);
@@ -433,10 +447,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Following implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECCgEAAdoAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAICQLz19tF2/fxIyJhwEHaiaH0kfSR9AGuFAAJrlhAAAEgGR2TrlhAAAEgCRx5rlhAAAEAuRxOYmZn8SWOCyRi/y/xJLGOC4YBxeXFeegJrphB9gmh2j3ap+IWGbZjwGEIHguOACvl6IYnxhqAJ8YaA5H0pfSksfQFlAGT2qkGBwA9rYYYdqJofSR9JH0AaQBogeR9KQl9KQD9AWUAZPaqQAD2NfiSIscFkX+X+JIjxwXDAOLy4rwDjkoyAtM/+kgwggr68IDIz4UIFfpSUAT6AoESCc8LiiHPCz/PiAu+UjD6Uslz+wDIz4UIEvpSgRIJzwuOyz/PiAu++lLJgQCC+wDbMeEzcIsIyM7JyM+FCFIw+lJxzwtuzMmAQvsAAPY1+JIixwWRf5f4kiPHBcMA4vLivATTP/pIMASORDSCCvrwgMjPhQgT+lJY+gKBEgjPC4ojzws/z4gLulIg+lLJgBH7AMjPhQj6UoESCM8LjhLLP8+IC7r6UsmBAIL7ANsx4DB/iwjIzsnIz4UIFfpScc8LbhTMyYBQ+wAAHb3Sd2omh9JH0kfQBpAGjAAjvymXaiaH0kGP0kGP0AGOkAaM');
+    static CodeCell = c.Cell.fromBase64('te6ccgECDAEAAioAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAKCwLz19tF2/fxIyJhwEHaiaH0kfSR9AGuFAAJrlhAAAEgGR2TrlhAAAEgCRx5rlhAAAEAuRxOYmZn8SWOCyRi/y/xJLGOC4YBxeXFeegJrphB9gmh2j3ap+IWGbZjwGEIHguOACvl6IYnxhqAJ8YaA5H0pfSksfQFlAGT2qkGBwIBSAgJAPY1+JIixwWRf5f4kiPHBcMA4vLivAOOSjIC0z/6SDCCCvrwgMjPhQgV+lJQBPoCgRIJzwuKIc8LP8+IC75SMPpSyXP7AMjPhQgS+lKBEgnPC47LP8+IC776UsmBAIL7ANsx4TNwiwjIzsnIz4UIUjD6UnHPC27MyYBC+wAA9jX4kiLHBZF/l/iSI8cFwwDi8uK8BNM/+kgwBI5ENIIK+vCAyM+FCBP6Ulj6AoESCM8LiiPPCz/PiAu6UiD6UsmAEfsAyM+FCPpSgRIIzwuOEss/z4gLuvpSyYEAgvsA2zHgMH+LCMjOycjPhQgV+lJxzwtuFMzJgFD7AACTpV6mY44KooeOCilj5cV4BeWlvAWuWEAAASAZ5X+mfmP0kfQAYAeR9KQl9KSx9AWfB5PaqRYRkZ2TkZ8KECX0pOOeFt2ZkwCh9gEAO6YYYdqJofSR9JH0AaQBogeR9KQl9KQD9AWUAZPaqQAdvdJ3aiaH0kfSR9AGkAaMACO/KZdqJofSQY/SQY/QAY6QBow=');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
+        'Errors.VersionMismatch': 734,
     }
 
     readonly address: c.Address
@@ -468,6 +483,8 @@ export class Following implements c.Contract {
     static createCellOfInitFollow(body: {
         queryId: uint64
         followerOwner: c.Address
+        mintAmount?: coins /* = 0 */
+        latestFollowingCode?: c.Cell | null /* = null */
     }) {
         return InitFollow.toCell(InitFollow.create(body));
     }
@@ -498,6 +515,8 @@ export class Following implements c.Contract {
     async sendInitFollow(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         followerOwner: c.Address
+        mintAmount?: coins /* = 0 */
+        latestFollowingCode?: c.Cell | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

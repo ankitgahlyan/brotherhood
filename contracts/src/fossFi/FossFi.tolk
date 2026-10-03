@@ -12,6 +12,7 @@ import "@contracts/dns/messages"
 
 import "@contracts/fossFi/jetton-utils"
 import "@contracts/fossFi/storage"
+import "@contracts/location/base-location-code"
 import "@contracts/location/location-utils"
 import "@contracts/lottery/messages"
 import "@contracts/lottery/storage"
@@ -158,7 +159,7 @@ fun onInternalMessage(in: InMessage): void {
             val locDeploy = calcDeployLocation(
                 msg.h3Cell,
                 contract.getAddress(),
-                getLocationCode(),
+                getBaseLocationCode(),
             );
             val locMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -168,6 +169,7 @@ fun onInternalMessage(in: InMessage): void {
                     queryId: msg.queryId,
                     userAddress: msg.sender,
                     sendExcessesTo: msg.invitor,
+                    latestLocationCode: getLocationCode(),
                 },
             });
             locMsg.send(
@@ -182,11 +184,11 @@ fun onInternalMessage(in: InMessage): void {
             val oldLocDeploy = calcDeployLocation(
                 msg.oldH3Cell,
                 contract.getAddress(),
-                getLocationCode(),
+                getBaseLocationCode(),
             );
             val oldLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
-                dest: oldLocDeploy,
+                dest: oldLocDeploy.calculateAddress(),
                 value: grams("0.05"),
                 body: LocationRemoveMember {
                     queryId: msg.queryId,
@@ -199,7 +201,7 @@ fun onInternalMessage(in: InMessage): void {
             val newLocDeploy = calcDeployLocation(
                 msg.newH3Cell,
                 contract.getAddress(),
-                getLocationCode(),
+                getBaseLocationCode(),
             );
             val newLocMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -209,6 +211,7 @@ fun onInternalMessage(in: InMessage): void {
                     queryId: msg.queryId,
                     userAddress: msg.owner,
                     sendExcessesTo: msg.owner,
+                    latestLocationCode: getLocationCode(),
                 },
             });
             // SAFETY: forwards remaining balance above reserve to location indexer

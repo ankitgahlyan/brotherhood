@@ -275,6 +275,7 @@ struct (0x000010a4) LocationAddMember {
     queryId: uint64
     userAddress: address
     sendExcessesTo: address?
+    latestLocationCode: cell? = null
 }
 
 struct (0x000010a5) LocationRemoveMember {

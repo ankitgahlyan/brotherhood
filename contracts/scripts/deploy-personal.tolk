@@ -6,6 +6,7 @@ import "@acton/emulation/scripts"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
+import "@contracts/common/messages"
 import "@contracts/personalMinter/storage"
 
 import "utils/common"
@@ -40,17 +41,16 @@ fun main() {
     }
 
     val metadata = promptJettonMetadata("Personal Token");
+    val metadataCell = buildJettonMetadataCell(metadata);
 
-    val personalStore: PersonalStore = {
-        totalSupply: 0,
+    val baseStore: BasePersonalMinterStore = {
         fiJettonAddress: issuerWallet,
         adminAddress: admin,
-        metadataUri: null,
-        codes: { latestPersonalWalletCode: build("PersonalWallet") },
+        version: 0,
     };
     val stateInit = ContractState {
-        code: build("PersonalMinter"),
-        data: personalStore.toCell(),
+        code: build("BasePersonalMinter"),
+        data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };
     val pmAddress = AutoDeployAddress {
@@ -59,29 +59,46 @@ fun main() {
         toShard,
     }.calculateAddress();
 
-    // deploy the Personal Token minter
+    val mintAmount = promptJettonCoins(
+        "PERSONAL_MINT_AMOUNT",
+        "Enter initial Personal Token mint amount",
+        "1000000000000",
+    );
+
+    val internalMsg: InternalTransferStep = {
+        queryId: 0,
+        jettonAmount: mintAmount,
+        version: 0,
+        transferredAsCredit: false,
+        transferInitiator: admin,
+        sendExcessesTo: admin,
+        forwardTonAmount: grams("0.02"),
+        latestWalletCode: build("PersonalMinter"),
+        forwardPayload: (PayloadInRef {
+            value: (metadataCell.beginParse() as RemainingBitsAndRefs).toCell(),
+        })
+            .toCell()
+            .beginParse(),
+    };
+
+    // deploy the Personal Token minter + set metadata + onboard/mint PersonalWallet in one message via BasePersonalMinter proxy
     val deployMsg = createMessage({
         bounce: false,
-        value: grams("1"),
+        value: grams("1.5"),
         dest: {
             workchain: BASECHAIN,
             stateInit,
             toShard,
         },
+        body: MintNewJettons {
+            queryId: 0,
+            mintRecipient: issuerOwner,
+            tonAmount: grams("0.7"),
+            internalTransferMsg: internalMsg.toCell(),
+        },
     });
-    val deployRes = net.send(deployer.address, deployMsg);
-    deployRes.waitForFirstTransaction();
-
-    // set metadata on the deployed minter
-    val metaMsg = Personal
-        .fromAddress(pmAddress)
-        .sendChangeMinterMetadata(
-            admin,
-            0,
-            buildJettonMetadataCell(metadata),
-            SendParams { value: grams("0.05") },
-        );
-    metaMsg.waitForFirstTransaction();
+    val deployRes = net.send(admin, deployMsg);
+    println(deployRes.waitForTrace());
 
     val personalWalletAddress = Personal.fromAddress(pmAddress).getWalletAddress(issuerOwner);
     // point the issuer's FI wallet at the Personal Token minter and personal wallet (ActSetPersonalJetton signal)
@@ -93,7 +110,7 @@ fun main() {
             personalWalletAddress,
             { value: grams("0.6") },
         );
-    pointRes.waitForFirstTransaction();
+    println(pointRes.waitForTrace());
 
     println("PERSONAL_MINTER_ADDRESS={}", pmAddress);
     println("PERSONAL_ADMIN_ADDRESS={}", admin);

@@ -101,6 +101,39 @@ fun onInternalMessage(in: InMessage): void {
     }
 }
 
+@method_id(2223)
+fun migrateLocationFromBase(
+    body: slice,
+    senderAddress: address,
+    baseStore: BaseLocationStore,
+): void {
+    assert (senderAddress == baseStore.minterAddress) throw Errors.NotOwner;
+    assert (baseStore.version == 0) throw Errors.VersionMismatch;
+
+    val msg = lazy LocationAddMember.fromSlice(body);
+    var store: LocationStore = {
+        h3Cell: baseStore.h3Cell,
+        minterAddress: baseStore.minterAddress,
+        memberCount: 1,
+        members: [],
+        version: 1,
+    };
+    store.members.set(msg.userAddress, true);
+    store.save();
+
+    if (msg.sendExcessesTo != null) {
+        val retMsg = createMessage({
+            bounce: BounceMode.NoBounce,
+            dest: msg.sendExcessesTo,
+            value: 0,
+            body: ReturnExcessesBack { queryId: msg.queryId },
+        });
+        retMsg.send(
+            SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+        );
+    }
+}
+
 @method_id(2323)
 fun hotUpgradeLocationData(_additionalData: cell?) {
     var oldStore = LocationStore.load();

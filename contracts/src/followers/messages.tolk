@@ -25,6 +25,8 @@ struct (0x00001207) RequestUnfollow {
 struct (0x00001201) InitFollow {
     queryId: uint64
     followerOwner: address
+    mintAmount: coins = 0
+    latestFollowingCode: cell? = null
 }
 
 struct (0x00001204) SettleDeath {

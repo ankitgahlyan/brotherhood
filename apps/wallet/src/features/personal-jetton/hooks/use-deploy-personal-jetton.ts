@@ -10,6 +10,7 @@ import { useCallback, useState } from 'react';
 import { Address, beginCell, storeStateInit } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
+import { PersonalMinter } from '@wrappers/PersonalMinter.gen';
 import {
   buildMintBody,
   getPersonalMinter,
@@ -17,6 +18,10 @@ import {
   getExpectedPersonalWalletAddress,
   parseUnits,
 } from '@/lib/brotherhood/deploy';
+import {
+  buildTolkOnchainMetadata,
+  type JettonMetadata,
+} from '@/lib/brotherhood/jettonContent';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
@@ -37,6 +42,7 @@ export interface UseDeployPersonalJettonParams {
   walletAddress: string | null;
   network: Network;
   initialMintAmount: string;
+  metadata?: JettonMetadata;
   onDeploySuccess?: (addresses: DeployedPersonalAddresses) => void;
 }
 
@@ -55,6 +61,7 @@ export function useDeployPersonalJetton({
   walletAddress,
   network,
   initialMintAmount,
+  metadata,
   onDeploySuccess,
 }: UseDeployPersonalJettonParams): UseDeployPersonalJettonResult {
   const {
@@ -86,8 +93,8 @@ export function useDeployPersonalJetton({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
 
-    // Pure deterministic deployment: null metadata ensures minter address calculation is strictly deterministic
-    const { contractAddress, stateInit } = await getPersonalMinter({
+    // Deterministic BasePersonalMinter deployment: address depends only on fiJettonAddress + adminAddress
+    const { contractAddress, stateInit } = getPersonalMinter({
       issuerWallet: fiWalletAddr,
       adminAddress: ownerAddr,
     });
@@ -101,16 +108,29 @@ export function useDeployPersonalJetton({
       .store(storeStateInit(stateInit))
       .endCell();
 
-    // Prepare initial MintNewJettons payload to mint directly to the deployer
+    let initialMetadataCell = null;
+    if (metadata && metadata.name.trim() && metadata.symbol.trim()) {
+      initialMetadataCell = await buildTolkOnchainMetadata({
+        name: metadata.name.trim(),
+        symbol: metadata.symbol.trim(),
+        description: metadata.description?.trim() || DEFAULT_TOKEN_DESCRIPTION,
+        image: metadata.image?.trim() || undefined,
+        decimals: metadata.decimals || '9',
+      });
+    }
+
+    // Prepare initial MintNewJettons payload with PersonalMinter.CodeCell and optional initial metadata cell
     const mintAmountNano = parseUnits(initialMintAmount, 9);
     const mintPayload = buildMintBody({
       toAddress: ownerAddr,
       jettonAmount: mintAmountNano,
       forwardTonAmount: 20000000n,
       totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
+      latestWalletCode: PersonalMinter.CodeCell,
+      forwardPayload: initialMetadataCell,
     });
 
-    // Message 1: Deploy Personal Minter contract with stateInit and initial mint payload
+    // Message 1: Deploy BasePersonalMinter -> PersonalMinter with initial metadata and mint
     const deployMsg = {
       toAddress: contractAddress.toString(),
       amount: GAS.DEPLOY + GAS.MINT,
@@ -151,6 +171,7 @@ export function useDeployPersonalJetton({
   }, [
     walletAddress,
     initialMintAmount,
+    metadata,
     network,
     sendTx,
     refreshQueries,
@@ -160,7 +181,11 @@ export function useDeployPersonalJetton({
   const parsedMint = parseFloat(initialMintAmount);
   const isMintInvalid =
     !initialMintAmount || isNaN(parsedMint) || parsedMint <= 0;
-  const isDisabled = !wallet || !walletAddress || isMintInvalid || isSending;
+  const isMetaInvalid = metadata
+    ? !metadata.name.trim() || !metadata.symbol.trim()
+    : false;
+  const isDisabled =
+    !wallet || !walletAddress || isMintInvalid || isMetaInvalid || isSending;
 
   return {
     deploy,
