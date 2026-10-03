@@ -31,10 +31,10 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   build-packages:
     name: Build shared packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -54,7 +54,7 @@ jobs:
         run: bun run build:packages
 
       - name: Cache packages build
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             packages/walletkit/dist
@@ -68,10 +68,10 @@ jobs:
   build-web:
     name: Build Web PWA
     needs: build-packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -82,7 +82,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Restore packages build
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             packages/walletkit/dist
@@ -97,7 +97,7 @@ jobs:
         run: bun run --cwd apps/wallet build:web && node scripts/copy-to-dist.mjs --target=web
 
       - name: Upload Web artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: apps/wallet/dist
@@ -109,10 +109,10 @@ jobs:
   build-twa:
     name: Build TWA (Telegram Mini App)
     needs: build-packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -123,7 +123,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Restore packages build
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             packages/walletkit/dist
@@ -138,7 +138,7 @@ jobs:
         run: bun run --cwd apps/wallet build:twa && node scripts/copy-to-dist.mjs --target=twa
 
       - name: Upload TWA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: twa-dist
           path: apps/wallet/dist-twa
@@ -150,10 +150,10 @@ jobs:
   test:
     name: Tests
     needs: build-packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -176,10 +176,10 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -187,13 +187,13 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Download Web artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-dist
           path: apps/wallet/dist
 
       - name: Download TWA artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: twa-dist
           path: apps/wallet/dist-twa
@@ -213,10 +213,10 @@ jobs:
           echo "✅ All verification checks passed"
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist/client
 

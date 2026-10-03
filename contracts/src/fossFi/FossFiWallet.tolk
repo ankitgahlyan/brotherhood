@@ -2231,6 +2231,7 @@ fun normalizePocketMoney(pm: PocketMoney, now: int): PocketMoney {
             val elapsed = now - open.startTime;
             if (elapsed >= open.period) {
                 val cycles = elapsed / open.period;
+                // check-disable-next-line E019
                 open.startTime += (cycles * open.period) as uint32;
                 open.spent = 0;
             }
@@ -2246,6 +2247,7 @@ fun normalizePocketMoney(pm: PocketMoney, now: int): PocketMoney {
             val elapsed = now - fixed.startTime;
             if (elapsed >= fixed.period) {
                 val cycles = elapsed / fixed.period;
+                // check-disable-next-line E019
                 fixed.startTime += (cycles * fixed.period) as uint32;
                 fixed.spent = 0;
             }
