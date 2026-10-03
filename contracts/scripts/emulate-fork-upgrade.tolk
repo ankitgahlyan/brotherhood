@@ -133,7 +133,7 @@ fun main() {
 
     // ── Step 4: Approve FiWallet Child Upgrade ────────────────────────────────
     println("\n[4/5] Approving FossFiWallet Child Upgrade...");
-    val approveWalletRes = minter.sendApproveUpgrade(admin, { value: grams("0.5") });
+    val approveWalletRes = minter.sendApproveUpgrade(admin, { value: grams("1.5") });
     approveWalletRes.waitForTrace();
     println("✓ Wallet upgrade approved.");
 

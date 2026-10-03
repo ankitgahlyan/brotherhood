@@ -219,7 +219,7 @@ export const GAS = {
   DEPLOY: toNano('0.5'),
   MINT: toNano('0.75'),
   TOP_UP: toNano('0.1'),
-  REQUEST_UPGRADE: toNano('0.08'),
+  REQUEST_UPGRADE: toNano('1.5'),
   SET_PERSONAL: toNano('0.6'),
   PAY_EMI: toNano('0.2'),
   DEFERRED_PAYMENT: toNano('0.4'),

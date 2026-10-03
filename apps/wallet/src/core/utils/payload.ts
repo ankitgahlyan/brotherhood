@@ -22,6 +22,7 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x5fcc3d14: 'NftTransfer',
   0x05138d91: 'OwnershipAssigned',
   0x6f89f5e3: 'GetStaticData',
+  0x2fcb26a2: 'GetStaticData',
   0x8b771735: 'ReportStaticData',
   0x1f0453e0: 'NftDestroy',
 
@@ -123,6 +124,26 @@ export const KNOWN_OPCODES: Record<number, string> = {
 
   // Brotherhood Group 8: Personal Token
   0x1674b0a0: 'MintPersonal',
+
+  // Brotherhood Group 9: DNS & .bro Domains
+  0x370fec51: 'FillUp',
+  0x557cea20: 'OutbidNotification',
+  0x1a0b9d51: 'EditContent',
+  0x4eb1f0f9: 'ChangeDnsRecord',
+  0x44beae41: 'ProcessGovernanceDecision',
+  0x4ed14b65: 'DnsRecordRelease',
+  0x59a3c821: 'WithdrawFees',
+  0x2c159bf4: 'MintDomainFor',
+  0x646e7375: 'UpgradeDnsItem',
+  0x646e7364: 'DestroyContract',
+  0x646e7378: 'DestroyDnsItem',
+  0x62696430: 'DnsBidRequest',
+  0x62696431: 'BidBroDomain',
+  0x6f757462: 'DnsOutbidNotification',
+  0x66696e61: 'FinalizeAuction',
+  0x6275726e: 'DnsAuctionFinalized',
+  0x72656e30: 'DnsRenewRequest',
+  0x72656e65: 'RenewBroDomain',
 };
 
 /** Human-friendly action titles for known message types and opcodes */
@@ -218,22 +239,46 @@ export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
   Follow: 'Follow Member',
   Unfollow: 'Unfollow Member',
   InitFollow: 'Initialize Follow',
+  BouncedInitFollow: 'Bounced Follow Init',
+  BouncedUnfollow: 'Bounced Unfollow',
   SettleDeath: 'Settle Member Inheritance',
   RequestFollow: 'Request Follow',
   RequestUnfollow: 'Request Unfollow',
   FollowRevertedNotification: 'Follow Reverted',
   UnfollowRevertedNotification: 'Unfollow Reverted',
 
-  // Standard Token transfers
+  // DNS & .bro Domains
+  FillUp: 'Renew / Top Up Domain',
+  OutbidNotification: 'Domain Outbid Notification',
+  EditContent: 'Edit Domain Content',
+  ChangeDnsRecord: 'Update DNS Record',
+  ProcessGovernanceDecision: 'Process DNS Governance',
+  DnsRecordRelease: 'Release DNS Domain',
+  WithdrawFees: 'Withdraw DNS Fees',
+  MintDomainFor: 'Mint .bro Domain',
+  UpgradeDnsItem: 'Upgrade DNS Item',
+  DestroyContract: 'Destroy DNS Contract',
+  DestroyDnsItem: 'Destroy DNS Item',
+  DnsBidRequest: 'Bid on .bro Domain',
+  BidBroDomain: 'Process .bro Domain Bid',
+  DnsOutbidNotification: 'Domain Outbid Refund',
+  FinalizeAuction: 'Finalize Domain Auction',
+  DnsAuctionFinalized: 'Domain Auction Finalized',
+  DnsRenewRequest: 'Renew .bro Domain',
+  RenewBroDomain: 'Process .bro Domain Renewal',
+
+  // Standard Token & NFT transfers
   AskToTransfer: 'Send Token',
   TransferNotificationForRecipient: 'Received Token',
   InternalTransferStep: 'Transfer Step',
   ReturnExcessesBack: 'Excess Return',
+  Excesses: 'Excess Return',
   AskToBurn: 'Burn Token',
   NotifyMinter: 'Notify Token Minter',
   RequestWalletAddress: 'Request Wallet Address',
   ResponseWalletAddress: 'Response Wallet Address',
   NftTransfer: 'Transfer NFT',
+  TransferOwnership: 'Transfer Ownership',
   OwnershipAssigned: 'Ownership Assigned',
   GetStaticData: 'Get Static Data',
   ReportStaticData: 'Report Static Data',

@@ -120,16 +120,43 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   10: 'Dictionary Error',
   11: 'Unknown Error',
   13: 'Out of Gas',
-  // Common Contract Errors
+  // Common Contract & DNS Errors
   47: 'Balance Error',
   48: 'Not Enough Gas',
   49: 'Invalid Message',
+  70: 'Invalid Subdomain Bits',
   72: 'Invalid Op',
   73: 'Not Owner',
   74: 'Not Valid Wallet',
+  199: 'Auction Not Started',
+  200: 'Domain Too Short',
+  201: 'Domain Too Long',
+  202: 'Invalid Domain Format',
+  203: 'Domain Has Invalid Characters',
+  204: 'Bid Below Minimum Price',
+  205: 'Domain Is Blacklisted',
   250: 'Max Connections',
   333: 'Wrong Workchain',
+  401: 'Not Domain Owner',
+  402: 'Not Enough Balance',
   404: 'Not Found',
+  405: 'Not From Collection',
+  406: 'Only Owner Can Fill Up After Auction',
+  407: 'Bid Too Low',
+  410: 'Only Owner Can Edit Content',
+  411: 'Only Owner Can Change DNS',
+  412: 'Invalid Content Tag',
+  413: 'Governance Requires No Auction',
+  414: 'DNS Balance Release Forbidden',
+  415: 'Config Entry Not Found',
+  416: 'Invalid Config Operation',
+  417: 'Not Authorized Treasury',
+  418: 'Reservation Period Active',
+  420: 'No Active Auction',
+  421: 'Auction Not Finished',
+  422: 'Auction Already Finished',
+  423: 'No Auction Winner',
+  424: 'Incorrect DNS Sender',
   // Brotherhood Specific Errors
   700: 'Incorrect Sender',
   701: 'Account Terminated',
@@ -160,9 +187,9 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   739: 'Invalid Forward Payload',
   740: 'Invite First',
   741: 'Already Reported For Other Reason',
-  750: 'Proposal Already Active',
-  751: 'Proposal Not Found',
-  752: 'Proposal Pending Accounts',
+  750: 'Proposal Already Active / Already Following',
+  751: 'Proposal Not Found / Not Following',
+  752: 'Proposal Pending Accounts / Invalid Follow Action',
   753: 'Proposal Already Executed',
   754: 'Proposal Expired',
   755: 'Already Voted',
@@ -198,6 +225,29 @@ export function getContractContextBadge(opcode?: number): string | undefined {
     opcode === 0x576f30a1
   ) {
     return 'Holding';
+  }
+  // DNS & .bro Domains
+  if (
+    opcode === 0x370fec51 ||
+    opcode === 0x557cea20 ||
+    opcode === 0x1a0b9d51 ||
+    opcode === 0x4eb1f0f9 ||
+    opcode === 0x44beae41 ||
+    opcode === 0x4ed14b65 ||
+    opcode === 0x59a3c821 ||
+    opcode === 0x2c159bf4 ||
+    opcode === 0x646e7375 ||
+    opcode === 0x646e7364 ||
+    opcode === 0x646e7378 ||
+    opcode === 0x62696430 ||
+    opcode === 0x62696431 ||
+    opcode === 0x6f757462 ||
+    opcode === 0x66696e61 ||
+    opcode === 0x6275726e ||
+    opcode === 0x72656e30 ||
+    opcode === 0x72656e65
+  ) {
+    return 'DNS / .bro';
   }
   // Brotherhood Member / FiWallet
   if (
@@ -581,9 +631,24 @@ const signedAmount = (value: string, isOutgoing: boolean): string =>
 
 const FI_STRUCT_NAMES = new Set([
   'ActClaimWeeklyGrant',
+  'ActPayEmi',
+  'SetPocketMoney',
+  'SpendPocketMoney',
   'AskGoldCoinsTransfer',
   'InternalGoldCoinsTransfer',
+  'BuyCredit',
+  'Payback',
+  'RepayDebt',
+  'TriggerDefaultEmi',
+  'TriggerDecay',
   'MintNewJettons',
+  'ActSubmitProposal',
+  'DnsBidRequest',
+  'BidBroDomain',
+  'DnsOutbidNotification',
+  'DnsAuctionFinalized',
+  'DnsRenewRequest',
+  'RenewBroDomain',
 ]);
 
 /**

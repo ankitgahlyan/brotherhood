@@ -37,6 +37,7 @@ import { mnemonicToPrivateKey } from '@ton/crypto';
 import { tryDecryptComment } from '@/core/utils/encryption';
 import { EditableAddressName } from '@/core/components/ui/editable-address-name';
 
+import { getOpcodeInfo } from '@/core/utils/payload';
 import type { TransactionRowModel } from '../../utils/map-transaction-row';
 import { decodeExitCode } from '../../utils/map-transaction-row';
 import { InlineExplorerModal } from '../inline-explorer-modal';
@@ -699,18 +700,35 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
                               >
                                 {hop.isSuccess
                                   ? 'OK'
-                                  : decodeExitCode(hop.computeExitCode ?? 0)}
+                                  : hop.computeExitCode &&
+                                      hop.computeExitCode !== 0
+                                    ? decodeExitCode(hop.computeExitCode)
+                                    : hop.actionResultCode &&
+                                        hop.actionResultCode !== 0
+                                      ? `Action Failed (code ${hop.actionResultCode})`
+                                      : decodeExitCode(
+                                          hop.computeExitCode ?? 0,
+                                        )}
                               </span>
                             </div>
 
                             {/* Op / Comment */}
                             {(hop.opCode || hop.comment) && (
-                              <div className="text-[11px] text-muted-foreground flex items-center gap-2">
-                                {hop.opCode && (
-                                  <span className="font-mono bg-muted/60 px-1 py-0.5 rounded">
-                                    Op: {hop.opCode}
-                                  </span>
-                                )}
+                              <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                                {hop.opCode &&
+                                  (() => {
+                                    const opInfo = getOpcodeInfo(hop.opCode);
+                                    return (
+                                      <span
+                                        className="font-mono bg-muted/60 px-1.5 py-0.5 rounded"
+                                        title={opInfo.opcodeHex || hop.opCode}
+                                      >
+                                        {opInfo.isKnown && opInfo.structName
+                                          ? `${opInfo.title} (${opInfo.structName})`
+                                          : `Op: ${hop.opCode}`}
+                                      </span>
+                                    );
+                                  })()}
                                 {hop.comment && (
                                   <span className="truncate italic">
                                     "{hop.comment}"
