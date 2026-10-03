@@ -366,11 +366,12 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
             <div className="pt-2">
               <TxButton
                 size="lg"
+                fullWidth
                 className="w-full font-semibold"
                 disabled={!effectiveRecipient || isSending}
                 loading={isSending}
                 onAction={handleTransfer}
-                actionLabel="Confirm Transfer"
+                actionLabel="Transfer NFT"
                 completeLabel="Transferred!"
                 data-testid="nft-transfer-submit-button"
               >
@@ -412,11 +413,12 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
               <TxButton
                 size="lg"
                 variant="danger"
+                fullWidth
                 className="w-full font-semibold"
                 disabled={!address || isSending}
                 loading={isSending}
                 onAction={handleBurn}
-                actionLabel="Confirm Burn"
+                actionLabel={isBroDomain ? 'Destroy & Reclaim TON' : 'Burn NFT'}
                 completeLabel="Burned!"
                 data-testid="nft-burn-submit-button"
               >

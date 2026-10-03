@@ -328,14 +328,20 @@ export const NetworkSettingsPanel: React.FC<NetworkSettingsPanelProps> = ({
               Connect to local or self-hosted RPC node
             </span>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
               className="sr-only peer"
               checked={isCustomToncenter}
               onChange={(e) => setIsCustomToncenter(e.target.checked)}
             />
-            <div className="w-9 h-5 bg-muted border border-border/60 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500" />
+            <div className="relative inline-flex w-9 h-5 shrink-0 items-center rounded-full p-0.5 bg-muted ring-1 ring-inset ring-border/60 transition-colors duration-200 peer-checked:bg-blue-500 peer-checked:ring-blue-500">
+              <span
+                className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-xs ring-1 ring-black/10 transition-transform duration-200 ${
+                  isCustomToncenter ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </div>
           </label>
         </div>
 
@@ -459,14 +465,20 @@ export const NetworkSettingsPanel: React.FC<NetworkSettingsPanelProps> = ({
               Connect to local or self-hosted OpenTonAPI
             </span>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
               className="sr-only peer"
               checked={isCustomTonapi}
               onChange={(e) => setIsCustomTonapi(e.target.checked)}
             />
-            <div className="w-9 h-5 bg-muted border border-border/60 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500" />
+            <div className="relative inline-flex w-9 h-5 shrink-0 items-center rounded-full p-0.5 bg-muted ring-1 ring-inset ring-border/60 transition-colors duration-200 peer-checked:bg-blue-500 peer-checked:ring-blue-500">
+              <span
+                className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-xs ring-1 ring-black/10 transition-transform duration-200 ${
+                  isCustomTonapi ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </div>
           </label>
         </div>
 

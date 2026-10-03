@@ -84,10 +84,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
     const idle = rawLabel.replace(/^(hold|slide) to\s+/i, '');
 
     return (
-      <div
-        ref={containerRef}
-        className={cn(fullWidth && 'w-full', 'inline-flex')}
-      >
+      <div ref={containerRef} className="w-full flex">
         <SlideToSignButton
           onComplete={handleAction}
           disabled={disabled}
@@ -96,7 +93,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
           completeLabel={completeLabel}
           variant={props.variant}
           size={props.size}
-          className={cn(fullWidth && 'w-full', className)}
+          className={cn('w-full', className)}
           testId={resolvedTestId}
         />
       </div>
@@ -109,10 +106,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
     const idle = rawLabel.replace(/^hold to\s+/i, '');
 
     return (
-      <div
-        ref={containerRef}
-        className={cn(fullWidth && 'w-full', 'inline-flex')}
-      >
+      <div ref={containerRef} className="w-full flex">
         <HoldToSignButton
           onComplete={handleAction}
           disabled={disabled}
@@ -122,7 +116,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
           completeLabel={completeLabel}
           variant={props.variant}
           size={props.size}
-          className={cn(fullWidth && 'w-full', className)}
+          className={cn('w-full', className)}
           testId={resolvedTestId}
         />
       </div>

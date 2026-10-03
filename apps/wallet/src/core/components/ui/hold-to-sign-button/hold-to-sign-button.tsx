@@ -159,7 +159,7 @@ export const HoldToSignButton: React.FC<HoldToSignButtonProps> = ({
   }, [clearTimers]);
 
   const buttonClasses = `
-        relative flex-1 ${HOLD_SIZE_CLASS[size]}
+        relative w-full flex-1 ${HOLD_SIZE_CLASS[size]}
         overflow-hidden transition-all duration-300 select-none
         ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         ${isComplete ? 'bg-emerald-600 text-white' : isHolding ? HOLD_VARIANT_ACTIVE[variant] : HOLD_VARIANT_IDLE[variant]}

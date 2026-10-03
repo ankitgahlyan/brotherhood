@@ -161,7 +161,7 @@ export const CommentField: React.FC<CommentFieldProps> = ({
               </span>
             )}
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
               className="sr-only peer"
@@ -170,7 +170,13 @@ export const CommentField: React.FC<CommentFieldProps> = ({
               onChange={(e) => handleToggleEncrypted(e.target.checked)}
               aria-label="Toggle encrypted comment"
             />
-            <div className="w-8 h-4.5 bg-muted border border-border/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-500"></div>
+            <div className="relative inline-flex w-8 h-4.5 shrink-0 items-center rounded-full p-0.5 bg-muted ring-1 ring-inset ring-border/60 peer-focus:outline-none transition-colors duration-200 peer-checked:bg-blue-500 peer-checked:ring-blue-500">
+              <span
+                className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-xs ring-1 ring-black/10 transition-transform duration-200 ${
+                  isEncrypted ? 'translate-x-3.5' : 'translate-x-0'
+                }`}
+              />
+            </div>
           </label>
         </div>
       </div>

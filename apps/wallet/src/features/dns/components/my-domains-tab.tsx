@@ -521,6 +521,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                     </div>
                     <TxButton
                       size="sm"
+                      fullWidth
                       className="w-full"
                       disabled={isThisSending}
                       loading={
@@ -722,6 +723,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
 
                       <TxButton
                         size="sm"
+                        fullWidth
                         className="w-full"
                         disabled={!hasPendingChanges || isThisSending}
                         loading={
@@ -737,11 +739,12 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                       </TxButton>
                     </div>
 
-                    {/* Compact Footer: Renew & Destroy side-by-side */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
+                    {/* Compact Footer: Renew & Destroy */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border/60">
                       <TxButton
                         size="sm"
                         variant="secondary"
+                        fullWidth
                         className="w-full"
                         disabled={isThisSending}
                         loading={
@@ -758,6 +761,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                       <TxButton
                         size="sm"
                         variant="danger"
+                        fullWidth
                         className="w-full"
                         disabled={isThisSending}
                         loading={

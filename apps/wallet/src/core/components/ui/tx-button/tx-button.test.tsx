@@ -77,7 +77,7 @@ describe('TxButton component', () => {
     expect(html).not.toContain('Hold to Send TON');
   });
 
-  it('renders SlideToSignButton when both slideToSign and showFastSend are true', () => {
+  it('renders SlideToSignButton with concise action name when both slideToSign and showFastSend are true', () => {
     mockAuthState = {
       holdToSign: false,
       slideToSign: true,
@@ -88,7 +88,7 @@ describe('TxButton component', () => {
       <TxButton testId="send-btn">Send TON</TxButton>,
     );
 
-    expect(html).toContain('Slide to Send TON');
+    expect(html).toContain('>Send TON<');
     expect(html).toContain('data-swipe-ignore="true"');
   });
 

@@ -226,9 +226,11 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
   const isReadyToRelease = progressRatio >= COMPLETION_THRESHOLD;
   const thumbHalfWidth =
     size === 'lg' ? 24 : size === 'sm' ? 16 : size === 'icon' ? 14 : 20;
-  const formattedIdleLabel = idleLabel.toLowerCase().startsWith('slide')
+  const conciseIdleLabel =
+    idleLabel.replace(/^slide\s+to\s+/i, '').trim() || idleLabel;
+  const ariaIdleLabel = idleLabel.toLowerCase().startsWith('slide')
     ? idleLabel
-    : `Slide to ${idleLabel}`;
+    : `Slide to ${conciseIdleLabel}`;
 
   return (
     <div
@@ -236,7 +238,7 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
       role="button"
       tabIndex={disabled || loading ? -1 : 0}
       aria-disabled={disabled || loading}
-      aria-label={formattedIdleLabel}
+      aria-label={ariaIdleLabel}
       data-testid={testId}
       data-swipe-ignore="true"
       onKeyDown={(e) => {
@@ -257,7 +259,7 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
         e.stopPropagation();
       }}
       className={cn(
-        'no-swipe relative flex-1 flex items-center p-1 overflow-hidden select-none touch-none transition-colors duration-200',
+        'no-swipe relative w-full flex-1 flex items-center p-1 overflow-hidden select-none touch-none transition-colors duration-200',
         SLIDE_HEIGHT_CLASS[size],
         disabled || loading
           ? 'opacity-50 cursor-not-allowed'
@@ -285,48 +287,6 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
         />
       )}
 
-      {/* Center Track Label */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none px-12">
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <svg
-              className="animate-spin h-4 w-4 flex-shrink-0"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            <span className="truncate">Processing...</span>
-          </div>
-        ) : isComplete ? (
-          <div className="flex items-center gap-1.5 text-white font-bold">
-            <Check className="w-5 h-5 stroke-[2.5]" />
-            <span className="truncate">{completeLabel}</span>
-          </div>
-        ) : (
-          <span
-            className={cn(
-              'truncate font-semibold transition-colors duration-100',
-              progressRatio > 0.35 && 'text-white drop-shadow-xs',
-            )}
-          >
-            {isReadyToRelease ? `Release to ${idleLabel}` : formattedIdleLabel}
-          </span>
-        )}
-      </div>
-
       {/* Draggable Thumb */}
       {!loading && !isComplete && (
         <div
@@ -351,6 +311,48 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
           )}
         </div>
       )}
+
+      {/* Track Label (in flex flow so track occupies remaining width after thumb) */}
+      <div className="relative z-10 flex-1 min-w-0 flex items-center justify-center pointer-events-none px-2.5">
+        {loading ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <svg
+              className="animate-spin h-4 w-4 flex-shrink-0"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <span className="truncate">Processing...</span>
+          </div>
+        ) : isComplete ? (
+          <div className="flex items-center gap-1.5 text-white font-bold min-w-0">
+            <Check className="w-5 h-5 stroke-[2.5] shrink-0" />
+            <span className="truncate">{completeLabel}</span>
+          </div>
+        ) : (
+          <span
+            className={cn(
+              'truncate font-semibold text-center transition-colors duration-100',
+              progressRatio > 0.35 && 'text-white drop-shadow-xs',
+            )}
+          >
+            {conciseIdleLabel}
+          </span>
+        )}
+      </div>
     </div>
   );
 };

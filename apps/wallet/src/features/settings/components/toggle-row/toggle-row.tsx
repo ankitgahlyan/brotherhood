@@ -86,7 +86,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
     <label
       data-testid={testId}
       onClick={(e) => e.stopPropagation()}
-      className={`relative inline-flex items-center justify-center min-h-(--touch-target) flex-shrink-0 ${
+      className={`inline-flex items-center justify-center min-h-(--touch-target) flex-shrink-0 ${
         disabled ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'
       }`}
     >
@@ -97,7 +97,13 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <div className="w-11 h-6 bg-muted border border-border/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+      <div className="relative inline-flex w-11 h-6 shrink-0 items-center rounded-full p-0.5 bg-muted ring-1 ring-inset ring-border/60 peer-focus:outline-none transition-colors duration-200 peer-checked:bg-primary peer-checked:ring-primary">
+        <span
+          className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-xs ring-1 ring-black/10 transition-transform duration-200 ${
+            checked ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        />
+      </div>
     </label>
   </div>
 );
