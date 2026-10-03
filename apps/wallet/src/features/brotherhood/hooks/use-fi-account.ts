@@ -213,6 +213,7 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
         net,
         contactsForNet,
         domainsForNet,
+        rawUsername,
       );
 
       return {

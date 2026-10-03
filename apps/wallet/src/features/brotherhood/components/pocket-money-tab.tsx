@@ -33,6 +33,7 @@ import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import type { PocketMoney } from '@/lib/brotherhood/deploy';
 import type { TokenContractContext } from '@/features/send/lib/token-contract-resolution';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
+import { formatProfileUsernameDisplay } from '@/core/utils/telegram';
 import { usePocketMoneyBalance } from '@/features/send/hooks/use-pocket-money-balance';
 import type { AllowanceEntry, FiAccountData } from '../hooks/use-fi-account';
 import {
@@ -602,9 +603,9 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {circleMatch?.username && (
                               <span className="font-semibold text-primary">
-                                {circleMatch.username.endsWith('.bro')
-                                  ? circleMatch.username
-                                  : `@${circleMatch.username}`}
+                                {formatProfileUsernameDisplay(
+                                  circleMatch.username,
+                                )}
                               </span>
                             )}
                             <span className="font-mono text-foreground font-medium">
@@ -753,11 +754,11 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
                       onClick={() => setLookupInput(m.ownerAddress)}
                       className="px-2 py-1 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/60 text-[11px] text-foreground shrink-0 cursor-pointer"
                     >
-                      {m.username
-                        ? m.username.endsWith('.bro')
-                          ? m.username
-                          : `@${m.username}`
-                        : formatShortWallet(m.ownerAddress)}
+                      {formatProfileUsernameDisplay(
+                        m.username,
+                        undefined,
+                        formatShortWallet(m.ownerAddress),
+                      )}
                     </button>
                   ))}
               </div>

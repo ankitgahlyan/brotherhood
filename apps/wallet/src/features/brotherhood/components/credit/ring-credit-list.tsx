@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { formatProfileUsernameDisplay } from '@/core/utils/telegram';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import {
   useMemberProfiles,
@@ -41,9 +42,11 @@ const RingCreditAccordionItem: React.FC<RingCreditAccordionItemProps> = ({
   onRegisterRingMembers,
 }) => {
   const { network } = useFormatAddress();
-  const inviterUsername = circleProfile?.username
-    ? `@${circleProfile.username}`
-    : '@member';
+  const inviterUsername = formatProfileUsernameDisplay(
+    circleProfile?.username,
+    circleProfile?.dnsDomain,
+    '@member',
+  );
 
   const {
     invitees,

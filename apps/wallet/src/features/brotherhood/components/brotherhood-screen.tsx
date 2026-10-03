@@ -44,7 +44,9 @@ import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import {
+  formatProfileUsernameDisplay,
   getMemberContactDisplay,
+  isBareTelegramHandle,
   openMemberContact,
 } from '@/core/utils/telegram';
 import { getH3ViewerUrl } from '@/core/utils/h3';
@@ -1161,20 +1163,34 @@ export const BrotherhoodScreen: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Invitee Telegram Username
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Invitee Username / Social Link / .bro
+                  </label>
+                  {inviteUsername.trim() &&
+                    (() => {
+                      const preview = getMemberContactDisplay({
+                        username: inviteUsername,
+                        network,
+                      });
+                      return preview.platformLabel ? (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                          {preview.platformIcon ?? '✈️'} {preview.platformLabel}
+                        </span>
+                      ) : null;
+                    })()}
+                </div>
                 <input
                   type="text"
                   value={inviteUsername}
                   onChange={(e) => setInviteUsername(e.target.value)}
-                  placeholder="@username or username"
+                  placeholder="@username, name.bro, or social/messenger link"
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-invite-username"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Enter the invitee&apos;s Telegram handle. This will be
-                  registered as their on-chain username for peer communication.
+                  Enter @username, .bro domain, or any social/messenger link
+                  (ThatsApp, Briar, Telegram, X, GitHub, etc.).
                 </p>
               </div>
 
@@ -1603,11 +1619,11 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const walletAddr = getCandidateWalletAddress(
                                   entry.addressString,
                                 );
-                                const label = prof?.dnsDomain
-                                  ? prof.dnsDomain
-                                  : prof?.username
-                                    ? `@${prof.username}`
-                                    : formatShortWallet(walletAddr);
+                                const label = formatProfileUsernameDisplay(
+                                  prof?.username,
+                                  prof?.dnsDomain,
+                                  formatShortWallet(walletAddr),
+                                );
                                 return (
                                   <option
                                     key={`voted-${entry.addressString}`}
@@ -1633,11 +1649,11 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const walletAddr = getCandidateWalletAddress(
                                   entry.addressString,
                                 );
-                                const label = prof?.dnsDomain
-                                  ? prof.dnsDomain
-                                  : prof?.username
-                                    ? `@${prof.username}`
-                                    : formatShortWallet(walletAddr);
+                                const label = formatProfileUsernameDisplay(
+                                  prof?.username,
+                                  prof?.dnsDomain,
+                                  formatShortWallet(walletAddr),
+                                );
                                 return (
                                   <option
                                     key={`circle-${entry.addressString}`}
@@ -2587,23 +2603,44 @@ export const BrotherhoodScreen: React.FC = () => {
                 </p>
               </div>
 
-              {/* Username Input */}
+              {/* Username / Social Link / .bro Domain Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Telegram Username
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Username / Social Link / .bro Domain
+                  </label>
+                  {(profileUsername.trim() || account.data?.username) &&
+                    (() => {
+                      const preview = getMemberContactDisplay({
+                        username:
+                          profileUsername.trim() || account.data?.username,
+                        network,
+                      });
+                      return preview.platformLabel ? (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                          {preview.platformIcon ?? '✈️'} {preview.platformLabel}
+                        </span>
+                      ) : null;
+                    })()}
+                </div>
                 <input
                   type="text"
                   value={profileUsername}
                   onChange={(e) => setProfileUsername(e.target.value)}
                   placeholder={
                     account.data?.username
-                      ? `@${account.data.username}`
-                      : '@username or username'
+                      ? isBareTelegramHandle(account.data.username)
+                        ? `@${account.data.username.replace(/^@+/, '')}`
+                        : account.data.username
+                      : '@username, name.bro, or social/messenger link'
                   }
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="brotherhood-profile-username"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Supports @username (Telegram), .bro domain, ThatsApp/SimpleX,
+                  Briar, X/Twitter, Instagram, GitHub, or any website link.
+                </p>
                 {profile.usernameValidationError && (
                   <p className="text-xs text-rose-500 font-medium">
                     {profile.usernameValidationError}

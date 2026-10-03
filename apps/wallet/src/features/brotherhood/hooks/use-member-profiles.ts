@@ -171,6 +171,9 @@ export function useMemberProfiles(
               const cachedDns = resolveCachedDnsContact(
                 [ownerAddress, addrStr],
                 net,
+                undefined,
+                undefined,
+                fallbackUsername,
               );
 
               results[addrStr] = {

@@ -15,6 +15,7 @@ import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
 import {
+  formatProfileUsernameDisplay,
   getMemberContactDisplay,
   openMemberContact,
 } from '@/core/utils/telegram';
@@ -134,11 +135,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
   const handleToggleActive = async () => {
     if (!data) return;
     const isCurrentlyActive = data.active;
-    const memberName = data.dnsDomain
-      ? `@${data.dnsDomain}`
-      : data.username
-        ? `@${data.username}`
-        : 'this member';
+    const memberName = formatProfileUsernameDisplay(
+      data.username,
+      data.dnsDomain,
+      'this member',
+    );
     const actionDesc = lineageAmount.trim()
       ? `transfer ${lineageAmount} FI`
       : isCurrentlyActive
@@ -171,11 +172,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
 
   const handleAuthoritySanction = async () => {
     if (!data) return;
-    const memberName = data.dnsDomain
-      ? `@${data.dnsDomain}`
-      : data.username
-        ? `@${data.username}`
-        : 'this member';
+    const memberName = formatProfileUsernameDisplay(
+      data.username,
+      data.dnsDomain,
+      'this member',
+    );
     const amountLabel = authAmount.trim()
       ? `${authAmount} FI`
       : `${formatFi(data.jettonBalance)} FI`;

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { QrScanner } from '@/core/components/ui/qr-scanner/qr-scanner';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { formatProfileUsernameDisplay } from '@/core/utils/telegram';
 import { cn } from '@/core/lib/utils';
 import { formatFi } from './credit-member-card';
 
@@ -234,9 +235,11 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
                       Circle Members ({filteredCircle.length})
                     </div>
                     {filteredCircle.map((member) => {
-                      const username = member.username
-                        ? `@${member.username}`
-                        : '@member';
+                      const username = formatProfileUsernameDisplay(
+                        member.username,
+                        undefined,
+                        '@member',
+                      );
                       const addr = member.ownerAddress
                         ? formatWalletAddress(member.ownerAddress, true, 4)
                         : formatContractAddress(
@@ -285,9 +288,11 @@ export const MemberComboboxInput: React.FC<MemberComboboxInputProps> = ({
                       Ring Members ({filteredRing.length})
                     </div>
                     {filteredRing.map((member) => {
-                      const username = member.username
-                        ? `@${member.username}`
-                        : '@member';
+                      const username = formatProfileUsernameDisplay(
+                        member.username,
+                        undefined,
+                        '@member',
+                      );
                       const addr = member.ownerAddress
                         ? formatWalletAddress(member.ownerAddress, true, 4)
                         : formatContractAddress(

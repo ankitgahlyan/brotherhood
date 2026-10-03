@@ -64,6 +64,36 @@ export function cleanTelegramUsername(username: string): string {
   return username.replace(/^@+/, '').trim();
 }
 
+/** True when the input is a plain @handle / username (not a URL, URI scheme, or domain). */
+export function isBareTelegramHandle(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return /^@?[a-zA-Z0-9_]{1,64}$/.test(trimmed);
+}
+
+/**
+ * Normalizes a FiWallet profile username input:
+ * - Bare @handle -> strips leading @ (e.g. "@alice" -> "alice")
+ * - .bro domain -> strips leading @/# and lowercases (e.g. "@Alice.bro" -> "alice.bro")
+ * - Social/messenger URL or URI (simplex:, briar:, https://x.com/..., etc.) -> preserved trimmed
+ */
+export function normalizeProfileUsernameInput(rawInput: string): string {
+  const trimmed = rawInput.trim();
+  if (!trimmed) return '';
+  const cleanBro = trimmed.replace(/^[@#]+/, '').toLowerCase();
+  if (
+    /^[a-z0-9][a-z0-9-]{0,62}\.bro$/.test(cleanBro) &&
+    !trimmed.includes('/') &&
+    !trimmed.includes(':')
+  ) {
+    return cleanBro;
+  }
+  if (isBareTelegramHandle(trimmed)) {
+    return cleanTelegramUsername(trimmed);
+  }
+  return trimmed;
+}
+
 /** Construct a canonical Telegram profile deep-link URL (e.g. https://t.me/username). */
 export function getTelegramProfileUrl(username: string): string {
   const clean = cleanTelegramUsername(username);
@@ -74,19 +104,57 @@ export function getTelegramProfileUrl(username: string): string {
 }
 
 import { Address } from '@ton/core';
-import { detectSocialPlatform, type SocialPlatform } from '@/core/lib/dns';
+import { toast } from 'sonner';
+import {
+  detectSocialPlatform,
+  resolveBroDomainContact,
+  type SocialPlatform,
+} from '@/core/lib/dns';
 import {
   useContactBookStore,
   normalizeContactAddress,
 } from '@/core/storage/useContactBookStore';
 import { useDnsStore } from '@/features/dns/store/dns-store';
 
-/** Open a user's Telegram profile/chat via native Telegram Mini App deeplink or browser. */
-export function openTelegramProfile(username: string): void {
-  const clean = cleanTelegramUsername(username);
-  if (!clean || clean.toLowerCase().endsWith('.bro') || clean.includes('.')) {
+/**
+ * Opens any detected social or messenger link:
+ * - Telegram links open via Telegram SDK / t.me
+ * - Custom app schemes (`simplex:/`, `briar://`, `tg://`, `smp://`, `xftp://`)
+ *   trigger the native OS intent handler directly (allowing the Android app chooser
+ *   between ThatsApp and SimpleX without opening a blank browser tab)
+ * - HTTP/HTTPS profile URLs open in a new tab
+ */
+export function openSocialLink(rawLink: string): void {
+  const trimmed = rawLink.trim();
+  if (!trimmed) return;
+  const detected = detectSocialPlatform(trimmed);
+  if (detected?.platform === 'telegram' && detected.href) {
+    openTelegramLink(detected.href);
     return;
   }
+  const targetHref = detected?.href || trimmed;
+  if (/^(simplex|briar|thatsapp|smp|xftp|tg):/i.test(targetHref)) {
+    const a = document.createElement('a');
+    a.href = targetHref;
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+  window.open(targetHref, '_blank', 'noopener,noreferrer');
+}
+
+/** Open a user's Telegram profile/chat via native Telegram Mini App deeplink or browser. */
+export function openTelegramProfile(username: string): void {
+  const trimmed = username.trim();
+  if (!trimmed) return;
+  if (!isBareTelegramHandle(trimmed)) {
+    openMemberContact({ username: trimmed });
+    return;
+  }
+  const clean = cleanTelegramUsername(trimmed);
+  if (!clean) return;
   const url = getTelegramProfileUrl(clean);
   openTelegramLink(url);
 }
@@ -96,6 +164,7 @@ export interface MemberContactOptions {
   dnsDomain?: string | null;
   username?: string | null;
   fallbackLabel?: string;
+  network?: string;
 }
 
 export interface MemberContactDisplay {
@@ -113,6 +182,39 @@ export interface MemberContactDisplay {
   actionTitle?: string;
 }
 
+function findCachedDomainContactLink(
+  domainName: string,
+  network: string = 'testnet',
+): string | undefined {
+  const clean = domainName
+    .trim()
+    .toLowerCase()
+    .replace(/^[@#]+/, '');
+  if (!clean) return undefined;
+  const fullBro = clean.endsWith('.bro') ? clean : `${clean}.bro`;
+  const base = fullBro.slice(0, -4);
+
+  const nets: ('testnet' | 'mainnet')[] =
+    network === 'mainnet' ? ['mainnet', 'testnet'] : ['testnet', 'mainnet'];
+  for (const net of nets) {
+    const dnsDomains = useDnsStore.getState().domainsByNetwork[net] ?? [];
+    for (const d of dnsDomains) {
+      const dName = d.name.toLowerCase();
+      if (dName === base || dName === fullBro) {
+        if (d.contactLink?.trim()) return d.contactLink.trim();
+      }
+    }
+    const contacts =
+      useContactBookStore.getState().contactsByNetwork[net] ?? {};
+    for (const c of Object.values(contacts)) {
+      if (c?.dnsDomain?.toLowerCase() === fullBro && c.contactLink?.trim()) {
+        return c.contactLink.trim();
+      }
+    }
+  }
+  return undefined;
+}
+
 /**
  * Resolves any cached .bro DNS domain and contact link for one or more addresses
  * (e.g. owner wallet address and FiWallet contract address) from useDnsStore & useContactBookStore.
@@ -122,6 +224,7 @@ export function resolveCachedDnsContact(
   network: string = 'testnet',
   contactsOverride?: Record<string, any>,
   domainsOverride?: any[],
+  domainHint?: string | null,
 ): { dnsDomain?: string; contactLink?: string } {
   const net = network === 'mainnet' ? 'mainnet' : 'testnet';
   const rawSet = new Set<string>();
@@ -131,10 +234,22 @@ export function resolveCachedDnsContact(
     if (!str) continue;
     rawSet.add(normalizeContactAddress(str));
   }
-  if (rawSet.size === 0) return {};
 
   let dnsDomain: string | undefined;
   let contactLink: string | undefined;
+
+  if (domainHint) {
+    const cleanHint = domainHint
+      .trim()
+      .toLowerCase()
+      .replace(/^[@#]+/, '');
+    if (cleanHint.endsWith('.bro')) {
+      dnsDomain = cleanHint;
+      contactLink = findCachedDomainContactLink(cleanHint, net);
+    }
+  }
+
+  if (rawSet.size === 0) return { dnsDomain, contactLink };
 
   // 1. Check owned / tracked domains in useDnsStore
   const dnsDomains =
@@ -174,52 +289,90 @@ export function resolveCachedDnsContact(
     }
   }
 
+  if (dnsDomain && !contactLink) {
+    contactLink = findCachedDomainContactLink(dnsDomain, net);
+  }
+
   return { dnsDomain, contactLink };
 }
 
 /**
  * Computes display label, platform icon, and action metadata for a FiWallet member.
- * Prioritizes .bro DNS contact / domain when set over profile Telegram username.
+ * Prioritizes .bro DNS contact / domain when set over profile username, and parses
+ * social links, messenger URIs (ThatsApp/SimpleX, Briar), .bro domains, or @handles
+ * stored in `profile.username`.
  */
 export function getMemberContactDisplay(
   options?: MemberContactOptions | null,
 ): MemberContactDisplay {
   const opts = options ?? {};
-  const cleanDns = opts.dnsDomain?.trim().toLowerCase() || '';
-  const cleanLink = opts.contactLink?.trim() || '';
+  const cleanDns =
+    opts.dnsDomain
+      ?.trim()
+      .toLowerCase()
+      .replace(/^[@#]+/, '') || '';
   const rawUser = opts.username?.trim() || '';
-  const cleanUser = cleanTelegramUsername(rawUser);
-  const userIsBro = cleanUser.toLowerCase().endsWith('.bro');
+  const userDetected = rawUser ? detectSocialPlatform(rawUser) : null;
+  const userIsBro = userDetected?.platform === 'bro';
+  const userIsBareTg = isBareTelegramHandle(rawUser);
+  const userIsSocialLink = Boolean(rawUser && !userIsBro && !userIsBareTg);
 
-  const effectiveDns = cleanDns || (userIsBro ? cleanUser.toLowerCase() : '');
+  const effectiveDns =
+    cleanDns || (userIsBro ? rawUser.replace(/^[@#]+/, '').toLowerCase() : '');
 
-  if (cleanLink || effectiveDns) {
-    const detected = cleanLink ? detectSocialPlatform(cleanLink) : null;
+  const cachedDnsLink =
+    !opts.contactLink?.trim() && effectiveDns
+      ? findCachedDomainContactLink(effectiveDns, opts.network)
+      : undefined;
+
+  const effectiveLink =
+    opts.contactLink?.trim() ||
+    cachedDnsLink ||
+    (userIsSocialLink ? rawUser : '');
+
+  if (effectiveLink || effectiveDns) {
+    const detected = effectiveLink ? detectSocialPlatform(effectiveLink) : null;
+    const cleanBareUser = userIsBareTg ? cleanTelegramUsername(rawUser) : '';
+
     const label = effectiveDns
       ? effectiveDns
-      : cleanUser
-        ? `@${cleanUser}`
-        : detected?.label || opts.fallbackLabel || '@member';
-    const hasLinkAction = Boolean(cleanLink);
-    const hasFallbackTg = !hasLinkAction && Boolean(cleanUser && !userIsBro);
-    const hasAction = hasLinkAction || hasFallbackTg;
-    const platform = detected?.platform ?? (hasFallbackTg ? 'telegram' : null);
+      : cleanBareUser
+        ? `@${cleanBareUser}`
+        : detected?.shortLabel ||
+          detected?.label ||
+          opts.fallbackLabel ||
+          '@member';
+
+    const hasLinkAction = Boolean(
+      effectiveLink && (detected?.href || effectiveLink),
+    );
+    const hasDnsAction = Boolean(effectiveDns);
+    const hasFallbackTg = !hasLinkAction && Boolean(cleanBareUser);
+    const hasAction = hasLinkAction || hasDnsAction || hasFallbackTg;
+
+    const platform: SocialPlatform | null =
+      detected?.platform ??
+      (hasFallbackTg ? 'telegram' : effectiveDns ? 'bro' : null);
     const platformLabel =
-      detected?.label ?? (hasFallbackTg ? 'Telegram' : 'DNS');
+      detected?.label ??
+      (hasFallbackTg ? 'Telegram' : effectiveDns ? '.bro Domain' : 'Social');
     const platformIcon = detected?.icon ?? (effectiveDns ? '🌐' : null);
     const isCustomApp = Boolean(platform && platform !== 'telegram');
+
     const title = hasLinkAction
-      ? `Open ${label} on ${detected?.label || 'App'} (${cleanLink})`
+      ? `Open ${label} on ${detected?.label || 'App'} (${effectiveLink})`
       : hasFallbackTg
-        ? `Open @${cleanUser} on Telegram`
-        : effectiveDns || undefined;
+        ? `Open @${cleanBareUser} on Telegram`
+        : effectiveDns
+          ? `Open ${effectiveDns} contact`
+          : undefined;
 
     return {
       label,
       displayLabel: label,
       hasAction,
       canOpen: hasAction,
-      isDns: true,
+      isDns: Boolean(effectiveDns),
       isCustomApp,
       platform,
       platformLabel,
@@ -230,7 +383,8 @@ export function getMemberContactDisplay(
     };
   }
 
-  if (cleanUser) {
+  if (userIsBareTg) {
+    const cleanUser = cleanTelegramUsername(rawUser);
     const label = `@${cleanUser}`;
     const title = `Open @${cleanUser} on Telegram`;
     return {
@@ -265,24 +419,95 @@ export function getMemberContactDisplay(
 }
 
 /**
- * Opens a member's configured DNS contact link in its respective app
- * (ThatsApp/SimpleX, Briar, Telegram, etc.), falling back to Telegram username.
+ * Formats a member's username / domain / social link into a clean display label
+ * without erroneously prepending `@` to URLs or `.bro` domains.
+ */
+export function formatProfileUsernameDisplay(
+  username?: string | null,
+  dnsDomain?: string | null,
+  fallback = '',
+): string {
+  if (!username?.trim() && !dnsDomain?.trim()) return fallback;
+  return getMemberContactDisplay({
+    username,
+    dnsDomain,
+    fallbackLabel: fallback,
+  }).displayLabel;
+}
+
+/**
+ * Opens a member's configured DNS contact link or social profile link in its respective app
+ * (ThatsApp/SimpleX via `simplex:/`, Briar, Telegram, X, Instagram, GitHub, etc.).
+ * If a `.bro` domain is set and its contact record isn't cached yet, resolves it on-chain first.
  */
 export function openMemberContact(options?: MemberContactOptions | null): void {
   if (!options) return;
-  const cleanLink = options.contactLink?.trim();
-  if (cleanLink) {
-    const detected = detectSocialPlatform(cleanLink);
-    if (detected?.platform === 'telegram' && detected.href) {
-      openTelegramLink(detected.href);
-      return;
-    }
-    const targetHref = detected?.href || cleanLink;
-    window.open(targetHref, '_blank', 'noopener,noreferrer');
+  const cleanDns =
+    options.dnsDomain
+      ?.trim()
+      .toLowerCase()
+      .replace(/^[@#]+/, '') || '';
+  const rawUser = options.username?.trim() || '';
+  const userDetected = rawUser ? detectSocialPlatform(rawUser) : null;
+  const userIsBro = userDetected?.platform === 'bro';
+  const userIsBareTg = isBareTelegramHandle(rawUser);
+  const userIsSocialLink = Boolean(rawUser && !userIsBro && !userIsBareTg);
+
+  const effectiveDns =
+    cleanDns || (userIsBro ? rawUser.replace(/^[@#]+/, '').toLowerCase() : '');
+
+  const cachedDnsLink =
+    !options.contactLink?.trim() && effectiveDns
+      ? findCachedDomainContactLink(effectiveDns, options.network)
+      : undefined;
+
+  const effectiveLink =
+    options.contactLink?.trim() ||
+    cachedDnsLink ||
+    (userIsSocialLink ? rawUser : '');
+
+  if (effectiveLink) {
+    openSocialLink(effectiveLink);
     return;
   }
 
-  if (options.username) {
-    openTelegramProfile(options.username);
+  if (effectiveDns) {
+    const net: 'mainnet' | 'testnet' =
+      options.network === 'mainnet' ? 'mainnet' : 'testnet';
+    void resolveBroDomainContact(effectiveDns, net).then((parsed) => {
+      const link = parsed?.contactLink?.trim() || parsed?.channelLink?.trim();
+      if (link) {
+        if (parsed?.walletRecord || parsed?.ownerAddress) {
+          useContactBookStore
+            .getState()
+            .saveDnsDomain(
+              (parsed.walletRecord || parsed.ownerAddress)!,
+              effectiveDns,
+              net,
+              link,
+            );
+        }
+        openSocialLink(link);
+        return;
+      }
+      if (userIsBareTg) {
+        openTelegramProfile(rawUser);
+        return;
+      }
+      toast.info(
+        `No social contact record set on ${effectiveDns}. Opening domain details…`,
+      );
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'dns');
+        window.history.pushState({}, '', url.toString());
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    });
+    return;
+  }
+
+  if (rawUser) {
+    openTelegramProfile(rawUser);
   }
 }

@@ -15,7 +15,7 @@ import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
-import { cleanTelegramUsername } from '@/core/utils/telegram';
+import { normalizeProfileUsernameInput } from '@/core/utils/telegram';
 
 export interface UseProfileParams {
   wallet: Wallet | null | undefined;
@@ -59,7 +59,7 @@ export function useProfile({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
 
-  const cleanUsername = cleanTelegramUsername(username);
+  const cleanUsername = normalizeProfileUsernameInput(username);
   const isUsernameDirty = Boolean(username.trim());
 
   const trimmedH3Cell = h3Cell.trim();
@@ -100,7 +100,7 @@ export function useProfile({
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
     if (isUsernameDirty && !cleanUsername) {
-      return 'Enter a valid Telegram username';
+      return 'Enter a valid username, .bro domain, or social link';
     }
     return null;
   }, [wallet, walletAddress, accountData, isUsernameDirty, cleanUsername]);

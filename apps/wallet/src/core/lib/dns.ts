@@ -49,6 +49,11 @@ export type SocialPlatform =
   | 'twitter'
   | 'instagram'
   | 'github'
+  | 'youtube'
+  | 'discord'
+  | 'linkedin'
+  | 'reddit'
+  | 'bro'
   | 'website';
 
 export interface DetectedSocialLink {
@@ -56,11 +61,79 @@ export interface DetectedSocialLink {
   label: string;
   icon: string;
   href?: string;
+  shortLabel?: string;
 }
 
 /**
- * Auto-recognizes whether a stored DNS social link is a ThatsApp/SimpleX address,
- * Briar link, Telegram, Facebook, X/Twitter, Instagram, GitHub, or generic website/social contact link.
+ * Converts any SimpleX / ThatsApp connection URI (`https://simplex.chat/...`,
+ * `https://smp*.simplex.im/a#...`, `thatsapp:/...`, etc.) into a canonical
+ * `simplex:/...` custom-scheme URI so Android's intent system presents the native
+ * OS app chooser between ThatsApp (`thats.app`) and SimpleX (`chat.simplex.app`)
+ * instead of auto-routing `https://simplex.chat` via App Links to SimpleX.
+ */
+export function toSimplexCustomSchemeUri(rawLink: string): string {
+  const trimmed = rawLink.trim();
+  if (!trimmed) return '';
+
+  // Already simplex: scheme -> normalize simplex:// to simplex:/
+  if (/^simplex:/i.test(trimmed)) {
+    return trimmed.replace(/^simplex:\/\/+/i, 'simplex:/');
+  }
+
+  // thatsapp: scheme -> convert to simplex:/ so both ThatsApp & SimpleX match Android intent filter
+  if (/^thatsapp:/i.test(trimmed)) {
+    return trimmed.replace(/^thatsapp:\/*/, 'simplex:/');
+  }
+
+  // smp:// or xftp:// relay address
+  if (/^(smp|xftp):\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // https://simplex.chat/<path> or simplex.chat/<path>
+  const simplexChatMatch = trimmed.match(
+    /^(?:https?:\/\/)?(?:www\.)?simplex\.chat\/(.+)$/i,
+  );
+  if (simplexChatMatch) {
+    return `simplex:/${simplexChatMatch[1]}`;
+  }
+
+  // Short link on smp*.simplex.im or smp*.simplexonflux.com:
+  // e.g. https://smp15.simplex.im/a#HASH -> simplex:/a#HASH?h=smp15.simplex.im
+  const smpHostMatch = trimmed.match(
+    /^(?:https?:\/\/)?([a-z0-9.-]+\.(?:simplex\.im|simplexonflux\.com))\/(.+)$/i,
+  );
+  if (smpHostMatch) {
+    const host = smpHostMatch[1].toLowerCase();
+    const pathAndFrag = smpHostMatch[2];
+    if (pathAndFrag.includes('#') && !/[?&]h=/i.test(pathAndFrag)) {
+      const sep = pathAndFrag.split('#')[1]?.includes('?') ? '&' : '?';
+      return `simplex:/${pathAndFrag}${sep}h=${host}`;
+    }
+    return `simplex:/${pathAndFrag}`;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/^https?:\/\/[^/]+\//i, 'simplex:/');
+  }
+
+  return `simplex:/${trimmed.replace(/^\/+/, '')}`;
+}
+
+function extractUrlPathHandle(
+  rawUrl: string,
+  hostPattern: RegExp,
+): string | undefined {
+  const match = rawUrl.match(hostPattern);
+  const pathPart = match?.[1]?.replace(/^\/+|\/+$/g, '').split(/[/?#]/)[0];
+  if (!pathPart) return undefined;
+  return pathPart.startsWith('@') ? pathPart : `@${pathPart}`;
+}
+
+/**
+ * Auto-recognizes whether a stored DNS social link or FiWallet profile username
+ * is a ThatsApp/SimpleX address, Briar link, Telegram, Facebook, X/Twitter,
+ * Instagram, GitHub, YouTube, Discord, LinkedIn, Reddit, .bro domain, or website/social link.
  */
 export function detectSocialPlatform(
   rawLink?: string,
@@ -69,6 +142,21 @@ export function detectSocialPlatform(
   if (!trimmed) return null;
   const lower = trimmed.toLowerCase();
 
+  // .bro decentralized domain (e.g. ankit.bro, @ankit.bro, #ankit.bro)
+  const cleanBroCandidate = lower.replace(/^[@#]+/, '');
+  if (
+    /^[a-z0-9][a-z0-9-]{0,62}\.bro$/.test(cleanBroCandidate) &&
+    !lower.includes('/') &&
+    !lower.includes(':')
+  ) {
+    return {
+      platform: 'bro',
+      label: '.bro Domain',
+      icon: '🌐',
+      shortLabel: cleanBroCandidate,
+    };
+  }
+
   if (
     lower.startsWith('simplex:') ||
     lower.startsWith('smp://') ||
@@ -76,23 +164,15 @@ export function detectSocialPlatform(
     lower.startsWith('thatsapp:') ||
     lower.includes('simplex.chat') ||
     lower.includes('simplex.im') ||
+    lower.includes('simplexonflux.com') ||
     lower.includes('thatsapp')
   ) {
     return {
       platform: 'thatsapp',
       label: 'ThatsApp',
       icon: '💬',
-      href:
-        lower.startsWith('http://') ||
-        lower.startsWith('https://') ||
-        lower.startsWith('simplex:') ||
-        lower.startsWith('smp://') ||
-        lower.startsWith('xftp://') ||
-        lower.startsWith('thatsapp:')
-          ? trimmed
-          : lower.startsWith('simplex.chat/') || lower.startsWith('simplex.im/')
-            ? `https://${trimmed}`
-            : `simplex:${trimmed}`,
+      href: toSimplexCustomSchemeUri(trimmed),
+      shortLabel: 'ThatsApp',
     };
   }
 
@@ -112,6 +192,7 @@ export function detectSocialPlatform(
         lower.startsWith('https://')
           ? trimmed
           : `briar://${trimmed}`,
+      shortLabel: 'Briar',
     };
   }
 
@@ -120,7 +201,9 @@ export function detectSocialPlatform(
     lower.includes('t.me/') ||
     lower.includes('telegram.me/') ||
     lower.includes('telegram.org/') ||
-    trimmed.startsWith('@')
+    (trimmed.startsWith('@') &&
+      !trimmed.includes('/') &&
+      !trimmed.includes(' '))
   ) {
     const href = trimmed.startsWith('@')
       ? `https://t.me/${trimmed.slice(1)}`
@@ -129,7 +212,16 @@ export function detectSocialPlatform(
           lower.startsWith('tg://')
         ? trimmed
         : `https://${trimmed}`;
-    return { platform: 'telegram', label: 'Telegram', icon: '✈️', href };
+    const handle = trimmed.startsWith('@')
+      ? trimmed
+      : extractUrlPathHandle(trimmed, /(?:t\.me|telegram\.(?:me|org))\/(.+)/i);
+    return {
+      platform: 'telegram',
+      label: 'Telegram',
+      icon: '✈️',
+      href,
+      shortLabel: handle || 'Telegram',
+    };
   }
 
   if (
@@ -141,15 +233,37 @@ export function detectSocialPlatform(
       lower.startsWith('http://') || lower.startsWith('https://')
         ? trimmed
         : `https://${trimmed}`;
-    return { platform: 'facebook', label: 'Facebook', icon: '📘', href };
+    const handle = extractUrlPathHandle(
+      trimmed,
+      /(?:facebook\.com|fb\.(?:com|me))\/(.+)/i,
+    );
+    return {
+      platform: 'facebook',
+      label: 'Facebook',
+      icon: '📘',
+      href,
+      shortLabel: handle || 'Facebook',
+    };
   }
 
-  if (lower.includes('x.com/') || lower.includes('twitter.com/')) {
+  if (
+    lower.includes('x.com/') ||
+    lower.includes('twitter.com/') ||
+    lower.startsWith('x.com/') ||
+    lower.startsWith('twitter.com/')
+  ) {
     const href =
       lower.startsWith('http://') || lower.startsWith('https://')
         ? trimmed
         : `https://${trimmed}`;
-    return { platform: 'twitter', label: 'X / Twitter', icon: '🐦', href };
+    const handle = extractUrlPathHandle(trimmed, /(?:x|twitter)\.com\/(.+)/i);
+    return {
+      platform: 'twitter',
+      label: 'X / Twitter',
+      icon: '🐦',
+      href,
+      shortLabel: handle || 'X / Twitter',
+    };
   }
 
   if (lower.includes('instagram.com/') || lower.includes('instagr.am/')) {
@@ -157,7 +271,17 @@ export function detectSocialPlatform(
       lower.startsWith('http://') || lower.startsWith('https://')
         ? trimmed
         : `https://${trimmed}`;
-    return { platform: 'instagram', label: 'Instagram', icon: '📸', href };
+    const handle = extractUrlPathHandle(
+      trimmed,
+      /(?:instagram\.com|instagr\.am)\/(.+)/i,
+    );
+    return {
+      platform: 'instagram',
+      label: 'Instagram',
+      icon: '📸',
+      href,
+      shortLabel: handle || 'Instagram',
+    };
   }
 
   if (lower.includes('github.com/')) {
@@ -165,14 +289,118 @@ export function detectSocialPlatform(
       lower.startsWith('http://') || lower.startsWith('https://')
         ? trimmed
         : `https://${trimmed}`;
-    return { platform: 'github', label: 'GitHub', icon: '🐙', href };
+    const handle = extractUrlPathHandle(trimmed, /github\.com\/(.+)/i);
+    return {
+      platform: 'github',
+      label: 'GitHub',
+      icon: '🐙',
+      href,
+      shortLabel: handle || 'GitHub',
+    };
   }
 
-  const href =
-    lower.startsWith('http://') || lower.startsWith('https://')
-      ? trimmed
+  if (lower.includes('youtube.com/') || lower.includes('youtu.be/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    const handle = extractUrlPathHandle(
+      trimmed,
+      /(?:youtube\.com|youtu\.be)\/(.+)/i,
+    );
+    return {
+      platform: 'youtube',
+      label: 'YouTube',
+      icon: '▶️',
+      href,
+      shortLabel: handle || 'YouTube',
+    };
+  }
+
+  if (lower.includes('discord.gg/') || lower.includes('discord.com/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    return {
+      platform: 'discord',
+      label: 'Discord',
+      icon: '🎮',
+      href,
+      shortLabel: 'Discord',
+    };
+  }
+
+  if (lower.includes('linkedin.com/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    const handle = extractUrlPathHandle(
+      trimmed,
+      /linkedin\.com\/(?:in|company)\/(.+)/i,
+    );
+    return {
+      platform: 'linkedin',
+      label: 'LinkedIn',
+      icon: '💼',
+      href,
+      shortLabel: handle || 'LinkedIn',
+    };
+  }
+
+  if (lower.includes('reddit.com/')) {
+    const href =
+      lower.startsWith('http://') || lower.startsWith('https://')
+        ? trimmed
+        : `https://${trimmed}`;
+    const handle = extractUrlPathHandle(
+      trimmed,
+      /reddit\.com\/(?:u|user|r)\/(.+)/i,
+    );
+    return {
+      platform: 'reddit',
+      label: 'Reddit',
+      icon: '👽',
+      href,
+      shortLabel: handle || 'Reddit',
+    };
+  }
+
+  const isExplicitHttp =
+    lower.startsWith('http://') || lower.startsWith('https://');
+  const isDomainLike =
+    !trimmed.includes(' ') &&
+    /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/.*)?$/i.test(trimmed);
+
+  const href = isExplicitHttp
+    ? trimmed
+    : isDomainLike
+      ? `https://${trimmed}`
       : undefined;
-  return { platform: 'website', label: 'Social Link', icon: '🔗', href };
+
+  let shortLabel = 'Social Link';
+  if (href) {
+    try {
+      const parsed = new URL(href);
+      const host = parsed.hostname.replace(/^www\./i, '');
+      const cleanPath = parsed.pathname.replace(/^\/+|\/+$/g, '');
+      shortLabel = cleanPath ? `${host}/${cleanPath}` : host;
+      if (shortLabel.length > 26) {
+        shortLabel = `${shortLabel.slice(0, 24)}…`;
+      }
+    } catch {
+      shortLabel = trimmed.slice(0, 24);
+    }
+  }
+
+  return {
+    platform: 'website',
+    label: 'Social Link',
+    icon: '🔗',
+    href,
+    shortLabel,
+  };
 }
 
 /**
@@ -945,6 +1173,38 @@ export async function resolveAddressByDomain(
     // Network or other transient error: do not cache permanently
     console.warn(`[resolveAddressByDomain] Failed to resolve ${domain}:`, err);
     return undefined;
+  }
+}
+
+/**
+ * Resolves a .bro domain's on-chain DnsItem state (contactLink, channelLink, walletRecord, ownerAddress).
+ */
+export async function resolveBroDomainContact(
+  domain: string,
+  network: Network = 'testnet',
+): Promise<ParsedDnsItemState | null> {
+  const clean = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^[@#]+/, '');
+  const base = clean.endsWith('.bro') ? clean.slice(0, -4) : clean;
+  if (!base || base.includes('.')) return null;
+
+  try {
+    const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
+    const itemAddrStr = deriveDnsItemAddress(
+      collectionAddr,
+      base,
+      network === 'testnet',
+    );
+    const batch = await batchFetchAccountStates([itemAddrStr], network);
+    const acc = batch.accounts[0];
+    if (!acc || acc.status !== 'active' || !acc.data_boc) return null;
+    const parsed = parseDnsItemAccountState(acc.data_boc, network);
+    if (!parsed || !parsed.isInitialized || parsed.isExpired) return null;
+    return parsed;
+  } catch {
+    return null;
   }
 }
 

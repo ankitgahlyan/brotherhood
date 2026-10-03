@@ -213,6 +213,7 @@ export function useMemberDetail(
         net,
         contactsForNet,
         domainsForNet,
+        rawUsername,
       );
 
       return {

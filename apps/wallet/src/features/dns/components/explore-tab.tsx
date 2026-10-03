@@ -37,6 +37,7 @@ import {
   clearDomainResolutionCache,
   detectSocialPlatform,
 } from '@/core/lib/dns';
+import { openSocialLink } from '@/core/utils/telegram';
 
 interface ExploreTabProps {
   network: Network;
@@ -680,9 +681,14 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               {contactPlatform.icon} {contactPlatform.label}
             </span>
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-mono truncate max-w-[180px] text-foreground">
+              <button
+                type="button"
+                onClick={() => openSocialLink(lookup.contactLink!)}
+                className="font-mono truncate max-w-[180px] text-primary hover:underline cursor-pointer text-left"
+                title={`Open on ${contactPlatform.label}`}
+              >
                 {lookup.contactLink}
-              </span>
+              </button>
               <CopyButton address={lookup.contactLink} />
             </div>
           </div>
@@ -691,9 +697,14 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
             <span className="shrink-0">📢 {channelPlatform.label} Channel</span>
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-mono truncate max-w-[180px] text-foreground">
+              <button
+                type="button"
+                onClick={() => openSocialLink(lookup.channelLink!)}
+                className="font-mono truncate max-w-[180px] text-primary hover:underline cursor-pointer text-left"
+                title={`Open on ${channelPlatform.label}`}
+              >
                 {lookup.channelLink}
-              </span>
+              </button>
               <CopyButton address={lookup.channelLink} />
             </div>
           </div>
