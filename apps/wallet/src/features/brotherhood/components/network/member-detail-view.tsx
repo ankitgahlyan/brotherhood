@@ -14,7 +14,10 @@ import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+} from '@/core/utils/telegram';
 import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
@@ -131,7 +134,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
   const handleToggleActive = async () => {
     if (!data) return;
     const isCurrentlyActive = data.active;
-    const memberName = data.username ? `@${data.username}` : 'this member';
+    const memberName = data.dnsDomain
+      ? `@${data.dnsDomain}`
+      : data.username
+        ? `@${data.username}`
+        : 'this member';
     const actionDesc = lineageAmount.trim()
       ? `transfer ${lineageAmount} FI`
       : isCurrentlyActive
@@ -164,7 +171,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
 
   const handleAuthoritySanction = async () => {
     if (!data) return;
-    const memberName = data.username ? `@${data.username}` : 'this member';
+    const memberName = data.dnsDomain
+      ? `@${data.dnsDomain}`
+      : data.username
+        ? `@${data.username}`
+        : 'this member';
     const amountLabel = authAmount.trim()
       ? `${authAmount} FI`
       : `${formatFi(data.jettonBalance)} FI`;
@@ -204,6 +215,13 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
     if (!addr) return 'None';
     return formatContractAddress(addr, true, 4);
   };
+
+  const memberContact = getMemberContactDisplay({
+    username: data?.username,
+    dnsDomain: data?.dnsDomain,
+    contactLink: data?.contactLink,
+    fallbackLabel: '@anonymous',
+  });
 
   return (
     <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
@@ -256,22 +274,34 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
               <span className="text-xs text-muted-foreground block">
                 Member Profile
               </span>
-              {data.username ? (
+              {memberContact.canOpen ? (
                 <button
                   type="button"
-                  onClick={() => openTelegramProfile(data.username!)}
+                  onClick={() =>
+                    openMemberContact({
+                      username: data.username,
+                      dnsDomain: data.dnsDomain,
+                      contactLink: data.contactLink,
+                    })
+                  }
                   className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
-                  title={`Open @${data.username} on Telegram`}
+                  title={memberContact.title}
                   data-testid="brotherhood-member-telegram-link"
                 >
-                  <span>@{data.username}</span>
+                  <span>{memberContact.label}</span>
                   <span className="min-w-8 min-h-8 p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
-                    <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                    {memberContact.platform === 'telegram' ? (
+                      <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                    ) : (
+                      <span className="text-sm leading-none">
+                        {memberContact.icon}
+                      </span>
+                    )}
                   </span>
                 </button>
               ) : (
                 <span className="text-base font-bold text-foreground block">
-                  @anonymous
+                  {memberContact.label}
                 </span>
               )}
               <span

@@ -173,6 +173,8 @@ export function usePersonalWalletForIssuer(
   };
 }
 
+import { parseOnchainMetadataCell } from './jettonContent';
+
 export function usePersonalMinterDetails(
   personalMinter: Address | string | null | undefined,
   enabled = true,
@@ -183,14 +185,19 @@ export function usePersonalMinterDetails(
     net,
   );
 
-  const minterDetails: PersonalMinterDetails | null = data
-    ? {
-        totalSupply: data.totalSupply ?? 0n,
-        fiJettonAddress: data.fiJettonAddress,
-        adminAddress: data.adminAddress,
-        mintable: true,
-      }
-    : null;
+  const minterDetails: PersonalMinterDetails | null = useMemo(
+    () =>
+      data
+        ? {
+            totalSupply: data.totalSupply ?? 0n,
+            fiJettonAddress: data.fiJettonAddress,
+            adminAddress: data.adminAddress,
+            mintable: true,
+            metadata: parseOnchainMetadataCell(data.metadataUri),
+          }
+        : null,
+    [data],
+  );
 
   return {
     data: minterDetails,

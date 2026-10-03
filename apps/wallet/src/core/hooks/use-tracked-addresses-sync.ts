@@ -182,6 +182,52 @@ export function useTrackedAddressesSync() {
           { force },
         );
 
+        if (res?.balances && Object.keys(res.balances).length > 0) {
+          storeApi.setState((state) => {
+            const nextBalances = {
+              ...state.walletManagement.balancesByAddress,
+            };
+            let nextBalance = state.walletManagement.balance;
+            for (const wallet of savedWallets) {
+              if (!wallet.address) continue;
+              let resolvedBal = res.balances?.[wallet.address];
+              if (resolvedBal === undefined) {
+                try {
+                  const parsed = Address.parse(wallet.address);
+                  resolvedBal =
+                    res.balances?.[parsed.toString()] ??
+                    res.balances?.[parsed.toRawString()] ??
+                    res.balances?.[
+                      normalizeAddressByNetwork(
+                        wallet.address,
+                        false,
+                        defaultNetwork,
+                      )
+                    ];
+                } catch {
+                  /* ignore */
+                }
+              }
+              if (resolvedBal !== undefined) {
+                nextBalances[wallet.address] = resolvedBal;
+                if (
+                  state.walletManagement.activeWalletId === wallet.id ||
+                  state.walletManagement.address === wallet.address
+                ) {
+                  nextBalance = resolvedBal;
+                }
+              }
+            }
+            return {
+              walletManagement: {
+                ...state.walletManagement,
+                balancesByAddress: nextBalances,
+                balance: nextBalance,
+              },
+            };
+          });
+        }
+
         if (
           !res?.decodedStores ||
           Object.keys(res.decodedStores).length === 0

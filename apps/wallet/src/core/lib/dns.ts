@@ -73,6 +73,7 @@ export function detectSocialPlatform(
     lower.startsWith('simplex:') ||
     lower.startsWith('smp://') ||
     lower.startsWith('xftp://') ||
+    lower.startsWith('thatsapp:') ||
     lower.includes('simplex.chat') ||
     lower.includes('simplex.im') ||
     lower.includes('thatsapp')
@@ -84,9 +85,14 @@ export function detectSocialPlatform(
       href:
         lower.startsWith('http://') ||
         lower.startsWith('https://') ||
-        lower.startsWith('simplex:')
+        lower.startsWith('simplex:') ||
+        lower.startsWith('smp://') ||
+        lower.startsWith('xftp://') ||
+        lower.startsWith('thatsapp:')
           ? trimmed
-          : undefined,
+          : lower.startsWith('simplex.chat/') || lower.startsWith('simplex.im/')
+            ? `https://${trimmed}`
+            : `simplex:${trimmed}`,
     };
   }
 
@@ -105,7 +111,7 @@ export function detectSocialPlatform(
         lower.startsWith('http://') ||
         lower.startsWith('https://')
           ? trimmed
-          : undefined,
+          : `briar://${trimmed}`,
     };
   }
 

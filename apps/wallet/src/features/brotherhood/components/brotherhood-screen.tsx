@@ -46,7 +46,10 @@ import { Modal } from '@/core/components/ui/modal';
 import { CountrySelect } from '@/core/components/ui/country-select';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+} from '@/core/utils/telegram';
 import { getH3ViewerUrl } from '@/core/utils/h3';
 import { getCountryByCode } from '@/lib/brotherhood/countries';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
@@ -236,7 +239,7 @@ export const BrotherhoodScreen: React.FC = () => {
     'buy' | 'seekers' | 'terms' | 'repay'
   >('buy');
   const [authTarget, setAuthTarget] = useState('');
-  const [authStatus, setAuthStatus] = useState(0);
+  const [authStatusInput, setAuthStatusInput] = useState('');
   const [authFundsReceiver, setAuthFundsReceiver] = useState('');
   const [authSanctionAmount, setAuthSanctionAmount] = useState('');
   const [authToggleActive, setAuthToggleActive] = useState(true);
@@ -347,7 +350,7 @@ export const BrotherhoodScreen: React.FC = () => {
       return {
         contractAddress: m.addressString,
         ownerAddress: prof?.ownerAddress || '',
-        username: prof?.username || '',
+        username: prof?.dnsDomain || prof?.username || '',
         degree: 'circle',
         creditNeed: prof?.creditNeed,
         multiplier: prof?.multiplier,
@@ -359,7 +362,7 @@ export const BrotherhoodScreen: React.FC = () => {
     return Object.values(discoveredRingProfiles).map((prof) => ({
       contractAddress: prof.address,
       ownerAddress: prof.ownerAddress || '',
-      username: prof.username || '',
+      username: prof.dnsDomain || prof.username || '',
       degree: 'ring',
       creditNeed: prof.creditNeed,
       multiplier: prof.multiplier,
@@ -525,7 +528,9 @@ export const BrotherhoodScreen: React.FC = () => {
     walletKit,
     walletAddress: address ?? null,
     targetAddress: authTarget,
-    newStatus: authStatus,
+    newStatus: authStatusInput.trim()
+      ? parseInt(authStatusInput, 10) || 0
+      : (account.data?.status ?? 0),
     network,
     accountData: account.data,
   });
@@ -694,28 +699,46 @@ export const BrotherhoodScreen: React.FC = () => {
                 <div className="p-3 bg-secondary/50 rounded-xl border border-border/60 flex items-center justify-between">
                   <div>
                     <span className="text-xs text-muted-foreground block">
-                      Member Username
+                      Member Identity
                     </span>
-                    {account.data.username ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openTelegramProfile(account.data!.username)
-                        }
-                        className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
-                        title={`Open @${account.data.username} on Telegram`}
-                        data-testid="brotherhood-account-telegram-link"
-                      >
-                        <span>@{account.data.username}</span>
-                        <span className="min-w-8 min-h-8 p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
-                          <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                    {(() => {
+                      const accountContact = getMemberContactDisplay({
+                        username: account.data.username,
+                        dnsDomain: account.data.dnsDomain,
+                        contactLink: account.data.contactLink,
+                        fallbackLabel: '@anonymous',
+                      });
+                      return accountContact.canOpen ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openMemberContact({
+                              username: account.data!.username,
+                              dnsDomain: account.data!.dnsDomain,
+                              contactLink: account.data!.contactLink,
+                            })
+                          }
+                          className="inline-flex items-center gap-2 text-base font-bold text-primary hover:underline cursor-pointer group text-left py-0.5"
+                          title={accountContact.actionTitle}
+                          data-testid="brotherhood-account-telegram-link"
+                        >
+                          <span>{accountContact.displayLabel}</span>
+                          <span className="min-w-8 min-h-8 p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+                            {accountContact.isCustomApp ? (
+                              <span className="text-sm leading-none">
+                                {accountContact.platformIcon}
+                              </span>
+                            ) : (
+                              <TelegramIcon className="w-4.5 h-4.5 text-primary" />
+                            )}
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="text-base font-bold text-foreground block">
+                          {accountContact.displayLabel}
                         </span>
-                      </button>
-                    ) : (
-                      <span className="text-base font-bold text-foreground block">
-                        @anonymous
-                      </span>
-                    )}
+                      );
+                    })()}
                     <span
                       className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
                         memberState === 'fully_active'
@@ -822,12 +845,12 @@ export const BrotherhoodScreen: React.FC = () => {
                     <span className="text-muted-foreground">Invited By</span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-[11px] text-foreground">
-                        {formatShortWallet(account.data.invitor)}
+                        {formatShortContract(account.data.invitor)}
                       </span>
                       {account.data.invitor && (
                         <CopyButton
                           address={account.data.invitor}
-                          type="wallet"
+                          type="contract"
                           size="xs"
                         />
                       )}
@@ -938,6 +961,8 @@ export const BrotherhoodScreen: React.FC = () => {
             resolvedProfiles={resolvedProfiles.data}
             isLoading={account.isLoading || resolvedProfiles.isLoading}
             onNavigateToInvite={() => setActiveTab('invite')}
+            onBoundaryPrev={() => setActiveTab('account')}
+            onBoundaryNext={() => setActiveTab('claim')}
             onQuickAction={(action, target) => {
               if (action === 'send') {
                 navigate('/send');
@@ -1239,6 +1264,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {account.data.invited.map((entry) => {
                     const prof = resolvedProfiles.data?.[entry.addressString];
+                    const contact = getMemberContactDisplay(prof);
                     return (
                       <div
                         key={entry.addressString}
@@ -1250,29 +1276,24 @@ export const BrotherhoodScreen: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (prof?.username)
-                                  openTelegramProfile(prof.username);
+                                if (contact.canOpen) openMemberContact(prof);
                               }}
-                              disabled={!prof?.username}
-                              className={`font-semibold text-foreground text-left ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
-                              title={
-                                prof?.username
-                                  ? `Open @${prof.username} on Telegram`
-                                  : undefined
-                              }
+                              disabled={!contact.canOpen}
+                              className={`font-semibold text-foreground text-left ${contact.canOpen ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
+                              title={contact.title}
                             >
-                              @{prof?.username || 'member'}
+                              {contact.label}
                             </button>
-                            {prof?.username && (
+                            {contact.canOpen && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openTelegramProfile(prof.username!);
+                                  openMemberContact(prof);
                                 }}
                                 className="min-w-9 min-h-9 p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-                                title={`Open @${prof.username} on Telegram`}
-                                aria-label={`Open @${prof.username} on Telegram`}
+                                title={contact.title}
+                                aria-label={contact.title}
                               >
                                 <TelegramIcon className="w-4.5 h-4.5" />
                               </button>
@@ -1343,6 +1364,7 @@ export const BrotherhoodScreen: React.FC = () => {
                 <div className="space-y-2">
                   {account.data.votedFor.map((entry) => {
                     const prof = resolvedProfiles.data?.[entry.addressString];
+                    const contact = getMemberContactDisplay(prof);
                     const candCountry = getCountryByCode(prof?.country);
                     const candidateWallet = getCandidateWalletAddress(
                       entry.addressString,
@@ -1358,29 +1380,24 @@ export const BrotherhoodScreen: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (prof?.username)
-                                  openTelegramProfile(prof.username);
+                                if (contact.canOpen) openMemberContact(prof);
                               }}
-                              disabled={!prof?.username}
-                              className={`font-semibold text-foreground text-left truncate ${prof?.username ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
-                              title={
-                                prof?.username
-                                  ? `Open @${prof.username} on Telegram`
-                                  : undefined
-                              }
+                              disabled={!contact.canOpen}
+                              className={`font-semibold text-foreground text-left truncate ${contact.canOpen ? 'hover:text-primary hover:underline cursor-pointer' : ''}`}
+                              title={contact.title}
                             >
-                              @{prof?.username || 'member'}
+                              {contact.label}
                             </button>
-                            {prof?.username && (
+                            {contact.canOpen && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openTelegramProfile(prof.username!);
+                                  openMemberContact(prof);
                                 }}
                                 className="min-w-8 min-h-8 p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                                title={`Open @${prof.username} on Telegram`}
-                                aria-label={`Open @${prof.username} on Telegram`}
+                                title={contact.title}
+                                aria-label={contact.title}
                               >
                                 <TelegramIcon className="w-4 h-4" />
                               </button>
@@ -1611,9 +1628,11 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const walletAddr = getCandidateWalletAddress(
                                   entry.addressString,
                                 );
-                                const label = prof?.username
-                                  ? `@${prof.username}`
-                                  : formatShortWallet(walletAddr);
+                                const label = prof?.dnsDomain
+                                  ? prof.dnsDomain
+                                  : prof?.username
+                                    ? `@${prof.username}`
+                                    : formatShortWallet(walletAddr);
                                 return (
                                   <option
                                     key={`voted-${entry.addressString}`}
@@ -1639,9 +1658,11 @@ export const BrotherhoodScreen: React.FC = () => {
                                 const walletAddr = getCandidateWalletAddress(
                                   entry.addressString,
                                 );
-                                const label = prof?.username
-                                  ? `@${prof.username}`
-                                  : formatShortWallet(walletAddr);
+                                const label = prof?.dnsDomain
+                                  ? prof.dnsDomain
+                                  : prof?.username
+                                    ? `@${prof.username}`
+                                    : formatShortWallet(walletAddr);
                                 return (
                                   <option
                                     key={`circle-${entry.addressString}`}
@@ -1767,6 +1788,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                 entry.addressString,
                               );
                               return (
+                                prof?.dnsDomain?.toLowerCase().includes(q) ||
                                 prof?.username?.toLowerCase().includes(q) ||
                                 entry.addressString.toLowerCase().includes(q) ||
                                 walletAddr.toLowerCase().includes(q)
@@ -1775,6 +1797,7 @@ export const BrotherhoodScreen: React.FC = () => {
                             .map((entry) => {
                               const prof =
                                 resolvedProfiles.data?.[entry.addressString];
+                              const contact = getMemberContactDisplay(prof);
                               const candCountry = getCountryByCode(
                                 prof?.country,
                               );
@@ -1803,15 +1826,15 @@ export const BrotherhoodScreen: React.FC = () => {
                                   <div className="truncate pr-2">
                                     <div className="flex items-center gap-2">
                                       <span className="truncate">
-                                        @{prof?.username || 'member'}
+                                        {contact.label}
                                       </span>
-                                      {prof?.username && (
+                                      {contact.canOpen && (
                                         <span
                                           role="button"
                                           tabIndex={0}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            openTelegramProfile(prof.username!);
+                                            openMemberContact(prof);
                                           }}
                                           onKeyDown={(e) => {
                                             if (
@@ -1819,9 +1842,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                               e.key === ' '
                                             ) {
                                               e.stopPropagation();
-                                              openTelegramProfile(
-                                                prof.username!,
-                                              );
+                                              openMemberContact(prof);
                                             }
                                           }}
                                           className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
@@ -1829,8 +1850,8 @@ export const BrotherhoodScreen: React.FC = () => {
                                               ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
                                               : 'bg-primary/10 text-primary hover:bg-primary/20'
                                           }`}
-                                          title={`Open @${prof.username} on Telegram`}
-                                          aria-label={`Open @${prof.username} on Telegram`}
+                                          title={contact.title}
+                                          aria-label={contact.title}
                                         >
                                           <TelegramIcon className="w-3.5 h-3.5" />
                                         </span>
@@ -1877,6 +1898,7 @@ export const BrotherhoodScreen: React.FC = () => {
                               entry.addressString,
                             );
                             return (
+                              prof?.dnsDomain?.toLowerCase().includes(q) ||
                               prof?.username?.toLowerCase().includes(q) ||
                               entry.addressString.toLowerCase().includes(q) ||
                               walletAddr.toLowerCase().includes(q)
@@ -1885,6 +1907,7 @@ export const BrotherhoodScreen: React.FC = () => {
                           .map((entry) => {
                             const prof =
                               resolvedProfiles.data?.[entry.addressString];
+                            const contact = getMemberContactDisplay(prof);
                             const candCountry = getCountryByCode(prof?.country);
                             const walletAddr = getCandidateWalletAddress(
                               entry.addressString,
@@ -1908,15 +1931,15 @@ export const BrotherhoodScreen: React.FC = () => {
                                 <div className="truncate pr-2">
                                   <div className="flex items-center gap-2">
                                     <span className="truncate">
-                                      @{prof?.username || 'member'}
+                                      {contact.label}
                                     </span>
-                                    {prof?.username && (
+                                    {contact.canOpen && (
                                       <span
                                         role="button"
                                         tabIndex={0}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          openTelegramProfile(prof.username!);
+                                          openMemberContact(prof);
                                         }}
                                         onKeyDown={(e) => {
                                           if (
@@ -1924,7 +1947,7 @@ export const BrotherhoodScreen: React.FC = () => {
                                             e.key === ' '
                                           ) {
                                             e.stopPropagation();
-                                            openTelegramProfile(prof.username!);
+                                            openMemberContact(prof);
                                           }
                                         }}
                                         className={`min-w-7 min-h-7 p-1 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
@@ -1932,8 +1955,8 @@ export const BrotherhoodScreen: React.FC = () => {
                                             ? 'bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30'
                                             : 'bg-primary/10 text-primary hover:bg-primary/20'
                                         }`}
-                                        title={`Open @${prof.username} on Telegram`}
-                                        aria-label={`Open @${prof.username} on Telegram`}
+                                        title={contact.title}
+                                        aria-label={contact.title}
                                       >
                                         <TelegramIcon className="w-3.5 h-3.5" />
                                       </span>
@@ -2106,370 +2129,388 @@ export const BrotherhoodScreen: React.FC = () => {
         {/* Buy Credit & Repay Debt */}
         {activeTab === 'credit' && (
           <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-            {/* Sub-tabs header */}
-            <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setCreditSubTab('buy')}
-                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
-                  creditSubTab === 'buy'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-credit-subtab-buy"
-              >
-                Buy Credit
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreditSubTab('seekers')}
-                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
-                  creditSubTab === 'seekers'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-credit-subtab-seekers"
-              >
-                Seekers Directory
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreditSubTab('terms')}
-                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
-                  creditSubTab === 'terms'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-credit-subtab-terms"
-              >
-                My Terms
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreditSubTab('repay')}
-                className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
-                  creditSubTab === 'repay'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-credit-subtab-repay"
-              >
-                Repay Debt
-              </button>
-            </div>
-
-            {/* Sub-tab 1: Buy Credit */}
-            {creditSubTab === 'buy' && (
-              <div ref={creditFormRef} className="space-y-3 pt-1">
-                <div>
-                  <h3 className="font-semibold text-base">
-                    Buy Credit (Personal Loan)
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Extend credit to an issuer by buying their Personal Tokens
-                    with FI. Select any Circle or Ring member from the list, or
-                    type/scan their address.
-                  </p>
+            <SwipeableSubTabs
+              tabs={['buy', 'seekers', 'terms', 'repay']}
+              activeTab={creditSubTab}
+              onTabChange={(tab) => setCreditSubTab(tab as any)}
+              loop={false}
+              className="min-h-0"
+              onBoundaryPrev={() => setActiveTab('vote')}
+              onBoundaryNext={() => setActiveTab('allowance')}
+              boundaryPrevLabel="Vote"
+              boundaryNextLabel="Allowance"
+              stickyTabBar={
+                <div className="flex flex-wrap gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setCreditSubTab('buy')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                      creditSubTab === 'buy'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-credit-subtab-buy"
+                  >
+                    Buy Credit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreditSubTab('seekers')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                      creditSubTab === 'seekers'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-credit-subtab-seekers"
+                  >
+                    Seekers Directory
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreditSubTab('terms')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                      creditSubTab === 'terms'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-credit-subtab-terms"
+                  >
+                    My Terms
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreditSubTab('repay')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
+                      creditSubTab === 'repay'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-credit-subtab-repay"
+                  >
+                    Repay Debt
+                  </button>
                 </div>
-
-                <MemberComboboxInput
-                  value={recipient}
-                  onChange={setRecipient}
-                  placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                  circleMembers={circleSelectableMembers}
-                  ringMembers={ringSelectableMembers}
-                  onSelectMember={(m) => {
-                    if (
-                      m.creditNeed &&
-                      m.creditNeed > 0n &&
-                      (!amount || amount === '0')
-                    ) {
-                      const targetNano = account.data
-                        ? m.creditNeed < account.data.jettonBalance
-                          ? m.creditNeed
-                          : account.data.jettonBalance
-                        : m.creditNeed;
-                      const whole = targetNano / 1_000_000_000n;
-                      const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
-                      const amountStr =
-                        frac === 0n
-                          ? whole.toString()
-                          : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
-                      setAmount(amountStr);
-                    }
-                  }}
-                  data-testid="brotherhood-credit-recipient"
-                />
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Credit Amount (FI)"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="brotherhood-credit-amount"
-                />
-
-                {credit.validationError && (
-                  <p className="text-xs text-rose-500 font-medium">
-                    {credit.validationError}
-                  </p>
-                )}
-
-                <TxButton
-                  onAction={() => credit.send()}
-                  disabled={credit.isDisabled}
-                  loading={credit.isSending}
-                  fullWidth
-                  testId="brotherhood-credit-submit"
-                >
-                  Buy Credit
-                </TxButton>
-              </div>
-            )}
-
-            {/* Sub-tab 2: Seekers Directory */}
-            {creditSubTab === 'seekers' && (
-              <div className="space-y-4">
-                <CircleCreditList
-                  circleMembers={
-                    account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
-                  }
-                  profiles={resolvedProfiles.data}
-                  isLoading={resolvedProfiles.isLoading}
-                  onRefresh={() => resolvedProfiles.refetch()}
-                  onSendCredit={handleSendCredit}
-                />
-
-                <hr className="border-border/60" />
-
-                <RingCreditList
-                  circleMembers={
-                    account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
-                  }
-                  circleProfiles={resolvedProfiles.data}
-                  onSendCredit={handleSendCredit}
-                  onRegisterRingMembers={handleRegisterRingMembers}
-                />
-              </div>
-            )}
-
-            {/* Sub-tab 3: My Terms */}
-            {creditSubTab === 'terms' && (
-              <div className="space-y-4">
-                {/* Credit Overview */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Your Credit Need
-                    </span>
-                    <span className="font-semibold text-foreground">
-                      {formatFi(account.data?.creditNeed)} FI
-                    </span>
-                  </div>
-                  <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Outstanding Debt
-                    </span>
-                    <span className="font-semibold text-rose-500">
-                      {formatFi(account.data?.debt)} FI
-                    </span>
-                  </div>
-                </div>
-
-                {/* Borrowing Terms Configuration Card */}
-                <div className="p-3.5 bg-secondary/40 border border-border/50 rounded-xl space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-foreground text-sm">
-                      My Borrowing Terms
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      Multiplier:{' '}
-                      <strong className="text-foreground">
-                        {account.data?.multiplier ?? 1}x
-                      </strong>
-                      {account.data?.creditMaturity
-                        ? ` • Due: ${formatDate(account.data.creditMaturity)}`
-                        : ''}
-                    </span>
+              }
+            >
+              {/* Sub-tab 1: Buy Credit */}
+              {creditSubTab === 'buy' && (
+                <div ref={creditFormRef} className="space-y-3 pt-1">
+                  <div>
+                    <h3 className="font-semibold text-base">
+                      Buy Credit (Personal Loan)
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Extend credit to an issuer by buying their Personal Tokens
+                      with FI. Select any Circle or Ring member from the list,
+                      or type/scan their address.
+                    </p>
                   </div>
 
-                  {/* Set Loan Requirement Form */}
-                  <div className="space-y-3 pt-2 border-t border-border/40">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-foreground block">
-                        Set Loan Requirement
-                      </label>
-                      <span className="text-[11px] text-muted-foreground">
-                        {loanRequirement.hasPersonalToken
-                          ? 'Personal Token Registered'
-                          : 'No Personal Token'}
-                      </span>
-                    </div>
-
-                    {!loanRequirement.hasPersonalToken && (
-                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400">
-                        Personal Token must be registered before setting a loan
-                        requirement.
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <div>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={loanAmountInput}
-                          onChange={(e) => setLoanAmountInput(e.target.value)}
-                          placeholder={`Amount (Current: ${formatFi(account.data?.creditNeed)} FI)`}
-                          disabled={
-                            !canOperate ||
-                            !loanRequirement.hasPersonalToken ||
-                            loanRequirement.isSending
-                          }
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                          data-testid="brotherhood-loan-amount-input"
-                        />
-                        {loanRequirement.amountValidationError && (
-                          <p className="text-[11px] text-rose-500 mt-1">
-                            {loanRequirement.amountValidationError}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <input
-                            type="number"
-                            step="1"
-                            min="0"
-                            value={loanMaturityDays}
-                            onChange={(e) =>
-                              setLoanMaturityDays(e.target.value)
-                            }
-                            placeholder={
-                              account.data?.creditMaturity
-                                ? `Maturity (${formatDate(account.data.creditMaturity)})`
-                                : 'Maturity (Days, 0 = Instant)'
-                            }
-                            disabled={
-                              !canOperate ||
-                              !loanRequirement.hasPersonalToken ||
-                              loanRequirement.isSending
-                            }
-                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                            data-testid="brotherhood-loan-maturity-input"
-                          />
-                          {loanRequirement.maturityValidationError && (
-                            <p className="text-[11px] text-rose-500 mt-1">
-                              {loanRequirement.maturityValidationError}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="0.001"
-                            max="65.535"
-                            value={loanMultiplierInput}
-                            onChange={(e) =>
-                              setLoanMultiplierInput(e.target.value)
-                            }
-                            placeholder={`Multiplier (Current: ${account.data?.multiplier ?? 1}x)`}
-                            disabled={
-                              !canOperate ||
-                              !loanRequirement.hasPersonalToken ||
-                              loanRequirement.isSending
-                            }
-                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                            data-testid="brotherhood-loan-multiplier-input"
-                          />
-                          {loanRequirement.multiplierValidationError && (
-                            <p className="text-[11px] text-rose-500 mt-1">
-                              {loanRequirement.multiplierValidationError}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      fullWidth
-                      onClick={() => loanRequirement.updateLoanRequirement()}
-                      disabled={loanRequirement.isDisabled}
-                      loading={loanRequirement.isSending}
-                      data-testid="brotherhood-set-loan-requirement-submit"
-                    >
-                      {loanRequirement.isSending
-                        ? 'Updating Loan Requirement...'
-                        : loanRequirement.isDirty
-                          ? 'Update Loan Requirement'
-                          : 'No Changes'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sub-tab 4: Repay Debt */}
-            {creditSubTab === 'repay' && (
-              <div className="space-y-4">
-                <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50 text-xs">
-                  <span className="text-muted-foreground block text-[11px]">
-                    Outstanding Debt
-                  </span>
-                  <span className="font-semibold text-rose-500 text-sm">
-                    {formatFi(account.data?.debt)} FI
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-base">Repay Debt</h3>
-                    {account.data && account.data.debt > 0n && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAmount(
-                            (Number(account.data?.debt ?? 0n) / 1e9).toString(),
-                          )
-                        }
-                        className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
-                      >
-                        Repay All Debt
-                      </button>
-                    )}
-                  </div>
+                  <MemberComboboxInput
+                    value={recipient}
+                    onChange={setRecipient}
+                    placeholder={`Borrower Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    circleMembers={circleSelectableMembers}
+                    ringMembers={ringSelectableMembers}
+                    onSelectMember={(m) => {
+                      if (
+                        m.creditNeed &&
+                        m.creditNeed > 0n &&
+                        (!amount || amount === '0')
+                      ) {
+                        const targetNano = account.data
+                          ? m.creditNeed < account.data.jettonBalance
+                            ? m.creditNeed
+                            : account.data.jettonBalance
+                          : m.creditNeed;
+                        const whole = targetNano / 1_000_000_000n;
+                        const frac = (targetNano % 1_000_000_000n) / 1_000_000n;
+                        const amountStr =
+                          frac === 0n
+                            ? whole.toString()
+                            : `${whole}.${frac.toString().padStart(3, '0').replace(/0+$/, '')}`;
+                        setAmount(amountStr);
+                      }
+                    }}
+                    data-testid="brotherhood-credit-recipient"
+                  />
                   <input
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Repayment Amount (FI)"
+                    placeholder="Credit Amount (FI)"
                     className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    data-testid="brotherhood-repay-amount"
+                    data-testid="brotherhood-credit-amount"
                   />
 
-                  {repay.validationError && (
+                  {credit.validationError && (
                     <p className="text-xs text-rose-500 font-medium">
-                      {repay.validationError}
+                      {credit.validationError}
                     </p>
                   )}
 
                   <TxButton
-                    onAction={() => repay.send()}
-                    disabled={repay.isDisabled}
-                    loading={repay.isSending}
+                    onAction={() => credit.send()}
+                    disabled={credit.isDisabled}
+                    loading={credit.isSending}
                     fullWidth
-                    testId="brotherhood-repay-submit"
+                    testId="brotherhood-credit-submit"
                   >
-                    Repay Debt
+                    Buy Credit
                   </TxButton>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Sub-tab 2: Seekers Directory */}
+              {creditSubTab === 'seekers' && (
+                <div className="space-y-4">
+                  <CircleCreditList
+                    circleMembers={
+                      account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
+                    }
+                    profiles={resolvedProfiles.data}
+                    isLoading={resolvedProfiles.isLoading}
+                    onRefresh={() => resolvedProfiles.refetch()}
+                    onSendCredit={handleSendCredit}
+                  />
+
+                  <hr className="border-border/60" />
+
+                  <RingCreditList
+                    circleMembers={
+                      account.data?.invited ?? (EMPTY_INVITED_ARRAY as any)
+                    }
+                    circleProfiles={resolvedProfiles.data}
+                    onSendCredit={handleSendCredit}
+                    onRegisterRingMembers={handleRegisterRingMembers}
+                  />
+                </div>
+              )}
+
+              {/* Sub-tab 3: My Terms */}
+              {creditSubTab === 'terms' && (
+                <div className="space-y-4">
+                  {/* Credit Overview */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Your Credit Need
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {formatFi(account.data?.creditNeed)} FI
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Outstanding Debt
+                      </span>
+                      <span className="font-semibold text-rose-500">
+                        {formatFi(account.data?.debt)} FI
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Borrowing Terms Configuration Card */}
+                  <div className="p-3.5 bg-secondary/40 border border-border/50 rounded-xl space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground text-sm">
+                        My Borrowing Terms
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Multiplier:{' '}
+                        <strong className="text-foreground">
+                          {account.data?.multiplier ?? 1}x
+                        </strong>
+                        {account.data?.creditMaturity
+                          ? ` • Due: ${formatDate(account.data.creditMaturity)}`
+                          : ''}
+                      </span>
+                    </div>
+
+                    {/* Set Loan Requirement Form */}
+                    <div className="space-y-3 pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-foreground block">
+                          Set Loan Requirement
+                        </label>
+                        <span className="text-[11px] text-muted-foreground">
+                          {loanRequirement.hasPersonalToken
+                            ? 'Personal Token Registered'
+                            : 'No Personal Token'}
+                        </span>
+                      </div>
+
+                      {!loanRequirement.hasPersonalToken && (
+                        <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400">
+                          Personal Token must be registered before setting a
+                          loan requirement.
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <div>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={loanAmountInput}
+                            onChange={(e) => setLoanAmountInput(e.target.value)}
+                            placeholder={`Amount (Current: ${formatFi(account.data?.creditNeed)} FI)`}
+                            disabled={
+                              !canOperate ||
+                              !loanRequirement.hasPersonalToken ||
+                              loanRequirement.isSending
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                            data-testid="brotherhood-loan-amount-input"
+                          />
+                          {loanRequirement.amountValidationError && (
+                            <p className="text-[11px] text-rose-500 mt-1">
+                              {loanRequirement.amountValidationError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={loanMaturityDays}
+                              onChange={(e) =>
+                                setLoanMaturityDays(e.target.value)
+                              }
+                              placeholder={
+                                account.data?.creditMaturity
+                                  ? `Maturity (${formatDate(account.data.creditMaturity)})`
+                                  : 'Maturity (Days, 0 = Instant)'
+                              }
+                              disabled={
+                                !canOperate ||
+                                !loanRequirement.hasPersonalToken ||
+                                loanRequirement.isSending
+                              }
+                              className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                              data-testid="brotherhood-loan-maturity-input"
+                            />
+                            {loanRequirement.maturityValidationError && (
+                              <p className="text-[11px] text-rose-500 mt-1">
+                                {loanRequirement.maturityValidationError}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0.001"
+                              max="65.535"
+                              value={loanMultiplierInput}
+                              onChange={(e) =>
+                                setLoanMultiplierInput(e.target.value)
+                              }
+                              placeholder={`Multiplier (Current: ${account.data?.multiplier ?? 1}x)`}
+                              disabled={
+                                !canOperate ||
+                                !loanRequirement.hasPersonalToken ||
+                                loanRequirement.isSending
+                              }
+                              className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                              data-testid="brotherhood-loan-multiplier-input"
+                            />
+                            {loanRequirement.multiplierValidationError && (
+                              <p className="text-[11px] text-rose-500 mt-1">
+                                {loanRequirement.multiplierValidationError}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        fullWidth
+                        onClick={() => loanRequirement.updateLoanRequirement()}
+                        disabled={loanRequirement.isDisabled}
+                        loading={loanRequirement.isSending}
+                        data-testid="brotherhood-set-loan-requirement-submit"
+                      >
+                        {loanRequirement.isSending
+                          ? 'Updating Loan Requirement...'
+                          : loanRequirement.isDirty
+                            ? 'Update Loan Requirement'
+                            : 'No Changes'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-tab 4: Repay Debt */}
+              {creditSubTab === 'repay' && (
+                <div className="space-y-4">
+                  <div className="p-2.5 bg-secondary/50 rounded-xl border border-border/50 text-xs">
+                    <span className="text-muted-foreground block text-[11px]">
+                      Outstanding Debt
+                    </span>
+                    <span className="font-semibold text-rose-500 text-sm">
+                      {formatFi(account.data?.debt)} FI
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-base">Repay Debt</h3>
+                      {account.data && account.data.debt > 0n && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAmount(
+                              (
+                                Number(account.data?.debt ?? 0n) / 1e9
+                              ).toString(),
+                            )
+                          }
+                          className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
+                        >
+                          Repay All Debt
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder={
+                        account.data?.debt && account.data.debt > 0n
+                          ? `${formatFi(account.data.debt)} FI`
+                          : 'Repayment Amount (FI)'
+                      }
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      data-testid="brotherhood-repay-amount"
+                    />
+
+                    {repay.validationError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {repay.validationError}
+                      </p>
+                    )}
+
+                    <TxButton
+                      onAction={() => repay.send()}
+                      disabled={repay.isDisabled}
+                      loading={repay.isSending}
+                      fullWidth
+                      testId="brotherhood-repay-submit"
+                    >
+                      Repay Debt
+                    </TxButton>
+                  </div>
+                </div>
+              )}
+            </SwipeableSubTabs>
           </div>
         )}
 
@@ -3006,186 +3047,205 @@ export const BrotherhoodScreen: React.FC = () => {
               </p>
             </div>
 
-            {/* Sub-tabs header */}
-            <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setAuthoritySubTab('status')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  authoritySubTab === 'status'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-authority-subtab-status"
-              >
-                Set Status
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthoritySubTab('close')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  authoritySubTab === 'close'
-                    ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                }`}
-                data-testid="brotherhood-authority-subtab-close"
-              >
-                Close Account
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthoritySubTab('sanction')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  authoritySubTab === 'sanction'
-                    ? 'bg-destructive shadow-sm text-destructive-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-                }`}
-                data-testid="brotherhood-authority-subtab-sanction"
-              >
-                Sanction & Confiscate
-              </button>
-            </div>
-
-            {authoritySubTab === 'status' && (
-              <div className="space-y-2 pt-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Set Account Status (0 = Active, 1 = Suspended, 2 = Review)
-                </label>
-                <input
-                  type="number"
-                  value={authStatus}
-                  onChange={(e) => setAuthStatus(parseInt(e.target.value) || 0)}
-                  placeholder="0 = active, 1 = suspended, 2 = review"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="brotherhood-authority-status-input"
-                />
-                <Button
-                  onClick={() => authority.setStatus()}
-                  disabled={authority.isDisabled}
-                  loading={authority.isSending}
-                  fullWidth
-                  data-testid="brotherhood-authority-set-status-submit"
-                >
-                  Set Account Status
-                </Button>
-              </div>
-            )}
-
-            {authoritySubTab === 'close' && (
-              <div className="space-y-2 pt-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Close Member Account (Nominee Succession)
-                </label>
-                <p className="text-[11px] text-muted-foreground">
-                  Closes deceased member account and transfers remaining assets
-                  to designated nominee.
-                </p>
-                <InputScan
-                  value={authTarget}
-                  onChange={setAuthTarget}
-                  placeholder={`Target Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                  data-testid="brotherhood-authority-target"
-                />
-                <Button
-                  variant="secondary"
-                  onClick={() => authority.closeAccount()}
-                  disabled={authority.isDisabled || !authTarget}
-                  loading={authority.isSending}
-                  fullWidth
-                  data-testid="brotherhood-authority-close-submit"
-                >
-                  Close Account (Authority)
-                </Button>
-              </div>
-            )}
-
-            {authoritySubTab === 'sanction' && (
-              <div className="space-y-3 pt-1">
-                <div>
-                  <label className="text-xs font-medium text-destructive">
-                    Sanction Malicious Account & Confiscate Funds
-                  </label>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Optionally deactivates the target member account and
-                    transfers/confiscates FI tokens to the specified receiver
-                    (or your Authority account). Any excess requested amount is
-                    set as debt on the target.
-                  </p>
+            <SwipeableSubTabs
+              tabs={['status', 'close', 'sanction']}
+              activeTab={authoritySubTab}
+              onTabChange={(tab) => setAuthoritySubTab(tab as any)}
+              loop={false}
+              className="min-h-0"
+              onBoundaryPrev={() => setActiveTab('deferred')}
+              boundaryPrevLabel="Deferred"
+              stickyTabBar={
+                <div className="flex gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAuthoritySubTab('status')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      authoritySubTab === 'status'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-authority-subtab-status"
+                  >
+                    Set Status
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthoritySubTab('close')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      authoritySubTab === 'close'
+                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                    }`}
+                    data-testid="brotherhood-authority-subtab-close"
+                  >
+                    Close Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthoritySubTab('sanction')}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      authoritySubTab === 'sanction'
+                        ? 'bg-destructive shadow-sm text-destructive-foreground font-semibold'
+                        : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                    }`}
+                    data-testid="brotherhood-authority-subtab-sanction"
+                  >
+                    Sanction & Confiscate
+                  </button>
                 </div>
-                <div className="space-y-2">
+              }
+            >
+              {authoritySubTab === 'status' && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Set Account Status (0 = Active, 1 = Suspended, 2 = Review)
+                  </label>
+                  <input
+                    type="number"
+                    value={authStatusInput}
+                    onChange={(e) => setAuthStatusInput(e.target.value)}
+                    placeholder={`Current: ${account.data?.status ?? 0} (0 = active, 1 = suspended, 2 = review)`}
+                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    data-testid="brotherhood-authority-status-input"
+                  />
+                  <Button
+                    onClick={() => authority.setStatus()}
+                    disabled={authority.isDisabled}
+                    loading={authority.isSending}
+                    fullWidth
+                    data-testid="brotherhood-authority-set-status-submit"
+                  >
+                    Set Account Status
+                  </Button>
+                </div>
+              )}
+
+              {authoritySubTab === 'close' && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Close Member Account (Nominee Succession)
+                  </label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Closes deceased member account and transfers remaining
+                    assets to designated nominee.
+                  </p>
                   <InputScan
                     value={authTarget}
                     onChange={setAuthTarget}
-                    placeholder={`Target Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                    data-testid="brotherhood-authority-sanction-target"
+                    placeholder={`Target Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                    data-testid="brotherhood-authority-target"
                   />
-                  <InputScan
-                    value={authFundsReceiver}
-                    onChange={setAuthFundsReceiver}
-                    placeholder={`Funds Receiver (Leave empty for Authority Self)`}
-                    data-testid="brotherhood-authority-funds-receiver"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={authSanctionAmount}
-                    onChange={(e) => setAuthSanctionAmount(e.target.value)}
-                    placeholder="Amount to confiscate/transfer (Leave 0 for full balance)"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive"
-                  />
-                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-1">
-                    <input
-                      type="checkbox"
-                      checked={authToggleActive}
-                      onChange={(e) => setAuthToggleActive(e.target.checked)}
-                      className="rounded border-border text-destructive focus:ring-destructive"
+                  <Button
+                    variant="secondary"
+                    onClick={() => authority.closeAccount()}
+                    disabled={authority.isDisabled || !authTarget}
+                    loading={authority.isSending}
+                    fullWidth
+                    data-testid="brotherhood-authority-close-submit"
+                  >
+                    Close Account (Authority)
+                  </Button>
+                </div>
+              )}
+
+              {authoritySubTab === 'sanction' && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="text-xs font-medium text-destructive">
+                      Sanction Malicious Account & Confiscate Funds
+                    </label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Optionally deactivates the target member account and
+                      transfers/confiscates FI tokens to the specified receiver
+                      (or your Authority account). Any excess requested amount
+                      is set as debt on the target.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <InputScan
+                      value={authTarget}
+                      onChange={setAuthTarget}
+                      placeholder={`Target Member Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
+                      data-testid="brotherhood-authority-sanction-target"
                     />
-                    <span>Toggle / Deactivate Account Status</span>
-                  </label>
-                </div>
-                <div className="p-2.5 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive space-y-1">
-                  <p className="font-semibold">
-                    ⚠️ High-impact disciplinary action
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    This action will confiscate/transfer funds and optionally
-                    toggle member active status. If the target's balance is
-                    insufficient, the remainder will be added as debt.
-                  </p>
-                </div>
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    let amountNano = 0n;
-                    if (authSanctionAmount.trim()) {
-                      try {
-                        amountNano = toNano(authSanctionAmount.trim());
-                      } catch {
-                        // ignore
+                    <InputScan
+                      value={authFundsReceiver}
+                      onChange={setAuthFundsReceiver}
+                      placeholder={`Funds Receiver (Leave empty for Authority Self)`}
+                      data-testid="brotherhood-authority-funds-receiver"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={authSanctionAmount}
+                      onChange={(e) => setAuthSanctionAmount(e.target.value)}
+                      placeholder="Amount to confiscate/transfer (Leave 0 for full balance)"
+                      className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={authToggleActive}
+                        onChange={(e) => setAuthToggleActive(e.target.checked)}
+                        className="rounded border-border text-destructive focus:ring-destructive"
+                      />
+                      <span>Toggle / Deactivate Account Status</span>
+                    </label>
+                  </div>
+                  <div className="p-2.5 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive space-y-1">
+                    <p className="font-semibold">
+                      ⚠️ High-impact disciplinary action
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      This action will confiscate/transfer funds and optionally
+                      toggle member active status. If the target's balance is
+                      insufficient, the remainder will be added as debt.
+                    </p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      let amountNano = 0n;
+                      if (authSanctionAmount.trim()) {
+                        try {
+                          amountNano = toNano(authSanctionAmount.trim());
+                        } catch {
+                          // ignore
+                        }
                       }
-                    }
-                    authority.dispatchAuthorityAction({
-                      fundsReceiver: authFundsReceiver.trim() || null,
-                      amount: amountNano,
-                      toggleActive: authToggleActive,
-                    });
-                  }}
-                  disabled={authority.isDisabled || !authTarget}
-                  loading={authority.isSending}
-                  fullWidth
-                  data-testid="brotherhood-authority-sanction-submit"
-                >
-                  Execute Sanction
-                </Button>
-              </div>
-            )}
+                      authority.dispatchAuthorityAction({
+                        fundsReceiver: authFundsReceiver.trim() || null,
+                        amount: amountNano,
+                        toggleActive: authToggleActive,
+                      });
+                    }}
+                    disabled={authority.isDisabled || !authTarget}
+                    loading={authority.isSending}
+                    fullWidth
+                    data-testid="brotherhood-authority-sanction-submit"
+                  >
+                    Execute Sanction
+                  </Button>
+                </div>
+              )}
+            </SwipeableSubTabs>
           </div>
         )}
 
         {/* Deferred Payment Tab */}
         {activeTab === 'deferred' && (
-          <DeferredPaymentTab network={network} accountData={account.data} />
+          <DeferredPaymentTab
+            network={network}
+            accountData={account.data}
+            onBoundaryPrev={() => setActiveTab('profile')}
+            onBoundaryNext={
+              isAuthority ? () => setActiveTab('authority') : undefined
+            }
+            boundaryPrevLabel="Profile"
+            boundaryNextLabel={isAuthority ? 'Authority' : undefined}
+          />
         )}
       </SwipeableSubTabs>
 

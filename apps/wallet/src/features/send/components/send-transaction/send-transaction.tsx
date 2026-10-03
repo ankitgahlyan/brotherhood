@@ -9,7 +9,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from '@/core/routing';
 import { isValidAddress } from '@ton/walletkit';
-import { useAuth, useWallet, useWalletKit } from '@demo/wallet-core';
+import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
 import { notifyTransactionSent } from '@/core/utils/transaction-toast';
@@ -47,7 +47,6 @@ import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/core/components/ui/button';
 import { TxButton } from '@/core/components/ui/tx-button';
-import { SlideToSignButton } from '@/core/components/ui/slide-to-sign-button';
 import { NewLayout } from '@/core/components/shared/new-layout';
 import { ScreenHeader } from '@/core/components/shared/screen-header';
 import { createComponentLogger } from '@/core/lib/logger';
@@ -87,7 +86,6 @@ export const SendTransaction: React.FC = () => {
   const [senderMode, setSenderMode] = useState<SenderMode>('self');
   const [granterInput, setGranterInput] = useState('');
   const [isDeveloperMode] = useDeveloperMode();
-  const { slideToSign, showFastSend } = useAuth();
 
   const options = useSendTokens();
 
@@ -686,21 +684,6 @@ export const SendTransaction: React.FC = () => {
                     ? 'Sending…'
                     : `Send ${selected.symbol}`}
             </TxButton>
-
-            {!(slideToSign && showFastSend) && (
-              <SlideToSignButton
-                onComplete={() => {
-                  void handleSend(undefined, { fastSend: true });
-                }}
-                disabled={isSendDisabled}
-                loading={isSendingAny}
-                idleLabel={sendActionLabel}
-                completeLabel="Sent!"
-                size="lg"
-                className="w-full"
-                testId="slide-to-send-submit"
-              />
-            )}
           </div>
 
           {/* Vertical list of recent transacted members */}

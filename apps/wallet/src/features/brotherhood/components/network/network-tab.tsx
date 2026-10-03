@@ -7,6 +7,7 @@
  */
 
 import React, { useState } from 'react';
+import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import type { MemberProfileInfo } from '../../hooks/use-member-profiles';
 import { CircleTab } from './circle-tab';
@@ -20,6 +21,8 @@ export interface NetworkTabProps {
   resolvedProfiles?: Record<string, MemberProfileInfo>;
   isLoading?: boolean;
   onNavigateToInvite: () => void;
+  onBoundaryPrev?: () => void;
+  onBoundaryNext?: () => void;
   onQuickAction?: (
     action: 'send' | 'vote' | 'allowance',
     targetAddress: string,
@@ -31,6 +34,8 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
   resolvedProfiles,
   isLoading = false,
   onNavigateToInvite,
+  onBoundaryPrev,
+  onBoundaryNext,
   onQuickAction,
 }) => {
   const [subTab, setSubTab] = useState<NetworkSubTab>('circle');
@@ -106,23 +111,31 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
       </div>
 
       {/* Sub-tab content */}
-      {subTab === 'circle' ? (
-        <CircleTab
-          invitedMembers={safeInvitedMembers}
-          resolvedProfiles={resolvedProfiles}
-          isLoading={isLoading}
-          onSelectMember={(addr) => setSelectedMemberAddress(addr)}
-          onNavigateToInvite={onNavigateToInvite}
-        />
-      ) : (
-        <RingTab
-          circleMembers={safeInvitedMembers}
-          circleProfiles={resolvedProfiles}
-          isLoading={isLoading}
-          onSelectMember={(addr) => setSelectedMemberAddress(addr)}
-          onNavigateToInvite={onNavigateToInvite}
-        />
-      )}
+      <SwipeableSubTabs
+        tabs={['circle', 'ring'] as const}
+        activeTab={subTab}
+        onTabChange={(tab) => setSubTab(tab as NetworkSubTab)}
+        onBoundaryPrev={onBoundaryPrev}
+        onBoundaryNext={onBoundaryNext}
+      >
+        {subTab === 'circle' ? (
+          <CircleTab
+            invitedMembers={safeInvitedMembers}
+            resolvedProfiles={resolvedProfiles}
+            isLoading={isLoading}
+            onSelectMember={(addr) => setSelectedMemberAddress(addr)}
+            onNavigateToInvite={onNavigateToInvite}
+          />
+        ) : (
+          <RingTab
+            circleMembers={safeInvitedMembers}
+            circleProfiles={resolvedProfiles}
+            isLoading={isLoading}
+            onSelectMember={(addr) => setSelectedMemberAddress(addr)}
+            onNavigateToInvite={onNavigateToInvite}
+          />
+        )}
+      </SwipeableSubTabs>
     </div>
   );
 };

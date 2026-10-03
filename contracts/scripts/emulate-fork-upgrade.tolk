@@ -65,19 +65,32 @@ fun main() {
 
     println("\nCurrent Time: {}", testing.getNow());
 
-    // ── Step 0: HotUpgrade — fix walletVersion 0 → 1 ─────────────────────────
-    println("\n[0/5] HotUpgrade: bumping minter walletVersion 0 → 1...");
-    val hotUpgradeRes = minter.sendHotUpgrade(
-        admin,
-        null,
-        newMinterCode,
-        { value: grams("0.1") },
-    );
-    hotUpgradeRes.waitForTrace();
-    val afterHotUpgrade = minter.getJettonDataAll();
-    println("Minter walletVersion after HotUpgrade: {}", afterHotUpgrade.walletVersion);
-    assertEq("minter.walletVersion after HotUpgrade", afterHotUpgrade.walletVersion as int, 1);
-    println("✓ HotUpgrade complete.");
+    // ── Step 0: HotUpgrade — bump minter walletVersion if 0 ───────────────────
+    var expectedAfterHot = fullData.walletVersion as int;
+    if (fullData.walletVersion == 0) {
+        expectedAfterHot = 1;
+        println("\n[0/5] HotUpgrade: bumping minter walletVersion 0 → 1...");
+        val hotUpgradeRes = minter.sendHotUpgrade(
+            admin,
+            null,
+            newMinterCode,
+            { value: grams("0.1") },
+        );
+        hotUpgradeRes.waitForTrace();
+        val afterHotUpgrade = minter.getJettonDataAll();
+        println("Minter walletVersion after HotUpgrade: {}", afterHotUpgrade.walletVersion);
+        assertEq(
+            "minter.walletVersion after HotUpgrade",
+            afterHotUpgrade.walletVersion as int,
+            expectedAfterHot,
+        );
+        println("✓ HotUpgrade complete.");
+    } else {
+        println(
+            "\n[0/5] Skipping HotUpgrade (minter.walletVersion is already {})",
+            fullData.walletVersion,
+        );
+    }
 
     // ── Step 1: Propose Minter Code Upgrade ──────────────────────────────────
     println("\n[1/5] Proposing FossFi Minter Upgrade...");
@@ -142,9 +155,10 @@ fun main() {
     // ── Post-upgrade deep assertions ──────────────────────────────────────────
     println("\n[ASSERTIONS] Validating post-upgrade state...");
 
+    val expectedFinalVersion = expectedAfterHot + 1;
     val updatedMinterData = minter.getJettonDataAll();
     println("Minter walletVersion (post): {}", updatedMinterData.walletVersion);
-    assertEq("minter.walletVersion", updatedMinterData.walletVersion as int, 2);
+    assertEq("minter.walletVersion", updatedMinterData.walletVersion as int, expectedFinalVersion);
     assertEq(
         "minter.totalSupply unchanged",
         updatedMinterData.totalSupply as int,
@@ -158,7 +172,7 @@ fun main() {
     println("FiWallet jettonBalance (post): {}", updatedFullWallet.jettonBalance);
     println("FiWallet active (post)       : {}", updatedFullWallet.active);
 
-    assertEq("wallet.version", updatedFullWallet.version as int, 2);
+    assertEq("wallet.version", updatedFullWallet.version as int, expectedFinalVersion);
     assertEq("wallet.storeVersion", updatedFullWallet.storeVersion as int, 1);
     assertGt("wallet.jettonBalance", updatedFullWallet.jettonBalance as int, 0);
     assertTrue("wallet.active", updatedFullWallet.active);
@@ -169,6 +183,19 @@ fun main() {
 
     val (username, h3Cell, country) = adminWallet.getProfile();
     println("Profile — username: {}, h3: {}, country: {}", username, h3Cell, country);
+
+    println("\n[6/6] Verifying ChangeProfile deploys BaseLocation for h3: {}...", h3Cell);
+    val locRes = adminWallet.sendChangeProfile(
+        admin,
+        1,
+        null,
+        h3Cell,
+        null,
+        null,
+        { value: grams("1.0") },
+    );
+    locRes.waitForTrace();
+    println("✓ ChangeProfile (BaseLocation deployment) executed without error.");
 
     println("\n==================================================");
     println("✓ All upgrade steps verified successfully on testnet fork!");

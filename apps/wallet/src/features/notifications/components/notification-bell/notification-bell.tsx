@@ -28,6 +28,7 @@ import {
 import { toast } from 'sonner';
 import {
   useWallet,
+  useWalletStore,
   useWalletKit,
   useBrotherhood,
   normalizeAddressByNetwork,
@@ -192,6 +193,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
 };
 
 export type NotificationType =
+  | 'low_gram_balance'
   | 'upgrade'
   | 'personal_upgrade'
   | 'claim'
@@ -211,6 +213,7 @@ export interface WalletNotificationItem {
 interface WalletNotificationCollectorProps {
   wallet: SavedWallet;
   isActive: boolean;
+  walletBalance?: string;
   minterVersion: number | null;
   pendingDeferredByAddress: Record<string, PendingDeferredPayment[]>;
   nowSec: number;
@@ -220,11 +223,14 @@ interface WalletNotificationCollectorProps {
   ) => void;
 }
 
+const LOW_GRAM_THRESHOLD_NANO = 5_000_000_000n; // 5 GRAM
+
 const WalletNotificationCollector: React.FC<
   WalletNotificationCollectorProps
 > = ({
   wallet,
   isActive,
+  walletBalance,
   minterVersion,
   pendingDeferredByAddress,
   nowSec,
@@ -233,9 +239,33 @@ const WalletNotificationCollector: React.FC<
   const account = useFiAccount(wallet.address);
 
   useEffect(() => {
-    if (account.isLoading) return;
     const accountData = account.data;
     const items: WalletNotificationItem[] = [];
+
+    // 0. Low GRAM balance check (< 5 GRAM)
+    if (walletBalance !== undefined) {
+      try {
+        const balNano = BigInt(walletBalance);
+        if (balNano < LOW_GRAM_THRESHOLD_NANO) {
+          const formattedGram = (Number(balNano) / 1e9).toFixed(2);
+          items.push({
+            id: `low-gram-${wallet.address}`,
+            type: 'low_gram_balance',
+            walletId: wallet.id,
+            walletName: wallet.name || 'Wallet',
+            walletAddress: wallet.address,
+            isActive,
+            data: {
+              balanceGram: formattedGram,
+            },
+          });
+        }
+      } catch {
+        /* ignore invalid balance string */
+      }
+    }
+
+    if (account.isLoading && items.length === 0) return;
 
     // 1. Contract upgrade check
     if (accountData && minterVersion !== null) {
@@ -327,6 +357,7 @@ const WalletNotificationCollector: React.FC<
     wallet.name,
     wallet.address,
     isActive,
+    walletBalance,
     account.data,
     account.isLoading,
     minterVersion,
@@ -512,7 +543,11 @@ export const NotificationBell: React.FC = () => {
       getBrowserNotificationPermission(),
     );
 
-  const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
+  const { currentWallet, address, balance, savedWallets, activeWalletId } =
+    useWallet();
+  const balancesByAddress = useWalletStore(
+    (s) => s.walletManagement.balancesByAddress,
+  );
   const walletKit = useWalletKit();
   const { network } = useFormatAddress();
   const minter = useFiMinterState();
@@ -870,6 +905,10 @@ export const NotificationBell: React.FC = () => {
           key={w.id}
           wallet={w}
           isActive={w.id === activeWalletId}
+          walletBalance={
+            balancesByAddress?.[w.address] ??
+            (w.id === activeWalletId ? balance : undefined)
+          }
           minterVersion={minterVersion}
           pendingDeferredByAddress={pendingDeferredByAddress}
           nowSec={nowSec}
@@ -978,6 +1017,61 @@ export const NotificationBell: React.FC = () => {
           {/* Render All Wallet Notifications */}
           {allWalletNotifs.map((item) => {
             const isProcessing = actionInProgressId === item.id;
+
+            if (item.type === 'low_gram_balance') {
+              return (
+                <SwipeableCard
+                  key={item.id}
+                  id={item.id}
+                  onDismiss={handleDismissOne}
+                >
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col gap-2.5 shadow-2xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0 text-amber-500">
+                          <Coins className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-foreground text-sm">
+                              Low GRAM Balance
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-secondary text-foreground border border-border/80">
+                              {item.walletName}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground block">
+                            Balance:{' '}
+                            <span className="font-bold text-foreground">
+                              {item.data.balanceGram} GRAM
+                            </span>{' '}
+                            (below 5 GRAM recommended for gas) •{' '}
+                            {formatTonAddress(item.walletAddress, {
+                              network,
+                              shorten: true,
+                              count: 4,
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        window.open(
+                          'https://t.me/tnfaucet_bot/',
+                          '_blank',
+                          'noopener,noreferrer',
+                        );
+                      }}
+                      className="w-full text-xs font-semibold py-2 rounded-xl cursor-pointer"
+                    >
+                      Fund via Faucet Bot
+                    </Button>
+                  </div>
+                </SwipeableCard>
+              );
+            }
 
             if (item.type === 'upgrade') {
               return (

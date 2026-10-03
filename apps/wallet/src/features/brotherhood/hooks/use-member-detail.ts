@@ -6,11 +6,18 @@
  *
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { useFiWalletStateByContract } from '@/lib/brotherhood/queries';
 import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
+import {
+  useContactBookStore,
+  EMPTY_CONTACTS_MAP,
+} from '@/core/storage/useContactBookStore';
+import { useDnsStore } from '@/features/dns/store/dns-store';
+import { syncBroCollectionContacts } from '@/features/dns/hooks/use-my-domains';
+import { resolveCachedDnsContact } from '@/core/utils/telegram';
 import type {
   VotedCandidateEntry,
   InvitedMemberEntry,
@@ -42,6 +49,8 @@ export interface MemberDetailData {
   version: number;
   storeVersion: number;
   username: string;
+  dnsDomain?: string;
+  contactLink?: string;
   h3Cell: string;
   country: number;
   accountInit: number;
@@ -75,6 +84,15 @@ export function useMemberDetail(
   addressInput: Address | string | null,
 ): UseMemberDetailResult {
   const { network } = useFormatAddress();
+  const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+  const contactsForNet = useContactBookStore(
+    (s) => s.contactsByNetwork[net] || EMPTY_CONTACTS_MAP,
+  );
+  const domainsForNet = useDnsStore((s) => s.domainsByNetwork[net]);
+
+  useEffect(() => {
+    void syncBroCollectionContacts(net);
+  }, [net]);
 
   const parsedAddress = useMemo(() => {
     if (!addressInput) return null;
@@ -93,10 +111,7 @@ export function useMemberDetail(
     isLoading,
     error,
     refetch,
-  } = useFiWalletStateByContract(
-    parsedAddress,
-    network === 'mainnet' ? 'mainnet' : 'testnet',
-  );
+  } = useFiWalletStateByContract(parsedAddress, net);
 
   const formattedData = useMemo<MemberDetailData | null>(() => {
     if (!rawData || !parsedAddress) return null;
@@ -171,17 +186,27 @@ export function useMemberDetail(
       }
 
       const ownerAddr = addresses?.owner ?? null;
+      const contractAddressString = formatTonAddress(parsedAddress, {
+        isContract: true,
+        network,
+      });
+      const ownerAddressString = ownerAddr
+        ? formatTonAddress(ownerAddr, { isContract: false, network })
+        : '';
+      const rawUsername = (profile?.username ?? '').trim();
+      const isBroUsername = rawUsername.toLowerCase().endsWith('.bro');
+      const resolvedDns = resolveCachedDnsContact(
+        [ownerAddressString, contractAddressString],
+        net,
+        contactsForNet,
+        domainsForNet,
+      );
 
       return {
         contractAddress: parsedAddress,
-        contractAddressString: formatTonAddress(parsedAddress, {
-          isContract: true,
-          network,
-        }),
+        contractAddressString,
         ownerAddress: ownerAddr,
-        ownerAddressString: ownerAddr
-          ? formatTonAddress(ownerAddr, { isContract: false, network })
-          : '',
+        ownerAddressString,
         jettonBalance: rawData.jettonBalance ?? 0n,
         goldCoins: Number(rawData.goldCoins ?? 0),
         txnCount: Number(rawData.txnCount ?? 0),
@@ -201,7 +226,11 @@ export function useMemberDetail(
         mintable: Boolean(rawData.mintable),
         version: Number(rawData.version ?? 0),
         storeVersion: Number(rawData.storeVersion ?? 0),
-        username: profile?.username ?? '',
+        username: isBroUsername ? '' : rawUsername,
+        dnsDomain:
+          resolvedDns.dnsDomain ||
+          (isBroUsername ? rawUsername.toLowerCase() : undefined),
+        contactLink: resolvedDns.contactLink,
         h3Cell: profile?.h3Cell ?? '',
         country: profile?.country ? Number(profile.country) : 0,
         accountInit: timestamps?.accountInit
@@ -237,7 +266,7 @@ export function useMemberDetail(
       console.error('[useMemberDetail] Error parsing raw FiWallet store:', e);
       return null;
     }
-  }, [rawData, parsedAddress, network]);
+  }, [rawData, parsedAddress, network, net, contactsForNet, domainsForNet]);
 
   return {
     data: formattedData,

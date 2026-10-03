@@ -6,11 +6,18 @@
  *
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { useFiWalletState } from '@/lib/brotherhood/queries';
 import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
+import {
+  useContactBookStore,
+  EMPTY_CONTACTS_MAP,
+} from '@/core/storage/useContactBookStore';
+import { useDnsStore } from '@/features/dns/store/dns-store';
+import { syncBroCollectionContacts } from '@/features/dns/hooks/use-my-domains';
+import { resolveCachedDnsContact } from '@/core/utils/telegram';
 
 export interface VotedCandidateEntry {
   address: Address;
@@ -51,6 +58,8 @@ export interface FiAccountData {
   version: number;
   storeVersion: number;
   username: string;
+  dnsDomain?: string;
+  contactLink?: string;
   h3Cell: string;
   country: number;
   accountInit: number;
@@ -82,6 +91,15 @@ export interface UseFiAccountResult {
 
 export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
   const { network } = useFormatAddress();
+  const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+  const contactsForNet = useContactBookStore(
+    (s) => s.contactsByNetwork[net] || EMPTY_CONTACTS_MAP,
+  );
+  const domainsForNet = useDnsStore((s) => s.domainsByNetwork[net]);
+
+  useEffect(() => {
+    void syncBroCollectionContacts(net);
+  }, [net]);
 
   const ownerAddress = useMemo(() => {
     if (!walletAddress) return null;
@@ -174,6 +192,14 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
         }
       }
 
+      const rawUsername = profile?.username ?? '';
+      const resolvedDns = resolveCachedDnsContact(
+        [walletAddress],
+        net,
+        contactsForNet,
+        domainsForNet,
+      );
+
       return {
         jettonBalance: rawData.jettonBalance ?? 0n,
         goldCoins: Number(rawData.goldCoins ?? 0),
@@ -194,7 +220,9 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
         mintable: Boolean(rawData.mintable),
         version: Number(rawData.version ?? 0),
         storeVersion: Number(rawData.storeVersion ?? 0),
-        username: profile?.username ?? '',
+        username: rawUsername,
+        dnsDomain: resolvedDns.dnsDomain,
+        contactLink: resolvedDns.contactLink,
         h3Cell: profile?.h3Cell ?? '',
         country: profile?.country ? Number(profile.country) : 0,
         accountInit: timestamps?.accountInit
@@ -230,7 +258,7 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
       console.error('[useFiAccount] Error parsing raw FiWallet store:', e);
       return null;
     }
-  }, [rawData, network]);
+  }, [rawData, network, net, walletAddress, contactsForNet, domainsForNet]);
 
   return {
     data: formattedData,

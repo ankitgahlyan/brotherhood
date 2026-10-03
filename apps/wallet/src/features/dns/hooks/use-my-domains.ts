@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Address } from '@ton/core';
-import { toncenterApiKey } from '@/lib/brotherhood/ton';
+import { getFiWalletAddress, toncenterApiKey } from '@/lib/brotherhood/ton';
 import { rateLimitedFetch } from '@/lib/brotherhood/rate-limiter';
 import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
 import {
@@ -15,6 +15,7 @@ import {
   type Network,
 } from '@/lib/brotherhood/config';
 import { deriveDnsItemAddress, parseDnsItemAccountState } from '@/core/lib/dns';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 import {
   useDnsStore,
   selectOwnedDomains,
@@ -27,9 +28,12 @@ const MY_DOMAINS_TTL_MS = 5 * 60 * 1000; // 5-minute session TTL cache
 // Module-level session/TTL cache keyed by `${network}:${canonicalWalletAddress}`
 const myDomainsSessionCache = new Map<string, number>();
 const inFlightMyDomainsRefresh = new Map<string, Promise<void>>();
+const broCollectionSyncCache = new Map<string, number>();
+const inFlightBroCollectionSync = new Map<string, Promise<void>>();
 
 export function clearMyDomainsSessionCache(): void {
   myDomainsSessionCache.clear();
+  broCollectionSyncCache.clear();
 }
 
 const TONCENTER_V3_BASE: Record<'mainnet' | 'testnet', string> = {
@@ -63,8 +67,43 @@ function toWalletCacheKey(network: Network, walletAddress: string): string {
   }
 }
 
+function syncParsedDnsContactToBook(
+  domainName: string,
+  ownerAddress: string | null | undefined,
+  walletRecord: string | null | undefined,
+  contactLink: string | null | undefined,
+  network: Network,
+): void {
+  const fullDomain = domainName.toLowerCase().endsWith('.bro')
+    ? domainName.toLowerCase()
+    : `${domainName.toLowerCase()}.bro`;
+  const saveDnsDomain = useContactBookStore.getState().saveDnsDomain;
+  const targets = new Set<string>();
+
+  for (const rawTarget of [ownerAddress, walletRecord]) {
+    if (!rawTarget) continue;
+    targets.add(rawTarget);
+    try {
+      const fiWallet = getFiWalletAddress(
+        Address.parse(rawTarget),
+        network,
+      ).toString({
+        bounceable: true,
+        testOnly: network === 'testnet',
+      });
+      targets.add(fiWallet);
+    } catch {
+      /* ignore invalid address */
+    }
+  }
+
+  for (const target of targets) {
+    saveDnsDomain(target, fullDomain, network, contactLink ?? undefined);
+  }
+}
+
 async function fetchBroCollectionNftAddresses(
-  walletAddress: string,
+  walletAddress: string | null | undefined,
   network: Network,
 ): Promise<string[]> {
   const netKey = network === 'mainnet' ? 'mainnet' : 'testnet';
@@ -78,21 +117,26 @@ async function fetchBroCollectionNftAddresses(
   const testOnly = network === 'testnet';
   const result = new Set<string>();
 
-  const queries = [
+  const queries: URLSearchParams[] = [];
+  if (walletAddress) {
+    queries.push(
+      new URLSearchParams({
+        owner_address: walletAddress,
+        collection_address: BRO_COLLECTION_RESOLVER,
+        limit: '100',
+        offset: '0',
+      }),
+    );
+  }
+  // Also fetch recent items in the collection so domains in active/ended auction
+  // and member domains across the collection are discovered
+  queries.push(
     new URLSearchParams({
-      owner_address: walletAddress,
       collection_address: BRO_COLLECTION_RESOLVER,
       limit: '100',
       offset: '0',
     }),
-    // Also fetch recent items in the collection so domains in active/ended auction
-    // (where owner_address is still null on-chain until FinalizeAuction) are discovered
-    new URLSearchParams({
-      collection_address: BRO_COLLECTION_RESOLVER,
-      limit: '100',
-      offset: '0',
-    }),
-  ];
+  );
 
   for (const params of queries) {
     try {
@@ -125,6 +169,69 @@ async function fetchBroCollectionNftAddresses(
   }
 
   return Array.from(result);
+}
+
+/**
+ * Ensures all recent .bro collection domains on `network` are hydrated into
+ * `useContactBookStore` (including their `contactLink` for ThatsApp/Briar/Telegram),
+ * even before the user visits the `/dns` screen.
+ */
+export async function syncBroCollectionContacts(
+  network: Network,
+  force = false,
+): Promise<void> {
+  const now = Date.now();
+  const lastSynced = broCollectionSyncCache.get(network) ?? 0;
+  if (!force && now - lastSynced < MY_DOMAINS_TTL_MS) {
+    return;
+  }
+  const inFlight = inFlightBroCollectionSync.get(network);
+  if (!force && inFlight) {
+    await inFlight;
+    return;
+  }
+  broCollectionSyncCache.set(network, now);
+  const promise = (async () => {
+    try {
+      const testOnly = network === 'testnet';
+      const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
+      const genesisNftAddr = deriveDnsItemAddress(
+        collectionAddr,
+        'genesis',
+        testOnly,
+      );
+      const indexedAddresses = await fetchBroCollectionNftAddresses(
+        null,
+        network,
+      );
+      const candidateSet = new Set<string>(indexedAddresses);
+      candidateSet.add(genesisNftAddr);
+      const candidates = Array.from(candidateSet);
+      if (candidates.length === 0) return;
+
+      const batch = await batchFetchAccountStates(candidates, network, 30, {
+        force,
+      });
+      for (const acc of batch.accounts) {
+        if (acc.status !== 'active' || !acc.data_boc) continue;
+        const parsed = parseDnsItemAccountState(acc.data_boc, network);
+        if (!parsed || !parsed.isInitialized || !parsed.domainName) continue;
+        syncParsedDnsContactToBook(
+          parsed.domainName,
+          parsed.ownerAddress,
+          parsed.walletRecord,
+          parsed.contactLink,
+          network,
+        );
+      }
+    } catch {
+      /* ignore background sync errors */
+    } finally {
+      inFlightBroCollectionSync.delete(network);
+    }
+  })();
+  inFlightBroCollectionSync.set(network, promise);
+  await promise;
 }
 
 /**
@@ -165,6 +272,7 @@ export function useMyDomains(
 
       setIsRefreshing(true);
       myDomainsSessionCache.set(cacheKey, now);
+      broCollectionSyncCache.set(network, now);
 
       const refreshPromise = (async () => {
         try {
@@ -275,6 +383,16 @@ export function useMyDomains(
 
             const parsed = parseDnsItemAccountState(acc.data_boc, network);
             if (!parsed || !parsed.isInitialized) continue;
+
+            if (parsed.domainName) {
+              syncParsedDnsContactToBook(
+                parsed.domainName,
+                parsed.ownerAddress,
+                parsed.walletRecord,
+                parsed.contactLink,
+                network,
+              );
+            }
 
             const latestList =
               useDnsStore.getState().domainsByNetwork[network] ?? [];

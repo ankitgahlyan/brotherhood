@@ -6,6 +6,7 @@
  *
  */
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
@@ -20,11 +21,20 @@ import {
   getOnChainCachedUsername,
   saveUsernameAddressMapping,
 } from '@/core/lib/contact-storage';
+import {
+  useContactBookStore,
+  EMPTY_CONTACTS_MAP,
+} from '@/core/storage/useContactBookStore';
+import { useDnsStore } from '@/features/dns/store/dns-store';
+import { syncBroCollectionContacts } from '@/features/dns/hooks/use-my-domains';
+import { resolveCachedDnsContact } from '@/core/utils/telegram';
 
 export interface MemberProfileInfo {
   address: string;
   ownerAddress: string;
   username: string;
+  dnsDomain?: string;
+  contactLink?: string;
   h3Cell: string;
   country: number;
   active: boolean;
@@ -41,6 +51,12 @@ export function useMemberProfiles(
   addresses: (Address | string)[],
   network: AddressNetwork = 'testnet',
 ) {
+  const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+  const contactsForNet = useContactBookStore(
+    (s) => s.contactsByNetwork[net] || EMPTY_CONTACTS_MAP,
+  );
+  const domainsForNet = useDnsStore((s) => s.domainsByNetwork[net]);
+
   const addressStrings = addresses
     .map((a) => {
       try {
@@ -61,8 +77,10 @@ export function useMemberProfiles(
     queryFn: () =>
       cachedQueryFn(cacheKey, async (options?: any) => {
         if (addressStrings.length === 0) return {};
-        const net = network === 'mainnet' ? 'mainnet' : 'testnet';
         const results: Record<string, MemberProfileInfo> = {};
+
+        // Ensure .bro collection domains & contactLinks are synced to contact book
+        void syncBroCollectionContacts(net, Boolean(options?.forceFresh));
 
         // 1. Check local cache first to avoid redundant network calls
         const missingAddresses: string[] = [];
@@ -147,12 +165,22 @@ export function useMemberProfiles(
                 getOnChainCachedUsername(addrStr, net) ||
                 '';
 
+              const isBroUsername = fallbackUsername
+                .toLowerCase()
+                .endsWith('.bro');
+              const cachedDns = resolveCachedDnsContact(
+                [ownerAddress, addrStr],
+                net,
+              );
+
               results[addrStr] = {
                 address: addrStr,
                 ownerAddress,
-                username: fallbackUsername.toLowerCase().endsWith('.bro')
-                  ? ''
-                  : fallbackUsername,
+                username: isBroUsername ? '' : fallbackUsername,
+                dnsDomain:
+                  cachedDns.dnsDomain ||
+                  (isBroUsername ? fallbackUsername.toLowerCase() : undefined),
+                contactLink: cachedDns.contactLink,
                 h3Cell: store?.profile?.ref?.h3Cell ?? '',
                 country: store?.profile?.ref?.country
                   ? Number(store.profile.ref.country)
@@ -193,8 +221,28 @@ export function useMemberProfiles(
     enabled: addressStrings.length > 0,
   });
 
+  const enrichedData = useMemo(() => {
+    if (!query.data) return query.data;
+    const next: Record<string, MemberProfileInfo> = {};
+    for (const [addrKey, profile] of Object.entries(query.data)) {
+      const liveDns = resolveCachedDnsContact(
+        [profile.ownerAddress, profile.address],
+        net,
+        contactsForNet,
+        domainsForNet,
+      );
+      next[addrKey] = {
+        ...profile,
+        dnsDomain: liveDns.dnsDomain ?? profile.dnsDomain,
+        contactLink: liveDns.contactLink ?? profile.contactLink,
+      };
+    }
+    return next;
+  }, [query.data, contactsForNet, domainsForNet, net]);
+
   return {
     ...query,
+    data: enrichedData,
     refetch: createRefetchWrapper(cacheKey, query.refetch),
   };
 }

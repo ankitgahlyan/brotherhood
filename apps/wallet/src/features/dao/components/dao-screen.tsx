@@ -18,6 +18,8 @@ import { Button } from '@/core/components/ui/button';
 import { InputScan } from '@/core/components/ui/input-scan';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { useFormatAddress } from '@/core/utils/formatters';
+import { DAO_PROXY_ADDRESS } from '@/lib/brotherhood/config';
+import { isZeroAddress } from '@/lib/brotherhood/ton';
 import {
   MemberGuard,
   ActivationBanner,
@@ -37,7 +39,7 @@ export const DaoScreen: React.FC = () => {
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
-  const { formatWalletAddress } = useFormatAddress();
+  const { formatWalletAddress, formatContractAddress } = useFormatAddress();
   const { canOperate } = useIsNetworkMember();
 
   const [activeTab, setActiveTab] = useState<Tab>('proposals');
@@ -46,13 +48,18 @@ export const DaoScreen: React.FC = () => {
   const [voteProposalId, setVoteProposalId] = useState('');
   const [voteYes, setVoteYes] = useState(true);
 
-  const proposals = useProposals(daoAddrInput);
+  const defaultDaoAddress = !isZeroAddress(DAO_PROXY_ADDRESS)
+    ? DAO_PROXY_ADDRESS
+    : '';
+  const effectiveDaoAddress = daoAddrInput.trim() || defaultDaoAddress;
+
+  const proposals = useProposals(effectiveDaoAddress);
 
   const submitter = useSubmitProposal({
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
-    daoAddress: daoAddrInput,
+    daoAddress: effectiveDaoAddress,
     network,
   });
 
@@ -60,7 +67,7 @@ export const DaoScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     walletAddress: address ?? null,
-    daoAddress: daoAddrInput,
+    daoAddress: effectiveDaoAddress,
     proposalId: voteProposalId,
     voteYes,
     network,
@@ -91,9 +98,9 @@ export const DaoScreen: React.FC = () => {
                   <label className="font-semibold text-foreground">
                     Target DAO Contract Address
                   </label>
-                  {daoAddrInput && (
+                  {effectiveDaoAddress && (
                     <CopyButton
-                      address={daoAddrInput}
+                      address={effectiveDaoAddress}
                       type="contract"
                       size="xs"
                     />
@@ -102,7 +109,11 @@ export const DaoScreen: React.FC = () => {
                 <InputScan
                   value={daoAddrInput}
                   onChange={setDaoAddrInput}
-                  placeholder={`DAO Address (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`}
+                  placeholder={
+                    defaultDaoAddress
+                      ? formatContractAddress(defaultDaoAddress, false)
+                      : `DAO Address (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`
+                  }
                   data-testid="dao-address-input"
                 />
               </div>
@@ -180,7 +191,7 @@ export const DaoScreen: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-muted-foreground text-xs">
-                  {daoAddrInput
+                  {effectiveDaoAddress
                     ? 'No proposals found in this DAO.'
                     : 'Enter a DAO contract address above.'}
                 </p>

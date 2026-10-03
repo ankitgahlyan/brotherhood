@@ -38,6 +38,7 @@ import { TonconnectAppsModal } from '../tonconnect-apps/tonconnect-apps-modal';
 import { MnemonicDisplay } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
 import { Modal } from '@/core/components/ui/modal';
+import { cn } from '@/core/lib/utils';
 import { Button } from '@/core/components/ui/button';
 import { SettingsIcon } from '@/core/components/ui/icons';
 
@@ -330,20 +331,64 @@ export const SettingsDropdown: React.FC = () => {
                   checked={!persistPassword}
                   onChange={(checked) => setPersistPassword(!checked)}
                 />
-                <ToggleRow
-                  testId="hold-to-sign"
-                  label="Hold to Sign"
-                  description="Hold action buttons to approve sends and signing"
-                  checked={Boolean(holdToSign && !slideToSign)}
-                  onChange={setHoldToSign}
-                />
-                <ToggleRow
-                  testId="slide-to-sign"
-                  label="Slide to Sign"
-                  description="Slide left to right to approve sends and signing"
-                  checked={Boolean(slideToSign)}
-                  onChange={setSlideToSign}
-                />
+                <div className="flex items-center justify-between gap-3 py-1">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-foreground">
+                      Action Confirmation
+                    </div>
+                    <div className="text-[11px] text-muted-foreground leading-snug">
+                      {slideToSign
+                        ? 'Slide left to right to approve sends and signing'
+                        : holdToSign
+                          ? 'Hold action buttons to approve sends and signing'
+                          : 'Click action buttons normally'}
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center rounded-lg bg-secondary/80 p-0.5 border border-border/60 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHoldToSign(false);
+                        setSlideToSign(false);
+                      }}
+                      className={cn(
+                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        !holdToSign && !slideToSign
+                          ? 'bg-primary text-primary-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      data-testid="click-to-sign"
+                    >
+                      Off
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHoldToSign(true)}
+                      className={cn(
+                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        holdToSign && !slideToSign
+                          ? 'bg-primary text-primary-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      data-testid="hold-to-sign"
+                    >
+                      Hold
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSlideToSign(true)}
+                      className={cn(
+                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        slideToSign
+                          ? 'bg-primary text-primary-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      data-testid="slide-to-sign"
+                    >
+                      Slide
+                    </button>
+                  </div>
+                </div>
                 <ToggleRow
                   testId="show-fast-send"
                   label="Fast Send"

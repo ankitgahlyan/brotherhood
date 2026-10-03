@@ -45,12 +45,14 @@ export const DashboardHeader: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsConnectOpen(true)}
-        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
+        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/30 hover:bg-secondary/50 border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
         aria-label="Scan"
         data-testid="connect-dapp-button"
       >
-        <ScanIcon className="w-5 h-5 text-foreground" />
-        <NetworkIndicator className="absolute top-1.5 right-1.5" />
+        <span className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+          <NetworkIndicator className="pointer-events-none" />
+        </span>
+        <ScanIcon className="relative z-10 w-5 h-5 text-foreground/85 pointer-events-none" />
       </button>
 
       <div className="flex items-center gap-2">

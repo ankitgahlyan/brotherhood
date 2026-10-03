@@ -99,7 +99,7 @@ export function useLocationByH3Cell(
     getContractCache(
       getNormalizedContractCacheKey(network, calculatedAddress),
     ).then((cached) => {
-      if (isCancelled || cached?.data) return;
+      if (isCancelled || cached) return;
       try {
         const locAddr = Address.parse(calculatedAddress);
         batchHydrateUniversal([locAddr], network, {

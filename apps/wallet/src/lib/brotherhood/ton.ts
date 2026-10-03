@@ -592,11 +592,19 @@ export async function getFiMinterTotalAccounts(): Promise<bigint> {
   return 0n;
 }
 
+export interface PersonalTokenMetadata {
+  name?: string;
+  symbol?: string;
+  image?: string;
+  description?: string;
+}
+
 export interface PersonalMinterDetails {
   totalSupply: bigint;
   fiJettonAddress: Address;
   adminAddress: Address;
   mintable?: boolean;
+  metadata?: PersonalTokenMetadata;
 }
 
 export async function getPersonalMinterDetails(
@@ -607,11 +615,13 @@ export async function getPersonalMinterDetails(
   const normalizedKey = getNormalizedContractCacheKey(network, personalMinter);
   const cached = await getContractCache<any>(normalizedKey);
   if (cached?.data?.adminAddress) {
+    const { parseOnchainMetadataCell } = await import('./jettonContent');
     return {
       totalSupply: cached.data.totalSupply ?? 0n,
       fiJettonAddress: cached.data.fiJettonAddress || cached.data.issuerWallet,
       adminAddress: cached.data.adminAddress,
       mintable: true,
+      metadata: parseOnchainMetadataCell(cached.data.metadataUri),
     };
   }
   return null;
@@ -625,13 +635,6 @@ export async function isPersonalMinterContract(
   const normalizedKey = getNormalizedContractCacheKey(network, address);
   const cached = await getContractCache<any>(normalizedKey);
   return Boolean(cached?.data?.adminAddress);
-}
-
-export interface PersonalTokenMetadata {
-  name?: string;
-  symbol?: string;
-  image?: string;
-  description?: string;
 }
 
 export async function fetchPersonalTokenMetadata(

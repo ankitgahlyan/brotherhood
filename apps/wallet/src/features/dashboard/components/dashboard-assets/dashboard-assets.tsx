@@ -21,12 +21,13 @@ import {
 } from '@/features/assets';
 import type { AssetRowData } from '@/features/assets';
 import { NftsCard } from '@/features/nft';
+import { SwipeableSubTabs } from '@/core/components/shared/swipeable-sub-tabs';
 
 const JETTON_SLOTS = 5;
 
 export const DashboardAssets: React.FC = () => {
   const navigate = useNavigate();
-  const { tonRow, jettonRows, assetsReady } = useAssetRows();
+  const { jettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
   const { refreshNfts } = useNfts();
 
@@ -186,45 +187,48 @@ export const DashboardAssets: React.FC = () => {
         </div>
       </div>
 
-      {assetTab === 'tokens' ? (
-        <>
-          <div className="flex flex-col gap-1">
-            {tonRow ? (
-              <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
-            ) : (
-              <AssetRowSkeleton />
-            )}
-            {assetsReady ? (
-              displayedJettons.map((row) => (
-                <AssetRow
-                  key={row.id}
-                  {...row}
-                  onClick={() => handleAssetClick(row)}
-                />
-              ))
-            ) : (
-              <>
-                <AssetRowSkeleton />
-                <AssetRowSkeleton />
-              </>
-            )}
-          </div>
-
-          {hasMoreJettons && (
-            <div className="mt-2 text-center">
-              <button
-                type="button"
-                onClick={() => setShowAll((prev) => !prev)}
-                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer py-1 px-3 rounded-md hover:bg-secondary/50"
-              >
-                {showAll ? 'Show less' : `Show all (${jettonRows.length})`}
-              </button>
+      <SwipeableSubTabs
+        tabs={['tokens', 'nfts'] as const}
+        activeTab={assetTab}
+        onTabChange={(tab) => setAssetTab(tab as 'tokens' | 'nfts')}
+        loop={false}
+        className="min-h-0"
+      >
+        {assetTab === 'tokens' ? (
+          <>
+            <div className="flex flex-col gap-1">
+              {assetsReady ? (
+                displayedJettons.map((row) => (
+                  <AssetRow
+                    key={row.id}
+                    {...row}
+                    onClick={() => handleAssetClick(row)}
+                  />
+                ))
+              ) : (
+                <>
+                  <AssetRowSkeleton />
+                  <AssetRowSkeleton />
+                </>
+              )}
             </div>
-          )}
-        </>
-      ) : (
-        <NftsCard hideHeader />
-      )}
+
+            {hasMoreJettons && (
+              <div className="mt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAll((prev) => !prev)}
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer py-1 px-3 rounded-md hover:bg-secondary/50"
+                >
+                  {showAll ? 'Show less' : `Show all (${jettonRows.length})`}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <NftsCard hideHeader />
+        )}
+      </SwipeableSubTabs>
 
       <AssetDetailsModal
         asset={selectedAsset}

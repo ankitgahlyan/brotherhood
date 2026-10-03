@@ -10,7 +10,6 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import {
-  Sparkles,
   AlertCircle,
   CheckCircle2,
   Rocket,
@@ -85,7 +84,7 @@ import {
 
 type Tab = 'info' | 'mint' | 'admin';
 
-type ManageSection = 'metadata' | 'addresses' | 'operations' | 'danger';
+type ManageSection = 'metadata' | 'operations' | 'danger';
 
 const PERSONAL_JETTON_TAB_CONFIG: Record<
   Tab,
@@ -368,19 +367,23 @@ export const PersonalJettonScreen: React.FC = () => {
   const availableTabs: Tab[] = ['info', 'mint', 'admin'];
 
   // Effective addresses to register
-  const targetRegisterMinter =
-    addressesTabMinter ||
+  const defaultRegisterMinter =
     deployer.deployedAddresses?.minterAddress ||
-    activeMinter ||
     info.deterministicMinterAddress ||
+    activeMinter ||
     '';
 
-  const targetRegisterWallet =
-    addressesTabWallet ||
+  const defaultRegisterWallet =
     deployer.deployedAddresses?.personalWalletAddress ||
-    activePersonalWallet ||
     info.expectedPersonalWalletAddress ||
+    activePersonalWallet ||
     '';
+
+  const targetRegisterMinter =
+    addressesTabMinter.trim() || defaultRegisterMinter;
+
+  const targetRegisterWallet =
+    addressesTabWallet.trim() || defaultRegisterWallet;
 
   const registrar = useRegisterPersonalJetton({
     wallet: currentWallet,
@@ -390,6 +393,8 @@ export const PersonalJettonScreen: React.FC = () => {
     personalWalletAddress: targetRegisterWallet,
     network,
     onSuccess: () => {
+      setAddressesTabMinter('');
+      setAddressesTabWallet('');
       info.refetch();
     },
   });
@@ -425,10 +430,17 @@ export const PersonalJettonScreen: React.FC = () => {
     wallet: currentWallet,
     walletKit,
     minterAddress: activeMinter,
-    name: adminTokenName,
-    symbol: adminTokenSymbol,
-    description: adminTokenDesc,
-    image: adminTokenImage,
+    name: adminTokenName.trim() || info.minterDetails?.metadata?.name || '',
+    symbol:
+      adminTokenSymbol.trim() || info.minterDetails?.metadata?.symbol || '',
+    description:
+      adminTokenDesc.trim() ||
+      info.minterDetails?.metadata?.description ||
+      DEFAULT_TOKEN_DESCRIPTION,
+    image:
+      adminTokenImage ||
+      info.minterDetails?.metadata?.image ||
+      DEFAULT_TOKEN_IMAGE,
   });
 
   const topup = useTopUp({
@@ -631,17 +643,31 @@ export const PersonalJettonScreen: React.FC = () => {
                     {showManualLinkInWizard && (
                       <div className="mt-2.5 space-y-2.5 p-3 rounded-xl bg-secondary/30 border border-border">
                         <InputScan
-                          value={addressesTabMinter || targetRegisterMinter}
+                          value={addressesTabMinter}
                           onChange={setAddressesTabMinter}
                           enableUsernameResolution={false}
-                          placeholder="Personal Minter Address"
+                          placeholder={
+                            defaultRegisterMinter
+                              ? formatContractAddress(
+                                  defaultRegisterMinter,
+                                  false,
+                                )
+                              : 'Personal Minter Address'
+                          }
                           data-testid="personal-addresses-minter-input"
                         />
                         <InputScan
-                          value={addressesTabWallet || targetRegisterWallet}
+                          value={addressesTabWallet}
                           onChange={setAddressesTabWallet}
                           enableUsernameResolution={false}
-                          placeholder="Personal Wallet Address"
+                          placeholder={
+                            defaultRegisterWallet
+                              ? formatContractAddress(
+                                  defaultRegisterWallet,
+                                  false,
+                                )
+                              : 'Personal Wallet Address'
+                          }
                           data-testid="personal-addresses-wallet-input"
                         />
                         <Button
@@ -690,16 +716,35 @@ export const PersonalJettonScreen: React.FC = () => {
             {/* Overview Tab */}
             {activeTab === 'info' && (
               <div className="space-y-3 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-base">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h3 className="font-semibold text-base flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-blue-500" />
                     Personal Jetton Overview
                   </h3>
-                  {info.isRegistered && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Active & Registered
-                    </span>
-                  )}
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                      info.isRegistered && !info.hasMismatchedRegistration
+                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                        : 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
+                    }`}
+                  >
+                    {info.isRegistered && !info.hasMismatchedRegistration ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        Registered & Matches Calculated
+                      </>
+                    ) : info.hasMismatchedRegistration ? (
+                      <>
+                        <AlertCircle className="w-3 h-3" />
+                        Registration Mismatch
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-3 h-3" />
+                        Not Registered in FI Account
+                      </>
+                    )}
+                  </span>
                 </div>
 
                 {info.isLoading ? (
@@ -708,7 +753,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {/* Deployed or mismatched registration banner */}
+                    {/* Registration form — only shown when NOT registered or mismatched */}
                     {(!info.isRegistered || info.hasMismatchedRegistration) && (
                       <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2.5">
                         <div className="flex items-start gap-2.5">
@@ -721,29 +766,53 @@ export const PersonalJettonScreen: React.FC = () => {
                             </span>
                             <p className="text-muted-foreground leading-relaxed">
                               {info.hasMismatchedRegistration
-                                ? 'Your FI Account points to a legacy minter address that differs from the current deterministic BasePersonalMinter address. You can destroy the legacy contracts in Manage -> Danger Zone and re-issue cleanly, or update registration below.'
-                                : 'Register both minter & wallet addresses to your FI Account in a single unified transaction.'}
+                                ? 'Your FI Account points to a legacy minter/wallet address that differs from your calculated deterministic addresses. Update registration below or destroy the legacy contracts in Manage -> Destroy.'
+                                : 'Register your Personal Minter and Personal Wallet addresses in your FI Account below.'}
                             </p>
                           </div>
                         </div>
-                        <div className="space-y-1.5 text-[11px] bg-background/60 p-2 rounded-lg border border-border">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                              Minter:
-                            </span>
-                            <span className="font-mono text-foreground font-medium">
-                              {formatContractAddress(targetRegisterMinter)}
-                            </span>
+
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-foreground block">
+                              Personal Minter Address
+                            </label>
+                            <InputScan
+                              value={addressesTabMinter}
+                              onChange={setAddressesTabMinter}
+                              enableUsernameResolution={false}
+                              placeholder={
+                                defaultRegisterMinter
+                                  ? formatContractAddress(
+                                      defaultRegisterMinter,
+                                      false,
+                                    )
+                                  : `Personal Minter (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`
+                              }
+                              data-testid="personal-addresses-minter-input"
+                            />
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                              Wallet:
-                            </span>
-                            <span className="font-mono text-foreground font-medium">
-                              {formatContractAddress(targetRegisterWallet)}
-                            </span>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-foreground block">
+                              Personal Wallet Address
+                            </label>
+                            <InputScan
+                              value={addressesTabWallet}
+                              onChange={setAddressesTabWallet}
+                              enableUsernameResolution={false}
+                              placeholder={
+                                defaultRegisterWallet
+                                  ? formatContractAddress(
+                                      defaultRegisterWallet,
+                                      false,
+                                    )
+                                  : `Personal Wallet (${network === 'mainnet' ? 'EQ...' : 'kQ...'})`
+                              }
+                              data-testid="personal-addresses-wallet-input"
+                            />
                           </div>
                         </div>
+
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button
                             onClick={() => registrar.register()}
@@ -834,13 +903,30 @@ export const PersonalJettonScreen: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Addresses Summary */}
+                    {/* Addresses & Registration Verification Summary */}
                     <div className="space-y-2 text-xs">
-                      <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all">
-                        <span className="text-muted-foreground block text-[11px]">
-                          Personal Minter Address
-                        </span>
-                        <div className="flex items-center justify-between gap-1 mt-0.5">
+                      <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-muted-foreground text-[11px]">
+                            Personal Minter (Contract)
+                          </span>
+                          <span
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              info.isRegistered &&
+                              !info.hasMismatchedRegistration
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {info.isRegistered &&
+                            !info.hasMismatchedRegistration
+                              ? '✓ Matches Calculated'
+                              : info.registeredMinterAddress
+                                ? '⚠ Mismatch'
+                                : 'Unregistered'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1">
                           <span className="font-mono font-medium text-foreground">
                             {formatContractAddress(activeMinter)}
                           </span>
@@ -867,13 +953,41 @@ export const PersonalJettonScreen: React.FC = () => {
                             </div>
                           )}
                         </div>
+                        {info.hasMismatchedRegistration &&
+                          info.deterministicMinterAddress && (
+                            <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/40 flex items-center justify-between">
+                              <span>Calculated Minter:</span>
+                              <span className="font-mono">
+                                {formatContractAddress(
+                                  info.deterministicMinterAddress,
+                                )}
+                              </span>
+                            </div>
+                          )}
                       </div>
 
-                      <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all">
-                        <span className="text-muted-foreground block text-[11px]">
-                          Personal Wallet Address
-                        </span>
-                        <div className="flex items-center justify-between gap-1 mt-0.5">
+                      <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-muted-foreground text-[11px]">
+                            Personal Wallet (Contract)
+                          </span>
+                          <span
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              info.isRegistered &&
+                              !info.hasMismatchedRegistration
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {info.isRegistered &&
+                            !info.hasMismatchedRegistration
+                              ? '✓ Matches Calculated'
+                              : info.registeredWalletAddress
+                                ? '⚠ Mismatch'
+                                : 'Unregistered'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1">
                           <span className="font-mono font-medium text-foreground">
                             {formatContractAddress(activePersonalWallet)}
                           </span>
@@ -900,7 +1014,40 @@ export const PersonalJettonScreen: React.FC = () => {
                             </div>
                           )}
                         </div>
+                        {info.hasMismatchedRegistration &&
+                          info.expectedPersonalWalletAddress && (
+                            <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/40 flex items-center justify-between">
+                              <span>Calculated Wallet:</span>
+                              <span className="font-mono">
+                                {formatContractAddress(
+                                  info.expectedPersonalWalletAddress,
+                                )}
+                              </span>
+                            </div>
+                          )}
                       </div>
+
+                      {info.minterDetails?.adminAddress && (
+                        <div className="bg-secondary/50 border border-border/50 p-2.5 rounded-xl break-all">
+                          <span className="text-muted-foreground block text-[11px]">
+                            Minter Admin (WalletV5)
+                          </span>
+                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                            <span className="font-mono font-medium text-foreground">
+                              {formatWalletAddress(
+                                info.minterDetails.adminAddress,
+                                true,
+                                6,
+                              )}
+                            </span>
+                            <CopyButton
+                              address={info.minterDetails.adminAddress}
+                              type="wallet"
+                              size="xs"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Quick Actions */}
@@ -1030,383 +1177,282 @@ export const PersonalJettonScreen: React.FC = () => {
             {/* Consolidated Manage Tab */}
             {activeTab === 'admin' && (
               <div className="space-y-4 bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm">
-                {/* Manage Section Selector */}
-                <div className="grid grid-cols-4 gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setManageSection('metadata')}
-                    className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      manageSection === 'metadata'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                    data-testid="personal-admin-subtab-metadata"
-                  >
-                    Metadata
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManageSection('addresses')}
-                    className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      manageSection === 'addresses'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                    data-testid="personal-tab-addresses"
-                  >
-                    Wallets
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManageSection('operations')}
-                    className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      manageSection === 'operations'
-                        ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                    data-testid="personal-admin-subtab-transfer"
-                  >
-                    Admin / Gas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManageSection('danger')}
-                    className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      manageSection === 'danger'
-                        ? 'bg-card shadow-sm text-destructive font-semibold border border-destructive/30'
-                        : 'text-muted-foreground hover:text-destructive'
-                    }`}
-                    data-testid="personal-tab-destroy"
-                  >
-                    Destroy
-                  </button>
-                </div>
-
-                {/* Section 1: Metadata */}
-                {manageSection === 'metadata' && (
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <h3 className="font-semibold text-base">
-                        Update Token Metadata
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Customize your Personal Token name, symbol, description,
-                        and icon on-chain.
-                      </p>
+                <SwipeableSubTabs
+                  tabs={['metadata', 'operations', 'danger']}
+                  activeTab={manageSection}
+                  onTabChange={(s) => setManageSection(s as ManageSection)}
+                  loop={false}
+                  className="min-h-0"
+                  onBoundaryPrev={() => setActiveTab('mint')}
+                  stickyTabBar={
+                    <div className="grid grid-cols-3 gap-1 bg-secondary/70 border border-border p-1 rounded-xl text-xs font-medium">
+                      <button
+                        type="button"
+                        onClick={() => setManageSection('metadata')}
+                        className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          manageSection === 'metadata'
+                            ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        data-testid="personal-admin-subtab-metadata"
+                      >
+                        Metadata
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManageSection('operations')}
+                        className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          manageSection === 'operations'
+                            ? 'bg-card shadow-sm text-foreground font-semibold border border-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        data-testid="personal-admin-subtab-transfer"
+                      >
+                        Admin / Gas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManageSection('danger')}
+                        className={`py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          manageSection === 'danger'
+                            ? 'bg-card shadow-sm text-destructive font-semibold border border-destructive/30'
+                            : 'text-muted-foreground hover:text-destructive'
+                        }`}
+                        data-testid="personal-tab-destroy"
+                      >
+                        Destroy
+                      </button>
                     </div>
-                    <div className="space-y-2.5">
+                  }
+                >
+                  {/* Section 1: Metadata */}
+                  {manageSection === 'metadata' && (
+                    <div className="space-y-3 pt-1">
                       <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Token Name
-                        </label>
-                        <input
-                          type="text"
-                          value={adminTokenName}
-                          onChange={(e) => setAdminTokenName(e.target.value)}
-                          placeholder="Token Name (e.g. Alice Credit)"
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          data-testid="personal-meta-name"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Symbol
-                        </label>
-                        <input
-                          type="text"
-                          value={adminTokenSymbol}
-                          onChange={(e) => setAdminTokenSymbol(e.target.value)}
-                          placeholder="Symbol (e.g. ALICE)"
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          data-testid="personal-meta-symbol"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Description{' '}
-                          <span className="text-muted-foreground text-[10px] font-normal">
-                            (Optional)
-                          </span>
-                        </label>
-                        <textarea
-                          value={adminTokenDesc}
-                          onChange={(e) => setAdminTokenDesc(e.target.value)}
-                          placeholder={DEFAULT_TOKEN_DESCRIPTION}
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          rows={2}
-                          data-testid="personal-meta-desc"
-                        />
-                      </div>
-
-                      <TokenImagePicker
-                        value={adminTokenImage}
-                        onChange={setAdminTokenImage}
-                        disabled={metadata.isSending}
-                      />
-
-                      <Button
-                        onClick={() => metadata.changeMetadata()}
-                        disabled={!canOperate || metadata.isDisabled}
-                        loading={metadata.isSending}
-                        fullWidth
-                        data-testid="personal-meta-submit"
-                      >
-                        Update Metadata
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Section 2: Contract Addresses & Registration */}
-                {manageSection === 'addresses' && (
-                  <div className="space-y-3.5 pt-1">
-                    <div>
-                      <h3 className="font-semibold text-base mb-0.5 flex items-center gap-1.5">
-                        <Wallet className="w-4 h-4 text-cyan-500" />
-                        Personal Contract Addresses
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        View and update the Personal Minter and Personal Wallet
-                        contracts linked to your FI Account.
-                      </p>
-                    </div>
-
-                    <div className="space-y-2 p-3 bg-secondary/40 border border-border/50 rounded-xl text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground">
-                          Registration in FI Account:
-                        </span>
-                        <span
-                          className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
-                            info.isRegistered
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          }`}
-                        >
-                          {info.isRegistered
-                            ? 'Registered'
-                            : 'Outdated / Unregistered'}
-                        </span>
-                      </div>
-                      <div className="pt-2 border-t border-border/50 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">
-                            Deterministic Minter:
-                          </span>
-                          <span className="font-mono font-medium text-foreground truncate">
-                            {formatContractAddress(
-                              info.deterministicMinterAddress,
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">
-                            Expected Personal Wallet:
-                          </span>
-                          <span className="font-mono font-medium text-foreground truncate">
-                            {formatContractAddress(
-                              info.expectedPersonalWalletAddress,
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs font-medium text-foreground">
-                            Personal Minter Address
-                          </label>
-                          {info.deterministicMinterAddress && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAddressesTabMinter(
-                                  info.deterministicMinterAddress || '',
-                                )
-                              }
-                              className="text-[11px] text-primary hover:underline font-medium"
-                            >
-                              Use Deterministic Address
-                            </button>
-                          )}
-                        </div>
-                        <InputScan
-                          value={addressesTabMinter || targetRegisterMinter}
-                          onChange={setAddressesTabMinter}
-                          enableUsernameResolution={false}
-                          placeholder="Enter Personal Minter Address"
-                          data-testid="personal-addresses-minter-input"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs font-medium text-foreground">
-                            Personal Wallet Address
-                          </label>
-                          {info.expectedPersonalWalletAddress && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAddressesTabWallet(
-                                  info.expectedPersonalWalletAddress || '',
-                                )
-                              }
-                              className="text-[11px] text-primary hover:underline font-medium"
-                            >
-                              Use Expected Wallet
-                            </button>
-                          )}
-                        </div>
-                        <InputScan
-                          value={addressesTabWallet || targetRegisterWallet}
-                          onChange={setAddressesTabWallet}
-                          enableUsernameResolution={false}
-                          placeholder="Enter Personal Wallet Address"
-                          data-testid="personal-addresses-wallet-input"
-                        />
-                      </div>
-
-                      <Button
-                        onClick={() => registrar.register()}
-                        disabled={!canOperate || registrar.isDisabled}
-                        loading={registrar.isSending}
-                        fullWidth
-                        data-testid="personal-addresses-submit"
-                      >
-                        Register / Update Addresses in FI Account
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Section 3: Admin & Gas Operations */}
-                {manageSection === 'operations' && (
-                  <div className="space-y-5 pt-1">
-                    {/* Top Up TONs */}
-                    <div className="space-y-2.5">
-                      <h3 className="font-semibold text-base flex items-center gap-1.5">
-                        <PlusCircle className="w-4 h-4 text-amber-500" />
-                        Top Up Contract TON Balance
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Send TON to replenish storage and execution gas on your
-                        Personal Minter or Wallet contract.
-                      </p>
-                      <InputScan
-                        value={topUpTarget}
-                        onChange={setTopUpTarget}
-                        enableUsernameResolution={false}
-                        placeholder={`Target Contract Address (Default: ${activeMinter || 'None'})`}
-                        data-testid="personal-topup-target"
-                      />
-                      <Button
-                        onClick={() => topup.topUp()}
-                        disabled={!canOperate || topup.isDisabled}
-                        loading={topup.isSending}
-                        fullWidth
-                        data-testid="personal-topup-submit"
-                      >
-                        Top Up Contract TONs
-                      </Button>
-                    </div>
-
-                    {/* Transfer Minter Admin */}
-                    <div className="space-y-2.5 pt-4 border-t border-border">
-                      <h3 className="font-semibold text-base">
-                        Transfer Minter Admin
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Transfer ownership and administration of this Personal
-                        Minter contract to another TON address.
-                      </p>
-                      <InputScan
-                        value={newAdmin}
-                        onChange={setNewAdmin}
-                        enableUsernameResolution={false}
-                        placeholder={`New Admin Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`}
-                        data-testid="personal-admin-new-admin"
-                      />
-                      <Button
-                        onClick={() => admin.changeAdmin()}
-                        disabled={!canOperate || admin.isDisabled}
-                        loading={admin.isSending}
-                        fullWidth
-                        data-testid="personal-admin-change-submit"
-                      >
-                        Transfer Admin
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Section 4: Danger Zone (Destroy) */}
-                {manageSection === 'danger' && (
-                  <div className="space-y-4 pt-1">
-                    {/* Wallet Destroy Card */}
-                    <div className="p-3.5 border border-border rounded-xl space-y-2.5 bg-secondary/20">
-                      <div className="flex items-center gap-2 text-destructive">
-                        <Trash2 className="w-4.5 h-4.5 shrink-0" />
-                        <h3 className="font-semibold text-sm text-foreground">
-                          Destroy Personal Wallet
+                        <h3 className="font-semibold text-base">
+                          Update Token Metadata
                         </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Customize your Personal Token name, symbol,
+                          description, and icon on-chain.
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Permanently destroys your Personal Jetton Wallet
-                        contract ({formatContractAddress(activePersonalWallet)})
-                        and reclaims remaining TON balance to your wallet.
-                      </p>
-                      <Button
-                        variant="danger"
-                        onClick={() => setIsConfirmWalletOpen(true)}
-                        disabled={
-                          !canOperate ||
-                          !activePersonalWallet ||
-                          destroyer.isSending
-                        }
-                        loading={destroyer.isSending}
-                        fullWidth
-                        data-testid="personal-destroy-wallet-trigger"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1.5" />
-                        Destroy Personal Wallet
-                      </Button>
-                    </div>
+                      <div className="space-y-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-foreground block mb-1">
+                            Token Name
+                          </label>
+                          <input
+                            type="text"
+                            value={adminTokenName}
+                            onChange={(e) => setAdminTokenName(e.target.value)}
+                            placeholder={
+                              info.minterDetails?.metadata?.name ||
+                              'Token Name (e.g. Alice Credit)'
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid="personal-meta-name"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-foreground block mb-1">
+                            Symbol
+                          </label>
+                          <input
+                            type="text"
+                            value={adminTokenSymbol}
+                            onChange={(e) =>
+                              setAdminTokenSymbol(e.target.value)
+                            }
+                            placeholder={
+                              info.minterDetails?.metadata?.symbol ||
+                              'Symbol (e.g. ALICE)'
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid="personal-meta-symbol"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-foreground block mb-1">
+                            Description{' '}
+                            <span className="text-muted-foreground text-[10px] font-normal">
+                              (Optional)
+                            </span>
+                          </label>
+                          <textarea
+                            value={adminTokenDesc}
+                            onChange={(e) => setAdminTokenDesc(e.target.value)}
+                            placeholder={
+                              info.minterDetails?.metadata?.description ||
+                              DEFAULT_TOKEN_DESCRIPTION
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={2}
+                            data-testid="personal-meta-desc"
+                          />
+                        </div>
 
-                    {/* Minter Destroy Card */}
-                    {isMinterAdmin && (
-                      <div className="p-3.5 border border-destructive/30 rounded-xl space-y-2.5 bg-destructive/5">
+                        <TokenImagePicker
+                          value={
+                            adminTokenImage !== DEFAULT_TOKEN_IMAGE
+                              ? adminTokenImage
+                              : info.minterDetails?.metadata?.image ||
+                                DEFAULT_TOKEN_IMAGE
+                          }
+                          onChange={setAdminTokenImage}
+                          disabled={metadata.isSending}
+                        />
+
+                        <Button
+                          onClick={() => metadata.changeMetadata()}
+                          disabled={!canOperate || metadata.isDisabled}
+                          loading={metadata.isSending}
+                          fullWidth
+                          data-testid="personal-meta-submit"
+                        >
+                          Update Metadata
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 2: Admin & Gas Operations */}
+                  {manageSection === 'operations' && (
+                    <div className="space-y-5 pt-1">
+                      {/* Top Up TONs */}
+                      <div className="space-y-2.5">
+                        <h3 className="font-semibold text-base flex items-center gap-1.5">
+                          <PlusCircle className="w-4 h-4 text-amber-500" />
+                          Top Up Contract TON Balance
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Send TON to replenish storage and execution gas on
+                          your Personal Minter or Wallet contract.
+                        </p>
+                        <InputScan
+                          value={topUpTarget}
+                          onChange={setTopUpTarget}
+                          enableUsernameResolution={false}
+                          placeholder={
+                            activeMinter
+                              ? `Target Contract Address (Default: ${formatContractAddress(activeMinter, true, 6)})`
+                              : 'Target Contract Address'
+                          }
+                          data-testid="personal-topup-target"
+                        />
+                        <Button
+                          onClick={() => topup.topUp()}
+                          disabled={!canOperate || topup.isDisabled}
+                          loading={topup.isSending}
+                          fullWidth
+                          data-testid="personal-topup-submit"
+                        >
+                          Top Up Contract TONs
+                        </Button>
+                      </div>
+
+                      {/* Transfer Minter Admin */}
+                      <div className="space-y-2.5 pt-4 border-t border-border">
+                        <h3 className="font-semibold text-base">
+                          Transfer Minter Admin
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Transfer ownership and administration of this Personal
+                          Minter contract to another TON address.
+                        </p>
+                        <InputScan
+                          value={newAdmin}
+                          onChange={setNewAdmin}
+                          enableUsernameResolution={false}
+                          placeholder={
+                            info.minterDetails?.adminAddress
+                              ? `Current Admin: ${formatWalletAddress(info.minterDetails.adminAddress, false)}`
+                              : `New Admin Address (${network === 'mainnet' ? 'UQ...' : '0Q...'})`
+                          }
+                          data-testid="personal-admin-new-admin"
+                        />
+                        <Button
+                          onClick={() => admin.changeAdmin()}
+                          disabled={!canOperate || admin.isDisabled}
+                          loading={admin.isSending}
+                          fullWidth
+                          data-testid="personal-admin-change-submit"
+                        >
+                          Transfer Admin
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 3: Danger Zone (Destroy) */}
+                  {manageSection === 'danger' && (
+                    <div className="space-y-4 pt-1">
+                      {/* Wallet Destroy Card */}
+                      <div className="p-3.5 border border-border rounded-xl space-y-2.5 bg-secondary/20">
                         <div className="flex items-center gap-2 text-destructive">
                           <Trash2 className="w-4.5 h-4.5 shrink-0" />
                           <h3 className="font-semibold text-sm text-foreground">
-                            Destroy Personal Minter
+                            Destroy Personal Wallet
                           </h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Permanently destroys the Personal Token Minter
-                          contract ({formatContractAddress(activeMinter)}) and
-                          returns its remaining TON balance to your admin
-                          wallet.
+                          Permanently destroys your Personal Jetton Wallet
+                          contract (
+                          {formatContractAddress(activePersonalWallet)}) and
+                          reclaims remaining TON balance to your wallet.
                         </p>
                         <Button
                           variant="danger"
-                          onClick={() => setIsConfirmMinterOpen(true)}
+                          onClick={() => setIsConfirmWalletOpen(true)}
                           disabled={
-                            !canOperate || !activeMinter || destroyer.isSending
+                            !canOperate ||
+                            !activePersonalWallet ||
+                            destroyer.isSending
                           }
                           loading={destroyer.isSending}
                           fullWidth
-                          data-testid="personal-destroy-minter-trigger"
+                          data-testid="personal-destroy-wallet-trigger"
                         >
                           <Trash2 className="w-4 h-4 mr-1.5" />
-                          Destroy Personal Minter
+                          Destroy Personal Wallet
                         </Button>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Minter Destroy Card */}
+                      {isMinterAdmin && (
+                        <div className="p-3.5 border border-destructive/30 rounded-xl space-y-2.5 bg-destructive/5">
+                          <div className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="w-4.5 h-4.5 shrink-0" />
+                            <h3 className="font-semibold text-sm text-foreground">
+                              Destroy Personal Minter
+                            </h3>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Permanently destroys the Personal Token Minter
+                            contract ({formatContractAddress(activeMinter)}) and
+                            returns its remaining TON balance to your admin
+                            wallet.
+                          </p>
+                          <Button
+                            variant="danger"
+                            onClick={() => setIsConfirmMinterOpen(true)}
+                            disabled={
+                              !canOperate ||
+                              !activeMinter ||
+                              destroyer.isSending
+                            }
+                            loading={destroyer.isSending}
+                            fullWidth
+                            data-testid="personal-destroy-minter-trigger"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1.5" />
+                            Destroy Personal Minter
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </SwipeableSubTabs>
               </div>
             )}
           </SwipeableSubTabs>

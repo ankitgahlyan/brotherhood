@@ -11,6 +11,8 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { TxButton } from '@/core/components/ui/tx-button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
+import { useFormatAddress } from '@/core/utils/formatters';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 import {
   clearDomainResolutionCache,
   detectSocialPlatform,
@@ -65,6 +67,8 @@ function formatFi(nano: bigint): string {
 export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
   const { currentWallet, address } = useWallet();
   const walletKit = useWalletKit();
+  const { formatWalletAddress, formatContractAddress } = useFormatAddress();
+  const saveDnsDomain = useContactBookStore((s) => s.saveDnsDomain);
 
   const { domains, isRefreshing, refresh } = useMyDomains(network, address);
   const updateDomain = useDnsStore((s) => s.updateDomain);
@@ -207,6 +211,30 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       try {
         await send(messages);
         updateDomain(nftAddress, optimisticPatch, network);
+        const existingDomain = domains.find((d) => d.nftAddress === nftAddress);
+        if (existingDomain) {
+          const fullDomain = `${existingDomain.name}.${existingDomain.zone}`;
+          const nextContact =
+            optimisticPatch.contactLink ?? existingDomain.contactLink;
+          const nextWallet =
+            optimisticPatch.walletRecord ?? existingDomain.walletRecord;
+          for (const target of [address, nextWallet]) {
+            if (!target) continue;
+            saveDnsDomain(target, fullDomain, network, nextContact);
+            try {
+              const fiWallet = getFiWalletAddress(
+                Address.parse(target),
+                network,
+              ).toString({
+                bounceable: true,
+                testOnly: network === 'testnet',
+              });
+              saveDnsDomain(fiWallet, fullDomain, network, nextContact);
+            } catch {
+              /* ignore */
+            }
+          }
+        }
         clearDomainResolutionCache();
         clearDomainLookupCache();
         setRecordDrafts((prev) => {
@@ -236,6 +264,9 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       contactDrafts,
       channelDrafts,
       network,
+      domains,
+      address,
+      saveDnsDomain,
       schedulePostTxRefresh,
       send,
       updateDomain,
@@ -433,8 +464,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                 </span>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
                   <span>
-                    {domain.nftAddress.slice(0, 4)}…
-                    {domain.nftAddress.slice(-4)}
+                    {formatContractAddress(domain.nftAddress, true, 4)}
                   </span>
                   <CopyButton address={domain.nftAddress} />
                 </div>
@@ -570,8 +600,12 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                             }
                           }}
                           placeholder={
-                            domain.walletRecord ||
-                            address ||
+                            (domain.walletRecord
+                              ? formatWalletAddress(domain.walletRecord, false)
+                              : '') ||
+                            (address
+                              ? formatWalletAddress(address, false)
+                              : '') ||
                             'Wallet address (0Q… / UQ…)'
                           }
                           className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"

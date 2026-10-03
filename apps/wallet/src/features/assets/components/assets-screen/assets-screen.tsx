@@ -28,7 +28,7 @@ import { SyncStatusButton } from '@/features/dashboard/components/sync-status-bu
 export const AssetsScreen: FC = () => {
   const navigate = useNavigate();
   const { isReduced, isRich } = useAnimationSettings();
-  const { tonRow, jettonRows, assetsReady } = useAssetRows();
+  const { jettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
 
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
@@ -74,11 +74,6 @@ export const AssetsScreen: FC = () => {
       }
     >
       <div className="space-y-1">
-        {tonRow ? (
-          <AssetRow {...tonRow} onClick={() => handleAssetClick(tonRow)} />
-        ) : (
-          <AssetRowSkeleton />
-        )}
         {assetsReady || jettonRows.length > 0 ? (
           <AnimatePresence initial={false}>
             {jettonRows.map((row) => (

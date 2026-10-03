@@ -273,7 +273,7 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
       )}
 
       {/* Center Track Label */}
-      <div className="relative z-10 flex-1 flex items-center justify-center pointer-events-none px-12">
+      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none px-12">
         {loading ? (
           <div className="flex items-center gap-2">
             <svg

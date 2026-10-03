@@ -6,11 +6,73 @@ import {
   type Builder,
   type Slice,
 } from '@ton/core';
+import { sha256_sync } from '@ton/crypto';
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
 const SNAKE_DATA_PREFIX = 0x00;
 
 const sha256Keys: Record<string, Buffer> = {};
+
+const METADATA_KEY_HASHES = {
+  name: BigInt('0x' + sha256_sync('name').toString('hex')),
+  symbol: BigInt('0x' + sha256_sync('symbol').toString('hex')),
+  description: BigInt('0x' + sha256_sync('description').toString('hex')),
+  image: BigInt('0x' + sha256_sync('image').toString('hex')),
+  decimals: BigInt('0x' + sha256_sync('decimals').toString('hex')),
+} as const;
+
+function readSnakeTail(cell: Cell): string {
+  const chunks: Buffer[] = [];
+  let cur: Cell | null = cell;
+  let isFirst = true;
+  while (cur) {
+    const s = cur.beginParse();
+    if (
+      isFirst &&
+      s.remainingBits >= 8 &&
+      s.preloadUint(8) === SNAKE_DATA_PREFIX
+    ) {
+      s.loadUint(8);
+    }
+    isFirst = false;
+    const byteLen = Math.floor(s.remainingBits / 8);
+    if (byteLen > 0) {
+      chunks.push(s.loadBuffer(byteLen));
+    }
+    cur = s.remainingRefs > 0 ? s.loadRef() : null;
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
+export function parseOnchainMetadataCell(
+  cell: Cell | null | undefined,
+): Partial<JettonMetadata> {
+  if (!cell) return {};
+  try {
+    const s = cell.beginParse();
+    if (s.remainingBits < 8) return {};
+    const prefix = s.loadUint(8);
+    if (prefix !== ONCHAIN_CONTENT_PREFIX) return {};
+    const dict = s.loadDict(
+      Dictionary.Keys.BigUint(256),
+      Dictionary.Values.Cell(),
+    );
+    const result: Partial<JettonMetadata> = {};
+    const nameCell = dict.get(METADATA_KEY_HASHES.name);
+    if (nameCell) result.name = readSnakeTail(nameCell);
+    const symbolCell = dict.get(METADATA_KEY_HASHES.symbol);
+    if (symbolCell) result.symbol = readSnakeTail(symbolCell);
+    const descCell = dict.get(METADATA_KEY_HASHES.description);
+    if (descCell) result.description = readSnakeTail(descCell);
+    const imageCell = dict.get(METADATA_KEY_HASHES.image);
+    if (imageCell) result.image = readSnakeTail(imageCell);
+    const decimalsCell = dict.get(METADATA_KEY_HASHES.decimals);
+    if (decimalsCell) result.decimals = readSnakeTail(decimalsCell);
+    return result;
+  } catch {
+    return {};
+  }
+}
 
 export async function sha256(key: string): Promise<Buffer> {
   if (!sha256Keys[key]) {

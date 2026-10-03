@@ -30,6 +30,11 @@ import { useFormatAddress } from '@/core/utils/formatters';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
 import { isTonChainDns, resolveAddressByDomain } from '@/core/lib/dns';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+  resolveCachedDnsContact,
+} from '@/core/utils/telegram';
 
 interface ContactsManagerModalProps {
   isOpen: boolean;
@@ -309,10 +314,23 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
           </div>
         ) : (
           filteredContacts.map((contact) => {
+            const cachedDns = resolveCachedDnsContact(
+              [contact.address],
+              network,
+            );
+            const dnsDomain = contact.dnsDomain || cachedDns.dnsDomain;
+            const contactLink = contact.contactLink || cachedDns.contactLink;
             const effective =
               contact.customName ||
+              dnsDomain ||
               contact.onChainUsername ||
               'Unnamed Contact';
+            const contactDisplay = getMemberContactDisplay({
+              username: contact.onChainUsername,
+              dnsDomain,
+              contactLink,
+              fallbackLabel: `@${effective}`,
+            });
             return (
               <div
                 key={contact.rawAddress}
@@ -320,21 +338,55 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
-                    {effective.charAt(0).toUpperCase()}
+                    {effective.replace(/^@+/, '').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground truncate">
-                      <span>@{effective}</span>
+                      {contactDisplay.canOpen ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openMemberContact({
+                              username: contact.onChainUsername,
+                              dnsDomain,
+                              contactLink,
+                            })
+                          }
+                          className="hover:text-primary hover:underline cursor-pointer truncate text-left"
+                          title={contactDisplay.title}
+                        >
+                          @{effective.replace(/^@+/, '')}
+                        </button>
+                      ) : (
+                        <span>@{effective.replace(/^@+/, '')}</span>
+                      )}
                       {contact.customName && (
                         <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.2 rounded font-medium">
                           custom
                         </span>
                       )}
-                      {contact.dnsDomain && (
-                        <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-medium flex items-center gap-0.5">
+                      {dnsDomain && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (contactDisplay.canOpen) {
+                              openMemberContact({
+                                username: contact.onChainUsername,
+                                dnsDomain,
+                                contactLink,
+                              });
+                            }
+                          }}
+                          className={`text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-medium flex items-center gap-0.5 ${
+                            contactDisplay.canOpen
+                              ? 'hover:bg-emerald-500/25 cursor-pointer'
+                              : ''
+                          }`}
+                          title={contactDisplay.title}
+                        >
                           <Globe className="w-2.5 h-2.5" />
-                          {contact.dnsDomain}
-                        </span>
+                          {dnsDomain}
+                        </button>
                       )}
                     </div>
                     <div className="text-[11px] font-mono text-muted-foreground truncate">

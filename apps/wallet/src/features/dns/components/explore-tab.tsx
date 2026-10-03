@@ -76,7 +76,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
   const [bidInput, setBidInput] = useState('');
   const { currentWallet, address } = useWallet();
   const walletKit = useWalletKit();
-  const { formatWalletAddress } = useFormatAddress();
+  const { formatWalletAddress, formatContractAddress } = useFormatAddress();
   const addDomain = useDnsStore((s) => s.addDomain);
   const updateDomain = useDnsStore((s) => s.updateDomain);
 
@@ -114,8 +114,38 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
   const handleAddToContacts = useCallback(() => {
     if (!targetContactAddress || !fullSearchedDomain) return;
-    saveDnsDomain(targetContactAddress, fullSearchedDomain, lookupNet);
-  }, [targetContactAddress, fullSearchedDomain, saveDnsDomain, lookupNet]);
+    const targets = new Set<string>([targetContactAddress]);
+    if (lookup.owner) targets.add(lookup.owner);
+    if (lookup.walletRecord) targets.add(lookup.walletRecord);
+    for (const addr of Array.from(targets)) {
+      try {
+        targets.add(
+          getFiWalletAddress(Address.parse(addr), lookupNet).toString({
+            bounceable: true,
+            testOnly: lookupNet === 'testnet',
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+    for (const addr of targets) {
+      saveDnsDomain(
+        addr,
+        fullSearchedDomain,
+        lookupNet,
+        lookup.contactLink ?? undefined,
+      );
+    }
+  }, [
+    targetContactAddress,
+    fullSearchedDomain,
+    lookup.owner,
+    lookup.walletRecord,
+    lookup.contactLink,
+    saveDnsDomain,
+    lookupNet,
+  ]);
 
   const handleSearch = useCallback(() => {
     setSubmittedQuery(inputValue.trim());
@@ -362,7 +392,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
               <span>NFT contract</span>
               <div className="flex items-center gap-1">
                 <span className="font-mono">
-                  {formatWalletAddress(lookup.nftAddress, true, 4)}
+                  {formatContractAddress(lookup.nftAddress, true, 4)}
                 </span>
                 <CopyButton address={lookup.nftAddress} />
               </div>
@@ -678,7 +708,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
             <span>NFT contract</span>
             <div className="flex items-center gap-1">
               <span className="font-mono">
-                {formatWalletAddress(lookup.nftAddress, true, 4)}
+                {formatContractAddress(lookup.nftAddress, true, 4)}
               </span>
               <CopyButton address={lookup.nftAddress} />
             </div>

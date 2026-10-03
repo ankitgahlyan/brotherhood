@@ -113,6 +113,7 @@ export interface UniversalHydrateResult {
   outdatedAccounts: string[];
   failedAddresses: string[];
   decodedStores?: Record<string, any>;
+  balances?: Record<string, string>;
 }
 
 const toncenterV3 = {
@@ -483,6 +484,7 @@ export function batchHydrateUniversal(
     outdatedAccounts: [],
     failedAddresses: [],
     decodedStores: {},
+    balances: {},
   };
 
   if (normalizedAddresses.length === 0) return Promise.resolve(result);
@@ -507,8 +509,10 @@ export function batchHydrateUniversal(
         // Address is within cooldown window: reuse cached store directly
         const cacheKey = getNormalizedContractCacheKey(net, addr);
         const cached = await getContractCache(cacheKey);
-        if (cached?.data) {
-          result.decodedStores![addr] = cached.data;
+        if (cached) {
+          if (cached.data) {
+            result.decodedStores![addr] = cached.data;
+          }
           result.hydrated++;
         }
       }
@@ -577,10 +581,21 @@ export function batchHydrateUniversal(
       const rawAcc =
         accountMap.get(standardAddrStr) ||
         accountMap.get(parsedAddress.toRawString());
+      if (result.balances) {
+        const resolvedBalance =
+          rawAcc?.balance ??
+          (fetchResult.accounts.length > 0 ? '0' : undefined);
+        if (resolvedBalance !== undefined) {
+          result.balances[standardAddrStr] = resolvedBalance;
+          result.balances[parsedAddress.toRawString()] = resolvedBalance;
+        }
+      }
       if (!rawAcc || rawAcc.status !== 'active' || !rawAcc.data_boc) {
         console.warn(
           `[batchHydrateUniversal] Account not active or missing data_boc for ${standardAddrStr}, status: ${rawAcc?.status}`,
         );
+        const cacheKey = getNormalizedContractCacheKey(net, parsedAddress);
+        await setContractCache(cacheKey, null).catch(() => {});
         result.failedAddresses.push(standardAddrStr);
         continue;
       }
@@ -596,6 +611,20 @@ export function batchHydrateUniversal(
     }
 
     if (itemsToProcess.length === 0) {
+      if (result.balances) {
+        for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
+          if (
+            origKey !== canonical &&
+            result.balances[canonical] !== undefined
+          ) {
+            result.balances[origKey] = result.balances[canonical];
+          }
+        }
+      }
+      const completedAt = Date.now();
+      for (const addr of addressesToFetch) {
+        hydrationCooldowns.set(`${net}:${addr}`, completedAt);
+      }
       return result;
     }
 
@@ -708,11 +737,18 @@ export function batchHydrateUniversal(
       result.hydrated++;
     }
 
-    // Mirror decoded stores to any original input alias keys requested by the caller
+    // Mirror decoded stores and balances to any original input alias keys requested by the caller
     if (result.decodedStores) {
       for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
         if (origKey !== canonical && result.decodedStores[canonical]) {
           result.decodedStores[origKey] = result.decodedStores[canonical];
+        }
+      }
+    }
+    if (result.balances) {
+      for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
+        if (origKey !== canonical && result.balances[canonical] !== undefined) {
+          result.balances[origKey] = result.balances[canonical];
         }
       }
     }

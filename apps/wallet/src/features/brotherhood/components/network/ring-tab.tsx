@@ -11,7 +11,10 @@ import { Address } from '@ton/core';
 import { Button } from '@/core/components/ui/button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+} from '@/core/utils/telegram';
 import { useFormatAddress } from '@/core/utils/formatters';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import {
@@ -44,9 +47,13 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
   onSelectMember,
 }) => {
   const { network, formatContractAddress } = useFormatAddress();
-  const inviterUsername = circleProfile?.username
-    ? `@${circleProfile.username}`
-    : '@member';
+  const inviterContact = getMemberContactDisplay({
+    username: circleProfile?.username,
+    dnsDomain: circleProfile?.dnsDomain,
+    contactLink: circleProfile?.contactLink,
+    fallbackLabel: '@member',
+  });
+  const inviterUsername = inviterContact.label;
 
   const formatShortContract = (addr: Address | string | null | undefined) => {
     if (!addr) return 'None';
@@ -89,52 +96,70 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
               role="button"
               tabIndex={0}
               onClick={(e) => {
-                if (circleProfile?.username) {
+                if (inviterContact.canOpen) {
                   e.stopPropagation();
-                  openTelegramProfile(circleProfile.username);
+                  openMemberContact({
+                    username: circleProfile?.username,
+                    dnsDomain: circleProfile?.dnsDomain,
+                    contactLink: circleProfile?.contactLink,
+                  });
                 }
               }}
               onKeyDown={(e) => {
                 if (
                   (e.key === 'Enter' || e.key === ' ') &&
-                  circleProfile?.username
+                  inviterContact.canOpen
                 ) {
                   e.stopPropagation();
-                  openTelegramProfile(circleProfile.username);
+                  openMemberContact({
+                    username: circleProfile?.username,
+                    dnsDomain: circleProfile?.dnsDomain,
+                    contactLink: circleProfile?.contactLink,
+                  });
                 }
               }}
               className={`font-semibold text-sm text-foreground transition-colors ${
-                circleProfile?.username
+                inviterContact.canOpen
                   ? 'hover:text-primary hover:underline cursor-pointer'
                   : ''
               }`}
-              title={
-                circleProfile?.username
-                  ? `Open @${circleProfile.username} on Telegram`
-                  : undefined
-              }
+              title={inviterContact.title}
             >
               Invited by {inviterUsername}
             </span>
-            {circleProfile?.username && (
+            {inviterContact.canOpen && (
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
-                  openTelegramProfile(circleProfile.username!);
+                  openMemberContact({
+                    username: circleProfile?.username,
+                    dnsDomain: circleProfile?.dnsDomain,
+                    contactLink: circleProfile?.contactLink,
+                  });
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.stopPropagation();
-                    openTelegramProfile(circleProfile.username!);
+                    openMemberContact({
+                      username: circleProfile?.username,
+                      dnsDomain: circleProfile?.dnsDomain,
+                      contactLink: circleProfile?.contactLink,
+                    });
                   }
                 }}
                 className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-                title={`Open @${circleProfile.username} on Telegram`}
-                aria-label={`Open @${circleProfile.username} on Telegram`}
+                title={inviterContact.title}
+                aria-label={inviterContact.title}
               >
-                <TelegramIcon className="w-4.5 h-4.5" />
+                {inviterContact.platform === 'telegram' ? (
+                  <TelegramIcon className="w-4.5 h-4.5" />
+                ) : (
+                  <span className="text-sm leading-none">
+                    {inviterContact.icon}
+                  </span>
+                )}
               </span>
             )}
             <span className="text-[10px] text-muted-foreground font-mono">
@@ -219,11 +244,12 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
               {safeInvitees.map((entry) => {
                 const prof = resolvedRingProfiles.data?.[entry.addressString];
                 const isProfLoading = !prof && resolvedRingProfiles.isLoading;
-                const username = prof?.username
-                  ? `@${prof.username}`
-                  : isProfLoading
-                    ? 'Loading...'
-                    : '@member';
+                const memberContact = getMemberContactDisplay({
+                  username: prof?.username,
+                  dnsDomain: prof?.dnsDomain,
+                  contactLink: prof?.contactLink,
+                  fallbackLabel: isProfLoading ? 'Loading...' : '@member',
+                });
                 const isActive = prof?.active ?? false;
 
                 return (
@@ -239,52 +265,70 @@ const RingInviterAccordionItem: React.FC<RingInviterAccordionItemProps> = ({
                           role="button"
                           tabIndex={0}
                           onClick={(e) => {
-                            if (prof?.username) {
+                            if (memberContact.canOpen) {
                               e.stopPropagation();
-                              openTelegramProfile(prof.username);
+                              openMemberContact({
+                                username: prof?.username,
+                                dnsDomain: prof?.dnsDomain,
+                                contactLink: prof?.contactLink,
+                              });
                             }
                           }}
                           onKeyDown={(e) => {
                             if (
                               (e.key === 'Enter' || e.key === ' ') &&
-                              prof?.username
+                              memberContact.canOpen
                             ) {
                               e.stopPropagation();
-                              openTelegramProfile(prof.username);
+                              openMemberContact({
+                                username: prof?.username,
+                                dnsDomain: prof?.dnsDomain,
+                                contactLink: prof?.contactLink,
+                              });
                             }
                           }}
                           className={`font-semibold text-xs text-foreground transition-colors truncate ${
-                            prof?.username
+                            memberContact.canOpen
                               ? 'hover:text-primary hover:underline cursor-pointer'
                               : 'group-hover:text-primary'
                           }`}
-                          title={
-                            prof?.username
-                              ? `Open @${prof.username} on Telegram`
-                              : undefined
-                          }
+                          title={memberContact.title}
                         >
-                          {username}
+                          {memberContact.label}
                         </span>
-                        {prof?.username && (
+                        {memberContact.canOpen && (
                           <span
                             role="button"
                             tabIndex={0}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openTelegramProfile(prof.username!);
+                              openMemberContact({
+                                username: prof?.username,
+                                dnsDomain: prof?.dnsDomain,
+                                contactLink: prof?.contactLink,
+                              });
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.stopPropagation();
-                                openTelegramProfile(prof.username!);
+                                openMemberContact({
+                                  username: prof?.username,
+                                  dnsDomain: prof?.dnsDomain,
+                                  contactLink: prof?.contactLink,
+                                });
                               }
                             }}
                             className="min-w-[32px] min-h-[32px] p-1.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-                            title={`Open @${prof.username} on Telegram`}
-                            aria-label={`Open @${prof.username} on Telegram`}
+                            title={memberContact.title}
+                            aria-label={memberContact.title}
                           >
-                            <TelegramIcon className="w-4 h-4" />
+                            {memberContact.platform === 'telegram' ? (
+                              <TelegramIcon className="w-4 h-4" />
+                            ) : (
+                              <span className="text-xs leading-none">
+                                {memberContact.icon}
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>

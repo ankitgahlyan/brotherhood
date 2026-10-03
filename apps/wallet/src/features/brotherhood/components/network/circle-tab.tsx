@@ -10,7 +10,10 @@ import React from 'react';
 import { Address } from '@ton/core';
 import { Button } from '@/core/components/ui/button';
 import { TelegramIcon } from '@/core/components/ui/icons';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+} from '@/core/utils/telegram';
 import { useFormatAddress } from '@/core/utils/formatters';
 import type { InvitedMemberEntry } from '../../hooks/use-fi-account';
 import type { MemberProfileInfo } from '../../hooks/use-member-profiles';
@@ -88,7 +91,12 @@ export const CircleTab: React.FC<CircleTabProps> = ({
       <div className="space-y-1.5 max-h-105 overflow-y-auto">
         {invitedMembers.map((entry) => {
           const prof = resolvedProfiles?.[entry.addressString];
-          const username = prof?.username ? `@${prof.username}` : '@member';
+          const contactDisplay = getMemberContactDisplay({
+            username: prof?.username,
+            dnsDomain: prof?.dnsDomain,
+            contactLink: prof?.contactLink,
+            fallbackLabel: '@member',
+          });
           const isActive = prof?.active ?? false;
 
           return (
@@ -104,52 +112,70 @@ export const CircleTab: React.FC<CircleTabProps> = ({
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
-                      if (prof?.username) {
+                      if (contactDisplay.canOpen) {
                         e.stopPropagation();
-                        openTelegramProfile(prof.username);
+                        openMemberContact({
+                          username: prof?.username,
+                          dnsDomain: prof?.dnsDomain,
+                          contactLink: prof?.contactLink,
+                        });
                       }
                     }}
                     onKeyDown={(e) => {
                       if (
                         (e.key === 'Enter' || e.key === ' ') &&
-                        prof?.username
+                        contactDisplay.canOpen
                       ) {
                         e.stopPropagation();
-                        openTelegramProfile(prof.username);
+                        openMemberContact({
+                          username: prof?.username,
+                          dnsDomain: prof?.dnsDomain,
+                          contactLink: prof?.contactLink,
+                        });
                       }
                     }}
                     className={`font-semibold text-sm text-foreground transition-colors truncate ${
-                      prof?.username
+                      contactDisplay.canOpen
                         ? 'hover:text-primary hover:underline cursor-pointer'
                         : 'group-hover:text-primary'
                     }`}
-                    title={
-                      prof?.username
-                        ? `Open @${prof.username} on Telegram`
-                        : undefined
-                    }
+                    title={contactDisplay.title}
                   >
-                    {username}
+                    {contactDisplay.label}
                   </span>
-                  {prof?.username && (
+                  {contactDisplay.canOpen && (
                     <span
                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
-                        openTelegramProfile(prof.username!);
+                        openMemberContact({
+                          username: prof?.username,
+                          dnsDomain: prof?.dnsDomain,
+                          contactLink: prof?.contactLink,
+                        });
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.stopPropagation();
-                          openTelegramProfile(prof.username!);
+                          openMemberContact({
+                            username: prof?.username,
+                            dnsDomain: prof?.dnsDomain,
+                            contactLink: prof?.contactLink,
+                          });
                         }
                       }}
                       className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-                      title={`Open @${prof.username} on Telegram`}
-                      aria-label={`Open @${prof.username} on Telegram`}
+                      title={contactDisplay.title}
+                      aria-label={contactDisplay.title}
                     >
-                      <TelegramIcon className="w-4.5 h-4.5" />
+                      {contactDisplay.platform === 'telegram' ? (
+                        <TelegramIcon className="w-4.5 h-4.5" />
+                      ) : (
+                        <span className="text-sm leading-none">
+                          {contactDisplay.icon}
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>

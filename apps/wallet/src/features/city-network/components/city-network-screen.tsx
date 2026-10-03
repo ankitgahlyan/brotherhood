@@ -34,7 +34,11 @@ import {
   isValidH3Cell,
   normalizeH3Cell,
 } from '@/core/utils/h3';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+  resolveCachedDnsContact,
+} from '@/core/utils/telegram';
 import { MemberGuard, ActivationBanner } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { useMemberProfiles } from '@/features/brotherhood/hooks/use-member-profiles';
@@ -588,9 +592,27 @@ export const CityNetworkScreen: React.FC = () => {
                                 }
                               }
 
-                              // Retrieve profile username if hydrated
+                              // Retrieve profile username / DNS contact if hydrated
                               const profile = getMemberProfile(m);
-                              const username = profile?.username?.trim();
+                              const profDnsDomain =
+                                profile && 'dnsDomain' in profile
+                                  ? profile.dnsDomain
+                                  : undefined;
+                              const profContactLink =
+                                profile && 'contactLink' in profile
+                                  ? profile.contactLink
+                                  : undefined;
+                              const cachedDns = resolveCachedDnsContact(
+                                [m],
+                                network === 'mainnet' ? 'mainnet' : 'testnet',
+                              );
+                              const contactDisplay = getMemberContactDisplay({
+                                username: profile?.username?.trim(),
+                                dnsDomain: profDnsDomain || cachedDns.dnsDomain,
+                                contactLink:
+                                  profContactLink || cachedDns.contactLink,
+                                fallbackLabel: '',
+                              });
 
                               return (
                                 <div
@@ -598,16 +620,24 @@ export const CityNetworkScreen: React.FC = () => {
                                   className="flex items-center justify-between p-2 bg-secondary/50 rounded-xl border border-border/50 text-xs gap-2"
                                 >
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    {username ? (
+                                    {contactDisplay.label ? (
                                       <button
                                         type="button"
                                         onClick={() =>
-                                          openTelegramProfile(username)
+                                          openMemberContact({
+                                            username: profile?.username?.trim(),
+                                            dnsDomain:
+                                              profDnsDomain ||
+                                              cachedDns.dnsDomain,
+                                            contactLink:
+                                              profContactLink ||
+                                              cachedDns.contactLink,
+                                          })
                                         }
                                         className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline shrink-0 text-[11px] cursor-pointer"
-                                        title={`Open @${username} on Telegram`}
+                                        title={contactDisplay.title}
                                       >
-                                        <span>@{username}</span>
+                                        <span>{contactDisplay.label}</span>
                                         <ExternalLink className="w-2.5 h-2.5" />
                                       </button>
                                     ) : null}

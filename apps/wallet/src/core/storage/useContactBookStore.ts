@@ -16,6 +16,7 @@ export interface ContactItem {
   onChainUsername?: string;
   dnsDomain?: string;
   dnsDomains?: string[];
+  contactLink?: string;
   notes?: string;
   updatedAt: number;
 }
@@ -45,7 +46,12 @@ export interface ContactBookState {
     username: string,
     network?: string,
   ) => void;
-  saveDnsDomain: (address: string, domain: string, network?: string) => void;
+  saveDnsDomain: (
+    address: string,
+    domain: string,
+    network?: string,
+    contactLink?: string,
+  ) => void;
   addRecentRecipient: (
     member: { address: string; username?: string },
     network?: string,
@@ -208,6 +214,7 @@ export const useContactBookStore = create<ContactBookState>()(
                 onChainUsername: existing?.onChainUsername,
                 dnsDomain: existing?.dnsDomain,
                 dnsDomains: existing?.dnsDomains,
+                contactLink: existing?.contactLink,
                 notes: notes !== undefined ? notes : existing?.notes,
                 updatedAt: Date.now(),
               };
@@ -307,6 +314,7 @@ export const useContactBookStore = create<ContactBookState>()(
               onChainUsername: cleanName,
               dnsDomain: existing?.dnsDomain,
               dnsDomains: existing?.dnsDomains,
+              contactLink: existing?.contactLink,
               notes: existing?.notes,
               updatedAt: Date.now(),
             };
@@ -320,7 +328,12 @@ export const useContactBookStore = create<ContactBookState>()(
           });
         },
 
-        saveDnsDomain: (address, domain, network = DEFAULT_NETWORK) => {
+        saveDnsDomain: (
+          address,
+          domain,
+          network = DEFAULT_NETWORK,
+          contactLink,
+        ) => {
           const net = network || DEFAULT_NETWORK;
           const cleanAddr = address.trim();
           const cleanDomain = domain.trim().toLowerCase();
@@ -338,6 +351,19 @@ export const useContactBookStore = create<ContactBookState>()(
             const updatedDomains = Array.from(
               new Set([...existingDomains, cleanDomain]),
             );
+            const nextContactLink =
+              contactLink !== undefined
+                ? contactLink.trim() || undefined
+                : existing?.contactLink;
+
+            if (
+              existing &&
+              existing.dnsDomain === cleanDomain &&
+              existing.contactLink === nextContactLink &&
+              existing.dnsDomains?.length === updatedDomains.length
+            ) {
+              return state;
+            }
 
             netContacts[raw] = {
               address: existing?.address || cleanAddr,
@@ -346,6 +372,7 @@ export const useContactBookStore = create<ContactBookState>()(
               onChainUsername: existing?.onChainUsername,
               dnsDomain: cleanDomain,
               dnsDomains: updatedDomains,
+              contactLink: nextContactLink,
               notes: existing?.notes,
               updatedAt: Date.now(),
             };

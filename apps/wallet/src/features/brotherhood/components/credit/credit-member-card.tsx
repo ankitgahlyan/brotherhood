@@ -10,7 +10,10 @@ import React from 'react';
 import { Button } from '@/core/components/ui/button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { TelegramIcon } from '@/core/components/ui/icons';
-import { openTelegramProfile } from '@/core/utils/telegram';
+import {
+  getMemberContactDisplay,
+  openMemberContact,
+} from '@/core/utils/telegram';
 import { useFormatAddress } from '@/core/utils/formatters';
 import type { MemberProfileInfo } from '../../hooks/use-member-profiles';
 
@@ -36,7 +39,12 @@ export const CreditMemberCard: React.FC<CreditMemberCardProps> = ({
   onSendCredit,
 }) => {
   const { formatWalletAddress, formatContractAddress } = useFormatAddress();
-  const username = profile.username ? `@${profile.username}` : '@member';
+  const contactDisplay = getMemberContactDisplay({
+    username: profile.username,
+    dnsDomain: profile.dnsDomain,
+    contactLink: profile.contactLink,
+    fallbackLabel: '@member',
+  });
 
   // Target address is borrower's Owner address; fallback to contract address if not resolved
   const targetAddress = profile.ownerAddress || profile.address;
@@ -53,34 +61,56 @@ export const CreditMemberCard: React.FC<CreditMemberCardProps> = ({
             role="button"
             tabIndex={0}
             onClick={() => {
-              if (profile.username) openTelegramProfile(profile.username);
+              if (contactDisplay.canOpen) {
+                openMemberContact({
+                  username: profile.username,
+                  dnsDomain: profile.dnsDomain,
+                  contactLink: profile.contactLink,
+                });
+              }
             }}
             onKeyDown={(e) => {
-              if ((e.key === 'Enter' || e.key === ' ') && profile.username) {
-                openTelegramProfile(profile.username);
+              if (
+                (e.key === 'Enter' || e.key === ' ') &&
+                contactDisplay.canOpen
+              ) {
+                openMemberContact({
+                  username: profile.username,
+                  dnsDomain: profile.dnsDomain,
+                  contactLink: profile.contactLink,
+                });
               }
             }}
             className={`font-semibold text-sm truncate ${
-              profile.username
+              contactDisplay.canOpen
                 ? 'text-foreground hover:text-primary hover:underline cursor-pointer'
                 : 'text-muted-foreground'
             }`}
-            title={
-              profile.username
-                ? `Open @${profile.username} on Telegram`
-                : undefined
-            }
+            title={contactDisplay.title}
           >
-            {username}
+            {contactDisplay.label}
           </span>
-          {profile.username && (
+          {contactDisplay.canOpen && (
             <button
               type="button"
-              onClick={() => openTelegramProfile(profile.username)}
-              className="text-primary hover:opacity-80 transition-opacity p-0.5"
-              aria-label={`Open @${profile.username} on Telegram`}
+              onClick={() =>
+                openMemberContact({
+                  username: profile.username,
+                  dnsDomain: profile.dnsDomain,
+                  contactLink: profile.contactLink,
+                })
+              }
+              className="text-primary hover:opacity-80 transition-opacity p-0.5 cursor-pointer"
+              title={contactDisplay.title}
+              aria-label={contactDisplay.title}
             >
-              <TelegramIcon className="w-3.5 h-3.5" />
+              {contactDisplay.platform === 'telegram' ? (
+                <TelegramIcon className="w-3.5 h-3.5" />
+              ) : (
+                <span className="text-xs leading-none">
+                  {contactDisplay.icon}
+                </span>
+              )}
             </button>
           )}
         </div>
