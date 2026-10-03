@@ -63,39 +63,103 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(0.982 0.008 280);
-  --foreground: oklch(0.18 0.03 285);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.03 285);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.03 285);
-  --primary: oklch(0.54 0.24 280);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.955 0.015 280);
-  --secondary-foreground: oklch(0.35 0.12 280);
-  --muted: oklch(0.95 0.012 280);
-  --muted-foreground: oklch(0.5 0.03 280);
-  --accent: oklch(0.94 0.025 280);
-  --accent-foreground: oklch(0.35 0.15 280);
-  --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.9 0.015 280);
-  --input: oklch(0.9 0.015 280);
-  --ring: oklch(0.54 0.24 280);
-  --chart-1: oklch(0.54 0.24 280);
-  --chart-2: oklch(0.68 0.18 160);
-  --chart-3: oklch(0.65 0.22 320);
-  --chart-4: oklch(0.75 0.17 65);
-  --chart-5: oklch(0.62 0.2 230);
-  --sidebar: oklch(0.97 0.01 280);
-  --sidebar-foreground: oklch(0.18 0.03 285);
-  --sidebar-primary: oklch(0.54 0.24 280);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.025 280);
-  --sidebar-accent-foreground: oklch(0.35 0.15 280);
-  --sidebar-border: oklch(0.9 0.015 280);
-  --sidebar-ring: oklch(0.54 0.24 280);
+/* ==========================================================================
+   1. Base Theme Modes:
+      - Soft Daylight (Light: low-glare pearl stone, zero pure #ffffff)
+      - Warm Paper (Warm: blue-light-filtering sepia cream/oatmeal)
+      - Midnight (Dark: deep slate-indigo)
+      - OLED (True #000000 canvas)
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
+  --radius: 0.75rem;
+  --font-scale: 1;
+  --touch-target: max(44px, 2.75rem);
+  --background: oklch(0.932 0.014 280);
+  --foreground: oklch(0.19 0.032 285);
+  --card: oklch(0.962 0.01 280);
+  --card-foreground: oklch(0.19 0.032 285);
+  --popover: oklch(0.966 0.01 280);
+  --popover-foreground: oklch(0.19 0.032 285);
+  --primary: oklch(0.52 0.23 280);
+  --primary-foreground: oklch(0.985 0.005 280);
+  --secondary: oklch(0.896 0.018 280);
+  --secondary-foreground: oklch(0.32 0.12 280);
+  --muted: oklch(0.888 0.015 280);
+  --muted-foreground: oklch(0.45 0.035 280);
+  --accent: oklch(0.885 0.028 280);
+  --accent-foreground: oklch(0.32 0.15 280);
+  --destructive: oklch(0.55 0.21 25);
+  --border: oklch(0.835 0.022 280);
+  --input: oklch(0.835 0.022 280);
+  --ring: oklch(0.52 0.23 280);
+  --chart-1: oklch(0.52 0.23 280);
+  --chart-2: oklch(0.64 0.17 160);
+  --chart-3: oklch(0.62 0.21 320);
+  --chart-4: oklch(0.7 0.16 65);
+  --chart-5: oklch(0.58 0.19 230);
+  --sidebar: oklch(0.92 0.014 280);
+  --sidebar-foreground: oklch(0.19 0.032 285);
+  --sidebar-primary: oklch(0.52 0.23 280);
+  --sidebar-primary-foreground: oklch(0.985 0.005 280);
+  --sidebar-accent: oklch(0.885 0.028 280);
+  --sidebar-accent-foreground: oklch(0.32 0.15 280);
+  --sidebar-border: oklch(0.835 0.022 280);
+  --sidebar-ring: oklch(0.52 0.23 280);
+
+  /* Glass surface lighting tokens (Soft Daylight) */
+  --glass-card-bg: oklch(0.968 0.01 280 / 64%);
+  --glass-secondary-bg: oklch(0.905 0.018 280 / 56%);
+  --glass-popover-bg: oklch(0.965 0.012 280 / 84%);
+  --glass-border: oklch(0.99 0.005 280 / 65%);
+  --glass-rim-top: rgba(255, 255, 255, 0.82);
+  --glass-rim-bottom: oklch(0.52 0.23 280 / 18%);
+  --glass-caustic-1: rgba(56, 189, 248, 0.22);
+  --glass-caustic-2: rgba(168, 85, 247, 0.2);
+  --glass-shadow: 0 10px 28px -8px rgba(35, 24, 75, 0.11);
+  color-scheme: light;
+}
+
+/* --- Warm Paper / True Tone (Low-Blue-Light Sepia Cream) --- */
+[data-theme='warm'] {
+  --background: oklch(0.916 0.022 78);
+  --foreground: oklch(0.21 0.032 65);
+  --card: oklch(0.946 0.018 78);
+  --card-foreground: oklch(0.21 0.032 65);
+  --popover: oklch(0.95 0.018 78);
+  --popover-foreground: oklch(0.21 0.032 65);
+  --primary: oklch(0.5 0.21 280);
+  --primary-foreground: oklch(0.975 0.01 78);
+  --secondary: oklch(0.878 0.025 76);
+  --secondary-foreground: oklch(0.3 0.1 280);
+  --muted: oklch(0.868 0.022 76);
+  --muted-foreground: oklch(0.44 0.035 68);
+  --accent: oklch(0.865 0.03 76);
+  --accent-foreground: oklch(0.3 0.12 280);
+  --destructive: oklch(0.54 0.2 25);
+  --border: oklch(0.818 0.028 75);
+  --input: oklch(0.818 0.028 75);
+  --ring: oklch(0.5 0.21 280);
+  --sidebar: oklch(0.904 0.022 78);
+  --sidebar-foreground: oklch(0.21 0.032 65);
+  --sidebar-primary: oklch(0.5 0.21 280);
+  --sidebar-primary-foreground: oklch(0.975 0.01 78);
+  --sidebar-accent: oklch(0.865 0.03 76);
+  --sidebar-accent-foreground: oklch(0.3 0.12 280);
+  --sidebar-border: oklch(0.818 0.028 75);
+  --sidebar-ring: oklch(0.5 0.21 280);
+
+  /* Glass surface lighting tokens (Warm Paper) */
+  --glass-card-bg: oklch(0.952 0.018 78 / 66%);
+  --glass-secondary-bg: oklch(0.888 0.024 76 / 58%);
+  --glass-popover-bg: oklch(0.95 0.018 78 / 86%);
+  --glass-border: oklch(0.98 0.012 78 / 62%);
+  --glass-rim-top: rgba(255, 250, 240, 0.78);
+  --glass-rim-bottom: oklch(0.55 0.16 65 / 18%);
+  --glass-caustic-1: rgba(245, 158, 11, 0.2);
+  --glass-caustic-2: rgba(168, 85, 247, 0.16);
+  --glass-shadow: 0 10px 28px -8px rgba(62, 45, 22, 0.13);
   color-scheme: light;
 }
 
@@ -132,6 +196,17 @@
   --sidebar-accent-foreground: oklch(0.97 0.01 280);
   --sidebar-border: oklch(0.85 0.03 285 / 14%);
   --sidebar-ring: oklch(0.62 0.22 280);
+
+  /* Glass surface lighting tokens (Midnight) */
+  --glass-card-bg: oklch(0.18 0.035 285 / 50%);
+  --glass-secondary-bg: oklch(0.24 0.04 285 / 44%);
+  --glass-popover-bg: oklch(0.17 0.032 285 / 82%);
+  --glass-border: oklch(0.92 0.02 280 / 22%);
+  --glass-rim-top: rgba(255, 255, 255, 0.38);
+  --glass-rim-bottom: oklch(0.62 0.22 280 / 28%);
+  --glass-caustic-1: rgba(56, 189, 248, 0.28);
+  --glass-caustic-2: rgba(217, 70, 239, 0.26);
+  --glass-shadow: 0 14px 34px -8px rgba(4, 2, 14, 0.55);
   color-scheme: dark;
 }
 
@@ -167,23 +242,56 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.85 0.04 285 / 18%);
   --sidebar-ring: oklch(0.68 0.22 280);
+
+  /* Glass surface lighting tokens (OLED: pure #000 canvas + crisp specular crystal rims) */
+  --glass-card-bg: oklch(0.09 0.025 285 / 68%);
+  --glass-secondary-bg: oklch(0.15 0.032 285 / 56%);
+  --glass-popover-bg: oklch(0.08 0.025 285 / 88%);
+  --glass-border: oklch(0.95 0.02 280 / 26%);
+  --glass-rim-top: rgba(255, 255, 255, 0.45);
+  --glass-rim-bottom: oklch(0.68 0.22 280 / 34%);
+  --glass-caustic-1: rgba(56, 189, 248, 0.32);
+  --glass-caustic-2: rgba(217, 70, 239, 0.3);
+  --glass-shadow: 0 12px 32px -6px rgba(0, 0, 0, 0.85);
   color-scheme: dark;
 }
 
 /* ==========================================================================
-   2D OKLCH Color Palettes: TON, Emerald, Sunset, Fuchsia (Violet is default)
+   2. 2D OKLCH Color Palettes: TON, Emerald, Sunset, Fuchsia (Violet is default)
+      Soft Daylight & Warm Paper dynamically tint surfaces to prevent white glare
    ========================================================================== */
 
-/* --- TON Ocean Blue (Light) --- */
-:root[data-palette='ton'] {
-  --primary: oklch(0.55 0.22 235);
-  --ring: oklch(0.55 0.22 235);
-  --secondary: oklch(0.955 0.015 235);
-  --secondary-foreground: oklch(0.35 0.12 235);
-  --accent: oklch(0.94 0.025 235);
-  --accent-foreground: oklch(0.35 0.15 235);
-  --sidebar-primary: oklch(0.55 0.22 235);
-  --chart-1: oklch(0.55 0.22 235);
+/* --- TON Ocean Blue (Soft Daylight) --- */
+:root[data-palette='ton'],
+[data-theme='light'][data-palette='ton'] {
+  --background: oklch(0.932 0.015 235);
+  --card: oklch(0.962 0.01 235);
+  --popover: oklch(0.966 0.01 235);
+  --primary: oklch(0.53 0.21 235);
+  --ring: oklch(0.53 0.21 235);
+  --secondary: oklch(0.896 0.018 235);
+  --secondary-foreground: oklch(0.32 0.12 235);
+  --muted: oklch(0.888 0.015 235);
+  --accent: oklch(0.885 0.026 235);
+  --accent-foreground: oklch(0.32 0.15 235);
+  --border: oklch(0.835 0.022 235);
+  --input: oklch(0.835 0.022 235);
+  --sidebar-primary: oklch(0.53 0.21 235);
+  --chart-1: oklch(0.53 0.21 235);
+  --glass-card-bg: oklch(0.966 0.01 235 / 64%);
+  --glass-secondary-bg: oklch(0.904 0.018 235 / 56%);
+  --glass-rim-bottom: oklch(0.53 0.21 235 / 20%);
+}
+
+/* --- TON Ocean Blue (Warm Paper) --- */
+[data-theme='warm'][data-palette='ton'] {
+  --primary: oklch(0.51 0.2 235);
+  --ring: oklch(0.51 0.2 235);
+  --secondary-foreground: oklch(0.3 0.12 235);
+  --accent-foreground: oklch(0.3 0.14 235);
+  --sidebar-primary: oklch(0.51 0.2 235);
+  --chart-1: oklch(0.51 0.2 235);
+  --glass-rim-bottom: oklch(0.51 0.2 235 / 20%);
 }
 
 /* --- TON Ocean Blue (Dark / Midnight) --- */
@@ -197,6 +305,7 @@
   --accent-foreground: oklch(0.95 0.02 235);
   --sidebar-primary: oklch(0.65 0.2 235);
   --chart-1: oklch(0.65 0.2 235);
+  --glass-rim-bottom: oklch(0.65 0.2 235 / 28%);
 }
 
 /* --- TON Ocean Blue (OLED) --- */
@@ -209,18 +318,40 @@
   --accent-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.7 0.2 235);
   --chart-1: oklch(0.7 0.2 235);
+  --glass-rim-bottom: oklch(0.7 0.2 235 / 34%);
 }
 
-/* --- Cyber Emerald (Light) --- */
-:root[data-palette='emerald'] {
-  --primary: oklch(0.52 0.2 158);
-  --ring: oklch(0.52 0.2 158);
-  --secondary: oklch(0.955 0.015 158);
-  --secondary-foreground: oklch(0.32 0.12 158);
-  --accent: oklch(0.94 0.025 158);
-  --accent-foreground: oklch(0.32 0.15 158);
-  --sidebar-primary: oklch(0.52 0.2 158);
-  --chart-1: oklch(0.52 0.2 158);
+/* --- Cyber Emerald (Soft Daylight) --- */
+:root[data-palette='emerald'],
+[data-theme='light'][data-palette='emerald'] {
+  --background: oklch(0.934 0.015 158);
+  --card: oklch(0.962 0.01 158);
+  --popover: oklch(0.966 0.01 158);
+  --primary: oklch(0.5 0.19 158);
+  --ring: oklch(0.5 0.19 158);
+  --secondary: oklch(0.896 0.018 158);
+  --secondary-foreground: oklch(0.3 0.11 158);
+  --muted: oklch(0.888 0.015 158);
+  --accent: oklch(0.885 0.026 158);
+  --accent-foreground: oklch(0.3 0.14 158);
+  --border: oklch(0.835 0.022 158);
+  --input: oklch(0.835 0.022 158);
+  --sidebar-primary: oklch(0.5 0.19 158);
+  --chart-1: oklch(0.5 0.19 158);
+  --glass-card-bg: oklch(0.966 0.01 158 / 64%);
+  --glass-secondary-bg: oklch(0.904 0.018 158 / 56%);
+  --glass-rim-bottom: oklch(0.5 0.19 158 / 20%);
+}
+
+/* --- Cyber Emerald (Warm Paper) --- */
+[data-theme='warm'][data-palette='emerald'] {
+  --primary: oklch(0.49 0.18 158);
+  --ring: oklch(0.49 0.18 158);
+  --secondary-foreground: oklch(0.28 0.11 158);
+  --accent-foreground: oklch(0.28 0.13 158);
+  --sidebar-primary: oklch(0.49 0.18 158);
+  --chart-1: oklch(0.49 0.18 158);
+  --glass-rim-bottom: oklch(0.49 0.18 158 / 20%);
 }
 
 /* --- Cyber Emerald (Dark / Midnight) --- */
@@ -234,6 +365,7 @@
   --accent-foreground: oklch(0.95 0.02 158);
   --sidebar-primary: oklch(0.65 0.19 158);
   --chart-1: oklch(0.65 0.19 158);
+  --glass-rim-bottom: oklch(0.65 0.19 158 / 28%);
 }
 
 /* --- Cyber Emerald (OLED) --- */
@@ -246,18 +378,40 @@
   --accent-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.72 0.21 158);
   --chart-1: oklch(0.72 0.21 158);
+  --glass-rim-bottom: oklch(0.72 0.21 158 / 34%);
 }
 
-/* --- Solar Sunset (Light) --- */
-:root[data-palette='sunset'] {
-  --primary: oklch(0.58 0.21 55);
-  --ring: oklch(0.58 0.21 55);
-  --secondary: oklch(0.955 0.018 55);
-  --secondary-foreground: oklch(0.35 0.14 55);
-  --accent: oklch(0.94 0.03 55);
-  --accent-foreground: oklch(0.35 0.16 55);
-  --sidebar-primary: oklch(0.58 0.21 55);
-  --chart-1: oklch(0.58 0.21 55);
+/* --- Solar Sunset (Soft Daylight) --- */
+:root[data-palette='sunset'],
+[data-theme='light'][data-palette='sunset'] {
+  --background: oklch(0.932 0.016 55);
+  --card: oklch(0.962 0.012 55);
+  --popover: oklch(0.966 0.012 55);
+  --primary: oklch(0.56 0.2 55);
+  --ring: oklch(0.56 0.2 55);
+  --secondary: oklch(0.896 0.02 55);
+  --secondary-foreground: oklch(0.33 0.13 55);
+  --muted: oklch(0.888 0.016 55);
+  --accent: oklch(0.885 0.028 55);
+  --accent-foreground: oklch(0.33 0.15 55);
+  --border: oklch(0.835 0.024 55);
+  --input: oklch(0.835 0.024 55);
+  --sidebar-primary: oklch(0.56 0.2 55);
+  --chart-1: oklch(0.56 0.2 55);
+  --glass-card-bg: oklch(0.966 0.012 55 / 64%);
+  --glass-secondary-bg: oklch(0.904 0.02 55 / 56%);
+  --glass-rim-bottom: oklch(0.56 0.2 55 / 20%);
+}
+
+/* --- Solar Sunset (Warm Paper) --- */
+[data-theme='warm'][data-palette='sunset'] {
+  --primary: oklch(0.55 0.2 55);
+  --ring: oklch(0.55 0.2 55);
+  --secondary-foreground: oklch(0.32 0.13 55);
+  --accent-foreground: oklch(0.32 0.15 55);
+  --sidebar-primary: oklch(0.55 0.2 55);
+  --chart-1: oklch(0.55 0.2 55);
+  --glass-rim-bottom: oklch(0.55 0.2 55 / 20%);
 }
 
 /* --- Solar Sunset (Dark / Midnight) --- */
@@ -271,6 +425,7 @@
   --accent-foreground: oklch(0.95 0.02 55);
   --sidebar-primary: oklch(0.68 0.2 55);
   --chart-1: oklch(0.68 0.2 55);
+  --glass-rim-bottom: oklch(0.68 0.2 55 / 28%);
 }
 
 /* --- Solar Sunset (OLED) --- */
@@ -283,18 +438,40 @@
   --accent-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.74 0.21 55);
   --chart-1: oklch(0.74 0.21 55);
+  --glass-rim-bottom: oklch(0.74 0.21 55 / 34%);
 }
 
-/* --- Neon Fuchsia (Light) --- */
-:root[data-palette='fuchsia'] {
-  --primary: oklch(0.56 0.25 325);
-  --ring: oklch(0.56 0.25 325);
-  --secondary: oklch(0.955 0.018 325);
-  --secondary-foreground: oklch(0.35 0.15 325);
-  --accent: oklch(0.94 0.03 325);
-  --accent-foreground: oklch(0.35 0.17 325);
-  --sidebar-primary: oklch(0.56 0.25 325);
-  --chart-1: oklch(0.56 0.25 325);
+/* --- Neon Fuchsia (Soft Daylight) --- */
+:root[data-palette='fuchsia'],
+[data-theme='light'][data-palette='fuchsia'] {
+  --background: oklch(0.932 0.015 325);
+  --card: oklch(0.962 0.01 325);
+  --popover: oklch(0.966 0.01 325);
+  --primary: oklch(0.54 0.24 325);
+  --ring: oklch(0.54 0.24 325);
+  --secondary: oklch(0.896 0.018 325);
+  --secondary-foreground: oklch(0.33 0.14 325);
+  --muted: oklch(0.888 0.015 325);
+  --accent: oklch(0.885 0.028 325);
+  --accent-foreground: oklch(0.33 0.16 325);
+  --border: oklch(0.835 0.022 325);
+  --input: oklch(0.835 0.022 325);
+  --sidebar-primary: oklch(0.54 0.24 325);
+  --chart-1: oklch(0.54 0.24 325);
+  --glass-card-bg: oklch(0.966 0.01 325 / 64%);
+  --glass-secondary-bg: oklch(0.904 0.018 325 / 56%);
+  --glass-rim-bottom: oklch(0.54 0.24 325 / 20%);
+}
+
+/* --- Neon Fuchsia (Warm Paper) --- */
+[data-theme='warm'][data-palette='fuchsia'] {
+  --primary: oklch(0.53 0.23 325);
+  --ring: oklch(0.53 0.23 325);
+  --secondary-foreground: oklch(0.32 0.14 325);
+  --accent-foreground: oklch(0.32 0.16 325);
+  --sidebar-primary: oklch(0.53 0.23 325);
+  --chart-1: oklch(0.53 0.23 325);
+  --glass-rim-bottom: oklch(0.53 0.23 325 / 20%);
 }
 
 /* --- Neon Fuchsia (Dark / Midnight) --- */
@@ -308,6 +485,7 @@
   --accent-foreground: oklch(0.95 0.02 325);
   --sidebar-primary: oklch(0.66 0.23 325);
   --chart-1: oklch(0.66 0.23 325);
+  --glass-rim-bottom: oklch(0.66 0.23 325 / 28%);
 }
 
 /* --- Neon Fuchsia (OLED) --- */
@@ -320,10 +498,139 @@
   --accent-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.72 0.24 325);
   --chart-1: oklch(0.72 0.24 325);
+  --glass-rim-bottom: oklch(0.72 0.24 325 / 34%);
 }
 
 /* ==========================================================================
-   Jewel Action Gradients & Glass Surfaces
+   3. Liquid Glass Optical Surface System
+      Modes: flat | glass_css | glass_hybrid | glass_tilt
+   ========================================================================== */
+
+html[data-glass='true'] {
+  --card: var(--glass-card-bg);
+  --secondary: var(--glass-secondary-bg);
+  --popover: var(--glass-popover-bg);
+  --border: var(--glass-border);
+}
+
+/* Automatic specular glass elevation on standard cards & dialogs in glass modes */
+html[data-surface='glass_css'] .bg-card,
+html[data-surface='glass_css'] .glass-card {
+  backdrop-filter: blur(22px) saturate(185%);
+  -webkit-backdrop-filter: blur(22px) saturate(185%);
+  box-shadow:
+    inset 0 1px 0.5px 0 var(--glass-rim-top),
+    inset 0 -1px 1px 0 var(--glass-rim-bottom),
+    var(--glass-shadow);
+}
+
+html[data-surface='glass_hybrid'] .bg-card,
+html[data-surface='glass_hybrid'] .glass-card,
+html[data-surface='glass_tilt'] .bg-card,
+html[data-surface='glass_tilt'] .glass-card {
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  box-shadow:
+    inset 0 1.5px 1px 0 var(--glass-rim-top),
+    inset 1px 0 1px 0 var(--glass-caustic-1),
+    inset -1px -1.5px 2px 0 var(--glass-caustic-2),
+    var(--glass-shadow);
+}
+
+/* Hero Balance Card & Floating Dock Optical Lens (uses SVG refraction in hybrid/tilt) */
+html[data-surface='glass_css'] .liquid-glass-hero,
+html[data-surface='glass_css'] .liquid-glass-dock {
+  background: linear-gradient(
+    135deg,
+    var(--glass-card-bg) 0%,
+    var(--glass-secondary-bg) 100%
+  );
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border-color: var(--glass-border);
+  box-shadow:
+    inset 0 1.5px 1px 0 var(--glass-rim-top),
+    inset 0 -1px 1.5px 0 var(--glass-rim-bottom),
+    var(--glass-shadow);
+}
+
+html[data-surface='glass_hybrid'] .liquid-glass-hero,
+html[data-surface='glass_hybrid'] .liquid-glass-dock,
+html[data-surface='glass_tilt'] .liquid-glass-hero,
+html[data-surface='glass_tilt'] .liquid-glass-dock {
+  background: linear-gradient(
+    135deg,
+    var(--glass-card-bg) 0%,
+    var(--glass-secondary-bg) 60%,
+    var(--glass-caustic-1) 100%
+  );
+  backdrop-filter: url(#liquid-glass-refract) blur(20px) saturate(210%);
+  -webkit-backdrop-filter: blur(24px) saturate(210%);
+  border-color: var(--glass-border);
+  box-shadow:
+    inset 0 1.5px 1.5px 0 var(--glass-rim-top),
+    inset 1.5px 0 1.5px 0 var(--glass-caustic-1),
+    inset -1.5px -1.5px 2px 0 var(--glass-caustic-2),
+    var(--glass-shadow);
+}
+
+/* Active Water-Droplet Pill Indicator in BottomNav & ScrollableTabBar */
+html[data-surface='glass_css'] .liquid-droplet-active {
+  background: color-mix(in oklab, var(--primary) 20%, var(--glass-card-bg));
+  border-color: color-mix(in oklab, var(--primary) 42%, var(--glass-rim-top));
+  box-shadow:
+    inset 0 1px 1px 0 var(--glass-rim-top),
+    0 4px 12px -2px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+html[data-surface='glass_hybrid'] .liquid-droplet-active,
+html[data-surface='glass_tilt'] .liquid-droplet-active {
+  background: radial-gradient(
+    125% 125% at 30% 20%,
+    var(--glass-rim-top) 0%,
+    color-mix(in oklab, var(--primary) 26%, var(--glass-card-bg)) 52%,
+    var(--glass-caustic-1) 100%
+  );
+  backdrop-filter: url(#liquid-droplet-refract) blur(12px) saturate(220%);
+  -webkit-backdrop-filter: blur(14px) saturate(220%);
+  border-color: color-mix(in oklab, var(--primary) 50%, var(--glass-rim-top));
+  box-shadow:
+    inset 0 1.5px 1.5px 0 var(--glass-rim-top),
+    inset 0 -1.5px 2px 0 var(--glass-caustic-1),
+    0 6px 16px -3px color-mix(in oklab, var(--primary) 38%, transparent);
+}
+
+html[data-surface='glass_tilt'] .liquid-glass-hero {
+  transform: perspective(900px) rotateX(var(--rx, 0deg))
+    rotateY(var(--ry, 0deg));
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* Interactive Specular Spotlight Overlay (active in glass_tilt mode) */
+.liquid-specular-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+  z-index: 1;
+}
+
+html[data-surface='glass_tilt'] .liquid-specular-glare {
+  opacity: 1;
+  background: radial-gradient(
+    260px circle at var(--gx, 32%) var(--gy, 22%),
+    var(--glass-rim-top),
+    var(--glass-caustic-1) 38%,
+    transparent 72%
+  );
+  mix-blend-mode: overlay;
+}
+
+/* ==========================================================================
+   4. Jewel Action Gradients & Liquid Droplet Jewels
    ========================================================================== */
 
 .jewel-btn-send {
@@ -362,11 +669,57 @@
   box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.25);
 }
 
+html[data-glass='true'] .jewel-btn-send,
+html[data-glass='true'] .jewel-btn-receive,
+html[data-glass='true'] .jewel-btn-vote,
+html[data-glass='true'] .jewel-btn-swap,
+html[data-glass='true'] .jewel-btn-invite,
+html[data-glass='true'] .jewel-btn-stake {
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.22),
+    0 6px 16px -3px rgba(0, 0, 0, 0.28);
+}
+
 .glass-card {
   background-color: var(--card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
+
+/* Ambient Drifting Aurora Orbs for Liquid Glass Background */
+@keyframes brotherhood-orb-drift-1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(28px, -18px, 0) scale(1.08);
+  }
+}
+
+@keyframes brotherhood-orb-drift-2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-24px, 22px, 0) scale(1.1);
+  }
+}
+
+.liquid-ambient-orb-1 {
+  animation: brotherhood-orb-drift-1 11s ease-in-out infinite;
+}
+
+.liquid-ambient-orb-2 {
+  animation: brotherhood-orb-drift-2 14s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   5. Base Typography, Accessibility Scaling & Touch Target Ergonomics
+   ========================================================================== */
 
 @layer base {
   * {
@@ -374,10 +727,12 @@
   }
   html {
     @apply bg-background text-foreground transition-colors duration-200;
+    font-size: calc(100% * var(--font-scale, 1));
   }
   body {
     @apply bg-background text-foreground min-h-screen;
     scrollbar-color: var(--muted-foreground) var(--background);
+    overflow-wrap: break-word;
   }
   button:not(:disabled),
   [role='button'],
@@ -385,11 +740,49 @@
   summary,
   label[for] {
     cursor: pointer;
+    touch-action: manipulation;
   }
 }
 
+/* Convert hardcoded arbitrary px font utilities to rem so they scale with --font-scale */
+.text-\[9px\] {
+  font-size: 0.5625rem !important;
+  line-height: 1.35 !important;
+}
+
+.text-\[10px\] {
+  font-size: 0.625rem !important;
+  line-height: 1.35 !important;
+}
+
+.text-\[11px\] {
+  font-size: 0.6875rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Adaptive auto-reflow for multi-column grids when Large / Senior Text (115% - 135%) is active */
+html[data-large-text='true'] main .grid-cols-2:not(.keep-cols),
+html[data-large-text='true'] [role='dialog'] .grid-cols-2:not(.keep-cols) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.75rem), 1fr));
+}
+
+html[data-large-text='true'] main .grid-cols-3:not(.keep-cols),
+html[data-large-text='true'] [role='dialog'] .grid-cols-3:not(.keep-cols) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
+}
+
+html[data-large-text='true'] main .grid-cols-4:not(.keep-cols),
+html[data-large-text='true'] [role='dialog'] .grid-cols-4:not(.keep-cols) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.25rem), 1fr));
+}
+
+html[data-large-text='true'] main .grid-cols-5:not(.keep-cols),
+html[data-large-text='true'] [role='dialog'] .grid-cols-5:not(.keep-cols) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.75rem), 1fr));
+}
+
 /* ==========================================================================
-   Native View Transitions & Accessibility Motion Overrides
+   6. Native View Transitions & Accessibility Motion Overrides
    ========================================================================== */
 
 ::view-transition-old(root),
@@ -428,7 +821,9 @@
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
-  ::view-transition-new(*) {
+  ::view-transition-new(*),
+  .liquid-ambient-orb-1,
+  .liquid-ambient-orb-2 {
     animation: none !important;
   }
 }

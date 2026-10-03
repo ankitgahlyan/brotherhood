@@ -146,8 +146,8 @@ export const InputScan: React.FC<InputScanProps> = ({
             disabled={disabled}
             data-testid={dataTestId}
             className={cn(
-              'w-full p-2 border border-border bg-card rounded-lg text-xs text-foreground outline-none focus:border-primary',
-              value && !disabled ? 'pr-8' : '',
+              'w-full px-3 py-2 min-h-(--touch-target) border border-border bg-card rounded-xl text-xs text-foreground outline-none focus:border-primary',
+              value && !disabled ? 'pr-9' : '',
               className,
             )}
           />
@@ -159,7 +159,7 @@ export const InputScan: React.FC<InputScanProps> = ({
                 onChange('');
                 onResolvedAddressChange?.(null);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="absolute right-1 top-1/2 -translate-y-1/2 min-w-9 min-h-9 flex items-center justify-center text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-colors cursor-pointer"
               title="Clear input"
               aria-label="Clear input"
             >
@@ -180,7 +180,7 @@ export const InputScan: React.FC<InputScanProps> = ({
                       e.preventDefault();
                       handleSelectSuggestion(item);
                     }}
-                    className="w-full px-3 py-2 text-left text-xs hover:bg-muted flex items-center justify-between transition-colors border-b border-border/40 last:border-0"
+                    className="w-full px-3 py-2.5 min-h-(--touch-target) text-left text-xs hover:bg-muted flex items-center justify-between transition-colors border-b border-border/40 last:border-0"
                   >
                     <div className="flex items-center gap-2">
                       {item.isDns ? (
@@ -226,7 +226,7 @@ export const InputScan: React.FC<InputScanProps> = ({
           disabled={disabled}
           aria-label="Scan QR code"
           title="Scan QR code"
-          className="shrink-0 p-2 rounded-lg bg-secondary text-primary hover:bg-secondary/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-border cursor-pointer"
+          className="shrink-0 min-w-11 min-h-(--touch-target) px-3 rounded-xl bg-secondary text-primary hover:bg-secondary/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50 border border-border cursor-pointer"
         >
           <QrCode className="w-4 h-4" />
         </button>

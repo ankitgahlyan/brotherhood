@@ -28,7 +28,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="w-8 h-8 rounded-full bg-secondary/80 border border-border/80 flex items-center justify-center text-foreground hover:bg-secondary transition-colors flex-shrink-0 cursor-pointer shadow-2xs"
+          className="min-w-11 min-h-11 rounded-full bg-secondary/80 border border-border/80 flex items-center justify-center text-foreground hover:bg-secondary transition-colors flex-shrink-0 cursor-pointer shadow-2xs"
           aria-label="Back"
         >
           <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />

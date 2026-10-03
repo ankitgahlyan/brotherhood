@@ -60,7 +60,7 @@ export function Segmented<T extends string>({
             title={option.label}
             onClick={() => onChange(option.value)}
             className={cn(
-              'px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer',
+              'px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer min-h-11',
               index > 0 && 'border-l border-border',
               isSelected
                 ? 'bg-primary text-primary-foreground shadow-xs font-semibold'

@@ -41,7 +41,7 @@ export const SyncStatusButton: React.FC<SyncStatusButtonProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary/80 hover:bg-secondary border border-border transition-colors text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 min-h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border transition-colors text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none ${
         disabled ? 'cursor-not-allowed opacity-80' : ''
       } ${
         isSuccess

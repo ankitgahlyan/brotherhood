@@ -9,6 +9,7 @@
 import React, { useRef, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { usePreferences, type ViewMode } from '@demo/wallet-core';
+import { useTheme } from '@/core/theme';
 import { useActiveSwipePreview } from '@/core/lib/swipe-gesture-store';
 import { cn } from '@/core/lib/utils';
 
@@ -47,6 +48,7 @@ export function ScrollableTabBar<T extends string = string>({
   size = 'md',
 }: ScrollableTabBarProps<T>) {
   const { viewMode: userViewMode } = usePreferences();
+  const { isGlass } = useTheme();
   const effectiveViewMode = propViewMode ?? userViewMode ?? 'standard';
   const isPictorial = effectiveViewMode === 'icons_only';
   const activePreview = useActiveSwipePreview();
@@ -67,7 +69,10 @@ export function ScrollableTabBar<T extends string = string>({
     <div
       role="tablist"
       className={cn(
-        'no-swipe flex items-center gap-1 bg-secondary/70 border border-border p-1 rounded-xl',
+        'no-swipe flex items-center gap-1 border border-border p-1',
+        isGlass
+          ? 'liquid-glass-dock rounded-full px-1.5 py-1'
+          : 'bg-secondary/70 rounded-xl',
         'overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity select-none w-full',
         className,
       )}
@@ -95,10 +100,15 @@ export function ScrollableTabBar<T extends string = string>({
               title={tab.label}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'relative flex items-center justify-center shrink-0 snap-center rounded-lg transition-all duration-200 cursor-pointer overflow-hidden',
-                size === 'sm' ? 'w-8 h-8' : 'w-10 h-9 px-2',
+                'relative flex items-center justify-center shrink-0 snap-center transition-all duration-200 cursor-pointer overflow-hidden',
+                isGlass ? 'rounded-full' : 'rounded-lg',
+                size === 'sm'
+                  ? 'min-w-10 min-h-10 px-2'
+                  : 'min-w-11 min-h-(--touch-target) px-2.5',
                 isActive
-                  ? 'bg-card text-primary shadow-xs font-semibold border border-border scale-[1.03]'
+                  ? isGlass
+                    ? 'liquid-droplet-active text-primary font-semibold border scale-[1.03]'
+                    : 'bg-card text-primary shadow-xs font-semibold border border-border scale-[1.03]'
                   : isTargetArmed
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.35)] scale-[1.03]'
                     : isSwipeTarget && !isTargetCanceled
@@ -120,7 +130,7 @@ export function ScrollableTabBar<T extends string = string>({
                 )}
               />
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold px-1 min-w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[0.5625rem] font-bold px-1 min-w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
                   {tab.count > 99 ? '99+' : tab.count}
                 </span>
               )}
@@ -152,10 +162,15 @@ export function ScrollableTabBar<T extends string = string>({
             title={tab.label}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'relative inline-flex items-center justify-center gap-1.5 shrink-0 snap-center rounded-lg font-medium transition-all duration-150 cursor-pointer overflow-hidden',
-              size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-xs',
+              'relative inline-flex items-center justify-center gap-1.5 shrink-0 snap-center font-medium transition-all duration-150 cursor-pointer overflow-hidden',
+              isGlass ? 'rounded-full' : 'rounded-lg',
+              size === 'sm'
+                ? 'min-h-10 px-3 py-1.5 text-xs'
+                : 'min-h-(--touch-target) px-3.5 py-2 text-xs',
               isActive
-                ? 'bg-card text-foreground font-semibold border border-border shadow-xs scale-[1.01]'
+                ? isGlass
+                  ? 'liquid-droplet-active text-foreground font-semibold border scale-[1.01]'
+                  : 'bg-card text-foreground font-semibold border border-border shadow-xs scale-[1.01]'
                 : isTargetArmed
                   ? 'bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.35)] scale-[1.02]'
                   : isSwipeTarget && !isTargetCanceled
@@ -180,7 +195,7 @@ export function ScrollableTabBar<T extends string = string>({
             {tab.count !== undefined && (
               <span
                 className={cn(
-                  'text-[10px] px-1.5 py-0.2 rounded-full font-medium',
+                  'text-[0.625rem] px-1.5 py-0.2 rounded-full font-medium',
                   isActive || isTargetArmed
                     ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground',

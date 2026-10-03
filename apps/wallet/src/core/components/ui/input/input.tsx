@@ -120,7 +120,7 @@ const Field: FC<ComponentProps<'div'>> = ({
       className={cn(
         'relative flex items-center gap-2 overflow-hidden transition-colors',
         variant === 'default' &&
-          'rounded-2xl border-2 border-border/50 bg-secondary/70 p-3.5 focus-within:border-blue-500',
+          'rounded-2xl border-2 border-border/50 bg-secondary/70 p-3.5 min-h-(--touch-target) focus-within:border-blue-500',
         variant === 'default' && error && 'border-red-500',
         className,
       )}

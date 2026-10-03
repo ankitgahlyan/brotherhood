@@ -9,6 +9,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { usePreferences } from '@demo/wallet-core';
+import { useTheme } from '@/core/theme';
 import { useActiveSwipePreview } from '@/core/lib/swipe-gesture-store';
 import {
   Wallet,
@@ -113,17 +114,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
     }
   }, [pathname]);
 
+  const { isGlass } = useTheme();
+
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/70 select-none pb-(--tg-safe-area-bottom,0px) transition-transform duration-300 ease-in-out no-swipe ${
-        isVisible ? 'translate-y-0' : 'translate-y-full'
-      }`}
+      className={
+        isGlass
+          ? `fixed bottom-[calc(0.625rem+var(--tg-safe-area-bottom,0px))] left-3 right-3 max-w-[calc(28rem-1.5rem)] mx-auto z-40 rounded-full liquid-glass-dock border border-border/80 select-none transition-all duration-300 ease-in-out no-swipe ${
+              isVisible
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-[140%] opacity-0 pointer-events-none'
+            }`
+          : `fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/70 select-none pb-(--tg-safe-area-bottom,0px) transition-transform duration-300 ease-in-out no-swipe ${
+              isVisible ? 'translate-y-0' : 'translate-y-full'
+            }`
+      }
       aria-label="Bottom Navigation"
       data-swipe-ignore="true"
     >
       <div
         ref={containerRef}
-        className="max-w-md mx-auto flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity"
+        className={`max-w-md mx-auto flex items-center gap-1 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity ${
+          isGlass ? 'px-2 py-1.5' : 'px-2 py-1.5'
+        }`}
       >
         {ECOSYSTEM_NAV_ITEMS.map((item) => {
           const isActive = getIsActive(item);
@@ -144,9 +157,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 ref={isActive ? activeBtnRef : null}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`relative flex-1 min-w-[48px] min-h-[44px] shrink-0 snap-center flex items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`relative flex-1 min-w-12 min-h-(--touch-target) shrink-0 snap-center flex items-center justify-center py-1.5 px-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? `${item.activeColor || 'text-primary'} scale-105`
+                    ? `${item.activeColor || 'text-primary'} scale-105 ${
+                        isGlass ? 'liquid-droplet-active border' : ''
+                      }`
                     : isTargetArmed
                       ? 'text-emerald-400 scale-105'
                       : isSwipeTarget
@@ -160,7 +175,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 <div
                   className={`relative flex items-center justify-center w-10 h-8 rounded-full transition-all duration-150 ${
                     isActive
-                      ? item.activeBg || 'bg-primary/15'
+                      ? isGlass
+                        ? 'bg-transparent'
+                        : item.activeBg || 'bg-primary/15'
                       : isTargetArmed
                         ? 'bg-emerald-500/25 ring-1 ring-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.45)]'
                         : isSwipeTarget && !isTargetCanceled
@@ -198,9 +215,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
               ref={isActive ? activeBtnRef : null}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`relative flex-1 min-w-[52px] min-h-[44px] shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+              className={`relative flex-1 min-w-13 min-h-(--touch-target) shrink-0 snap-center flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 transition-all duration-200 cursor-pointer ${
+                isGlass ? 'rounded-full' : 'rounded-xl'
+              } ${
                 isActive
-                  ? 'text-primary scale-[1.02]'
+                  ? `text-primary scale-[1.02] ${
+                      isGlass ? 'liquid-droplet-active border' : ''
+                    }`
                   : isTargetArmed
                     ? 'text-emerald-400 scale-[1.04]'
                     : isSwipeTarget && !isTargetCanceled
@@ -211,9 +232,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
               data-testid={`bottom-nav-${item.id}`}
             >
               <div
-                className={`relative flex items-center justify-center w-9 h-7 rounded-full transition-all duration-150 ${
+                className={`relative flex items-center justify-center w-9 h-6.5 rounded-full transition-all duration-150 ${
                   isActive
-                    ? 'bg-primary/15'
+                    ? isGlass
+                      ? 'bg-transparent'
+                      : 'bg-primary/15'
                     : isTargetArmed
                       ? 'bg-emerald-500/25 ring-1 ring-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.45)]'
                       : isSwipeTarget && !isTargetCanceled
@@ -231,7 +254,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
                 />
               </div>
               <span
-                className={`text-[10px] tracking-tight leading-tight truncate w-full text-center transition-all ${
+                className={`text-[0.65rem] tracking-tight leading-tight truncate w-full text-center transition-all ${
                   isActive || isTargetArmed
                     ? 'font-bold text-foreground'
                     : 'font-medium'

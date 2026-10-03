@@ -24,7 +24,7 @@ const InfoPopover: React.FC<{ label: string; children: React.ReactNode }> = ({
       <button
         type="button"
         onClick={(e) => e.stopPropagation()}
-        className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+        className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 inline-flex items-center justify-center min-w-7 min-h-7 -m-1 rounded-full"
         aria-label={`${label} info`}
       >
         <Info className="w-4 h-4" />
@@ -67,7 +67,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
         onChange(!checked);
       }
     }}
-    className={`flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors select-none ${
+    className={`flex items-center justify-between gap-3 px-4 py-3 min-h-(--touch-target) cursor-pointer hover:bg-muted/40 transition-colors select-none ${
       disabled ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''
     }`}
   >
@@ -86,7 +86,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
     <label
       data-testid={testId}
       onClick={(e) => e.stopPropagation()}
-      className={`relative inline-flex items-center flex-shrink-0 ${
+      className={`relative inline-flex items-center justify-center min-h-(--touch-target) flex-shrink-0 ${
         disabled ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'
       }`}
     >

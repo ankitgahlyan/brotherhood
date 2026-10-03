@@ -65,7 +65,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer select-none disabled:opacity-50 ${
+    className={`w-full flex items-center gap-3 px-4 py-3 min-h-(--touch-target) text-left transition-colors cursor-pointer select-none disabled:opacity-50 ${
       danger
         ? 'text-red-500 hover:bg-red-500/10'
         : 'text-foreground hover:bg-muted/80'
@@ -247,11 +247,11 @@ export const SettingsDropdown: React.FC = () => {
     <>
       <button
         onClick={handleOpenMenu}
-        className="p-1.5 -mr-1.5 rounded-md hover:bg-secondary transition-colors text-foreground cursor-pointer"
+        className="min-w-10 min-h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
         aria-label="Settings"
         data-testid="wallet-menu"
       >
-        <SettingsIcon className="w-6 h-6 text-foreground" />
+        <SettingsIcon className="w-5 h-5 text-foreground" />
       </button>
 
       <Modal.Container
@@ -269,7 +269,7 @@ export const SettingsDropdown: React.FC = () => {
             <button
               type="button"
               onClick={() => setPanel(null)}
-              className="px-2.5 py-1 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold border border-border transition-colors flex items-center gap-1 cursor-pointer"
+              className="px-3 py-1.5 min-h-10 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold border border-border transition-colors flex items-center gap-1 cursor-pointer"
               aria-label="Close settings"
             >
               <X className="w-3.5 h-3.5" />
@@ -282,13 +282,13 @@ export const SettingsDropdown: React.FC = () => {
             {/* Section 1: Appearance & Motion */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
-                Appearance & Motion
+                Appearance &amp; Accessibility
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 <ActionRow
                   icon={<Palette className="w-5 h-5 text-primary" />}
-                  label="Appearance & Animations"
-                  subtitle="Theme mode, color accents & motion physics"
+                  label="Appearance & Accessibility"
+                  subtitle="Themes, Liquid Glass, text size & motion"
                   onClick={() => {
                     setPanel(null);
                     setIsAppearanceOpen(true);
@@ -300,7 +300,7 @@ export const SettingsDropdown: React.FC = () => {
             {/* Section 2: Security & Signing */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1.5 block">
-                Security & Signing
+                Security &amp; Signing
               </span>
               <div className="rounded-2xl bg-secondary/60 divide-y divide-border overflow-hidden border border-border">
                 {(isBiometricsSupported || isBiometricsInsecure) && (
@@ -331,12 +331,12 @@ export const SettingsDropdown: React.FC = () => {
                   checked={!persistPassword}
                   onChange={(checked) => setPersistPassword(!checked)}
                 />
-                <div className="flex items-center justify-between gap-3 py-1">
+                <div className="flex items-center justify-between gap-3 px-4 py-3 min-h-(--touch-target)">
                   <div className="min-w-0">
-                    <div className="text-xs font-medium text-foreground">
+                    <div className="text-sm font-semibold text-foreground">
                       Action Confirmation
                     </div>
-                    <div className="text-[11px] text-muted-foreground leading-snug">
+                    <div className="text-xs text-muted-foreground mt-0.5 leading-snug">
                       {slideToSign
                         ? 'Slide left to right to approve sends and signing'
                         : holdToSign
@@ -344,7 +344,7 @@ export const SettingsDropdown: React.FC = () => {
                           : 'Click action buttons normally'}
                     </div>
                   </div>
-                  <div className="inline-flex items-center rounded-lg bg-secondary/80 p-0.5 border border-border/60 shrink-0">
+                  <div className="inline-flex items-center rounded-xl bg-secondary/80 p-1 border border-border/60 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -352,7 +352,7 @@ export const SettingsDropdown: React.FC = () => {
                         setSlideToSign(false);
                       }}
                       className={cn(
-                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        'px-2.5 py-1.5 min-h-9 text-[11px] font-semibold rounded-lg transition-all cursor-pointer',
                         !holdToSign && !slideToSign
                           ? 'bg-primary text-primary-foreground shadow-2xs'
                           : 'text-muted-foreground hover:text-foreground',
@@ -365,7 +365,7 @@ export const SettingsDropdown: React.FC = () => {
                       type="button"
                       onClick={() => setHoldToSign(true)}
                       className={cn(
-                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        'px-2.5 py-1.5 min-h-9 text-[11px] font-semibold rounded-lg transition-all cursor-pointer',
                         holdToSign && !slideToSign
                           ? 'bg-primary text-primary-foreground shadow-2xs'
                           : 'text-muted-foreground hover:text-foreground',
@@ -378,7 +378,7 @@ export const SettingsDropdown: React.FC = () => {
                       type="button"
                       onClick={() => setSlideToSign(true)}
                       className={cn(
-                        'px-2 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer',
+                        'px-2.5 py-1.5 min-h-9 text-[11px] font-semibold rounded-lg transition-all cursor-pointer',
                         slideToSign
                           ? 'bg-primary text-primary-foreground shadow-2xs'
                           : 'text-muted-foreground hover:text-foreground',

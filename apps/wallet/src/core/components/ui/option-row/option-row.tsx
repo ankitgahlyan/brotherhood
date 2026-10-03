@@ -34,7 +34,7 @@ export const OptionRow: React.FC<OptionRowProps> = ({
     data-testid={testId}
     onClick={onClick}
     disabled={disabled}
-    className="w-full flex items-center gap-3 bg-secondary/70 border border-border rounded-2xl px-4 py-4 text-left transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100 disabled:active:scale-100"
+    className="w-full flex items-center gap-3 bg-secondary/70 border border-border rounded-2xl px-4 py-4 min-h-(--touch-target) text-left transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100 disabled:active:scale-100"
   >
     <span className="flex-shrink-0 flex items-center justify-center text-foreground">
       {icon}

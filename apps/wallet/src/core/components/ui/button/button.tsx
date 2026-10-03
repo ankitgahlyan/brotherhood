@@ -38,10 +38,10 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  lg: 'px-5 py-3.5 text-base font-bold rounded-2xl',
-  md: 'px-4 py-2.5 text-sm font-semibold rounded-xl',
-  sm: 'px-4 py-2 text-sm font-semibold rounded-full',
-  icon: 'h-9 w-9 rounded-full',
+  lg: 'px-5 py-3.5 text-base font-bold rounded-2xl min-h-(--touch-target)',
+  md: 'px-4 py-2.5 text-sm font-semibold rounded-xl min-h-(--touch-target)',
+  sm: 'px-4 py-2 text-sm font-semibold rounded-full min-h-(--touch-target)',
+  icon: 'h-11 w-11 rounded-full',
 };
 
 /**

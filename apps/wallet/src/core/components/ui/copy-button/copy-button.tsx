@@ -68,7 +68,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
         title ??
         (type === 'contract' ? 'Copy contract address' : 'Copy wallet address')
       }
-      className={`inline-flex items-center gap-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/70 transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40 ${className}`}
+      className={`inline-flex items-center gap-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/70 transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40 min-w-11 min-h-11 justify-center ${className}`}
       data-testid="copy-address-button"
     >
       {copied ? (

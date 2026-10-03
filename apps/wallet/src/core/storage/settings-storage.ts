@@ -14,6 +14,8 @@ export const SETTINGS_STORAGE_EVENT = 'brotherhood:settings-changed';
 export const SettingsKeys = {
   THEME: 'brotherhood-theme',
   PALETTE: 'brotherhood-palette',
+  SURFACE_STYLE: 'brotherhood-surface-style',
+  TEXT_SCALE: 'brotherhood-text-scale',
   EXPLORER: 'brotherhood-explorer',
   DEVELOPER_MODE: 'brotherhood_developer_mode_enabled',
   TESTNET_TONCENTER_KEY: 'brotherhood_api_key_testnet_toncenter',
@@ -26,8 +28,23 @@ export const SettingsKeys = {
   TESTNET_TONAPI_CUSTOM_ACTIVE: 'brotherhood_custom_active_tonapi',
 } as const;
 
-export const ThemeSchema = z.enum(['light', 'dark', 'oled', 'system']);
+export const ThemeSchema = z.enum(['light', 'warm', 'dark', 'oled', 'system']);
 export type ThemeSetting = z.infer<typeof ThemeSchema>;
+
+export const SurfaceStyleSchema = z.enum([
+  'flat',
+  'glass_css',
+  'glass_hybrid',
+  'glass_tilt',
+]);
+export type SurfaceStyleSetting = z.infer<typeof SurfaceStyleSchema>;
+
+export const TextScaleSchema = z.coerce
+  .number()
+  .min(85)
+  .max(135)
+  .transform((v) => Math.round(v / 5) * 5);
+export type TextScaleSetting = z.infer<typeof TextScaleSchema>;
 
 export const ColorPaletteSchema = z.enum([
   'violet',

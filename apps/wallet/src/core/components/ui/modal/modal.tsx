@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogTitle } from '../dialog';
 import { Drawer, DrawerContent, DrawerTitle } from '../drawer';
 
 import { cn } from '@/core/lib/utils';
+import { useTheme } from '@/core/theme';
 import { useIsMobile } from '@/core/hooks/use-media-query';
 import { useHistoryBack } from '@/core/hooks/use-history-back';
 import {
@@ -37,6 +38,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   ...props
 }) => {
   const isMobile = useIsMobile();
+  const { isGlass } = useTheme();
 
   // Register with Unified Back Stack (Tier 1 modal dismiss)
   useHistoryBack({
@@ -69,6 +71,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
         <DrawerContent
           className={cn(
             'max-w-md mx-auto max-h-[88dvh] overflow-hidden flex flex-col',
+            isGlass && 'glass-card bg-popover/85 backdrop-blur-2xl',
             className,
           )}
           aria-describedby={undefined}
@@ -85,6 +88,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
       <DialogContent
         className={cn(
           'max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-2xl p-0 gap-0',
+          isGlass && 'glass-card bg-popover/85 backdrop-blur-2xl',
           className,
         )}
         aria-describedby={undefined}
@@ -123,7 +127,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
+          className="min-w-11 min-h-11 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-secondary/80 transition-colors flex-shrink-0"
           aria-label="Back"
         >
           <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />

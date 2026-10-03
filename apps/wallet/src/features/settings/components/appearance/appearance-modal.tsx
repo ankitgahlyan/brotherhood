@@ -16,10 +16,22 @@ import {
   Check,
   LayoutGrid,
   Eye,
+  Coffee,
+  Layers,
+  Blend,
+  Box,
+  ALargeSmall,
+  RotateCcw,
 } from 'lucide-react';
 import { usePreferences } from '@demo/wallet-core';
 import { useTheme } from '@/core/theme';
-import type { ThemeMode, ColorPalette } from '@/core/theme';
+import type { ThemeMode, ColorPalette, SurfaceStyle } from '@/core/theme';
+import {
+  MIN_TEXT_SCALE,
+  MAX_TEXT_SCALE,
+  DEFAULT_TEXT_SCALE,
+  TEXT_SCALE_STEP,
+} from '@/core/theme';
 import { Modal } from '@/core/components/ui/modal';
 import { AnimationSettingsCard } from '../animation-settings-card';
 
@@ -34,7 +46,8 @@ const THEME_OPTIONS: {
   icon: React.ReactNode;
 }[] = [
   { mode: 'system', label: 'System', icon: <Monitor className="w-4 h-4" /> },
-  { mode: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
+  { mode: 'light', label: 'Daylight', icon: <Sun className="w-4 h-4" /> },
+  { mode: 'warm', label: 'Warm', icon: <Coffee className="w-4 h-4" /> },
   { mode: 'dark', label: 'Midnight', icon: <Moon className="w-4 h-4" /> },
   { mode: 'oled', label: 'OLED', icon: <Sparkles className="w-4 h-4" /> },
 ];
@@ -71,11 +84,61 @@ const PALETTE_OPTIONS: {
   },
 ];
 
+const SURFACE_OPTIONS: {
+  style: SurfaceStyle;
+  label: string;
+  desc: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    style: 'flat',
+    label: 'Flat',
+    desc: 'Classic matte',
+    icon: <Layers className="w-4 h-4" />,
+  },
+  {
+    style: 'glass_css',
+    label: 'Glass',
+    desc: 'Pure specular',
+    icon: <Box className="w-4 h-4" />,
+  },
+  {
+    style: 'glass_hybrid',
+    label: 'Lens',
+    desc: 'SVG refraction',
+    icon: <Blend className="w-4 h-4" />,
+  },
+  {
+    style: 'glass_tilt',
+    label: 'Tilt',
+    desc: '3D interactive',
+    icon: <ALargeSmall className="w-4 h-4 rotate-90" />,
+  },
+];
+
+const TEXT_PRESETS: { label: string; scale: number }[] = [
+  { label: 'Compact', scale: 90 },
+  { label: 'Standard', scale: 100 },
+  { label: 'Large', scale: 115 },
+  { label: 'Senior', scale: 130 },
+];
+
 export const AppearanceModal: React.FC<AppearanceModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { theme, setTheme, palette, setPalette } = useTheme();
+  const {
+    theme,
+    setTheme,
+    palette,
+    setPalette,
+    surfaceStyle,
+    setSurfaceStyle,
+    textScale,
+    stepTextScale,
+    resetTextScale,
+    setTextScale,
+  } = useTheme();
   const { viewMode, setViewMode } = usePreferences();
 
   return (
@@ -87,7 +150,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
       <Modal.Header onClose={onClose}>
         <Modal.Title className="flex items-center gap-2">
           <Palette className="w-5 h-5 text-pink-500" />
-          <span>Appearance & Animations</span>
+          <span>Appearance &amp; Accessibility</span>
         </Modal.Title>
       </Modal.Header>
 
@@ -95,16 +158,16 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
         {/* Section 1: Theme & Color Palette */}
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 block">
-            Theme & Color Palette
+            Theme &amp; Color Palette
           </span>
 
           <div className="rounded-2xl bg-secondary/60 p-3.5 border border-border flex flex-col gap-4">
-            {/* Theme Mode Selector */}
+            {/* Theme Mode Selector — 5 options */}
             <div>
               <span className="text-[11px] font-medium text-muted-foreground mb-1.5 block">
                 Display Mode
               </span>
-              <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-1 rounded-xl border border-border">
+              <div className="grid grid-cols-5 keep-cols gap-1 bg-background/60 p-1 rounded-xl border border-border">
                 {THEME_OPTIONS.map((opt) => {
                   const isSelected = theme === opt.mode;
                   return (
@@ -112,20 +175,22 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                       key={opt.mode}
                       type="button"
                       onClick={() => setTheme(opt.mode)}
-                      className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer min-h-(--touch-target) ${
                         isSelected
                           ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                       }`}
                       data-testid={`appearance-theme-${opt.mode}`}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         {opt.icon}
                         {isSelected && (
-                          <Check className="w-3 h-3 text-primary" />
+                          <Check className="w-2.5 h-2.5 text-primary" />
                         )}
                       </div>
-                      <span>{opt.label}</span>
+                      <span className="truncate w-full text-center">
+                        {opt.label}
+                      </span>
                     </button>
                   );
                 })}
@@ -138,7 +203,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                 <Palette className="w-3 h-3 text-primary" />
                 Color Palette
               </span>
-              <div className="grid grid-cols-5 gap-1.5 bg-background/60 p-1.5 rounded-xl border border-border">
+              <div className="grid grid-cols-5 keep-cols gap-1.5 bg-background/60 p-1.5 rounded-xl border border-border">
                 {PALETTE_OPTIONS.map((pal) => {
                   const isSelected = palette === pal.id;
                   return (
@@ -146,7 +211,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                       key={pal.id}
                       type="button"
                       onClick={() => setPalette(pal.id)}
-                      className={`flex flex-col items-center gap-1.5 py-2 px-0.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                      className={`flex flex-col items-center gap-1.5 py-2 px-0.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer min-h-(--touch-target) ${
                         isSelected
                           ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -176,7 +241,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
               </div>
             </div>
 
-            {/* Visual Navigation Mode (Standard vs Pictorial) */}
+            {/* Visual Navigation Mode */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
@@ -191,7 +256,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewMode('standard')}
-                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer min-h-(--touch-target) ${
                     viewMode !== 'icons_only'
                       ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -202,7 +267,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                   <div className="text-left flex-1 min-w-0">
                     <div className="font-semibold leading-tight">Standard</div>
                     <div className="text-[10px] text-muted-foreground truncate">
-                      Text & Icons
+                      Text &amp; Icons
                     </div>
                   </div>
                   {viewMode !== 'icons_only' && (
@@ -213,7 +278,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewMode('icons_only')}
-                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer min-h-(--touch-target) ${
                     viewMode === 'icons_only'
                       ? 'bg-card text-foreground shadow-xs font-semibold border border-border'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -233,14 +298,156 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = ({
                 </button>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1 px-1">
-                Pictorial mode enlarges icons and removes text on tabs & actions
-                for universal global usability.
+                Pictorial mode enlarges icons and removes text on tabs &amp;
+                actions for universal global usability.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Motion & Animations */}
+        {/* Section 2: Surface Style */}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 block">
+            Surface Style
+          </span>
+          <div className="rounded-2xl bg-secondary/60 p-3.5 border border-border">
+            <span className="text-[11px] font-medium text-muted-foreground mb-2 block">
+              Card &amp; panel material
+            </span>
+            <div className="grid grid-cols-4 keep-cols gap-1.5">
+              {SURFACE_OPTIONS.map((opt) => {
+                const isSelected = surfaceStyle === opt.style;
+                return (
+                  <button
+                    key={opt.style}
+                    type="button"
+                    onClick={() => setSurfaceStyle(opt.style)}
+                    className={`flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl text-[10px] font-medium transition-all cursor-pointer border min-h-(--touch-target) ${
+                      isSelected
+                        ? 'bg-card text-foreground shadow-sm border-primary/40 ring-1 ring-primary/30'
+                        : 'bg-background/50 text-muted-foreground border-border hover:text-foreground hover:bg-muted/40'
+                    }`}
+                    data-testid={`appearance-surface-${opt.style}`}
+                  >
+                    <span
+                      className={isSelected ? 'text-primary' : 'opacity-70'}
+                    >
+                      {opt.icon}
+                    </span>
+                    <span className="font-semibold">{opt.label}</span>
+                    <span className="text-[9px] text-muted-foreground leading-tight text-center">
+                      {opt.desc}
+                    </span>
+                    {isSelected && (
+                      <Check className="w-2.5 h-2.5 text-primary" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 px-1">
+              Flat = classic matte. Glass modes add backdrop blur &amp; specular
+              highlights. Tilt adds pointer-tracked 3D refraction.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 3: Text Size / Accessibility */}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 block">
+            Text Size
+          </span>
+          <div className="rounded-2xl bg-secondary/60 p-3.5 border border-border flex flex-col gap-3">
+            {/* Live indicator + reset */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <ALargeSmall className="w-3.5 h-3.5 text-primary" />
+                Scale: {textScale}%
+              </span>
+              {textScale !== DEFAULT_TEXT_SCALE && (
+                <button
+                  type="button"
+                  onClick={resetTextScale}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-muted/40 min-h-9 cursor-pointer"
+                  aria-label="Reset text scale to default"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+              )}
+            </div>
+
+            {/* Slider + A−/A+ steppers */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => stepTextScale(-TEXT_SCALE_STEP)}
+                disabled={textScale <= MIN_TEXT_SCALE}
+                className="min-w-11 min-h-11 rounded-xl bg-secondary border border-border flex items-center justify-center text-sm font-bold text-foreground hover:bg-secondary/80 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                aria-label="Decrease text size"
+              >
+                A−
+              </button>
+              <input
+                type="range"
+                min={MIN_TEXT_SCALE}
+                max={MAX_TEXT_SCALE}
+                step={TEXT_SCALE_STEP}
+                value={textScale}
+                onChange={(e) => setTextScale(Number(e.target.value))}
+                className="flex-1 accent-primary h-2 rounded-full cursor-pointer"
+                aria-label="Text scale slider"
+              />
+              <button
+                type="button"
+                onClick={() => stepTextScale(TEXT_SCALE_STEP)}
+                disabled={textScale >= MAX_TEXT_SCALE}
+                className="min-w-11 min-h-11 rounded-xl bg-secondary border border-border flex items-center justify-center text-sm font-bold text-foreground hover:bg-secondary/80 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                aria-label="Increase text size"
+              >
+                A+
+              </button>
+            </div>
+
+            {/* Preset pills */}
+            <div className="grid grid-cols-4 keep-cols gap-1.5">
+              {TEXT_PRESETS.map((preset) => {
+                const isActive = textScale === preset.scale;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setTextScale(preset.scale)}
+                    className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-[10px] font-medium border transition-all cursor-pointer min-h-(--touch-target) ${
+                      isActive
+                        ? 'bg-card text-foreground border-primary/40 shadow-sm ring-1 ring-primary/30'
+                        : 'bg-background/50 text-muted-foreground border-border hover:text-foreground hover:bg-muted/40'
+                    }`}
+                    aria-label={`Set text scale to ${preset.label} (${preset.scale}%)`}
+                    aria-pressed={isActive}
+                  >
+                    <span
+                      className={`font-bold ${preset.scale >= 115 ? 'text-sm' : preset.scale <= 90 ? 'text-[9px]' : 'text-xs'}`}
+                    >
+                      Aa
+                    </span>
+                    <span className="font-semibold">{preset.label}</span>
+                    <span className="text-[9px] opacity-70">
+                      {preset.scale}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-[10px] text-muted-foreground px-1">
+              Adjusts app text size from {MIN_TEXT_SCALE}% to {MAX_TEXT_SCALE}%.
+              All interactive targets remain tappable at any size.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 4: Motion & Animations */}
         <AnimationSettingsCard />
       </Modal.Body>
     </Modal.Container>

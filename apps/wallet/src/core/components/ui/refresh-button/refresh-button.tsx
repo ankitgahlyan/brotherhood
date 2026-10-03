@@ -191,7 +191,7 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
         onClick={triggerRefresh}
         disabled={isButtonDisabled}
         className={cn(
-          'p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center',
+          'p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center min-w-10 min-h-10',
           isSuccess &&
             'text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/15',
           className,

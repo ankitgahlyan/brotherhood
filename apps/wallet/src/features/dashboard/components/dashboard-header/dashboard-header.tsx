@@ -11,6 +11,7 @@ import {
   Moon,
   Sun,
   Sparkles,
+  Coffee,
   Wallet as WalletIcon,
   ChevronDown,
 } from 'lucide-react';
@@ -41,11 +42,11 @@ export const DashboardHeader: React.FC = () => {
   usePasteHandler(handleTonConnectUrl, isConnectOpen);
 
   return (
-    <header className="flex items-center justify-between px-4 py-3">
+    <header className="flex items-center justify-between gap-2 px-4 py-3">
       <button
         type="button"
         onClick={() => setIsConnectOpen(true)}
-        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/30 hover:bg-secondary/50 border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs"
+        className="relative min-w-10 min-h-10 flex items-center justify-center rounded-xl bg-secondary/30 hover:bg-secondary/50 border border-border/60 active:scale-95 transition-all text-foreground cursor-pointer shadow-2xs shrink-0"
         aria-label="Scan"
         data-testid="connect-dapp-button"
       >
@@ -55,40 +56,42 @@ export const DashboardHeader: React.FC = () => {
         <ScanIcon className="relative z-10 w-5 h-5 text-foreground/85 pointer-events-none" />
       </button>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <SyncStatusButton />
 
         <button
           type="button"
           onClick={() => setIsManageWalletsOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/80 hover:bg-secondary border border-border/80 active:scale-95 transition-all shadow-2xs cursor-pointer group"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border/80 active:scale-95 transition-all shadow-2xs cursor-pointer group min-w-0"
           aria-label="Manage Wallets"
           title="Click to manage or switch wallets"
           data-testid="header-wallet-switcher"
         >
-          <WalletIcon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
+          <WalletIcon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform shrink-0" />
           <span className="text-xs font-bold text-foreground tracking-tight max-w-28 sm:max-w-36 truncate">
             {activeWallet?.name || 'My Wallet'}
           </span>
-          <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 shrink-0">
         <button
           type="button"
           onClick={toggleTheme}
-          className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs"
+          className="min-w-10 min-h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs"
           aria-label={`Toggle theme (currently ${resolvedTheme})`}
           title={`Current theme: ${resolvedTheme}. Click to toggle.`}
           data-testid="header-theme-toggle"
         >
           {resolvedTheme === 'light' ? (
-            <Moon className="w-4.5 h-4.5 text-primary" />
+            <Sun className="w-4.5 h-4.5 text-amber-500" />
+          ) : resolvedTheme === 'warm' ? (
+            <Coffee className="w-4.5 h-4.5 text-amber-600" />
           ) : resolvedTheme === 'oled' ? (
             <Sparkles className="w-4.5 h-4.5 text-amber-400" />
           ) : (
-            <Sun className="w-4.5 h-4.5 text-yellow-400" />
+            <Moon className="w-4.5 h-4.5 text-primary" />
           )}
         </button>
         <NotificationBell />

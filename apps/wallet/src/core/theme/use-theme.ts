@@ -12,16 +12,30 @@ import {
   SettingsKeys,
   ThemeSchema,
   ColorPaletteSchema,
+  SurfaceStyleSchema,
+  TextScaleSchema,
 } from '@/core/storage';
-import type {
-  ColorPalette,
-  ResolvedTheme,
-  ThemeMode,
-  ThemeState,
+import {
+  MIN_TEXT_SCALE,
+  MAX_TEXT_SCALE,
+  DEFAULT_TEXT_SCALE,
+  type ColorPalette,
+  type ResolvedTheme,
+  type SurfaceStyle,
+  type ThemeMode,
+  type ThemeState,
 } from './types';
 
 export const THEME_STORAGE_KEY = SettingsKeys.THEME;
 export const PALETTE_STORAGE_KEY = SettingsKeys.PALETTE;
+export const SURFACE_STORAGE_KEY = SettingsKeys.SURFACE_STYLE;
+export const TEXT_SCALE_STORAGE_KEY = SettingsKeys.TEXT_SCALE;
+
+export const clampTextScale = (scale: number): number => {
+  if (!Number.isFinite(scale)) return DEFAULT_TEXT_SCALE;
+  const rounded = Math.round(scale / 5) * 5;
+  return Math.max(MIN_TEXT_SCALE, Math.min(MAX_TEXT_SCALE, rounded));
+};
 
 export const getSystemTheme = (): ResolvedTheme => {
   if (typeof window === 'undefined') return 'light';
@@ -37,18 +51,39 @@ export const applyPaletteToDom = (palette: ColorPalette): ColorPalette => {
   return palette;
 };
 
+export const applySurfaceStyleToDom = (surface: SurfaceStyle): SurfaceStyle => {
+  if (typeof window === 'undefined') return 'glass_hybrid';
+  const root = document.documentElement;
+  root.setAttribute('data-surface', surface);
+  root.setAttribute('data-glass', surface !== 'flat' ? 'true' : 'false');
+  return surface;
+};
+
+export const applyTextScaleToDom = (scale: number): number => {
+  const clamped = clampTextScale(scale);
+  if (typeof window === 'undefined') return clamped;
+  const root = document.documentElement;
+  const factor = Number((clamped / 100).toFixed(2));
+  root.style.setProperty('--font-scale', String(factor));
+  root.style.fontSize = `${clamped}%`;
+  root.setAttribute('data-text-scale', String(clamped));
+  root.setAttribute('data-large-text', clamped >= 115 ? 'true' : 'false');
+  return clamped;
+};
+
 export const applyThemeToDom = (theme: ThemeMode): ResolvedTheme => {
   if (typeof window === 'undefined') return 'light';
 
   const resolved: ResolvedTheme = theme === 'system' ? getSystemTheme() : theme;
   const root = document.documentElement;
+  const isDarkTheme = resolved === 'dark' || resolved === 'oled';
 
-  root.classList.toggle('dark', resolved === 'dark' || resolved === 'oled');
+  root.classList.toggle('dark', isDarkTheme);
   root.setAttribute('data-theme', resolved);
 
   const meta = document.querySelector('meta[name="color-scheme"]');
   if (meta) {
-    meta.setAttribute('content', resolved === 'light' ? 'light' : 'dark');
+    meta.setAttribute('content', isDarkTheme ? 'dark' : 'light');
   }
 
   return resolved;
@@ -71,19 +106,47 @@ if (typeof window !== 'undefined') {
   applyPaletteToDom(currentPalette);
 }
 
+let currentSurfaceStyle: SurfaceStyle = settingsStorage.get(
+  SURFACE_STORAGE_KEY,
+  SurfaceStyleSchema,
+  'glass_hybrid',
+);
+if (typeof window !== 'undefined') {
+  applySurfaceStyleToDom(currentSurfaceStyle);
+}
+
+let currentTextScale: number = settingsStorage.get(
+  TEXT_SCALE_STORAGE_KEY,
+  TextScaleSchema,
+  DEFAULT_TEXT_SCALE,
+);
+if (typeof window !== 'undefined') {
+  currentTextScale = applyTextScaleToDom(currentTextScale);
+}
+
 interface ThemeSnapshot {
   theme: ThemeMode;
   palette: ColorPalette;
+  surfaceStyle: SurfaceStyle;
+  textScale: number;
 }
 
-let currentSnapshot: ThemeSnapshot = {
-  theme: currentTheme,
-  palette: currentPalette,
-};
+function buildSnapshot(): ThemeSnapshot {
+  return {
+    theme: currentTheme,
+    palette: currentPalette,
+    surfaceStyle: currentSurfaceStyle,
+    textScale: currentTextScale,
+  };
+}
+
+let currentSnapshot: ThemeSnapshot = buildSnapshot();
 
 const SERVER_SNAPSHOT: ThemeSnapshot = {
   theme: 'system',
   palette: 'violet',
+  surfaceStyle: 'glass_hybrid',
+  textScale: DEFAULT_TEXT_SCALE,
 };
 
 const themeSubscribers = new Set<() => void>();
@@ -97,7 +160,7 @@ function notifyThemeChange(): void {
 function updateTheme(theme: ThemeMode): void {
   currentTheme = theme;
   currentResolved = applyThemeToDom(theme);
-  currentSnapshot = { theme: currentTheme, palette: currentPalette };
+  currentSnapshot = buildSnapshot();
   settingsStorage.set(THEME_STORAGE_KEY, theme);
   notifyThemeChange();
 }
@@ -105,8 +168,24 @@ function updateTheme(theme: ThemeMode): void {
 function updatePalette(palette: ColorPalette): void {
   currentPalette = palette;
   applyPaletteToDom(palette);
-  currentSnapshot = { theme: currentTheme, palette: currentPalette };
+  currentSnapshot = buildSnapshot();
   settingsStorage.set(PALETTE_STORAGE_KEY, palette);
+  notifyThemeChange();
+}
+
+function updateSurfaceStyle(surfaceStyle: SurfaceStyle): void {
+  currentSurfaceStyle = surfaceStyle;
+  applySurfaceStyleToDom(surfaceStyle);
+  currentSnapshot = buildSnapshot();
+  settingsStorage.set(SURFACE_STORAGE_KEY, surfaceStyle);
+  notifyThemeChange();
+}
+
+function updateTextScale(scale: number): void {
+  const clamped = applyTextScaleToDom(scale);
+  currentTextScale = clamped;
+  currentSnapshot = buildSnapshot();
+  settingsStorage.set(TEXT_SCALE_STORAGE_KEY, clamped);
   notifyThemeChange();
 }
 
@@ -116,7 +195,7 @@ settingsStorage.subscribe(THEME_STORAGE_KEY, () => {
   if (next !== currentTheme) {
     currentTheme = next;
     currentResolved = applyThemeToDom(next);
-    currentSnapshot = { theme: currentTheme, palette: currentPalette };
+    currentSnapshot = buildSnapshot();
     notifyThemeChange();
   }
 });
@@ -130,7 +209,34 @@ settingsStorage.subscribe(PALETTE_STORAGE_KEY, () => {
   if (next !== currentPalette) {
     currentPalette = next;
     applyPaletteToDom(next);
-    currentSnapshot = { theme: currentTheme, palette: currentPalette };
+    currentSnapshot = buildSnapshot();
+    notifyThemeChange();
+  }
+});
+
+settingsStorage.subscribe(SURFACE_STORAGE_KEY, () => {
+  const next = settingsStorage.get(
+    SURFACE_STORAGE_KEY,
+    SurfaceStyleSchema,
+    'glass_hybrid',
+  );
+  if (next !== currentSurfaceStyle) {
+    currentSurfaceStyle = next;
+    applySurfaceStyleToDom(next);
+    currentSnapshot = buildSnapshot();
+    notifyThemeChange();
+  }
+});
+
+settingsStorage.subscribe(TEXT_SCALE_STORAGE_KEY, () => {
+  const next = settingsStorage.get(
+    TEXT_SCALE_STORAGE_KEY,
+    TextScaleSchema,
+    DEFAULT_TEXT_SCALE,
+  );
+  if (next !== currentTextScale) {
+    currentTextScale = applyTextScaleToDom(next);
+    currentSnapshot = buildSnapshot();
     notifyThemeChange();
   }
 });
@@ -173,13 +279,31 @@ export function useTheme(): ThemeState {
     updatePalette(nextPalette);
   }, []);
 
+  const setSurfaceStyle = useCallback((nextStyle: SurfaceStyle) => {
+    updateSurfaceStyle(nextStyle);
+  }, []);
+
+  const setTextScale = useCallback((nextScale: number) => {
+    updateTextScale(nextScale);
+  }, []);
+
+  const stepTextScale = useCallback((delta: number) => {
+    updateTextScale(currentTextScale + delta);
+  }, []);
+
+  const resetTextScale = useCallback(() => {
+    updateTextScale(DEFAULT_TEXT_SCALE);
+  }, []);
+
   const toggleTheme = useCallback(() => {
     const next: ThemeMode =
       currentResolved === 'light'
-        ? 'dark'
-        : currentResolved === 'dark'
-          ? 'oled'
-          : 'light';
+        ? 'warm'
+        : currentResolved === 'warm'
+          ? 'dark'
+          : currentResolved === 'dark'
+            ? 'oled'
+            : 'light';
     updateTheme(next);
   }, []);
 
@@ -187,8 +311,15 @@ export function useTheme(): ThemeState {
     theme: state.theme,
     resolvedTheme,
     palette: state.palette,
+    surfaceStyle: state.surfaceStyle,
+    isGlass: state.surfaceStyle !== 'flat',
+    textScale: state.textScale,
     setTheme,
     setPalette,
+    setSurfaceStyle,
+    setTextScale,
+    stepTextScale,
+    resetTextScale,
     toggleTheme,
   };
 }

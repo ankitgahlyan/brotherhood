@@ -15,6 +15,7 @@ import {
   useRates,
 } from '@demo/wallet-core';
 
+import { useTheme } from '@/core/theme';
 import { useCountUp } from '@/core/hooks/use-count-up';
 import {
   createSwipeKinematicState,
@@ -48,6 +49,8 @@ const GRAM_DECIMALS = 9;
 const SWIPE_THRESHOLD_PX = 52;
 
 export const WalletCardCarousel: React.FC = () => {
+  const { isGlass, surfaceStyle } = useTheme();
+  const cardRef = useRef<HTMLElement>(null);
   const {
     savedWallets,
     activeWalletId,
@@ -283,8 +286,38 @@ export const WalletCardCarousel: React.FC = () => {
 
   return (
     <section
-      className="wallet-card-carousel relative flex flex-col items-center p-4 pt-3 pb-4 rounded-3xl bg-linear-to-b from-card/90 via-card/70 to-card/90 border border-border/80 shadow-md backdrop-blur-xl select-none touch-pan-y transition-all overflow-hidden"
+      ref={cardRef}
+      className={`wallet-card-carousel relative flex flex-col items-center p-4 pt-3 pb-4 rounded-3xl bg-linear-to-b from-card/90 via-card/70 to-card/90 border border-border/80 shadow-md backdrop-blur-xl select-none touch-pan-y transition-all overflow-hidden${isGlass ? ' liquid-glass-hero' : ''}`}
       data-swipe-ignore={hasMultipleWallets ? 'true' : undefined}
+      onPointerMove={
+        surfaceStyle === 'glass_tilt'
+          ? (e) => {
+              const el = cardRef.current;
+              if (!el) return;
+              const rect = el.getBoundingClientRect();
+              const nx = (e.clientX - rect.left) / rect.width;
+              const ny = (e.clientY - rect.top) / rect.height;
+              const gx = nx * 100;
+              const gy = ny * 100;
+              const rx = (0.5 - ny) * 7;
+              const ry = (nx - 0.5) * 7;
+              el.style.setProperty('--gx', `${gx.toFixed(1)}%`);
+              el.style.setProperty('--gy', `${gy.toFixed(1)}%`);
+              el.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+              el.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+            }
+          : undefined
+      }
+      onPointerLeave={
+        surfaceStyle === 'glass_tilt'
+          ? () => {
+              const el = cardRef.current;
+              if (!el) return;
+              el.style.setProperty('--rx', '0deg');
+              el.style.setProperty('--ry', '0deg');
+            }
+          : undefined
+      }
       onTouchStart={hasMultipleWallets ? onTouchStart : undefined}
       onTouchMove={hasMultipleWallets ? onTouchMove : undefined}
       onTouchEnd={hasMultipleWallets ? onTouchEnd : undefined}
@@ -294,6 +327,9 @@ export const WalletCardCarousel: React.FC = () => {
       onMouseUp={hasMultipleWallets ? onTouchEnd : undefined}
       onMouseLeave={hasMultipleWallets ? onTouchEnd : undefined}
     >
+      {/* Specular glare overlay — visible only in glass_tilt mode */}
+      <div className="liquid-specular-glare" aria-hidden="true" />
+
       {/* Ambient Top Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-12 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
 
@@ -350,7 +386,7 @@ export const WalletCardCarousel: React.FC = () => {
                 e.stopPropagation();
                 void handleCopy();
               }}
-              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/80 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 min-h-9 bg-secondary/80 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
               aria-label="Copy address"
             >
               <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
@@ -379,7 +415,7 @@ export const WalletCardCarousel: React.FC = () => {
                 e.stopPropagation();
                 void handleToggleDeferred();
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-9 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed ${
                 allowDeferred
                   ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25'
                   : 'bg-secondary/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -408,7 +444,7 @@ export const WalletCardCarousel: React.FC = () => {
 
       {/* Pagination Dots Indicator */}
       {savedWallets.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-3.5 z-10">
+        <div className="flex items-center justify-center gap-1 mt-2 z-10">
           {savedWallets.map((wallet, idx) => {
             const isCurrent = idx === currentIndex;
             return (
@@ -419,13 +455,17 @@ export const WalletCardCarousel: React.FC = () => {
                   e.stopPropagation();
                   void handleSwitchTo(idx);
                 }}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  isCurrent
-                    ? 'w-6 bg-primary shadow-xs'
-                    : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'
-                }`}
+                className="py-2 px-1 flex items-center justify-center cursor-pointer group"
                 aria-label={`Switch to ${wallet.name}`}
-              />
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all duration-300 ${
+                    isCurrent
+                      ? 'w-6 bg-primary shadow-xs'
+                      : 'w-1.5 bg-muted-foreground/30 group-hover:bg-muted-foreground/60'
+                  }`}
+                />
+              </button>
             );
           })}
         </div>

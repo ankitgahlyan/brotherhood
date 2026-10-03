@@ -929,7 +929,7 @@ export const NotificationBell: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs"
+        className="relative min-w-10 min-h-10 flex items-center justify-center rounded-xl bg-secondary/50 hover:bg-secondary border border-border/60 active:scale-95 transition-all text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs"
         aria-label={`Notifications (${count} unread)`}
         title={`Notifications (${count} unread)`}
         data-testid="header-notification-bell"
@@ -967,7 +967,7 @@ export const NotificationBell: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                className="text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-2 py-1.5 min-h-9 rounded-lg hover:bg-secondary/60"
                 data-testid="notifications-clear-all-btn"
               >
                 Clear all
