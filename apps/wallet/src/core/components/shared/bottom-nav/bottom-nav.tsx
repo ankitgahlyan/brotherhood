@@ -80,6 +80,8 @@ interface BottomNavProps {
   isVisible?: boolean;
 }
 
+let lastBottomNavScrollLeft = 0;
+
 export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -100,17 +102,30 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
     return pathname.startsWith(item.path);
   };
 
-  // Scroll active tab into view horizontally inside container without jerking page viewport
+  // Restore previous scrollLeft before paint so mounting a new route never jerks BottomNav from 0,
+  // then smoothly center the active button only if it moved.
   useEffect(() => {
-    if (containerRef.current && activeBtnRef.current) {
-      const container = containerRef.current;
+    const container = containerRef.current;
+    if (!container) return;
+    if (
+      lastBottomNavScrollLeft > 0 &&
+      Math.abs(container.scrollLeft - lastBottomNavScrollLeft) > 1
+    ) {
+      container.scrollLeft = lastBottomNavScrollLeft;
+    }
+    if (activeBtnRef.current) {
       const btn = activeBtnRef.current;
-      const targetLeft =
-        btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
-      container.scrollTo({
-        left: Math.max(0, targetLeft),
-        behavior: 'smooth',
-      });
+      const targetLeft = Math.max(
+        0,
+        btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2,
+      );
+      if (Math.abs(container.scrollLeft - targetLeft) > 2) {
+        container.scrollTo({
+          left: targetLeft,
+          behavior: 'smooth',
+        });
+      }
+      lastBottomNavScrollLeft = targetLeft;
     }
   }, [pathname]);
 
@@ -134,6 +149,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
     >
       <div
         ref={containerRef}
+        onScroll={(e) => {
+          lastBottomNavScrollLeft = e.currentTarget.scrollLeft;
+        }}
         className={`max-w-md mx-auto flex items-center gap-1 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-proximity ${
           isGlass ? 'px-2 py-1.5' : 'px-2 py-1.5'
         }`}

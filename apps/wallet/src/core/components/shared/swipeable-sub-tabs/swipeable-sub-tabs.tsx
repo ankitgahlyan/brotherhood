@@ -384,9 +384,13 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     }
   };
 
+  const isNestedSubTabs = Boolean(
+    onBoundaryPrev || onBoundaryNext || className.includes('min-h-0'),
+  );
+
   return (
     <div
-      className={`swipeable-sub-tabs-container touch-pan-y flex flex-col flex-1 w-full overflow-x-clip ${
+      className={`swipeable-sub-tabs-container touch-pan-y flex flex-col flex-1 w-full ${
         className.includes('min-h') ? '' : 'min-h-[calc(100vh-180px)]'
       } ${className}`}
       onTouchStart={onTouchStart}
@@ -395,33 +399,36 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
       onTouchCancel={onTouchEnd}
     >
       {pinnedHeader}
-      {stickyTabBar && (
+      {stickyTabBar &&
+        (isNestedSubTabs ? (
+          <div className="mb-3">{stickyTabBar}</div>
+        ) : (
+          <div
+            className={`sticky z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md transition-[top] duration-300 ease-in-out ${
+              isBarsVisible ? 'top-[108px]' : 'top-0'
+            }`}
+          >
+            {stickyTabBar}
+          </div>
+        ))}
+      <div className="flex-1 flex flex-col w-full overflow-x-clip">
         <div
-          className={`sticky z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md transition-all duration-300 ease-in-out ${
-            isBarsVisible
-              ? 'top-[108px] translate-y-0 opacity-100'
-              : 'top-0 -translate-y-full opacity-0 pointer-events-none'
-          }`}
+          key={activeTab}
+          className="animate-in fade-in duration-150 flex-1 flex flex-col w-full"
+          style={{
+            transform: dragOffset
+              ? `translate3d(${dragOffset}px, 0, 0)`
+              : undefined,
+            opacity: dragOffset
+              ? Math.max(0.62, 1 - Math.abs(dragOffset) / 340)
+              : undefined,
+            transition: isDragging
+              ? 'none'
+              : 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out',
+          }}
         >
-          {stickyTabBar}
+          {children}
         </div>
-      )}
-      <div
-        key={activeTab}
-        className="animate-in fade-in duration-150 flex-1 flex flex-col w-full"
-        style={{
-          transform: dragOffset
-            ? `translate3d(${dragOffset}px, 0, 0)`
-            : undefined,
-          opacity: dragOffset
-            ? Math.max(0.62, 1 - Math.abs(dragOffset) / 340)
-            : undefined,
-          transition: isDragging
-            ? 'none'
-            : 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out',
-        }}
-      >
-        {children}
       </div>
     </div>
   );

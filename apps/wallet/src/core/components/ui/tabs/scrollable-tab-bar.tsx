@@ -53,20 +53,29 @@ export function ScrollableTabBar<T extends string = string>({
   const isPictorial = effectiveViewMode === 'icons_only';
   const activePreview = useActiveSwipePreview();
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    if (activeBtnRef.current) {
-      activeBtnRef.current.scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
+    const container = containerRef.current;
+    const btn = activeBtnRef.current;
+    if (container && btn) {
+      const targetLeft = Math.max(
+        0,
+        btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2,
+      );
+      if (Math.abs(container.scrollLeft - targetLeft) > 2) {
+        container.scrollTo({
+          left: targetLeft,
+          behavior: 'smooth',
+        });
+      }
     }
   }, [activeTab]);
 
   return (
     <div
+      ref={containerRef}
       role="tablist"
       className={cn(
         'no-swipe flex items-center gap-1 border border-border p-1',

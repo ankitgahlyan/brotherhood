@@ -255,14 +255,15 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
 
   return (
     <div
-      className="screen-swipe-container relative w-full min-h-screen flex flex-col touch-pan-y overflow-x-clip"
+      className="screen-swipe-container relative w-full flex-1 flex flex-col touch-pan-y overflow-x-clip"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
     >
       <div
-        className="w-full flex-1 flex flex-col"
+        key={pathname}
+        className="animate-in fade-in duration-150 w-full flex-1 flex flex-col"
         style={{
           transform: dragOffset
             ? `translate3d(${dragOffset}px, 0, 0)`

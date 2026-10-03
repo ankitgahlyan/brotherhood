@@ -55,18 +55,7 @@ export function useNavigate() {
         });
       };
 
-      if (
-        typeof document !== 'undefined' &&
-        'startViewTransition' in document &&
-        typeof window !== 'undefined' &&
-        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ) {
-        document.startViewTransition(() => {
-          performNavigate();
-        });
-      } else {
-        performNavigate();
-      }
+      performNavigate();
     },
     [tanstackNavigate],
   );
