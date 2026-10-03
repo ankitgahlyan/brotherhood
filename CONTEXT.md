@@ -61,13 +61,13 @@ _Avoid_: Liquidation, default, clearing
 _Avoid_: Inflation, demurrage (too broad), fees, loan repayment (reserved for Personal Token loans)
 
 **Weekly Claim** — a recurring mint of FI a Member may claim every 7 days after an initial 1-day activation wait. Composed of a 2-year Fixed Grant (11,111 FI/week) followed by a lifetime baseline floor (500 FI/week), combined with a lifetime Reputation Grant (10 FI per received vote per week). Automatically offsets any outstanding Debt before crediting net balance.
-_Avoid_: Stipend, allowance (allowance is reserved for friend spending)
+_Avoid_: Stipend, allowance, pocket money (reserved for friend spending permissions)
 
 **Gold Coin** — a transferrable store-of-value unit held by an Account, used for token-like transfers alongside FI.
 _Avoid_: Points, credits
 
-**Allowance** — a spending permission an Account grants to a friend, letting them spend a limited amount of the Account's balance (pocket money).
-_Avoid_: Spending limit, delegation
+**Pocket Money** — a spending permission an Account grants to a friend across concurrent modes (an irrevocable one-time instant or post-dated cheque, an irrevocable fixed-term recurring limit, a revocable open-ended recurring limit, and revocable unrestricted access for trusted loved ones), letting them spend from the Account's FI balance.
+_Avoid_: Allowance, spending limit, delegation
 
 **Deferred Payment** — a timelocked pull payment allowing a Member to pay a counterparty without carrying their wallet device. Disabled by default via the `allowDeferred` account flag, and enabled through an explicit owner toggle. Funds are escrowed in a temporary child contract for a 72-hour challenge window before release.
 _Avoid_: Offline payment, pull transfer, async payment

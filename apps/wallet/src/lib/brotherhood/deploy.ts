@@ -22,13 +22,28 @@ import {
   ActVote,
   BuyCredit,
   Destroy,
-  SetAllowance,
-  SpendAllowance,
+  SetPocketMoney,
+  SpendPocketMoney,
+  OneTimePocketMoney,
+  FixedRecurringPocketMoney,
+  OpenRecurringPocketMoney,
+  PocketMoney,
+  FixedRecurringConfig,
+  OpenRecurringConfig,
   RequestDeferredPayment,
   ActCancelDeferredPayment,
   ActClaimDeferredPayment,
   ToggleDeferredPayment,
 } from '@wrappers/FossFiWallet.gen';
+
+export {
+  OneTimePocketMoney,
+  FixedRecurringPocketMoney,
+  OpenRecurringPocketMoney,
+  PocketMoney,
+  FixedRecurringConfig,
+  OpenRecurringConfig,
+};
 import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
 import { BasePersonalMinter } from '@wrappers/BasePersonalMinter.gen';
@@ -398,26 +413,127 @@ export function buildRejectUpgradeBody(): Cell {
   return RejectUpgrade.toCell(RejectUpgrade.create());
 }
 
+export function buildSetPocketMoneyBody(params: {
+  grantee: Address;
+  unrestricted?: boolean | null;
+  oneTime?: {
+    remaining: bigint;
+    startTime?: bigint;
+    validUntil?: bigint;
+  } | null;
+  fixedRecurring?: {
+    limit: bigint;
+    period: bigint;
+    startTime?: bigint;
+    validUntil: bigint;
+  } | null;
+  openRecurring?: {
+    limit: bigint;
+    period?: bigint;
+    startTime?: bigint;
+  } | null;
+  queryId?: bigint;
+}): Cell {
+  const {
+    grantee,
+    unrestricted = null,
+    oneTime = null,
+    fixedRecurring = null,
+    openRecurring = null,
+    queryId = 0n,
+  } = params;
+  return SetPocketMoney.toCell(
+    SetPocketMoney.create({
+      queryId,
+      grantee,
+      unrestricted,
+      oneTime: oneTime
+        ? OneTimePocketMoney.create({
+            remaining: oneTime.remaining,
+            startTime: oneTime.startTime ?? 0n,
+            validUntil: oneTime.validUntil ?? 0n,
+          })
+        : null,
+      fixedRecurring: fixedRecurring
+        ? FixedRecurringConfig.create({
+            limit: fixedRecurring.limit,
+            period: fixedRecurring.period,
+            startTime: fixedRecurring.startTime ?? 0n,
+            validUntil: fixedRecurring.validUntil,
+          })
+        : null,
+      openRecurring: openRecurring
+        ? OpenRecurringConfig.create({
+            limit: openRecurring.limit,
+            period: openRecurring.period ?? 0n,
+            startTime: openRecurring.startTime ?? 0n,
+          })
+        : null,
+    }),
+  );
+}
+
 export function buildSetAllowanceBody(params: {
   grantee: Address;
   amount: bigint;
+  period?: bigint;
+  startTime?: bigint;
+  validUntil?: bigint;
+  mode?: 'openRecurring' | 'fixedRecurring' | 'oneTime' | 'unrestricted';
   queryId?: bigint;
 }): Cell {
-  const { grantee, amount, queryId = 0n } = params;
-  return SetAllowance.toCell(SetAllowance.create({ queryId, grantee, amount }));
+  const {
+    grantee,
+    amount,
+    period = 0n,
+    startTime = 0n,
+    validUntil = 0n,
+    mode = 'openRecurring',
+    queryId = 0n,
+  } = params;
+
+  if (mode === 'unrestricted') {
+    return buildSetPocketMoneyBody({
+      grantee,
+      unrestricted: amount > 0n,
+      queryId,
+    });
+  }
+  if (mode === 'oneTime') {
+    return buildSetPocketMoneyBody({
+      grantee,
+      oneTime: { remaining: amount, startTime, validUntil },
+      queryId,
+    });
+  }
+  if (mode === 'fixedRecurring') {
+    return buildSetPocketMoneyBody({
+      grantee,
+      fixedRecurring: { limit: amount, period, startTime, validUntil },
+      queryId,
+    });
+  }
+  return buildSetPocketMoneyBody({
+    grantee,
+    unrestricted: amount === 0n ? false : null,
+    openRecurring: { limit: amount, period, startTime },
+    queryId,
+  });
 }
 
-export function buildSpendAllowanceBody(params: {
+export function buildSpendPocketMoneyBody(params: {
   amount: bigint;
   receiver: Address;
   sendExcessesTo: Address;
   queryId?: bigint;
 }): Cell {
   const { amount, receiver, sendExcessesTo, queryId = 0n } = params;
-  return SpendAllowance.toCell(
-    SpendAllowance.create({ queryId, amount, receiver, sendExcessesTo }),
+  return SpendPocketMoney.toCell(
+    SpendPocketMoney.create({ queryId, amount, receiver, sendExcessesTo }),
   );
 }
+
+export const buildSpendAllowanceBody = buildSpendPocketMoneyBody;
 
 export function buildRequestDeferredPaymentBody(params: {
   payer: Address;

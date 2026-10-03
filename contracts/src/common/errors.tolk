@@ -61,6 +61,7 @@ enum Errors {
     PersonalJettonNotRegistered = 764
     DeferredPaymentDisabled = 765
     NotOnboardedWallet = 766
+    PocketMoneyLocked = 767
 
     // DNS Errors
     DnsInvalidSubdomainBits = 70

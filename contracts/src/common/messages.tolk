@@ -374,7 +374,7 @@ struct (0x000010ff) CleanupProposalVotes {
 }
 
 // ============================================================================
-// GROUP 5: ECONOMY, ALLOWANCES, & CREDIT (Range: 0x00001140 - 0x0000118F)
+// GROUP 5: ECONOMY, POCKET MONEY, & CREDIT (Range: 0x00001140 - 0x0000118F)
 // Buffer: 50 reserved opcodes for future financial features
 // ============================================================================
 
@@ -398,13 +398,57 @@ struct (0x0000114e) TriggerDecay {
     sender: address
 }
 
-struct (0x00001143) SetAllowance {
-    queryId: uint64
-    grantee: address
-    amount: coins
+struct OneTimePocketMoney {
+    remaining: coins
+    startTime: uint32 = 0
+    validUntil: uint32 = 0
 }
 
-struct (0x00001144) SpendAllowance {
+struct FixedRecurringPocketMoney {
+    limit: coins
+    spent: coins = 0
+    period: uint32
+    startTime: uint32 = 0
+    validUntil: uint32
+}
+
+struct OpenRecurringPocketMoney {
+    limit: coins
+    spent: coins = 0
+    period: uint32 = 0
+    startTime: uint32 = 0
+}
+
+struct PocketMoney {
+    unrestricted: bool = false
+    oneTime: OneTimePocketMoney? = null
+    fixedRecurring: FixedRecurringPocketMoney? = null
+    openRecurring: OpenRecurringPocketMoney? = null
+}
+
+struct FixedRecurringConfig {
+    limit: coins
+    period: uint32
+    startTime: uint32 = 0
+    validUntil: uint32
+}
+
+struct OpenRecurringConfig {
+    limit: coins
+    period: uint32 = 0
+    startTime: uint32 = 0
+}
+
+struct (0x00001143) SetPocketMoney {
+    queryId: uint64
+    grantee: address
+    unrestricted: bool? = null
+    oneTime: OneTimePocketMoney? = null
+    fixedRecurring: FixedRecurringConfig? = null
+    openRecurring: OpenRecurringConfig? = null
+}
+
+struct (0x00001144) SpendPocketMoney {
     queryId: uint64
     amount: coins
     receiver: address

@@ -9,6 +9,11 @@
 import { useEffect, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { useFiWalletState } from '@/lib/brotherhood/queries';
+import {
+  calcSpendablePocketMoney,
+  unwrapPocketMoneyEntry,
+} from '@/lib/brotherhood/ton';
+import type { PocketMoney } from '@/lib/brotherhood/deploy';
 import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import {
@@ -35,6 +40,7 @@ export interface AllowanceEntry {
   address: Address;
   addressString: string;
   amount: bigint;
+  pocketMoney?: PocketMoney;
 }
 
 export interface FiAccountData {
@@ -171,20 +177,29 @@ export function useFiAccount(walletAddress: string | null): UseFiAccountResult {
         }
       }
 
-      // Extract allowances entries
+      // Extract pocketMoney / allowances entries
       const allowances: AllowanceEntry[] = [];
-      if (maps?.allowances) {
+      const pocketMoneyMap =
+        maps?.pocketMoney ??
+        (maps as { allowances?: any } | undefined)?.allowances;
+      if (pocketMoneyMap) {
         try {
-          const keys = maps.allowances.keys();
+          const grantorBal = rawData.jettonBalance ?? 0n;
+          const keys = pocketMoneyMap.keys();
           for (const k of keys) {
-            const amountVal = maps.allowances.get(k);
+            const rawVal = pocketMoneyMap.get(k);
+            const unwrapped = unwrapPocketMoneyEntry(rawVal);
             allowances.push({
               address: k,
               addressString: formatTonAddress(k, {
                 isContract: false,
                 network,
               }),
-              amount: amountVal ?? 0n,
+              amount: calcSpendablePocketMoney(rawVal, grantorBal),
+              pocketMoney:
+                unwrapped && typeof unwrapped === 'object'
+                  ? unwrapped
+                  : undefined,
             });
           }
         } catch {

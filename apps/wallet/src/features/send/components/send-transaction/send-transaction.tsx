@@ -19,8 +19,8 @@ import { parseUnits } from '@/core/utils/units';
 
 import { useSendToken } from '../../hooks/use-send-token';
 import { useSendTokens } from '../../hooks/use-send-tokens';
-import { useSpendAllowance } from '@/features/brotherhood/hooks/use-spend-allowance';
-import { useAllowanceBalance } from '../../hooks/use-allowance-balance';
+import { useSpendAllowance } from '@/features/brotherhood/hooks/use-spend-pocket-money';
+import { useAllowanceBalance } from '../../hooks/use-pocket-money-balance';
 import { TokenSelectButton } from '../token-select-button';
 import { TokenSelectModal } from '../token-select-modal';
 import { AmountField } from '../amount-field';
@@ -261,6 +261,7 @@ export const SendTransaction: React.FC = () => {
   const {
     allowance,
     formattedAllowance,
+    pocketMoney,
     isLoading: isAllowanceLoading,
   } = useAllowanceBalance({
     granterOwnerAddress: senderMode === 'other' ? resolvedGranterAddress : null,
@@ -451,7 +452,7 @@ export const SendTransaction: React.FC = () => {
 
   const sendActionLabel =
     senderMode === 'other'
-      ? 'Spend Allowance'
+      ? 'Spend Pocket Money'
       : effectiveGasless
         ? 'Send Gasless'
         : `Send ${selected.symbol}`;
@@ -483,7 +484,7 @@ export const SendTransaction: React.FC = () => {
 
           <AmountField value={amount} onChange={setAmount} token={selected} />
 
-          {/* Spend allowance toggle for FI tokens */}
+          {/* Spend pocket money toggle for FI tokens */}
           {isFiToken && (
             <div className="space-y-3">
               <button
@@ -518,12 +519,12 @@ export const SendTransaction: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-foreground leading-tight">
-                      Spend from Allowance
+                      Spend from Pocket Money
                     </div>
                     <div className="text-[11px] text-muted-foreground truncate">
                       {senderMode === 'other'
-                        ? 'Sending FI from a granter wallet'
-                        : 'Use delegated FI spending limit'}
+                        ? 'Sending FI from a granter wallet (open → fixed → cheque)'
+                        : 'Use delegated FI pocket money, recurring limit, or cheque'}
                     </div>
                   </div>
                 </div>
@@ -549,6 +550,7 @@ export const SendTransaction: React.FC = () => {
                   resolvedGranterAddress={resolvedGranterAddress}
                   allowance={allowance}
                   formattedAllowance={formattedAllowance}
+                  pocketMoney={pocketMoney}
                   isAllowanceLoading={isAllowanceLoading}
                   userAddress={address ?? null}
                   error={granterError}

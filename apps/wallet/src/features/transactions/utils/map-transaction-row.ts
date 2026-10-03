@@ -177,6 +177,7 @@ export const TVM_EXIT_CODES: Record<number, string> = {
   764: 'Personal Jetton Not Registered',
   765: 'Deferred Payment Disabled',
   766: 'Wallet Not Onboarded',
+  767: 'Pocket Money Locked',
   65535: 'Invalid Message Body',
 };
 

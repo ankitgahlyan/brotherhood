@@ -203,7 +203,7 @@ fun setupDirectWallet(initialBalance: coins = 0): (FossFiWallet, Treasury, Treas
                 }.toCell(),
             }.toCell(),
             maps: Maps {
-                allowances: [],
+                pocketMoney: [],
                 invited: [],
                 social: SocialMaps { votedFor: [] }.toCell(),
                 reportInfo: ReportInfo { reports: [] }.toCell(),

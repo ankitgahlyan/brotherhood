@@ -48,7 +48,7 @@ struct Maps {
     // followings: map<address, coins>
     invited: map<address, coins> = []
 
-    allowances: map<address, coins> = [] // todo need in personal tokens too?
+    pocketMoney: map<address, Cell<PocketMoney>> = [] // todo need in personal tokens too?
     // debts: map<address, coins>
     // closeFriends: map<address, bool> // for social recovery of account
     social: Cell<SocialMaps>

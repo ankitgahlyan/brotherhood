@@ -173,13 +173,77 @@ fun main() {
     println("FiWallet active (post)       : {}", updatedFullWallet.active);
 
     assertEq("wallet.version", updatedFullWallet.version as int, expectedFinalVersion);
-    assertEq("wallet.storeVersion", updatedFullWallet.storeVersion as int, 1);
+    assertEq("wallet.storeVersion", updatedFullWallet.storeVersion as int, 2);
     assertGt("wallet.jettonBalance", updatedFullWallet.jettonBalance as int, 0);
     assertTrue("wallet.active", updatedFullWallet.active);
     assertTrue(
         "wallet.ownerAddress == admin",
         updatedBasicWallet.ownerAddress == admin,
     );
+
+    // ── Verify invitee wallet (tst1) auto-upgraded via teleg fan-out ──────────
+    val updatedMaps = updatedFullWallet.maps.load();
+    val inviteeEntry = updatedMaps.invited.findFirst();
+    assertTrue("teleg has invited tst1 in maps.invited", inviteeEntry.isFound);
+    val tst1FiWalletAddr = inviteeEntry.getKey();
+    val tst1Wallet = FossFiWallet.fromAddress(tst1FiWalletAddr);
+    val tst1Basic = tst1Wallet.getWalletData();
+    val tst1Full = tst1Wallet.getWalletDataAll();
+    println("\n[INVITEE TST1] FiWallet Address : {}", tst1FiWalletAddr);
+    println("[INVITEE TST1] Owner Address    : {}", tst1Basic.ownerAddress);
+    println("[INVITEE TST1] version (post)   : {}", tst1Full.version);
+    println("[INVITEE TST1] storeVersion     : {}", tst1Full.storeVersion);
+    println("[INVITEE TST1] jettonBalance    : {}", tst1Full.jettonBalance);
+    assertEq("tst1.version", tst1Full.version as int, expectedFinalVersion);
+    assertEq("tst1.storeVersion", tst1Full.storeVersion as int, 2);
+    assertTrue("tst1.active", tst1Full.active);
+
+    // ── Verify PocketMoney grant from teleg to tst1 & spend by tst1 ───────────
+    println("\n[POCKET MONEY] Testing SetPocketMoney & SpendPocketMoney between teleg and tst1...");
+    val setPmRes = adminWallet.sendSetPocketMoney(
+        admin,
+        10,
+        tst1Basic.ownerAddress,
+        false,
+        OneTimePocketMoney {
+            remaining: grams("5"),
+            startTime: 0,
+            validUntil: 0,
+        },
+        null,
+        OpenRecurringConfig {
+            limit: grams("3"),
+            period: ONE_WEEK,
+            startTime: 0,
+        },
+        { value: grams("0.2") },
+    );
+    setPmRes.waitForTrace();
+    val spendableBefore = adminWallet.getPocketMoney(tst1Basic.ownerAddress);
+    assertEq(
+        "spendable pocketMoney (5 oneTime + 3 openRecurring)",
+        spendableBefore as int,
+        grams("8") as int,
+    );
+
+    val tst1BalBefore = tst1Wallet.getJettonBalance();
+    val spendPmRes = adminWallet.sendSpendPocketMoney(
+        tst1Basic.ownerAddress,
+        11,
+        grams("4"),
+        tst1Basic.ownerAddress,
+        tst1Basic.ownerAddress,
+        { value: grams("0.3") },
+    );
+    spendPmRes.waitForTrace();
+    val spendableAfter = adminWallet.getPocketMoney(tst1Basic.ownerAddress);
+    assertEq("spendable pocketMoney after spending 4 FI", spendableAfter as int, grams("4") as int);
+    assertEq(
+        "tst1 balance increased by 4 FI",
+        tst1Wallet.getJettonBalance() as int,
+        (tst1BalBefore + grams("4")) as int,
+    );
+    println("✓ PocketMoney grant and waterfall spend between teleg and tst1 verified!");
 
     val (username, h3Cell, country) = adminWallet.getProfile();
     println("Profile — username: {}, h3: {}, country: {}", username, h3Cell, country);

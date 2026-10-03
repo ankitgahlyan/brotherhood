@@ -2,7 +2,7 @@ import { TonClient } from '@ton/ton';
 import { Address } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
-import { FossFiWallet } from '@wrappers/FossFiWallet.gen';
+import { FossFiWallet, type PocketMoney } from '@wrappers/FossFiWallet.gen';
 import { BaseFiWallet } from '@wrappers/BaseFiWallet.gen';
 import {
   rateLimitedFetch,
@@ -442,20 +442,108 @@ export async function getFiMinterState() {
 export interface AllowanceEntry {
   grantee: Address;
   amount: bigint;
+  pocketMoney?: PocketMoney;
 }
 
-// The allowances a wallet has granted, as a stable array (sorted by address).
+export function unwrapPocketMoneyEntry(raw: any): PocketMoney | bigint | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'bigint') return raw;
+  if (typeof raw === 'object' && 'ref' in raw && raw.ref) {
+    return raw.ref as PocketMoney;
+  }
+  return raw as PocketMoney;
+}
+
+export function calcSpendablePocketMoney(
+  rawEntry: any,
+  grantorBalance: bigint,
+  nowSec: bigint = BigInt(Math.floor(Date.now() / 1000)),
+): bigint {
+  const pm = unwrapPocketMoneyEntry(rawEntry);
+  if (pm === null) return 0n;
+  if (typeof pm === 'bigint') {
+    return pm > grantorBalance ? grantorBalance : pm;
+  }
+  if (pm.unrestricted) {
+    return grantorBalance;
+  }
+  let total = 0n;
+
+  if (pm.openRecurring && pm.openRecurring.limit > 0n) {
+    const open = pm.openRecurring;
+    if (nowSec >= open.startTime) {
+      let spent = open.spent ?? 0n;
+      if (open.period > 0n) {
+        const elapsed = nowSec - open.startTime;
+        const cycles = elapsed / open.period;
+        if (cycles > 0n) {
+          spent = 0n;
+        }
+      }
+      if (open.limit > spent) {
+        total += open.limit - spent;
+      }
+    }
+  }
+
+  if (
+    pm.fixedRecurring &&
+    pm.fixedRecurring.limit > 0n &&
+    pm.fixedRecurring.period > 0n &&
+    nowSec < pm.fixedRecurring.validUntil &&
+    nowSec >= pm.fixedRecurring.startTime
+  ) {
+    const fixed = pm.fixedRecurring;
+    const elapsed = nowSec - fixed.startTime;
+    const cycles = elapsed / fixed.period;
+    const spent = cycles > 0n ? 0n : (fixed.spent ?? 0n);
+    if (fixed.limit > spent) {
+      total += fixed.limit - spent;
+    }
+  }
+
+  if (
+    pm.oneTime &&
+    pm.oneTime.remaining > 0n &&
+    nowSec >= pm.oneTime.startTime &&
+    (pm.oneTime.validUntil === 0n || nowSec < pm.oneTime.validUntil)
+  ) {
+    total += pm.oneTime.remaining;
+  }
+
+  return total > grantorBalance ? grantorBalance : total;
+}
+
+// The pocketMoney / allowances a wallet has granted, as a stable array (sorted by address).
 export function listAllowances(state: {
+  jettonBalance?: bigint;
   maps: {
-    ref: { allowances: import('@ton/core').Dictionary<Address, bigint> };
+    ref: {
+      pocketMoney?: import('@ton/core').Dictionary<Address, any>;
+      allowances?: import('@ton/core').Dictionary<Address, any>;
+    };
   };
 }): AllowanceEntry[] {
-  const entries = state.maps.ref.allowances;
+  const entries = state.maps.ref.pocketMoney ?? state.maps.ref.allowances;
+  if (!entries) return [];
+  const grantorBalance =
+    state.jettonBalance ?? BigInt(Number.MAX_SAFE_INTEGER) * 1_000_000_000n;
   return entries
     .keys()
-    .map((grantee) => ({ grantee, amount: entries.get(grantee)! }))
+    .map((grantee) => {
+      const raw = entries.get(grantee);
+      const unwrapped = unwrapPocketMoneyEntry(raw);
+      return {
+        grantee,
+        amount: calcSpendablePocketMoney(raw, grantorBalance),
+        pocketMoney:
+          unwrapped && typeof unwrapped === 'object' ? unwrapped : undefined,
+      };
+    })
     .sort((a, b) => a.grantee.toString().localeCompare(b.grantee.toString()));
 }
+
+export const listPocketMoney = listAllowances;
 
 export async function getCircle(
   invitedList: Address[],

@@ -749,24 +749,34 @@ fun FossFiWallet.sendDestroy(self, from: address, config: SendParams = {}): Send
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendSetAllowance(
+fun FossFiWallet.sendSetPocketMoney(
     self,
     from: address,
     queryId: uint64,
     grantee: address,
-    amount: coins,
+    unrestricted: bool?,
+    oneTime: OneTimePocketMoney?,
+    fixedRecurring: FixedRecurringConfig?,
+    openRecurring: OpenRecurringConfig?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SetAllowance { queryId, grantee, amount },
+        body: SetPocketMoney {
+            queryId,
+            grantee,
+            unrestricted,
+            oneTime,
+            fixedRecurring,
+            openRecurring,
+        },
     });
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendSpendAllowance(
+fun FossFiWallet.sendSpendPocketMoney(
     self,
     from: address,
     queryId: uint64,
@@ -779,7 +789,7 @@ fun FossFiWallet.sendSpendAllowance(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SpendAllowance { queryId, amount, receiver, sendExcessesTo },
+        body: SpendPocketMoney { queryId, amount, receiver, sendExcessesTo },
     });
     return net.send(from, genericMsg);
 }
@@ -1109,6 +1119,10 @@ fun FossFiWallet.getFollowersCount(self): uint32 {
     return net.runGetMethod(self.address, "get_followers_count");
 }
 
-fun FossFiWallet.getAllowance(self, grantee: address): coins {
-    return net.runGetMethod(self.address, "get_allowance", [grantee]);
+fun FossFiWallet.getPocketMoney(self, grantee: address): coins {
+    return net.runGetMethod(self.address, "get_pocket_money", [grantee]);
+}
+
+fun FossFiWallet.getPocketMoneyData(self, grantee: address): PocketMoney {
+    return net.runGetMethod(self.address, "get_pocket_money_data", [grantee]);
 }

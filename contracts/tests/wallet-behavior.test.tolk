@@ -139,7 +139,7 @@ get fun `test : addrs r same`() {
             }.toCell(),
         }.toCell(),
         maps: Maps {
-            allowances: [],
+            pocketMoney: [],
             invited: [],
             social: SocialMaps { votedFor: [] }.toCell(),
             reportInfo: ReportInfo { reports: [] }.toCell(),

@@ -376,8 +376,36 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
                 }
                 className="text-[11px] sm:text-xs py-1.5 px-1 truncate min-w-0"
               >
-                Set Allowance
+                Pocket Money
               </Button>
+            </div>
+          )}
+
+          {/* Pocket Money Summary between Member & Viewer */}
+          {data.allowances && data.allowances.length > 0 && (
+            <div className="p-3 bg-secondary/40 border border-border/60 rounded-xl space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground">
+                  Pocket Money Grants ({data.allowances.length})
+                </span>
+              </div>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {data.allowances.map((entry) => (
+                  <div
+                    key={entry.addressString}
+                    className="flex items-center justify-between text-[11px] py-1 border-t border-border/40"
+                  >
+                    <span className="font-mono text-muted-foreground">
+                      {formatShortWallet(entry.address)}
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {entry.pocketMoney?.unrestricted
+                        ? `♾️ Unrestricted (${formatFi(entry.amount)} FI)`
+                        : `${formatFi(entry.amount)} FI spendable`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

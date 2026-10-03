@@ -16,6 +16,12 @@ import {
   EMPTY_CONTACTS_MAP,
 } from '@/core/storage/useContactBookStore';
 import { isTonChainDns } from '@/core/lib/dns';
+import type { PocketMoney } from '@/lib/brotherhood/deploy';
+import {
+  formatFiCoins,
+  formatPocketMoneyPeriod,
+  formatPocketMoneyTimestamp,
+} from '@/features/brotherhood/hooks/use-set-pocket-money';
 
 export type SenderMode = 'self' | 'other';
 
@@ -27,6 +33,7 @@ interface SenderFieldProps {
   resolvedGranterAddress: string | null;
   allowance: bigint;
   formattedAllowance: string;
+  pocketMoney?: PocketMoney | null;
   isAllowanceLoading: boolean;
   userAddress: string | null;
   error?: string;
@@ -40,12 +47,14 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   resolvedGranterAddress,
   allowance: _allowance,
   formattedAllowance,
+  pocketMoney,
   isAllowanceLoading,
   userAddress,
   error,
 }) => {
   const { network, formatWalletAddress } = useFormatAddress();
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nowMs] = useState(() => Date.now());
 
   const contactsMap = useContactBookStore(
     (state) => state.contactsByNetwork[network] || EMPTY_CONTACTS_MAP,
@@ -99,7 +108,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
   return (
     <Input.Container error={Boolean(error)}>
       <Input.Header>
-        <Input.Title>Allowance Granter</Input.Title>
+        <Input.Title>Pocket Money Granter</Input.Title>
       </Input.Header>
 
       {mode === 'self' ? (
@@ -155,7 +164,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                   >
                     <div className="flex items-center gap-1.5">
                       {item.isDns ? (
-                        <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
                       ) : (
                         <User className="w-3.5 h-3.5 text-primary shrink-0" />
                       )}
@@ -163,7 +172,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                         {item.isDns ? item.username : `@${item.username}`}
                       </span>
                       {item.isDns && (
-                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-normal">
+                        <span className="text-[9px] bg-primary/20 text-primary px-1 py-0.5 rounded font-normal">
                           DNS
                         </span>
                       )}
@@ -177,7 +186,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
             )}
           </div>
 
-          {/* Granter resolution & Allowance summary */}
+          {/* Granter resolution & Pocket Money summary */}
           {resolvedGranterAddress && (
             <div className="flex flex-col gap-1.5 px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-xs">
               <div className="flex items-center justify-between text-primary">
@@ -202,7 +211,7 @@ export const SenderField: React.FC<SenderFieldProps> = ({
               </div>
               <div className="flex items-center justify-between pt-1.5 border-t border-primary/20">
                 <span className="text-muted-foreground">
-                  Remaining Allowance:
+                  Spendable Pocket Money Now:
                 </span>
                 <span className="font-semibold text-foreground">
                   {isAllowanceLoading
@@ -210,6 +219,66 @@ export const SenderField: React.FC<SenderFieldProps> = ({
                     : `${formattedAllowance} FI`}
                 </span>
               </div>
+
+              {pocketMoney && !isAllowanceLoading && (
+                <div className="flex flex-wrap gap-1 pt-1 text-[10px]">
+                  {pocketMoney.unrestricted && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-medium">
+                      ♾️ Unrestricted Access
+                    </span>
+                  )}
+                  {pocketMoney.openRecurring &&
+                    pocketMoney.openRecurring.limit > 0n && (
+                      <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground">
+                        Open:{' '}
+                        {formatFiCoins(
+                          pocketMoney.openRecurring.limit >
+                            pocketMoney.openRecurring.spent
+                            ? pocketMoney.openRecurring.limit -
+                                pocketMoney.openRecurring.spent
+                            : 0n,
+                        )}
+                        /{formatFiCoins(pocketMoney.openRecurring.limit)} FI (
+                        {formatPocketMoneyPeriod(
+                          pocketMoney.openRecurring.period,
+                        )}
+                        )
+                      </span>
+                    )}
+                  {pocketMoney.fixedRecurring &&
+                    pocketMoney.fixedRecurring.limit > 0n && (
+                      <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground">
+                        Fixed:{' '}
+                        {formatFiCoins(
+                          pocketMoney.fixedRecurring.limit >
+                            pocketMoney.fixedRecurring.spent
+                            ? pocketMoney.fixedRecurring.limit -
+                                pocketMoney.fixedRecurring.spent
+                            : 0n,
+                        )}
+                        /{formatFiCoins(pocketMoney.fixedRecurring.limit)} FI (
+                        {formatPocketMoneyPeriod(
+                          pocketMoney.fixedRecurring.period,
+                        )}{' '}
+                        until{' '}
+                        {formatPocketMoneyTimestamp(
+                          pocketMoney.fixedRecurring.validUntil,
+                        )}
+                        )
+                      </span>
+                    )}
+                  {pocketMoney.oneTime &&
+                    pocketMoney.oneTime.remaining > 0n && (
+                      <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground">
+                        One-Time: {formatFiCoins(pocketMoney.oneTime.remaining)}{' '}
+                        FI
+                        {Number(pocketMoney.oneTime.startTime) * 1000 > nowMs
+                          ? ` (Cheque unlocks ${formatPocketMoneyTimestamp(pocketMoney.oneTime.startTime)})`
+                          : ''}
+                      </span>
+                    )}
+                </div>
+              )}
             </div>
           )}
 

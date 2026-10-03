@@ -8,6 +8,55 @@ type AllowedBaseUpgradeMessage =
     | TopUpTons
     | InternalInvite
 
+struct LegacyMapsV1 {
+    invited: map<address, coins> = []
+    allowances: map<address, RemainingBitsAndRefs> = []
+    social: Cell<SocialMaps>
+    reportInfo: Cell<ReportInfo>
+}
+
+fun migrateLegacyMapsToV2(rawMapsCell: cell): Cell<Maps> {
+    val legacy = LegacyMapsV1.fromCell(rawMapsCell);
+    var migratedPocketMoney: map<address, Cell<PocketMoney>> = [];
+    val now = blockchain.now();
+
+    var entry = legacy.allowances.findFirst();
+    while (entry.isFound) {
+        val grantee = entry.getKey();
+        var valSlice = entry.loadValue();
+        if (valSlice.remainingRefsCount() == 0) {
+            val amount = valSlice.loadCoins();
+            if (amount > 0) {
+                migratedPocketMoney.set(
+                    grantee,
+                    PocketMoney {
+                        unrestricted: false,
+                        oneTime: null,
+                        fixedRecurring: null,
+                        openRecurring: OpenRecurringPocketMoney {
+                            limit: amount,
+                            spent: 0,
+                            period: 0,
+                            startTime: now,
+                        },
+                    }.toCell(),
+                );
+            }
+        } else {
+            val existingRef = valSlice.loadRef() as Cell<PocketMoney>;
+            migratedPocketMoney.set(grantee, existingRef);
+        }
+        entry = legacy.allowances.iterateNext(entry);
+    }
+
+    return Maps {
+        invited: legacy.invited,
+        pocketMoney: migratedPocketMoney,
+        social: legacy.social,
+        reportInfo: legacy.reportInfo,
+    }.toCell();
+}
+
 fun migrateFromInit(
     initStore: BaseFiWalletStore,
     isAuthority: bool = false,
@@ -18,6 +67,7 @@ fun migrateFromInit(
     h3Cell: string = "",
     country: uint16 = 0,
     nominee: address? = null,
+    walletVersion: uint10 = 1,
 ): FiWalletStore {
     assert (initStore.version == 0) throw Errors.VersionMismatch;
 
@@ -39,8 +89,8 @@ fun migrateFromInit(
         connections: 0,
         active: true,
         mintable: true,
-        version: 1,
-        storeVersion: 1,
+        version: walletVersion,
+        storeVersion: 2,
 
         profile: ProfileInfo { username, h3Cell, country }.toCell(),
         timestamps: TimeStamps {
@@ -61,7 +111,7 @@ fun migrateFromInit(
         }.toCell(),
         maps: Maps {
             invited: [],
-            allowances: [],
+            pocketMoney: [],
             social: SocialMaps {
                 votedFor: [],
                 followingCount: 0,
@@ -80,20 +130,12 @@ fun migrateFromInit(
 
 @method_id(2222)
 fun migrateFiWalletFromPrevious(oldStore: FiWalletStore, version: uint10): void {
-    // todo: need to repack? or use fresh instance of store? change version here
-    // Current latest store version is 1; when version bumps occur in future,
-    // stepwise migration logic goes here:
-    // var oldStore = lazy FiWalletStore.fromCell(contract.getData());
-    assert (oldStore.version == version - 1) throw Errors.VersionMismatch;
+    assert (oldStore.version < version) throw Errors.VersionMismatch;
+    if (oldStore.storeVersion < 2) {
+        oldStore.maps = migrateLegacyMapsToV2(oldStore.maps as unknown as cell);
+        oldStore.storeVersion = 2;
+    }
     oldStore.version = version;
-    // var storage = FiStore {
-    //     supply: oldStorage.totalSupply,
-    //     walletVersion: oldStorage.walletVersion,
-    //     admin: oldStorage.adminAddress,
-    //     baseFiWalletCode: oldStorage.baseFiWalletCode,
-    //     metadata: oldStorage.metadata,
-    //     others: oldStorage.others,
-    // };
     contract.setData(oldStore.toCell());
 }
 
@@ -112,6 +154,11 @@ fun migrateFiWalletFromBase(
                 true,
                 contract.getAddress(),
                 contract.getAddress(),
+                "",
+                "",
+                0,
+                null,
+                1,
             );
             contract.setData(newStore.toCell());
         }
@@ -127,6 +174,7 @@ fun migrateFiWalletFromBase(
                 msg.h3Cell,
                 msg.country,
                 msg.sender,
+                msg.version > 0 ? msg.version : 1,
             );
             contract.setData(newStore.toCell());
 

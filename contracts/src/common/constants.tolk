@@ -45,31 +45,34 @@ const SWAP_CREDIT_FORWARD_OP: int = 0x0000114f // Inline forwardPayload opcode f
 // 3. TIMING, INTERVALS & DEADLINES
 // ----------------------------------------------------------------------------
 
-const ONE_DAY = 60 * 60 * 24
-const ONE_MONTH = 60 * 60 * 24 * 30
-const ONE_YEAR = 60 * 60 * 24 * 366
+const ONE_MINUTE = 60
+const ONE_HOUR = 60 * ONE_MINUTE
+const ONE_DAY = 24 * ONE_HOUR
+const ONE_WEEK = 7 * ONE_DAY
+const ONE_MONTH = 30 * ONE_DAY
+const ONE_YEAR = 366 * ONE_DAY
 
-const ACTIVATION_WAIT: int = 86400 // 1 day
-const CLAIM_INTERVAL: int = 604800 // 1 week
-const ADMIN_HANDOVER_WAIT: int = 604800 // 1 week
-const INVITE_WAIT: int = 14400 // 4 hours
-const MAX_CLAIM_PERIOD: int = 63072000 // 2 years
-const CLOSURE_WAIT: int = 86400 // 1 day
-const DECAY_MONTH_SECONDS: int = 2592000 // 30 days
+const ACTIVATION_WAIT: int = ONE_DAY // 1 day
+const CLAIM_INTERVAL: int = ONE_WEEK // 1 week
+const ADMIN_HANDOVER_WAIT: int = ONE_WEEK // 1 week
+const INVITE_WAIT: int = 4 * ONE_HOUR // 4 hours
+const MAX_CLAIM_PERIOD: int = 730 * ONE_DAY // 2 years
+const CLOSURE_WAIT: int = ONE_DAY // 1 day
+const DECAY_MONTH_SECONDS: int = ONE_MONTH // 30 days
 const DECAY_MONTHS_TOTAL: int = 480 // ~40 years
-const EMI_GRACE_PERIOD: int = 86400 // 24 hours
-const HOLDING_CHALLENGE_DURATION: uint32 = 72 * 3600 // 72 hours
-const REVEAL_DEADLINE_SECONDS: int = 3600 // 1 hour to reveal lottery
+const EMI_GRACE_PERIOD: int = ONE_DAY // 24 hours
+const HOLDING_CHALLENGE_DURATION: uint32 = 3 * ONE_DAY // 72 hours
+const REVEAL_DEADLINE_SECONDS: int = ONE_HOUR // 1 hour to reveal lottery
 
 // ----------------------------------------------------------------------------
 // 4. DNS, AUCTIONS & FEES
 // ----------------------------------------------------------------------------
 
-const RESERVATION_PERIOD = 10 * 60 // 10 minutes
+const RESERVATION_PERIOD = 10 * ONE_MINUTE // 10 minutes
 const AUCTION_START_TIME = 1659171600 // GMT: Monday, 30 July 2022 г., 09:00:00
-const AUCTION_START_DURATION = 5 * 60 // 5 minutes
-const AUCTION_END_DURATION = 60 // 1 minute
-const AUCTION_PROLONGATION = 60 // 1 minute
+const AUCTION_START_DURATION = 5 * ONE_MINUTE // 5 minutes
+const AUCTION_END_DURATION = ONE_MINUTE // 1 minute
+const AUCTION_PROLONGATION = ONE_MINUTE // 1 minute
 
 const BRO_FIXED_TON_FEE: coins = grams("1.0")
 const BRO_TREASURY_TON_FEE: coins = grams("0.5")

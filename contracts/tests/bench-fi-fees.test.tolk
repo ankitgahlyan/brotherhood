@@ -10,6 +10,7 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/utils"
 
+import "@contracts/common/constants"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/fossFi/fees-management"
@@ -47,9 +48,20 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
     invitedMap.set(randomAddress(), grams("1"));
     invitedMap.set(randomAddress(), grams("1"));
     invitedMap.set(randomAddress(), grams("1"));
-    var allowancesMap: map<address, coins> = [];
-    allowancesMap.set(randomAddress(), grams("5"));
-    allowancesMap.set(randomAddress(), grams("5"));
+    var pocketMoneyMap: map<address, Cell<PocketMoney>> = [];
+    pocketMoneyMap.set(
+        randomAddress(),
+        PocketMoney { oneTime: OneTimePocketMoney { remaining: grams("5") } }.toCell(),
+    );
+    pocketMoneyMap.set(
+        randomAddress(),
+        PocketMoney {
+            openRecurring: OpenRecurringPocketMoney {
+                limit: grams("5"),
+                period: ONE_WEEK,
+            },
+        }.toCell(),
+    );
     var votedForMap: map<address, uint4> = [];
     votedForMap.set(randomAddress(), 10);
     votedForMap.set(randomAddress(), 10);
@@ -63,7 +75,7 @@ get fun `test bench: measure FossFi storage, init-state, and message sizes`() {
 
     val heavyMaps = Maps {
         invited: invitedMap,
-        allowances: allowancesMap,
+        pocketMoney: pocketMoneyMap,
         social: SocialMaps { votedFor: votedForMap }.toCell(),
         reportInfo: ReportInfo {
             reports: reportsMap,

@@ -76,11 +76,11 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x000010fe: 'VoteProposal',
   0x000010ff: 'CleanupProposalVotes',
 
-  // Brotherhood Group 5: Economy, Allowances, & Credit
+  // Brotherhood Group 5: Economy, Pocket Money, & Credit
   0x00001141: 'ActClaimWeeklyGrant',
   0x00001142: 'ActPayEmi',
-  0x00001143: 'SetAllowance',
-  0x00001144: 'SpendAllowance',
+  0x00001143: 'SetPocketMoney',
+  0x00001144: 'SpendPocketMoney',
   0x00001145: 'AskGoldCoinsTransfer',
   0x00001146: 'InternalGoldCoinsTransfer',
   0x00001147: 'BuyCredit',
@@ -191,8 +191,10 @@ export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
   // Economy & Credit
   ActClaimWeeklyGrant: 'Claim Weekly Grant',
   ActPayEmi: 'Pay Loan EMI',
-  SetAllowance: 'Set Spending Allowance',
-  SpendAllowance: 'Spend Allowance',
+  SetPocketMoney: 'Set Pocket Money',
+  SpendPocketMoney: 'Spend Pocket Money',
+  SetAllowance: 'Set Pocket Money',
+  SpendAllowance: 'Spend Pocket Money',
   AskGoldCoinsTransfer: 'Transfer Community Credit',
   InternalGoldCoinsTransfer: 'Process Community Credit',
   BuyCredit: 'Buy Credit',

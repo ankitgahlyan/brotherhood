@@ -3,7 +3,7 @@
 Date: 2026-09-14
 
 ## Status
-Accepted
+Accepted (allowance schema extended to multi-slot `PocketMoney` in [ADR 0022](./0022-multi-slot-pocket-money-and-post-dated-cheques.md))
 
 ## Context
 Members of BrotherHood can grant spending permissions (**Allowance**) to friends from their Account (`FossFiWallet`). The on-chain contract supports `SpendAllowance` (`0x00001144`), which lets a designated grantee spend up to an authorized amount of the granter's FI balance.

@@ -9,24 +9,30 @@
 import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { buildSetAllowanceBody, parseUnits } from '@/lib/brotherhood/deploy';
+import {
+  buildSpendPocketMoneyBody,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
 
-export interface UseSetAllowanceParams {
+export interface UseSpendPocketMoneyParams {
   wallet: Wallet | null | undefined;
   walletKit: ITonWalletKit | null;
   walletAddress: string | null;
-  grantee: string;
+  granterAddress: string;
+  receiver: string;
   amount: string;
   network: Network;
   accountData?: FiAccountData | null;
 }
 
-export interface UseSetAllowanceResult {
+export type UseSpendAllowanceParams = UseSpendPocketMoneyParams;
+
+export interface UseSpendPocketMoneyResult {
   send: () => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
@@ -34,15 +40,18 @@ export interface UseSetAllowanceResult {
   validationError: string | null;
 }
 
-export function useSetAllowance({
+export type UseSpendAllowanceResult = UseSpendPocketMoneyResult;
+
+export function useSpendPocketMoney({
   wallet,
   walletKit,
   walletAddress,
-  grantee,
+  granterAddress,
+  receiver,
   amount,
   network,
   accountData,
-}: UseSetAllowanceParams): UseSetAllowanceResult {
+}: UseSpendPocketMoneyParams): UseSpendPocketMoneyResult {
   const {
     send: sendTx,
     isSending,
@@ -53,50 +62,52 @@ export function useSetAllowance({
     if (!wallet || !walletAddress) return 'Connect wallet first';
     const actionErr = getAccountActionError(accountData);
     if (actionErr) return actionErr;
-    if (!grantee.trim()) return 'Enter grantee address';
+    if (!granterAddress.trim()) return 'Enter granter member address';
     try {
-      const parsed = Address.parse(grantee.trim());
-      if (walletAddress) {
-        const self = Address.parse(walletAddress);
-        if (parsed.equals(self)) return 'Cannot grant allowance to yourself';
-      }
+      Address.parse(granterAddress.trim());
     } catch {
-      return 'Invalid grantee address';
+      return 'Invalid granter address';
     }
-    if (!amount || parseFloat(amount) < 0) return 'Enter allowance amount';
-
-    if (accountData && parseFloat(amount) > 0) {
-      try {
-        const amountNano = parseUnits(amount, 9);
-        if (amountNano > accountData.jettonBalance) {
-          return `Insufficient balance (available: ${(Number(accountData.jettonBalance) / 1e9).toFixed(4)} FI)`;
-        }
-      } catch {
-        return 'Invalid amount format';
-      }
+    if (!receiver.trim()) return 'Enter receiver address';
+    try {
+      Address.parse(receiver.trim());
+    } catch {
+      return 'Invalid receiver address';
     }
+    if (!amount || parseFloat(amount) <= 0) return 'Enter amount to spend';
 
     return null;
-  }, [wallet, walletAddress, accountData, grantee, amount]);
+  }, [wallet, walletAddress, accountData, granterAddress, receiver, amount]);
 
   const send = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet address');
     const ownerAddr = Address.parse(walletAddress);
-    const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
-    const granteeAddr = Address.parse(grantee.trim());
+    const granterOwnerAddr = Address.parse(granterAddress.trim());
+    const granterFiWalletAddr = await getFiWalletAddress(
+      granterOwnerAddr,
+      network,
+    );
+    const receiverAddr = Address.parse(receiver.trim());
     const amountNano = parseUnits(amount, 9);
 
-    const payload = buildSetAllowanceBody({
-      grantee: granteeAddr,
+    const payload = buildSpendPocketMoneyBody({
       amount: amountNano,
+      receiver: receiverAddr,
+      sendExcessesTo: ownerAddr,
     });
 
     await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.ALLOWANCE, payload },
+      {
+        toAddress: granterFiWalletAddr.toString(),
+        amount: GAS.ALLOWANCE,
+        payload,
+      },
     ]);
-  }, [walletAddress, grantee, amount, network, sendTx]);
+  }, [walletAddress, granterAddress, receiver, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
 
   return { send, isDisabled, isSending, error, validationError };
 }
+
+export const useSpendAllowance = useSpendPocketMoney;

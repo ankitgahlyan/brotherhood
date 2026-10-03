@@ -65,8 +65,8 @@ type AllowedMessageToWallet =
     | UnfollowRevertedNotification
     | SettleDeath
     | Destroy
-    | SetAllowance
-    | SpendAllowance
+    | SetPocketMoney
+    | SpendPocketMoney
     | AskGoldCoinsTransfer
     | InternalGoldCoinsTransfer
     | TriggerDecay
@@ -1478,29 +1478,182 @@ fun onInternalMessage(in: InMessage): void {
             // todo: full invite chain destroy
         }
 
-        SetAllowance => {
+        SetPocketMoney => {
             assert (in.senderAddress == addrs.owner) throw Errors.NotOwner;
-            // todo: don't allow to revoke existing allowance
-            if (msg.amount == 0) {
-                maps.allowances.delete(msg.grantee);
+            assert (
+                msg.unrestricted != null || msg.oneTime != null || msg.fixedRecurring != null ||
+                msg.openRecurring != null
+            ) throw Errors.InvalidMessage;
+
+            val now: uint32 = blockchain.now();
+            val existing = maps.pocketMoney.get(msg.grantee);
+            var pm = existing.isFound
+                ? normalizePocketMoney(existing.loadValue().load(), now)
+                : PocketMoney {};
+
+            if (msg.unrestricted != null) {
+                pm.unrestricted = msg.unrestricted;
+            }
+
+            if (msg.oneTime != null) {
+                val reqOne = msg.oneTime;
+                if (pm.oneTime != null) {
+                    val curOne = pm.oneTime;
+                    assert (
+                        reqOne.remaining >= curOne.remaining && reqOne.remaining > 0
+                    ) throw Errors.PocketMoneyLocked;
+                    assert (reqOne.startTime <= curOne.startTime) throw Errors.PocketMoneyLocked;
+                    if (curOne.validUntil == 0) {
+                        assert (reqOne.validUntil == 0) throw Errors.PocketMoneyLocked;
+                    } else {
+                        assert (
+                            reqOne.validUntil == 0 || reqOne.validUntil >= curOne.validUntil
+                        ) throw Errors.PocketMoneyLocked;
+                    }
+                    pm.oneTime = reqOne;
+                } else {
+                    assert (reqOne.remaining > 0) throw Errors.InvalidMessage;
+                    if (reqOne.validUntil > 0) {
+                        assert (
+                            reqOne.validUntil > now && reqOne.validUntil > reqOne.startTime
+                        ) throw Errors.InvalidMessage;
+                    }
+                    pm.oneTime = reqOne;
+                }
+            }
+
+            if (msg.fixedRecurring != null) {
+                val reqFixed = msg.fixedRecurring;
+                if (pm.fixedRecurring != null) {
+                    val curFixed = pm.fixedRecurring;
+                    assert (
+                        reqFixed.limit >= curFixed.limit && reqFixed.limit > 0
+                    ) throw Errors.PocketMoneyLocked;
+                    assert (
+                        reqFixed.period > 0 && reqFixed.period <= curFixed.period
+                    ) throw Errors.PocketMoneyLocked;
+                    assert (
+                        reqFixed.validUntil >= curFixed.validUntil
+                    ) throw Errors.PocketMoneyLocked;
+                    val nextStart = reqFixed.startTime > 0
+                        ? reqFixed.startTime
+                        : curFixed.startTime;
+                    assert (nextStart <= curFixed.startTime) throw Errors.PocketMoneyLocked;
+                    pm.fixedRecurring = FixedRecurringPocketMoney {
+                        limit: reqFixed.limit,
+                        spent: curFixed.spent,
+                        period: reqFixed.period,
+                        startTime: nextStart,
+                        validUntil: reqFixed.validUntil,
+                    };
+                } else {
+                    assert (reqFixed.limit > 0 && reqFixed.period > 0) throw Errors.InvalidMessage;
+                    val effStart = reqFixed.startTime > 0 ? reqFixed.startTime : now;
+                    assert (
+                        reqFixed.validUntil > now && reqFixed.validUntil > effStart
+                    ) throw Errors.InvalidMessage;
+                    pm.fixedRecurring = FixedRecurringPocketMoney {
+                        limit: reqFixed.limit,
+                        spent: 0,
+                        period: reqFixed.period,
+                        startTime: effStart,
+                        validUntil: reqFixed.validUntil,
+                    };
+                }
+            }
+
+            if (msg.openRecurring != null) {
+                val reqOpen = msg.openRecurring;
+                if (reqOpen.limit == 0) {
+                    pm.openRecurring = null;
+                } else {
+                    val effStart = reqOpen.startTime > 0 ? reqOpen.startTime : now;
+                    pm.openRecurring = OpenRecurringPocketMoney {
+                        limit: reqOpen.limit,
+                        spent: 0,
+                        period: reqOpen.period,
+                        startTime: effStart,
+                    };
+                }
+            }
+
+            if (isPocketMoneyEmpty(pm)) {
+                maps.pocketMoney.delete(msg.grantee);
             } else {
-                maps.allowances.set(msg.grantee, msg.amount);
+                maps.pocketMoney.set(msg.grantee, pm.toCell());
             }
         }
 
-        SpendAllowance => {
-            val granted = maps.allowances.get(in.senderAddress);
+        SpendPocketMoney => {
+            val granted = maps.pocketMoney.get(in.senderAddress);
             assert (granted.isFound) throw FollowingErrors.NotFollowing;
-            val remaining = granted.loadValue();
-            assert (remaining >= msg.amount) throw Errors.InsufficientBalance;
+            assert (msg.amount > 0) throw Errors.InvalidMessage;
             assert (store.jettonBalance >= msg.amount) throw Errors.BalanceError;
+
+            val now = blockchain.now();
+            var pm = normalizePocketMoney(granted.loadValue().load(), now);
+
+            if (!pm.unrestricted) {
+                var toSpend: coins = msg.amount;
+
+                // 1. Spend from openRecurring first (cancellable anytime)
+                if (pm.openRecurring != null) {
+                    var open = pm.openRecurring;
+                    if (now >= open.startTime && open.limit > open.spent) {
+                        val availOpen = open.limit - open.spent;
+                        val useOpen = min(toSpend, availOpen);
+                        open.spent += useOpen;
+                        toSpend -= useOpen;
+                        if (open.period == 0 && open.spent >= open.limit) {
+                            pm.openRecurring = null;
+                        } else {
+                            pm.openRecurring = open;
+                        }
+                    }
+                }
+
+                // 2. Spend from fixedRecurring second (resets every period until validUntil)
+                if (toSpend > 0 && pm.fixedRecurring != null) {
+                    var fixed = pm.fixedRecurring;
+                    if (
+                        now >= fixed.startTime && now < fixed.validUntil &&
+                        fixed.limit > fixed.spent
+                    ) {
+                        val availFixed = fixed.limit - fixed.spent;
+                        val useFixed = min(toSpend, availFixed);
+                        fixed.spent += useFixed;
+                        toSpend -= useFixed;
+                        pm.fixedRecurring = fixed;
+                    }
+                }
+
+                // 3. Spend from oneTime last (irrevocable cheque)
+                if (toSpend > 0 && pm.oneTime != null) {
+                    var one = pm.oneTime;
+                    if (
+                        now >= one.startTime && (one.validUntil == 0 || now < one.validUntil) &&
+                        one.remaining > 0
+                    ) {
+                        val useOne = min(toSpend, one.remaining);
+                        one.remaining -= useOne;
+                        toSpend -= useOne;
+                        if (one.remaining == 0) {
+                            pm.oneTime = null;
+                        } else {
+                            pm.oneTime = one;
+                        }
+                    }
+                }
+
+                assert (toSpend == 0) throw Errors.InsufficientBalance;
+            }
 
             checkAmountIsEnoughToTransfer(in.valueCoins, 0, in.originalForwardFee);
 
-            if (remaining == msg.amount) {
-                maps.allowances.delete(in.senderAddress);
+            if (isPocketMoneyEmpty(pm)) {
+                maps.pocketMoney.delete(in.senderAddress);
             } else {
-                maps.allowances.set(in.senderAddress, remaining - msg.amount);
+                maps.pocketMoney.set(in.senderAddress, pm.toCell());
             }
             store.jettonBalance -= msg.amount;
 
@@ -2067,12 +2220,102 @@ get fun get_followers_count(): uint32 {
     return social.followersCount;
 }
 
-get fun get_allowance(grantee: address): coins {
+fun normalizePocketMoney(pm: PocketMoney, now: int): PocketMoney {
+    var result = pm;
+
+    if (result.openRecurring != null) {
+        var open = result.openRecurring;
+        if (open.limit == 0) {
+            result.openRecurring = null;
+        } else if (open.period > 0 && now >= open.startTime) {
+            val elapsed = now - open.startTime;
+            if (elapsed >= open.period) {
+                val cycles = elapsed / open.period;
+                open.startTime += (cycles * open.period) as uint32;
+                open.spent = 0;
+            }
+            result.openRecurring = open;
+        }
+    }
+
+    if (result.fixedRecurring != null) {
+        var fixed = result.fixedRecurring;
+        if (fixed.limit == 0 || now >= fixed.validUntil) {
+            result.fixedRecurring = null;
+        } else if (fixed.period > 0 && now >= fixed.startTime) {
+            val elapsed = now - fixed.startTime;
+            if (elapsed >= fixed.period) {
+                val cycles = elapsed / fixed.period;
+                fixed.startTime += (cycles * fixed.period) as uint32;
+                fixed.spent = 0;
+            }
+            result.fixedRecurring = fixed;
+        }
+    }
+
+    if (result.oneTime != null) {
+        val one = result.oneTime;
+        if (one.remaining == 0 || (one.validUntil > 0 && now >= one.validUntil)) {
+            result.oneTime = null;
+        }
+    }
+
+    return result;
+}
+
+fun isPocketMoneyEmpty(pm: PocketMoney): bool {
+    return (!pm.unrestricted && pm.oneTime == null && pm.fixedRecurring == null &&
+        pm.openRecurring == null);
+}
+
+fun calcSpendablePocketMoneyNow(pm: PocketMoney, walletBalance: coins, now: int): coins {
+    val norm = normalizePocketMoney(pm, now);
+    if (norm.unrestricted) {
+        return walletBalance;
+    }
+
+    var total: coins = 0;
+    if (norm.openRecurring != null) {
+        val open = norm.openRecurring;
+        if (now >= open.startTime && open.limit > open.spent) {
+            total += open.limit - open.spent;
+        }
+    }
+    if (norm.fixedRecurring != null) {
+        val fixed = norm.fixedRecurring;
+        if (now >= fixed.startTime && now < fixed.validUntil && fixed.limit > fixed.spent) {
+            total += fixed.limit - fixed.spent;
+        }
+    }
+    if (norm.oneTime != null) {
+        val one = norm.oneTime;
+        if (now >= one.startTime && (one.validUntil == 0 || now < one.validUntil)) {
+            total += one.remaining;
+        }
+    }
+    return total;
+}
+
+get fun get_pocket_money(grantee: address): coins {
     val store = lazy FiWalletStore.load();
     val maps = lazy store.maps.load();
-    val granted = maps.allowances.get(grantee);
+    val granted = maps.pocketMoney.get(grantee);
     if (!granted.isFound) {
         return 0;
     }
-    return granted.loadValue();
+    return calcSpendablePocketMoneyNow(
+        granted.loadValue().load(),
+        store.jettonBalance,
+        blockchain.now(),
+    );
+}
+
+get fun get_pocket_money_data(grantee: address): PocketMoney {
+    val store = lazy FiWalletStore.load();
+    val maps = lazy store.maps.load();
+    val granted = maps.pocketMoney.get(grantee);
+    if (!granted.isFound) {
+        return {};
+    }
+    return normalizePocketMoney(granted.loadValue().load(), blockchain.now());
 }

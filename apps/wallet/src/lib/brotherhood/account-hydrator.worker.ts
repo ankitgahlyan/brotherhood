@@ -8,8 +8,15 @@
 
 import '../../bufferPolyfill';
 import { Buffer } from 'buffer';
-import { Cell, Dictionary } from '@ton/core';
-import { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import { beginCell, Cell, Dictionary } from '@ton/core';
+import {
+  FiWalletStore,
+  Maps,
+  OpenRecurringPocketMoney,
+  PocketMoney,
+  ReportInfo,
+  SocialMaps,
+} from '@wrappers/FossFiWallet.gen';
 import { FiStore } from '@wrappers/FossFi.gen';
 import { PersonalStore } from '@wrappers/Personal.gen';
 import { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
@@ -90,7 +97,72 @@ export function deserializeFiWalletDataBoc(
 ): FiWalletStore | null {
   try {
     const cell = Cell.fromBase64(dataBoc);
-    return FiWalletStore.fromSlice(cell.beginParse());
+    try {
+      return FiWalletStore.fromSlice(cell.beginParse());
+    } catch {
+      // Fallback for storeVersion=1 wallets with non-empty legacy `allowances: map<address, coins>`
+      const rootSlice = cell.beginParse();
+      if (rootSlice.remainingRefs !== 4) return null;
+      const addressesRef = rootSlice.loadRef();
+      const legacyMapsRef = rootSlice.loadRef();
+      const timestampsRef = rootSlice.loadRef();
+      const profileRef = rootSlice.loadRef();
+
+      const ms = legacyMapsRef.beginParse();
+      const invited = Dictionary.load(
+        Dictionary.Keys.Address(),
+        Dictionary.Values.BigVarUint(4),
+        ms,
+      );
+      const legacyAllowances = Dictionary.load(
+        Dictionary.Keys.Address(),
+        Dictionary.Values.BigVarUint(4),
+        ms,
+      );
+      const socialRef = ms.loadRef();
+      const reportInfoRef = ms.loadRef();
+
+      const pocketMoney = Dictionary.empty<
+        import('@ton/core').Address,
+        { ref: PocketMoney }
+      >(Dictionary.Keys.Address());
+      for (const addr of legacyAllowances.keys()) {
+        const amt = legacyAllowances.get(addr) ?? 0n;
+        if (amt > 0n) {
+          pocketMoney.set(addr, {
+            ref: PocketMoney.create({
+              unrestricted: false,
+              oneTime: null,
+              fixedRecurring: null,
+              openRecurring: OpenRecurringPocketMoney.create({
+                limit: amt,
+                spent: 0n,
+                period: 0n,
+                startTime: 0n,
+              }),
+            }),
+          });
+        }
+      }
+
+      const rootBits = rootSlice.loadBits(rootSlice.remainingBits);
+      const migratedMapsCell = Maps.toCell(
+        Maps.create({
+          invited,
+          pocketMoney,
+          social: { ref: SocialMaps.fromSlice(socialRef.beginParse()) },
+          reportInfo: { ref: ReportInfo.fromSlice(reportInfoRef.beginParse()) },
+        }),
+      );
+      const migratedRootCell = beginCell()
+        .storeBits(rootBits)
+        .storeRef(addressesRef)
+        .storeRef(migratedMapsCell)
+        .storeRef(timestampsRef)
+        .storeRef(profileRef)
+        .endCell();
+      return FiWalletStore.fromSlice(migratedRootCell.beginParse());
+    }
   } catch {
     return null;
   }
