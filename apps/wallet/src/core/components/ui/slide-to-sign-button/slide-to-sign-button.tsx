@@ -44,14 +44,6 @@ const SLIDE_THUMB_VARIANT: Record<ButtonVariant, string> = {
   ghost: 'bg-primary text-primary-foreground shadow-md',
 };
 
-const SLIDE_FILL_VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-primary/25',
-  secondary: 'bg-primary/20',
-  gray: 'bg-foreground/15',
-  danger: 'bg-destructive/25',
-  ghost: 'bg-primary/20',
-};
-
 const SLIDE_HEIGHT_CLASS: Record<ButtonSize, string> = {
   lg: 'h-13 rounded-2xl text-base font-bold',
   md: 'h-11 rounded-xl text-sm font-semibold',
@@ -91,6 +83,7 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
   const maxDragRef = useRef(0);
   const currentOffsetRef = useRef(0);
   const isDraggingRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -123,6 +116,7 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
 
   const triggerComplete = useCallback(() => {
     isDraggingRef.current = false;
+    activePointerIdRef.current = null;
     setIsDragging(false);
     setIsComplete(true);
     setDragOffset(maxDragRef.current);
@@ -139,87 +133,99 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
     }, 1000);
   }, [onComplete, clearTimers]);
 
-  const handleStart = useCallback(
-    (clientX: number) => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (disabled || loading || isComplete) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      e.stopPropagation();
       const max = measureTrack();
       if (max <= 0) return;
 
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore if unsupported */
+      }
+
+      activePointerIdRef.current = e.pointerId;
       isDraggingRef.current = true;
+      currentOffsetRef.current = 0;
+      startXRef.current = e.clientX;
       setIsDragging(true);
-      startXRef.current = clientX - currentOffsetRef.current;
+      setDragOffset(0);
     },
     [disabled, loading, isComplete, measureTrack],
   );
 
-  const handleMove = useCallback(
-    (clientX: number) => {
-      if (!isDraggingRef.current || isComplete) return;
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (
+        !isDraggingRef.current ||
+        isComplete ||
+        (activePointerIdRef.current !== null &&
+          e.pointerId !== activePointerIdRef.current)
+      ) {
+        return;
+      }
+      e.stopPropagation();
+
       const max = maxDragRef.current || measureTrack();
       if (max <= 0) return;
 
       const nextOffset = Math.max(
         0,
-        Math.min(clientX - startXRef.current, max),
+        Math.min(e.clientX - startXRef.current, max),
       );
       currentOffsetRef.current = nextOffset;
       setDragOffset(nextOffset);
-
-      if (nextOffset >= max * 0.96) {
-        triggerComplete();
-      }
     },
-    [isComplete, measureTrack, triggerComplete],
+    [isComplete, measureTrack],
   );
 
-  const handleEnd = useCallback(() => {
-    if (!isDraggingRef.current || isComplete) return;
-    isDraggingRef.current = false;
-    setIsDragging(false);
-
-    const max = maxDragRef.current;
-    if (max > 0 && currentOffsetRef.current >= max * COMPLETION_THRESHOLD) {
-      triggerComplete();
-    } else {
-      currentOffsetRef.current = 0;
-      setDragOffset(0);
-    }
-  }, [isComplete, triggerComplete]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      handleMove(e.clientX);
-    };
-    const onMouseUp = () => {
-      handleEnd();
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        handleMove(e.touches[0].clientX);
+  const handlePointerEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (
+        !isDraggingRef.current ||
+        isComplete ||
+        (activePointerIdRef.current !== null &&
+          e.pointerId !== activePointerIdRef.current)
+      ) {
+        return;
       }
-    };
-    const onTouchEnd = () => {
-      handleEnd();
-    };
+      e.stopPropagation();
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('touchcancel', onTouchEnd);
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
 
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchEnd);
-    };
-  }, [isDragging, handleMove, handleEnd]);
+      isDraggingRef.current = false;
+      activePointerIdRef.current = null;
+      setIsDragging(false);
+
+      const max = maxDragRef.current;
+      if (
+        e.type !== 'pointercancel' &&
+        max > 0 &&
+        currentOffsetRef.current >= max * COMPLETION_THRESHOLD
+      ) {
+        triggerComplete();
+      } else {
+        currentOffsetRef.current = 0;
+        setDragOffset(0);
+      }
+    },
+    [isComplete, triggerComplete],
+  );
 
   const progressRatio = maxDrag > 0 ? Math.min(1, dragOffset / maxDrag) : 0;
+  const isReadyToRelease = progressRatio >= COMPLETION_THRESHOLD;
+  const thumbHalfWidth =
+    size === 'lg' ? 24 : size === 'sm' ? 16 : size === 'icon' ? 14 : 20;
   const formattedIdleLabel = idleLabel.toLowerCase().startsWith('slide')
     ? idleLabel
     : `Slide to ${idleLabel}`;
@@ -240,6 +246,10 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
           triggerComplete();
         }
       }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
       onTouchStart={(e) => {
         e.stopPropagation();
       }}
@@ -247,27 +257,30 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
         e.stopPropagation();
       }}
       className={cn(
-        'no-swipe relative flex-1 flex items-center p-1 overflow-hidden select-none touch-pan-y transition-colors duration-200',
+        'no-swipe relative flex-1 flex items-center p-1 overflow-hidden select-none touch-none transition-colors duration-200',
         SLIDE_HEIGHT_CLASS[size],
         disabled || loading
           ? 'opacity-50 cursor-not-allowed'
-          : 'cursor-pointer',
+          : 'cursor-grab active:cursor-grabbing',
         isComplete
           ? 'bg-emerald-600 text-white border border-emerald-500'
           : SLIDE_TRACK_VARIANT[variant],
         className,
       )}
     >
-      {/* Filled trail behind thumb */}
+      {/* Green visual fill trail behind thumb */}
       {!isComplete && !loading && (
         <div
           className={cn(
-            'absolute inset-y-0 left-0 pointer-events-none',
-            SLIDE_FILL_VARIANT[variant],
+            'absolute inset-y-0 left-0 pointer-events-none bg-gradient-to-r from-emerald-500/80 via-emerald-500/90 to-green-600/95',
             !isDragging && 'transition-all duration-200 ease-out',
           )}
           style={{
-            width: dragOffset > 0 ? `${dragOffset + 28}px` : '0px',
+            width:
+              dragOffset > 0 ? `${dragOffset + thumbHalfWidth + 4}px` : '0px',
+            boxShadow: isDragging
+              ? '0 0 18px rgba(16, 185, 129, 0.45)'
+              : 'none',
           }}
         />
       )}
@@ -304,12 +317,12 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
           </div>
         ) : (
           <span
-            className="truncate font-semibold transition-opacity duration-75"
-            style={{
-              opacity: Math.max(0.15, 1 - progressRatio * 1.15),
-            }}
+            className={cn(
+              'truncate font-semibold transition-colors duration-100',
+              progressRatio > 0.35 && 'text-white drop-shadow-xs',
+            )}
           >
-            {formattedIdleLabel}
+            {isReadyToRelease ? `Release to ${idleLabel}` : formattedIdleLabel}
           </span>
         )}
       </div>
@@ -318,21 +331,12 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
       {!loading && !isComplete && (
         <div
           ref={thumbRef}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleStart(e.clientX);
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-            if (e.touches.length > 0) {
-              handleStart(e.touches[0].clientX);
-            }
-          }}
           className={cn(
-            'relative z-20 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing select-none',
+            'relative z-20 flex items-center justify-center shrink-0 pointer-events-none select-none',
             SLIDE_THUMB_SIZE_CLASS[size],
-            SLIDE_THUMB_VARIANT[variant],
+            isReadyToRelease
+              ? 'bg-emerald-500 text-white shadow-lg'
+              : SLIDE_THUMB_VARIANT[variant],
             !isDragging && 'transition-transform duration-200 ease-out',
           )}
           style={{
@@ -340,7 +344,11 @@ export const SlideToSignButton: React.FC<SlideToSignButtonProps> = ({
           }}
           data-testid={testId ? `${testId}-thumb` : 'slide-to-sign-thumb'}
         >
-          <ChevronsRight className="w-5 h-5" />
+          {isReadyToRelease ? (
+            <Check className="w-5 h-5 stroke-[2.5]" />
+          ) : (
+            <ChevronsRight className="w-5 h-5" />
+          )}
         </div>
       )}
     </div>

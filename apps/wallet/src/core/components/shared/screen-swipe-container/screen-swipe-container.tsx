@@ -13,6 +13,7 @@ import { useSettingsModal } from '@/core/lib/settings-modal-state';
 import { ECOSYSTEM_NAV_ITEMS } from '../bottom-nav';
 import { PredictiveSwipeOverlay } from '../predictive-swipe-overlay';
 import {
+  canTargetScrollHorizontally,
   createSwipeKinematicState,
   getActiveSwipePreview,
   setActiveSwipePreview,
@@ -79,6 +80,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const kinematicsRef = useRef<SwipeKinematicState | null>(null);
+  const touchTargetRef = useRef<HTMLElement | null>(null);
   const isIgnoredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -147,6 +149,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     }
 
     const target = e.target as HTMLElement | null;
+    touchTargetRef.current = target;
     if (shouldIgnoreSwipeStart(target)) {
       isIgnoredRef.current = true;
       return;
@@ -181,6 +184,14 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     }
 
     if (step.isHorizontal) {
+      if (canTargetScrollHorizontally(touchTargetRef.current, step.direction)) {
+        isIgnoredRef.current = true;
+        setDragOffset(0);
+        setIsDragging(false);
+        setActiveSwipePreview(null);
+        return;
+      }
+
       const targetInfo = resolveTargetForDirection(step.direction);
       if (!targetInfo) {
         setDragOffset(0);

@@ -16,6 +16,7 @@ import {
   getEcosystemRouteMeta,
 } from '../screen-swipe-container';
 import {
+  canTargetScrollHorizontally,
   createSwipeKinematicState,
   getActiveSwipePreview,
   setActiveSwipePreview,
@@ -27,7 +28,7 @@ import {
 import type { TabItem } from '@/core/components/ui/tabs/scrollable-tab-bar';
 
 export interface SwipeableSubTabsProps {
-  tabs: string[];
+  tabs: readonly string[] | string[];
   activeTab: string;
   onTabChange: (tab: string) => void;
   loop?: boolean;
@@ -69,6 +70,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const kinematicsRef = useRef<SwipeKinematicState | null>(null);
+  const touchTargetRef = useRef<HTMLElement | null>(null);
   const isIgnoredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -101,9 +103,10 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
   const resolveAdjacentMainScreen = useCallback(
     (dir: 'next' | 'prev') => {
-      const currentRouteIdx = ECOSYSTEM_SWIPE_ROUTES.findIndex((r) =>
-        pathname.startsWith(r),
-      );
+      const currentRouteIdx =
+        pathname === '/' || pathname === '/wallet'
+          ? 0
+          : ECOSYSTEM_SWIPE_ROUTES.findIndex((r) => pathname.startsWith(r));
       if (currentRouteIdx === -1) return null;
       const total = ECOSYSTEM_SWIPE_ROUTES.length;
       const targetIdx =
@@ -275,6 +278,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   const onTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     const target = e.target as HTMLElement | null;
+    touchTargetRef.current = target;
     if (shouldIgnoreSwipeStart(target)) {
       isIgnoredRef.current = true;
       return;
@@ -310,6 +314,14 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     }
 
     if (step.isHorizontal) {
+      if (canTargetScrollHorizontally(touchTargetRef.current, step.direction)) {
+        isIgnoredRef.current = true;
+        setDragOffset(0);
+        setIsDragging(false);
+        setActiveSwipePreview(null);
+        return;
+      }
+
       const dest = resolveSwipeDestination(step.direction);
       if (!dest) {
         setDragOffset(0);

@@ -223,6 +223,7 @@ export function useMemberProfiles(
 
   const enrichedData = useMemo(() => {
     if (!query.data) return query.data;
+    let changed = false;
     const next: Record<string, MemberProfileInfo> = {};
     for (const [addrKey, profile] of Object.entries(query.data)) {
       const liveDns = resolveCachedDnsContact(
@@ -231,13 +232,23 @@ export function useMemberProfiles(
         contactsForNet,
         domainsForNet,
       );
-      next[addrKey] = {
-        ...profile,
-        dnsDomain: liveDns.dnsDomain ?? profile.dnsDomain,
-        contactLink: liveDns.contactLink ?? profile.contactLink,
-      };
+      const nextDnsDomain = liveDns.dnsDomain ?? profile.dnsDomain;
+      const nextContactLink = liveDns.contactLink ?? profile.contactLink;
+      if (
+        nextDnsDomain !== profile.dnsDomain ||
+        nextContactLink !== profile.contactLink
+      ) {
+        changed = true;
+        next[addrKey] = {
+          ...profile,
+          dnsDomain: nextDnsDomain,
+          contactLink: nextContactLink,
+        };
+      } else {
+        next[addrKey] = profile;
+      }
     }
-    return next;
+    return changed ? next : query.data;
   }, [query.data, contactsForNet, domainsForNet, net]);
 
   return {

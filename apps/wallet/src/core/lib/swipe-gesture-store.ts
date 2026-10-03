@@ -66,8 +66,8 @@ export function useActiveSwipePreview(): ActiveSwipePreview | null {
 }
 
 /**
- * Checks whether a touch start event originated inside an element that should
- * isolate its own horizontal gestures (explicit opt-out or any horizontally scrollable container).
+ * Checks whether a touch start event originated inside an element that explicitly
+ * opts out of swipe navigation (sliders, dialogs, navbars, or explicit .no-swipe).
  */
 export function shouldIgnoreSwipeStart(target: HTMLElement | null): boolean {
   if (!target) return false;
@@ -85,7 +85,21 @@ export function shouldIgnoreSwipeStart(target: HTMLElement | null): boolean {
     return true;
   }
 
-  // Walk up DOM tree to auto-detect any horizontally scrollable container
+  return false;
+}
+
+/**
+ * Checks whether an ancestor scrollable container can still scroll horizontally
+ * in the given swipe direction ('prev' = swipe right / scroll left, 'next' = swipe left / scroll right).
+ * When the container is at its boundary (first item on swipe-right, or last item on swipe-left),
+ * returns false so the parent sub-tab or screen swipe takes over seamlessly.
+ */
+export function canTargetScrollHorizontally(
+  target: HTMLElement | null,
+  direction: 'next' | 'prev',
+): boolean {
+  if (!target) return false;
+
   let el: HTMLElement | null = target;
   while (el && el !== document.body && el !== document.documentElement) {
     if (
@@ -103,7 +117,17 @@ export function shouldIgnoreSwipeStart(target: HTMLElement | null): boolean {
         overflowX === 'scroll' ||
         overflowX === 'overlay'
       ) {
-        return true;
+        if (direction === 'prev') {
+          // Finger moves left-to-right -> scrolling toward scrollLeft = 0 (first item)
+          if (el.scrollLeft > 4) {
+            return true;
+          }
+        } else {
+          // direction === 'next': Finger moves right-to-left -> scrolling toward max scrollLeft (last item)
+          if (el.scrollLeft + el.clientWidth < el.scrollWidth - 4) {
+            return true;
+          }
+        }
       }
     }
     el = el.parentElement;

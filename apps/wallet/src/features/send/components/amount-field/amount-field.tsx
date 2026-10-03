@@ -6,13 +6,16 @@
  *
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Undo2 } from 'lucide-react';
 
 import type { TokenOption } from '../../types';
 
 import { CenteredAmountInput } from '@/core/components/ui/centered-amount-input';
 import { AmountReversed } from '@/core/components/ui/amount-reversed';
-import { AmountPresets } from '@/core/components/shared/amount-presets';
+import { Button } from '@/core/components/ui/button';
+
+const INCREMENT_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000] as const;
 
 /** Clamp a numeric amount to a clean decimal string (no trailing zeros, no exponent). */
 const toAmountString = (value: number, decimals: number): string => {
@@ -27,22 +30,56 @@ interface AmountFieldProps {
   token: TokenOption;
 }
 
-/** Centered amount input with a fiat sub-line and percentage presets. */
+/** Centered amount input with a fiat sub-line, additive denomination buttons, MAX, and Undo. */
 export const AmountField: React.FC<AmountFieldProps> = ({
   value,
   onChange,
   token,
 }) => {
+  const [clickHistory, setClickHistory] = useState<number[]>([]);
+  const [prevTokenId, setPrevTokenId] = useState(token.id);
+
+  if (token.id !== prevTokenId) {
+    setPrevTokenId(token.id);
+    setClickHistory([]);
+  }
+
   const amountNumber = parseFloat(value) || 0;
   const fiatValue =
     token.rate !== undefined ? String(amountNumber * token.rate) : undefined;
-  const presets = [
-    { label: 'MAX', amount: toAmountString(token.maxSendable, token.decimals) },
-  ];
 
   const handleAmountChange = (raw: string) => {
-    // Keep digits and a single decimal separator (the input is free-form text).
-    onChange(raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'));
+    const cleaned = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    if (!cleaned || parseFloat(cleaned) === 0) {
+      setClickHistory([]);
+    }
+    onChange(cleaned);
+  };
+
+  const handleAddStep = (step: number) => {
+    const current = parseFloat(value) || 0;
+    const next = current + step;
+    setClickHistory((prev) => [...prev, step]);
+    onChange(toAmountString(next, token.decimals));
+  };
+
+  const handleUndo = () => {
+    if (clickHistory.length === 0) return;
+    const lastStep = clickHistory[clickHistory.length - 1];
+    const current = parseFloat(value) || 0;
+    const next = Math.max(0, current - lastStep);
+    setClickHistory((prev) => prev.slice(0, -1));
+    onChange(next > 0 ? toAmountString(next, token.decimals) : '');
+  };
+
+  const handleMax = () => {
+    const maxVal = Math.max(0, token.maxSendable);
+    const current = parseFloat(value) || 0;
+    const delta = maxVal - current;
+    if (delta !== 0) {
+      setClickHistory((prev) => [...prev, delta]);
+    }
+    onChange(toAmountString(maxVal, token.decimals));
   };
 
   return (
@@ -58,7 +95,44 @@ export const AmountField: React.FC<AmountFieldProps> = ({
           <AmountReversed value={fiatValue} symbol="≈$" decimals={2} />
         )}
       </div>
-      <AmountPresets presets={presets} onPresetSelect={onChange} />
+      <div className="mx-auto grid w-full grid-cols-6 gap-1.5">
+        {INCREMENT_STEPS.map((step) => (
+          <Button
+            key={step}
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer"
+            onClick={() => handleAddStep(step)}
+            data-testid={`send-amount-add-${step}`}
+          >
+            +{step}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer"
+          onClick={handleMax}
+          data-testid="send-amount-max"
+        >
+          MAX
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="gray"
+          disabled={clickHistory.length === 0}
+          className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer gap-1"
+          onClick={handleUndo}
+          title="Undo last added amount"
+          data-testid="send-amount-undo"
+        >
+          <Undo2 className="w-3.5 h-3.5 shrink-0" />
+          <span>Undo</span>
+        </Button>
+      </div>
     </div>
   );
 };

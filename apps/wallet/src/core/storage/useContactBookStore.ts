@@ -304,8 +304,12 @@ export const useContactBookStore = create<ContactBookState>()(
           const raw = normalizeContactAddress(cleanAddr);
 
           set((state) => {
+            const existing = state.contactsByNetwork[net]?.[raw];
+            if (existing && existing.onChainUsername === cleanName) {
+              return state;
+            }
+
             const netContacts = { ...(state.contactsByNetwork[net] || {}) };
-            const existing = netContacts[raw];
 
             netContacts[raw] = {
               address: existing?.address || cleanAddr,

@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useBrotherhood } from '@demo/wallet-core';
 import { Address } from '@ton/core';
@@ -45,7 +45,6 @@ import { useMemberProfiles } from '@/features/brotherhood/hooks/use-member-profi
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
 import {
-  saveUsernameAddressMappingsBatch,
   getOnChainCachedUsername,
   getEffectiveUsername,
 } from '@/core/lib/contact-storage';
@@ -232,25 +231,6 @@ export const CityNetworkScreen: React.FC = () => {
     () => memberProfilesQuery.data || {},
     [memberProfilesQuery.data],
   );
-
-  // Batch sync hydrated member profiles to local Contact Book
-  useEffect(() => {
-    if (!memberProfilesQuery.data) return;
-    const entries = Object.entries(memberProfilesQuery.data);
-    if (entries.length === 0) return;
-    const batch: { username: string; address: string }[] = [];
-    for (const [addr, info] of entries) {
-      if (info?.username) {
-        batch.push({ username: info.username, address: addr });
-        if (info.ownerAddress) {
-          batch.push({ username: info.username, address: info.ownerAddress });
-        }
-      }
-    }
-    if (batch.length > 0) {
-      saveUsernameAddressMappingsBatch(batch, network);
-    }
-  }, [memberProfilesQuery.data, network]);
 
   // Helper to retrieve profile username for a given member address
   const getMemberProfile = useCallback(

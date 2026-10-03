@@ -62,10 +62,7 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
     return (
       <section>
         {!hideHeader && header}
-        <div
-          className="no-swipe flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
-          data-swipe-ignore="true"
-        >
+        <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
           <div className="w-36 flex-shrink-0 aspect-square rounded-2xl bg-muted/60 animate-pulse border border-border" />
         </div>
@@ -107,10 +104,7 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
   return (
     <section>
       {!hideHeader && header}
-      <div
-        className="no-swipe flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
-        data-swipe-ignore="true"
-      >
+      <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         {allNfts.map((nft) => (
           <div key={nft.address} className="w-36 flex-shrink-0">
             <NftTile
