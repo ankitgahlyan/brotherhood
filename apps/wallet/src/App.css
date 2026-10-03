@@ -258,11 +258,11 @@
 
 /* ==========================================================================
    2. 2D OKLCH Color Palettes: TON, Emerald, Sunset, Fuchsia (Violet is default)
-      Soft Daylight & Warm Paper dynamically tint surfaces to prevent white glare
+      Never use bare :root[data-palette='...'] — always scope by [data-theme='...']
+      so light-mode surface tokens never bleed into Warm, Midnight, or OLED.
    ========================================================================== */
 
 /* --- TON Ocean Blue (Soft Daylight) --- */
-:root[data-palette='ton'],
 [data-theme='light'][data-palette='ton'] {
   --background: oklch(0.932 0.015 235);
   --card: oklch(0.962 0.01 235);
@@ -280,7 +280,11 @@
   --chart-1: oklch(0.53 0.21 235);
   --glass-card-bg: oklch(0.966 0.01 235 / 64%);
   --glass-secondary-bg: oklch(0.904 0.018 235 / 56%);
+  --glass-popover-bg: oklch(0.965 0.012 235 / 84%);
+  --glass-border: oklch(0.99 0.005 235 / 65%);
   --glass-rim-bottom: oklch(0.53 0.21 235 / 20%);
+  --glass-caustic-1: rgba(14, 165, 233, 0.24);
+  --glass-caustic-2: rgba(56, 189, 248, 0.2);
 }
 
 /* --- TON Ocean Blue (Warm Paper) --- */
@@ -292,37 +296,68 @@
   --sidebar-primary: oklch(0.51 0.2 235);
   --chart-1: oklch(0.51 0.2 235);
   --glass-rim-bottom: oklch(0.51 0.2 235 / 20%);
+  --glass-caustic-1: rgba(14, 165, 233, 0.22);
+  --glass-caustic-2: rgba(245, 158, 11, 0.16);
 }
 
 /* --- TON Ocean Blue (Dark / Midnight) --- */
-.dark[data-palette='ton'],
 [data-theme='dark'][data-palette='ton'] {
+  --background: oklch(0.12 0.026 235);
+  --foreground: oklch(0.97 0.01 235);
+  --card: oklch(0.165 0.032 235);
+  --card-foreground: oklch(0.97 0.01 235);
+  --popover: oklch(0.165 0.032 235);
+  --popover-foreground: oklch(0.97 0.01 235);
   --primary: oklch(0.65 0.2 235);
   --ring: oklch(0.65 0.2 235);
-  --secondary: oklch(0.22 0.035 235);
+  --secondary: oklch(0.22 0.036 235);
   --secondary-foreground: oklch(0.95 0.015 235);
+  --muted: oklch(0.2 0.03 235);
+  --muted-foreground: oklch(0.68 0.03 235);
   --accent: oklch(0.24 0.045 235);
   --accent-foreground: oklch(0.95 0.02 235);
+  --border: oklch(0.85 0.03 235 / 14%);
+  --input: oklch(0.85 0.03 235 / 16%);
+  --sidebar: oklch(0.165 0.032 235);
   --sidebar-primary: oklch(0.65 0.2 235);
   --chart-1: oklch(0.65 0.2 235);
+  --glass-card-bg: oklch(0.18 0.036 235 / 50%);
+  --glass-secondary-bg: oklch(0.24 0.04 235 / 44%);
+  --glass-popover-bg: oklch(0.17 0.034 235 / 82%);
+  --glass-border: oklch(0.92 0.02 235 / 22%);
   --glass-rim-bottom: oklch(0.65 0.2 235 / 28%);
+  --glass-caustic-1: rgba(56, 189, 248, 0.32);
+  --glass-caustic-2: rgba(37, 99, 235, 0.28);
 }
 
 /* --- TON Ocean Blue (OLED) --- */
 [data-theme='oled'][data-palette='ton'] {
+  --background: oklch(0 0 0);
+  --card: oklch(0.07 0.022 235);
+  --popover: oklch(0.07 0.022 235);
   --primary: oklch(0.7 0.2 235);
   --ring: oklch(0.7 0.2 235);
   --secondary: oklch(0.14 0.03 235);
   --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.12 0.025 235);
+  --muted-foreground: oklch(0.7 0.02 235);
   --accent: oklch(0.16 0.04 235);
   --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.85 0.04 235 / 18%);
+  --input: oklch(0.85 0.04 235 / 22%);
+  --sidebar: oklch(0.06 0.02 235);
   --sidebar-primary: oklch(0.7 0.2 235);
   --chart-1: oklch(0.7 0.2 235);
+  --glass-card-bg: oklch(0.09 0.026 235 / 68%);
+  --glass-secondary-bg: oklch(0.15 0.032 235 / 56%);
+  --glass-popover-bg: oklch(0.08 0.026 235 / 88%);
+  --glass-border: oklch(0.95 0.02 235 / 26%);
   --glass-rim-bottom: oklch(0.7 0.2 235 / 34%);
+  --glass-caustic-1: rgba(56, 189, 248, 0.36);
+  --glass-caustic-2: rgba(14, 165, 233, 0.3);
 }
 
 /* --- Cyber Emerald (Soft Daylight) --- */
-:root[data-palette='emerald'],
 [data-theme='light'][data-palette='emerald'] {
   --background: oklch(0.934 0.015 158);
   --card: oklch(0.962 0.01 158);
@@ -340,7 +375,11 @@
   --chart-1: oklch(0.5 0.19 158);
   --glass-card-bg: oklch(0.966 0.01 158 / 64%);
   --glass-secondary-bg: oklch(0.904 0.018 158 / 56%);
+  --glass-popover-bg: oklch(0.965 0.012 158 / 84%);
+  --glass-border: oklch(0.99 0.005 158 / 65%);
   --glass-rim-bottom: oklch(0.5 0.19 158 / 20%);
+  --glass-caustic-1: rgba(16, 185, 129, 0.24);
+  --glass-caustic-2: rgba(20, 184, 166, 0.2);
 }
 
 /* --- Cyber Emerald (Warm Paper) --- */
@@ -352,37 +391,68 @@
   --sidebar-primary: oklch(0.49 0.18 158);
   --chart-1: oklch(0.49 0.18 158);
   --glass-rim-bottom: oklch(0.49 0.18 158 / 20%);
+  --glass-caustic-1: rgba(16, 185, 129, 0.22);
+  --glass-caustic-2: rgba(245, 158, 11, 0.16);
 }
 
 /* --- Cyber Emerald (Dark / Midnight) --- */
-.dark[data-palette='emerald'],
 [data-theme='dark'][data-palette='emerald'] {
+  --background: oklch(0.12 0.024 158);
+  --foreground: oklch(0.97 0.01 158);
+  --card: oklch(0.165 0.03 158);
+  --card-foreground: oklch(0.97 0.01 158);
+  --popover: oklch(0.165 0.03 158);
+  --popover-foreground: oklch(0.97 0.01 158);
   --primary: oklch(0.65 0.19 158);
   --ring: oklch(0.65 0.19 158);
   --secondary: oklch(0.22 0.035 158);
   --secondary-foreground: oklch(0.95 0.015 158);
+  --muted: oklch(0.2 0.028 158);
+  --muted-foreground: oklch(0.68 0.028 158);
   --accent: oklch(0.24 0.045 158);
   --accent-foreground: oklch(0.95 0.02 158);
+  --border: oklch(0.85 0.03 158 / 14%);
+  --input: oklch(0.85 0.03 158 / 16%);
+  --sidebar: oklch(0.165 0.03 158);
   --sidebar-primary: oklch(0.65 0.19 158);
   --chart-1: oklch(0.65 0.19 158);
+  --glass-card-bg: oklch(0.18 0.034 158 / 50%);
+  --glass-secondary-bg: oklch(0.24 0.038 158 / 44%);
+  --glass-popover-bg: oklch(0.17 0.032 158 / 82%);
+  --glass-border: oklch(0.92 0.02 158 / 22%);
   --glass-rim-bottom: oklch(0.65 0.19 158 / 28%);
+  --glass-caustic-1: rgba(16, 185, 129, 0.3);
+  --glass-caustic-2: rgba(20, 184, 166, 0.26);
 }
 
 /* --- Cyber Emerald (OLED) --- */
 [data-theme='oled'][data-palette='emerald'] {
+  --background: oklch(0 0 0);
+  --card: oklch(0.07 0.02 158);
+  --popover: oklch(0.07 0.02 158);
   --primary: oklch(0.72 0.21 158);
   --ring: oklch(0.72 0.21 158);
   --secondary: oklch(0.14 0.03 158);
   --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.12 0.024 158);
+  --muted-foreground: oklch(0.7 0.02 158);
   --accent: oklch(0.16 0.04 158);
   --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.85 0.04 158 / 18%);
+  --input: oklch(0.85 0.04 158 / 22%);
+  --sidebar: oklch(0.06 0.02 158);
   --sidebar-primary: oklch(0.72 0.21 158);
   --chart-1: oklch(0.72 0.21 158);
+  --glass-card-bg: oklch(0.09 0.025 158 / 68%);
+  --glass-secondary-bg: oklch(0.15 0.032 158 / 56%);
+  --glass-popover-bg: oklch(0.08 0.025 158 / 88%);
+  --glass-border: oklch(0.95 0.02 158 / 26%);
   --glass-rim-bottom: oklch(0.72 0.21 158 / 34%);
+  --glass-caustic-1: rgba(16, 185, 129, 0.34);
+  --glass-caustic-2: rgba(45, 212, 191, 0.28);
 }
 
 /* --- Solar Sunset (Soft Daylight) --- */
-:root[data-palette='sunset'],
 [data-theme='light'][data-palette='sunset'] {
   --background: oklch(0.932 0.016 55);
   --card: oklch(0.962 0.012 55);
@@ -400,7 +470,11 @@
   --chart-1: oklch(0.56 0.2 55);
   --glass-card-bg: oklch(0.966 0.012 55 / 64%);
   --glass-secondary-bg: oklch(0.904 0.02 55 / 56%);
+  --glass-popover-bg: oklch(0.965 0.014 55 / 84%);
+  --glass-border: oklch(0.99 0.006 55 / 65%);
   --glass-rim-bottom: oklch(0.56 0.2 55 / 20%);
+  --glass-caustic-1: rgba(245, 158, 11, 0.24);
+  --glass-caustic-2: rgba(244, 63, 94, 0.2);
 }
 
 /* --- Solar Sunset (Warm Paper) --- */
@@ -412,37 +486,68 @@
   --sidebar-primary: oklch(0.55 0.2 55);
   --chart-1: oklch(0.55 0.2 55);
   --glass-rim-bottom: oklch(0.55 0.2 55 / 20%);
+  --glass-caustic-1: rgba(245, 158, 11, 0.24);
+  --glass-caustic-2: rgba(244, 63, 94, 0.18);
 }
 
 /* --- Solar Sunset (Dark / Midnight) --- */
-.dark[data-palette='sunset'],
 [data-theme='dark'][data-palette='sunset'] {
+  --background: oklch(0.12 0.024 45);
+  --foreground: oklch(0.97 0.01 55);
+  --card: oklch(0.165 0.03 45);
+  --card-foreground: oklch(0.97 0.01 55);
+  --popover: oklch(0.165 0.03 45);
+  --popover-foreground: oklch(0.97 0.01 55);
   --primary: oklch(0.68 0.2 55);
   --ring: oklch(0.68 0.2 55);
-  --secondary: oklch(0.22 0.038 55);
+  --secondary: oklch(0.22 0.038 48);
   --secondary-foreground: oklch(0.95 0.015 55);
-  --accent: oklch(0.25 0.048 55);
+  --muted: oklch(0.2 0.028 45);
+  --muted-foreground: oklch(0.68 0.028 55);
+  --accent: oklch(0.25 0.048 50);
   --accent-foreground: oklch(0.95 0.02 55);
+  --border: oklch(0.85 0.03 55 / 14%);
+  --input: oklch(0.85 0.03 55 / 16%);
+  --sidebar: oklch(0.165 0.03 45);
   --sidebar-primary: oklch(0.68 0.2 55);
   --chart-1: oklch(0.68 0.2 55);
+  --glass-card-bg: oklch(0.18 0.035 45 / 50%);
+  --glass-secondary-bg: oklch(0.24 0.04 48 / 44%);
+  --glass-popover-bg: oklch(0.17 0.032 45 / 82%);
+  --glass-border: oklch(0.92 0.02 55 / 22%);
   --glass-rim-bottom: oklch(0.68 0.2 55 / 28%);
+  --glass-caustic-1: rgba(245, 158, 11, 0.3);
+  --glass-caustic-2: rgba(244, 63, 94, 0.26);
 }
 
 /* --- Solar Sunset (OLED) --- */
 [data-theme='oled'][data-palette='sunset'] {
+  --background: oklch(0 0 0);
+  --card: oklch(0.07 0.02 45);
+  --popover: oklch(0.07 0.02 45);
   --primary: oklch(0.74 0.21 55);
   --ring: oklch(0.74 0.21 55);
-  --secondary: oklch(0.15 0.032 55);
+  --secondary: oklch(0.15 0.032 48);
   --secondary-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.17 0.042 55);
+  --muted: oklch(0.12 0.024 45);
+  --muted-foreground: oklch(0.7 0.02 55);
+  --accent: oklch(0.17 0.042 50);
   --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.85 0.04 55 / 18%);
+  --input: oklch(0.85 0.04 55 / 22%);
+  --sidebar: oklch(0.06 0.02 45);
   --sidebar-primary: oklch(0.74 0.21 55);
   --chart-1: oklch(0.74 0.21 55);
+  --glass-card-bg: oklch(0.09 0.026 45 / 68%);
+  --glass-secondary-bg: oklch(0.15 0.032 48 / 56%);
+  --glass-popover-bg: oklch(0.08 0.026 45 / 88%);
+  --glass-border: oklch(0.95 0.02 55 / 26%);
   --glass-rim-bottom: oklch(0.74 0.21 55 / 34%);
+  --glass-caustic-1: rgba(251, 191, 36, 0.34);
+  --glass-caustic-2: rgba(244, 63, 94, 0.3);
 }
 
 /* --- Neon Fuchsia (Soft Daylight) --- */
-:root[data-palette='fuchsia'],
 [data-theme='light'][data-palette='fuchsia'] {
   --background: oklch(0.932 0.015 325);
   --card: oklch(0.962 0.01 325);
@@ -460,7 +565,11 @@
   --chart-1: oklch(0.54 0.24 325);
   --glass-card-bg: oklch(0.966 0.01 325 / 64%);
   --glass-secondary-bg: oklch(0.904 0.018 325 / 56%);
+  --glass-popover-bg: oklch(0.965 0.012 325 / 84%);
+  --glass-border: oklch(0.99 0.005 325 / 65%);
   --glass-rim-bottom: oklch(0.54 0.24 325 / 20%);
+  --glass-caustic-1: rgba(236, 72, 153, 0.24);
+  --glass-caustic-2: rgba(217, 70, 239, 0.22);
 }
 
 /* --- Neon Fuchsia (Warm Paper) --- */
@@ -472,41 +581,77 @@
   --sidebar-primary: oklch(0.53 0.23 325);
   --chart-1: oklch(0.53 0.23 325);
   --glass-rim-bottom: oklch(0.53 0.23 325 / 20%);
+  --glass-caustic-1: rgba(236, 72, 153, 0.22);
+  --glass-caustic-2: rgba(245, 158, 11, 0.16);
 }
 
 /* --- Neon Fuchsia (Dark / Midnight) --- */
-.dark[data-palette='fuchsia'],
 [data-theme='dark'][data-palette='fuchsia'] {
+  --background: oklch(0.12 0.026 325);
+  --foreground: oklch(0.97 0.01 325);
+  --card: oklch(0.165 0.032 325);
+  --card-foreground: oklch(0.97 0.01 325);
+  --popover: oklch(0.165 0.032 325);
+  --popover-foreground: oklch(0.97 0.01 325);
   --primary: oklch(0.66 0.23 325);
   --ring: oklch(0.66 0.23 325);
   --secondary: oklch(0.22 0.038 325);
   --secondary-foreground: oklch(0.95 0.015 325);
+  --muted: oklch(0.2 0.03 325);
+  --muted-foreground: oklch(0.68 0.03 325);
   --accent: oklch(0.25 0.048 325);
   --accent-foreground: oklch(0.95 0.02 325);
+  --border: oklch(0.85 0.03 325 / 14%);
+  --input: oklch(0.85 0.03 325 / 16%);
+  --sidebar: oklch(0.165 0.032 325);
   --sidebar-primary: oklch(0.66 0.23 325);
   --chart-1: oklch(0.66 0.23 325);
+  --glass-card-bg: oklch(0.18 0.038 325 / 50%);
+  --glass-secondary-bg: oklch(0.24 0.042 325 / 44%);
+  --glass-popover-bg: oklch(0.17 0.034 325 / 82%);
+  --glass-border: oklch(0.92 0.02 325 / 22%);
   --glass-rim-bottom: oklch(0.66 0.23 325 / 28%);
+  --glass-caustic-1: rgba(236, 72, 153, 0.32);
+  --glass-caustic-2: rgba(192, 38, 211, 0.28);
 }
 
 /* --- Neon Fuchsia (OLED) --- */
 [data-theme='oled'][data-palette='fuchsia'] {
+  --background: oklch(0 0 0);
+  --card: oklch(0.07 0.022 325);
+  --popover: oklch(0.07 0.022 325);
   --primary: oklch(0.72 0.24 325);
   --ring: oklch(0.72 0.24 325);
   --secondary: oklch(0.15 0.032 325);
   --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.12 0.025 325);
+  --muted-foreground: oklch(0.7 0.02 325);
   --accent: oklch(0.17 0.042 325);
   --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.85 0.04 325 / 18%);
+  --input: oklch(0.85 0.04 325 / 22%);
+  --sidebar: oklch(0.06 0.02 325);
   --sidebar-primary: oklch(0.72 0.24 325);
   --chart-1: oklch(0.72 0.24 325);
+  --glass-card-bg: oklch(0.09 0.026 325 / 68%);
+  --glass-secondary-bg: oklch(0.15 0.032 325 / 56%);
+  --glass-popover-bg: oklch(0.08 0.026 325 / 88%);
+  --glass-border: oklch(0.95 0.02 325 / 26%);
   --glass-rim-bottom: oklch(0.72 0.24 325 / 34%);
+  --glass-caustic-1: rgba(236, 72, 153, 0.36);
+  --glass-caustic-2: rgba(217, 70, 239, 0.32);
 }
 
 /* ==========================================================================
    3. Liquid Glass Optical Surface System
       Modes: flat | glass_css | glass_hybrid | glass_tilt
+      Include [data-theme][data-palette] compound specificity (0,3,1) so
+      glass token bindings always override [data-theme][data-palette] (0,2,0).
    ========================================================================== */
 
-html[data-glass='true'] {
+html[data-glass='true'],
+html[data-glass='true'][data-theme],
+html[data-glass='true'][data-theme][data-palette] {
   --card: var(--glass-card-bg);
   --secondary: var(--glass-secondary-bg);
   --popover: var(--glass-popover-bg);
