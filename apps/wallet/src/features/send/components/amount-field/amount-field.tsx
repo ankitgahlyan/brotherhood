@@ -96,24 +96,33 @@ export const AmountField: React.FC<AmountFieldProps> = ({
         )}
       </div>
       <div className="mx-auto grid w-full grid-cols-6 gap-1.5">
-        {INCREMENT_STEPS.map((step) => (
-          <Button
-            key={step}
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer"
-            onClick={() => handleAddStep(step)}
-            data-testid={`send-amount-add-${step}`}
-          >
-            +{step}
-          </Button>
-        ))}
+        {INCREMENT_STEPS.map((step) => {
+          const digits = String(step).length;
+          const sizeClass =
+            digits <= 2
+              ? 'text-lg sm:text-xl'
+              : digits === 3
+                ? 'text-base sm:text-lg'
+                : 'text-sm sm:text-base tracking-tighter';
+          return (
+            <Button
+              key={step}
+              type="button"
+              size="sm"
+              variant="secondary"
+              className={`w-full h-10 px-0.5 py-0 font-extrabold leading-none tabular-nums whitespace-nowrap cursor-pointer ${sizeClass}`}
+              onClick={() => handleAddStep(step)}
+              data-testid={`send-amount-add-${step}`}
+            >
+              {step}
+            </Button>
+          );
+        })}
         <Button
           type="button"
           size="sm"
           variant="secondary"
-          className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer"
+          className="w-full h-10 px-0.5 py-0 text-sm sm:text-base font-extrabold leading-none tracking-tight whitespace-nowrap cursor-pointer"
           onClick={handleMax}
           data-testid="send-amount-max"
         >
@@ -124,7 +133,7 @@ export const AmountField: React.FC<AmountFieldProps> = ({
           size="sm"
           variant="gray"
           disabled={clickHistory.length === 0}
-          className="w-full px-1.5 text-xs font-semibold whitespace-nowrap cursor-pointer gap-1"
+          className="w-full h-10 px-0.5 py-0 text-xs sm:text-sm font-bold leading-none whitespace-nowrap cursor-pointer gap-0.5"
           onClick={handleUndo}
           title="Undo last added amount"
           data-testid="send-amount-undo"

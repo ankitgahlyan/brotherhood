@@ -21,6 +21,7 @@ import {
   Trash2,
   Flame,
   Users,
+  Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '@demo/wallet-core';
@@ -171,6 +172,20 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Primary Transfer Action */}
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate(`/send?token=${encodeURIComponent(asset.id)}`);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
+            data-testid="asset-details-transfer-button"
+          >
+            <Send className="w-4 h-4" />
+            <span>Transfer {asset.symbol}</span>
+          </button>
 
           {/* 1. GRAMS SPECIFIC VIEW */}
           {isGram && (

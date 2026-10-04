@@ -12,7 +12,6 @@ import {
   ArrowDownUp,
   Copy,
   Download,
-  ExternalLink,
   Flame,
   Landmark,
   Search,
@@ -199,12 +198,11 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
   const handleUpiPay = () => {
     if (upiLinks.isBelowMinAmount) return;
-    window.location.href = upiLinks.bhimOrOthersUrl;
-  };
-
-  const handleUpiIntentPay = () => {
-    if (upiLinks.isBelowMinAmount) return;
-    window.location.href = upiLinks.upiIntentUrl;
+    const isAndroid =
+      typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+    window.location.href = isAndroid
+      ? upiLinks.upiIntentUrl
+      : upiLinks.bhimOrOthersUrl;
   };
 
   const generateUpiQrPngBlob = async (): Promise<{
@@ -970,13 +968,13 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             </span>
           </div>
 
-          {/* 4 UPI Action Buttons: UPI Pay, UPI Intent, Share QR, Download QR */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* 3 UPI Action Buttons: UPI Pay, Share QR, Download QR */}
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={handleUpiPay}
               disabled={upiLinks.isBelowMinAmount}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="upi-pay-button"
             >
               <Smartphone className="w-4 h-4 shrink-0" />
@@ -985,20 +983,9 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
             <button
               type="button"
-              onClick={handleUpiIntentPay}
-              disabled={upiLinks.isBelowMinAmount}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="upi-intent-button"
-            >
-              <ExternalLink className="w-4 h-4 shrink-0" />
-              <span>UPI Intent</span>
-            </button>
-
-            <button
-              type="button"
               onClick={handleShareUpiQr}
               disabled={isSharingQr || upiLinks.isBelowMinAmount}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="upi-share-qr-button"
             >
               <Share2 className="w-4 h-4 shrink-0" />
@@ -1009,11 +996,11 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
               type="button"
               onClick={handleDownloadUpiQr}
               disabled={isDownloadingQr || upiLinks.isBelowMinAmount}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="upi-download-qr-button"
             >
               <Download className="w-4 h-4 shrink-0" />
-              <span>{isDownloadingQr ? 'Saving…' : 'Download QR'}</span>
+              <span>{isDownloadingQr ? 'Saving…' : 'Save QR'}</span>
             </button>
           </div>
 
