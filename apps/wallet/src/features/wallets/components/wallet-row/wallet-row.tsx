@@ -144,6 +144,11 @@ export const WalletRow: React.FC<WalletRowProps> = ({
           <span className="text-base font-bold text-foreground truncate">
             {wallet.name}
           </span>
+          {(wallet.walletType === 'watch-only' || wallet.isWatchOnly) && (
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded flex-shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              Watch-Only
+            </span>
+          )}
           <span
             className={`px-1.5 py-0.5 text-[10px] font-medium rounded flex-shrink-0 ${networkBadgeClass(wallet.network)}`}
           >
@@ -162,6 +167,7 @@ export const WalletRow: React.FC<WalletRowProps> = ({
               network: wallet.network,
               shorten: true,
               count: 6,
+              withContactName: false,
             })}
           </span>
           <Copy className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2} />

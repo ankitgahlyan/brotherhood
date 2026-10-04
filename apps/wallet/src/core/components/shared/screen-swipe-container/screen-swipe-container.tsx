@@ -35,6 +35,7 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
 ];
 
 const SUB_TAB_ROUTES = [
+  '/wallet/history',
   '/brotherhood',
   '/personal-jetton',
   '/city-network',
@@ -47,7 +48,6 @@ const DRILL_DOWN_BACK_ROUTES: Record<string, { path: string; label: string }> =
   {
     '/wallet/nft': { path: '/wallet', label: 'Wallet' },
     '/wallet/assets': { path: '/wallet', label: 'Wallet' },
-    '/wallet/history': { path: '/wallet', label: 'Wallet' },
     '/send': { path: '/wallet', label: 'Wallet' },
     '/swap': { path: '/wallet', label: 'Wallet' },
     '/settings': { path: '/wallet', label: 'Wallet' },

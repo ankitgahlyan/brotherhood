@@ -14,6 +14,7 @@ import {
   subscribeWithSelector,
   type StateStorage,
 } from 'zustand/middleware';
+import { compareAddress } from '@ton/walletkit';
 import { immer } from 'zustand/middleware/immer';
 
 import { createAuthSlice } from './slices/authSlice';
@@ -357,6 +358,22 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   w.id === persisted?.walletManagement?.activeWalletId,
               );
 
+              const findByAddr = (
+                map: Record<string, any> | undefined,
+                targetAddr: string | undefined,
+              ): any => {
+                if (!map || !targetAddr) return undefined;
+                if (map[targetAddr] !== undefined) return map[targetAddr];
+                const key = Object.keys(map).find((k) => {
+                  try {
+                    return compareAddress(k, targetAddr);
+                  } catch {
+                    return k === targetAddr;
+                  }
+                });
+                return key ? map[key] : undefined;
+              };
+
               const effectivePassword =
                 (persisted?.auth?.persistPassword
                   ? persisted?.auth?.currentPassword
@@ -383,22 +400,20 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   balancesByAddress:
                     persisted?.walletManagement?.balancesByAddress || {},
                   balance:
-                    (activeWallet?.address &&
-                      persisted?.walletManagement?.balancesByAddress?.[
-                        activeWallet.address
-                      ]) ||
-                    persisted?.walletManagement?.balance,
+                    findByAddr(
+                      persisted?.walletManagement?.balancesByAddress,
+                      activeWallet?.address,
+                    ) || persisted?.walletManagement?.balance,
                   eventsByAddress:
                     persisted?.walletManagement?.eventsByAddress || {},
                   associatedAddressesByAddress:
                     persisted?.walletManagement?.associatedAddressesByAddress ||
                     {},
                   events:
-                    (activeWallet?.address &&
-                      persisted?.walletManagement?.eventsByAddress?.[
-                        activeWallet.address
-                      ]) ||
-                    [],
+                    findByAddr(
+                      persisted?.walletManagement?.eventsByAddress,
+                      activeWallet?.address,
+                    ) || [],
                   confirmedTraceIds:
                     persisted?.walletManagement?.confirmedTraceIds || [],
                   confirmedExternalHashes:
@@ -439,9 +454,10 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   ...persisted?.nfts,
                   nftsByAddress: persisted?.nfts?.nftsByAddress || {},
                   userNfts:
-                    (activeWallet?.address &&
-                      persisted?.nfts?.nftsByAddress?.[activeWallet.address]) ||
-                    [],
+                    findByAddr(
+                      persisted?.nfts?.nftsByAddress,
+                      activeWallet?.address,
+                    ) || [],
                   lastNftsUpdate: persisted?.nfts?.lastNftsUpdate || 0,
                   offset: persisted?.nfts?.offset || 0,
                   hasMore: persisted?.nfts?.hasMore ?? true,

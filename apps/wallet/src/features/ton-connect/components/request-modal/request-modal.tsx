@@ -145,7 +145,22 @@ export const RequestModal: React.FC<RequestModalProps> = ({
     preview?.moneyFlow?.inputs === '0' &&
     preview?.moneyFlow?.ourTransfers.length === 0;
 
-  const primary = isExpired ? (
+  const activeWalletId = useWalletStore(
+    (state) => state.walletManagement.activeWalletId,
+  );
+  const isWatchOnly = useMemo(() => {
+    const target =
+      currentWallet ??
+      savedWallets.find((w) => w.id === activeWalletId) ??
+      null;
+    return target?.walletType === 'watch-only' || Boolean(target?.isWatchOnly);
+  }, [currentWallet, savedWallets, activeWalletId]);
+
+  const primary = isWatchOnly ? (
+    <Button fullWidth disabled data-testid={testIds.approve}>
+      Watch-Only (Sending Disabled)
+    </Button>
+  ) : isExpired ? (
     <Button fullWidth disabled data-testid={testIds.approve}>
       Expired
     </Button>

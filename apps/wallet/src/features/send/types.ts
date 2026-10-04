@@ -30,4 +30,6 @@ export interface TokenOption {
   maxSendable: number;
   /** USD price per token; omitted when there's no rate. */
   rate?: number;
+  /** True for FI and FI Admin's Personal Token. */
+  isVerified?: boolean;
 }

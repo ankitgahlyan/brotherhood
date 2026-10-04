@@ -56,13 +56,13 @@ export const DashboardHeader: React.FC = () => {
         <ScanIcon className="relative z-10 w-5 h-5 text-foreground/85 pointer-events-none" />
       </button>
 
-      <div className="flex items-center gap-2 min-w-0">
-        <SyncStatusButton />
+      <div className="flex items-center justify-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+        <SyncStatusButton className="shrink min-w-9" />
 
         <button
           type="button"
           onClick={() => setIsManageWalletsOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border/80 active:scale-95 transition-all shadow-2xs cursor-pointer group min-w-0"
+          className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border/80 active:scale-95 transition-all shadow-2xs cursor-pointer group shrink-0 max-w-[65%] sm:max-w-none"
           aria-label="Manage Wallets"
           title="Click to manage or switch wallets"
           data-testid="header-wallet-switcher"
@@ -71,11 +71,17 @@ export const DashboardHeader: React.FC = () => {
           <span className="text-xs font-bold text-foreground tracking-tight max-w-28 sm:max-w-36 truncate">
             {activeWallet?.name || 'My Wallet'}
           </span>
+          {(activeWallet?.walletType === 'watch-only' ||
+            activeWallet?.isWatchOnly) && (
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+              Watch
+            </span>
+          )}
           <ChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         <button
           type="button"
           onClick={toggleTheme}

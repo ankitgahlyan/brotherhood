@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { BadgeCheck, ChevronDown } from 'lucide-react';
 
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { formatLargeValue } from '@/core/utils';
@@ -18,6 +18,7 @@ interface SwapFieldProps {
   subtitle?: string;
   badge?: string;
   icon?: string;
+  isVerified?: boolean;
   amount: string;
   /** Held balance as a human-readable decimal string. */
   balance: string;
@@ -34,6 +35,7 @@ export const SwapField: React.FC<SwapFieldProps> = ({
   subtitle,
   badge,
   icon,
+  isVerified,
   amount,
   balance,
   onAmountChange,
@@ -99,8 +101,14 @@ export const SwapField: React.FC<SwapFieldProps> = ({
           />
         </span>
         <div className="flex flex-col items-start text-left max-w-[120px]">
-          <span className="text-sm font-semibold text-foreground truncate w-full leading-tight">
-            {symbol}
+          <span className="flex items-center gap-1 text-sm font-semibold text-foreground w-full leading-tight">
+            <span className="truncate">{symbol}</span>
+            {isVerified && (
+              <BadgeCheck
+                className="w-3.5 h-3.5 text-emerald-500 shrink-0 fill-emerald-500/20"
+                aria-label="Verified token"
+              />
+            )}
           </span>
           {subtitle && (
             <span className="text-[10px] text-muted-foreground truncate w-full leading-tight">

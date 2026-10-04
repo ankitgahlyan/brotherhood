@@ -25,12 +25,12 @@ import {
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
-import { useFiMinterState } from '@/lib/brotherhood/queries';
+import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
-import { isPersonalMinterContract } from '@/lib/brotherhood/ton';
+import { isPersonalMinterContract, isZeroAddress } from '@/lib/brotherhood/ton';
 import { useTrackedPersonalTokens } from './use-tracked-personal-tokens';
-import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import { BRO_TREASURY_ADDRESS, FI_ADDRESS } from '@/lib/brotherhood/config';
 import {
   assetUrl,
   findRate,
@@ -80,10 +80,32 @@ export const useAssetRows = (): AssetRows => {
   const fiJettonBalance = fiAccount.data?.jettonBalance;
   const fiMinterState = useFiMinterState(true, net);
   const fiMetadataCell = fiMinterState.data?.metadata;
+  const fiAdminAddr = fiMinterState.data?.adminAddress;
   const fiOnchainMeta = useMemo(
     () => parseOnchainMetadataCell(fiMetadataCell),
     [fiMetadataCell],
   );
+  const adminOwnerAddress = useMemo(() => {
+    if (fiAdminAddr && !isZeroAddress(fiAdminAddr)) {
+      return fiAdminAddr;
+    }
+    try {
+      return Address.parse(BRO_TREASURY_ADDRESS);
+    } catch {
+      return null;
+    }
+  }, [fiAdminAddr]);
+  const adminFiWalletState = useFiWalletState(adminOwnerAddress, net);
+  const adminPersonalMinterRaw =
+    adminFiWalletState.data?.addresses?.ref?.trustedJettonAddrs?.ref
+      ?.personalJettonMinter ?? null;
+  const adminPtMinterNorm = useMemo(() => {
+    if (!adminPersonalMinterRaw || isZeroAddress(adminPersonalMinterRaw)) {
+      return null;
+    }
+    const rawStr = adminPersonalMinterRaw.toString();
+    return normalizeAddress(rawStr) || rawStr;
+  }, [adminPersonalMinterRaw]);
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
@@ -219,6 +241,10 @@ export const useAssetRows = (): AssetRows => {
           ]
         : tokenImageUrls(jetton.info?.image);
 
+      const isAdminPt = Boolean(
+        adminPtMinterNorm && normAddr === adminPtMinterNorm,
+      );
+
       rows.push({
         id: jetton.address,
         icon: imageSources(iconUrls, jetton.info?.image?.data),
@@ -228,6 +254,7 @@ export const useAssetRows = (): AssetRows => {
         amount,
         rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
         fiat: rateEntry ? amount * rateEntry.rate : undefined,
+        isVerified: isFi || isAdminPt,
         isPinned: pinnedTokenIds.includes(visKey),
         isHidden: hiddenTokenIds.includes(visKey),
       });
@@ -253,6 +280,7 @@ export const useAssetRows = (): AssetRows => {
         amount: fiBal,
         rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
         fiat: rateEntry ? fiBal * rateEntry.rate : undefined,
+        isVerified: true,
         isPinned: pinnedTokenIds.includes(visKey),
         isHidden: hiddenTokenIds.includes(visKey),
       });
@@ -260,15 +288,28 @@ export const useAssetRows = (): AssetRows => {
     }
 
     // 2. Process personalTokens (discovered on-chain and manually tracked)
+    const normOwnPersonal = personalMinterAddress
+      ? normalizeAddress(personalMinterAddress) || personalMinterAddress
+      : null;
     for (const pt of personalTokens) {
       if (isFiJetton({ address: pt.minterAddress, symbol: pt.symbol })) {
         continue;
       }
       const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
       if (seenAddresses.has(normAddr)) continue;
-      seenAddresses.add(normAddr);
 
       const amount = toDecimal(pt.balance, 9);
+      const isOwnPersonal = Boolean(
+        normOwnPersonal && normAddr === normOwnPersonal,
+      );
+      if (amount <= 0 && !isOwnPersonal) {
+        continue;
+      }
+      seenAddresses.add(normAddr);
+
+      const isAdminPt = Boolean(
+        adminPtMinterNorm && normAddr === adminPtMinterNorm,
+      );
       const symbol = pt.symbol || 'PT';
       const visKey = normalizeAssetVisibilityKey(pt.minterAddress);
       rows.push({
@@ -278,6 +319,7 @@ export const useAssetRows = (): AssetRows => {
         name: pt.name || 'Personal Token',
         symbol,
         amount,
+        isVerified: isAdminPt,
         isPinned: pinnedTokenIds.includes(visKey),
         isHidden: hiddenTokenIds.includes(visKey),
       });
@@ -309,6 +351,7 @@ export const useAssetRows = (): AssetRows => {
     rates,
     isMember,
     personalMinterAddress,
+    adminPtMinterNorm,
     verifiedPersonalMinterSet,
     personalTokens,
     fiJettonBalance,

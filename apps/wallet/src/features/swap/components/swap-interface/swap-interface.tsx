@@ -10,6 +10,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import {
   ArrowDownUp,
+  BadgeCheck,
   Copy,
   Download,
   Flame,
@@ -28,6 +29,7 @@ import { toast } from 'sonner';
 import QRCodeStyling from 'qr-code-styling';
 import type { Options as QrOptions } from 'qr-code-styling';
 
+import { useWalletStore } from '@demo/wallet-core';
 import { SwapField } from '../swap-field';
 import {
   useEcosystemSwap,
@@ -368,10 +370,23 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     }
   };
 
+  const savedWallets = useWalletStore((s) => s.walletManagement.savedWallets);
+  const activeWalletId = useWalletStore(
+    (s) => s.walletManagement.activeWalletId,
+  );
+  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
+  const isWatchOnly = Boolean(
+    activeWallet?.walletType === 'watch-only' || activeWallet?.isWatchOnly,
+  );
+
   const isSwapButtonDisabled =
-    isSwapping || quote.inputNano <= 0n || Boolean(quote.validationError);
+    isWatchOnly ||
+    isSwapping ||
+    quote.inputNano <= 0n ||
+    Boolean(quote.validationError);
 
   const getSwapButtonLabel = (): string => {
+    if (isWatchOnly) return 'Watch-Only (Sending Disabled)';
     if (isSwapping) return 'Broadcasting Swap…';
     if (quote.inputNano <= 0n) return 'Enter Amount';
     if (quote.validationError) return 'Unavailable';
@@ -395,6 +410,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             subtitle={fromToken.name}
             badge={getTokenBadge(fromToken)}
             icon={fromToken.icon}
+            isVerified={fromToken.kind === 'fi' || fromToken.kind === 'reserve'}
             amount={quote.fromAmountFormatted}
             balance={fromToken.userBalanceFormatted}
             onAmountChange={handleFromAmountChange}
@@ -408,6 +424,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             subtitle={toToken.name}
             badge={getTokenBadge(toToken)}
             icon={toToken.icon}
+            isVerified={toToken.kind === 'fi' || toToken.kind === 'reserve'}
             amount={quote.toAmountFormatted}
             balance={toToken.userBalanceFormatted}
             onAmountChange={handleToAmountChange}
@@ -716,6 +733,12 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                         <span className="text-xs font-bold text-foreground truncate">
                           {token.symbol}
                         </span>
+                        {(token.kind === 'fi' || token.kind === 'reserve') && (
+                          <BadgeCheck
+                            className="w-3.5 h-3.5 text-emerald-500 shrink-0 fill-emerald-500/20"
+                            aria-label="Verified token"
+                          />
+                        )}
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/50">
                           {getTokenBadge(token)}
                         </span>

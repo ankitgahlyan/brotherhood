@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import { useWalletStoreApi } from '@demo/wallet-core';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
@@ -23,6 +23,7 @@ import { useContactBookStore } from '@/core/storage/useContactBookStore';
 import {
   useDnsStore,
   selectOwnedDomains,
+  EMPTY_DOMAINS,
   type OwnedDomain,
 } from '../store/dns-store';
 import { ONE_YEAR_SEC } from '../lib/dns-bodies';
@@ -56,6 +57,23 @@ function sameRawAddress(
   } catch {
     return a.trim().toLowerCase() === b.trim().toLowerCase();
   }
+}
+
+function isDomainForWallet(
+  d: OwnedDomain,
+  walletAddress: string | null | undefined,
+): boolean {
+  if (!walletAddress) return false;
+  if (d.ownerAddress) {
+    return sameRawAddress(d.ownerAddress, walletAddress);
+  }
+  if (d.maxBidAddress) {
+    return sameRawAddress(d.maxBidAddress, walletAddress);
+  }
+  if (d.walletRecord) {
+    return sameRawAddress(d.walletRecord, walletAddress);
+  }
+  return false;
 }
 
 function toWalletCacheKey(network: Network, walletAddress: string): string {
@@ -220,7 +238,7 @@ export async function syncBroCollectionContacts(
     if (d.name) {
       syncParsedDnsContactToBook(
         d.name,
-        undefined,
+        d.ownerAddress,
         d.walletRecord,
         d.contactLink,
         network,
@@ -313,11 +331,16 @@ export function useMyDomains(
   walletAddress: string | null | undefined,
 ): MyDomainsResult {
   const storeApi = useWalletStoreApi();
-  const domains = useDnsStore((s) => selectOwnedDomains(s, network));
+  const allDomains = useDnsStore((s) => selectOwnedDomains(s, network));
   const addDomain = useDnsStore((s) => s.addDomain);
   const updateDomain = useDnsStore((s) => s.updateDomain);
   const removeDomain = useDnsStore((s) => s.removeDomain);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const domains = useMemo(() => {
+    if (!walletAddress) return EMPTY_DOMAINS;
+    return allDomains.filter((d) => isDomainForWallet(d, walletAddress));
+  }, [allDomains, walletAddress]);
 
   const runRefresh = useCallback(
     async (force = false) => {
@@ -355,6 +378,12 @@ export function useMyDomains(
       const cacheKey = toWalletCacheKey(network, walletAddress);
       const currentDomains =
         useDnsStore.getState().domainsByNetwork[network] ?? [];
+      const walletDomains = currentDomains.filter((d) =>
+        isDomainForWallet(d, walletAddress),
+      );
+      const hasUnassignedLegacyDomains = currentDomains.some(
+        (d) => !d.ownerAddress && !d.maxBidAddress && !d.walletRecord,
+      );
       const appState = storeApi.getState();
       const broNftsFromStore = extractBroNftAddressesFromNftsStore(
         walletAddress,
@@ -364,16 +393,17 @@ export function useMyDomains(
       );
       const untrackedBroNfts = broNftsFromStore.filter(
         (addr) =>
-          !currentDomains.some((d) => sameRawAddress(d.nftAddress, addr)),
+          !walletDomains.some((d) => sameRawAddress(d.nftAddress, addr)),
       );
       const isWalletAlreadyHydrated = Boolean(
         useDnsStore.getState().hydratedKeys?.[cacheKey],
       );
 
-      // LocalStorage-first: if already present in store (or previously hydrated) and no new .bro NFTs in nftsByAddress, skip network unless force = true
+      // LocalStorage-first: if already present in store for this wallet (or previously hydrated) and no new .bro NFTs in nftsByAddress, skip network unless force = true
       if (
         !force &&
-        (currentDomains.length > 0 || isWalletAlreadyHydrated) &&
+        !hasUnassignedLegacyDomains &&
+        (walletDomains.length > 0 || isWalletAlreadyHydrated) &&
         untrackedBroNfts.length === 0
       ) {
         return;
@@ -509,7 +539,7 @@ export function useMyDomains(
             const hasOwner = Boolean(parsed.ownerAddress);
 
             if (existing) {
-              if (!isOwnedByMe && !isBidByMe) {
+              if (!parsed.ownerAddress && !parsed.auction?.maxBidAddress) {
                 removeDomain(existing.nftAddress, network);
                 continue;
               }
@@ -518,6 +548,7 @@ export function useMyDomains(
                 existing.nftAddress,
                 {
                   name: parsed.domainName || existing.name,
+                  ownerAddress: parsed.ownerAddress ?? null,
                   lastFillUpTime: parsed.lastFillUpTime,
                   walletRecord: parsed.walletRecord ?? undefined,
                   contactLink: parsed.contactLink ?? undefined,
@@ -537,6 +568,7 @@ export function useMyDomains(
                   name: parsed.domainName,
                   zone: 'bro',
                   nftAddress: canonicalBounceable,
+                  ownerAddress: parsed.ownerAddress ?? null,
                   registeredAt: parsed.lastFillUpTime || nowSec,
                   lastFillUpTime: parsed.lastFillUpTime,
                   walletRecord: parsed.walletRecord ?? undefined,

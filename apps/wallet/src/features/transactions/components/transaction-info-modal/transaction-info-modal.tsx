@@ -30,7 +30,6 @@ import { Button } from '@/core/components/ui/button';
 import { formatUnits } from '@/core/utils';
 import { cn } from '@/core/lib/utils';
 import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
-import { getCachedUsername } from '@/features/send/lib/contact-storage';
 import { useWalletStore, useWallet, getChainNetwork } from '@demo/wallet-core';
 import { parseTraceDag, type TraceDagAnalysis } from '@ton/walletkit';
 import { mnemonicToPrivateKey } from '@ton/crypto';
@@ -377,11 +376,6 @@ export const TransactionInfoModal: React.FC<TransactionInfoModalProps> = ({
 
   const resolveAddressLabel = (addr?: string) => {
     if (!addr) return 'Unknown';
-    if (myAddress && sameAddress(addr, myAddress)) {
-      return 'My Account (Self)';
-    }
-    const cachedName = getCachedUsername(addr, network);
-    if (cachedName) return `@${cachedName}`;
     return formatWalletAddress(addr, true);
   };
 

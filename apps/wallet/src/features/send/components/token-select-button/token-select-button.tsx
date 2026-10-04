@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { BadgeCheck, ChevronDown } from 'lucide-react';
 
 import type { TokenOption } from '../../types';
 
@@ -46,6 +46,12 @@ export const TokenSelectButton: React.FC<TokenSelectButtonProps> = ({
       <span className="truncate text-base font-semibold text-foreground">
         {token.symbol}
       </span>
+      {token.isVerified && (
+        <BadgeCheck
+          className="h-4 w-4 shrink-0 text-emerald-500 fill-emerald-500/20"
+          aria-label="Verified token"
+        />
+      )}
       <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
     </span>
     <span className="flex-shrink-0 text-right">

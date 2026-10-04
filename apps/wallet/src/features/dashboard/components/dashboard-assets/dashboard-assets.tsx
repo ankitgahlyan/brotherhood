@@ -57,11 +57,11 @@ export const DashboardAssets: React.FC = () => {
 
   return (
     <section>
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex items-center justify-between gap-1.5 mb-3 min-w-0">
         <div
           role="tablist"
           aria-label="Dashboard Asset Type"
-          className="flex items-center gap-1.5 bg-secondary/80 p-1 rounded-2xl border border-border/70"
+          className="flex items-center gap-1 bg-secondary/80 p-1 rounded-2xl border border-border/70 min-w-0 shrink"
         >
           <button
             type="button"
@@ -70,7 +70,7 @@ export const DashboardAssets: React.FC = () => {
             onClick={() => setAssetTab('tokens')}
             aria-label="Tokens"
             title="Tokens"
-            className={`inline-flex items-center justify-center gap-2 min-h-[38px] px-4 py-1.5 rounded-xl text-sm transition-all cursor-pointer active:scale-[0.97] ${
+            className={`inline-flex items-center justify-center gap-1.5 min-h-[36px] px-2.5 sm:px-3.5 py-1 rounded-xl text-xs sm:text-sm transition-all cursor-pointer active:scale-[0.97] min-w-0 ${
               assetTab === 'tokens'
                 ? 'bg-card text-foreground shadow-sm font-bold border border-border/80 ring-1 ring-amber-500/20'
                 : 'text-muted-foreground hover:text-foreground font-semibold hover:bg-secondary/60'
@@ -88,7 +88,7 @@ export const DashboardAssets: React.FC = () => {
             {isPictorial ? (
               <span className="sr-only">Tokens</span>
             ) : (
-              <span>Tokens</span>
+              <span className="truncate">Tokens</span>
             )}
           </button>
 
@@ -101,7 +101,7 @@ export const DashboardAssets: React.FC = () => {
             }}
             aria-label="NFTs"
             title="NFTs"
-            className={`inline-flex items-center justify-center gap-2 min-h-[38px] px-4 py-1.5 rounded-xl text-sm transition-all cursor-pointer active:scale-[0.97] ${
+            className={`inline-flex items-center justify-center gap-1.5 min-h-[36px] px-2.5 sm:px-3.5 py-1 rounded-xl text-xs sm:text-sm transition-all cursor-pointer active:scale-[0.97] min-w-0 ${
               assetTab === 'nfts'
                 ? 'bg-card text-foreground shadow-sm font-bold border border-border/80 ring-1 ring-purple-500/20'
                 : 'text-muted-foreground hover:text-foreground font-semibold hover:bg-secondary/60'
@@ -119,22 +119,22 @@ export const DashboardAssets: React.FC = () => {
             {isPictorial ? (
               <span className="sr-only">NFTs</span>
             ) : (
-              <span>NFTs</span>
+              <span className="truncate">NFTs</span>
             )}
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() =>
               navigate(assetTab === 'tokens' ? '/wallet/assets' : '/wallet/nft')
             }
-            className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1.5 rounded-xl bg-secondary/80 hover:bg-secondary text-xs font-semibold text-foreground border border-border/60 transition-colors cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-0.5 min-h-[36px] px-2 sm:px-3 py-1.5 rounded-xl bg-secondary/80 hover:bg-secondary text-xs font-semibold text-foreground border border-border/60 transition-colors cursor-pointer active:scale-95 shrink-0"
             aria-label="View all assets"
           >
             <span>All</span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           </button>
 
           <RefreshButton
@@ -152,7 +152,7 @@ export const DashboardAssets: React.FC = () => {
                 await refreshNfts();
               }
             }}
-            className="rounded-xl bg-secondary/80 border border-border/60 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center"
+            className="rounded-xl bg-secondary/80 border border-border/60 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center shrink-0"
             title={
               assetTab === 'tokens'
                 ? 'Refresh and discover tokens'
@@ -165,25 +165,16 @@ export const DashboardAssets: React.FC = () => {
             }
             testId="dashboard-assets-refresh-btn"
           />
-          {assetTab === 'tokens' ? (
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-secondary/80 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95"
-              title="Add personal token by minter address"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/dns')}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-secondary/80 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95"
-              title="Register sovereign .bro domain"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-secondary/80 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95 shrink-0"
+            title="Inspect address, .bro domain, or @username & add Watch-Only wallet"
+            aria-label="Inspect address or add Watch-Only wallet"
+            data-testid="dashboard-assets-add-button"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+          </button>
         </div>
       </div>
 

@@ -174,14 +174,8 @@ export const createJettonsSlice: JettonsSliceCreator = (
             }
             pushUniqueJetton(partitioned[jetton.ownerAddress], jetton);
           }
-        } else {
-          const fallbackTarget =
-            addressesToFetch.find((a) =>
-              compareAddress(a, userAddress || address),
-            ) ||
-            addressesToFetch[0] ||
-            userAddress ||
-            address;
+        } else if (addressesToFetch.length === 1) {
+          const fallbackTarget = addressesToFetch[0];
           if (fallbackTarget) {
             if (!partitioned[fallbackTarget]) {
               partitioned[fallbackTarget] = [];
@@ -193,6 +187,11 @@ export const createJettonsSlice: JettonsSliceCreator = (
 
       set((s) => {
         for (const [addr, jettons] of Object.entries(partitioned)) {
+          for (const existingKey of Object.keys(s.jettons.jettonsByAddress)) {
+            if (existingKey !== addr && compareAddress(existingKey, addr)) {
+              delete s.jettons.jettonsByAddress[existingKey];
+            }
+          }
           s.jettons.jettonsByAddress[addr] = jettons;
         }
         s.jettons.lastJettonsUpdate = Date.now();

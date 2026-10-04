@@ -59,28 +59,37 @@ export const useWalletKit = () => {
  */
 export const useAuth = () => {
   return useWalletStore(
-    useShallow((state) => ({
-      isPasswordSet: state.auth.isPasswordSet,
-      isUnlocked: state.auth.isUnlocked,
-      currentPassword: state.auth.currentPassword,
-      persistPassword: state.auth.persistPassword,
-      holdToSign: state.auth.holdToSign,
-      slideToSign: state.auth.slideToSign,
-      showFastSend: state.auth.showFastSend,
-      useWalletInterfaceType: state.auth.useWalletInterfaceType,
-      ledgerAccountNumber: state.auth.ledgerAccountNumber,
-      setPassword: state.setPassword,
-      unlock: state.unlock,
-      lock: state.lock,
-      reset: state.reset,
-      setPersistPassword: state.setPersistPassword,
-      setHoldToSign: state.setHoldToSign,
-      setSlideToSign: state.setSlideToSign,
-      setShowFastSend: state.setShowFastSend,
-      setUseWalletInterfaceType: state.setUseWalletInterfaceType,
-      setLedgerAccountNumber: state.setLedgerAccountNumber,
-      createLedgerWallet: state.createLedgerWallet,
-    })),
+    useShallow((state) => {
+      const activeWallet = state.walletManagement.savedWallets.find(
+        (w) => w.id === state.walletManagement.activeWalletId,
+      );
+      const isWatchOnly = Boolean(
+        activeWallet?.walletType === 'watch-only' || activeWallet?.isWatchOnly,
+      );
+      return {
+        isPasswordSet: state.auth.isPasswordSet,
+        isUnlocked: state.auth.isUnlocked,
+        currentPassword: state.auth.currentPassword,
+        persistPassword: state.auth.persistPassword,
+        holdToSign: state.auth.holdToSign,
+        slideToSign: state.auth.slideToSign,
+        showFastSend: state.auth.showFastSend,
+        useWalletInterfaceType: state.auth.useWalletInterfaceType,
+        ledgerAccountNumber: state.auth.ledgerAccountNumber,
+        isWatchOnly,
+        setPassword: state.setPassword,
+        unlock: state.unlock,
+        lock: state.lock,
+        reset: state.reset,
+        setPersistPassword: state.setPersistPassword,
+        setHoldToSign: state.setHoldToSign,
+        setSlideToSign: state.setSlideToSign,
+        setShowFastSend: state.setShowFastSend,
+        setUseWalletInterfaceType: state.setUseWalletInterfaceType,
+        setLedgerAccountNumber: state.setLedgerAccountNumber,
+        createLedgerWallet: state.createLedgerWallet,
+      };
+    }),
   );
 };
 
@@ -114,6 +123,7 @@ export const useWallet = () => {
       removeWallet: state.removeWallet,
       renameWallet: state.renameWallet,
       createLedgerWallet: state.createLedgerWallet,
+      addWatchOnlyWallet: state.addWatchOnlyWallet,
       addPendingTransaction: state.addPendingTransaction,
       removePendingTransaction: state.removePendingTransaction,
       clearPendingTransactions: state.clearPendingTransactions,
@@ -212,22 +222,34 @@ export const useDisconnectEvents = () => {
  */
 export const useNfts = () => {
   return useWalletStore(
-    useShallow((state) => ({
-      userNfts: state.nfts.userNfts,
-      nftsByAddress: state.nfts.nftsByAddress,
-      lastNftsUpdate: state.nfts.lastNftsUpdate,
-      isLoadingNfts: state.nfts.isLoadingNfts,
-      isRefreshing: state.nfts.isRefreshing,
-      error: state.nfts.error,
-      hasMore: state.nfts.hasMore,
-      offset: state.nfts.offset,
-      loadUserNfts: state.loadUserNfts,
-      refreshNfts: state.refreshNfts,
-      loadMoreNfts: state.loadMoreNfts,
-      clearNfts: state.clearNfts,
-      getNftByAddress: state.getNftByAddress,
-      formatNftIndex: state.formatNftIndex,
-    })),
+    useShallow((state) => {
+      const addr = state.walletManagement.address;
+      const byAddr = state.nfts.nftsByAddress;
+      const matchingKey = addr
+        ? Object.keys(byAddr).find((k) => k === addr || compareAddress(k, addr))
+        : undefined;
+      const activeUserNfts = addr
+        ? matchingKey
+          ? byAddr[matchingKey] || (EMPTY_ARRAY as any)
+          : (EMPTY_ARRAY as any)
+        : state.nfts.userNfts;
+      return {
+        userNfts: activeUserNfts,
+        nftsByAddress: state.nfts.nftsByAddress,
+        lastNftsUpdate: state.nfts.lastNftsUpdate,
+        isLoadingNfts: state.nfts.isLoadingNfts,
+        isRefreshing: state.nfts.isRefreshing,
+        error: state.nfts.error,
+        hasMore: state.nfts.hasMore,
+        offset: state.nfts.offset,
+        loadUserNfts: state.loadUserNfts,
+        refreshNfts: state.refreshNfts,
+        loadMoreNfts: state.loadMoreNfts,
+        clearNfts: state.clearNfts,
+        getNftByAddress: state.getNftByAddress,
+        formatNftIndex: state.formatNftIndex,
+      };
+    }),
   );
 };
 
@@ -388,16 +410,39 @@ export const useBrotherhood = () => {
   return useWalletStore(
     useShallow((state) => {
       const activeAddress = state.walletManagement.address;
+      const activeWallet = state.walletManagement.savedWallets.find(
+        (w) => w.id === state.walletManagement.activeWalletId,
+      );
+      const activeNetwork = activeWallet?.network || 'testnet';
       const normalizedActiveKey = activeAddress
-        ? normalizeAddressByNetwork(activeAddress, false)
+        ? normalizeAddressByNetwork(activeAddress, false, activeNetwork)
         : undefined;
 
-      const activeMemberData = normalizedActiveKey
-        ? state.brotherhood.brotherhoodByAddress[normalizedActiveKey]
+      const byAddr = state.brotherhood.brotherhoodByAddress;
+      const matchingMemberKey = activeAddress
+        ? normalizedActiveKey && byAddr[normalizedActiveKey] !== undefined
+          ? normalizedActiveKey
+          : Object.keys(byAddr).find(
+              (k) => k === activeAddress || compareAddress(k, activeAddress),
+            )
         : undefined;
 
-      const activePendingDeferred = normalizedActiveKey
-        ? state.brotherhood.pendingDeferredByAddress[normalizedActiveKey]
+      const activeMemberData = matchingMemberKey
+        ? byAddr[matchingMemberKey]
+        : undefined;
+
+      const pendingByAddr = state.brotherhood.pendingDeferredByAddress;
+      const matchingPendingKey = activeAddress
+        ? normalizedActiveKey &&
+          pendingByAddr[normalizedActiveKey] !== undefined
+          ? normalizedActiveKey
+          : Object.keys(pendingByAddr).find(
+              (k) => k === activeAddress || compareAddress(k, activeAddress),
+            )
+        : undefined;
+
+      const activePendingDeferred = matchingPendingKey
+        ? pendingByAddr[matchingPendingKey]
         : undefined;
 
       return {

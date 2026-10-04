@@ -9,6 +9,7 @@
 import React, { useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import {
+  BadgeCheck,
   Copy,
   ExternalLink,
   ChevronRight,
@@ -141,6 +142,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
         <Modal.Header onClose={onClose}>
           <Modal.Title className="flex items-center gap-2">
             <span>{asset.name}</span>
+            {(asset.isVerified || isFi) && (
+              <BadgeCheck
+                className="w-4 h-4 text-emerald-500 shrink-0 fill-emerald-500/20"
+                aria-label="Verified token"
+              />
+            )}
             <span className="text-xs font-normal text-muted-foreground">
               ({asset.symbol})
             </span>

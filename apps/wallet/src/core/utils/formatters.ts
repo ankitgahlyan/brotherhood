@@ -10,6 +10,12 @@ import { toast } from 'sonner';
 import { Address } from '@ton/core';
 import { Base64ToHex } from '@ton/walletkit';
 import { useWalletStore, type NetworkType } from '@demo/wallet-core';
+import {
+  useContactBookStore,
+  normalizeContactAddress,
+  EMPTY_CONTACTS_MAP,
+  type ContactItem,
+} from '@/core/storage/useContactBookStore';
 
 export type AddressNetwork = NetworkType;
 
@@ -36,17 +42,83 @@ export function normalizeAddress(
   }
 }
 
+let cachedSavedWallets: ReadonlyArray<{ address: string; name?: string }> = [];
+
+function getPersistedSavedWallets(): ReadonlyArray<{
+  address: string;
+  name?: string;
+}> {
+  if (cachedSavedWallets.length > 0) return cachedSavedWallets;
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem('bro-store');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const list = parsed?.state?.walletManagement?.savedWallets;
+    if (Array.isArray(list)) {
+      cachedSavedWallets = list;
+      return list;
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+/**
+ * Resolves the effective display name for an address using priority:
+ * contact.customName > contact.onChainUsername > contact.dnsDomain > savedWallet.name
+ */
+export function resolveAddressContactName(
+  address: string | null | undefined,
+  network: AddressNetwork = 'testnet',
+  contactsMap?: Readonly<Record<string, ContactItem>>,
+  savedWallets?: ReadonlyArray<{ address: string; name?: string }>,
+): string | null {
+  if (!address) return null;
+  const rawKey = normalizeContactAddress(address);
+  const net = network || 'testnet';
+  const map =
+    contactsMap ??
+    useContactBookStore.getState().contactsByNetwork[net] ??
+    EMPTY_CONTACTS_MAP;
+  const contact = map[rawKey];
+  if (contact) {
+    if (contact.customName) return contact.customName;
+    if (contact.onChainUsername)
+      return `@${contact.onChainUsername.replace(/^@+/, '')}`;
+    const dns =
+      contact.dnsDomain ||
+      (contact.dnsDomains && contact.dnsDomains.length > 0
+        ? contact.dnsDomains[0]
+        : undefined);
+    if (dns) return dns;
+  }
+  const wallets = savedWallets ?? getPersistedSavedWallets();
+  for (const w of wallets) {
+    if (w.name && sameAddress(w.address, address)) {
+      return w.name;
+    }
+  }
+  return null;
+}
+
 export function shortenAddress(
   addr?: string,
   count = 4,
   bounceable = false,
   network: AddressNetwork = 'testnet',
+  withContactName = true,
 ): string {
   if (!addr) return '';
   const normalized = normalizeAddress(addr, bounceable, network) ?? addr;
-  return normalized.length <= count * 2
-    ? normalized
-    : `${normalized.slice(0, count)}...${normalized.slice(-count)}`;
+  const short =
+    normalized.length <= count * 2
+      ? normalized
+      : `${normalized.slice(0, count)}...${normalized.slice(-count)}`;
+  if (!withContactName) return short;
+  const name = resolveAddressContactName(addr, network);
+  return name ? `${name} (${short})` : short;
 }
 
 export interface FormatTonAddressOptions {
@@ -54,6 +126,7 @@ export interface FormatTonAddressOptions {
   network?: AddressNetwork;
   shorten?: boolean;
   count?: number;
+  withContactName?: boolean;
 }
 
 /**
@@ -68,9 +141,10 @@ export function formatTonAddress(
   const isContract = options?.isContract ?? false;
   const network = options?.network ?? 'testnet';
   const count = options?.count ?? 4;
+  const withContactName = options?.withContactName ?? true;
 
   if (options?.shorten) {
-    return shortenAddress(str, count, isContract, network);
+    return shortenAddress(str, count, isContract, network, withContactName);
   }
   return normalizeAddress(str, isContract, network) ?? str;
 }
@@ -120,21 +194,50 @@ export function useFormatAddress() {
   );
   const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
   const network: AddressNetwork = activeWallet?.network || 'testnet';
+  const contactsForNetwork = useContactBookStore(
+    (state) => state.contactsByNetwork[network] ?? EMPTY_CONTACTS_MAP,
+  );
+
+  const formatWithContact = (
+    address: Address | string | null | undefined,
+    options?: FormatTonAddressOptions,
+  ) => {
+    if (!address) return '';
+    const str = typeof address === 'string' ? address : address.toString();
+    const isContract = options?.isContract ?? false;
+    const count = options?.count ?? 4;
+    if (!options?.shorten) {
+      return normalizeAddress(str, isContract, network) ?? str;
+    }
+    const short = shortenAddress(str, count, isContract, network, false);
+    if (options.withContactName === false) return short;
+    const name = resolveAddressContactName(
+      str,
+      network,
+      contactsForNetwork,
+      savedWallets,
+    );
+    return name ? `${name} (${short})` : short;
+  };
 
   return {
     network,
     formatAddress: (
       address: Address | string | null | undefined,
-      options?: { isContract?: boolean; shorten?: boolean; count?: number },
-    ) => formatTonAddress(address, { ...options, network }),
+      options?: {
+        isContract?: boolean;
+        shorten?: boolean;
+        count?: number;
+        withContactName?: boolean;
+      },
+    ) => formatWithContact(address, options),
     formatWalletAddress: (
       address: Address | string | null | undefined,
       shorten = false,
       count = 4,
     ) =>
-      formatTonAddress(address, {
+      formatWithContact(address, {
         isContract: false,
-        network,
         shorten,
         count,
       }),
@@ -143,9 +246,8 @@ export function useFormatAddress() {
       shorten = false,
       count = 4,
     ) =>
-      formatTonAddress(address, {
+      formatWithContact(address, {
         isContract: true,
-        network,
         shorten,
         count,
       }),

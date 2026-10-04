@@ -138,7 +138,12 @@ export const SignDataRequestModal: React.FC<SignDataRequestModalProps> = ({
         />
       }
       primary={
-        slideToSign ? (
+        currentWallet?.walletType === 'watch-only' ||
+        currentWallet?.isWatchOnly ? (
+          <Button fullWidth disabled data-testid="sign-data-approve">
+            Watch-Only (Signing Disabled)
+          </Button>
+        ) : slideToSign ? (
           <SlideToSignButton
             onComplete={handleApprove}
             loading={isLoading}

@@ -96,8 +96,15 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
     const cached = nftsSessionCache.get(cacheKey);
     if (cached && now - cached.timestamp < NFTS_CACHE_TTL_MS) {
       set((s) => {
-        const targetAddress =
-          userAddress || s.walletManagement.address || address;
+        const targetAddress = address;
+        for (const existingKey of Object.keys(s.nfts.nftsByAddress)) {
+          if (
+            existingKey !== targetAddress &&
+            compareAddress(existingKey, targetAddress)
+          ) {
+            delete s.nfts.nftsByAddress[existingKey];
+          }
+        }
         s.nfts.nftsByAddress[targetAddress] = cached.nfts;
 
         const currentActiveAddress = s.walletManagement.address;
@@ -124,7 +131,11 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
     try {
       log.info('Loading user NFTs', { address, limit });
 
-      const wallet = state.walletManagement.currentWallet;
+      const wallet =
+        state.walletCore.walletKit
+          ?.getWallets()
+          .find((w) => compareAddress(w.getAddress(), address)) ??
+        state.walletManagement.currentWallet;
 
       if (!wallet) {
         throw new Error('Wallet not found');
@@ -151,8 +162,15 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress =
-          userAddress || s.walletManagement.address || address;
+        const targetAddress = address;
+        for (const existingKey of Object.keys(s.nfts.nftsByAddress)) {
+          if (
+            existingKey !== targetAddress &&
+            compareAddress(existingKey, targetAddress)
+          ) {
+            delete s.nfts.nftsByAddress[existingKey];
+          }
+        }
         s.nfts.nftsByAddress[targetAddress] = result.nfts;
 
         const currentActiveAddress = s.walletManagement.address;
@@ -209,7 +227,11 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
     try {
       log.info('Refreshing user NFTs', { address });
 
-      const wallet = state.walletManagement.currentWallet;
+      const wallet =
+        state.walletCore.walletKit
+          ?.getWallets()
+          .find((w) => compareAddress(w.getAddress(), address)) ??
+        state.walletManagement.currentWallet;
 
       if (!wallet) {
         throw new Error('Wallet not found');
@@ -226,8 +248,15 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress =
-          userAddress || s.walletManagement.address || address;
+        const targetAddress = address;
+        for (const existingKey of Object.keys(s.nfts.nftsByAddress)) {
+          if (
+            existingKey !== targetAddress &&
+            compareAddress(existingKey, targetAddress)
+          ) {
+            delete s.nfts.nftsByAddress[existingKey];
+          }
+        }
         s.nfts.nftsByAddress[targetAddress] = result.nfts;
 
         const currentActiveAddress = s.walletManagement.address;
@@ -284,7 +313,11 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
         offset: state.nfts.offset,
       });
 
-      const wallet = state.walletManagement.currentWallet;
+      const wallet =
+        state.walletCore.walletKit
+          ?.getWallets()
+          .find((w) => compareAddress(w.getAddress(), address)) ??
+        state.walletManagement.currentWallet;
 
       if (!wallet) {
         throw new Error('Wallet not found');
@@ -295,10 +328,17 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       });
 
       set((s) => {
-        const targetAddress =
-          userAddress || s.walletManagement.address || address;
-        const currentList = s.nfts.nftsByAddress[targetAddress] || [];
+        const targetAddress = address;
+        const matchingKey = Object.keys(s.nfts.nftsByAddress).find((k) =>
+          compareAddress(k, targetAddress),
+        );
+        const currentList = matchingKey
+          ? s.nfts.nftsByAddress[matchingKey] || []
+          : [];
         const mergedList = [...currentList, ...result.nfts];
+        if (matchingKey && matchingKey !== targetAddress) {
+          delete s.nfts.nftsByAddress[matchingKey];
+        }
         s.nfts.nftsByAddress[targetAddress] = mergedList;
 
         const currentActiveAddress = s.walletManagement.address;

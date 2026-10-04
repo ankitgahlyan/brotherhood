@@ -41,10 +41,12 @@ export const NftsCard: React.FC<NftsCardProps> = ({ hideHeader = false }) => {
 
   const { domains: ownedBroDomains } = useMyDomains(network, address);
 
-  // Trigger session-cached load on mount
+  // Trigger session-cached load on mount and when active wallet address changes
   useEffect(() => {
-    void loadUserNfts();
-  }, [loadUserNfts]);
+    if (address) {
+      void loadUserNfts(address);
+    }
+  }, [loadUserNfts, address]);
 
   // Unify standard indexer NFTs with local .bro domains and enrich missing .bro images
   const allNfts = useMemo<NFT[]>(

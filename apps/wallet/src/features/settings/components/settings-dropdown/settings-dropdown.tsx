@@ -98,7 +98,11 @@ export const SettingsDropdown: React.FC = () => {
     showFastSend,
     setShowFastSend,
   } = useAuth();
-  const { getDecryptedMnemonic } = useWallet();
+  const { getDecryptedMnemonic, savedWallets, activeWalletId } = useWallet();
+  const activeSavedWallet = savedWallets.find((w) => w.id === activeWalletId);
+  const isWatchOnly =
+    activeSavedWallet?.walletType === 'watch-only' ||
+    Boolean(activeSavedWallet?.isWatchOnly);
   const {
     isSupported: isBiometricsSupported,
     isEnabled: isBiometricsEnabled,
@@ -411,15 +415,17 @@ export const SettingsDropdown: React.FC = () => {
                     }}
                   />
                 )}
-                <ActionRow
-                  icon={<KeyRound className="w-5 h-5 text-primary" />}
-                  label={
-                    isLoadingMnemonic ? 'Decrypting…' : 'View Recovery Phrase'
-                  }
-                  subtitle="Reveal seed phrase backup"
-                  onClick={handleViewRecoveryPhrase}
-                  disabled={isLoadingMnemonic}
-                />
+                {!isWatchOnly && (
+                  <ActionRow
+                    icon={<KeyRound className="w-5 h-5 text-primary" />}
+                    label={
+                      isLoadingMnemonic ? 'Decrypting…' : 'View Recovery Phrase'
+                    }
+                    subtitle="Reveal seed phrase backup"
+                    onClick={handleViewRecoveryPhrase}
+                    disabled={isLoadingMnemonic}
+                  />
+                )}
                 <ActionRow
                   icon={<Lock className="w-5 h-5 text-muted-foreground" />}
                   label="Lock Wallet"

@@ -362,6 +362,91 @@ export const createWalletManagementSlice =
       }
     },
 
+    addWatchOnlyWallet: async (
+      rawAddress: string,
+      name?: string,
+      network?: NetworkType,
+    ) => {
+      const state = get();
+      if (!state.walletCore.walletKit) {
+        throw new Error('WalletKit not initialized');
+      }
+
+      const walletNetwork = network || 'testnet';
+      const existingByAddr = state.walletManagement.savedWallets.find((w) => {
+        try {
+          return (
+            w.network === walletNetwork &&
+            compareAddress(w.address, rawAddress.trim())
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      if (existingByAddr) {
+        await get().switchWallet(existingByAddr.id);
+        return existingByAddr.id;
+      }
+
+      const walletId = generateWalletId();
+      const walletName =
+        name?.trim() ||
+        generateWalletName(state.walletManagement.savedWallets, 'watch-only');
+
+      const walletAdapter = await createWalletAdapter({
+        watchOnlyAddress: rawAddress.trim(),
+        useWalletInterfaceType: 'watch-only',
+        network: walletNetwork,
+        walletKit: state.walletCore.walletKit,
+        version: 'v5r1',
+      });
+
+      const wallet = await state.walletCore.walletKit.addWallet(walletAdapter);
+      if (!wallet) {
+        throw new Error('Failed to add watch-only wallet');
+      }
+
+      const address = wallet.getAddress();
+      const publicKey = wallet.getPublicKey();
+
+      const savedWallet: SavedWallet = {
+        id: walletId,
+        name: walletName,
+        address,
+        publicKey,
+        walletType: 'watch-only',
+        walletInterfaceType: 'watch-only',
+        isWatchOnly: true,
+        version: 'v5r1',
+        network: walletNetwork,
+        createdAt: Date.now(),
+        kitWalletId: wallet.getWalletId(),
+      };
+
+      await get().stopWebSocketStreaming();
+
+      set((state) => {
+        state.walletManagement.savedWallets.push(savedWallet);
+        state.walletManagement.hasWallet = true;
+        state.walletManagement.isAuthenticated = true;
+        state.walletManagement.activeWalletId = walletId;
+        state.walletManagement.address = address;
+        state.walletManagement.publicKey = publicKey;
+        state.walletManagement.balance = undefined;
+        state.walletManagement.currentWallet = wallet;
+        state.walletManagement.events = [];
+        state.nfts.userNfts = [];
+      });
+
+      await get().startWebSocketStreaming();
+      void get().updateBalance();
+      log.info(
+        `Added watch-only wallet ${walletId} (${walletName}: ${address})`,
+      );
+      return walletId;
+    },
+
     switchWallet: async (walletId: string) => {
       if (inFlightSwitchWalletId === walletId && inFlightSwitchWalletPromise) {
         return inFlightSwitchWalletPromise;
@@ -424,9 +509,13 @@ export const createWalletManagementSlice =
             }
           }
 
-          // Wallet is not in WalletKit yet — decrypt mnemonic and create adapter
+          // Wallet is not in WalletKit yet — decrypt mnemonic (or create watch-only adapter)
           if (!wallet) {
-            if (!state.auth.currentPassword) {
+            const isWatchOnly =
+              savedWallet.walletType === 'watch-only' ||
+              savedWallet.walletInterfaceType === 'watch-only' ||
+              savedWallet.isWatchOnly;
+            if (!isWatchOnly && !state.auth.currentPassword) {
               throw new Error('User not authenticated');
             }
 
@@ -455,11 +544,28 @@ export const createWalletManagementSlice =
             newlyAssignedKitId = wallet.getWalletId();
           }
 
+          const findByAddressKey = <T>(
+            map: Record<string, T> | undefined,
+            targetAddr: string | undefined,
+          ): T | undefined => {
+            if (!map || !targetAddr) return undefined;
+            if (map[targetAddr] !== undefined) return map[targetAddr];
+            const matchKey = Object.keys(map).find((k) => {
+              try {
+                return compareAddress(k, targetAddr);
+              } catch {
+                return k === targetAddr;
+              }
+            });
+            return matchKey ? map[matchKey] : undefined;
+          };
+
           // Activate the wallet immediately using cached balance if available
           const cachedBalance = savedWallet.address
-            ? (state.walletManagement.balancesByAddress?.[
-                savedWallet.address
-              ] ??
+            ? (findByAddressKey(
+                state.walletManagement.balancesByAddress,
+                savedWallet.address,
+              ) ??
               (state.walletManagement.activeWalletId === walletId
                 ? state.walletManagement.balance
                 : undefined))
@@ -488,14 +594,16 @@ export const createWalletManagementSlice =
             }
             state.walletManagement.currentWallet = wallet;
             state.walletManagement.events =
-              (savedWallet.address &&
-                state.walletManagement.eventsByAddress[savedWallet.address]) ||
-              [];
+              findByAddressKey(
+                state.walletManagement.eventsByAddress,
+                savedWallet.address,
+              ) || [];
 
             // Restore cached nfts for the newly active wallet (or reset to empty if not yet loaded)
-            const cachedNfts = savedWallet.address
-              ? state.nfts.nftsByAddress[savedWallet.address]
-              : undefined;
+            const cachedNfts = findByAddressKey(
+              state.nfts.nftsByAddress,
+              savedWallet.address,
+            );
             state.nfts.userNfts = cachedNfts ?? [];
           });
 
@@ -903,32 +1011,41 @@ export const createWalletManagementSlice =
 
     updateBalance: async () => {
       const state = get();
-      if (!state.walletManagement.currentWallet) {
+      const targetWallet = state.walletManagement.currentWallet;
+      if (!targetWallet) {
         log.warn('No wallet available to update balance');
         return;
       }
+      const targetAddress =
+        targetWallet.getAddress() || state.walletManagement.address;
 
       try {
         const balance = await CallForSuccess(
-          () => state.walletManagement.currentWallet!.getBalance(),
+          () => targetWallet.getBalance(),
           5,
           1000,
         );
         const balanceString = balance.toString();
-        const address = state.walletManagement.address;
 
         set((state) => {
-          const prevBalance = address
-            ? state.walletManagement.balancesByAddress[address]
+          const prevBalance = targetAddress
+            ? state.walletManagement.balancesByAddress[targetAddress]
             : state.walletManagement.balance;
-          state.walletManagement.balance = balanceString;
-          if (address) {
-            state.walletManagement.balancesByAddress[address] = balanceString;
+          const isStillActive =
+            !targetAddress ||
+            !state.walletManagement.address ||
+            compareAddress(state.walletManagement.address, targetAddress);
+          if (isStillActive) {
+            state.walletManagement.balance = balanceString;
+          }
+          if (targetAddress) {
+            state.walletManagement.balancesByAddress[targetAddress] =
+              balanceString;
             if (prevBalance !== undefined && prevBalance !== balanceString) {
               if (!state.walletManagement.eventsStaleByAddress) {
                 state.walletManagement.eventsStaleByAddress = {};
               }
-              state.walletManagement.eventsStaleByAddress[address] = true;
+              state.walletManagement.eventsStaleByAddress[targetAddress] = true;
             }
           }
         });
@@ -1279,9 +1396,14 @@ export const createWalletManagementSlice =
         now - lastLoadEventsTime < EVENTS_CACHE_TTL_MS
       ) {
         set((s) => {
-          s.walletManagement.events = (
-            s.walletManagement.eventsByAddress[address] || []
-          ).slice(0, limit);
+          if (
+            !s.walletManagement.address ||
+            compareAddress(s.walletManagement.address, address)
+          ) {
+            s.walletManagement.events = (
+              s.walletManagement.eventsByAddress[address] || []
+            ).slice(0, limit);
+          }
           if (!s.walletManagement.eventsFetchedInSessionByAddress) {
             s.walletManagement.eventsFetchedInSessionByAddress = {};
           }
@@ -1375,12 +1497,17 @@ export const createWalletManagementSlice =
             newEventsByAddress[address] = mergedList.slice(0, maxCap);
 
             state.walletManagement.eventsByAddress = newEventsByAddress;
-            state.walletManagement.events = (
-              newEventsByAddress[address] || []
-            ).slice(0, limit);
-            state.walletManagement.hasNextEvents =
-              Boolean(response.hasNext) ||
-              (newEventsByAddress[address]?.length ?? 0) > limit;
+            if (
+              !state.walletManagement.address ||
+              compareAddress(state.walletManagement.address, address)
+            ) {
+              state.walletManagement.events = (
+                newEventsByAddress[address] || []
+              ).slice(0, limit);
+              state.walletManagement.hasNextEvents =
+                Boolean(response.hasNext) ||
+                (newEventsByAddress[address]?.length ?? 0) > limit;
+            }
 
             if (!state.walletManagement.eventsFetchedInSessionByAddress) {
               state.walletManagement.eventsFetchedInSessionByAddress = {};
@@ -1469,13 +1596,27 @@ export const createWalletManagementSlice =
       savedWallet: SavedWallet,
     ): Promise<WalletAdapter | undefined> => {
       const state = get();
+      const walletNetwork = savedWallet.network || 'testnet';
+
+      if (
+        savedWallet.walletType === 'watch-only' ||
+        savedWallet.walletInterfaceType === 'watch-only' ||
+        savedWallet.isWatchOnly
+      ) {
+        return await createWalletAdapter({
+          watchOnlyAddress: savedWallet.address,
+          useWalletInterfaceType: 'watch-only',
+          network: walletNetwork,
+          walletKit,
+          version: 'v5r1',
+        });
+      }
 
       if (!state.auth.currentPassword) {
         throw new Error('Cannot load wallets: user is not authenticated');
       }
 
       let walletAdapter;
-      const walletNetwork = savedWallet.network || 'testnet';
 
       if (savedWallet.walletType === 'ledger' && savedWallet.ledgerConfig) {
         if (!walletKitConfig?.createLedgerTransport) {

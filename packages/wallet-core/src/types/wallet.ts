@@ -32,8 +32,9 @@ export interface SavedWallet {
   publicKey: string;
   encryptedMnemonic?: string;
   ledgerConfig?: LedgerConfig;
-  walletType: 'mnemonic' | 'signer' | 'ledger';
-  walletInterfaceType: 'signer' | 'mnemonic' | 'ledger';
+  walletType: 'mnemonic' | 'signer' | 'ledger' | 'watch-only';
+  walletInterfaceType: 'signer' | 'mnemonic' | 'ledger' | 'watch-only';
+  isWatchOnly?: boolean;
   version?: 'v5r1' | 'v4r2';
   network: NetworkType;
   subwalletId?: number;

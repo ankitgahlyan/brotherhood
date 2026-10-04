@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Eye, EyeOff, Pin } from 'lucide-react';
+import { BadgeCheck, Eye, EyeOff, Pin } from 'lucide-react';
 
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { useCountUp } from '@/core/hooks/use-count-up';
@@ -26,6 +26,7 @@ export interface AssetRowData {
   rateLabel?: string;
   /** Fiat value to display on the right; omit to hide (asset has no rate). */
   fiat?: number;
+  isVerified?: boolean;
   isPinned?: boolean;
   isHidden?: boolean;
   onClick?: () => void;
@@ -41,6 +42,7 @@ export const AssetRow: React.FC<AssetRowData> = ({
   amount,
   rateLabel,
   fiat,
+  isVerified,
   isPinned,
   isHidden,
   onClick,
@@ -102,6 +104,13 @@ export const AssetRow: React.FC<AssetRowData> = ({
             <span className="text-sm font-semibold text-foreground truncate">
               {name}
             </span>
+            {isVerified && (
+              <BadgeCheck
+                className="w-4 h-4 text-emerald-500 shrink-0 fill-emerald-500/20"
+                aria-label="Verified token"
+                data-testid={`verified-badge-${symbol}`}
+              />
+            )}
             {isPinned && (
               <Pin
                 className="w-3 h-3 text-primary shrink-0 fill-primary/20"

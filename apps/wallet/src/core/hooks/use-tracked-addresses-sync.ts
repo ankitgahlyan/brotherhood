@@ -550,33 +550,50 @@ export function useTrackedAddressesSync() {
         }
 
         const activeWallet = latestState.walletManagement?.currentWallet;
+        const activeSavedWallet =
+          latestState.walletManagement?.savedWallets?.find(
+            (w) => w.id === latestState.walletManagement?.activeWalletId,
+          );
+        const isActiveWatchOnly = Boolean(
+          activeSavedWallet?.walletType === 'watch-only' ||
+          activeSavedWallet?.walletInterfaceType === 'watch-only' ||
+          activeSavedWallet?.isWatchOnly,
+        );
+        const signableSavedWallets = savedWallets.filter(
+          (w) =>
+            w.walletType !== 'watch-only' &&
+            w.walletInterfaceType !== 'watch-only' &&
+            !w.isWatchOnly,
+        );
         const isWalletUnlocked = latestState.auth?.isUnlocked ?? false;
         const activeBalanceStr = latestState.walletManagement?.balance;
 
-        void autoFundUnderfundedFiWallets({
-          wallet: activeWallet,
-          isUnlocked: isWalletUnlocked,
-          savedWallets,
-          network: defaultNetwork,
-          extraFiWallets: circleFiWallets,
-          activeWalletBalanceNano:
-            activeBalanceStr !== undefined && activeBalanceStr !== null
-              ? activeBalanceStr
-              : undefined,
-          prehydratedBalances: combinedBalances,
-          onTransactionSent: (hash) => {
-            latestState.addPendingTransaction?.({
-              traceId: hash,
-              externalHash: hash,
-              finality: 'pending',
-            });
-          },
-        }).catch((err) => {
-          console.warn(
-            '[useTrackedAddressesSync] Auto-funding check error:',
-            err,
-          );
-        });
+        if (!isActiveWatchOnly && signableSavedWallets.length > 0) {
+          void autoFundUnderfundedFiWallets({
+            wallet: activeWallet,
+            isUnlocked: isWalletUnlocked,
+            savedWallets: signableSavedWallets,
+            network: defaultNetwork,
+            extraFiWallets: circleFiWallets,
+            activeWalletBalanceNano:
+              activeBalanceStr !== undefined && activeBalanceStr !== null
+                ? activeBalanceStr
+                : undefined,
+            prehydratedBalances: combinedBalances,
+            onTransactionSent: (hash) => {
+              latestState.addPendingTransaction?.({
+                traceId: hash,
+                externalHash: hash,
+                finality: 'pending',
+              });
+            },
+          }).catch((err) => {
+            console.warn(
+              '[useTrackedAddressesSync] Auto-funding check error:',
+              err,
+            );
+          });
+        }
       } catch (err) {
         console.error(
           '[useTrackedAddressesSync] Background universal hydration error:',
@@ -608,8 +625,9 @@ export function useTrackedAddressesSync() {
   useEffect(() => {
     const currentLen = savedWallets?.length ?? 0;
     if (currentLen > savedWalletsLengthRef.current) {
+      const isMidSessionAddition = savedWalletsLengthRef.current > 0;
       savedWalletsLengthRef.current = currentLen;
-      void hydrateAllSavedWallets();
+      void hydrateAllSavedWallets(isMidSessionAddition);
     } else if (currentLen < savedWalletsLengthRef.current) {
       savedWalletsLengthRef.current = currentLen;
     }

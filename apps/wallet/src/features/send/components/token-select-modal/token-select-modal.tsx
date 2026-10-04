@@ -60,6 +60,7 @@ export const TokenSelectModal: React.FC<TokenSelectModalProps> = ({
               name={option.name}
               symbol={option.symbol}
               amount={option.balance}
+              isVerified={option.isVerified}
               rateLabel={
                 option.rate !== undefined ? formatRate(option.rate) : undefined
               }

@@ -93,9 +93,8 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
     useState(summaryCacheKey);
   if (summaryCacheKey !== prevSummaryCacheKey) {
     setPrevSummaryCacheKey(summaryCacheKey);
-    if (!summaryCacheKey) {
-      setCachedTokens([]);
-    }
+    setCachedTokens([]);
+    setManualMinters([]);
   }
 
   useEffect(() => {
@@ -103,8 +102,11 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
     let isCancelled = false;
     getContractCache<DiscoveredPersonalToken[]>(summaryCacheKey).then(
       (cached) => {
-        if (!isCancelled && cached?.data && Array.isArray(cached.data)) {
+        if (isCancelled) return;
+        if (cached?.data && Array.isArray(cached.data)) {
           setCachedTokens(cached.data);
+        } else {
+          setCachedTokens([]);
         }
       },
     );
@@ -128,7 +130,12 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
       [...trackedMinters].sort().join(','),
     ],
     queryFn: async () => {
-      if (!parsedOwnerAddress || trackedMinters.length === 0) return [];
+      if (!parsedOwnerAddress || trackedMinters.length === 0) {
+        if (summaryCacheKey) {
+          await setContractCache(summaryCacheKey, []).catch(() => {});
+        }
+        return [];
+      }
 
       const fiMinterParsed = Address.parse(FI_ADDRESS);
       const minterAddrs = trackedMinters
@@ -196,7 +203,7 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
         }
       }
 
-      if (summaryCacheKey && results.length > 0) {
+      if (summaryCacheKey) {
         await setContractCache(summaryCacheKey, results).catch(() => {});
       }
 

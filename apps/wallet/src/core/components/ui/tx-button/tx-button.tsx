@@ -56,14 +56,25 @@ export const TxButton: React.FC<TxButtonProps> = ({
   testId,
   ...props
 }) => {
-  const { holdToSign, slideToSign, showFastSend } = useAuth();
-  const shouldSlide = Boolean(slideToSign && showFastSend);
-  const shouldHold = Boolean(!shouldSlide && holdToSign && showFastSend);
+  const {
+    holdToSign,
+    slideToSign,
+    showFastSend,
+    isWatchOnly: rawIsWatchOnly,
+  } = useAuth();
+  const isWatchOnly = Boolean(rawIsWatchOnly);
+  const effectiveDisabled = Boolean(disabled || isWatchOnly);
+
+  const shouldSlide = Boolean(slideToSign && showFastSend && !isWatchOnly);
+  const shouldHold = Boolean(
+    !shouldSlide && holdToSign && showFastSend && !isWatchOnly,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
   const resolvedTestId = testId || (props as any)['data-testid'];
 
   const handleAction = () => {
+    if (isWatchOnly) return;
     if (onAction) {
       void onAction();
     } else if (type === 'submit') {
@@ -87,7 +98,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
       <div ref={containerRef} className="w-full flex">
         <SlideToSignButton
           onComplete={handleAction}
-          disabled={disabled}
+          disabled={effectiveDisabled}
           loading={loading}
           idleLabel={idle}
           completeLabel={completeLabel}
@@ -109,7 +120,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
       <div ref={containerRef} className="w-full flex">
         <HoldToSignButton
           onComplete={handleAction}
-          disabled={disabled}
+          disabled={effectiveDisabled}
           loading={loading}
           holdDuration={holdDuration}
           idleLabel={idle}
@@ -126,12 +137,14 @@ export const TxButton: React.FC<TxButtonProps> = ({
   return (
     <Button
       type={type}
-      disabled={disabled}
+      disabled={effectiveDisabled}
       loading={loading}
       fullWidth={fullWidth}
       className={className}
       data-testid={resolvedTestId}
+      title={isWatchOnly ? 'Watch-Only Wallet (Sending Disabled)' : props.title}
       onClick={(e) => {
+        if (isWatchOnly) return;
         if (type === 'submit') {
           onClick?.(e);
           return;
@@ -144,7 +157,7 @@ export const TxButton: React.FC<TxButtonProps> = ({
       }}
       {...props}
     >
-      {children}
+      {isWatchOnly ? 'Watch-Only (Sending Disabled)' : children}
     </Button>
   );
 };

@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { Address, toNano, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { isOnline } from '@/core/lib/network-status';
-import { useAuth } from '@demo/wallet-core';
+import { useAuth, useWalletStore } from '@demo/wallet-core';
 import { useExplorer } from '@/core/explorer';
 import { notifyTransactionSent } from '@/core/utils/transaction-toast';
 
@@ -45,6 +45,14 @@ export function useBrotherhoodTransaction(
 ): UseBrotherhoodTransactionResult {
   const queryClient = useQueryClient();
   const { showFastSend, isUnlocked } = useAuth();
+  const savedWallets = useWalletStore((s) => s.walletManagement.savedWallets);
+  const activeWalletId = useWalletStore(
+    (s) => s.walletManagement.activeWalletId,
+  );
+  const activeWallet = savedWallets.find((w) => w.id === activeWalletId);
+  const isWatchOnly = Boolean(
+    activeWallet?.walletType === 'watch-only' || activeWallet?.isWatchOnly,
+  );
   const { explorer } = useExplorer();
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +78,13 @@ export function useBrotherhoodTransaction(
       messages: BrotherhoodMessage[],
       options?: { affectedContracts?: (Address | string)[] },
     ) => {
+      if (isWatchOnly) {
+        const msg = 'Watch-Only wallet (Sending Disabled)';
+        setError(msg);
+        toast.error(msg);
+        throw new Error(msg);
+      }
+
       if (!wallet) {
         toast.error('No wallet connected');
         throw new Error('No wallet available');
@@ -177,7 +192,15 @@ export function useBrotherhoodTransaction(
         setIsSending(false);
       }
     },
-    [wallet, walletKit, showFastSend, isUnlocked, notifySent, queryClient],
+    [
+      isWatchOnly,
+      wallet,
+      walletKit,
+      showFastSend,
+      isUnlocked,
+      notifySent,
+      queryClient,
+    ],
   );
 
   return { send, isSending, error };

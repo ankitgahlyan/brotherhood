@@ -6,6 +6,7 @@
  *
  */
 
+import { Address } from '@ton/core';
 import type {
   WalletAdapter,
   WalletSigner,
@@ -18,6 +19,8 @@ import {
   Uint8ArrayToHex,
   Network,
   Signer,
+  createWalletId,
+  formatWalletAddress,
 } from '@ton/walletkit';
 import type { ITonWalletKit, Transaction } from '@ton/walletkit';
 import {
@@ -40,7 +43,8 @@ const log = createComponentLogger('WalletAdapterFactory');
 
 export interface CreateWalletAdapterParams {
   mnemonic?: string[];
-  useWalletInterfaceType: 'signer' | 'mnemonic' | 'ledger';
+  watchOnlyAddress?: string;
+  useWalletInterfaceType: 'signer' | 'mnemonic' | 'ledger' | 'watch-only';
   ledgerAccountNumber?: number;
   storedLedgerConfig?: LedgerConfig;
   network: NetworkType;
@@ -64,6 +68,7 @@ export async function createWalletAdapter(
 ): Promise<WalletAdapter> {
   const {
     mnemonic,
+    watchOnlyAddress,
     useWalletInterfaceType,
     ledgerAccountNumber = 0,
     storedLedgerConfig,
@@ -87,6 +92,34 @@ export async function createWalletAdapter(
   const w5WalletId = walletId ?? (isTestnet ? 2147483645 : 2147483409);
 
   switch (useWalletInterfaceType) {
+    case 'watch-only': {
+      if (!watchOnlyAddress) {
+        throw new Error('Address required for watch-only wallet type');
+      }
+      const parsedAddr = Address.parse(watchOnlyAddress.trim());
+      const client = walletKit.getApiClient(chainNetwork);
+      const rejectWatchOnly = async (): Promise<never> => {
+        throw new Error('Watch-only wallet cannot sign or send messages');
+      };
+      return {
+        getPublicKey: () => ('0x' + '0'.repeat(64)) as any,
+        getNetwork: () => chainNetwork,
+        getClient: () => client,
+        getAddress: (options?: { testnet?: boolean }) =>
+          formatWalletAddress(parsedAddr, options?.testnet ?? isTestnet),
+        getWalletId: () =>
+          createWalletId(
+            chainNetwork,
+            formatWalletAddress(parsedAddr, isTestnet),
+          ),
+        getStateInit: async () => '' as any,
+        getSignedSendTransaction: rejectWatchOnly,
+        getSignedSignMessage: rejectWatchOnly,
+        getSignedSignData: rejectWatchOnly,
+        getSignedTonProof: rejectWatchOnly,
+        getSupportedFeatures: () => [],
+      };
+    }
     case 'signer': {
       if (!mnemonic) {
         throw new Error('Mnemonic required for signer wallet type');
@@ -241,9 +274,10 @@ export function generateWalletId(): string {
  */
 export function generateWalletName(
   existingWallets: SavedWallet[],
-  type: 'mnemonic' | 'signer' | 'ledger',
+  type: 'mnemonic' | 'signer' | 'ledger' | 'watch-only',
 ): string {
-  const prefix = type === 'ledger' ? 'Ledger' : 'Wallet';
+  const prefix =
+    type === 'ledger' ? 'Ledger' : type === 'watch-only' ? 'Watch' : 'Wallet';
   let counter =
     existingWallets.filter((w) => w.name.startsWith(prefix)).length + 1;
   let name = `${prefix} ${counter}`;

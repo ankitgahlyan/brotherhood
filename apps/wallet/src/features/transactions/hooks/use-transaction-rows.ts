@@ -12,6 +12,8 @@ import { Base64ToHex } from '@ton/walletkit';
 import type { Event } from '@ton/walletkit';
 import { useExplorer } from '@/core/explorer';
 import { sameAddress } from '@/core/utils/formatters';
+import { useFiMinterState } from '@/lib/brotherhood/queries';
+import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 
 import { mapEventToRow, mapPendingToRow } from '../utils/map-transaction-row';
 import type { TransactionRowModel } from '../utils/map-transaction-row';
@@ -22,6 +24,34 @@ interface TransactionRows {
   rows: TransactionRowModel[];
   allRows: TransactionRowModel[];
   hasMore: boolean;
+}
+
+function replaceFiSymbolInRow(
+  row: TransactionRowModel,
+  fiSymbol: string,
+): TransactionRowModel {
+  if (!fiSymbol || fiSymbol === 'FI') return row;
+  const replaceFiWord = (str?: string) =>
+    str ? str.replace(/\bFI\b/g, fiSymbol) : str;
+  const isFiSymbol = row.symbol?.toUpperCase() === 'FI';
+  const hasFiToken = row.tokens?.some((t) => t.toUpperCase() === 'FI');
+  const hasFiInText =
+    /\bFI\b/.test(row.title || '') ||
+    /\bFI\b/.test(row.amount || '') ||
+    /\bFI\b/.test(row.subtitleId || '');
+
+  if (!isFiSymbol && !hasFiToken && !hasFiInText) {
+    return row;
+  }
+
+  return {
+    ...row,
+    symbol: isFiSymbol ? fiSymbol : row.symbol,
+    tokens: row.tokens?.map((t) => (t.toUpperCase() === 'FI' ? fiSymbol : t)),
+    title: replaceFiWord(row.title) ?? row.title,
+    amount: replaceFiWord(row.amount) ?? row.amount,
+    subtitleId: replaceFiWord(row.subtitleId) ?? row.subtitleId,
+  };
 }
 
 /**
@@ -58,6 +88,14 @@ export const useTransactionRows = (
       };
     }),
   );
+
+  const net = network === 'mainnet' ? 'mainnet' : 'testnet';
+  const fiMinterState = useFiMinterState(true, net);
+  const fiMetadataCell = fiMinterState.data?.metadata;
+  const fiSymbol = useMemo(() => {
+    const meta = parseOnchainMetadataCell(fiMetadataCell);
+    return meta.symbol?.trim() || 'FI';
+  }, [fiMetadataCell]);
 
   const { rows, allRows, totalSourceCount } = useMemo(() => {
     const myAddress = address ?? '';
@@ -112,21 +150,29 @@ export const useTransactionRows = (
       })
       .map((p) => {
         const timestamp = p.preview?.timestamp ?? nowSeconds();
+        const rawRow = mapPendingToRow(
+          p,
+          myAddress,
+          timestamp,
+          network,
+          explorer,
+        );
         return {
           timestamp,
-          row: mapPendingToRow(p, myAddress, timestamp, network, explorer),
+          row: replaceFiSymbolInRow(rawRow, fiSymbol),
         };
       });
 
     const eventRows = eventItems
       .map((ev) => {
-        const row = mapEventToRow(
+        const rawRow = mapEventToRow(
           ev,
           myAddress,
           network,
           explorer,
           associatedAddresses,
         );
+        const row = rawRow ? replaceFiSymbolInRow(rawRow, fiSymbol) : null;
         return {
           timestamp: row?.timestamp ?? (ev as any)?.timestamp ?? 0,
           row,
@@ -150,6 +196,9 @@ export const useTransactionRows = (
     }
 
     const filterNormalized = tokenFilter.toUpperCase();
+    const isFilteringFi =
+      filterNormalized === 'FI' || filterNormalized === fiSymbol.toUpperCase();
+
     const filtered = combinedRows.filter((row) => {
       if (filterNormalized === 'CONTRACT') {
         return row.category === 'contract' || row.isContractCall === true;
@@ -165,10 +214,20 @@ export const useTransactionRows = (
         );
       }
       if (row.tokens && row.tokens.length > 0) {
-        return row.tokens.some((t) => t.toUpperCase() === filterNormalized);
+        return row.tokens.some((t) => {
+          const upper = t.toUpperCase();
+          return (
+            upper === filterNormalized ||
+            (isFilteringFi &&
+              (upper === 'FI' || upper === fiSymbol.toUpperCase()))
+          );
+        });
       }
       return (
         row.symbol?.toUpperCase() === filterNormalized ||
+        (isFilteringFi &&
+          (row.symbol?.toUpperCase() === 'FI' ||
+            row.symbol?.toUpperCase() === fiSymbol.toUpperCase())) ||
         row.title?.toUpperCase().includes(filterNormalized) ||
         row.subtitleId?.toUpperCase().includes(filterNormalized)
       );
@@ -189,6 +248,7 @@ export const useTransactionRows = (
     explorer,
     tokenFilter,
     limit,
+    fiSymbol,
   ]);
 
   const hasMore =

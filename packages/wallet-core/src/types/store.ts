@@ -127,6 +127,11 @@ export interface WalletManagementSlice {
     subwalletId?: number,
   ) => Promise<string>;
   createLedgerWallet: (name?: string, network?: NetworkType) => Promise<string>;
+  addWatchOnlyWallet: (
+    address: string,
+    name?: string,
+    network?: NetworkType,
+  ) => Promise<string>;
   switchWallet: (walletId: string) => Promise<void>;
   removeWallet: (walletId: string) => void;
   renameWallet: (walletId: string, newName: string) => void;

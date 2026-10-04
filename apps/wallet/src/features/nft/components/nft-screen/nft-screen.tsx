@@ -48,8 +48,10 @@ export const NftsScreen: FC = () => {
   );
 
   useEffect(() => {
-    void loadUserNfts();
-  }, [loadUserNfts]);
+    if (address) {
+      void loadUserNfts(address);
+    }
+  }, [loadUserNfts, address]);
 
   const allNfts = useMemo<NFT[]>(
     () => mergeAndEnrichBroNfts(userNfts, ownedBroDomains),

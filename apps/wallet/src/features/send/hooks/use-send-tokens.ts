@@ -7,6 +7,7 @@
  */
 
 import { useMemo } from 'react';
+import { Address } from '@ton/core';
 import { useActiveJettons, useRates, useWallet } from '@demo/wallet-core';
 
 import type { TokenOption } from '../types';
@@ -19,12 +20,13 @@ import {
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
-import { useFiMinterState } from '@/lib/brotherhood/queries';
+import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { useTrackedPersonalTokens } from '@/features/assets/hooks/use-tracked-personal-tokens';
 import { assetUrl, findRate, normalizeAddress, toDecimal } from '@/core/utils';
-import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import { BRO_TREASURY_ADDRESS, FI_ADDRESS } from '@/lib/brotherhood/config';
+import { isZeroAddress } from '@/lib/brotherhood/ton';
 
 const GRAM_DECIMALS = 9;
 /** Kept aside on a MAX TON send so the transfer still has gas to pay for itself. */
@@ -44,10 +46,32 @@ export const useSendTokens = (): TokenOption[] => {
   const fiJettonBalance = fiAccount.data?.jettonBalance;
   const fiMinterState = useFiMinterState(true, net);
   const fiMetadataCell = fiMinterState.data?.metadata;
+  const fiAdminAddr = fiMinterState.data?.adminAddress;
   const fiOnchainMeta = useMemo(
     () => parseOnchainMetadataCell(fiMetadataCell),
     [fiMetadataCell],
   );
+  const adminOwnerAddress = useMemo(() => {
+    if (fiAdminAddr && !isZeroAddress(fiAdminAddr)) {
+      return fiAdminAddr;
+    }
+    try {
+      return Address.parse(BRO_TREASURY_ADDRESS);
+    } catch {
+      return null;
+    }
+  }, [fiAdminAddr]);
+  const adminFiWalletState = useFiWalletState(adminOwnerAddress, net);
+  const adminPersonalMinterRaw =
+    adminFiWalletState.data?.addresses?.ref?.trustedJettonAddrs?.ref
+      ?.personalJettonMinter ?? null;
+  const adminPtMinterNorm = useMemo(() => {
+    if (!adminPersonalMinterRaw || isZeroAddress(adminPersonalMinterRaw)) {
+      return null;
+    }
+    const rawStr = adminPersonalMinterRaw.toString();
+    return normalizeAddress(rawStr) || rawStr;
+  }, [adminPersonalMinterRaw]);
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
@@ -78,10 +102,15 @@ export const useSendTokens = (): TokenOption[] => {
       if (isFiJetton(jetton)) continue;
       const normAddr = normalizeAddress(jetton.address) || jetton.address;
       if (seenAddresses.has(normAddr)) continue;
-      seenAddresses.add(normAddr);
 
       const decimals = jetton.decimalsNumber ?? GRAM_DECIMALS;
       const amount = toDecimal(jetton.balance, decimals);
+      if (amount <= 0) continue;
+      seenAddresses.add(normAddr);
+
+      const isAdminPt = Boolean(
+        adminPtMinterNorm && normAddr === adminPtMinterNorm,
+      );
       const symbol = getJettonsSymbol(jetton) ?? '';
       otherJettons.push({
         token: { type: 'JETTON', data: jetton },
@@ -94,18 +123,30 @@ export const useSendTokens = (): TokenOption[] => {
         balance: amount,
         maxSendable: amount,
         rate: findRate(rates, jetton.address)?.rate,
+        isVerified: isAdminPt,
       });
     }
 
+    const normOwnPersonal = personalMinterAddress
+      ? normalizeAddress(personalMinterAddress) || personalMinterAddress
+      : null;
     for (const pt of personalTokens) {
       if (isFiJetton({ address: pt.minterAddress, symbol: pt.symbol })) {
         continue;
       }
       const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
       if (seenAddresses.has(normAddr)) continue;
-      seenAddresses.add(normAddr);
 
       const amount = toDecimal(pt.balance, GRAM_DECIMALS);
+      const isOwnPersonal = Boolean(
+        normOwnPersonal && normAddr === normOwnPersonal,
+      );
+      if (amount <= 0 && !isOwnPersonal) continue;
+      seenAddresses.add(normAddr);
+
+      const isAdminPt = Boolean(
+        adminPtMinterNorm && normAddr === adminPtMinterNorm,
+      );
       const symbol = pt.symbol || 'PT';
       otherJettons.push({
         token: {
@@ -133,6 +174,7 @@ export const useSendTokens = (): TokenOption[] => {
         balance: amount,
         maxSendable: amount,
         rate: findRate(rates, pt.minterAddress)?.rate,
+        isVerified: isAdminPt,
       });
     }
 
@@ -191,6 +233,7 @@ export const useSendTokens = (): TokenOption[] => {
       balance: fiAmount,
       maxSendable: fiAmount,
       rate: findRate(rates, fiJetton?.address ?? FI_ADDRESS)?.rate,
+      isVerified: true,
     };
 
     return [fiOption, tonOption, ...otherJettons];
@@ -198,6 +241,8 @@ export const useSendTokens = (): TokenOption[] => {
     balance,
     activeJettons,
     personalTokens,
+    personalMinterAddress,
+    adminPtMinterNorm,
     rates,
     isMember,
     fiJettonBalance,

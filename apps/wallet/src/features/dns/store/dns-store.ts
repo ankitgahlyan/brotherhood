@@ -38,6 +38,8 @@ export interface OwnedDomain {
   isAuctionEnded?: boolean;
   /** True if domain has an assigned owner on-chain */
   hasOwner?: boolean;
+  /** On-chain owner wallet address of the domain NFT */
+  ownerAddress?: string | null;
 }
 
 interface DnsState {

@@ -98,6 +98,7 @@ export const WalletSwitcher: React.FC<WalletSwitcherProps> = ({
       mnemonic: 'Mnemonic',
       signer: 'Signer',
       ledger: 'Ledger Hardware',
+      'watch-only': 'Watch-Only',
     };
     return typeMap[type] || type;
   };

@@ -9,7 +9,11 @@ import React, { useState } from 'react';
 import { Pencil, User, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWalletStore } from '@demo/wallet-core';
-import { useFormatAddress, sameAddress } from '@/core/utils/formatters';
+import {
+  useFormatAddress,
+  sameAddress,
+  shortenAddress,
+} from '@/core/utils/formatters';
 import {
   useContactBookStore,
   normalizeContactAddress,
@@ -74,25 +78,60 @@ export const EditableAddressName: React.FC<EditableAddressNameProps> = ({
     );
   }
 
-  let displayName = formatWalletAddress(address, truncate);
+  const net = (network === 'mainnet' ? 'mainnet' : 'testnet') as
+    'mainnet' | 'testnet';
+  const shortAddr = shortenAddress(address, 4, false, net, false);
+  const fullAddr = formatWalletAddress(address, false);
+
+  const savedWalletMatch = savedWallets.find((w) =>
+    sameAddress(w.address, address),
+  );
+  const dnsName =
+    contact?.dnsDomain ||
+    (contact?.dnsDomains && contact.dnsDomains.length > 0
+      ? contact.dnsDomains[0]
+      : undefined);
+
+  let effectiveLabel: string | null = null;
   let isCustom = false;
   let hasName = false;
 
-  if (isSelf) {
-    displayName = 'My Account (Self)';
-  } else if (contact?.customName) {
-    displayName = `@${contact.customName}`;
+  if (contact?.customName) {
+    effectiveLabel = contact.customName;
     isCustom = true;
     hasName = true;
   } else if (contact?.onChainUsername) {
-    displayName = `@${contact.onChainUsername}`;
+    effectiveLabel = `@${contact.onChainUsername.replace(/^@+/, '')}`;
+    hasName = true;
+  } else if (dnsName) {
+    effectiveLabel = dnsName;
+    hasName = true;
+  } else if (savedWalletMatch?.name) {
+    effectiveLabel = savedWalletMatch.name;
+    hasName = true;
+  } else if (isSelf) {
+    effectiveLabel = 'My Account';
     hasName = true;
   }
+
+  const displayName = effectiveLabel
+    ? truncate
+      ? `${effectiveLabel} (${shortAddr})`
+      : `${effectiveLabel} (${fullAddr})`
+    : truncate
+      ? shortAddr
+      : fullAddr;
 
   const handleOpenEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setInputName(contact?.customName || contact?.onChainUsername || '');
+    setInputName(
+      contact?.customName ||
+        contact?.onChainUsername ||
+        dnsName ||
+        savedWalletMatch?.name ||
+        '',
+    );
     setInputNotes(contact?.notes || '');
     setIsModalOpen(true);
   };
