@@ -1287,6 +1287,24 @@ export const createWalletManagementSlice =
         }
         s.walletManagement.eventsStaleByAddress[address] = true;
       });
+
+      const currentWallet = get().walletManagement.currentWallet;
+      if (typeof currentWallet?.clearCachedSeqno === 'function') {
+        currentWallet.clearCachedSeqno();
+      }
+
+      if (update.status === 'finalized' && typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('brotherhood_ws_transaction_finalized', {
+            detail: {
+              address,
+              traceId,
+              externalHash,
+              previewType,
+            },
+          }),
+        );
+      }
     },
 
     addPendingTransaction: (pendingTx) => {

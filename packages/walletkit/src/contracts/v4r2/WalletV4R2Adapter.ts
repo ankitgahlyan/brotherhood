@@ -67,6 +67,12 @@ export class WalletV4R2Adapter implements WalletAdapter {
   public clearCachedSeqno(): void {
     this.cachedSeqno = null;
   }
+
+  public setCachedSeqno(seqno: number): void {
+    if (Number.isInteger(seqno) && seqno >= 0) {
+      this.cachedSeqno = { value: seqno, timestamp: Date.now() };
+    }
+  }
   public readonly version = 'v4r2';
 
   /**
@@ -272,7 +278,7 @@ export class WalletV4R2Adapter implements WalletAdapter {
    */
   async getSeqno(forceFresh = false): Promise<number> {
     const now = Date.now();
-    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 5000) {
+    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 60000) {
       return this.cachedSeqno.value;
     }
 

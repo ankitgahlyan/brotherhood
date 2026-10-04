@@ -7,9 +7,8 @@
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateContractState } from '@/lib/brotherhood/queries';
-import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import { Address, Cell } from '@ton/core';
+import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
+import { Cell } from '@ton/core';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { toast } from 'sonner';
 import type {
@@ -76,6 +75,9 @@ export const useSendToken = ({
   const { getDecryptedMnemonic } = useWallet();
   const savedWallets = useWalletStore(
     (state) => state.walletManagement.savedWallets,
+  );
+  const isStreamingConnected = useWalletStore(
+    (state) => state.walletManagement?.isStreamingConnected ?? false,
   );
 
   const gasless = useGaslessJettonSend({
@@ -162,8 +164,11 @@ export const useSendToken = ({
       }
 
       let sendResult: SendTransactionResponse | undefined;
+      const isFastSendActive = Boolean(
+        (showFastSend || options?.fastSend) && isUnlocked,
+      );
 
-      if ((showFastSend || options?.fastSend) && isUnlocked) {
+      if (isFastSendActive) {
         if (tokenType === 'TON') {
           const tx = await wallet.createTransferTonTransaction({
             recipientAddress: recipient,
@@ -213,35 +218,25 @@ export const useSendToken = ({
       }
 
       if (senderAddress) {
-        const scheduleRevalidation = (delayMs: number) => {
-          setTimeout(async () => {
-            try {
-              await invalidateContractState(
-                senderAddress.toString(),
-                net,
-                queryClient,
-              );
-              try {
-                const userFiWallet = getFiWalletAddress(
-                  Address.parse(senderAddress.toString()),
-                  net,
-                );
-                await invalidateContractState(
-                  userFiWallet.toString(),
-                  net,
-                  queryClient,
-                );
-              } catch {
-                // Ignore non-member wallet errors
-              }
-            } catch {
-              // Ignore invalidation errors
-            }
-          }, delayMs);
-        };
-
-        scheduleRevalidation(2000);
-        scheduleRevalidation(5000);
+        if (isFastSendActive) {
+          brotherhoodSynchronizer.schedulePostTxReconciliation(
+            [],
+            net,
+            queryClient,
+            undefined,
+            {
+              isStreamingConnected,
+              isContractTx: false,
+            },
+          );
+        } else {
+          brotherhoodSynchronizer.stagePostTxReconciliation(
+            [],
+            queryClient,
+            undefined,
+            false,
+          );
+        }
       }
 
       return sendResult;
@@ -257,6 +252,7 @@ export const useSendToken = ({
       isEncrypted,
       showFastSend,
       isUnlocked,
+      isStreamingConnected,
       gaslessEffective,
       gaslessSend,
       getDecryptedMnemonic,

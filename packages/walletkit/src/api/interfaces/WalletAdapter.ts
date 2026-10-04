@@ -71,4 +71,10 @@ export interface WalletAdapter {
    * If not implemented, features from deviceInfo will be used
    */
   getSupportedFeatures(): Feature[] | undefined;
+
+  /** Clear cached sequence number after broadcast or incoming transaction */
+  clearCachedSeqno?(): void;
+
+  /** Seed cached sequence number from pre-hydrated account state BOC */
+  setCachedSeqno?(seqno: number): void;
 }

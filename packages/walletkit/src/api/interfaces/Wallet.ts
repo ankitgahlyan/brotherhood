@@ -36,7 +36,7 @@ export interface WalletTonInterface {
     params: TONTransferRequest,
   ): Promise<TransactionRequest>;
   createTransferMultiTonTransaction(
-    params: [TONTransferRequest],
+    params: TONTransferRequest[],
   ): Promise<TransactionRequest>;
 
   getTransactionPreview(

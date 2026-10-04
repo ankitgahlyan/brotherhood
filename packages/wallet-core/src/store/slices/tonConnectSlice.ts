@@ -6,7 +6,7 @@
  *
  */
 
-import { SEND_TRANSACTION_ERROR_CODES } from '@ton/walletkit';
+import { SEND_TRANSACTION_ERROR_CODES, compareAddress } from '@ton/walletkit';
 import type {
   Wallet,
   SendTransactionRequestEvent,
@@ -256,16 +256,42 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       });
 
       state.clearCurrentRequestFromQueue();
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.dispatchEvent === 'function'
+      ) {
+        window.dispatchEvent(
+          new CustomEvent('brotherhood_tx_modal_approved', {
+            detail: {
+              isStreamingConnected: Boolean(
+                get().walletManagement?.isStreamingConnected,
+              ),
+            },
+          }),
+        );
+      }
       return result;
     } catch (error) {
       log.error('Failed to approve transaction request:', error);
       state.clearCurrentRequestFromQueue();
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.dispatchEvent === 'function'
+      ) {
+        window.dispatchEvent(new CustomEvent('brotherhood_tx_modal_rejected'));
+      }
       throw error;
     }
   },
 
   rejectTransactionRequest: async (reason?: string) => {
     const state = get();
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.dispatchEvent === 'function'
+    ) {
+      window.dispatchEvent(new CustomEvent('brotherhood_tx_modal_rejected'));
+    }
     if (!state.tonConnect.pendingTransactionRequestEvent) {
       log.error('No pending transaction request to reject');
       return;
@@ -642,7 +668,30 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
           return;
         }
 
-        const balance = await wallet.getBalance();
+        const state = get();
+        const walletAddress = wallet.getAddress();
+        let cachedBalance: string | undefined =
+          (walletAddress &&
+            state.walletManagement?.balancesByAddress?.[walletAddress]) ??
+          (walletAddress &&
+          state.walletManagement?.address &&
+          compareAddress(state.walletManagement.address, walletAddress)
+            ? state.walletManagement?.balance
+            : undefined);
+        if (cachedBalance === undefined && walletAddress) {
+          for (const [addrKey, balVal] of Object.entries(
+            state.walletManagement?.balancesByAddress ?? {},
+          )) {
+            if (compareAddress(addrKey, walletAddress)) {
+              cachedBalance = balVal;
+              break;
+            }
+          }
+        }
+        const balance =
+          cachedBalance !== undefined
+            ? cachedBalance
+            : await wallet.getBalance();
         const minNeededBalance = event.request.messages.reduce(
           (acc, message) => acc + BigInt(message.amount),
           0n,

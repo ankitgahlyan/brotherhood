@@ -504,6 +504,11 @@ export class RequestProcessor {
           await CallForSuccess(() => client.sendBoc(signedBoc));
         }
 
+        const wallet = getWalletFromEvent(this.walletManager, event);
+        if (typeof wallet?.clearCachedSeqno === 'function') {
+          wallet.clearCachedSeqno();
+        }
+
         // Send approval response
         const transactionResponse: SendTransactionRpcResponseSuccess = {
           result: signedBoc,

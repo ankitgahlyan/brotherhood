@@ -16,8 +16,14 @@ import {
   useBrotherhood,
   normalizeAddressByNetwork,
 } from '@demo/wallet-core';
-import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
-import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  brotherhoodSynchronizer,
+  type ManualWalletRefreshDetail,
+} from '@/lib/brotherhood/synchronizer';
+import {
+  computePersonalWalletAddress,
+  getCachedRawAccountState,
+} from '@/lib/brotherhood/account-state-hydrator';
 import {
   getContractCacheSync,
   getNormalizedContractCacheKey,
@@ -33,7 +39,7 @@ import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tra
 import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
 import { autoFundUnderfundedFiWallets } from '@/features/brotherhood/hooks/use-auto-fiwallet-funding';
-import { Address } from '@ton/core';
+import { Address, Cell } from '@ton/core';
 
 /**
  * Top-level hook to manage tracked contract addresses lifecycle in bro-store:
@@ -63,7 +69,11 @@ export function useTrackedAddressesSync() {
   const savedWalletsLengthRef = useRef(0);
   const lastHydratedRef = useRef(0);
   const hydrateAllSavedWalletsRef = useRef<
-    ((force?: boolean) => Promise<void>) | null
+    | ((
+        force?: boolean,
+        refreshDetail?: ManualWalletRefreshDetail,
+      ) => Promise<void>)
+    | null
   >(null);
 
   // Helper to normalize address matching helper
@@ -85,7 +95,7 @@ export function useTrackedAddressesSync() {
   };
 
   const hydrateAllSavedWallets = useCallback(
-    async (force = false) => {
+    async (force = false, refreshDetail?: ManualWalletRefreshDetail) => {
       if (!isOnline() || !savedWallets || savedWallets.length === 0) return;
 
       const now = Date.now();
@@ -97,14 +107,24 @@ export function useTrackedAddressesSync() {
       // 1. Purge legacy localStorage tracked_addresses
       purgeLegacyTrackedAddressesStorage();
 
+      const currentState = storeApi.getState();
+      const isStreamingConnected = Boolean(
+        currentState.walletManagement?.isStreamingConnected,
+      );
+      const skipAuxiliarySync = Boolean(
+        refreshDetail?.isPostTx && isStreamingConnected,
+      );
+
       // 2. Fetch jettons (only if missing from localStorage unless force = true) and reconcile .bro DNS contacts
-      void loadUserJettons(undefined, force).catch(() => {});
-      void brotherhoodSynchronizer
-        .reconcileDnsContacts(defaultNetwork, force)
-        .catch(() => {});
+      // Skip when triggered by post-tx refresh while WebSocket is already streaming jetton updates
+      if (!skipAuxiliarySync) {
+        void loadUserJettons(undefined, force).catch(() => {});
+        void brotherhoodSynchronizer
+          .reconcileDnsContacts(defaultNetwork, force)
+          .catch(() => {});
+      }
 
       try {
-        const currentState = storeApi.getState();
         const currentJettonsByAddress =
           currentState.jettons?.jettonsByAddress || {};
         const currentBrotherhoodByAddress =
@@ -135,6 +155,9 @@ export function useTrackedAddressesSync() {
 
         // Root FI Minter
         addContract(FI_ADDRESS);
+        if (refreshDetail?.extraAddresses) {
+          refreshDetail.extraAddresses.forEach((addr) => addContract(addr));
+        }
 
         // FI Admin FiWallet & PersonalMinter (from cached FiStore.adminAddress or fallback BRO_TREASURY_ADDRESS)
         let cachedAdminOwner: Address | null = null;
@@ -333,6 +356,45 @@ export function useTrackedAddressesSync() {
               },
             };
           });
+        }
+
+        // Seed active wallet's cachedSeqno from pre-hydrated raw account state BOC so pre-send getSeqno() makes 0 RPC calls
+        const activeWalletAdapter =
+          storeApi.getState().walletManagement?.currentWallet;
+        const activeWalletAddr =
+          activeWalletAdapter?.getAddress?.() ||
+          storeApi.getState().walletManagement?.address;
+        if (
+          activeWalletAddr &&
+          typeof activeWalletAdapter?.setCachedSeqno === 'function'
+        ) {
+          try {
+            const rawAcc = getCachedRawAccountState(
+              activeWalletAddr,
+              defaultNetwork,
+            );
+            if (rawAcc) {
+              if (
+                rawAcc.status === 'uninit' ||
+                rawAcc.status === 'nonexist' ||
+                !rawAcc.data_boc
+              ) {
+                activeWalletAdapter.setCachedSeqno(0);
+              } else {
+                const dataCell = Cell.fromBase64(rawAcc.data_boc);
+                const isV4 = (activeWalletAdapter as any).version === 'v4r2';
+                const minBits = isV4 ? 32 : 33;
+                if (dataCell.bits.length >= minBits) {
+                  const slice = dataCell.asSlice();
+                  if (!isV4) slice.skip(1);
+                  const seqno = slice.loadUint(32);
+                  activeWalletAdapter.setCachedSeqno(seqno);
+                }
+              }
+            }
+          } catch {
+            /* ignore seqno decode fallback */
+          }
         }
 
         if (
@@ -594,6 +656,10 @@ export function useTrackedAddressesSync() {
             );
           });
         }
+
+        if (refreshDetail?.onSettledToast) {
+          refreshDetail.onSettledToast();
+        }
       } catch (err) {
         console.error(
           '[useTrackedAddressesSync] Background universal hydration error:',
@@ -601,7 +667,7 @@ export function useTrackedAddressesSync() {
         );
         lastHydratedRef.current = 0;
         setTimeout(() => {
-          void hydrateAllSavedWalletsRef.current?.(true);
+          void hydrateAllSavedWalletsRef.current?.(true, refreshDetail);
         }, 5000);
       }
     },
@@ -648,8 +714,14 @@ export function useTrackedAddressesSync() {
 
   // Listen for manual dashboard refresh events to re-hydrate all saved wallets
   useEffect(() => {
-    const handleManualRefresh = () => {
-      void hydrateAllSavedWallets(true);
+    const handleManualRefresh = (event: Event) => {
+      const customEvent = event as CustomEvent<
+        ManualWalletRefreshDetail | undefined
+      >;
+      if (customEvent.detail) {
+        customEvent.detail.handled = true;
+      }
+      void hydrateAllSavedWallets(true, customEvent.detail);
     };
 
     window.addEventListener(

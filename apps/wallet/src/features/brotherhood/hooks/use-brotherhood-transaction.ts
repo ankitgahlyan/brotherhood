@@ -53,6 +53,9 @@ export function useBrotherhoodTransaction(
   const isWatchOnly = Boolean(
     activeWallet?.walletType === 'watch-only' || activeWallet?.isWatchOnly,
   );
+  const isStreamingConnected = useWalletStore(
+    (s) => s.walletManagement?.isStreamingConnected ?? false,
+  );
   const { explorer } = useExplorer();
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,34 +108,64 @@ export function useBrotherhoodTransaction(
       setError(null);
 
       try {
+        const buildTx = async () => {
+          if (
+            messages.length > 1 &&
+            typeof wallet.createTransferMultiTonTransaction === 'function'
+          ) {
+            return wallet.createTransferMultiTonTransaction(
+              messages.map((msg) => ({
+                recipientAddress: msg.toAddress,
+                transferAmount: msg.amount.toString(),
+                payload: msg.payload.toBoc().toString('base64'),
+                stateInit: msg.stateInit
+                  ? msg.stateInit.toBoc().toString('base64')
+                  : undefined,
+              })),
+            );
+          }
+          const msg = messages[0];
+          return wallet.createTransferTonTransaction({
+            recipientAddress: msg.toAddress,
+            transferAmount: msg.amount.toString(),
+            payload: msg.payload.toBoc().toString('base64'),
+            stateInit: msg.stateInit
+              ? msg.stateInit.toBoc().toString('base64')
+              : undefined,
+          });
+        };
+
         if (isFastSendActive) {
-          for (const msg of messages) {
-            const tx = await wallet.createTransferTonTransaction({
-              recipientAddress: msg.toAddress,
-              transferAmount: msg.amount.toString(),
-              payload: msg.payload.toBoc().toString('base64'),
-              stateInit: msg.stateInit
-                ? msg.stateInit.toBoc().toString('base64')
-                : undefined,
-            });
+          if (
+            messages.length > 1 &&
+            typeof wallet.createTransferMultiTonTransaction !== 'function'
+          ) {
+            for (const msg of messages) {
+              const tx = await wallet.createTransferTonTransaction({
+                recipientAddress: msg.toAddress,
+                transferAmount: msg.amount.toString(),
+                payload: msg.payload.toBoc().toString('base64'),
+                stateInit: msg.stateInit
+                  ? msg.stateInit.toBoc().toString('base64')
+                  : undefined,
+              });
+              const result = await wallet.sendTransaction(tx);
+              if (result?.normalizedHash) {
+                notifySent(result.normalizedHash);
+              }
+            }
+          } else {
+            const tx = await buildTx();
             const result = await wallet.sendTransaction(tx);
             if (result?.normalizedHash) {
               notifySent(result.normalizedHash);
             }
           }
         } else {
-          if (messages.length === 1) {
-            const msg = messages[0];
-            const tx = await wallet.createTransferTonTransaction({
-              recipientAddress: msg.toAddress,
-              transferAmount: msg.amount.toString(),
-              payload: msg.payload.toBoc().toString('base64'),
-              stateInit: msg.stateInit
-                ? msg.stateInit.toBoc().toString('base64')
-                : undefined,
-            });
-            await walletKit!.handleNewTransaction(wallet, tx);
-          } else {
+          if (
+            messages.length > 1 &&
+            typeof wallet.createTransferMultiTonTransaction !== 'function'
+          ) {
             for (const msg of messages) {
               const tx = await wallet.createTransferTonTransaction({
                 recipientAddress: msg.toAddress,
@@ -144,6 +177,9 @@ export function useBrotherhoodTransaction(
               });
               await walletKit!.handleNewTransaction(wallet, tx);
             }
+          } else {
+            const tx = await buildTx();
+            await walletKit!.handleNewTransaction(wallet, tx);
           }
         }
 
@@ -171,17 +207,30 @@ export function useBrotherhoodTransaction(
           }
         }
 
-        // Schedule post-tx reconciliation at 2s and 5s via central Synchronizer
         const net =
           String(wallet?.getNetwork()?.chainId) === '-239'
             ? 'mainnet'
             : 'testnet';
-        brotherhoodSynchronizer.schedulePostTxReconciliation(
-          Array.from(targets),
-          net,
-          queryClient,
-          () => toast.info('On-chain state updated'),
-        );
+
+        if (isFastSendActive) {
+          brotherhoodSynchronizer.schedulePostTxReconciliation(
+            Array.from(targets),
+            net,
+            queryClient,
+            () => toast.info('On-chain state updated'),
+            {
+              isStreamingConnected,
+              isContractTx: true,
+            },
+          );
+        } else {
+          brotherhoodSynchronizer.stagePostTxReconciliation(
+            Array.from(targets),
+            queryClient,
+            () => toast.info('On-chain state updated'),
+            true,
+          );
+        }
       } catch (err) {
         const errMsg =
           err instanceof Error ? err.message : 'Transaction failed';
@@ -198,6 +247,7 @@ export function useBrotherhoodTransaction(
       walletKit,
       showFastSend,
       isUnlocked,
+      isStreamingConnected,
       notifySent,
       queryClient,
     ],
