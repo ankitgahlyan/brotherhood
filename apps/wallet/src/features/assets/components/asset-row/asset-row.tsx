@@ -52,30 +52,46 @@ export const AssetRow: React.FC<AssetRowData> = ({
   const hasFiat = fiat !== undefined;
   const hasActions = Boolean(onTogglePin || onToggleHide);
 
+  const isClickable = Boolean(onClick);
+  const OuterTag = isClickable && !hasActions ? 'button' : 'div';
+  const InnerTag = isClickable && hasActions ? 'button' : 'div';
+
   return (
-    <div
+    <OuterTag
+      {...(OuterTag === 'button'
+        ? { type: 'button' as const, onClick }
+        : isClickable
+          ? { onClick }
+          : {})}
       className={cn(
         'w-full flex items-center gap-3 py-2 text-left rounded-xl transition-colors',
-        onClick && 'hover:bg-secondary/50 active:bg-secondary/80 px-2 -mx-2',
+        isClickable &&
+          'hover:bg-secondary/50 active:bg-secondary/80 px-2 -mx-2 cursor-pointer',
         isHidden && 'opacity-65',
       )}
     >
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={!onClick}
+      <InnerTag
+        {...(InnerTag === 'button'
+          ? {
+              type: 'button' as const,
+              onClick: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                onClick?.();
+              },
+            }
+          : {})}
         className={cn(
           'flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg',
-          onClick ? 'cursor-pointer' : 'cursor-default',
+          InnerTag === 'button' && 'cursor-pointer',
         )}
       >
-        <span className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center">
+        <span className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-secondary border border-border flex items-center justify-center">
           <FallbackImage
             src={icon}
             alt=""
             className="w-full h-full object-cover"
             fallback={
-              <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
+              <span className="w-full h-full bg-linear-to-br from-blue-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
                 {fallbackText}
               </span>
             }
@@ -99,13 +115,13 @@ export const AssetRow: React.FC<AssetRowData> = ({
           </div>
         </div>
         {hasFiat && (
-          <div className="text-right flex-shrink-0 tabular-nums">
+          <div className="text-right shrink-0 tabular-nums">
             <div className="text-sm font-semibold text-foreground">
               ${formatLargeValue(String(animatedFiat), 2, 2)}
             </div>
           </div>
         )}
-      </button>
+      </InnerTag>
 
       {hasActions && (
         <div className="flex items-center gap-1 shrink-0">
@@ -163,13 +179,13 @@ export const AssetRow: React.FC<AssetRowData> = ({
           )}
         </div>
       )}
-    </div>
+    </OuterTag>
   );
 };
 
 export const AssetRowSkeleton: React.FC = () => (
   <div className="flex items-center gap-3 py-2">
-    <span className="w-10 h-10 rounded-full bg-muted animate-pulse flex-shrink-0" />
+    <span className="w-10 h-10 rounded-full bg-muted animate-pulse shrink-0" />
     <div className="flex-1 min-w-0 space-y-1.5">
       <div className="h-4 w-24 rounded bg-muted animate-pulse" />
       <div className="h-3 w-32 rounded bg-muted animate-pulse" />

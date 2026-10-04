@@ -42,21 +42,34 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
 
   // Tracked minters are dynamically derived from activeJettons (excluding FI) plus any manually imported tokens
   const trackedMinters = useMemo(() => {
-    const set = new Set<string>();
-    for (const j of activeJettons) {
-      if (j.address && j.address !== FI_ADDRESS) {
-        set.add(j.address);
+    const byNorm = new Map<string, string>();
+    const addMinter = (rawAddr?: string | null) => {
+      if (!rawAddr) return;
+      try {
+        const parsed = Address.parse(rawAddr);
+        if (parsed.equals(Address.parse(FI_ADDRESS))) return;
+        const normKey = parsed.toRawString();
+        if (!byNorm.has(normKey)) {
+          byNorm.set(normKey, parsed.toString());
+        }
+      } catch {
+        // ignore invalid address
       }
+    };
+
+    for (const j of activeJettons) {
+      if (j.info?.symbol?.toUpperCase() === 'FI') continue;
+      addMinter(j.address);
     }
     for (const m of manualMinters) {
-      set.add(m);
+      addMinter(m);
     }
     if (additionalMinters) {
       for (const m of additionalMinters) {
-        if (m) set.add(m);
+        addMinter(m);
       }
     }
-    return Array.from(set);
+    return Array.from(byNorm.values());
   }, [activeJettons, manualMinters, additionalMinters]);
 
   const parsedOwnerAddress = useMemo(() => {
@@ -69,7 +82,7 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
   }, [walletAddress]);
 
   const summaryCacheKey = walletAddress
-    ? `personal_tokens_summary:${network}:${walletAddress}`
+    ? `personal_tokens_summary_v2:${network}:${walletAddress}`
     : null;
 
   const [cachedTokens, setCachedTokens] = useState<DiscoveredPersonalToken[]>(
@@ -117,21 +130,34 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
     queryFn: async () => {
       if (!parsedOwnerAddress || trackedMinters.length === 0) return [];
 
-      const minterAddrs = trackedMinters.map((m) => Address.parse(m));
+      const fiMinterParsed = Address.parse(FI_ADDRESS);
+      const minterAddrs = trackedMinters
+        .map((m) => Address.parse(m))
+        .filter((addr) => !addr.equals(fiMinterParsed));
 
       // Off-chain compute Personal Wallet addresses using cached minter states
       const minterWalletPairs: { minterAddr: Address; walletAddr: Address }[] =
         [];
+      const seenRaw = new Set<string>();
       for (const minterAddr of minterAddrs) {
+        const rawKey = minterAddr.toRawString();
+        if (seenRaw.has(rawKey)) continue;
+        seenRaw.add(rawKey);
+
         const cacheKey = getNormalizedContractCacheKey(network, minterAddr);
         const minterCache = await getContractCache<any>(cacheKey);
-        const adminAddress = minterCache?.data?.adminAddress;
-        if (adminAddress) {
+        const data = minterCache?.data;
+        const isPersonalMinter = Boolean(
+          data?.adminAddress &&
+          (data?.fiJettonAddress || data?.issuerWallet || data?.metadataUri) &&
+          !data?.others,
+        );
+        if (isPersonalMinter) {
           try {
             const walletAddr = computePersonalWalletAddress(
               minterAddr,
               parsedOwnerAddress,
-              adminAddress,
+              data.adminAddress,
             );
             minterWalletPairs.push({ minterAddr, walletAddr });
           } catch {

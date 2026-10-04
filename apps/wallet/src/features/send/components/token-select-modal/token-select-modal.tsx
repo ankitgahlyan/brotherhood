@@ -13,7 +13,7 @@ import type { TokenOption } from '../../types';
 import { Modal } from '@/core/components/ui/modal';
 import { AssetRow } from '@/features/assets';
 import { cn } from '@/core/lib/utils';
-import { formatRate } from '@/core/utils';
+import { formatRate, sameAddress } from '@/core/utils';
 
 interface TokenSelectModalProps {
   isOpened: boolean;
@@ -36,36 +36,42 @@ export const TokenSelectModal: React.FC<TokenSelectModalProps> = ({
       <Modal.Title>Select token</Modal.Title>
     </Modal.Header>
     <Modal.Body className="max-h-[60vh] gap-1 overflow-y-auto">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onSelect(option)}
-          className={cn(
-            'w-full rounded-2xl px-2 text-left transition-colors',
-            option.id === selectedId
-              ? 'bg-primary/15 border border-primary/30'
-              : 'hover:bg-secondary/60 border border-transparent',
-          )}
-        >
-          <AssetRow
-            id={option.id}
-            icon={option.icon}
-            fallbackText={option.fallbackText}
-            name={option.name}
-            symbol={option.symbol}
-            amount={option.balance}
-            rateLabel={
-              option.rate !== undefined ? formatRate(option.rate) : undefined
-            }
-            fiat={
-              option.rate !== undefined
-                ? option.balance * option.rate
-                : undefined
-            }
-          />
-        </button>
-      ))}
+      {options.map((option) => {
+        const isSelected =
+          option.id.toLowerCase() === selectedId.toLowerCase() ||
+          sameAddress(option.id, selectedId);
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onSelect(option)}
+            className={cn(
+              'w-full flex items-center rounded-2xl px-3 text-left transition-colors cursor-pointer',
+              isSelected
+                ? 'bg-primary/15 border border-primary/30'
+                : 'hover:bg-secondary/60 border border-transparent',
+            )}
+            data-testid={`token-option-${option.symbol}`}
+          >
+            <AssetRow
+              id={option.id}
+              icon={option.icon}
+              fallbackText={option.fallbackText}
+              name={option.name}
+              symbol={option.symbol}
+              amount={option.balance}
+              rateLabel={
+                option.rate !== undefined ? formatRate(option.rate) : undefined
+              }
+              fiat={
+                option.rate !== undefined
+                  ? option.balance * option.rate
+                  : undefined
+              }
+            />
+          </button>
+        );
+      })}
     </Modal.Body>
   </Modal.Container>
 );

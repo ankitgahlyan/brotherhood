@@ -281,16 +281,27 @@ export function useIsContractDeployed(
   };
 }
 
-export function useJettonMaster(_enabled = true) {
+export function useJettonMaster(enabled = true, net: Network = defaultNetwork) {
+  const {
+    data: fiStore,
+    isLoading,
+    isFetching,
+  } = useFiMinterState(enabled, net);
+  const meta = useMemo(
+    () => parseOnchainMetadataCell(fiStore?.metadata),
+    [fiStore?.metadata],
+  );
   return {
     data: {
       address: FI_ADDRESS,
-      name: 'Brotherhood FossFi',
-      symbol: 'FI',
+      name: meta.name?.trim() || 'BroTherHOOD',
+      symbol: meta.symbol?.trim() || 'HD',
+      image: meta.image?.trim() || undefined,
+      description: meta.description?.trim() || undefined,
       decimals: 9,
     },
-    isLoading: false,
-    isFetching: false,
+    isLoading,
+    isFetching,
     error: null as Error | null,
     refetch: async () => {},
   };

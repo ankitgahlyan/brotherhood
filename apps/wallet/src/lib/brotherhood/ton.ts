@@ -719,10 +719,20 @@ export async function isPersonalMinterContract(
   address: Address,
 ): Promise<boolean> {
   if (isZeroAddress(address)) return false;
+  try {
+    if (address.equals(Address.parse(FI_ADDRESS))) return false;
+  } catch {
+    // ignore
+  }
 
   const normalizedKey = getNormalizedContractCacheKey(network, address);
   const cached = await getContractCache<any>(normalizedKey);
-  return Boolean(cached?.data?.adminAddress);
+  const data = cached?.data;
+  return Boolean(
+    data?.adminAddress &&
+    (data?.fiJettonAddress || data?.issuerWallet || data?.metadataUri) &&
+    !data?.others,
+  );
 }
 
 export async function fetchPersonalTokenMetadata(

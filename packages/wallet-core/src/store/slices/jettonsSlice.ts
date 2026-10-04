@@ -64,13 +64,23 @@ export const createJettonsSlice: JettonsSliceCreator = (
     }
 
     const allSavedWallets = state.walletManagement.savedWallets;
-    const candidateAddresses = Array.from(
-      new Set(
-        [address, ...allSavedWallets.map((w) => w.address).filter(Boolean)]
-          .filter(Boolean)
-          .map((a) => String(a)),
-      ),
-    );
+    const rawCandidates = [
+      address,
+      ...allSavedWallets.map((w) => w.address).filter(Boolean),
+    ]
+      .filter(Boolean)
+      .map((a) => String(a));
+    const candidateAddresses: string[] = [];
+    for (const candidate of rawCandidates) {
+      if (
+        !candidateAddresses.some(
+          (existing) =>
+            existing === candidate || compareAddress(existing, candidate),
+        )
+      ) {
+        candidateAddresses.push(candidate);
+      }
+    }
 
     const existingMap = state.jettons.jettonsByAddress || {};
     const hasCachedEntry = (targetAddr: string) =>
@@ -138,18 +148,31 @@ export const createJettonsSlice: JettonsSliceCreator = (
         partitioned[addr] = [];
       }
 
+      const pushUniqueJetton = (bucket: Jetton[], jetton: Jetton) => {
+        const exists = bucket.some(
+          (j) =>
+            j.address === jetton.address ||
+            (Boolean(j.address) &&
+              Boolean(jetton.address) &&
+              compareAddress(j.address, jetton.address)),
+        );
+        if (!exists) {
+          bucket.push(jetton);
+        }
+      };
+
       for (const jetton of jettonsResponse.jettons) {
         if (jetton.ownerAddress) {
           const matchingAddr = addressesToFetch.find((a) =>
             compareAddress(a, jetton.ownerAddress!),
           );
           if (matchingAddr) {
-            partitioned[matchingAddr].push(jetton);
+            pushUniqueJetton(partitioned[matchingAddr], jetton);
           } else {
             if (!partitioned[jetton.ownerAddress]) {
               partitioned[jetton.ownerAddress] = [];
             }
-            partitioned[jetton.ownerAddress].push(jetton);
+            pushUniqueJetton(partitioned[jetton.ownerAddress], jetton);
           }
         } else {
           const fallbackTarget =
@@ -163,7 +186,7 @@ export const createJettonsSlice: JettonsSliceCreator = (
             if (!partitioned[fallbackTarget]) {
               partitioned[fallbackTarget] = [];
             }
-            partitioned[fallbackTarget].push(jetton);
+            pushUniqueJetton(partitioned[fallbackTarget], jetton);
           }
         }
       }

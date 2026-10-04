@@ -13,7 +13,7 @@ import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { toast } from 'sonner';
 import { useExplorer } from '@/core/explorer';
 import { notifyTransactionSent } from '@/core/utils/transaction-toast';
-import { useFormatAddress } from '@/core/utils/formatters';
+import { sameAddress, useFormatAddress } from '@/core/utils/formatters';
 import { isOnline } from '@/core/lib/network-status';
 import { parseUnits } from '@/core/utils/units';
 
@@ -131,13 +131,20 @@ export const SendTransaction: React.FC = () => {
     }
   }
 
+  const findOptionByTarget = (target: string): TokenOption | undefined => {
+    if (!target) return undefined;
+    const lower = target.toLowerCase();
+    return (
+      options.find(
+        (option) =>
+          option.id.toLowerCase() === lower || sameAddress(option.id, target),
+      ) ?? options.find((option) => option.symbol?.toLowerCase() === lower)
+    );
+  };
+
   const [hasAppliedInitialToken, setHasAppliedInitialToken] = useState(false);
   if (!hasAppliedInitialToken && initialParams.token && options.length > 0) {
-    const match = options.find(
-      (o) =>
-        o.symbol?.toLowerCase() === initialParams.token.toLowerCase() ||
-        o.id.toLowerCase() === initialParams.token.toLowerCase(),
-    );
+    const match = findOptionByTarget(initialParams.token);
     if (match) {
       setHasAppliedInitialToken(true);
       setSelectedId(match.id);
@@ -147,24 +154,12 @@ export const SendTransaction: React.FC = () => {
 
   const rememberedTokenId = getLastSendTokenForWallet(walletStorageKey);
   const selected =
-    options.find(
-      (option) =>
-        option.id.toLowerCase() === selectedId.toLowerCase() ||
-        option.symbol?.toLowerCase() === selectedId.toLowerCase(),
-    ) ??
-    (rememberedTokenId
-      ? options.find(
-          (option) =>
-            option.id.toLowerCase() === rememberedTokenId.toLowerCase() ||
-            option.symbol?.toLowerCase() === rememberedTokenId.toLowerCase(),
-        )
-      : undefined) ??
+    findOptionByTarget(selectedId) ??
+    (rememberedTokenId ? findOptionByTarget(rememberedTokenId) : undefined) ??
     options[0];
 
   const isFiToken =
-    selected.id === 'FI' ||
-    selected.id === FI_ADDRESS ||
-    selected.symbol === 'FI' ||
+    sameAddress(selected.id, FI_ADDRESS) ||
     (selected.token.type === 'JETTON' && isFiJetton(selected.token.data));
 
   const tokenContext = useMemo<TokenContractContext>(() => {
@@ -362,9 +357,7 @@ export const SendTransaction: React.FC = () => {
     setError('');
     setShowTokenModal(false);
     const isNewFi =
-      option.id === 'FI' ||
-      option.id === FI_ADDRESS ||
-      option.symbol === 'FI' ||
+      sameAddress(option.id, FI_ADDRESS) ||
       (option.token.type === 'JETTON' && isFiJetton(option.token.data));
     if (!isNewFi) {
       setSenderMode('self');
