@@ -24,17 +24,21 @@ export function normalizeAddressString(addr: Address | string): string {
 }
 
 /**
- * Extract invited addresses and h3Cell from a deserialized FiWallet store
+ * Extract invited, followed, inviter FiWallet addresses and h3Cell from a deserialized FiWallet store
  */
 export function extractInvitedAndLocationFromFiWallet(store: any): {
   invited: string[];
+  followed: string[];
+  inviter: string | null;
   h3Cell: string | null;
 } {
   const invited: string[] = [];
+  const followed: string[] = [];
+  let inviter: string | null = null;
   let h3Cell: string | null = null;
 
   try {
-    if (store && store.$ === 'FiWalletStore') {
+    if (store && (store.$ === 'FiWalletStore' || store.addresses?.ref?.owner)) {
       const fiStore = store as FiWalletStore;
       const dict = fiStore.maps?.ref?.invited;
       if (dict && typeof dict.keys === 'function') {
@@ -44,6 +48,30 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
           if (str && !invited.includes(str)) {
             invited.push(str);
           }
+        }
+      }
+
+      const followedDict =
+        store.socialMaps?.ref?.followed ?? store.maps?.ref?.followed;
+      if (followedDict && typeof followedDict.keys === 'function') {
+        const keys = followedDict.keys();
+        for (const k of keys) {
+          const str = normalizeAddressString(k);
+          if (str && !followed.includes(str)) {
+            followed.push(str);
+          }
+        }
+      }
+
+      const rawInviter =
+        store.addresses?.ref?.inviter ?? store.inviterAddress ?? null;
+      if (rawInviter) {
+        const invStr = normalizeAddressString(rawInviter);
+        if (
+          invStr &&
+          invStr !== 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'
+        ) {
+          inviter = invStr;
         }
       }
 
@@ -59,7 +87,7 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
     );
   }
 
-  return { invited, h3Cell };
+  return { invited, followed, inviter, h3Cell };
 }
 
 /**

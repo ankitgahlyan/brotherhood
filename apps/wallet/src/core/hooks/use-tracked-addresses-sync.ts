@@ -187,12 +187,38 @@ export function useTrackedAddressesSync() {
           if (!wallet.address) continue;
           addWallet(wallet.address);
 
-          // Deterministic FiWallet & user's PersonalWallet for FI Admin's Personal Token (for Swap)
+          // Deterministic FiWallet, cached Circle/Ring/Personal contracts, & user's PersonalWallet for FI Admin's Personal Token (for Swap)
           try {
             const parsedOwner = Address.parse(wallet.address);
             const fiWallet = getFiWalletAddress(parsedOwner, defaultNetwork);
             addContract(fiWallet);
             setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
+
+            const cachedSelfFiStore = getContractCacheSync<any>(
+              getNormalizedContractCacheKey(defaultNetwork, fiWallet),
+            )?.data;
+            if (cachedSelfFiStore) {
+              const { invited, followed, inviter } =
+                extractInvitedAndLocationFromFiWallet(cachedSelfFiStore);
+              for (const addr of invited) addContract(addr);
+              for (const addr of followed) addContract(addr);
+              if (inviter) addContract(inviter);
+
+              const trustedAddrs =
+                cachedSelfFiStore?.addresses?.ref?.trustedJettonAddrs?.ref;
+              if (
+                trustedAddrs?.personalJettonMinter &&
+                !isZeroAddress(trustedAddrs.personalJettonMinter)
+              ) {
+                addContract(trustedAddrs.personalJettonMinter);
+              }
+              if (
+                trustedAddrs?.personalJettonWallet &&
+                !isZeroAddress(trustedAddrs.personalJettonWallet)
+              ) {
+                addContract(trustedAddrs.personalJettonWallet);
+              }
+            }
 
             if (cachedAdminMinter && cachedAdminOwner) {
               const adminPersonalWallet = computePersonalWalletAddress(
@@ -218,15 +244,27 @@ export function useTrackedAddressesSync() {
             if (j.walletAddress) addContract(j.walletAddress);
           }
 
-          // Known location contract for this wallet
+          // Known location, circle, and ring contracts for this wallet
           const walletKey = normalizeAddressByNetwork(
             wallet.address,
             false,
             defaultNetwork,
           );
           const bData = currentBrotherhoodByAddress[walletKey];
-          if (bData && bData.isMember && bData.location) {
-            addContract(bData.location);
+          if (bData) {
+            if (bData.isMember && bData.location) {
+              addContract(bData.location);
+            }
+            if (Array.isArray(bData.circle)) {
+              for (const cAddr of bData.circle) {
+                addContract(cAddr);
+              }
+            }
+            if (bData.ring && typeof bData.ring === 'object') {
+              for (const rAddr of Object.keys(bData.ring)) {
+                addContract(rAddr);
+              }
+            }
           }
         }
 
@@ -246,6 +284,10 @@ export function useTrackedAddressesSync() {
           defaultNetwork,
           { force },
         );
+
+        const combinedBalances: Record<string, string> = {
+          ...(res?.balances || {}),
+        };
 
         if (res?.balances && Object.keys(res.balances).length > 0) {
           storeApi.setState((state) => {
@@ -305,6 +347,13 @@ export function useTrackedAddressesSync() {
         }
 
         const newLocationsToHydrate: string[] = [];
+        const addIfNotInMaster = (addr?: Address | string | null) => {
+          if (!addr) return;
+          const norm = normalizeAddressByNetwork(addr, true, defaultNetwork);
+          if (norm && !masterSet.has(norm)) {
+            newLocationsToHydrate.push(norm);
+          }
+        };
 
         // 5. Evaluate FiWallet status and membership for each wallet
         for (const wallet of savedWallets) {
@@ -350,8 +399,27 @@ export function useTrackedAddressesSync() {
           // Active member
           setBrotherhoodMemberData(walletKey, { isMember: true });
 
-          const { invited, h3Cell } =
+          const { invited, followed, inviter, h3Cell } =
             extractInvitedAndLocationFromFiWallet(fiWalletStore);
+
+          for (const addr of invited) addIfNotInMaster(addr);
+          for (const addr of followed) addIfNotInMaster(addr);
+          if (inviter) addIfNotInMaster(inviter);
+
+          const trustedAddrs =
+            fiWalletStore?.addresses?.ref?.trustedJettonAddrs?.ref;
+          if (
+            trustedAddrs?.personalJettonMinter &&
+            !isZeroAddress(trustedAddrs.personalJettonMinter)
+          ) {
+            addIfNotInMaster(trustedAddrs.personalJettonMinter);
+          }
+          if (
+            trustedAddrs?.personalJettonWallet &&
+            !isZeroAddress(trustedAddrs.personalJettonWallet)
+          ) {
+            addIfNotInMaster(trustedAddrs.personalJettonWallet);
+          }
 
           // Location derivation
           if (h3Cell && h3Cell.trim().length > 0) {
@@ -359,14 +427,7 @@ export function useTrackedAddressesSync() {
               const calculatedLoc = calculateLocationAddress(h3Cell.trim());
               setLocationContract(walletKey, calculatedLoc, defaultNetwork);
               if (calculatedLoc) {
-                const normLoc = normalizeAddressByNetwork(
-                  calculatedLoc,
-                  true,
-                  defaultNetwork,
-                );
-                if (normLoc && !masterSet.has(normLoc)) {
-                  newLocationsToHydrate.push(normLoc);
-                }
+                addIfNotInMaster(calculatedLoc);
               }
             } catch (locErr) {
               console.warn(
@@ -409,9 +470,7 @@ export function useTrackedAddressesSync() {
               true,
               defaultNetwork,
             );
-            if (normAdminFiWallet && !masterSet.has(normAdminFiWallet)) {
-              newLocationsToHydrate.push(normAdminFiWallet);
-            }
+            addIfNotInMaster(normAdminFiWallet);
 
             const decodedAdminFiStore =
               findDecodedStore(res.decodedStores, normAdminFiWallet) ??
@@ -426,14 +485,7 @@ export function useTrackedAddressesSync() {
                 typeof minterCandidate === 'string'
                   ? Address.parse(minterCandidate)
                   : minterCandidate;
-              const normAdminMinter = normalizeAddressByNetwork(
-                adminMinterAddr,
-                true,
-                defaultNetwork,
-              );
-              if (normAdminMinter && !masterSet.has(normAdminMinter)) {
-                newLocationsToHydrate.push(normAdminMinter);
-              }
+              addIfNotInMaster(adminMinterAddr);
               for (const wallet of savedWallets) {
                 if (!wallet.address) continue;
                 try {
@@ -443,14 +495,7 @@ export function useTrackedAddressesSync() {
                     parsedOwner,
                     resolvedAdminOwner,
                   );
-                  const normPw = normalizeAddressByNetwork(
-                    adminPersonalWallet,
-                    true,
-                    defaultNetwork,
-                  );
-                  if (normPw && !masterSet.has(normPw)) {
-                    newLocationsToHydrate.push(normPw);
-                  }
+                  addIfNotInMaster(adminPersonalWallet);
                 } catch {
                   /* ignore */
                 }
@@ -461,21 +506,24 @@ export function useTrackedAddressesSync() {
           /* ignore */
         }
 
-        // 6. Pass 2: Follow-up targeted batch for newly discovered location & FI Admin swap contracts
+        // 6. Pass 2: Follow-up targeted batch for newly discovered circle/ring/location & FI Admin swap contracts
         if (newLocationsToHydrate.length > 0) {
           const freshList = Array.from(new Set(newLocationsToHydrate));
           if (freshList.length > 0) {
-            await brotherhoodSynchronizer.reconcileContracts(
+            const pass2Res = await brotherhoodSynchronizer.reconcileContracts(
               freshList,
               defaultNetwork,
               {
                 force: true,
               },
             );
+            if (pass2Res?.balances) {
+              Object.assign(combinedBalances, pass2Res.balances);
+            }
           }
         }
 
-        // 7. Auto-fund underfunded FiWallets (< 2 TON) across saved wallets & circle invitees
+        // 7. Auto-fund underfunded FiWallets (< 2 TON) across saved wallets & circle invitees using already-hydrated balances
         const latestState = storeApi.getState();
         const latestBrotherhood =
           latestState.brotherhood?.brotherhoodByAddress || {};
@@ -503,6 +551,7 @@ export function useTrackedAddressesSync() {
 
         const activeWallet = latestState.walletManagement?.currentWallet;
         const isWalletUnlocked = latestState.auth?.isUnlocked ?? false;
+        const activeBalanceStr = latestState.walletManagement?.balance;
 
         void autoFundUnderfundedFiWallets({
           wallet: activeWallet,
@@ -510,6 +559,11 @@ export function useTrackedAddressesSync() {
           savedWallets,
           network: defaultNetwork,
           extraFiWallets: circleFiWallets,
+          activeWalletBalanceNano:
+            activeBalanceStr !== undefined && activeBalanceStr !== null
+              ? activeBalanceStr
+              : undefined,
+          prehydratedBalances: combinedBalances,
           onTransactionSent: (hash) => {
             latestState.addPendingTransaction?.({
               traceId: hash,

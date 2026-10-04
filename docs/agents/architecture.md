@@ -67,8 +67,10 @@ When modifying smart contracts (`contracts/src/*.tolk`), protocol constants (`ap
 | `apps/wallet/src/lib/brotherhood/config.ts` | `:lib:brotherhood` (`BrotherhoodConfig.kt`) |
 | `wrappers-ts/*.ts` (`fromSlice`, opcodes, `StateInit`) | `:lib:brotherhood` (`store/*.kt`, `messages/*.kt`, `derivation/*.kt`) |
 | `apps/wallet/src/lib/brotherhood/domain/*` (`fi-account-projector.ts`) | `:lib:brotherhood` (`domain/FiAccountProjector.kt`) |
-| `account-state-hydrator.ts`, `contract-cache.ts` & `synchronizer.ts` | `:apps:wallet:data:brotherhood` (`AccountStateHydrator.kt`, `BrotherhoodDatabase.kt`, `BrotherhoodSynchronizer.kt`) |
+| `account-state-hydrator.ts`, `contract-cache.ts` & `synchronizer.ts` | `:apps:wallet:data:brotherhood` (`AccountStateHydrator.kt`, `internal` `BrotherhoodDatabase.kt`, `BrotherhoodSynchronizer.kt`, `OfflineFirst*Repository`) |
 | `use-auto-fiwallet-funding.ts` | `:apps:wallet:data:brotherhood` (`AutoFiWalletFunder.kt`) |
-| `packages/wallet-core/src/store/slices/*` | `:apps:wallet:data:brotherhood` Repositories + `:apps:wallet:features:brotherhood` `GraphViewModel`s |
-| `apps/wallet/src/features/*` (7 main tabs & 11 BrotherHood sub-tabs) | `:apps:wallet:features:brotherhood` Compose screens + `MoonNav` routers |
+| `packages/wallet-core/src/store/slices/*` | `:apps:wallet:data:brotherhood` Repository interfaces + `:apps:wallet:features:brotherhood:impl` `GraphViewModel`s |
+| `apps/wallet/src/routes/*` & navigation contracts | `:apps:wallet:features:brotherhood:api` (`BrotherhoodNavKey`, `BrotherhoodNavigator`) |
+| `apps/wallet/src/features/*` (7 main tabs & 11 BrotherHood sub-tabs) | `:apps:wallet:features:brotherhood:impl` Compose screens + `MoonNav` routers |
+
 

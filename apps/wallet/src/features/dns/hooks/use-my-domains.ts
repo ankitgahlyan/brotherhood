@@ -7,9 +7,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Address } from '@ton/core';
-import { getFiWalletAddress, toncenterApiKey } from '@/lib/brotherhood/ton';
-import { rateLimitedFetch } from '@/lib/brotherhood/rate-limiter';
+import { useWalletStoreApi } from '@demo/wallet-core';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  setContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import {
   BRO_COLLECTION_RESOLVER,
   type Network,
@@ -35,11 +39,6 @@ export function clearMyDomainsSessionCache(): void {
   myDomainsSessionCache.clear();
   broCollectionSyncCache.clear();
 }
-
-const TONCENTER_V3_BASE: Record<'mainnet' | 'testnet', string> = {
-  mainnet: 'https://toncenter.com/api/v3',
-  testnet: 'https://testnet.toncenter.com/api/v3',
-};
 
 export interface MyDomainsResult {
   domains: OwnedDomain[];
@@ -102,69 +101,91 @@ function syncParsedDnsContactToBook(
   }
 }
 
-async function fetchBroCollectionNftAddresses(
+/**
+ * Extracts `.bro` DNS NFT item addresses directly from the already-cached `nftsSlice`
+ * (`nftsByAddress` and `userNfts`) by matching `collection.address` against `BRO_COLLECTION_RESOLVER`
+ * or `.bro` domain metadata — avoiding any separate `/nft/items?collection_address=...` network call.
+ */
+export function extractBroNftAddressesFromNftsStore(
   walletAddress: string | null | undefined,
   network: Network,
-): Promise<string[]> {
-  const netKey = network === 'mainnet' ? 'mainnet' : 'testnet';
-  const base = TONCENTER_V3_BASE[netKey];
-  const apiKey = toncenterApiKey(network);
-  const headers: Record<string, string> = {};
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey;
-  }
-
+  providedNftsState?: {
+    nftsByAddress?: Record<string, any[]>;
+    userNfts?: any[];
+  } | null,
+  providedActiveAddress?: string | null,
+): string[] {
   const testOnly = network === 'testnet';
   const result = new Set<string>();
+  let nftsState = providedNftsState ?? null;
+  let activeAddr = providedActiveAddress ?? null;
 
-  const queries: URLSearchParams[] = [];
-  if (walletAddress) {
-    queries.push(
-      new URLSearchParams({
-        owner_address: walletAddress,
-        collection_address: BRO_COLLECTION_RESOLVER,
-        limit: '100',
-        offset: '0',
-      }),
-    );
-  }
-  // Also fetch recent items in the collection so domains in active/ended auction
-  // and member domains across the collection are discovered
-  queries.push(
-    new URLSearchParams({
-      collection_address: BRO_COLLECTION_RESOLVER,
-      limit: '100',
-      offset: '0',
-    }),
-  );
-
-  for (const params of queries) {
+  if (!nftsState && typeof window !== 'undefined') {
     try {
-      const res = await rateLimitedFetch(
-        `${base}/nft/items?${params.toString()}`,
-        { headers },
-      );
-      if (!res.ok) continue;
-      const data = (await res.json()) as {
-        nft_items?: { address?: string }[];
-      };
-      if (!Array.isArray(data.nft_items)) continue;
-      for (const item of data.nft_items) {
-        if (item?.address) {
-          try {
-            result.add(
-              Address.parse(item.address).toString({
-                bounceable: true,
-                testOnly,
-              }),
-            );
-          } catch {
-            /* ignore invalid address */
-          }
+      const raw = window.localStorage?.getItem('bro-store');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        nftsState = parsed?.state?.nfts ?? null;
+        if (!activeAddr) {
+          activeAddr = parsed?.state?.walletManagement?.address ?? null;
         }
       }
     } catch {
-      /* ignore network error */
+      /* ignore localStorage parse error */
+    }
+  }
+
+  if (!nftsState) return [];
+
+  const listsToScan: any[][] = [];
+  const byAddr = nftsState.nftsByAddress || {};
+
+  if (walletAddress) {
+    for (const [key, list] of Object.entries(byAddr)) {
+      if (sameRawAddress(key, walletAddress) && Array.isArray(list)) {
+        listsToScan.push(list);
+      }
+    }
+    if (
+      sameRawAddress(activeAddr, walletAddress) &&
+      Array.isArray(nftsState.userNfts)
+    ) {
+      listsToScan.push(nftsState.userNfts);
+    }
+  } else {
+    for (const list of Object.values(byAddr)) {
+      if (Array.isArray(list)) {
+        listsToScan.push(list);
+      }
+    }
+    if (Array.isArray(nftsState.userNfts)) {
+      listsToScan.push(nftsState.userNfts);
+    }
+  }
+
+  for (const list of listsToScan) {
+    for (const item of list) {
+      if (!item?.address) continue;
+      const collectionAddr =
+        item.collection?.address ?? item.collectionAddress ?? null;
+      const itemName = String(
+        item.dns ?? item.info?.name ?? item.name ?? '',
+      ).toLowerCase();
+      const isBroCollection =
+        sameRawAddress(collectionAddr, BRO_COLLECTION_RESOLVER) ||
+        itemName.endsWith('.bro');
+      if (!isBroCollection) continue;
+
+      try {
+        result.add(
+          Address.parse(item.address).toString({
+            bounceable: true,
+            testOnly,
+          }),
+        );
+      } catch {
+        /* ignore invalid address */
+      }
     }
   }
 
@@ -172,14 +193,51 @@ async function fetchBroCollectionNftAddresses(
 }
 
 /**
- * Ensures all recent .bro collection domains on `network` are hydrated into
- * `useContactBookStore` (including their `contactLink` for ThatsApp/Briar/Telegram),
- * even before the user visits the `/dns` screen.
+ * Ensures `.bro` domains discovered from cached NFTs and `useDnsStore` are synced into
+ * `useContactBookStore` (including their `contactLink` for ThatsApp/Briar/Telegram).
+ * LocalStorage-first: if `useDnsStore` or `useContactBookStore` already has persisted
+ * `.bro` domains/contacts for `network` and `force === false`, skips network fetching completely.
  */
 export async function syncBroCollectionContacts(
   network: Network,
   force = false,
 ): Promise<void> {
+  const collectionHydratedKey = `${network}:__collection__`;
+  const dnsState = useDnsStore.getState();
+  const storedDomains = dnsState.domainsByNetwork[network] ?? [];
+  const contactsMap =
+    useContactBookStore.getState().contactsByNetwork[network] ?? {};
+  const hasCachedDnsContacts = Object.values(contactsMap).some((c) =>
+    Boolean(c?.dnsDomain || (c?.dnsDomains && c.dnsDomains.length > 0)),
+  );
+  const broNftsFromStore = extractBroNftAddressesFromNftsStore(null, network);
+  const untrackedBroNfts = broNftsFromStore.filter(
+    (addr) => !storedDomains.some((d) => sameRawAddress(d.nftAddress, addr)),
+  );
+
+  // Sync any already-stored domains into contact book synchronously (0ms, zero network)
+  for (const d of storedDomains) {
+    if (d.name) {
+      syncParsedDnsContactToBook(
+        d.name,
+        undefined,
+        d.walletRecord,
+        d.contactLink,
+        network,
+      );
+    }
+  }
+
+  if (
+    !force &&
+    (storedDomains.length > 0 ||
+      hasCachedDnsContacts ||
+      Boolean(dnsState.hydratedKeys?.[collectionHydratedKey])) &&
+    untrackedBroNfts.length === 0
+  ) {
+    return;
+  }
+
   const now = Date.now();
   const lastSynced = broCollectionSyncCache.get(network) ?? 0;
   if (!force && now - lastSynced < MY_DOMAINS_TTL_MS) {
@@ -200,11 +258,10 @@ export async function syncBroCollectionContacts(
         'genesis',
         testOnly,
       );
-      const indexedAddresses = await fetchBroCollectionNftAddresses(
-        null,
-        network,
-      );
-      const candidateSet = new Set<string>(indexedAddresses);
+      const candidateSet = new Set<string>(broNftsFromStore);
+      for (const d of storedDomains) {
+        if (d.nftAddress) candidateSet.add(d.nftAddress);
+      }
       candidateSet.add(genesisNftAddr);
       const candidates = Array.from(candidateSet);
       if (candidates.length === 0) return;
@@ -216,6 +273,15 @@ export async function syncBroCollectionContacts(
         if (acc.status !== 'active' || !acc.data_boc) continue;
         const parsed = parseDnsItemAccountState(acc.data_boc, network);
         if (!parsed || !parsed.isInitialized || !parsed.domainName) continue;
+        void setContractCache(
+          getNormalizedContractCacheKey(network, acc.address),
+          parsed,
+          {
+            codeHash: acc.code_hash,
+            balance: acc.balance ?? '0',
+            status: acc.status ?? 'active',
+          },
+        ).catch(() => {});
         syncParsedDnsContactToBook(
           parsed.domainName,
           parsed.ownerAddress,
@@ -224,6 +290,7 @@ export async function syncBroCollectionContacts(
           network,
         );
       }
+      useDnsStore.getState().markKeyHydrated(collectionHydratedKey);
     } catch {
       /* ignore background sync errors */
     } finally {
@@ -235,17 +302,17 @@ export async function syncBroCollectionContacts(
 }
 
 /**
- * Returns owned domains from the local Zustand store, discovers any on-chain
- * .bro domains owned by walletAddress (including genesis.bro and active/ended auctions),
- * migrates any stale pre-upgrade NFT addresses by re-deriving from domain name,
- * and prunes destroyed or non-existent domains from localStorage.
- * Uses a module-level session/TTL cache so tab switches do not re-fetch;
- * explicit `refresh()` (hard refresh) bypasses the TTL cache for both NFTs and accountStates.
+ * Returns owned domains from the local Zustand store (`localStorage`-first).
+ * Filters `.bro` domain NFTs directly from `nftsSlice.nftsByAddress` instead of making
+ * a separate `/nft/items` call. Only fetches `accountStates` if local storage has not yet
+ * been hydrated for this wallet (or has newly discovered `.bro` NFTs in `nftsByAddress`),
+ * or when the user triggers manual `refresh()` (`force = true`).
  */
 export function useMyDomains(
   network: Network,
   walletAddress: string | null | undefined,
 ): MyDomainsResult {
+  const storeApi = useWalletStoreApi();
   const domains = useDnsStore((s) => selectOwnedDomains(s, network));
   const addDomain = useDnsStore((s) => s.addDomain);
   const updateDomain = useDnsStore((s) => s.updateDomain);
@@ -256,7 +323,62 @@ export function useMyDomains(
     async (force = false) => {
       if (!walletAddress) return;
 
+      const testOnly = network === 'testnet';
+      const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
+
+      // Step 1: Migrate any stored domain whose nftAddress was derived with stale DnsItem code (purely local)
+      const storedBefore =
+        useDnsStore.getState().domainsByNetwork[network] ?? [];
+      for (const d of storedBefore) {
+        if (!d.name || (d.zone && d.zone !== 'bro')) continue;
+        try {
+          const expectedAddr = deriveDnsItemAddress(
+            collectionAddr,
+            d.name.trim().toLowerCase(),
+            testOnly,
+          );
+          if (!sameRawAddress(d.nftAddress, expectedAddr)) {
+            removeDomain(d.nftAddress, network);
+            addDomain(
+              {
+                ...d,
+                nftAddress: expectedAddr,
+              },
+              network,
+            );
+          }
+        } catch {
+          /* ignore invalid domain name */
+        }
+      }
+
       const cacheKey = toWalletCacheKey(network, walletAddress);
+      const currentDomains =
+        useDnsStore.getState().domainsByNetwork[network] ?? [];
+      const appState = storeApi.getState();
+      const broNftsFromStore = extractBroNftAddressesFromNftsStore(
+        walletAddress,
+        network,
+        appState?.nfts,
+        appState?.walletManagement?.address,
+      );
+      const untrackedBroNfts = broNftsFromStore.filter(
+        (addr) =>
+          !currentDomains.some((d) => sameRawAddress(d.nftAddress, addr)),
+      );
+      const isWalletAlreadyHydrated = Boolean(
+        useDnsStore.getState().hydratedKeys?.[cacheKey],
+      );
+
+      // LocalStorage-first: if already present in store (or previously hydrated) and no new .bro NFTs in nftsByAddress, skip network unless force = true
+      if (
+        !force &&
+        (currentDomains.length > 0 || isWalletAlreadyHydrated) &&
+        untrackedBroNfts.length === 0
+      ) {
+        return;
+      }
+
       const now = Date.now();
       const lastFetchedAt = myDomainsSessionCache.get(cacheKey) ?? 0;
 
@@ -276,52 +398,17 @@ export function useMyDomains(
 
       const refreshPromise = (async () => {
         try {
-          const testOnly = network === 'testnet';
-          const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
           const genesisNftAddr = deriveDnsItemAddress(
             collectionAddr,
             'genesis',
             testOnly,
           );
 
-          // Step 1: Migrate any stored domain whose nftAddress was derived with stale DnsItem code
-          const storedBefore =
-            useDnsStore.getState().domainsByNetwork[network] ?? [];
-          for (const d of storedBefore) {
-            if (!d.name || (d.zone && d.zone !== 'bro')) continue;
-            try {
-              const expectedAddr = deriveDnsItemAddress(
-                collectionAddr,
-                d.name.trim().toLowerCase(),
-                testOnly,
-              );
-              if (!sameRawAddress(d.nftAddress, expectedAddr)) {
-                removeDomain(d.nftAddress, network);
-                addDomain(
-                  {
-                    ...d,
-                    nftAddress: expectedAddr,
-                  },
-                  network,
-                );
-              }
-            } catch {
-              /* ignore invalid domain name */
-            }
-          }
-
-          const currentDomains =
-            useDnsStore.getState().domainsByNetwork[network] ?? [];
-          const indexedAddresses = await fetchBroCollectionNftAddresses(
-            walletAddress,
-            network,
-          );
-
           const candidateSet = new Set<string>();
           for (const d of currentDomains) {
             candidateSet.add(d.nftAddress);
           }
-          for (const addr of indexedAddresses) {
+          for (const addr of broNftsFromStore) {
             candidateSet.add(addr);
           }
           candidateSet.add(genesisNftAddr);
@@ -332,6 +419,7 @@ export function useMyDomains(
           const batch = await batchFetchAccountStates(candidates, network, 30, {
             force,
           });
+          useDnsStore.getState().markKeyHydrated(cacheKey);
           const nowSec = Math.floor(Date.now() / 1000);
           const activeAddressMap = new Map<
             string,
@@ -383,6 +471,16 @@ export function useMyDomains(
 
             const parsed = parseDnsItemAccountState(acc.data_boc, network);
             if (!parsed || !parsed.isInitialized) continue;
+
+            void setContractCache(
+              getNormalizedContractCacheKey(network, canonicalBounceable),
+              parsed,
+              {
+                codeHash: acc.code_hash,
+                balance: acc.balance ?? '0',
+                status: acc.status ?? 'active',
+              },
+            ).catch(() => {});
 
             if (parsed.domainName) {
               syncParsedDnsContactToBook(
@@ -466,7 +564,7 @@ export function useMyDomains(
       inFlightMyDomainsRefresh.set(cacheKey, refreshPromise);
       await refreshPromise;
     },
-    [walletAddress, network, addDomain, updateDomain, removeDomain],
+    [walletAddress, network, addDomain, updateDomain, removeDomain, storeApi],
   );
 
   useEffect(() => {

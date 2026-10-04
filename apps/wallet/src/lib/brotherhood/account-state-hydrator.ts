@@ -15,6 +15,7 @@ import {
   getNormalizedContractCacheKey,
   deserializeFromStorage,
   getContractCache,
+  getContractCacheSync,
 } from './contract-cache';
 import { rateLimitedFetch } from './rate-limiter';
 import { toncenterApiKey, type Network } from './ton';
@@ -155,6 +156,41 @@ const rawAccountStatesCache = new Map<string, CachedAccountStateEntry>();
 
 export function clearAccountStatesCache(): void {
   rawAccountStatesCache.clear();
+}
+
+export function getCachedRawAccountState(
+  addr: Address | string,
+  net: Network = defaultNetwork,
+): RawAccountStateItem | null {
+  const canonical = toCanonicalAddressString(addr);
+  if (!canonical) return null;
+  return rawAccountStatesCache.get(`${net}:${canonical}`)?.account ?? null;
+}
+
+export function getCachedAccountBalance(
+  addr: Address | string,
+  net: Network = defaultNetwork,
+): bigint | null {
+  const canonical = toCanonicalAddressString(addr);
+  if (!canonical) return null;
+  const contractKey = getNormalizedContractCacheKey(net, canonical);
+  const contractCached = getContractCacheSync(contractKey);
+  if (contractCached?.balance !== undefined) {
+    try {
+      return BigInt(contractCached.balance);
+    } catch {
+      /* ignore */
+    }
+  }
+  const rawCached = rawAccountStatesCache.get(`${net}:${canonical}`)?.account;
+  if (rawCached?.balance !== undefined) {
+    try {
+      return BigInt(rawCached.balance);
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
 }
 
 /**
@@ -513,7 +549,30 @@ export function batchHydrateUniversal(
           if (cached.data) {
             result.decodedStores![addr] = cached.data;
           }
+          if (cached.balance !== undefined && result.balances) {
+            result.balances[addr] = cached.balance;
+            try {
+              result.balances[Address.parse(addr).toRawString()] =
+                cached.balance;
+            } catch {
+              /* ignore */
+            }
+          }
           result.hydrated++;
+        }
+        const rawCached = getCachedRawAccountState(addr, net);
+        if (
+          rawCached?.balance !== undefined &&
+          result.balances &&
+          result.balances[addr] === undefined
+        ) {
+          result.balances[addr] = rawCached.balance;
+          try {
+            result.balances[Address.parse(addr).toRawString()] =
+              rawCached.balance;
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
@@ -524,6 +583,16 @@ export function batchHydrateUniversal(
         for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
           if (origKey !== canonical && result.decodedStores[canonical]) {
             result.decodedStores[origKey] = result.decodedStores[canonical];
+          }
+        }
+      }
+      if (result.balances) {
+        for (const [origKey, canonical] of inputToCanonicalMap.entries()) {
+          if (
+            origKey !== canonical &&
+            result.balances[canonical] !== undefined
+          ) {
+            result.balances[origKey] = result.balances[canonical];
           }
         }
       }
@@ -595,7 +664,11 @@ export function batchHydrateUniversal(
           `[batchHydrateUniversal] Account not active or missing data_boc for ${standardAddrStr}, status: ${rawAcc?.status}`,
         );
         const cacheKey = getNormalizedContractCacheKey(net, parsedAddress);
-        await setContractCache(cacheKey, null).catch(() => {});
+        await setContractCache(cacheKey, null, {
+          codeHash: rawAcc?.code_hash,
+          balance: rawAcc?.balance ?? '0',
+          status: rawAcc?.status ?? 'uninit',
+        }).catch(() => {});
         result.failedAddresses.push(standardAddrStr);
         continue;
       }
@@ -693,20 +766,37 @@ export function batchHydrateUniversal(
 
     // Save decoded results into cache
     for (const { standardAddrStr, parsedAddress } of validRequestedAddresses) {
+      const rawAcc =
+        accountMap.get(standardAddrStr) ||
+        accountMap.get(parsedAddress.toRawString());
+      const cacheKey = getNormalizedContractCacheKey(net, parsedAddress);
       const serialized = workerResult.serializedStores[standardAddrStr];
-      if (!serialized) continue;
+
+      if (!serialized) {
+        if (rawAcc) {
+          const existing = getContractCacheSync(cacheKey);
+          await setContractCache(cacheKey, existing?.data ?? null, {
+            codeHash: rawAcc.code_hash,
+            balance: rawAcc.balance ?? '0',
+            status: rawAcc.status ?? 'active',
+          }).catch(() => {});
+        }
+        continue;
+      }
 
       const decodedStore = deserializeFromStorage(serialized);
-      const cacheKey = getNormalizedContractCacheKey(net, parsedAddress);
 
-      await setContractCache(cacheKey, decodedStore).catch((err) => {
+      await setContractCache(cacheKey, decodedStore, {
+        codeHash: rawAcc?.code_hash,
+        balance: rawAcc?.balance ?? '0',
+        status: rawAcc?.status ?? 'active',
+      }).catch((err) => {
         console.error(
           `[batchHydrateUniversal] Failed to setContractCache for ${cacheKey}:`,
           err,
         );
       });
 
-      const rawAcc = accountMap.get(standardAddrStr);
       const meta =
         fetchResult.metadata[standardAddrStr] ||
         (rawAcc ? fetchResult.metadata[rawAcc.address] : undefined);

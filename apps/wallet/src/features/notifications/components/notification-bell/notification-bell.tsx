@@ -13,7 +13,6 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
   BellRing,
@@ -58,8 +57,8 @@ import {
 import {
   CONTRACT_CODE_HASHES,
   normalizeCodeHash,
-  deserializePersonalStoreDataBoc,
 } from '@/lib/brotherhood/account-hydrator.worker';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
 import type { Network } from '@/lib/brotherhood/config';
 
 import { isZeroAddress } from '@/lib/brotherhood/ton';
@@ -409,83 +408,51 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
   }, [fiWalletQuery.data]);
 
   const notifKey = `personal-upgrade-${wallet.id}`;
+  const walletNet = wallet.network ?? 'testnet';
+  const minterCachedState = useContractState<any>(
+    personalMinterAddr,
+    walletNet,
+  );
+  const walletCachedState = useContractState<any>(
+    personalWalletAddr,
+    walletNet,
+  );
 
-  // Fetch on-chain code_hash for the personal minter and personal wallet and compare against expected hashes
-  const { data: outdatedState } = useQuery({
-    queryKey: [
-      'personal-minter-outdated',
-      personalMinterAddr?.toRawString(),
-      personalWalletAddr?.toRawString(),
-      wallet.network,
-    ],
-    queryFn: async () => {
-      if (!personalMinterAddr) {
-        return {
-          minterOutdated: false,
-          walletOutdated: false,
-          isMinterAdmin: false,
-          nextVersion: 2n,
-        };
-      }
-      const { batchFetchAccountStates } =
-        await import('@/lib/brotherhood/account-state-hydrator');
-      const addrs = [
-        personalMinterAddr,
-        ...(personalWalletAddr ? [personalWalletAddr] : []),
-      ];
-      const result = await batchFetchAccountStates(
-        addrs,
-        wallet.network ?? 'testnet',
-      );
-      const findAccount = (target: Address) =>
-        result.accounts.find((a) => {
-          try {
-            return Address.parse(a.address).equals(target);
-          } catch {
-            return (
-              a.address === target.toRawString() ||
-              a.address === target.toString()
-            );
-          }
-        });
-
-      const rawMinter = findAccount(personalMinterAddr);
-      const rawWallet = personalWalletAddr
-        ? findAccount(personalWalletAddr)
-        : undefined;
-
-      const minterOutdated = Boolean(
-        rawMinter?.code_hash &&
-        normalizeCodeHash(rawMinter.code_hash) !==
-          normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
-      );
-      const walletOutdated = Boolean(
-        rawWallet?.code_hash &&
-        normalizeCodeHash(rawWallet.code_hash) !==
-          normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
-      );
-
-      const minterStore = rawMinter?.data_boc
-        ? deserializePersonalStoreDataBoc(rawMinter.data_boc)
-        : null;
-      const isMinterAdmin = Boolean(
-        ownerAddress &&
-        minterStore?.adminAddress &&
-        minterStore.adminAddress.equals(ownerAddress),
-      );
-      const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
-
-      return {
-        minterOutdated,
-        walletOutdated,
-        isMinterAdmin,
-        nextVersion,
-      };
-    },
-    enabled: Boolean(personalMinterAddr),
-    staleTime: 5 * 60 * 1000, // 5 min — no need to hammer Toncenter
-    retry: 1,
-  });
+  // Derive outdated status and version directly from local contract-cache (zero network calls)
+  const outdatedState = useMemo(() => {
+    if (!personalMinterAddr) {
+      return null;
+    }
+    const minterOutdated = Boolean(
+      minterCachedState.codeHash &&
+      normalizeCodeHash(minterCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
+    );
+    const walletOutdated = Boolean(
+      walletCachedState.codeHash &&
+      normalizeCodeHash(walletCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
+    );
+    const minterStore = minterCachedState.data;
+    const isMinterAdmin = Boolean(
+      ownerAddress &&
+      minterStore?.adminAddress &&
+      minterStore.adminAddress.equals(ownerAddress),
+    );
+    const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
+    return {
+      minterOutdated,
+      walletOutdated,
+      isMinterAdmin,
+      nextVersion,
+    };
+  }, [
+    personalMinterAddr,
+    ownerAddress,
+    minterCachedState.codeHash,
+    minterCachedState.data,
+    walletCachedState.codeHash,
+  ]);
 
   useEffect(() => {
     if (!personalMinterAddr || !outdatedState) {

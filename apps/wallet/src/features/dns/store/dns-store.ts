@@ -42,6 +42,7 @@ export interface OwnedDomain {
 
 interface DnsState {
   domainsByNetwork: Record<Network, OwnedDomain[]>;
+  hydratedKeys: Record<string, boolean>;
 }
 
 interface DnsActions {
@@ -52,12 +53,14 @@ interface DnsActions {
     network: Network,
   ): void;
   removeDomain(nftAddress: string, network: Network): void;
+  markKeyHydrated(key: string): void;
 }
 
 const EMPTY_DOMAINS: OwnedDomain[] = [] as OwnedDomain[];
 
 const initialState: DnsState = {
   domainsByNetwork: { testnet: [], mainnet: [], tetra: [] },
+  hydratedKeys: {},
 };
 
 export const useDnsStore = create<DnsState & DnsActions>()(
@@ -105,11 +108,24 @@ export const useDnsStore = create<DnsState & DnsActions>()(
           },
         }));
       },
+
+      markKeyHydrated(key) {
+        if (get().hydratedKeys[key]) return;
+        set((state) => ({
+          hydratedKeys: {
+            ...state.hydratedKeys,
+            [key]: true,
+          },
+        }));
+      },
     }),
     {
       name: 'dns_domains_store',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ domainsByNetwork: state.domainsByNetwork }),
+      partialize: (state) => ({
+        domainsByNetwork: state.domainsByNetwork,
+        hydratedKeys: state.hydratedKeys,
+      }),
     },
   ),
 );

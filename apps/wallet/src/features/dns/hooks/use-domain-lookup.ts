@@ -10,7 +10,17 @@ import { Address } from '@ton/core';
 import type { Network } from '@/lib/brotherhood/config';
 import { RESERVATION_PERIOD_SEC } from '@/lib/brotherhood/config';
 import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
-import { getDnsDomainZone, parseDnsItemAccountState } from '@/core/lib/dns';
+import {
+  getContractCache,
+  setContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
+import {
+  getDnsDomainZone,
+  parseDnsItemAccountState,
+  type BroCollectionState,
+  type ParsedDnsItemState,
+} from '@/core/lib/dns';
 import {
   deriveDnsItemAddress,
   broFiStartingBid,
@@ -99,7 +109,8 @@ function isRegisterableOnNetwork(
 
 /**
  * Debounced hook that looks up a domain name across TON DNS zones.
- * Derives the NFT address off-chain and queries on-chain state in a single batch.
+ * Derives the NFT address off-chain, checks local contract-cache first,
+ * and queries on-chain state only for uncached addresses.
  */
 export function useDomainLookup(
   rawInput: string,
@@ -162,15 +173,28 @@ export function useDomainLookup(
 
         if (ac.signal.aborted) return;
 
-        // Fetch both DnsItem and DnsCollection in a single batch request
-        const batch = await batchFetchAccountStates(
-          [nftAddress, zone.resolver],
+        const nowSec = Math.floor(Date.now() / 1000);
+        const itemCacheKey = getNormalizedContractCacheKey(network, nftAddress);
+        const collCacheKey = getNormalizedContractCacheKey(
           network,
+          zone.resolver,
         );
+        const [cachedItemEntry, cachedCollEntry] = await Promise.all([
+          getContractCache<ParsedDnsItemState>(itemCacheKey),
+          getContractCache<BroCollectionState>(collCacheKey),
+        ]);
+
+        const toFetch: string[] = [];
+        if (!cachedItemEntry) toFetch.push(nftAddress);
+        if (!cachedCollEntry) toFetch.push(zone.resolver);
+
+        const batch =
+          toFetch.length > 0
+            ? await batchFetchAccountStates(toFetch, network)
+            : { accounts: [], addressBook: {}, metadata: {} };
 
         if (ac.signal.aborted) return;
 
-        const nowSec = Math.floor(Date.now() / 1000);
         const itemCanonical = Address.parse(nftAddress).toString();
         const collCanonical = collectionAddress.toString();
 
@@ -191,11 +215,15 @@ export function useDomainLookup(
 
         let isInReservationPeriod = false;
         let reservationEndsAt: number | undefined;
-        if (collAcc && collAcc.status === 'active' && collAcc.data_boc) {
+        if (cachedCollEntry?.data?.deploymentTime) {
+          reservationEndsAt =
+            cachedCollEntry.data.deploymentTime + RESERVATION_PERIOD_SEC;
+          isInReservationPeriod = nowSec < reservationEndsAt;
+        } else if (collAcc && collAcc.status === 'active' && collAcc.data_boc) {
           try {
             const { Cell } = await import('@ton/core');
             const cs = Cell.fromBase64(collAcc.data_boc).beginParse();
-            cs.loadAddress(); // treasuryAddress
+            const treasuryAddr = cs.loadAddress();
             cs.loadRef(); // content
             cs.loadRef(); // nftItemCode
             const deploymentTime = cs.remainingBits >= 32 ? cs.loadUint(32) : 0;
@@ -203,15 +231,54 @@ export function useDomainLookup(
               reservationEndsAt = deploymentTime + RESERVATION_PERIOD_SEC;
               isInReservationPeriod = nowSec < reservationEndsAt;
             }
+            await setContractCache(
+              collCacheKey,
+              {
+                treasuryAddress: treasuryAddr.toString({
+                  bounceable: false,
+                  testOnly: network === 'testnet',
+                }),
+                deploymentTime,
+                isInReservationPeriod,
+                reservationEndsAt: reservationEndsAt ?? 0,
+              } satisfies BroCollectionState,
+              {
+                codeHash: collAcc.code_hash,
+                balance: collAcc.balance ?? '0',
+                status: collAcc.status ?? 'active',
+              },
+            ).catch(() => {});
           } catch {
             /* ignore collection parse errors */
           }
         }
 
-        const isDeployed =
-          Boolean(itemAcc) &&
-          itemAcc!.status === 'active' &&
-          Boolean(itemAcc!.data_boc);
+        let parsedItem: ParsedDnsItemState | null =
+          cachedItemEntry?.data ?? null;
+        let isDeployed = Boolean(parsedItem && parsedItem.isInitialized);
+
+        if (!cachedItemEntry) {
+          isDeployed =
+            Boolean(itemAcc) &&
+            itemAcc!.status === 'active' &&
+            Boolean(itemAcc!.data_boc);
+          if (isDeployed) {
+            parsedItem = parseDnsItemAccountState(itemAcc!.data_boc!, network);
+            if (parsedItem) {
+              await setContractCache(itemCacheKey, parsedItem, {
+                codeHash: itemAcc?.code_hash,
+                balance: itemAcc?.balance ?? '0',
+                status: itemAcc?.status ?? 'active',
+              }).catch(() => {});
+            }
+          } else {
+            await setContractCache(itemCacheKey, null, {
+              codeHash: itemAcc?.code_hash,
+              balance: itemAcc?.balance ?? '0',
+              status: itemAcc?.status ?? 'uninit',
+            }).catch(() => {});
+          }
+        }
 
         if (!isDeployed) {
           const r: DomainLookupResult = {
@@ -232,10 +299,6 @@ export function useDomainLookup(
           return;
         }
 
-        const parsedItem = parseDnsItemAccountState(
-          itemAcc!.data_boc!,
-          network,
-        );
         const ownerStr = parsedItem?.ownerAddress ?? undefined;
         const walletRecordStr = parsedItem?.walletRecord ?? undefined;
         const contactLinkStr = parsedItem?.contactLink ?? undefined;

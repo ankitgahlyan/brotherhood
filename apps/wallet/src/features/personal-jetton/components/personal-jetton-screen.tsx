@@ -6,8 +6,7 @@
  *
  */
 
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Address } from '@ton/core';
 import {
   AlertCircle,
@@ -75,8 +74,9 @@ import { DEFAULT_TOKEN_IMAGE } from '../data/cryptoicons';
 import {
   CONTRACT_CODE_HASHES,
   normalizeCodeHash,
-  deserializePersonalStoreDataBoc,
 } from '@/lib/brotherhood/account-hydrator.worker';
+import { useContractState } from '@/lib/brotherhood/contract-cache';
+import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
 import {
   buildRequestUpgradeBody,
   buildPersonalUpgradeBody,
@@ -208,76 +208,57 @@ export const PersonalJettonScreen: React.FC = () => {
     }
   }, [activePersonalWallet]);
 
-  const {
-    data: outdatedState,
-    isLoading: isOutdatedChecking,
-    refetch: refetchOutdated,
-  } = useQuery({
-    queryKey: [
-      'personal-screen-outdated',
-      activeMinterAddress?.toRawString(),
-      activePersonalWalletAddress?.toRawString(),
-      network,
-    ],
-    queryFn: async () => {
-      if (!activeMinterAddress) {
-        return {
-          minterOutdated: false,
-          walletOutdated: false,
-          nextVersion: 2n,
-        };
-      }
-      const { batchFetchAccountStates } =
-        await import('@/lib/brotherhood/account-state-hydrator');
-      const addrs = [
-        activeMinterAddress,
-        ...(activePersonalWalletAddress ? [activePersonalWalletAddress] : []),
-      ];
-      const result = await batchFetchAccountStates(addrs, network);
+  const minterCachedState = useContractState<any>(activeMinterAddress, network);
+  const walletCachedState = useContractState<any>(
+    activePersonalWalletAddress,
+    network,
+  );
+  const isOutdatedChecking = minterCachedState.isLoading;
 
-      const findAccount = (target: Address) =>
-        result.accounts.find((a) => {
-          try {
-            return Address.parse(a.address).equals(target);
-          } catch {
-            return (
-              a.address === target.toRawString() ||
-              a.address === target.toString()
-            );
-          }
-        });
-
-      const rawMinter = findAccount(activeMinterAddress);
-      const rawWallet = activePersonalWalletAddress
-        ? findAccount(activePersonalWalletAddress)
-        : undefined;
-
-      const minterOutdated = Boolean(
-        rawMinter?.code_hash &&
-        normalizeCodeHash(rawMinter.code_hash) !==
-          normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
-      );
-      const walletOutdated = Boolean(
-        rawWallet?.code_hash &&
-        normalizeCodeHash(rawWallet.code_hash) !==
-          normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
-      );
-
-      const minterStore = rawMinter?.data_boc
-        ? deserializePersonalStoreDataBoc(rawMinter.data_boc)
-        : null;
-      const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
-
+  const outdatedState = useMemo(() => {
+    if (!activeMinterAddress || !info.isDeployedOnChain) {
       return {
-        minterOutdated,
-        walletOutdated,
-        nextVersion,
+        minterOutdated: false,
+        walletOutdated: false,
+        nextVersion: 2n,
       };
-    },
-    enabled: Boolean(activeMinterAddress) && info.isDeployedOnChain,
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
+    }
+    const minterOutdated = Boolean(
+      minterCachedState.codeHash &&
+      normalizeCodeHash(minterCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
+    );
+    const walletOutdated = Boolean(
+      walletCachedState.codeHash &&
+      normalizeCodeHash(walletCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
+    );
+    const nextVersion = BigInt(
+      Number(minterCachedState.data?.version ?? 1n) + 1,
+    );
+    return {
+      minterOutdated,
+      walletOutdated,
+      nextVersion,
+    };
+  }, [
+    activeMinterAddress,
+    info.isDeployedOnChain,
+    minterCachedState.codeHash,
+    minterCachedState.data,
+    walletCachedState.codeHash,
+  ]);
+
+  const refetchOutdated = useCallback(() => {
+    if (!activeMinterAddress) return;
+    const addrs = [
+      activeMinterAddress,
+      ...(activePersonalWalletAddress ? [activePersonalWalletAddress] : []),
+    ];
+    void brotherhoodSynchronizer.reconcileContracts(addrs, network, {
+      force: true,
+    });
+  }, [activeMinterAddress, activePersonalWalletAddress, network]);
 
   const isAnyPersonalContractOutdated = Boolean(
     outdatedState &&

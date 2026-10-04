@@ -26,10 +26,19 @@ const MAX_L1_CONTRACT_ENTRIES = 500;
 const MAX_L1_METADATA_ENTRIES = 500;
 const MAX_L1_ADDRESS_BOOK_ENTRIES = 500;
 
+export interface CacheEntryMeta {
+  codeHash?: string;
+  balance?: string;
+  status?: string;
+}
+
 export interface CacheEntry<T = any> {
   key: string;
   data: T;
   timestamp: number;
+  codeHash?: string;
+  balance?: string;
+  status?: string;
 }
 
 export interface MetadataEntry {
@@ -105,7 +114,13 @@ function openDB(): Promise<IDBDatabase> {
 // Idle-commit batching queue
 const pendingContractWrites = new Map<
   string,
-  { serializedData: string; timestamp: number }
+  {
+    serializedData: string;
+    timestamp: number;
+    codeHash?: string;
+    balance?: string;
+    status?: string;
+  }
 >();
 let idleCommitCallbackId: number | null = null;
 
@@ -146,6 +161,9 @@ export async function flushPendingDbWrites(): Promise<void> {
           key,
           data: val.serializedData,
           timestamp: val.timestamp,
+          codeHash: val.codeHash,
+          balance: val.balance,
+          status: val.status,
         } satisfies CacheEntry);
       }
       tx.oncomplete = () => resolve();
@@ -353,13 +371,25 @@ export async function getAddressBookCache(
   }
 }
 
-export async function setContractCache(key: string, data: any): Promise<void> {
+export async function setContractCache(
+  key: string,
+  data: any,
+  meta?: CacheEntryMeta,
+): Promise<void> {
   const timestamp = Date.now();
+  const prev = memoryContractCache.get(key);
+  const codeHash =
+    meta?.codeHash !== undefined ? meta.codeHash : prev?.codeHash;
+  const balance = meta?.balance !== undefined ? meta.balance : prev?.balance;
+  const status = meta?.status !== undefined ? meta.status : prev?.status;
   // 1. Immediately store in L1 in-memory cache for 0ms subsequent reads
   memoryContractCache.set(key, {
     key,
     data,
     timestamp,
+    codeHash,
+    balance,
+    status,
   });
   pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
 
@@ -369,7 +399,13 @@ export async function setContractCache(key: string, data: any): Promise<void> {
   // 2. Queue for idle IndexedDB persistence (non-blocking)
   try {
     const serializedData = serializeForStorage(data);
-    pendingContractWrites.set(key, { serializedData, timestamp });
+    pendingContractWrites.set(key, {
+      serializedData,
+      timestamp,
+      codeHash,
+      balance,
+      status,
+    });
     scheduleIdleCommit();
   } catch (err) {
     console.warn(
@@ -432,13 +468,22 @@ export function notifyCacheUpdated(
 
 export async function getContractCache<T = any>(
   key: string,
-): Promise<{ data: T; timestamp: number } | null> {
+): Promise<{
+  data: T;
+  timestamp: number;
+  codeHash?: string;
+  balance?: string;
+  status?: string;
+} | null> {
   // 1. Check L1 in-memory cache first (0ms, avoids IDB & JSON overhead)
   const mem = memoryContractCache.get(key);
   if (mem) {
     return {
       data: mem.data as T,
       timestamp: mem.timestamp,
+      codeHash: mem.codeHash,
+      balance: mem.balance,
+      status: mem.status,
     };
   }
 
@@ -463,6 +508,9 @@ export async function getContractCache<T = any>(
       key,
       data: restoredData,
       timestamp: entry.timestamp,
+      codeHash: entry.codeHash,
+      balance: entry.balance,
+      status: entry.status,
     });
     pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
 
@@ -474,6 +522,9 @@ export async function getContractCache<T = any>(
     return {
       data: restoredData as T,
       timestamp: entry.timestamp,
+      codeHash: entry.codeHash,
+      balance: entry.balance,
+      status: entry.status,
     };
   } catch (err) {
     console.warn('[ContractCache] Failed to load cache for key:', key, err);
@@ -611,12 +662,21 @@ export async function invalidateContractCache(
 
 export function getContractCacheSync<T = any>(
   key: string,
-): { data: T; timestamp: number } | null {
+): {
+  data: T;
+  timestamp: number;
+  codeHash?: string;
+  balance?: string;
+  status?: string;
+} | null {
   const mem = memoryContractCache.get(key);
   if (mem) {
     return {
       data: mem.data as T,
       timestamp: mem.timestamp,
+      codeHash: mem.codeHash,
+      balance: mem.balance,
+      status: mem.status,
     };
   }
   return null;
@@ -648,6 +708,9 @@ export function preloadContractCacheFromDb(): Promise<void> {
               key: entry.key,
               data: restored,
               timestamp: entry.timestamp,
+              codeHash: entry.codeHash,
+              balance: entry.balance,
+              status: entry.status,
             });
             pruneL1Cache(memoryContractCache, MAX_L1_CONTRACT_ENTRIES);
             if (entry.timestamp > (lastKnownGlobalFetchTime ?? 0)) {
@@ -684,7 +747,14 @@ if (typeof window !== 'undefined') {
 export function useContractState<T = any>(
   contractAddress: Address | string | null | undefined,
   net: string = 'testnet',
-): { data: T | null; timestamp: number | null; isLoading: boolean } {
+): {
+  data: T | null;
+  timestamp: number | null;
+  codeHash: string | null;
+  balance: string | null;
+  status: string | null;
+  isLoading: boolean;
+} {
   const key = useMemo(() => {
     if (!contractAddress) return null;
     return getNormalizedContractCacheKey(net, contractAddress);
@@ -735,6 +805,9 @@ export function useContractState<T = any>(
   return {
     data: (cached?.data as T) ?? null,
     timestamp: cached?.timestamp ?? null,
+    codeHash: cached?.codeHash ?? null,
+    balance: cached?.balance ?? null,
+    status: cached?.status ?? null,
     isLoading: !cached && Boolean(key),
   };
 }

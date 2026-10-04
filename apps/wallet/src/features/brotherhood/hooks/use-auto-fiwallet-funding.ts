@@ -15,6 +15,7 @@ import { isOnline } from '@/core/lib/network-status';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
   batchFetchAccountStates,
+  getCachedAccountBalance,
   toCanonicalAddressString,
 } from '@/lib/brotherhood/account-state-hydrator';
 import {
@@ -48,6 +49,8 @@ export interface AutoFundFiWalletsParams {
   savedWallets?: Array<{ address: string }> | null;
   network?: Network;
   extraFiWallets?: (Address | string)[];
+  activeWalletBalanceNano?: bigint | string;
+  prehydratedBalances?: Record<string, string | bigint>;
   onTransactionSent?: (normalizedHash: string) => void;
   fetchAccountStatesFn?: typeof batchFetchAccountStates;
 }
@@ -61,12 +64,41 @@ export interface AutoFundFiWalletsResult {
 
 let isFundingInProgress = false;
 
+function resolveBalanceFromMap(
+  map: Record<string, string | bigint> | undefined,
+  address: string,
+): bigint | null {
+  if (!map) return null;
+  const direct = map[address];
+  if (direct !== undefined) {
+    try {
+      return typeof direct === 'bigint' ? direct : BigInt(direct);
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    const parsed = Address.parse(address);
+    const std = parsed.toString();
+    const raw = parsed.toRawString();
+    const val = map[std] ?? map[raw];
+    if (val !== undefined) {
+      return typeof val === 'bigint' ? val : BigInt(val);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export async function autoFundUnderfundedFiWallets({
   wallet,
   isUnlocked,
   savedWallets,
   network = defaultNetwork,
   extraFiWallets = [],
+  activeWalletBalanceNano,
+  prehydratedBalances,
   onTransactionSent,
   fetchAccountStatesFn = batchFetchAccountStates,
 }: AutoFundFiWalletsParams): Promise<AutoFundFiWalletsResult> {
@@ -127,7 +159,7 @@ export async function autoFundUnderfundedFiWallets({
       }
     }
 
-    // 2. Collect any extra FiWallets (e.g. circle members)
+    // 2. Collect any extra FiWallets (e.g. circle & ring members)
     if (extraFiWallets && extraFiWallets.length > 0) {
       for (const extra of extraFiWallets) {
         if (!extra) continue;
@@ -152,11 +184,27 @@ export async function autoFundUnderfundedFiWallets({
       };
     }
 
-    // 3. Check active wallet balance and calculate budget
+    // 3. Check active wallet balance from prehydrated/cached state first before falling back to wallet.getBalance()
     let activeBalanceNano = 0n;
     try {
-      const rawBalance = await wallet.getBalance();
-      activeBalanceNano = BigInt(rawBalance || '0');
+      const walletAddr =
+        typeof (wallet as any).getAddress === 'function'
+          ? (wallet as any).getAddress()
+          : undefined;
+      const prehydratedActiveBal =
+        activeWalletBalanceNano !== undefined
+          ? BigInt(activeWalletBalanceNano)
+          : walletAddr
+            ? (resolveBalanceFromMap(prehydratedBalances, walletAddr) ??
+              getCachedAccountBalance(walletAddr, network))
+            : null;
+
+      if (prehydratedActiveBal !== null) {
+        activeBalanceNano = prehydratedActiveBal;
+      } else {
+        const rawBalance = await wallet.getBalance();
+        activeBalanceNano = BigInt(rawBalance || '0');
+      }
     } catch (balErr) {
       console.warn(
         '[autoFundFiWallets] Could not read active wallet balance:',
@@ -192,19 +240,34 @@ export async function autoFundUnderfundedFiWallets({
       };
     }
 
-    // 4. Query current balances of candidates
-    const fetchRes = await fetchAccountStatesFn(candidateAddresses, network);
+    // 4. Resolve candidate balances from prehydrated/cached state first; only fetch missing addresses
     const accountBalanceMap = new Map<string, bigint>();
+    const missingCandidates: string[] = [];
+    const hasCustomFetchFn = fetchAccountStatesFn !== batchFetchAccountStates;
 
-    for (const acc of fetchRes.accounts) {
-      try {
-        const parsed = Address.parse(acc.address);
-        const bal = acc.balance ? BigInt(acc.balance) : 0n;
-        accountBalanceMap.set(parsed.toString(), bal);
-        accountBalanceMap.set(parsed.toRawString(), bal);
-      } catch {
-        if (acc.balance) {
-          accountBalanceMap.set(acc.address, BigInt(acc.balance));
+    for (const cand of candidateAddresses) {
+      const cachedBal =
+        resolveBalanceFromMap(prehydratedBalances, cand) ??
+        (!hasCustomFetchFn ? getCachedAccountBalance(cand, network) : null);
+      if (cachedBal !== null) {
+        accountBalanceMap.set(cand, cachedBal);
+      } else {
+        missingCandidates.push(cand);
+      }
+    }
+
+    if (missingCandidates.length > 0) {
+      const fetchRes = await fetchAccountStatesFn(missingCandidates, network);
+      for (const acc of fetchRes.accounts) {
+        try {
+          const parsed = Address.parse(acc.address);
+          const bal = acc.balance ? BigInt(acc.balance) : 0n;
+          accountBalanceMap.set(parsed.toString(), bal);
+          accountBalanceMap.set(parsed.toRawString(), bal);
+        } catch {
+          if (acc.balance) {
+            accountBalanceMap.set(acc.address, BigInt(acc.balance));
+          }
         }
       }
     }

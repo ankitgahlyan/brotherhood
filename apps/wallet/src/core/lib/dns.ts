@@ -26,6 +26,13 @@ import {
   batchFetchAccountStates,
   clearAccountStatesCache,
 } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  getContractCache,
+  setContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
+import { useDnsStore } from '@/features/dns/store/dns-store';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
 
 export enum DnsCategory {
   DnsNextResolver = 'dns_next_resolver',
@@ -971,14 +978,39 @@ export interface BroCollectionState {
 
 /**
  * Fetches and deserializes the .bro DnsCollection contract storage in-memory.
+ * Checks local contract-cache first unless `force = true`.
  */
 export async function fetchBroCollectionState(
   network: Network = 'testnet',
+  force = false,
 ): Promise<BroCollectionState | null> {
   try {
+    const cacheKey = getNormalizedContractCacheKey(
+      network,
+      BRO_COLLECTION_RESOLVER,
+    );
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (!force) {
+      const cached = await getContractCache<BroCollectionState>(cacheKey);
+      if (cached?.data && cached.data.treasuryAddress) {
+        const reservationEndsAt =
+          cached.data.deploymentTime > 0
+            ? cached.data.deploymentTime + RESERVATION_PERIOD_SEC
+            : 0;
+        return {
+          ...cached.data,
+          reservationEndsAt,
+          isInReservationPeriod:
+            cached.data.deploymentTime > 0 && nowSec < reservationEndsAt,
+        };
+      }
+    }
+
     const batch = await batchFetchAccountStates(
       [BRO_COLLECTION_RESOLVER],
       network,
+      30,
+      { force },
     );
     const acc = batch.accounts[0];
     if (!acc || acc.status !== 'active' || !acc.data_boc) return null;
@@ -990,11 +1022,10 @@ export async function fetchBroCollectionState(
     const deploymentTime = s.remainingBits >= 32 ? s.loadUint(32) : 0;
     const reservationEndsAt =
       deploymentTime > 0 ? deploymentTime + RESERVATION_PERIOD_SEC : 0;
-    const nowSec = Math.floor(Date.now() / 1000);
     const isInReservationPeriod =
       deploymentTime > 0 && nowSec < reservationEndsAt;
 
-    return {
+    const state: BroCollectionState = {
       treasuryAddress: treasuryAddr.toString({
         bounceable: false,
         testOnly: network === 'testnet',
@@ -1003,6 +1034,12 @@ export async function fetchBroCollectionState(
       isInReservationPeriod,
       reservationEndsAt,
     };
+    await setContractCache(cacheKey, state, {
+      codeHash: acc.code_hash,
+      balance: acc.balance ?? '0',
+      status: acc.status ?? 'active',
+    }).catch(() => {});
+    return state;
   } catch {
     return null;
   }
@@ -1018,8 +1055,8 @@ const domainResolutionCache = new Map<string, CachedDnsEntry>();
 
 /**
  * Resolves a TON DNS domain to a user-friendly wallet address.
- * For .bro domains, checks explicit "wallet" DNS record first and falls back
- * to the NFT ownerAddress when the domain is active and not expired.
+ * For .bro domains, checks local caches (`useDnsStore`, `useContactBookStore`, `contract-cache`) first,
+ * then queries DnsItem accountState BOC only if missing from local cache.
  */
 export async function resolveAddressByDomain(
   domain: string,
@@ -1052,31 +1089,84 @@ export async function resolveAddressByDomain(
     if (signal?.aborted) return undefined;
 
     // Fast path for top-level .bro domains when no custom mock client is injected:
-    // Query DnsItem accountState BOC directly and check walletRecord || ownerAddress.
+    // Check local caches first, then query DnsItem accountState BOC only on cache miss.
     if (
       !customClient &&
       zoneMatch.zone.suffixes.includes('bro') &&
       !zoneMatch.base.includes('.')
     ) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const storedDomains =
+        useDnsStore.getState().domainsByNetwork[network] ?? [];
+      const localOwned = storedDomains.find(
+        (d) =>
+          d.name.trim().toLowerCase() === zoneMatch.base &&
+          (!d.lastFillUpTime || nowSec <= d.lastFillUpTime + ONE_YEAR_SEC),
+      );
+      if (localOwned?.walletRecord) {
+        domainResolutionCache.set(cacheKey, {
+          address: localOwned.walletRecord,
+          timestamp: Date.now(),
+        });
+        return localOwned.walletRecord;
+      }
+
+      const contactResolved = useContactBookStore
+        .getState()
+        .resolveAddress(trimmed, network);
+      if (contactResolved) {
+        domainResolutionCache.set(cacheKey, {
+          address: contactResolved,
+          timestamp: Date.now(),
+        });
+        return contactResolved;
+      }
+
       const collectionAddr = Address.parse(zoneMatch.zone.resolver);
       const itemAddrStr = deriveDnsItemAddress(
         collectionAddr,
         zoneMatch.base,
         network === 'testnet',
       );
+      const itemCacheKey = getNormalizedContractCacheKey(network, itemAddrStr);
+      const cachedItem =
+        await getContractCache<ParsedDnsItemState>(itemCacheKey);
+      if (cachedItem?.data && cachedItem.data.isInitialized) {
+        const fillUpSec = cachedItem.data.lastFillUpTime ?? 0;
+        const isExpired = fillUpSec > 0 && nowSec > fillUpSec + ONE_YEAR_SEC;
+        if (!isExpired) {
+          const resolved =
+            cachedItem.data.walletRecord ||
+            cachedItem.data.ownerAddress ||
+            null;
+          domainResolutionCache.set(cacheKey, {
+            address: resolved,
+            timestamp: Date.now(),
+          });
+          return resolved ?? undefined;
+        }
+      }
+
       const batch = await batchFetchAccountStates([itemAddrStr], network);
       if (signal?.aborted) return undefined;
 
       const acc = batch.accounts[0];
       if (acc && acc.status === 'active' && acc.data_boc) {
         const parsed = parseDnsItemAccountState(acc.data_boc, network);
-        if (parsed && parsed.isInitialized && !parsed.isExpired) {
-          const resolved = parsed.walletRecord || parsed.ownerAddress || null;
-          domainResolutionCache.set(cacheKey, {
-            address: resolved,
-            timestamp: Date.now(),
-          });
-          return resolved ?? undefined;
+        if (parsed && parsed.isInitialized) {
+          await setContractCache(itemCacheKey, parsed, {
+            codeHash: acc.code_hash,
+            balance: acc.balance ?? '0',
+            status: acc.status ?? 'active',
+          }).catch(() => {});
+          if (!parsed.isExpired) {
+            const resolved = parsed.walletRecord || parsed.ownerAddress || null;
+            domainResolutionCache.set(cacheKey, {
+              address: resolved,
+              timestamp: Date.now(),
+            });
+            return resolved ?? undefined;
+          }
         }
       }
 
@@ -1178,6 +1268,7 @@ export async function resolveAddressByDomain(
 
 /**
  * Resolves a .bro domain's on-chain DnsItem state (contactLink, channelLink, walletRecord, ownerAddress).
+ * Checks local caches (`contract-cache` and `useDnsStore`) first before calling `batchFetchAccountStates`.
  */
 export async function resolveBroDomainContact(
   domain: string,
@@ -1191,17 +1282,60 @@ export async function resolveBroDomainContact(
   if (!base || base.includes('.')) return null;
 
   try {
+    const nowSec = Math.floor(Date.now() / 1000);
     const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
     const itemAddrStr = deriveDnsItemAddress(
       collectionAddr,
       base,
       network === 'testnet',
     );
+    const itemCacheKey = getNormalizedContractCacheKey(network, itemAddrStr);
+    const cachedItem = await getContractCache<ParsedDnsItemState>(itemCacheKey);
+    if (cachedItem?.data && cachedItem.data.isInitialized) {
+      const fillUpSec = cachedItem.data.lastFillUpTime ?? 0;
+      const isExpired = fillUpSec > 0 && nowSec > fillUpSec + ONE_YEAR_SEC;
+      if (!isExpired) {
+        return cachedItem.data;
+      }
+    }
+
+    const storedDomains =
+      useDnsStore.getState().domainsByNetwork[network] ?? [];
+    const localMatch = storedDomains.find(
+      (d) => d.name.trim().toLowerCase() === base,
+    );
+    if (localMatch && (localMatch.contactLink || localMatch.walletRecord)) {
+      const lastFillUpTime =
+        localMatch.lastFillUpTime ?? localMatch.registeredAt ?? nowSec;
+      const isExpired = nowSec > lastFillUpTime + ONE_YEAR_SEC;
+      if (!isExpired) {
+        return {
+          isInitialized: true,
+          index: 0n,
+          collectionAddress: collectionAddr,
+          domainName: base,
+          ownerAddress: localMatch.walletRecord ?? null,
+          walletRecord: localMatch.walletRecord ?? null,
+          contactLink: localMatch.contactLink ?? null,
+          channelLink: localMatch.channelLink ?? null,
+          lastFillUpTime,
+          isExpired: false,
+          auction: null,
+        };
+      }
+    }
+
     const batch = await batchFetchAccountStates([itemAddrStr], network);
     const acc = batch.accounts[0];
     if (!acc || acc.status !== 'active' || !acc.data_boc) return null;
     const parsed = parseDnsItemAccountState(acc.data_boc, network);
-    if (!parsed || !parsed.isInitialized || parsed.isExpired) return null;
+    if (!parsed || !parsed.isInitialized) return null;
+    await setContractCache(itemCacheKey, parsed, {
+      codeHash: acc.code_hash,
+      balance: acc.balance ?? '0',
+      status: acc.status ?? 'active',
+    }).catch(() => {});
+    if (parsed.isExpired) return null;
     return parsed;
   } catch {
     return null;
