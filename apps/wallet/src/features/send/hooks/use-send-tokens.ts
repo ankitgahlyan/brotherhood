@@ -18,7 +18,10 @@ import {
   isFiJetton,
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
-import { assetUrl, findRate, toDecimal } from '@/core/utils';
+import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
+import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
+import { useTrackedPersonalTokens } from '@/features/assets/hooks/use-tracked-personal-tokens';
+import { assetUrl, findRate, normalizeAddress, toDecimal } from '@/core/utils';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
 
 const GRAM_DECIMALS = 9;
@@ -27,10 +30,20 @@ const TON_GAS_RESERVE = 0.01;
 
 /** Builds the selectable send assets: FI first for members, then TON, then other held jettons. */
 export const useSendTokens = (): TokenOption[] => {
-  const { balance } = useWallet();
+  const { balance, currentWallet, address, getActiveWallet } = useWallet();
+  const walletAddress =
+    address || currentWallet?.getAddress() || getActiveWallet()?.address;
   const activeJettons = useActiveJettons();
   const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
+  const fiAccount = useFiAccount(walletAddress ?? null);
+  const fiJettonBalance = fiAccount.data?.jettonBalance;
+  const { personalMinterAddress } = usePersonalJettonInfo(
+    walletAddress ?? null,
+  );
+  const { personalTokens } = useTrackedPersonalTokens(
+    personalMinterAddress ? [personalMinterAddress] : undefined,
+  );
 
   return useMemo<TokenOption[]>(() => {
     const tonAmount = toDecimal(balance, GRAM_DECIMALS);
@@ -47,25 +60,66 @@ export const useSendTokens = (): TokenOption[] => {
       rate: rates['GRAM']?.rate,
     };
 
-    const otherJettons = activeJettons
-      .filter((j) => !isFiJetton(j))
-      .map((jetton): TokenOption => {
-        const decimals = jetton.decimalsNumber ?? GRAM_DECIMALS;
-        const amount = toDecimal(jetton.balance, decimals);
-        const symbol = getJettonsSymbol(jetton) ?? '';
-        return {
-          token: { type: 'JETTON', data: jetton },
-          id: jetton.address,
-          icon: getJettonsImage(jetton),
-          fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
-          name: getJettonsName(jetton) ?? symbol,
-          symbol,
-          decimals,
-          balance: amount,
-          maxSendable: amount,
-          rate: findRate(rates, jetton.address)?.rate,
-        };
+    const seenAddresses = new Set<string>();
+    const otherJettons: TokenOption[] = [];
+
+    for (const jetton of activeJettons) {
+      if (isFiJetton(jetton)) continue;
+      const normAddr = normalizeAddress(jetton.address) || jetton.address;
+      seenAddresses.add(normAddr);
+
+      const decimals = jetton.decimalsNumber ?? GRAM_DECIMALS;
+      const amount = toDecimal(jetton.balance, decimals);
+      const symbol = getJettonsSymbol(jetton) ?? '';
+      otherJettons.push({
+        token: { type: 'JETTON', data: jetton },
+        id: jetton.address,
+        icon: getJettonsImage(jetton),
+        fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
+        name: getJettonsName(jetton) ?? symbol,
+        symbol,
+        decimals,
+        balance: amount,
+        maxSendable: amount,
+        rate: findRate(rates, jetton.address)?.rate,
       });
+    }
+
+    for (const pt of personalTokens) {
+      const normAddr = normalizeAddress(pt.minterAddress) || pt.minterAddress;
+      if (seenAddresses.has(normAddr)) continue;
+      seenAddresses.add(normAddr);
+
+      const amount = toDecimal(pt.balance, GRAM_DECIMALS);
+      const symbol = pt.symbol || 'PT';
+      otherJettons.push({
+        token: {
+          type: 'JETTON',
+          data: {
+            address: pt.minterAddress,
+            walletAddress: pt.walletAddress,
+            balance: pt.balance,
+            decimalsNumber: GRAM_DECIMALS,
+            isVerified: true,
+            info: {
+              name: pt.name || 'Personal Token',
+              symbol,
+              decimals: GRAM_DECIMALS,
+              image: pt.image ? { url: pt.image } : undefined,
+            },
+          } as any,
+        },
+        id: pt.minterAddress,
+        icon: pt.image,
+        fallbackText: symbol.slice(0, 2).toUpperCase() || 'PT',
+        name: pt.name || 'Personal Token',
+        symbol,
+        decimals: GRAM_DECIMALS,
+        balance: amount,
+        maxSendable: amount,
+        rate: findRate(rates, pt.minterAddress)?.rate,
+      });
+    }
 
     if (!isMember) {
       return [tonOption, ...otherJettons];
@@ -73,7 +127,11 @@ export const useSendTokens = (): TokenOption[] => {
 
     const fiJetton = activeJettons.find(isFiJetton);
     const fiDecimals = fiJetton?.decimalsNumber ?? GRAM_DECIMALS;
-    const fiAmount = fiJetton ? toDecimal(fiJetton.balance, fiDecimals) : 0;
+    const fiAmount = fiJetton
+      ? toDecimal(fiJetton.balance, fiDecimals)
+      : fiJettonBalance
+        ? toDecimal(fiJettonBalance, GRAM_DECIMALS)
+        : 0;
     const fiOption: TokenOption = {
       token: {
         type: 'JETTON',
@@ -82,7 +140,7 @@ export const useSendTokens = (): TokenOption[] => {
           ({
             address: FI_ADDRESS,
             walletAddress: '',
-            balance: '0',
+            balance: String(fiJettonBalance ?? '0'),
             decimalsNumber: 9,
             isVerified: true,
             info: {
@@ -107,5 +165,12 @@ export const useSendTokens = (): TokenOption[] => {
     };
 
     return [fiOption, tonOption, ...otherJettons];
-  }, [balance, activeJettons, rates, isMember]);
+  }, [
+    balance,
+    activeJettons,
+    personalTokens,
+    rates,
+    isMember,
+    fiJettonBalance,
+  ]);
 };

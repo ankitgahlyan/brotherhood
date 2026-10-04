@@ -7,9 +7,11 @@
  */
 
 import React from 'react';
+import { Eye, EyeOff, Pin } from 'lucide-react';
 
 import { FallbackImage } from '@/core/components/ui/fallback-image';
 import { useCountUp } from '@/core/hooks/use-count-up';
+import { cn } from '@/core/lib/utils';
 import { formatLargeValue } from '@/core/utils';
 
 /** View-model for a single balance row (TON or a jetton). */
@@ -24,7 +26,11 @@ export interface AssetRowData {
   rateLabel?: string;
   /** Fiat value to display on the right; omit to hide (asset has no rate). */
   fiat?: number;
+  isPinned?: boolean;
+  isHidden?: boolean;
   onClick?: () => void;
+  onTogglePin?: () => void;
+  onToggleHide?: () => void;
 }
 
 export const AssetRow: React.FC<AssetRowData> = ({
@@ -35,52 +41,129 @@ export const AssetRow: React.FC<AssetRowData> = ({
   amount,
   rateLabel,
   fiat,
+  isPinned,
+  isHidden,
   onClick,
+  onTogglePin,
+  onToggleHide,
 }) => {
   const animatedAmount = useCountUp(amount);
   const animatedFiat = useCountUp(fiat ?? 0);
   const hasFiat = fiat !== undefined;
-  const Component = onClick ? 'button' : 'div';
+  const hasActions = Boolean(onTogglePin || onToggleHide);
 
   return (
-    <Component
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 py-2 text-left rounded-xl transition-colors ${
-        onClick
-          ? 'hover:bg-secondary/50 active:bg-secondary/80 px-2 -mx-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-          : ''
-      }`}
+    <div
+      className={cn(
+        'w-full flex items-center gap-3 py-2 text-left rounded-xl transition-colors',
+        onClick && 'hover:bg-secondary/50 active:bg-secondary/80 px-2 -mx-2',
+        isHidden && 'opacity-65',
+      )}
     >
-      <span className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center">
-        <FallbackImage
-          src={icon}
-          alt=""
-          className="w-full h-full object-cover"
-          fallback={
-            <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
-              {fallbackText}
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!onClick}
+        className={cn(
+          'flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg',
+          onClick ? 'cursor-pointer' : 'cursor-default',
+        )}
+      >
+        <span className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center">
+          <FallbackImage
+            src={icon}
+            alt=""
+            className="w-full h-full object-cover"
+            fallback={
+              <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
+                {fallbackText}
+              </span>
+            }
+          />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-foreground truncate">
+              {name}
             </span>
-          }
-        />
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-foreground truncate">
-          {name}
-        </div>
-        <div className="text-xs text-muted-foreground truncate tabular-nums">
-          {formatLargeValue(String(animatedAmount), 4)} {symbol}
-          {rateLabel && ` · ${rateLabel}`}
-        </div>
-      </div>
-      {hasFiat && (
-        <div className="text-right flex-shrink-0 tabular-nums">
-          <div className="text-sm font-semibold text-foreground">
-            ${formatLargeValue(String(animatedFiat), 2, 2)}
+            {isPinned && (
+              <Pin
+                className="w-3 h-3 text-primary shrink-0 fill-primary/20"
+                aria-label="Pinned to top"
+              />
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground truncate tabular-nums">
+            {formatLargeValue(String(animatedAmount), 4)} {symbol}
+            {rateLabel && ` · ${rateLabel}`}
           </div>
         </div>
+        {hasFiat && (
+          <div className="text-right flex-shrink-0 tabular-nums">
+            <div className="text-sm font-semibold text-foreground">
+              ${formatLargeValue(String(animatedFiat), 2, 2)}
+            </div>
+          </div>
+        )}
+      </button>
+
+      {hasActions && (
+        <div className="flex items-center gap-1 shrink-0">
+          {onTogglePin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin();
+              }}
+              className={cn(
+                'p-1.5 rounded-lg border transition-colors cursor-pointer',
+                isPinned
+                  ? 'bg-primary/15 border-primary/40 text-primary'
+                  : 'bg-secondary/70 border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary',
+              )}
+              title={isPinned ? 'Unpin token' : 'Pin token to top'}
+              aria-label={isPinned ? 'Unpin token' : 'Pin token to top'}
+              data-testid={`token-pin-btn-${symbol}`}
+            >
+              <Pin className={cn('w-3.5 h-3.5', isPinned && 'fill-current')} />
+            </button>
+          )}
+          {onToggleHide && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleHide();
+              }}
+              className={cn(
+                'p-1.5 rounded-lg border transition-colors cursor-pointer',
+                isHidden
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                  : 'bg-secondary/70 border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary',
+              )}
+              title={
+                isHidden
+                  ? 'Show token on dashboard'
+                  : 'Hide token from dashboard'
+              }
+              aria-label={
+                isHidden
+                  ? 'Show token on dashboard'
+                  : 'Hide token from dashboard'
+              }
+              data-testid={`token-hide-btn-${symbol}`}
+            >
+              {isHidden ? (
+                <Eye className="w-3.5 h-3.5" />
+              ) : (
+                <EyeOff className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
+        </div>
       )}
-    </Component>
+    </div>
   );
 };
 

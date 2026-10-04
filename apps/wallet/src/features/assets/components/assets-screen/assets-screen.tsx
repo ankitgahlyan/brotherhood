@@ -7,12 +7,14 @@
  */
 
 import { useState, type FC } from 'react';
-import { Plus } from 'lucide-react';
+import { ChevronDown, EyeOff, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons } from '@demo/wallet-core';
 import { useAnimationSettings } from '@/core/motion/motion-provider';
+import { useAssetVisibilityStore } from '@/core/storage/useAssetVisibilityStore';
+import { cn } from '@/core/lib/utils';
 
 import { AssetRow, AssetRowSkeleton } from '../asset-row';
 import { AssetDetailsModal } from '../asset-details-modal';
@@ -28,12 +30,15 @@ import { SyncStatusButton } from '@/features/dashboard/components/sync-status-bu
 export const AssetsScreen: FC = () => {
   const navigate = useNavigate();
   const { isReduced, isRich } = useAnimationSettings();
-  const { jettonRows, assetsReady } = useAssetRows();
+  const { jettonRows, hiddenJettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
+  const togglePinToken = useAssetVisibilityStore((s) => s.togglePinToken);
+  const toggleHideToken = useAssetVisibilityStore((s) => s.toggleHideToken);
 
   const [selectedAsset, setSelectedAsset] = useState<AssetRowData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showHiddenSection, setShowHiddenSection] = useState(false);
 
   const handleAssetClick = (asset: AssetRowData) => {
     setSelectedAsset(asset);
@@ -73,27 +78,81 @@ export const AssetsScreen: FC = () => {
         />
       }
     >
-      <div className="space-y-1">
-        {assetsReady || jettonRows.length > 0 ? (
-          <AnimatePresence initial={false}>
-            {jettonRows.map((row) => (
-              <motion.div
-                key={row.id}
-                layout={isRich ? 'position' : undefined}
-                initial={isReduced ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={isReduced ? undefined : { opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                <AssetRow {...row} onClick={() => handleAssetClick(row)} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        ) : (
-          <>
-            <AssetRowSkeleton />
-            <AssetRowSkeleton />
-          </>
+      <div className="space-y-3">
+        <div className="space-y-1">
+          {assetsReady ||
+          jettonRows.length > 0 ||
+          hiddenJettonRows.length > 0 ? (
+            jettonRows.length > 0 ? (
+              <AnimatePresence initial={false}>
+                {jettonRows.map((row) => (
+                  <motion.div
+                    key={row.id}
+                    layout={isRich ? 'position' : undefined}
+                    initial={isReduced ? false : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={isReduced ? undefined : { opacity: 0, scale: 0.96 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                  >
+                    <AssetRow
+                      {...row}
+                      onClick={() => handleAssetClick(row)}
+                      onTogglePin={() => togglePinToken(row.id)}
+                      onToggleHide={() => toggleHideToken(row.id)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            ) : (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                No visible tokens.{' '}
+                {hiddenJettonRows.length > 0
+                  ? 'Expand Hidden below to restore tokens to your dashboard.'
+                  : ''}
+              </div>
+            )
+          ) : (
+            <>
+              <AssetRowSkeleton />
+              <AssetRowSkeleton />
+            </>
+          )}
+        </div>
+
+        {hiddenJettonRows.length > 0 && (
+          <div className="pt-2 border-t border-border/60 space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowHiddenSection((prev) => !prev)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/50 hover:bg-secondary/80 border border-border/60 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              data-testid="assets-hidden-section-toggle"
+            >
+              <span className="flex items-center gap-1.5">
+                <EyeOff className="w-3.5 h-3.5" />
+                <span>Hidden ({hiddenJettonRows.length})</span>
+              </span>
+              <ChevronDown
+                className={cn(
+                  'w-4 h-4 transition-transform duration-200',
+                  showHiddenSection && 'rotate-180',
+                )}
+              />
+            </button>
+
+            {showHiddenSection && (
+              <div className="space-y-1 pl-1">
+                {hiddenJettonRows.map((row) => (
+                  <AssetRow
+                    key={row.id}
+                    {...row}
+                    onClick={() => handleAssetClick(row)}
+                    onTogglePin={() => togglePinToken(row.id)}
+                    onToggleHide={() => toggleHideToken(row.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

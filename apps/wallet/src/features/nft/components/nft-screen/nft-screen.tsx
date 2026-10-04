@@ -7,12 +7,18 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
+import { ChevronDown, EyeOff } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { useNfts, useWallet } from '@demo/wallet-core';
 import type { NFT } from '@ton/walletkit';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useMyDomains } from '@/features/dns/hooks/use-my-domains';
 import type { Network } from '@/lib/brotherhood/config';
+import {
+  normalizeAssetVisibilityKey,
+  useAssetVisibilityStore,
+} from '@/core/storage/useAssetVisibilityStore';
+import { cn } from '@/core/lib/utils';
 
 import { mergeAndEnrichBroNfts } from '../../lib/nft-transfer';
 import { NftTile } from '../nft-tile';
@@ -25,11 +31,16 @@ export const NftsScreen: FC = () => {
   const navigate = useNavigate();
   const { userNfts, formatNftIndex, loadUserNfts, refreshNfts } = useNfts();
   const { address, savedWallets, activeWalletId } = useWallet();
+  const pinnedNftIds = useAssetVisibilityStore((s) => s.pinnedNftIds);
+  const hiddenNftIds = useAssetVisibilityStore((s) => s.hiddenNftIds);
+  const togglePinNft = useAssetVisibilityStore((s) => s.togglePinNft);
+  const toggleHideNft = useAssetVisibilityStore((s) => s.toggleHideNft);
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
     'testnet') as Network;
 
   const [selectedNft, setSelectedNft] = useState<NFT | null>(null);
+  const [showHiddenSection, setShowHiddenSection] = useState(false);
 
   const { domains: ownedBroDomains, refresh: refreshMyDomains } = useMyDomains(
     network,
@@ -44,6 +55,34 @@ export const NftsScreen: FC = () => {
     () => mergeAndEnrichBroNfts(userNfts, ownedBroDomains),
     [userNfts, ownedBroDomains],
   );
+
+  const { visibleNfts, hiddenNfts } = useMemo<{
+    visibleNfts: NFT[];
+    hiddenNfts: NFT[];
+  }>(() => {
+    const compareNfts = (a: NFT, b: NFT) => {
+      const aIdx = pinnedNftIds.indexOf(normalizeAssetVisibilityKey(a.address));
+      const bIdx = pinnedNftIds.indexOf(normalizeAssetVisibilityKey(b.address));
+      const aPinned = aIdx !== -1;
+      const bPinned = bIdx !== -1;
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      if (aPinned && bPinned) return aIdx - bIdx;
+      return 0;
+    };
+
+    const visible = allNfts
+      .filter(
+        (nft) =>
+          !hiddenNftIds.includes(normalizeAssetVisibilityKey(nft.address)),
+      )
+      .sort(compareNfts);
+    const hidden = allNfts.filter((nft) =>
+      hiddenNftIds.includes(normalizeAssetVisibilityKey(nft.address)),
+    );
+
+    return { visibleNfts: visible, hiddenNfts: hidden };
+  }, [allNfts, pinnedNftIds, hiddenNftIds]);
 
   return (
     <NewLayout
@@ -83,15 +122,72 @@ export const NftsScreen: FC = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {allNfts.map((nft) => (
-            <NftTile
-              key={nft.address}
-              nft={nft}
-              formatNftIndex={formatNftIndex}
-              onClick={() => setSelectedNft(nft)}
-            />
-          ))}
+        <div className="space-y-4">
+          {visibleNfts.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {visibleNfts.map((nft) => {
+                const visKey = normalizeAssetVisibilityKey(nft.address);
+                return (
+                  <NftTile
+                    key={nft.address}
+                    nft={nft}
+                    formatNftIndex={formatNftIndex}
+                    isPinned={pinnedNftIds.includes(visKey)}
+                    isHidden={false}
+                    onClick={() => setSelectedNft(nft)}
+                    onTogglePin={() => togglePinNft(nft.address)}
+                    onToggleHide={() => toggleHideNft(nft.address)}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              No visible NFTs.{' '}
+              {hiddenNfts.length > 0
+                ? 'Expand Hidden below to restore NFTs to your dashboard.'
+                : ''}
+            </div>
+          )}
+
+          {hiddenNfts.length > 0 && (
+            <div className="pt-2 border-t border-border/60 space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowHiddenSection((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/50 hover:bg-secondary/80 border border-border/60 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                data-testid="nfts-hidden-section-toggle"
+              >
+                <span className="flex items-center gap-1.5">
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>Hidden ({hiddenNfts.length})</span>
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'w-4 h-4 transition-transform duration-200',
+                    showHiddenSection && 'rotate-180',
+                  )}
+                />
+              </button>
+
+              {showHiddenSection && (
+                <div className="grid grid-cols-2 gap-3">
+                  {hiddenNfts.map((nft) => (
+                    <NftTile
+                      key={nft.address}
+                      nft={nft}
+                      formatNftIndex={formatNftIndex}
+                      isPinned={false}
+                      isHidden
+                      onClick={() => setSelectedNft(nft)}
+                      onTogglePin={() => togglePinNft(nft.address)}
+                      onToggleHide={() => toggleHideNft(nft.address)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -27,6 +27,7 @@ export async function clearWholeAppStorage(): Promise<void> {
   try {
     if ('indexedDB' in window) {
       const knownDbs = [
+        'brotherhood_contract_db',
         'brotherhood-cache',
         'brotherhood_offline_images_db',
         'ton-keystore',

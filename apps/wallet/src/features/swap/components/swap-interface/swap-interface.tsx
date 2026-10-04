@@ -11,6 +11,8 @@ import type { FC } from 'react';
 import {
   ArrowDownUp,
   Copy,
+  Download,
+  ExternalLink,
   Flame,
   Landmark,
   Search,
@@ -42,6 +44,7 @@ import { formatFi } from '@/features/brotherhood/components/credit/credit-member
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
 import {
   BRO_TREASURY_ADDRESS,
+  RESERVE_TOKEN_UPI_CONFIG,
   buildReserveUpiLinks,
 } from '@/lib/brotherhood/config';
 import { cn } from '@/core/lib/utils';
@@ -49,9 +52,40 @@ import { cn } from '@/core/lib/utils';
 const UPI_QR_OPTIONS: Partial<QrOptions> = {
   type: 'svg',
   margin: 0,
-  dotsOptions: { color: '#14181F', type: 'rounded' },
-  cornersSquareOptions: { color: '#14181F', type: 'extra-rounded' },
-  cornersDotOptions: { color: '#14181F', type: 'dot' },
+  dotsOptions: {
+    type: 'rounded',
+    gradient: {
+      type: 'linear',
+      rotation: Math.PI / 4,
+      colorStops: [
+        { offset: 0, color: '#059669' },
+        { offset: 0.45, color: '#0284C7' },
+        { offset: 1, color: '#4F46E5' },
+      ],
+    },
+  },
+  cornersSquareOptions: {
+    type: 'extra-rounded',
+    gradient: {
+      type: 'linear',
+      rotation: Math.PI / 4,
+      colorStops: [
+        { offset: 0, color: '#047857' },
+        { offset: 1, color: '#4338CA' },
+      ],
+    },
+  },
+  cornersDotOptions: {
+    type: 'dot',
+    gradient: {
+      type: 'radial',
+      rotation: 0,
+      colorStops: [
+        { offset: 0, color: '#0284C7' },
+        { offset: 1, color: '#4F46E5' },
+      ],
+    },
+  },
   backgroundOptions: { color: '#ffffff' },
   qrOptions: { errorCorrectionLevel: 'M' },
 };
@@ -133,9 +167,13 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     [tokens],
   );
 
-  // Fiat On-Ramp (Personal UPI) Modal State — no default amount
+  // Fiat On-Ramp (Personal UPI) Modal State — default 100 INR, minimum 100 INR
   const [isOnRampOpen, setIsOnRampOpen] = useState(false);
+  const [upiAmountInr, setUpiAmountInr] = useState<string>(
+    RESERVE_TOKEN_UPI_CONFIG.defaultAmount,
+  );
   const [isSharingQr, setIsSharingQr] = useState(false);
+  const [isDownloadingQr, setIsDownloadingQr] = useState(false);
   const [upiRefSeed, setUpiRefSeed] = useState<string>(() =>
     Date.now().toString(36),
   );
@@ -143,10 +181,11 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   const upiLinks = useMemo(
     () =>
       buildReserveUpiLinks({
+        amountInr: upiAmountInr,
         walletAddress: userWalletAddress,
         referenceSeed: upiRefSeed,
       }),
-    [userWalletAddress, upiRefSeed],
+    [upiAmountInr, userWalletAddress, upiRefSeed],
   );
 
   const handleCopyText = async (text: string, label: string) => {
@@ -159,29 +198,54 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   };
 
   const handleUpiPay = () => {
+    if (upiLinks.isBelowMinAmount) return;
     window.location.href = upiLinks.bhimOrOthersUrl;
   };
 
+  const handleUpiIntentPay = () => {
+    if (upiLinks.isBelowMinAmount) return;
+    window.location.href = upiLinks.upiIntentUrl;
+  };
+
+  const generateUpiQrPngBlob = async (): Promise<{
+    blob: Blob;
+    fileName: string;
+  }> => {
+    const qr = new QRCodeStyling({
+      ...UPI_QR_OPTIONS,
+      width: 512,
+      height: 512,
+      margin: 24,
+      data: upiLinks.qrUpiUrl,
+    });
+    const rawData = await qr.getRawData('png');
+    if (!rawData) {
+      throw new Error('Could not generate QR image');
+    }
+    const blob =
+      rawData instanceof Blob
+        ? rawData
+        : new Blob([rawData as unknown as BlobPart], { type: 'image/png' });
+    const fileName = `upi-${(reserveToken?.symbol ?? 'token').toLowerCase()}-${upiLinks.txRef}.png`;
+    return { blob, fileName };
+  };
+
+  const triggerBlobDownload = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleShareUpiQr = async () => {
-    if (isSharingQr) return;
+    if (isSharingQr || upiLinks.isBelowMinAmount) return;
     setIsSharingQr(true);
     try {
-      const qr = new QRCodeStyling({
-        ...UPI_QR_OPTIONS,
-        width: 512,
-        height: 512,
-        margin: 24,
-        data: upiLinks.qrUpiUrl,
-      });
-      const rawData = await qr.getRawData('png');
-      if (!rawData) {
-        throw new Error('Could not generate QR image');
-      }
-      const blob =
-        rawData instanceof Blob
-          ? rawData
-          : new Blob([rawData as unknown as BlobPart], { type: 'image/png' });
-      const fileName = `upi-${(reserveToken?.symbol ?? 'token').toLowerCase()}-${upiLinks.txRef}.png`;
+      const { blob, fileName } = await generateUpiQrPngBlob();
       const file = new File([blob], fileName, { type: 'image/png' });
 
       if (
@@ -191,18 +255,11 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
       ) {
         await navigator.share({
           title: `Buy ${reserveToken?.symbol ?? ''} via UPI`,
-          text: `Pay ${upiLinks.payeeName} (${upiLinks.upiId}) · Note: ${upiLinks.note}`,
+          text: `Pay ₹${upiLinks.amountStr} to ${upiLinks.payeeName} (${upiLinks.upiId}) · Note: ${upiLinks.note}`,
           files: [file],
         });
       } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        triggerBlobDownload(blob, fileName);
         toast.success('QR code downloaded');
       }
     } catch (err: any) {
@@ -211,6 +268,20 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
       }
     } finally {
       setIsSharingQr(false);
+    }
+  };
+
+  const handleDownloadUpiQr = async () => {
+    if (isDownloadingQr || upiLinks.isBelowMinAmount) return;
+    setIsDownloadingQr(true);
+    try {
+      const { blob, fileName } = await generateUpiQrPngBlob();
+      triggerBlobDownload(blob, fileName);
+      toast.success('QR code downloaded');
+    } catch {
+      toast.error('Failed to download QR code');
+    } finally {
+      setIsDownloadingQr(false);
     }
   };
 
@@ -812,20 +883,100 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             </button>
           </div>
 
-          {/* UPI QR Code (No Default Amount) */}
-          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-border shadow-2xs space-y-2">
+          {/* INR Amount Input & Presets (Default ₹100, Min ₹100) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>Amount to Pay (INR)</span>
+              <span className="font-mono text-[11px]">
+                Min ₹{upiLinks.minAmount}
+              </span>
+            </div>
+            <input
+              type="number"
+              step="1"
+              min={upiLinks.minAmount}
+              value={upiAmountInr}
+              onChange={(e) => setUpiAmountInr(e.target.value)}
+              placeholder={upiLinks.minAmount}
+              className={cn(
+                'w-full px-3.5 py-2.5 rounded-xl border bg-background text-foreground text-sm font-mono focus:outline-none focus:ring-2',
+                upiLinks.isBelowMinAmount
+                  ? 'border-rose-500/60 focus:ring-rose-500'
+                  : 'border-border focus:ring-primary',
+              )}
+              data-testid="upi-amount-input"
+            />
+            {upiLinks.isBelowMinAmount && (
+              <p
+                className="text-[11px] font-medium text-rose-500 px-1"
+                data-testid="upi-min-amount-error"
+              >
+                Enter at least ₹{upiLinks.minAmount} to enable UPI payment and
+                QR actions.
+              </p>
+            )}
+            <div className="flex items-center gap-1.5 pt-0.5">
+              {['100', '500', '1000', '2000'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setUpiAmountInr(preset)}
+                  className={cn(
+                    'flex-1 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer',
+                    upiAmountInr === preset
+                      ? 'bg-primary/15 border-primary/40 text-primary'
+                      : 'bg-secondary/60 border-border/60 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  ₹{preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* NPCI > ₹2,000 Deep-Link Cap Warning */}
+          {upiLinks.isOverDeepLinkCap && (
+            <div
+              className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 text-[11px] text-amber-700 dark:text-amber-300"
+              data-testid="upi-cap-warning"
+            >
+              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">
+                  Amount exceeds ₹2,000 NPCI P2P Deep-Link Cap
+                </span>
+                <span>
+                  Google Pay & PhonePe often reject browser deep links over
+                  ₹2,000 for personal VPAs. Scan or share the{' '}
+                  <strong>QR Code</strong> below, or copy the VPA + Note
+                  manually.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* UPI QR Code */}
+          <div
+            className={cn(
+              'flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-border shadow-2xs space-y-2 transition-opacity',
+              upiLinks.isBelowMinAmount && 'opacity-40 pointer-events-none',
+            )}
+          >
             <UpiQrCode value={upiLinks.qrUpiUrl} size={184} />
             <span className="text-[11px] font-medium text-slate-600 text-center">
-              Scan or share with your UPI app ({upiLinks.payeeName})
+              {upiLinks.isBelowMinAmount
+                ? `Enter at least ₹${upiLinks.minAmount} to activate QR`
+                : `Scan or share with your UPI app (${upiLinks.payeeName} · ₹${upiLinks.amountStr})`}
             </span>
           </div>
 
-          {/* Primary UPI Pay & Share QR Actions */}
+          {/* 4 UPI Action Buttons: UPI Pay, UPI Intent, Share QR, Download QR */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={handleUpiPay}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              disabled={upiLinks.isBelowMinAmount}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="upi-pay-button"
             >
               <Smartphone className="w-4 h-4 shrink-0" />
@@ -834,13 +985,35 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
             <button
               type="button"
+              onClick={handleUpiIntentPay}
+              disabled={upiLinks.isBelowMinAmount}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="upi-intent-button"
+            >
+              <ExternalLink className="w-4 h-4 shrink-0" />
+              <span>UPI Intent</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleShareUpiQr}
-              disabled={isSharingQr}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              disabled={isSharingQr || upiLinks.isBelowMinAmount}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="upi-share-qr-button"
             >
               <Share2 className="w-4 h-4 shrink-0" />
               <span>{isSharingQr ? 'Sharing…' : 'Share QR'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadUpiQr}
+              disabled={isDownloadingQr || upiLinks.isBelowMinAmount}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="upi-download-qr-button"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>{isDownloadingQr ? 'Saving…' : 'Download QR'}</span>
             </button>
           </div>
 

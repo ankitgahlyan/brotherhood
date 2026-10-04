@@ -134,7 +134,7 @@ export const RESERVE_TOKEN_UPI_CONFIG = {
   upiId: 'ankitgahlyan44@okhdfcbank',
   payeeName: 'Brotherhood Network',
   defaultAmount: '100',
-  minAmount: '10',
+  minAmount: '100',
   currency: 'INR',
   notePrefix: 'dINR',
   deepLinkCapInr: 2000,
@@ -149,9 +149,12 @@ export interface ReserveUpiLinks {
   notePrefix: string;
   note: string;
   txRef: string;
+  isBelowMinAmount: boolean;
   isOverDeepLinkCap: boolean;
   /** Standard UPI deep link: upi://pay?... (BHIM & all UPI apps) */
   bhimOrOthersUrl: string;
+  /** Android Intent URI: intent://pay?...#Intent;scheme=upi;end (strictly opens UPI intent listeners) */
+  upiIntentUrl: string;
   /** Google Pay deep link: tez://upi/pay?... */
   gPayUrl: string;
   /** PhonePe deep link: phonepe://pay?... */
@@ -163,10 +166,9 @@ export interface ReserveUpiLinks {
 }
 
 /**
- * Builds NPCI-compliant UPI deep links (`upi://pay`, `tez://upi/pay`, etc.)
+ * Builds NPCI-compliant UPI deep links (`upi://pay`, `intent://pay?...#Intent;scheme=upi;end`, etc.)
  * with embedded TON wallet identification in `tn` (Transaction Note, <= 80 chars)
  * and a unique `tr` (Transaction Reference ID, <= 35 alphanumeric chars).
- * When `amountInr` is omitted or empty, `&am=` is omitted so the UPI app/QR has no default amount.
  */
 export function buildReserveUpiLinks(params: {
   amountInr?: string | number;
@@ -176,13 +178,15 @@ export function buildReserveUpiLinks(params: {
   const { upiId, payeeName, minAmount, currency, notePrefix, deepLinkCapInr } =
     RESERVE_TOKEN_UPI_CONFIG;
 
+  const minNum = parseFloat(minAmount);
   const rawNum =
     typeof params.amountInr === 'number'
       ? params.amountInr
       : parseFloat(String(params.amountInr ?? '').trim());
   const hasExplicitAmount = Number.isFinite(rawNum) && rawNum >= 0.01;
+  const isBelowMinAmount = !hasExplicitAmount || rawNum < minNum;
 
-  // Format cleanly if explicit amount provided; otherwise empty (no default amount)
+  // Format cleanly if explicit amount provided; otherwise empty
   const amountStr = hasExplicitAmount
     ? Number.isInteger(rawNum)
       ? String(rawNum)
@@ -228,8 +232,10 @@ export function buildReserveUpiLinks(params: {
     notePrefix,
     note,
     txRef,
+    isBelowMinAmount,
     isOverDeepLinkCap: hasExplicitAmount && rawNum > deepLinkCapInr,
     bhimOrOthersUrl: `upi://pay?${baseQuery}`,
+    upiIntentUrl: `intent://pay?${baseQuery}#Intent;scheme=upi;end`,
     gPayUrl: `tez://upi/pay?${baseQuery}`,
     phonePeUrl: `phonepe://pay?${baseQuery}`,
     paytmUrl: `paytmmp://pay?${baseQuery}`,

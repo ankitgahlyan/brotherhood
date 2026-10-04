@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Plus, Coins, Image } from 'lucide-react';
+import { ChevronRight, EyeOff, Plus, Coins, Image } from 'lucide-react';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons, useNfts, usePreferences } from '@demo/wallet-core';
@@ -27,7 +27,7 @@ const JETTON_SLOTS = 5;
 
 export const DashboardAssets: React.FC = () => {
   const navigate = useNavigate();
-  const { jettonRows, assetsReady } = useAssetRows();
+  const { jettonRows, hiddenJettonRows, assetsReady } = useAssetRows();
   const { loadUserJettons } = useJettons();
   const { refreshNfts } = useNfts();
 
@@ -198,13 +198,38 @@ export const DashboardAssets: React.FC = () => {
           <>
             <div className="flex flex-col gap-1">
               {assetsReady ? (
-                displayedJettons.map((row) => (
-                  <AssetRow
-                    key={row.id}
-                    {...row}
-                    onClick={() => handleAssetClick(row)}
-                  />
-                ))
+                displayedJettons.length > 0 ? (
+                  displayedJettons.map((row) => (
+                    <AssetRow
+                      key={row.id}
+                      {...row}
+                      onClick={() => handleAssetClick(row)}
+                    />
+                  ))
+                ) : hiddenJettonRows.length > 0 ? (
+                  <div className="p-4 bg-secondary/40 border border-border/70 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
+                        <EyeOff className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          All tokens hidden
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Manage visibility in the full Assets view.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/wallet/assets')}
+                      className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-xs font-semibold text-foreground transition-colors shrink-0 cursor-pointer"
+                    >
+                      Manage
+                    </button>
+                  </div>
+                ) : null
               ) : (
                 <>
                   <AssetRowSkeleton />

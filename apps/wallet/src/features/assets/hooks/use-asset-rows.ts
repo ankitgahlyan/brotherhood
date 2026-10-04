@@ -37,6 +37,10 @@ import {
   toDecimal,
   tokenImageUrls,
 } from '@/core/utils';
+import {
+  normalizeAssetVisibilityKey,
+  useAssetVisibilityStore,
+} from '@/core/storage/useAssetVisibilityStore';
 
 const GRAM_DECIMALS = 9;
 
@@ -51,12 +55,14 @@ export const imageSources = (
 
 interface AssetRows {
   tonRow: AssetRowData | null;
-  /** All held jettons as rows, sorted by fiat value desc (verified first as a tiebreaker). */
+  /** Visible held jettons as rows, sorted with pinned first (in pin order), then FI, then fiat/amount desc. */
   jettonRows: AssetRowData[];
+  /** Hidden held jettons as rows (shown inside the collapsible Hidden section on /wallet/assets). */
+  hiddenJettonRows: AssetRowData[];
   assetsReady: boolean;
 }
 
-/** Builds the TON row + a row per held jetton. Shared by the dashboard preview and the full assets page. */
+/** Builds the TON row + visible and hidden jetton rows. Shared by the dashboard preview and the full assets page. */
 export const useAssetRows = (): AssetRows => {
   const { balance, currentWallet, address, getActiveWallet } = useWallet();
   const walletAddress =
@@ -66,12 +72,15 @@ export const useAssetRows = (): AssetRows => {
   const { entries: rates } = useRates();
   const { isMember } = useIsNetworkMember();
   const fiAccount = useFiAccount(walletAddress ?? null);
+  const fiJettonBalance = fiAccount.data?.jettonBalance;
   const { personalMinterAddress } = usePersonalJettonInfo(
     walletAddress ?? null,
   );
   const { personalTokens } = useTrackedPersonalTokens(
     personalMinterAddress ? [personalMinterAddress] : undefined,
   );
+  const pinnedTokenIds = useAssetVisibilityStore((s) => s.pinnedTokenIds);
+  const hiddenTokenIds = useAssetVisibilityStore((s) => s.hiddenTokenIds);
 
   const assetsReady =
     Boolean(walletAddress) &&
@@ -141,8 +150,11 @@ export const useAssetRows = (): AssetRows => {
     };
   }, [assetsReady, balance, rates]);
 
-  const jettonRows = useMemo<AssetRowData[]>(() => {
-    if (!assetsReady) return [];
+  const { jettonRows, hiddenJettonRows } = useMemo<{
+    jettonRows: AssetRowData[];
+    hiddenJettonRows: AssetRowData[];
+  }>(() => {
+    if (!assetsReady) return { jettonRows: [], hiddenJettonRows: [] };
 
     const rows: AssetRowData[] = [];
     const seenAddresses = new Set<string>();
@@ -175,6 +187,7 @@ export const useAssetRows = (): AssetRows => {
       // Per user rule: only show tokens if balance > 0 (FI is shown if member)
       if (!isFi && amount <= 0) continue;
 
+      const visKey = normalizeAssetVisibilityKey(jetton.address);
       rows.push({
         id: jetton.address,
         icon: imageSources(
@@ -187,16 +200,17 @@ export const useAssetRows = (): AssetRows => {
         amount,
         rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
         fiat: rateEntry ? amount * rateEntry.rate : undefined,
+        isPinned: pinnedTokenIds.includes(visKey),
+        isHidden: hiddenTokenIds.includes(visKey),
       });
     }
 
     // 1.5 Ensure FI is included for members even if not indexed in activeJettons
     const normFi = normalizeAddress(FI_ADDRESS) || FI_ADDRESS;
     if (isMember && !seenAddresses.has(normFi)) {
-      const fiBal = fiAccount.data?.jettonBalance
-        ? toDecimal(fiAccount.data.jettonBalance, 9)
-        : 0;
+      const fiBal = fiJettonBalance ? toDecimal(fiJettonBalance, 9) : 0;
       const rateEntry = findRate(rates, FI_ADDRESS);
+      const visKey = normalizeAssetVisibilityKey(FI_ADDRESS);
       rows.push({
         id: FI_ADDRESS,
         icon: imageSources([assetUrl('fi.svg')]),
@@ -206,6 +220,8 @@ export const useAssetRows = (): AssetRows => {
         amount: fiBal,
         rateLabel: rateEntry ? formatRate(rateEntry.rate) : undefined,
         fiat: rateEntry ? fiBal * rateEntry.rate : undefined,
+        isPinned: pinnedTokenIds.includes(visKey),
+        isHidden: hiddenTokenIds.includes(visKey),
       });
       seenAddresses.add(normFi);
     }
@@ -218,6 +234,7 @@ export const useAssetRows = (): AssetRows => {
 
       const amount = toDecimal(pt.balance, 9);
       const symbol = pt.symbol || 'PT';
+      const visKey = normalizeAssetVisibilityKey(pt.minterAddress);
       rows.push({
         id: pt.minterAddress,
         icon: pt.image ? imageSources([pt.image]) : undefined,
@@ -225,16 +242,31 @@ export const useAssetRows = (): AssetRows => {
         name: pt.name || 'Personal Token',
         symbol,
         amount,
+        isPinned: pinnedTokenIds.includes(visKey),
+        isHidden: hiddenTokenIds.includes(visKey),
       });
     }
 
-    return rows.sort((a, b) => {
+    const compareRows = (a: AssetRowData, b: AssetRowData) => {
+      const aPinIdx = pinnedTokenIds.indexOf(normalizeAssetVisibilityKey(a.id));
+      const bPinIdx = pinnedTokenIds.indexOf(normalizeAssetVisibilityKey(b.id));
+      const aPinned = aPinIdx !== -1;
+      const bPinned = bPinIdx !== -1;
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      if (aPinned && bPinned) return aPinIdx - bPinIdx;
+
       const aIsFi = isFiJetton({ address: a.id, symbol: a.symbol });
       const bIsFi = isFiJetton({ address: b.id, symbol: b.symbol });
       if (aIsFi && !bIsFi) return -1;
       if (!aIsFi && bIsFi) return 1;
       return (b.fiat ?? 0) - (a.fiat ?? 0) || b.amount - a.amount;
-    });
+    };
+
+    const visible = rows.filter((r) => !r.isHidden).sort(compareRows);
+    const hidden = rows.filter((r) => r.isHidden).sort(compareRows);
+
+    return { jettonRows: visible, hiddenJettonRows: hidden };
   }, [
     assetsReady,
     activeJettons,
@@ -243,8 +275,10 @@ export const useAssetRows = (): AssetRows => {
     personalMinterAddress,
     verifiedPersonalMinterSet,
     personalTokens,
-    fiAccount.data,
+    fiJettonBalance,
+    pinnedTokenIds,
+    hiddenTokenIds,
   ]);
 
-  return { tonRow, jettonRows, assetsReady };
+  return { tonRow, jettonRows, hiddenJettonRows, assetsReady };
 };

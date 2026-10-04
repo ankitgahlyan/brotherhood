@@ -53,12 +53,42 @@ import { createComponentLogger } from '@/core/lib/logger';
 
 const log = createComponentLogger('SendTransaction');
 
+const LAST_SEND_TOKEN_STORAGE_KEY = 'brotherhood_send_last_token_v1';
+
+function getLastSendTokenForWallet(walletKey: string): string | null {
+  if (typeof window === 'undefined' || !walletKey) return null;
+  try {
+    const raw = window.localStorage.getItem(LAST_SEND_TOKEN_STORAGE_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw) as Record<string, string>;
+    return map[walletKey] || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLastSendTokenForWallet(walletKey: string, tokenId: string): void {
+  if (typeof window === 'undefined' || !walletKey || !tokenId) return;
+  try {
+    const raw = window.localStorage.getItem(LAST_SEND_TOKEN_STORAGE_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    map[walletKey] = tokenId;
+    window.localStorage.setItem(
+      LAST_SEND_TOKEN_STORAGE_KEY,
+      JSON.stringify(map),
+    );
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
 export const SendTransaction: React.FC = () => {
   const navigate = useNavigate();
   const walletKit = useWalletKit();
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const network =
     savedWallets.find((w) => w.id === activeWalletId)?.network ?? 'testnet';
+  const walletStorageKey = activeWalletId || address || 'default';
 
   const initialParams = useMemo(() => {
     if (typeof window === 'undefined')
@@ -71,7 +101,9 @@ export const SendTransaction: React.FC = () => {
     };
   }, []);
 
-  const [selectedId, setSelectedId] = useState('HD');
+  const [selectedId, setSelectedId] = useState<string>(
+    () => getLastSendTokenForWallet(walletStorageKey) || 'HD',
+  );
   const [recipient, setRecipient] = useState(initialParams.recipient);
   const [effectiveRecipientAddress, setEffectiveRecipientAddress] = useState<
     string | null
@@ -89,6 +121,16 @@ export const SendTransaction: React.FC = () => {
 
   const options = useSendTokens();
 
+  const [prevWalletStorageKey, setPrevWalletStorageKey] =
+    useState(walletStorageKey);
+  if (walletStorageKey !== prevWalletStorageKey) {
+    setPrevWalletStorageKey(walletStorageKey);
+    const remembered = getLastSendTokenForWallet(walletStorageKey);
+    if (remembered) {
+      setSelectedId(remembered);
+    }
+  }
+
   const [hasAppliedInitialToken, setHasAppliedInitialToken] = useState(false);
   if (!hasAppliedInitialToken && initialParams.token && options.length > 0) {
     const match = options.find(
@@ -99,11 +141,25 @@ export const SendTransaction: React.FC = () => {
     if (match) {
       setHasAppliedInitialToken(true);
       setSelectedId(match.id);
+      saveLastSendTokenForWallet(walletStorageKey, match.id);
     }
   }
 
+  const rememberedTokenId = getLastSendTokenForWallet(walletStorageKey);
   const selected =
-    options.find((option) => option.id === selectedId) ?? options[0];
+    options.find(
+      (option) =>
+        option.id.toLowerCase() === selectedId.toLowerCase() ||
+        option.symbol?.toLowerCase() === selectedId.toLowerCase(),
+    ) ??
+    (rememberedTokenId
+      ? options.find(
+          (option) =>
+            option.id.toLowerCase() === rememberedTokenId.toLowerCase() ||
+            option.symbol?.toLowerCase() === rememberedTokenId.toLowerCase(),
+        )
+      : undefined) ??
+    options[0];
 
   const isFiToken =
     selected.id === 'FI' ||
@@ -301,6 +357,7 @@ export const SendTransaction: React.FC = () => {
 
   const handleSelectToken = (option: TokenOption) => {
     setSelectedId(option.id);
+    saveLastSendTokenForWallet(walletStorageKey, option.id);
     setAmount('');
     setError('');
     setShowTokenModal(false);
@@ -703,7 +760,7 @@ export const SendTransaction: React.FC = () => {
         isOpened={showTokenModal}
         onOpenChange={setShowTokenModal}
         options={options}
-        selectedId={selectedId}
+        selectedId={selected.id}
         onSelect={handleSelectToken}
       />
     </NewLayout>
