@@ -1,0 +1,37 @@
+# BOC Hydration, `.bro` DNS, History Ingestion & Testing Invariants
+
+Consult this file whenever editing `apps/wallet/src/lib/brotherhood/**`, `apps/wallet/src/features/dns/**`, `apps/wallet/src/features/transactions/**`, `packages/wallet-core/**`, `packages/walletkit/**`, or test files.
+
+## Zero-Getter Batch BOC Hydration & Auto-Funding
+
+- **Universal Batch Account Ingestion (`accountStates?include_boc=true`):** Query contract states in batches of 30 and deserialize storage in-memory via Tolk wrapper functions (`FiWalletStore.fromSlice`, `PersonalStore.fromSlice`, `LocationStore.fromSlice`, etc.) inside Web Workers with a time-sliced main-thread fallback (`processAccountItemsAsync` in chunks of 5 with 8s timeout).
+- **Zero Getter Fallback & Live-Net Code Hash Rule:** When `code_hash` mismatches and `fromSlice` fails, never fall back to `runGetMethod`; flag `isOutdatedCode: true` and show an upgrade banner. Never update `CONTRACT_CODE_HASHES` in `account-hydrator.worker.ts` unless the contract upgrade was actually broadcast on a live network (`--net testnet` / `--net mainnet`).
+- **Uninitialized (`uninit`) Cache Resolution:** When `/api/v3/accountStates` returns `status === 'uninit'`, `'nonexist'`, or no `data_boc`, always write `await setContractCache(cacheKey, null)` and update `hydrationCooldowns` (even when `itemsToProcess.length === 0`) so `useContractState` resolves `isLoading` to `false`.
+- **Off-Chain Deterministic Address Derivation & Invitee Map Invariant:** Derive child contract addresses off-chain using minimal proxy wrappers (`BaseFiWallet.fromStorage`, `BasePersonalMinter.fromStorage`, `BasePersonalWallet.fromStorage`, `BaseLocation.fromStorage`, `BaseFollowing.fromStorage`). In `FossFiWallet.tolk`, `maps.invited` already stores deployed `FiWallet` addresses (not owner wallet addresses) — never call `getFiWalletAddress(inviteeAddr)` on `maps.invited` entries.
+- **Silent `FiWallet` Auto-Funding:** During hydration (`useTrackedAddressesSync`), any saved wallet's `FiWallet` or circle invitee `FiWallet` with balance `< 2 TON` (`2_000_000_000n`) is silently funded with `2 TON` via batched `createTransferMultiTonTransaction`, preserving a `0.5 TON` reserve in the active wallet and deduplicating per session.
+
+## `.bro` DNS Resolution, Discovery & Input Debouncing
+
+- **Exclusive `.bro` Scoping & Zero-Getter Owner Fallback:** Scope all DNS resolution strictly to `.bro` domains via `BRO_COLLECTION_RESOLVER` (never `.ton`, `.t.me`, `.vip`, `.grm`). `resolveAddressByDomain` and `useDomainLookup` deserialize `DnsItem` and `DnsCollection` BOCs in-memory via `batchFetchAccountStates`, resolving to `sha256("wallet")` when set and falling back to NFT `ownerAddress` when unexpired (`now <= lastFillUpTime + ONE_YEAR_SEC`).
+- **Single-Call Input Resolution (0ms Local Hit, 3s Debounce, 1-Char Support):** `useAddressUsernameResolution` supports handles/domains of $1\text{–}40$ chars (`/^[a-zA-Z0-9_\- ]{1,40}$/`). Local hits (`useContactBookStore` for `.bro` domains, `contact-storage` for `@username` mappings) resolve in `0ms` with zero network calls. On a cache miss, wait `3000ms` after typing stops and fire strictly **one** `batchFetchAccountStates` BOC request. `CommentField` queries `resolveRecipientPublicKey` only when `comment.trim()` is non-empty.
+- **`useMyDomains` Migration, Auction Discovery, TTL Cache & Pruning:**
+  1. Re-derive persisted `useDnsStore` (`dns_domains_store`) NFT addresses via `deriveDnsItemAddress(collectionAddr, d.name, testOnly)` so domains survive `DnsItem` code upgrades.
+  2. Query both `owner_address=${walletAddress}` and collection-level `/nft/items?collection_address=${BRO_COLLECTION_RESOLVER}` so unfinalized auctions where `maxBidAddress == walletAddress` (`ownerAddress == null`) are discovered.
+  3. Prune persisted domains via `removeDomain` when their on-chain account is not `active` (after a 45s grace window) or neither `isOwnedByMe` nor `isBidByMe` holds.
+  4. Maintain 5-minute module-level TTL + in-flight deduplication caches across `batchFetchAccountStates`, `useMyDomains`, and `loadUserNfts` (bypassed only on explicit `force: true` / `RefreshButton`), and compare NFT addresses via canonical raw strings (`Address.parse(addr).toRawString()`).
+
+## On-Demand Transaction History & RPC Rate-Limiting
+
+- **On-Demand `/wallet/history` Traces Only:** Never fetch `/api/v3/traces` (`loadEvents`) on startup, in `useTrackedAddressesSync`, `BackgroundSyncCoordinator`, or WebSocket callbacks. Fetch traces strictly on `/wallet/history` for the active wallet + its deterministic `FiWallet` (registered in `associatedAddressesByAddress`).
+- **Ingestion-Time Transformation & 100% Local Filtering:** Transform incoming events once in `loadEvents` via `mapEventToRow` into `TransactionRowModel` (`category`, `isContractCall`, `tokens`, `traceDag`), persisting up to 20 rows per wallet in `bro-store` (`localStorage`). Prioritize specialized contract actions (`SmartContractExec`, `JettonTransfer`, `JettonSwap`, `NftItemTransfer`, `ContractDeploy`) over generic `TonTransfer`. All tab/token filtering on `/wallet/history` and `TransactionInfoModal` DAG rendering operate locally with zero network requests.
+- **Optimistic Pending Transactions & 60s Route TTL:** Append newly broadcast transfers immediately via `addPendingTransaction` and reconcile when indexed. Guard `loadUserJettons`, `loadEvents`, and `batchHydrateUniversal` with 60s TTL cooldowns across route transitions unless `force = true`.
+- **WalletKit `rateLimitedFetch` Binding:** In `walletCoreSlice.ts`, pass `fetchApi: walletKitConfig?.fetchApi` (`rateLimitedFetch`) to both `ApiClientTonApi` and `ApiClientToncenter` across all networks (`mainnet`, `testnet`, `tetra`) and wrap startup getters (`loadUserJettons`, `updateBalance`) in `CallForSuccess` to prevent unthrottled global `fetch()` 429 bursts.
+
+## Test Runner Boundaries & Mock Invariants
+
+- **`apps/wallet/src` & `packages/wallet-core`:** Bun Test (`bun test` / `bun run test:unit`).
+- **`packages/walletkit`:** Vitest (`bun run test:walletkit`).
+- **`apps/wallet/e2e`:** Playwright (`bun run test:e2e`).
+- **`contracts/tests`:** Acton / Tolk (`acton test`).
+- **Root `bunfig.toml`:** Retain `pathIgnorePatterns` for `packages/walletkit/**` and `apps/wallet/e2e/**`.
+- **Mock Hygiene:** Mirror all `initialState` properties when mocking store slices (e.g. `createBrotherhoodSlice`), unconditionally assign and clear `globalThis.localStorage` in `beforeEach`, and assert user-facing friendly opcode titles in `getPayloadMessageName` tests.
