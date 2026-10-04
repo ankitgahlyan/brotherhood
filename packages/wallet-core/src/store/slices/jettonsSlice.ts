@@ -63,15 +63,33 @@ export const createJettonsSlice: JettonsSliceCreator = (
       return;
     }
 
-    // Zero-redundant check: if jettons were loaded in the last 60s, return cached state
-    if (!force) {
-      const now = Date.now();
-      const lastUpdate = state.jettons.lastJettonsUpdate || 0;
-      const cached = state.jettons.jettonsByAddress?.[address];
-      if (cached !== undefined && lastUpdate > 0 && now - lastUpdate < 60_000) {
-        log.info('Using fresh cached jettons (TTL valid)', { lastUpdate });
-        return;
-      }
+    const allSavedWallets = state.walletManagement.savedWallets;
+    const candidateAddresses = Array.from(
+      new Set(
+        [address, ...allSavedWallets.map((w) => w.address).filter(Boolean)]
+          .filter(Boolean)
+          .map((a) => String(a)),
+      ),
+    );
+
+    const existingMap = state.jettons.jettonsByAddress || {};
+    const hasCachedEntry = (targetAddr: string) =>
+      Object.keys(existingMap).some(
+        (k) =>
+          (k === targetAddr || compareAddress(k, targetAddr)) &&
+          existingMap[k] !== undefined,
+      );
+
+    // LocalStorage-first: when force is false, only fetch saved wallets not yet present in jettonsByAddress
+    const addressesToFetch = force
+      ? candidateAddresses
+      : candidateAddresses.filter((addr) => !hasCachedEntry(addr));
+
+    if (addressesToFetch.length === 0) {
+      log.info(
+        'All saved wallets already have jettons in localStorage; skipping automatic fetch',
+      );
+      return;
     }
 
     set((state) => {
@@ -80,17 +98,9 @@ export const createJettonsSlice: JettonsSliceCreator = (
     });
 
     try {
-      const allSavedWallets = state.walletManagement.savedWallets;
-      const allAddresses = Array.from(
-        new Set(
-          [address, ...allSavedWallets.map((w) => w.address).filter(Boolean)]
-            .filter(Boolean)
-            .map((a) => String(a)),
-        ),
-      );
-
-      log.info('Loading user jettons for all addresses', {
-        addresses: allAddresses,
+      log.info('Loading user jettons for addresses', {
+        addresses: addressesToFetch,
+        force,
       });
 
       const activeWallet = state.walletManagement.savedWallets.find(
@@ -105,9 +115,11 @@ export const createJettonsSlice: JettonsSliceCreator = (
         () =>
           client.jettonsByOwnerAddress({
             ownerAddress:
-              allAddresses.length === 1 ? allAddresses[0] : allAddresses,
+              addressesToFetch.length === 1
+                ? addressesToFetch[0]
+                : addressesToFetch,
             offset: 0,
-            limit: Math.max(50, allAddresses.length * 20),
+            limit: Math.max(50, addressesToFetch.length * 20),
           }),
         5,
         1000,
@@ -122,13 +134,13 @@ export const createJettonsSlice: JettonsSliceCreator = (
       }
 
       const partitioned: Record<string, Jetton[]> = {};
-      for (const addr of allAddresses) {
+      for (const addr of addressesToFetch) {
         partitioned[addr] = [];
       }
 
       for (const jetton of jettonsResponse.jettons) {
         if (jetton.ownerAddress) {
-          const matchingAddr = allAddresses.find((a) =>
+          const matchingAddr = addressesToFetch.find((a) =>
             compareAddress(a, jetton.ownerAddress!),
           );
           if (matchingAddr) {
@@ -140,7 +152,13 @@ export const createJettonsSlice: JettonsSliceCreator = (
             partitioned[jetton.ownerAddress].push(jetton);
           }
         } else {
-          const fallbackTarget = userAddress || address;
+          const fallbackTarget =
+            addressesToFetch.find((a) =>
+              compareAddress(a, userAddress || address),
+            ) ||
+            addressesToFetch[0] ||
+            userAddress ||
+            address;
           if (fallbackTarget) {
             if (!partitioned[fallbackTarget]) {
               partitioned[fallbackTarget] = [];
@@ -159,9 +177,9 @@ export const createJettonsSlice: JettonsSliceCreator = (
         s.jettons.error = null;
       });
 
-      log.info('Successfully loaded user jettons for all wallets', {
+      log.info('Successfully loaded user jettons for wallets', {
         totalCount: jettonsResponse.jettons.length,
-        walletCount: allAddresses.length,
+        walletCount: addressesToFetch.length,
       });
     } catch (error) {
       log.error('Failed to load user jettons:', error);
@@ -193,7 +211,7 @@ export const createJettonsSlice: JettonsSliceCreator = (
     });
 
     try {
-      await get().loadUserJettons(address);
+      await get().loadUserJettons(address, true);
     } finally {
       set((state) => {
         state.jettons.isRefreshing = false;

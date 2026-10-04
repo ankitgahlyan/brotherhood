@@ -11,8 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Address } from '@ton/core';
 import { formatTonAddress, type AddressNetwork } from '@/core/utils/formatters';
 import { cachedQueryFn, createRefetchWrapper } from '@/lib/brotherhood/queries';
-import { normalizeOnchainMultiplier } from '@/lib/brotherhood/config';
-import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
+import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
 import {
   getContractCache,
   getNormalizedContractCacheKey,
@@ -26,26 +25,13 @@ import {
   EMPTY_CONTACTS_MAP,
 } from '@/core/storage/useContactBookStore';
 import { useDnsStore } from '@/features/dns/store/dns-store';
-import { syncBroCollectionContacts } from '@/features/dns/hooks/use-my-domains';
 import { resolveCachedDnsContact } from '@/core/utils/telegram';
+import {
+  projectMemberProfileInfo,
+  type MemberProfileInfo,
+} from '@/lib/brotherhood/domain/fi-account-projector';
 
-export interface MemberProfileInfo {
-  address: string;
-  ownerAddress: string;
-  username: string;
-  dnsDomain?: string;
-  contactLink?: string;
-  h3Cell: string;
-  country: number;
-  active: boolean;
-  jettonBalance: bigint;
-  status: number;
-  creditNeed: bigint;
-  creditMaturity: number;
-  multiplier: number;
-  personalJettonMinter?: string;
-  isOutdatedCode?: boolean;
-}
+export type { MemberProfileInfo };
 
 export function useMemberProfiles(
   addresses: (Address | string)[],
@@ -79,8 +65,11 @@ export function useMemberProfiles(
         if (addressStrings.length === 0) return {};
         const results: Record<string, MemberProfileInfo> = {};
 
-        // Ensure .bro collection domains & contactLinks are synced to contact book
-        void syncBroCollectionContacts(net, Boolean(options?.forceFresh));
+        // Ensure .bro collection domains & contactLinks are reconciled via central Synchronizer
+        void brotherhoodSynchronizer.reconcileDnsContacts(
+          net,
+          Boolean(options?.forceFresh),
+        );
 
         // 1. Check local cache first to avoid redundant network calls
         const missingAddresses: string[] = [];
@@ -106,7 +95,7 @@ export function useMemberProfiles(
         let outdatedSet = new Set<string>();
         if (missingAddresses.length > 0) {
           try {
-            const hydrateRes = await batchHydrateUniversal(
+            const hydrateRes = await brotherhoodSynchronizer.reconcileContracts(
               missingAddresses,
               net,
             );
@@ -134,15 +123,6 @@ export function useMemberProfiles(
               const ownerAddress = ownerAddr
                 ? formatTonAddress(ownerAddr, { isContract: false, network })
                 : '';
-              const minterAddr =
-                store?.addresses?.ref?.trustedJettonAddrs?.ref
-                  ?.personalJettonMinter ?? null;
-              const personalJettonMinter = minterAddr
-                ? formatTonAddress(minterAddr, { isContract: true, network })
-                : undefined;
-              const isOutdated =
-                outdatedSet.has(addrStr) ||
-                (store && Boolean(store.isCodeHashOutdated));
 
               const rawProfileUsername = (
                 store?.profile?.ref?.username ?? ''
@@ -165,56 +145,19 @@ export function useMemberProfiles(
                 getOnChainCachedUsername(addrStr, net) ||
                 '';
 
-              const isBroUsername = fallbackUsername
-                .toLowerCase()
-                .endsWith('.bro');
-              const cachedDns = resolveCachedDnsContact(
-                [ownerAddress, addrStr],
-                net,
-                undefined,
-                undefined,
+              results[addrStr] = projectMemberProfileInfo(addrStr, store, {
+                network,
                 fallbackUsername,
-              );
-
-              results[addrStr] = {
-                address: addrStr,
-                ownerAddress,
-                username: isBroUsername ? '' : fallbackUsername,
-                dnsDomain:
-                  cachedDns.dnsDomain ||
-                  (isBroUsername ? fallbackUsername.toLowerCase() : undefined),
-                contactLink: cachedDns.contactLink,
-                h3Cell: store?.profile?.ref?.h3Cell ?? '',
-                country: store?.profile?.ref?.country
-                  ? Number(store.profile.ref.country)
-                  : 0,
-                active: Boolean(store?.active),
-                jettonBalance: store?.jettonBalance ?? 0n,
-                status: store?.status ? Number(store.status) : 0,
-                creditNeed: store?.creditNeed ?? 0n,
-                creditMaturity: Number(store?.creditMaturity ?? 0),
-                multiplier: normalizeOnchainMultiplier(store?.multiplier),
-                personalJettonMinter,
-                isOutdatedCode: isOutdated,
-              };
+                isOutdated: outdatedSet.has(addrStr),
+              });
             } catch (e) {
               console.warn(
                 `[useMemberProfiles] Could not process profile for ${addrStr}:`,
                 e,
               );
-              results[addrStr] = {
-                address: addrStr,
-                ownerAddress: '',
-                username: '',
-                h3Cell: '',
-                country: 0,
-                active: false,
-                jettonBalance: 0n,
-                status: 0,
-                creditNeed: 0n,
-                creditMaturity: 0,
-                multiplier: 1,
-              };
+              results[addrStr] = projectMemberProfileInfo(addrStr, null, {
+                network,
+              });
             }
           }),
         );

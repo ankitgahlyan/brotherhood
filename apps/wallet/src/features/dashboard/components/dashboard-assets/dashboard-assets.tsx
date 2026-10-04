@@ -141,7 +141,7 @@ export const DashboardAssets: React.FC = () => {
             iconOnly
             onRefresh={async () => {
               if (assetTab === 'tokens') {
-                await loadUserJettons();
+                await loadUserJettons(undefined, true);
               } else {
                 const { clearMyDomainsSessionCache } =
                   await import('@/features/dns/hooks/use-my-domains');

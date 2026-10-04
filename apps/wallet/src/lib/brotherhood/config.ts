@@ -166,38 +166,31 @@ export interface ReserveUpiLinks {
  * Builds NPCI-compliant UPI deep links (`upi://pay`, `tez://upi/pay`, etc.)
  * with embedded TON wallet identification in `tn` (Transaction Note, <= 80 chars)
  * and a unique `tr` (Transaction Reference ID, <= 35 alphanumeric chars).
+ * When `amountInr` is omitted or empty, `&am=` is omitted so the UPI app/QR has no default amount.
  */
 export function buildReserveUpiLinks(params: {
   amountInr?: string | number;
   walletAddress?: string | null;
   referenceSeed?: string;
 }): ReserveUpiLinks {
-  const {
-    upiId,
-    payeeName,
-    defaultAmount,
-    minAmount,
-    currency,
-    notePrefix,
-    deepLinkCapInr,
-  } = RESERVE_TOKEN_UPI_CONFIG;
+  const { upiId, payeeName, minAmount, currency, notePrefix, deepLinkCapInr } =
+    RESERVE_TOKEN_UPI_CONFIG;
 
   const rawNum =
     typeof params.amountInr === 'number'
       ? params.amountInr
       : parseFloat(String(params.amountInr ?? '').trim());
-  const validNum =
-    Number.isFinite(rawNum) && rawNum >= 0.01
-      ? rawNum
-      : parseFloat(defaultAmount);
+  const hasExplicitAmount = Number.isFinite(rawNum) && rawNum >= 0.01;
 
-  // Format cleanly: integer if whole, otherwise up to 2 decimals
-  const amountStr = Number.isInteger(validNum)
-    ? String(validNum)
-    : validNum.toFixed(2).replace(/\.?0+$/, '');
+  // Format cleanly if explicit amount provided; otherwise empty (no default amount)
+  const amountStr = hasExplicitAmount
+    ? Number.isInteger(rawNum)
+      ? String(rawNum)
+      : rawNum.toFixed(2).replace(/\.?0+$/, '')
+    : '';
 
   const cleanWallet = (params.walletAddress ?? '').trim();
-  // NPCI spec: tn max 80 chars. "dAd " (4 chars) + 48-char TON address = 52 chars.
+  // NPCI spec: tn max 80 chars.
   const note = cleanWallet
     ? `${notePrefix} ${cleanWallet}`.slice(0, 80)
     : notePrefix;
@@ -215,10 +208,12 @@ export function buildReserveUpiLinks(params: {
     .slice(-10);
   const txRef = `BRO${addrSuffix}${seed}`.slice(0, 35);
 
+  const amountParam = amountStr ? `&am=${encodeURIComponent(amountStr)}` : '';
+
   const baseQuery =
     `pa=${upiId}` +
     `&pn=${encodeURIComponent(payeeName)}` +
-    `&am=${encodeURIComponent(amountStr)}` +
+    amountParam +
     `&mam=${encodeURIComponent(minAmount)}` +
     `&cu=${encodeURIComponent(currency)}` +
     `&tr=${encodeURIComponent(txRef)}` +
@@ -233,7 +228,7 @@ export function buildReserveUpiLinks(params: {
     notePrefix,
     note,
     txRef,
-    isOverDeepLinkCap: validNum > deepLinkCapInr,
+    isOverDeepLinkCap: hasExplicitAmount && rawNum > deepLinkCapInr,
     bhimOrOthersUrl: `upi://pay?${baseQuery}`,
     gPayUrl: `tez://upi/pay?${baseQuery}`,
     phonePeUrl: `phonepe://pay?${baseQuery}`,

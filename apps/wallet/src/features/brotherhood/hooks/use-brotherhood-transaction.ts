@@ -8,7 +8,7 @@
 
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateContractState } from '@/lib/brotherhood/queries';
+import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { toast } from 'sonner';
 import { Address, toNano, type Cell } from '@ton/core';
@@ -156,35 +156,17 @@ export function useBrotherhoodTransaction(
           }
         }
 
-        // Target invalidations at 2s and 5s
+        // Schedule post-tx reconciliation at 2s and 5s via central Synchronizer
         const net =
           String(wallet?.getNetwork()?.chainId) === '-239'
             ? 'mainnet'
             : 'testnet';
-        const targetList = Array.from(targets);
-
-        const runInvalidation = (delayMs: number, showToast: boolean) => {
-          setTimeout(async () => {
-            try {
-              await Promise.all(
-                targetList.map((addr) =>
-                  invalidateContractState(addr, net, queryClient),
-                ),
-              );
-              if (showToast) {
-                toast.info('On-chain state updated');
-              }
-            } catch (refreshErr) {
-              console.error(
-                'Targeted refresh after transaction failed:',
-                refreshErr,
-              );
-            }
-          }, delayMs);
-        };
-
-        runInvalidation(2000, false);
-        runInvalidation(5000, true);
+        brotherhoodSynchronizer.schedulePostTxReconciliation(
+          Array.from(targets),
+          net,
+          queryClient,
+          () => toast.info('On-chain state updated'),
+        );
       } catch (err) {
         const errMsg =
           err instanceof Error ? err.message : 'Transaction failed';

@@ -16,13 +16,19 @@ import {
   useBrotherhood,
   normalizeAddressByNetwork,
 } from '@demo/wallet-core';
-import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
+import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
+import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  getContractCacheSync,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { isOnline } from '@/core/lib/network-status';
 import {
   network as defaultNetwork,
   FI_ADDRESS,
+  BRO_TREASURY_ADDRESS,
 } from '@/lib/brotherhood/config';
-import { getFiWalletAddress } from '@/lib/brotherhood/ton';
+import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
@@ -32,11 +38,13 @@ import { Address } from '@ton/core';
 /**
  * Top-level hook to manage tracked contract addresses lifecycle in bro-store:
  * 1. Immediately purges legacy localStorage tracked_addresses keys
- * 2. Fetches jettons for all saved wallets (including isMember: false)
+ * 2. Fetches jettons for saved wallets only if missing from localStorage (unless force = true)
  * 3. Triggers 1 universal background hydration batch on session start for all persisted addresses
+ *    including FI Minter, FI Admin FiWallet + PersonalMinter + user PersonalWallet (for Swap),
+ *    saved wallets' FiWallets, and watched locations
  * 4. Checks FiWallet initialization: uninit -> isMember: false; active -> isMember: true
  * 5. Discovers location and circle invites, adds fresh circle to bro-store
- * 6. Follow-up batch hydrates fresh circle members' FiWallets and records under ring[invitor]
+ * 6. Follow-up batch hydrates newly discovered location contracts and FI Admin PersonalMinter/PersonalWallet
  * 7. Zero refetch on wallet switch (0ms reads from bro-store & IndexedDB)
  */
 export function useTrackedAddressesSync() {
@@ -89,8 +97,11 @@ export function useTrackedAddressesSync() {
       // 1. Purge legacy localStorage tracked_addresses
       purgeLegacyTrackedAddressesStorage();
 
-      // 2. Fetch jettons for ALL saved wallets (including isMember: false)
+      // 2. Fetch jettons (only if missing from localStorage unless force = true) and reconcile .bro DNS contacts
       void loadUserJettons(undefined, force).catch(() => {});
+      void brotherhoodSynchronizer
+        .reconcileDnsContacts(defaultNetwork, force)
+        .catch(() => {});
 
       try {
         const currentState = storeApi.getState();
@@ -125,18 +136,72 @@ export function useTrackedAddressesSync() {
         // Root FI Minter
         addContract(FI_ADDRESS);
 
+        // FI Admin FiWallet & PersonalMinter (from cached FiStore.adminAddress or fallback BRO_TREASURY_ADDRESS)
+        let cachedAdminOwner: Address | null = null;
+        try {
+          const cachedFiMinter = getContractCacheSync<any>(
+            getNormalizedContractCacheKey(defaultNetwork, FI_ADDRESS),
+          )?.data;
+          if (
+            cachedFiMinter?.adminAddress &&
+            !isZeroAddress(cachedFiMinter.adminAddress)
+          ) {
+            cachedAdminOwner =
+              typeof cachedFiMinter.adminAddress === 'string'
+                ? Address.parse(cachedFiMinter.adminAddress)
+                : cachedFiMinter.adminAddress;
+          } else {
+            cachedAdminOwner = Address.parse(BRO_TREASURY_ADDRESS);
+          }
+        } catch {
+          cachedAdminOwner = null;
+        }
+
+        let cachedAdminMinter: Address | null = null;
+        if (cachedAdminOwner) {
+          try {
+            const adminFiWallet = getFiWalletAddress(
+              cachedAdminOwner,
+              defaultNetwork,
+            );
+            addContract(adminFiWallet);
+            const cachedAdminFiStore = getContractCacheSync<any>(
+              getNormalizedContractCacheKey(defaultNetwork, adminFiWallet),
+            )?.data;
+            const minterCandidate =
+              cachedAdminFiStore?.addresses?.ref?.trustedJettonAddrs?.ref
+                ?.personalJettonMinter;
+            if (minterCandidate && !isZeroAddress(minterCandidate)) {
+              cachedAdminMinter =
+                typeof minterCandidate === 'string'
+                  ? Address.parse(minterCandidate)
+                  : minterCandidate;
+              addContract(cachedAdminMinter);
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
         for (const wallet of savedWallets) {
           if (!wallet.address) continue;
           addWallet(wallet.address);
 
-          // Deterministic FiWallet
+          // Deterministic FiWallet & user's PersonalWallet for FI Admin's Personal Token (for Swap)
           try {
-            const fiWallet = getFiWalletAddress(
-              Address.parse(wallet.address),
-              defaultNetwork,
-            );
+            const parsedOwner = Address.parse(wallet.address);
+            const fiWallet = getFiWalletAddress(parsedOwner, defaultNetwork);
             addContract(fiWallet);
             setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
+
+            if (cachedAdminMinter && cachedAdminOwner) {
+              const adminPersonalWallet = computePersonalWalletAddress(
+                cachedAdminMinter,
+                parsedOwner,
+                cachedAdminOwner,
+              );
+              addContract(adminPersonalWallet);
+            }
           } catch {
             /* ignore parse error */
           }
@@ -176,7 +241,7 @@ export function useTrackedAddressesSync() {
         if (masterAddressList.length === 0) return;
 
         // 4. Pass 1: Execute single universal batch hydration
-        const res = await batchHydrateUniversal(
+        const res = await brotherhoodSynchronizer.reconcileContracts(
           masterAddressList,
           defaultNetwork,
           { force },
@@ -317,13 +382,96 @@ export function useTrackedAddressesSync() {
           }
         }
 
-        // 6. Pass 2: Follow-up targeted batch for newly discovered location contracts for saved wallets
+        // 5b. Discover FI Admin FiWallet, PersonalMinter, and user PersonalWallets from Pass 1 decodedStores
+        try {
+          const decodedFiMinter = findDecodedStore(
+            res.decodedStores,
+            FI_ADDRESS,
+          );
+          let resolvedAdminOwner = cachedAdminOwner;
+          if (
+            decodedFiMinter?.adminAddress &&
+            !isZeroAddress(decodedFiMinter.adminAddress)
+          ) {
+            resolvedAdminOwner =
+              typeof decodedFiMinter.adminAddress === 'string'
+                ? Address.parse(decodedFiMinter.adminAddress)
+                : decodedFiMinter.adminAddress;
+          }
+
+          if (resolvedAdminOwner) {
+            const adminFiWallet = getFiWalletAddress(
+              resolvedAdminOwner,
+              defaultNetwork,
+            );
+            const normAdminFiWallet = normalizeAddressByNetwork(
+              adminFiWallet,
+              true,
+              defaultNetwork,
+            );
+            if (normAdminFiWallet && !masterSet.has(normAdminFiWallet)) {
+              newLocationsToHydrate.push(normAdminFiWallet);
+            }
+
+            const decodedAdminFiStore =
+              findDecodedStore(res.decodedStores, normAdminFiWallet) ??
+              getContractCacheSync<any>(
+                getNormalizedContractCacheKey(defaultNetwork, adminFiWallet),
+              )?.data;
+            const minterCandidate =
+              decodedAdminFiStore?.addresses?.ref?.trustedJettonAddrs?.ref
+                ?.personalJettonMinter;
+            if (minterCandidate && !isZeroAddress(minterCandidate)) {
+              const adminMinterAddr =
+                typeof minterCandidate === 'string'
+                  ? Address.parse(minterCandidate)
+                  : minterCandidate;
+              const normAdminMinter = normalizeAddressByNetwork(
+                adminMinterAddr,
+                true,
+                defaultNetwork,
+              );
+              if (normAdminMinter && !masterSet.has(normAdminMinter)) {
+                newLocationsToHydrate.push(normAdminMinter);
+              }
+              for (const wallet of savedWallets) {
+                if (!wallet.address) continue;
+                try {
+                  const parsedOwner = Address.parse(wallet.address);
+                  const adminPersonalWallet = computePersonalWalletAddress(
+                    adminMinterAddr,
+                    parsedOwner,
+                    resolvedAdminOwner,
+                  );
+                  const normPw = normalizeAddressByNetwork(
+                    adminPersonalWallet,
+                    true,
+                    defaultNetwork,
+                  );
+                  if (normPw && !masterSet.has(normPw)) {
+                    newLocationsToHydrate.push(normPw);
+                  }
+                } catch {
+                  /* ignore */
+                }
+              }
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+
+        // 6. Pass 2: Follow-up targeted batch for newly discovered location & FI Admin swap contracts
         if (newLocationsToHydrate.length > 0) {
           const freshList = Array.from(new Set(newLocationsToHydrate));
           if (freshList.length > 0) {
-            await batchHydrateUniversal(freshList, defaultNetwork, {
-              force: true,
-            });
+            await brotherhoodSynchronizer.reconcileContracts(
+              freshList,
+              defaultNetwork,
+              {
+                force: true,
+              },
+            );
           }
         }
 

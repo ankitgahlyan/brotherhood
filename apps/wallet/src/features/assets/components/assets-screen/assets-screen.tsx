@@ -52,7 +52,7 @@ export const AssetsScreen: FC = () => {
               <RefreshButton
                 iconOnly
                 onRefresh={async () => {
-                  await loadUserJettons();
+                  await loadUserJettons(undefined, true);
                 }}
                 className="rounded-full bg-secondary p-1"
                 title="Refresh and discover tokens"

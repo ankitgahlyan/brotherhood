@@ -6,7 +6,7 @@
  *
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Address, type Cell, toNano } from '@ton/core';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { createCommentPayload } from '@ton/walletkit';
@@ -39,16 +39,23 @@ import {
   isZeroAddress,
 } from '@/lib/brotherhood/ton';
 import {
+  useFiMinterState,
   useFiWalletState,
+  usePersonalMinterDetails,
   usePersonalWalletBalance,
   useRefreshContractQueries,
 } from '@/lib/brotherhood/queries';
+import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 import {
   deleteContractCache,
   getContractCacheSync,
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
-import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
+import {
+  batchHydrateUniversal,
+  computePersonalWalletAddress,
+  type KnownContractType,
+} from '@/lib/brotherhood/account-state-hydrator';
 import {
   useFiAccount,
   useMemberProfiles,
@@ -57,7 +64,12 @@ import {
   getAccountActionError,
 } from '@/features/brotherhood';
 import { formatFi } from '@/features/brotherhood/components/credit/credit-member-card';
-import { getJettonsImage, getJettonsSymbol } from '@/features/jettons';
+import {
+  getJettonsImage,
+  getJettonsName,
+  getJettonsSymbol,
+  isFiJetton,
+} from '@/features/jettons';
 import { formatUnits, assetUrl } from '@/core/utils';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import { useNowSeconds } from '@/core/hooks';
@@ -66,6 +78,7 @@ import {
   packBytesAsSnakeForEncryptedData,
 } from '@/core/utils/encryption';
 import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
 import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 
 export type EcosystemTokenKind = 'fi' | 'reserve' | 'personal';
@@ -145,9 +158,14 @@ export function useEcosystemSwap() {
     error: txError,
   } = useBrotherhoodTransaction(currentWallet, walletKit);
 
-  // 1. User's own FI Account
+  // 1. User's own FI Account & FI Minter State (for on-chain FI metadata & admin address)
   const { data: accountData, refetch: refetchUserAccount } = useFiAccount(
     address ?? null,
+  );
+  const fiMinterState = useFiMinterState(true, net);
+  const fiOnchainMeta = useMemo(
+    () => parseOnchainMetadataCell(fiMinterState.data?.metadata),
+    [fiMinterState.data?.metadata],
   );
 
   const userOwnerAddress = useMemo(() => {
@@ -159,14 +177,18 @@ export function useEcosystemSwap() {
     }
   }, [address]);
 
-  // 2. Treasury Reserve Token (BRO_TREASURY_ADDRESS)
+  // 2. FI Admin Personal Token (resolved from FiStore.adminAddress or BRO_TREASURY_ADDRESS)
   const treasuryOwnerAddress = useMemo(() => {
+    const minterAdmin = fiMinterState.data?.adminAddress;
+    if (minterAdmin && !isZeroAddress(minterAdmin)) {
+      return minterAdmin;
+    }
     try {
       return Address.parse(BRO_TREASURY_ADDRESS);
     } catch {
       return null;
     }
-  }, []);
+  }, [fiMinterState.data?.adminAddress]);
 
   const treasuryFiState = useFiWalletState(treasuryOwnerAddress, net);
   const treasuryMinterAddr = useMemo(() => {
@@ -175,6 +197,12 @@ export function useEcosystemSwap() {
         ?.personalJettonMinter;
     return m && !isZeroAddress(m) ? m : null;
   }, [treasuryFiState.data]);
+
+  const treasuryMinterDetails = usePersonalMinterDetails(
+    treasuryMinterAddr,
+    Boolean(treasuryMinterAddr),
+    net,
+  );
 
   const userReserveBalanceQuery = usePersonalWalletBalance(
     treasuryMinterAddr,
@@ -249,6 +277,73 @@ export function useEcosystemSwap() {
 
   const memberProfilesQuery = useMemberProfiles(allMemberFiWalletAddrs, net);
 
+  // Ensure FI minter, FI Admin FiWallet/PersonalMinter, and discovered member PersonalMinters are hydrated for metadata
+  useEffect(() => {
+    const toHydrate: (Address | string)[] = [];
+    const knownTypes: Record<string, KnownContractType> = {};
+
+    const queueIfUncached = (
+      addr: Address | string | null | undefined,
+      type: KnownContractType,
+    ) => {
+      if (!addr) return;
+      try {
+        const parsed = typeof addr === 'string' ? Address.parse(addr) : addr;
+        if (isZeroAddress(parsed)) return;
+        const raw = parsed.toRawString();
+        const key = getNormalizedContractCacheKey(net, parsed);
+        if (!getContractCacheSync(key) && !knownTypes[raw]) {
+          knownTypes[raw] = type;
+          toHydrate.push(parsed);
+        }
+      } catch {
+        // ignore invalid address
+      }
+    };
+
+    queueIfUncached(FI_ADDRESS, 'fiMinter');
+    if (treasuryOwnerAddress) {
+      queueIfUncached(
+        getFiWalletAddress(treasuryOwnerAddress, net),
+        'fiWallet',
+      );
+    }
+    if (treasuryMinterAddr) {
+      queueIfUncached(treasuryMinterAddr, 'personalMinter');
+      if (userOwnerAddress && treasuryOwnerAddress) {
+        try {
+          const pw = computePersonalWalletAddress(
+            treasuryMinterAddr,
+            userOwnerAddress,
+            treasuryOwnerAddress,
+          );
+          queueIfUncached(pw, 'personalWallet');
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    const profiles = memberProfilesQuery.data ?? {};
+    for (const fwAddr of allMemberFiWalletAddrs) {
+      const minterStr = profiles[fwAddr]?.personalJettonMinter;
+      if (minterStr) {
+        queueIfUncached(minterStr, 'personalMinter');
+      }
+    }
+
+    if (toHydrate.length > 0) {
+      void batchHydrateUniversal(toHydrate, net, { knownTypes });
+    }
+  }, [
+    net,
+    treasuryOwnerAddress,
+    treasuryMinterAddr,
+    userOwnerAddress,
+    allMemberFiWalletAddrs,
+    memberProfilesQuery.data,
+  ]);
+
   const addCustomMemberOwner = useCallback((ownerAddrStr: string) => {
     try {
       const parsed = Address.parse(ownerAddrStr.trim());
@@ -261,11 +356,11 @@ export function useEcosystemSwap() {
     }
   }, []);
 
-  // Build unified list of EcosystemTokens
+  // Build unified list of EcosystemTokens using original on-chain metadata names & symbols
   const tokens = useMemo<EcosystemToken[]>(() => {
     const list: EcosystemToken[] = [];
 
-    // Pinned #1: BrotherHood FI (Gram)
+    // Pinned #1: FI Contract Token (symbol/name/icon fetched from FiStore.metadata)
     const userFiBalance = accountData?.jettonBalance ?? 0n;
     const userFiWalletAddr = userOwnerAddress
       ? formatTonAddress(getFiWalletAddress(userOwnerAddress, net), {
@@ -274,12 +369,26 @@ export function useEcosystemSwap() {
         })
       : FI_ADDRESS;
 
+    const matchingFiJetton = activeJettons.find((j) => isFiJetton(j));
+    const fiSymbol =
+      fiOnchainMeta.symbol?.trim() ||
+      (matchingFiJetton ? getJettonsSymbol(matchingFiJetton) : '') ||
+      'HD';
+    const fiName =
+      fiOnchainMeta.name?.trim() ||
+      (matchingFiJetton ? getJettonsName(matchingFiJetton) : '') ||
+      fiSymbol;
+    const fiIcon =
+      fiOnchainMeta.image?.trim() ||
+      (matchingFiJetton ? getJettonsImage(matchingFiJetton) : '') ||
+      assetUrl('fi.svg');
+
     list.push({
       id: 'FI',
       kind: 'fi',
-      symbol: 'FI',
-      name: 'BrotherHood FI (Gram)',
-      icon: assetUrl('gram.svg'),
+      symbol: fiSymbol,
+      name: fiName,
+      icon: fiIcon,
       ownerAddress: address ?? FI_ADDRESS,
       fiWalletAddress: userFiWalletAddr,
       minterAddress: FI_ADDRESS,
@@ -293,8 +402,14 @@ export function useEcosystemSwap() {
       hasPersonalToken: true,
     });
 
-    // Pinned #2: Reserve Token (Treasury Stablecoin)
+    // Pinned #2: FI Admin Personal Token (symbol/name/icon fetched from PersonalStore.metadataUri)
     const treasuryStore = treasuryFiState.data;
+    const treasuryOwnerStr = treasuryOwnerAddress
+      ? formatTonAddress(treasuryOwnerAddress, {
+          isContract: false,
+          network: net,
+        })
+      : BRO_TREASURY_ADDRESS;
     const treasuryFiWalletStr = treasuryOwnerAddress
       ? formatTonAddress(getFiWalletAddress(treasuryOwnerAddress, net), {
           isContract: true,
@@ -305,23 +420,41 @@ export function useEcosystemSwap() {
       ? formatTonAddress(treasuryMinterAddr, { isContract: true, network: net })
       : null;
 
+    const matchingAdminJetton = treasuryMinterAddr
+      ? activeJettons.find((j) => {
+          try {
+            return Address.parse(j.address).equals(treasuryMinterAddr);
+          } catch {
+            return false;
+          }
+        })
+      : undefined;
+
     let reserveUserBal = userReserveBalanceQuery.data ?? 0n;
-    if (reserveUserBal === 0n && treasuryMinterStr) {
-      const matchingJetton = activeJettons.find((j) => {
-        try {
-          return Address.parse(j.address).equals(treasuryMinterAddr!);
-        } catch {
-          return false;
-        }
-      });
-      if (matchingJetton?.balance) {
-        try {
-          reserveUserBal = BigInt(matchingJetton.balance);
-        } catch {
-          // ignore
-        }
+    if (reserveUserBal === 0n && matchingAdminJetton?.balance) {
+      try {
+        reserveUserBal = BigInt(matchingAdminJetton.balance);
+      } catch {
+        // ignore
       }
     }
+
+    const adminOnchainMeta = treasuryMinterDetails.data?.metadata;
+    const treasuryUsername =
+      treasuryStore?.profile?.ref?.username?.replace(/^@/, '') ?? '';
+    const adminSymbol =
+      adminOnchainMeta?.symbol?.trim() ||
+      (matchingAdminJetton ? getJettonsSymbol(matchingAdminJetton) : '') ||
+      (treasuryUsername
+        ? `@${treasuryUsername}`
+        : `${treasuryOwnerStr.slice(0, 4)}…${treasuryOwnerStr.slice(-4)}`);
+    const adminName =
+      adminOnchainMeta?.name?.trim() ||
+      (matchingAdminJetton ? getJettonsName(matchingAdminJetton) : '') ||
+      adminSymbol;
+    const adminIcon =
+      adminOnchainMeta?.image?.trim() ||
+      (matchingAdminJetton ? getJettonsImage(matchingAdminJetton) : undefined);
 
     const treasuryMultiplier = normalizeOnchainMultiplier(
       treasuryStore?.multiplier,
@@ -330,9 +463,10 @@ export function useEcosystemSwap() {
     list.push({
       id: 'RESERVE',
       kind: 'reserve',
-      symbol: 'RESERVE',
-      name: 'Reserve Token (Fiat Stablecoin)',
-      ownerAddress: BRO_TREASURY_ADDRESS,
+      symbol: adminSymbol,
+      name: adminName,
+      icon: adminIcon,
+      ownerAddress: treasuryOwnerStr,
       fiWalletAddress: treasuryFiWalletStr,
       minterAddress: treasuryMinterStr,
       userBalanceNano: reserveUserBal,
@@ -383,12 +517,29 @@ export function useEcosystemSwap() {
         }
       }
 
-      // Check user's held balance of this member's Personal Token
+      // Check on-chain PersonalStore metadata & user's held balance of this member's Personal Token
       let userPtBal = 0n;
       let jettonSymbol: string | undefined;
+      let jettonName: string | undefined;
       let jettonIcon: string | undefined;
 
       if (hasPt && minterParsed) {
+        try {
+          const cachedMinter = getContractCacheSync<PersonalStore>(
+            getNormalizedContractCacheKey(net, minterParsed),
+          );
+          if (cachedMinter?.data?.metadataUri) {
+            const meta = parseOnchainMetadataCell(
+              cachedMinter.data.metadataUri,
+            );
+            if (meta.symbol?.trim()) jettonSymbol = meta.symbol.trim();
+            if (meta.name?.trim()) jettonName = meta.name.trim();
+            if (meta.image?.trim()) jettonIcon = meta.image.trim();
+          }
+        } catch {
+          // ignore
+        }
+
         const matchingJetton = activeJettons.find((j) => {
           try {
             return Address.parse(j.address).equals(minterParsed!);
@@ -397,8 +548,9 @@ export function useEcosystemSwap() {
           }
         });
         if (matchingJetton) {
-          jettonSymbol = getJettonsSymbol(matchingJetton);
-          jettonIcon = getJettonsImage(matchingJetton);
+          if (!jettonSymbol) jettonSymbol = getJettonsSymbol(matchingJetton);
+          if (!jettonName) jettonName = getJettonsName(matchingJetton);
+          if (!jettonIcon) jettonIcon = getJettonsImage(matchingJetton);
           if (matchingJetton.balance) {
             try {
               userPtBal = BigInt(matchingJetton.balance);
@@ -434,9 +586,11 @@ export function useEcosystemSwap() {
         (cleanUsername
           ? `@${cleanUsername}`
           : `${prof.ownerAddress.slice(0, 4)}…${prof.ownerAddress.slice(-4)}`);
-      const displayName = cleanUsername
-        ? `@${cleanUsername} Personal Token`
-        : `Member Personal Token (${prof.ownerAddress.slice(0, 6)}…)`;
+      const displayName =
+        jettonName ||
+        (cleanUsername
+          ? `@${cleanUsername}`
+          : `${prof.ownerAddress.slice(0, 6)}…`);
 
       const degree: EcosystemToken['degree'] = circleSet.has(fwAddr)
         ? 'circle'
@@ -472,9 +626,11 @@ export function useEcosystemSwap() {
     userOwnerAddress,
     net,
     address,
+    fiOnchainMeta,
     treasuryFiState.data,
     treasuryOwnerAddress,
     treasuryMinterAddr,
+    treasuryMinterDetails.data,
     userReserveBalanceQuery.data,
     activeJettons,
     memberProfilesQuery.data,
@@ -484,10 +640,17 @@ export function useEcosystemSwap() {
     allMemberFiWalletAddrs,
   ]);
 
-  const [fromTokenId, setFromTokenId] = useState<string>('FI');
-  const [toTokenId, setToTokenId] = useState<string>('RESERVE');
+  // Default direction: from FI Admin PT ('RESERVE') -> FI ('FI') since swapping PT -> FI is always allowed,
+  // whereas swapping into FI Admin PT is disallowed unless FI Admin FiWallet sets creditNeed > 0.
+  const [fromTokenId, setFromTokenId] = useState<string>('RESERVE');
+  const [toTokenId, setToTokenId] = useState<string>('FI');
   const [amountInput, setAmountInput] = useState<string>('');
   const [isReverseInput, setIsReverseInput] = useState<boolean>(false);
+
+  const fiToken = useMemo(
+    () => tokens.find((t) => t.kind === 'fi') ?? tokens[0],
+    [tokens],
+  );
 
   const fromToken = useMemo(
     () => tokens.find((t) => t.id === fromTokenId) ?? tokens[0],
@@ -506,28 +669,51 @@ export function useEcosystemSwap() {
   const handleSelectFromToken = useCallback(
     (id: string) => {
       if (id === toToken.id) {
-        setToTokenId(fromToken.id);
+        if (fromToken.kind === 'reserve' && fromToken.creditNeedNano <= 0n) {
+          const fallbackTo =
+            tokens.find(
+              (t) =>
+                t.id !== id &&
+                !(t.kind === 'reserve' && t.creditNeedNano <= 0n),
+            ) ?? fiToken;
+          setToTokenId(fallbackTo.id);
+        } else {
+          setToTokenId(fromToken.id);
+        }
       }
       setFromTokenId(id);
     },
-    [fromToken.id, toToken.id],
+    [fromToken, toToken.id, tokens, fiToken],
   );
 
   const handleSelectToToken = useCallback(
     (id: string) => {
+      const candidate = tokens.find((t) => t.id === id);
+      if (candidate?.kind === 'reserve' && candidate.creditNeedNano <= 0n) {
+        toast.error(
+          `Swap to ${candidate.symbol} is disabled unless its FiWallet sets credit required`,
+        );
+        return;
+      }
       if (id === fromToken.id) {
         setFromTokenId(toToken.id);
       }
       setToTokenId(id);
     },
-    [fromToken.id, toToken.id],
+    [tokens, fromToken.id, toToken.id],
   );
 
   const flipDirection = useCallback(() => {
+    if (fromToken.kind === 'reserve' && fromToken.creditNeedNano <= 0n) {
+      toast.error(
+        `Swap from ${toToken.symbol} to ${fromToken.symbol} is disabled unless ${fromToken.symbol} FiWallet sets credit required`,
+      );
+      return;
+    }
     setFromTokenId(toToken.id);
     setToTokenId(fromToken.id);
     setIsReverseInput(false);
-  }, [fromToken.id, toToken.id]);
+  }, [fromToken, toToken]);
 
   // Compute deterministic Swap Quote
   const quote = useMemo<EcosystemSwapQuote>(() => {
@@ -537,6 +723,8 @@ export function useEcosystemSwap() {
         : toToken.kind === 'fi'
           ? 'payback'
           : 'multi-hop';
+
+    const fiSym = fiToken.symbol;
 
     const targetMultScaled = BigInt(
       Math.max(1, Math.round(toToken.multiplier * MULTIPLIER_SCALE)),
@@ -571,7 +759,7 @@ export function useEcosystemSwap() {
         intermediateFiNano = inputNano;
       }
     } else if (mode === 'payback') {
-      // Payback is strictly 1:1 in FI
+      // Payback is strictly 1:1
       inputNano = rawInputNano;
       outputNano = rawInputNano;
       intermediateFiNano = rawInputNano;
@@ -613,15 +801,15 @@ export function useEcosystemSwap() {
       mode === 'buy-credit'
         ? `${fromToken.symbol} → ${toToken.symbol} (BuyCredit)`
         : mode === 'payback'
-          ? `${fromToken.symbol} → FI (Payback)`
-          : `${fromToken.symbol} → FI → ${toToken.symbol} (Atomic Multi-Hop)`;
+          ? `${fromToken.symbol} → ${fiSym} (Payback)`
+          : `${fromToken.symbol} → ${fiSym} → ${toToken.symbol} (Atomic Multi-Hop)`;
 
     const routeDescription =
       mode === 'buy-credit'
-        ? `Sends FI to ${toToken.symbol} issuer's FossFiWallet and mints ${toToken.symbol} at ${toToken.multiplier}x.`
+        ? `Sends ${fiSym} to ${toToken.symbol} issuer's FossFiWallet and mints ${toToken.symbol} at ${toToken.multiplier}x.`
         : mode === 'payback'
-          ? `Burns ${fromToken.symbol} and redeems 1:1 FI from the issuer's FossFiWallet.`
-          : `Single-signature atomic hop: burns ${fromToken.symbol} for 1:1 FI, then automatically forwards FI to mint ${toToken.symbol} at ${toToken.multiplier}x.`;
+          ? `Burns ${fromToken.symbol} and redeems 1:1 ${fiSym} from the issuer's FossFiWallet.`
+          : `Single-signature atomic hop: burns ${fromToken.symbol} for 1:1 ${fiSym}, then automatically forwards ${fiSym} to mint ${toToken.symbol} at ${toToken.multiplier}x.`;
 
     const gasTon = mode === 'payback' ? '0.6' : '1.5';
 
@@ -631,6 +819,12 @@ export function useEcosystemSwap() {
       validationError = 'Connect wallet first';
     } else if (fromToken.id === toToken.id) {
       validationError = 'Select two different tokens';
+    } else if (
+      (mode === 'buy-credit' || mode === 'multi-hop') &&
+      toToken.kind === 'reserve' &&
+      toToken.creditNeedNano <= 0n
+    ) {
+      validationError = `Swap from ${fromToken.symbol} to ${toToken.symbol} is disabled unless ${toToken.symbol} FiWallet sets credit required`;
     } else {
       const actionErr = getAccountActionError(accountData);
       if (actionErr && (mode === 'buy-credit' || mode === 'multi-hop')) {
@@ -654,7 +848,7 @@ export function useEcosystemSwap() {
         (mode === 'payback' || mode === 'multi-hop') &&
         fromToken.creditMaturity > nowSec
       ) {
-        validationError = `${fromToken.symbol} matures on ${formatMaturityDate(fromToken.creditMaturity)} — cannot redeem for FI before maturity`;
+        validationError = `${fromToken.symbol} matures on ${formatMaturityDate(fromToken.creditMaturity)} — cannot redeem for ${fiSym} before maturity`;
       } else if (
         (mode === 'buy-credit' || mode === 'multi-hop') &&
         toToken.multiplier > 1 &&
@@ -669,12 +863,12 @@ export function useEcosystemSwap() {
           (mode === 'payback' || mode === 'multi-hop') &&
           inputNano > fromToken.issuerFiBalanceNano
         ) {
-          validationError = `Amount exceeds ${fromToken.symbol} issuer's available FI reserve (${formatFi(fromToken.issuerFiBalanceNano)} FI)`;
+          validationError = `Amount exceeds ${fromToken.symbol} issuer's available ${fiSym} reserve (${formatFi(fromToken.issuerFiBalanceNano)} ${fiSym})`;
         } else if (
           (mode === 'buy-credit' || mode === 'multi-hop') &&
           intermediateFiNano > toToken.creditNeedNano
         ) {
-          validationError = `Amount exceeds ${toToken.symbol} issuer's Credit Need capacity (${formatFi(toToken.creditNeedNano)} FI available)`;
+          validationError = `Amount exceeds ${toToken.symbol} issuer's Credit Need capacity (${formatFi(toToken.creditNeedNano)} ${fiSym} available)`;
         } else if (outputNano <= 0n) {
           validationError = 'Output amount is too small';
         }
@@ -707,6 +901,7 @@ export function useEcosystemSwap() {
   }, [
     fromToken,
     toToken,
+    fiToken,
     amountInput,
     isReverseInput,
     currentWallet,
@@ -842,14 +1037,16 @@ export function useEcosystemSwap() {
       }
       const reserveToken = tokens.find((t) => t.kind === 'reserve');
       if (!reserveToken?.minterAddress) {
-        throw new Error('Reserve Token minter is not deployed yet');
+        throw new Error(
+          `${reserveToken?.symbol ?? 'Token'} minter is not deployed yet`,
+        );
       }
       const amountNano = parseUnits(offRampAmount.trim(), 9);
       if (amountNano <= 0n) {
         throw new Error('Enter amount to sell');
       }
       if (amountNano > reserveToken.userBalanceNano) {
-        throw new Error('Insufficient Reserve Token balance');
+        throw new Error(`Insufficient ${reserveToken.symbol} balance`);
       }
 
       const personalWalletAddr = await getPersonalWalletAddress(
@@ -877,7 +1074,7 @@ export function useEcosystemSwap() {
               }
             }
             const theirPublicKey = await resolveRecipientPublicKey(
-              BRO_TREASURY_ADDRESS,
+              reserveToken.ownerAddress,
               net,
               tonClient,
               savedWallets,
@@ -910,7 +1107,7 @@ export function useEcosystemSwap() {
         }
       }
 
-      // Normal burn (sendExcessesTo = null) notifies BRO_TREASURY_ADDRESS with customPayload
+      // Normal burn (sendExcessesTo = null) notifies adminAddress with customPayload
       const payload = buildBurnBody(amountNano, null, 0n, customPayload);
 
       await sendTx([
@@ -923,7 +1120,7 @@ export function useEcosystemSwap() {
 
       await refreshQueries([`fi-wallet-state:${userOwnerAddress.toString()}`]);
       toast.success(
-        'Reserve Token burned for fiat settlement! Treasury has been notified.',
+        `${reserveToken.symbol} burned for fiat settlement! Issuer has been notified.`,
       );
       return true;
     },
@@ -950,6 +1147,7 @@ export function useEcosystemSwap() {
 
   return {
     tokens,
+    fiToken,
     fromToken,
     toToken,
     quote,

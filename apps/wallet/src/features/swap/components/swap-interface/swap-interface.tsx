@@ -13,8 +13,8 @@ import {
   Copy,
   Flame,
   Landmark,
-  QrCode,
   Search,
+  Share2,
   ShieldAlert,
   ShieldCheck,
   Smartphone,
@@ -42,7 +42,6 @@ import { formatFi } from '@/features/brotherhood/components/credit/credit-member
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
 import {
   BRO_TREASURY_ADDRESS,
-  RESERVE_TOKEN_UPI_CONFIG,
   buildReserveUpiLinks,
 } from '@/lib/brotherhood/config';
 import { cn } from '@/core/lib/utils';
@@ -91,8 +90,8 @@ interface SwapInterfaceProps {
 }
 
 function getTokenBadge(token: EcosystemToken): string {
-  if (token.kind === 'fi') return 'Network Gram';
-  if (token.kind === 'reserve') return `Fiat Reserve · ${token.multiplier}x`;
+  if (token.kind === 'fi') return token.name;
+  if (token.kind === 'reserve') return `${token.name} · ${token.multiplier}x`;
   const degreeLabel =
     token.degree === 'circle'
       ? 'Circle'
@@ -107,6 +106,7 @@ function getTokenBadge(token: EcosystemToken): string {
 export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   const {
     tokens,
+    fiToken,
     fromToken,
     toToken,
     quote,
@@ -128,12 +128,14 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   const [selectorSide, setSelectorSide] = useState<'from' | 'to' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fiat On-Ramp (Personal UPI) Modal State
-  const [isOnRampOpen, setIsOnRampOpen] = useState(false);
-  const [upiAmountInr, setUpiAmountInr] = useState<string>(
-    RESERVE_TOKEN_UPI_CONFIG.defaultAmount,
+  const reserveToken = useMemo(
+    () => tokens.find((t) => t.kind === 'reserve') ?? tokens[1],
+    [tokens],
   );
-  const [showUpiQr, setShowUpiQr] = useState(false);
+
+  // Fiat On-Ramp (Personal UPI) Modal State — no default amount
+  const [isOnRampOpen, setIsOnRampOpen] = useState(false);
+  const [isSharingQr, setIsSharingQr] = useState(false);
   const [upiRefSeed, setUpiRefSeed] = useState<string>(() =>
     Date.now().toString(36),
   );
@@ -141,11 +143,10 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
   const upiLinks = useMemo(
     () =>
       buildReserveUpiLinks({
-        amountInr: upiAmountInr,
         walletAddress: userWalletAddress,
         referenceSeed: upiRefSeed,
       }),
-    [upiAmountInr, userWalletAddress, upiRefSeed],
+    [userWalletAddress, upiRefSeed],
   );
 
   const handleCopyText = async (text: string, label: string) => {
@@ -157,12 +158,60 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     }
   };
 
-  const handleBhimPay = () => {
+  const handleUpiPay = () => {
     window.location.href = upiLinks.bhimOrOthersUrl;
   };
 
-  const handleGPay = () => {
-    window.location.href = upiLinks.gPayUrl;
+  const handleShareUpiQr = async () => {
+    if (isSharingQr) return;
+    setIsSharingQr(true);
+    try {
+      const qr = new QRCodeStyling({
+        ...UPI_QR_OPTIONS,
+        width: 512,
+        height: 512,
+        margin: 24,
+        data: upiLinks.qrUpiUrl,
+      });
+      const rawData = await qr.getRawData('png');
+      if (!rawData) {
+        throw new Error('Could not generate QR image');
+      }
+      const blob =
+        rawData instanceof Blob
+          ? rawData
+          : new Blob([rawData as unknown as BlobPart], { type: 'image/png' });
+      const fileName = `upi-${(reserveToken?.symbol ?? 'token').toLowerCase()}-${upiLinks.txRef}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.share &&
+        (!navigator.canShare || navigator.canShare({ files: [file] }))
+      ) {
+        await navigator.share({
+          title: `Buy ${reserveToken?.symbol ?? ''} via UPI`,
+          text: `Pay ${upiLinks.payeeName} (${upiLinks.upiId}) · Note: ${upiLinks.note}`,
+          files: [file],
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success('QR code downloaded');
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        toast.error('Failed to share QR code');
+      }
+    } finally {
+      setIsSharingQr(false);
+    }
   };
 
   // Fiat Off-Ramp Modal State
@@ -226,11 +275,6 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     }
   };
 
-  const reserveToken = useMemo(
-    () => tokens.find((t) => t.kind === 'reserve') ?? tokens[1],
-    [tokens],
-  );
-
   const handleSubmitOffRamp = async () => {
     setOffRampError(null);
     if (!offRampComment.trim()) {
@@ -266,7 +310,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
       return `Multi-Hop Swap ${fromToken.symbol} → ${toToken.symbol}`;
     }
     if (quote.mode === 'payback') {
-      return `Redeem ${fromToken.symbol} for FI`;
+      return `Redeem ${fromToken.symbol} for ${fiToken.symbol}`;
     }
     return `Swap ${fromToken.symbol} for ${toToken.symbol}`;
   };
@@ -279,13 +323,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
           <SwapField
             label="From"
             symbol={fromToken.symbol}
-            subtitle={
-              fromToken.kind === 'fi'
-                ? 'Gram'
-                : fromToken.kind === 'reserve'
-                  ? 'Stablecoin'
-                  : 'Personal'
-            }
+            subtitle={fromToken.name}
             badge={getTokenBadge(fromToken)}
             icon={fromToken.icon}
             amount={quote.fromAmountFormatted}
@@ -298,13 +336,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
           <SwapField
             label="To"
             symbol={toToken.symbol}
-            subtitle={
-              toToken.kind === 'fi'
-                ? 'Gram'
-                : toToken.kind === 'reserve'
-                  ? 'Stablecoin'
-                  : 'Personal'
-            }
+            subtitle={toToken.name}
             badge={getTokenBadge(toToken)}
             icon={toToken.icon}
             amount={quote.toAmountFormatted}
@@ -389,7 +421,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                 {toToken.symbol} Credit Need Capacity
               </span>
               <span className="font-mono font-semibold text-foreground">
-                {formatFi(toToken.creditNeedNano)} FI
+                {formatFi(toToken.creditNeedNano)} {fiToken.symbol}
               </span>
             </div>
           )}
@@ -398,10 +430,10 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             <>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">
-                  {fromToken.symbol} Available FI Reserve
+                  {fromToken.symbol} Available {fiToken.symbol} Reserve
                 </span>
                 <span className="font-mono font-semibold text-foreground">
-                  {formatFi(fromToken.issuerFiBalanceNano)} FI
+                  {formatFi(fromToken.issuerFiBalanceNano)} {fiToken.symbol}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -450,7 +482,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         {getSwapButtonLabel()}
       </Button>
 
-      {/* Reserve Token (Fiat Stablecoin) On-Ramp & Off-Ramp Gateway Card */}
+      {/* FI Admin Personal Token Fiat On-Ramp & Off-Ramp Gateway Card */}
       <div className="rounded-2xl bg-card border border-border/80 p-4 space-y-3 shadow-xs">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
@@ -460,15 +492,15 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="text-xs font-bold text-foreground">
-                  Reserve Token Fiat Gateway
+                  {reserveToken?.name ?? reserveToken?.symbol} Fiat Gateway
                 </h3>
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Stablecoin
+                  {reserveToken?.symbol}
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Buy Reserve Token with fiat or burn to receive fiat payout to
-                your bank account.
+                Buy {reserveToken?.symbol} with fiat or burn to receive fiat
+                payout to your bank account.
               </p>
             </div>
           </div>
@@ -573,17 +605,24 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
               const isSelected =
                 (selectorSide === 'from' && token.id === fromToken.id) ||
                 (selectorSide === 'to' && token.id === toToken.id);
+              const isDisabledAsDestination =
+                selectorSide === 'to' &&
+                token.kind === 'reserve' &&
+                token.creditNeedNano <= 0n;
 
               return (
                 <button
                   key={token.id}
                   type="button"
+                  disabled={isDisabledAsDestination}
                   onClick={() => handleSelectTokenFromModal(token.id)}
                   className={cn(
-                    'w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-colors cursor-pointer',
-                    isSelected
-                      ? 'bg-primary/10 border-primary/40'
-                      : 'bg-card hover:bg-secondary/50 border-border/60',
+                    'w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-colors',
+                    isDisabledAsDestination
+                      ? 'opacity-50 cursor-not-allowed bg-secondary/20 border-border/40'
+                      : isSelected
+                        ? 'bg-primary/10 border-primary/40 cursor-pointer'
+                        : 'bg-card hover:bg-secondary/50 border-border/60 cursor-pointer',
                   )}
                   data-testid={`swap-token-option-${token.symbol}`}
                 >
@@ -614,8 +653,10 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                       </div>
                       <div className="text-[11px] text-muted-foreground truncate mt-0.5">
                         {token.kind === 'fi'
-                          ? 'Base Network Gram'
-                          : `Need: ${formatFi(token.creditNeedNano)} FI · Reserve: ${formatFi(token.issuerFiBalanceNano)} FI`}
+                          ? token.name
+                          : isDisabledAsDestination
+                            ? `No credit required (0 ${fiToken.symbol} need)`
+                            : `Need: ${formatFi(token.creditNeedNano)} ${fiToken.symbol} · Reserve: ${formatFi(token.issuerFiBalanceNano)} ${fiToken.symbol}`}
                       </div>
                     </div>
                   </div>
@@ -638,7 +679,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         </Modal.Body>
       </Modal.Container>
 
-      {/* Sell Reserve Token for Fiat (Off-Ramp Burn) Modal */}
+      {/* Sell for Fiat (Off-Ramp Burn) Modal */}
       <Modal.Container
         isOpened={isOffRampOpen}
         onOpenChange={(open) => {
@@ -655,7 +696,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             setOffRampError(null);
           }}
         >
-          <Modal.Title>Sell Reserve Token for Fiat</Modal.Title>
+          <Modal.Title>Sell {reserveToken?.symbol} for Fiat</Modal.Title>
         </Modal.Header>
         <Modal.Body className="space-y-4">
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-start gap-2">
@@ -663,16 +704,17 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             <div>
               <p className="font-semibold">Encrypted Off-Chain Bank Payout</p>
               <p className="text-[11px] opacity-90 mt-0.5">
-                Burns your Reserve Token (without FI payback) and dispatches an
-                on-chain notification to the Treasury with your encrypted bank
-                account details for fiat transfer.
+                Burns your {reserveToken?.name ?? reserveToken?.symbol} (without{' '}
+                {fiToken.symbol} payback) and dispatches an on-chain
+                notification to the Treasury with your encrypted bank account
+                details for fiat transfer.
               </p>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <span>Amount of RESERVE to Burn</span>
+              <span>Amount of {reserveToken?.symbol} to Burn</span>
               <button
                 type="button"
                 onClick={() =>
@@ -680,7 +722,8 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                 }
                 className="font-semibold text-primary hover:underline cursor-pointer"
               >
-                Max ({reserveToken?.userBalanceFormatted ?? '0'} RESERVE)
+                Max ({reserveToken?.userBalanceFormatted ?? '0'}{' '}
+                {reserveToken?.symbol})
               </button>
             </div>
             <input
@@ -726,13 +769,13 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             <span>
               {isSwapping
                 ? 'Broadcasting Off-Ramp Burn…'
-                : 'Burn RESERVE & Request Fiat Payout'}
+                : `Burn ${reserveToken?.symbol} & Request Fiat Payout`}
             </span>
           </Button>
         </Modal.Body>
       </Modal.Container>
 
-      {/* Buy Reserve Token via Personal UPI (On-Ramp) Modal */}
+      {/* Buy via Personal UPI (On-Ramp) Modal */}
       <Modal.Container
         isOpened={isOnRampOpen}
         onOpenChange={(open) => {
@@ -743,7 +786,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
         className="px-2"
       >
         <Modal.Header onClose={() => setIsOnRampOpen(false)}>
-          <Modal.Title>Buy Reserve Token via Personal UPI</Modal.Title>
+          <Modal.Title>Buy {reserveToken?.symbol} via UPI</Modal.Title>
         </Modal.Header>
         <Modal.Body className="space-y-3.5">
           {/* Verified Payee Summary */}
@@ -769,124 +812,37 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
             </button>
           </div>
 
-          {/* INR Amount Input & Presets */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <span>Amount to Pay (INR)</span>
-              <span className="font-mono text-[11px]">
-                Min ₹{upiLinks.minAmount}
-              </span>
-            </div>
-            <input
-              type="number"
-              step="0.01"
-              min={upiLinks.minAmount}
-              value={upiAmountInr}
-              onChange={(e) => setUpiAmountInr(e.target.value)}
-              placeholder="1.00"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-              data-testid="upi-amount-input"
-            />
-            <div className="flex items-center gap-1.5 pt-0.5">
-              {['1', '100', '500', '2000'].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setUpiAmountInr(preset)}
-                  className={cn(
-                    'flex-1 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer',
-                    upiAmountInr === preset
-                      ? 'bg-primary/15 border-primary/40 text-primary'
-                      : 'bg-secondary/60 border-border/60 text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  ₹{preset}
-                </button>
-              ))}
-            </div>
+          {/* UPI QR Code (No Default Amount) */}
+          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-border shadow-2xs space-y-2">
+            <UpiQrCode value={upiLinks.qrUpiUrl} size={184} />
+            <span className="text-[11px] font-medium text-slate-600 text-center">
+              Scan or share with your UPI app ({upiLinks.payeeName})
+            </span>
           </div>
 
-          {/* NPCI > ₹2,000 Deep-Link Cap Warning */}
-          {upiLinks.isOverDeepLinkCap && (
-            <div
-              className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 text-[11px] text-amber-700 dark:text-amber-300"
-              data-testid="upi-cap-warning"
-            >
-              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold block">
-                  Amount exceeds ₹2,000 NPCI P2P Deep-Link Cap
-                </span>
-                <span>
-                  Google Pay & PhonePe often reject browser deep links over
-                  ₹2,000 for personal VPAs. Use <strong>BHIM</strong>, scan the{' '}
-                  <strong>Live QR Code</strong> below from another screen, or
-                  copy the VPA + Note manually.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Primary UPI Deep-Link Buttons (matching bhimPay() & gPay() from snippet) */}
+          {/* Primary UPI Pay & Share QR Actions */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={handleBhimPay}
+              onClick={handleUpiPay}
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
-              data-testid="upi-bhim-pay-button"
+              data-testid="upi-pay-button"
             >
               <Smartphone className="w-4 h-4 shrink-0" />
-              <span>BHIM or Others Pay</span>
+              <span>UPI Pay</span>
             </button>
 
             <button
               type="button"
-              onClick={handleGPay}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity cursor-pointer"
-              data-testid="upi-gpay-button"
+              onClick={handleShareUpiQr}
+              disabled={isSharingQr}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              data-testid="upi-share-qr-button"
             >
-              <Smartphone className="w-4 h-4 shrink-0" />
-              <span>Google Pay (tez://)</span>
+              <Share2 className="w-4 h-4 shrink-0" />
+              <span>{isSharingQr ? 'Sharing…' : 'Share QR'}</span>
             </button>
           </div>
-
-          {/* Secondary App Schemes (PhonePe / Paytm) & QR Toggle */}
-          <div className="grid grid-cols-3 gap-1.5">
-            <a
-              href={upiLinks.phonePeUrl}
-              className="flex items-center justify-center py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-foreground transition-colors"
-              data-testid="upi-phonepe-link"
-            >
-              PhonePe
-            </a>
-            <a
-              href={upiLinks.paytmUrl}
-              className="flex items-center justify-center py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-foreground transition-colors"
-              data-testid="upi-paytm-link"
-            >
-              Paytm
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowUpiQr((prev) => !prev)}
-              className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-[11px] font-semibold text-primary transition-colors cursor-pointer"
-              data-testid="upi-toggle-qr-button"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>{showUpiQr ? 'Hide QR' : 'Show QR'}</span>
-            </button>
-          </div>
-
-          {/* Dynamic UPI QR Code (Desktop & Anti-Block Fallback) */}
-          {showUpiQr && (
-            <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white border border-border shadow-2xs space-y-1.5">
-              <UpiQrCode value={upiLinks.qrUpiUrl} size={176} />
-              <span className="text-[10px] font-medium text-slate-600 text-center">
-                Scan with any UPI app ({upiLinks.payeeName} · ₹
-                {upiLinks.amountStr})
-              </span>
-            </div>
-          )}
 
           {/* Embedded Wallet Note (tn) & Order Reference (tr) */}
           <div className="rounded-xl bg-secondary/40 border border-border/60 p-3 space-y-2 text-xs">
@@ -942,15 +898,9 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                 PIN.
               </li>
               <li>
-                <strong>If Google Pay declines redirect:</strong> Some browsers
-                block P2P <code className="font-mono">tez://</code> links on
-                personal VPAs. Use <strong>BHIM</strong>, scan{' '}
-                <strong>Show QR</strong>, or copy the VPA & Note manually.
-              </li>
-              <li>
                 <strong>Save your 12-digit UTR:</strong> Keep the 12-digit UPI
-                reference ID from your payment receipt until Reserve Tokens
-                arrive in your wallet.
+                reference ID from your payment receipt until{' '}
+                {reserveToken?.symbol} tokens arrive in your wallet.
               </li>
             </ul>
           </div>

@@ -67,6 +67,30 @@ export const createNftsSlice: NftsSliceCreator = (set: SetState, get) => ({
       return;
     }
 
+    // LocalStorage-first: if nftsByAddress already has an entry for this address, use it without hitting the network
+    const existingNftsMap = state.nfts.nftsByAddress || {};
+    const persistedKey = Object.keys(existingNftsMap).find(
+      (k) =>
+        (k === address || compareAddress(k, address)) &&
+        existingNftsMap[k] !== undefined,
+    );
+    if (persistedKey !== undefined) {
+      const persistedList = existingNftsMap[persistedKey];
+      set((s) => {
+        const currentActiveAddress = s.walletManagement.address;
+        if (
+          !currentActiveAddress ||
+          compareAddress(currentActiveAddress, address)
+        ) {
+          s.nfts.userNfts = persistedList;
+          s.nfts.offset = persistedList.length;
+        }
+        s.nfts.isLoadingNfts = false;
+        s.nfts.error = null;
+      });
+      return;
+    }
+
     const cacheKey = getAddressCacheKey(address);
     const now = Date.now();
     const cached = nftsSessionCache.get(cacheKey);
