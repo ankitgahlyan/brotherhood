@@ -241,19 +241,8 @@ export function persistLoadedUrl(url: string): Promise<string | null> {
           }
         }
       } catch {
-        // Fallback to no-cors opaque caching for Service Worker interception
-        if ('caches' in window) {
-          void caches
-            .open(CACHE_STORAGE_NAME)
-            .then((cache) =>
-              fetch(url, { mode: 'no-cors' }).then((res) => {
-                if (res.status === 0 || res.ok) {
-                  return cache.put(url, res);
-                }
-              }),
-            )
-            .catch(() => {});
-        }
+        // Do not store opaque (mode: 'no-cors', status: 0) responses in CacheStorage:
+        // Chromium pads every opaque CacheStorage entry by ~7 MB toward origin storage quota.
       }
     } catch {
       /* ignore */
@@ -265,6 +254,41 @@ export function persistLoadedUrl(url: string): Promise<string | null> {
 
   IN_FLIGHT_CACHE_OPS.set(url, task);
   return task;
+}
+
+export async function clearFallbackImageCaches(): Promise<void> {
+  for (const val of RESOLVED_IMAGE_URLS.values()) {
+    if (val.startsWith('blob:') && typeof URL !== 'undefined') {
+      try {
+        URL.revokeObjectURL(val);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  LOADED_IMAGE_URLS.clear();
+  RESOLVED_IMAGE_URLS.clear();
+  IN_FLIGHT_CACHE_OPS.clear();
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(IMAGE_CACHE_STORAGE_KEY);
+    localStorage.removeItem(IMAGE_DATA_URL_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+  const db = await openImageIdb();
+  if (db) {
+    await new Promise<void>((resolve) => {
+      try {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      } catch {
+        resolve();
+      }
+    });
+  }
 }
 
 // Pre-warm core built-in token & domain icons so they are available offline immediately

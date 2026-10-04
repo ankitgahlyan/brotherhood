@@ -153,73 +153,35 @@ export default defineConfig(() => {
                 navigateFallbackDenylist: [/^\/api\//, /^\/_server\//],
                 runtimeCaching: [
                   {
-                    urlPattern: ({ request }) =>
-                      request.destination === 'style' ||
-                      request.destination === 'script' ||
-                      request.destination === 'worker',
-                    handler: 'CacheFirst',
-                    options: {
-                      cacheName: 'brotherhood-static-resources',
-                      expiration: {
-                        maxEntries: 150,
-                        maxAgeSeconds: 60 * 24 * 60 * 60,
-                      },
-                    },
-                  },
-                  {
-                    urlPattern: ({ request }) =>
-                      request.destination === 'image',
+                    urlPattern: ({ request, sameOrigin }) =>
+                      !sameOrigin && request.destination === 'image',
                     handler: 'CacheFirst',
                     options: {
                       cacheName: 'brotherhood-images',
                       expiration: {
-                        maxEntries: 300,
-                        maxAgeSeconds: 60 * 24 * 60 * 60,
+                        maxEntries: 150,
+                        maxAgeSeconds: 30 * 24 * 60 * 60,
                       },
                       cacheableResponse: {
-                        statuses: [0, 200],
+                        statuses: [200],
                       },
                     },
                   },
                   {
                     // Decentralized media gateways (IPFS, Arweave) and TON token image CDNs
+                    // Strictly cache status 200 (CORS-enabled) only; opaque (status 0) responses
+                    // are padded by ~7 MB each in Chromium CacheStorage quota (~500 MB bloat).
                     urlPattern:
                       /^https:\/\/(?:[a-zA-Z0-9-]+\.)*(?:ipfs\.io|cloudflare-ipfs\.com|dweb\.link|nftstorage\.link|arweave\.net|cache\.tonapi\.io)\/.*$/i,
                     handler: 'CacheFirst',
                     options: {
                       cacheName: 'brotherhood-token-media',
                       expiration: {
-                        maxEntries: 500,
+                        maxEntries: 200,
                         maxAgeSeconds: 30 * 24 * 60 * 60,
                       },
                       cacheableResponse: {
-                        statuses: [0, 200],
-                      },
-                    },
-                  },
-                  {
-                    urlPattern: ({ request }) => request.destination === 'font',
-                    handler: 'CacheFirst',
-                    options: {
-                      cacheName: 'brotherhood-fonts',
-                      expiration: {
-                        maxEntries: 60,
-                        maxAgeSeconds: 365 * 24 * 60 * 60,
-                      },
-                    },
-                  },
-                  {
-                    urlPattern:
-                      /^https:\/\/telegram\.org\/js\/telegram-web-app\.js/,
-                    handler: 'CacheFirst',
-                    options: {
-                      cacheName: 'brotherhood-telegram-sdk',
-                      expiration: {
-                        maxEntries: 5,
-                        maxAgeSeconds: 30 * 24 * 60 * 60,
-                      },
-                      cacheableResponse: {
-                        statuses: [0, 200],
+                        statuses: [200],
                       },
                     },
                   },

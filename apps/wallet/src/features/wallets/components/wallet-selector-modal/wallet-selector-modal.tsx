@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from '@/core/routing';
 import { Plus } from 'lucide-react';
-import { useWallet } from '@demo/wallet-core';
+import { useAuth, useWallet } from '@demo/wallet-core';
 
 import { toast } from 'sonner';
 
@@ -17,6 +17,7 @@ import { WalletRow } from '../wallet-row';
 import { WalletUnlockModal } from '../wallet-unlock-modal';
 
 import { Modal } from '@/core/components/ui/modal';
+import { clearBiometrics } from '@/core/security/biometrics';
 import { AddWalletModal, WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
 import type { AddWalletMode } from '@/features/wallet-setup';
 
@@ -29,6 +30,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { isPasswordSet, isUnlocked, currentPassword } = useAuth();
   const {
     savedWallets,
     activeWalletId,
@@ -42,6 +44,15 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
 
   const pendingWallet = savedWallets.find((w) => w.id === pendingWalletId);
+
+  const handleRemoveWallet = (walletId: string) => {
+    const isLast = savedWallets.length <= 1;
+    removeWallet(walletId);
+    if (isLast) {
+      clearBiometrics();
+      onClose();
+    }
+  };
 
   const performSwitch = async (walletId: string) => {
     try {
@@ -71,11 +82,16 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
     }
   };
 
-  // Already authenticated here — go straight to the chosen setup screen, no password step.
   const handleAddSelect = (mode: AddWalletMode) => {
     setIsAddOpen(false);
     onClose();
-    navigate(WALLET_SETUP_ROUTE[mode]);
+    if (isPasswordSet && isUnlocked && currentPassword) {
+      navigate(WALLET_SETUP_ROUTE[mode]);
+    } else if (isPasswordSet) {
+      navigate('/unlock', { state: { tab: mode } });
+    } else {
+      navigate('/setup-password', { state: { tab: mode } });
+    }
   };
 
   return (
@@ -102,7 +118,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
                 isActive={wallet.id === activeWalletId}
                 onSelect={() => handleSelect(wallet.id)}
                 onRename={renameWallet}
-                onRemove={removeWallet}
+                onRemove={handleRemoveWallet}
               />
             ))
           )}

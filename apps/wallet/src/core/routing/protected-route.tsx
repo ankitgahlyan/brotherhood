@@ -9,6 +9,7 @@
 import React from 'react';
 import { Navigate } from '@tanstack/react-router';
 import { useAuth, useWallet } from '@demo/wallet-core';
+import { notifyRouterNavigation } from '../lib/back-stack';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,21 +20,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiresWallet = false,
 }) => {
-  const { isPasswordSet, isUnlocked } = useAuth();
+  const { isPasswordSet, isUnlocked, currentPassword } = useAuth();
   const { hasWallet } = useWallet();
 
   // If no password is set (brand new or after a reset), start from the welcome screen
   if (!isPasswordSet) {
+    notifyRouterNavigation();
     return <Navigate to="/welcome" replace />;
   }
 
   // If password is set but wallet is locked, redirect to unlock
-  if (!isUnlocked) {
+  if (!isUnlocked || !currentPassword) {
+    notifyRouterNavigation();
     return <Navigate to="/unlock" replace />;
   }
 
   // If wallet is required but doesn't exist, send the user to the welcome screen
   if (requiresWallet && !hasWallet) {
+    notifyRouterNavigation();
     return <Navigate to="/welcome" replace />;
   }
 

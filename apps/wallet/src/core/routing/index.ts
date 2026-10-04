@@ -13,6 +13,7 @@ import {
   Link,
   Navigate,
 } from '@tanstack/react-router';
+import { notifyRouterNavigation } from '../lib/back-stack';
 
 export { Link, Navigate };
 
@@ -32,6 +33,8 @@ export function useNavigate() {
       options?: NavigateOptions,
     ) => {
       const performNavigate = () => {
+        notifyRouterNavigation();
+
         if (typeof to === 'number') {
           if (to === -1) {
             window.history.back();
@@ -48,7 +51,9 @@ export function useNavigate() {
 
         tanstackNavigate({
           to: to as any,
-          state: options?.state ? () => options.state : undefined,
+          state: options?.state
+            ? (prev: any) => ({ ...(prev || {}), ...options.state })
+            : undefined,
           replace: options?.replace,
           search: options?.search as any,
           params: options?.params as any,

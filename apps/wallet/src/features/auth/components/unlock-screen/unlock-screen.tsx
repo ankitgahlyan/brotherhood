@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from '@/core/routing';
+import { useLocation, useNavigate } from '@/core/routing';
 import { useAuth, useWallet } from '@demo/wallet-core';
 
 import { CenteredScreen } from '@/core/components/shared/centered-screen';
@@ -15,6 +15,8 @@ import { ConfirmModal } from '@/core/components/shared/confirm-modal';
 import { Button } from '@/core/components/ui/button';
 import { FingerprintIcon } from '@/core/components/ui/icons';
 import { useBiometrics } from '@/core/security/use-biometrics';
+import { WALLET_SETUP_ROUTE } from '@/features/wallet-setup';
+import type { WalletSetupMode } from '@/features/wallet-setup';
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary';
@@ -27,11 +29,14 @@ export const UnlockScreen: React.FC = () => {
   const [isResetOpen, setIsResetOpen] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { unlock, reset } = useAuth();
   const { loadAllWallets, hasWallet } = useWallet();
   const { isSupported, isEnabled, authenticate, disable } = useBiometrics();
   const inputRef = useRef<HTMLInputElement>(null);
   const autoPromptTriggered = useRef(false);
+
+  const pendingTab = (location.state as { tab?: WalletSetupMode } | null)?.tab;
 
   const handleBiometricUnlock = useCallback(async () => {
     if (isLoading || isBiometricLoading) return;
@@ -46,6 +51,8 @@ export const UnlockScreen: React.FC = () => {
           if (hasWallet) {
             navigate('/wallet', { replace: true });
             void loadAllWallets();
+          } else if (pendingTab && WALLET_SETUP_ROUTE[pendingTab]) {
+            navigate(WALLET_SETUP_ROUTE[pendingTab], { replace: true });
           } else {
             navigate('/welcome', { replace: true });
           }
@@ -80,6 +87,7 @@ export const UnlockScreen: React.FC = () => {
     authenticate,
     unlock,
     hasWallet,
+    pendingTab,
     loadAllWallets,
     navigate,
   ]);
@@ -108,6 +116,8 @@ export const UnlockScreen: React.FC = () => {
       if (hasWallet) {
         navigate('/wallet', { replace: true });
         void loadAllWallets();
+      } else if (pendingTab && WALLET_SETUP_ROUTE[pendingTab]) {
+        navigate(WALLET_SETUP_ROUTE[pendingTab], { replace: true });
       } else {
         navigate('/welcome', { replace: true });
       }

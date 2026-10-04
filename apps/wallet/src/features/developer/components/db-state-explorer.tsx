@@ -16,10 +16,13 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useWallet } from '@demo/wallet-core';
+import { useAuth, useWallet } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
 import { useExplorer } from '@/core/explorer/use-explorer';
+import { clearBiometrics } from '@/core/security/biometrics';
+import { useContactBookStore } from '@/core/storage/useContactBookStore';
+import { clearRuntimeCacheStorage } from '@/core/utils/storage-management';
 import { queryClient } from '@/lib/brotherhood/ton';
 import { StorageEditorDialog } from './storage-editor-dialog';
 import { FormattedValue, type RenderCtx } from './payload-viewer';
@@ -83,6 +86,7 @@ export function isProtectedStorageKey(key: string): boolean {
 }
 
 export const DbStateExplorer: React.FC = () => {
+  const { reset } = useAuth();
   const { currentWallet } = useWallet();
   const { explorer } = useExplorer();
   const network: NetworkType =
@@ -329,12 +333,19 @@ export const DbStateExplorer: React.FC = () => {
     }
 
     const devModeVal = localStorage.getItem(DEV_MODE_KEY);
+    reset();
+    useContactBookStore.setState({
+      contactsByNetwork: {},
+      recentByNetwork: {},
+    });
+    clearBiometrics();
     localStorage.clear();
     if (devModeVal !== null) {
       localStorage.setItem(DEV_MODE_KEY, devModeVal);
     }
 
     queryClient.clear();
+    void clearRuntimeCacheStorage();
     idbDatabases.forEach((db) => {
       try {
         indexedDB.deleteDatabase(db.name);
@@ -344,7 +355,7 @@ export const DbStateExplorer: React.FC = () => {
     });
 
     loadLocalStorage();
-    loadIndexedDb();
+    void loadIndexedDb();
     loadQueryCache();
 
     toast.success('All client state cleared (Dev mode kept)', {

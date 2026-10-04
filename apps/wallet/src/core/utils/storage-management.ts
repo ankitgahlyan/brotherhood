@@ -3,8 +3,12 @@
  * Provides comprehensive storage wiping for development, privacy, and full reset.
  */
 
+import { clearFallbackImageCaches } from '@/core/components/ui/fallback-image';
+
 export async function clearWholeAppStorage(): Promise<void> {
   if (typeof window === 'undefined') return;
+
+  await clearFallbackImageCaches();
 
   // 1. Clear LocalStorage & SessionStorage
   try {
@@ -22,7 +26,12 @@ export async function clearWholeAppStorage(): Promise<void> {
   // 2. Clear IndexedDB
   try {
     if ('indexedDB' in window) {
-      const knownDbs = ['brotherhood-cache', 'ton-keystore', 'keyval-store'];
+      const knownDbs = [
+        'brotherhood-cache',
+        'brotherhood_offline_images_db',
+        'ton-keystore',
+        'keyval-store',
+      ];
 
       if (
         'databases' in indexedDB &&
@@ -60,5 +69,25 @@ export async function clearWholeAppStorage(): Promise<void> {
     }
   } catch (err) {
     console.warn('[storage-management] Failed to clear caches:', err);
+  }
+}
+
+/**
+ * Clears all non-precache runtime CacheStorage buckets (images, token media, legacy runtime caches)
+ * and fallback-image blob/data-URL caches while preserving the offline Workbox app-shell precache.
+ */
+export async function clearRuntimeCacheStorage(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  await clearFallbackImageCaches();
+  if (!('caches' in window)) return;
+  try {
+    const keys = await window.caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => !key.startsWith('workbox-precache'))
+        .map((key) => window.caches.delete(key)),
+    );
+  } catch (err) {
+    console.warn('[storage-management] Failed to clear runtime caches:', err);
   }
 }

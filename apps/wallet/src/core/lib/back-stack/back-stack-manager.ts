@@ -31,7 +31,23 @@ let routerBackHandler: (() => void) | undefined = undefined;
 let isAtRootRoute = true;
 let isAlteringHistory = false;
 let lastRootBackPressTime = 0;
+let pendingHistoryBackTimer: ReturnType<typeof setTimeout> | null = null;
+let navigationSuppressUntil = 0;
+let lastKnownPathname = '';
 const DOUBLE_BACK_WINDOW_MS = 2000;
+
+/**
+ * Notify the back-stack manager that a router navigation is in progress so
+ * closing modals do not asynchronously call `window.history.back()` and pop
+ * the newly navigated route.
+ */
+export function notifyRouterNavigation(): void {
+  navigationSuppressUntil = Date.now() + 500;
+  if (pendingHistoryBackTimer !== null) {
+    clearTimeout(pendingHistoryBackTimer);
+    pendingHistoryBackTimer = null;
+  }
+}
 
 function updateNativeBackButtonState(): void {
   const hasModals = stack.some((entry) => !entry.isClosed);
@@ -80,7 +96,11 @@ export function handleRootExitConfirmation(): boolean {
 
   if (typeof window !== 'undefined') {
     try {
-      window.history.pushState({ isRootTrap: true }, '', window.location.href);
+      window.history.pushState(
+        { ...(window.history.state || {}), isRootTrap: true },
+        '',
+        window.location.href,
+      );
     } catch {
       // ignore
     }
@@ -183,6 +203,13 @@ function initPopstateListener(): void {
 export function registerRouterBack(handler: () => void, isRoot: boolean): void {
   initTelegramBackButtonListener();
   initPopstateListener();
+  if (typeof window !== 'undefined') {
+    const currentPathname = window.location.pathname;
+    if (lastKnownPathname && lastKnownPathname !== currentPathname) {
+      notifyRouterNavigation();
+    }
+    lastKnownPathname = currentPathname;
+  }
   routerBackHandler = handler;
   isAtRootRoute = isRoot;
   // NOTE: Do NOT push history state here. Eagerly calling window.history.pushState()
@@ -212,7 +239,19 @@ export function registerBackCallback(
     !isTelegramEnvironment()
   ) {
     try {
-      window.history.pushState({ modalId: id }, '');
+      if (pendingHistoryBackTimer !== null) {
+        clearTimeout(pendingHistoryBackTimer);
+        pendingHistoryBackTimer = null;
+        window.history.replaceState(
+          { ...(window.history.state || {}), modalId: id },
+          '',
+        );
+      } else {
+        window.history.pushState(
+          { ...(window.history.state || {}), modalId: id },
+          '',
+        );
+      }
     } catch {
       // ignore
     }
@@ -243,16 +282,27 @@ export function unregisterBackCallback(id: number): void {
       wasOpen &&
       entry.syncHistory &&
       typeof window !== 'undefined' &&
-      !isTelegramEnvironment()
+      !isTelegramEnvironment() &&
+      Date.now() >= navigationSuppressUntil
     ) {
-      try {
-        if (window.history.state?.modalId === id) {
-          isAlteringHistory = true;
-          window.history.back();
-        }
-      } catch {
-        // ignore
+      const urlAtUnregister = window.location.href;
+      if (pendingHistoryBackTimer !== null) {
+        clearTimeout(pendingHistoryBackTimer);
       }
+      pendingHistoryBackTimer = setTimeout(() => {
+        pendingHistoryBackTimer = null;
+        if (Date.now() < navigationSuppressUntil) return;
+        if (window.location.href !== urlAtUnregister) return;
+        if (stack.some((e) => !e.isClosed && e.syncHistory)) return;
+        try {
+          if (window.history.state?.modalId === id) {
+            isAlteringHistory = true;
+            window.history.back();
+          }
+        } catch {
+          // ignore
+        }
+      }, 0);
     }
 
     updateNativeBackButtonState();

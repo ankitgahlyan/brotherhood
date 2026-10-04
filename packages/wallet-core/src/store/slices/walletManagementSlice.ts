@@ -574,7 +574,18 @@ export const createWalletManagementSlice =
           }
         }
 
-        if (isRemovingActiveWallet && isLastWallet) {
+        if (isLastWallet || state.walletManagement.savedWallets.length === 0) {
+          // Reset auth so user returns to a clean /welcome state when 0 wallets remain
+          state.auth.isPasswordSet = false;
+          state.auth.isUnlocked = false;
+          state.auth.currentPassword = undefined;
+          state.auth.passwordHash = undefined;
+          state.auth.passwordSalt = undefined;
+          state.auth.persistPassword = false;
+          state.auth.showFastSend = false;
+          state.auth.useWalletInterfaceType = 'mnemonic';
+          state.auth.ledgerAccountNumber = 0;
+
           state.walletManagement.hasWallet = false;
           state.walletManagement.isAuthenticated = false;
           state.walletManagement.activeWalletId = undefined;
@@ -591,17 +602,23 @@ export const createWalletManagementSlice =
           state.walletManagement.confirmedTraceIds = [];
           state.walletManagement.confirmedExternalHashes = [];
           state.walletManagement.isStreamingConnected = false;
+          state.jettons.jettonsByAddress = {};
           state.nfts.userNfts = [];
+          state.nfts.nftsByAddress = {};
         }
       });
 
       if (removedAddress) {
         get().removeBrotherhoodWallet(removedAddress);
       }
-      if (state.walletCore.walletKit && removedKitWalletId) {
-        void state.walletCore.walletKit
-          .removeWallet(removedKitWalletId)
-          .catch(() => {});
+      if (state.walletCore.walletKit) {
+        if (isLastWallet) {
+          void state.walletCore.walletKit.clearWallets().catch(() => {});
+        } else if (removedKitWalletId) {
+          void state.walletCore.walletKit
+            .removeWallet(removedKitWalletId)
+            .catch(() => {});
+        }
       }
       try {
         if (typeof localStorage !== 'undefined') {
@@ -611,7 +628,7 @@ export const createWalletManagementSlice =
         // Ignore localStorage access errors
       }
 
-      if (isRemovingActiveWallet && isLastWallet) {
+      if (isLastWallet) {
         void get().stopWebSocketStreaming();
       }
 

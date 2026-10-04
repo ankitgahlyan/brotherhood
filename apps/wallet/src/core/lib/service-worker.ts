@@ -58,10 +58,41 @@ export function isUpdateAvailable(): boolean {
   return hasPendingUpdate;
 }
 
+async function pruneLegacyAndOpaqueRuntimeCaches(): Promise<void> {
+  if (typeof window === 'undefined' || !('caches' in window)) return;
+  try {
+    const legacyCaches = [
+      'brotherhood-static-resources',
+      'brotherhood-fonts',
+      'brotherhood-telegram-sdk',
+    ];
+    await Promise.all(legacyCaches.map((name) => window.caches.delete(name)));
+
+    const mediaCaches = ['brotherhood-images', 'brotherhood-token-media'];
+    for (const cacheName of mediaCaches) {
+      if (!(await window.caches.has(cacheName))) continue;
+      const cache = await window.caches.open(cacheName);
+      const requests = await cache.keys();
+      await Promise.all(
+        requests.map(async (req) => {
+          const res = await cache.match(req);
+          if (!res || res.type === 'opaque' || res.status === 0) {
+            await cache.delete(req);
+          }
+        }),
+      );
+    }
+  } catch {
+    // ignore cache cleanup errors
+  }
+}
+
 export async function initServiceWorker(): Promise<void> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return;
   }
+
+  void pruneLegacyAndOpaqueRuntimeCaches();
 
   // In development mode, unregister any stale service workers to prevent HMR WebSocket collisions
   if (import.meta.env.DEV) {

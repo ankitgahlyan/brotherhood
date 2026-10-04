@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { useWalletStore, useWalletStoreApi } from '@demo/wallet-core';
 import { useContactBookStore } from '@/core/storage/useContactBookStore';
+import { clearRuntimeCacheStorage } from '@/core/utils/storage-management';
 import { Modal } from '@/core/components/ui/modal';
 import { Button } from '@/core/components/ui/button';
 
@@ -497,6 +498,8 @@ export const StorageManagerModal: React.FC<StorageManagerModalProps> = ({
           }
         : state.tonConnect,
     }));
+
+    void clearRuntimeCacheStorage();
 
     toast.success(
       'All transient caches cleared. Wallets and passwords preserved.',

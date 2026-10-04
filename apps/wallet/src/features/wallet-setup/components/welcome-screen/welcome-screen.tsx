@@ -23,16 +23,16 @@ import { assetUrl } from '@/core/utils';
 /** First screen for a brand-new user: intro + entry into wallet setup. */
 export const WelcomeScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { isPasswordSet, isUnlocked } = useAuth();
+  const { isPasswordSet, isUnlocked, currentPassword } = useAuth();
   const { viewMode, setViewMode } = usePreferences();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Brand-new users set a PIN first; an already-authenticated user (no wallet) goes straight in.
   const start = (tab: WalletSetupMode) => {
-    if (isPasswordSet && isUnlocked) {
+    if (isPasswordSet && isUnlocked && currentPassword) {
       navigate(WALLET_SETUP_ROUTE[tab]);
-    } else if (isPasswordSet && !isUnlocked) {
-      navigate('/unlock');
+    } else if (isPasswordSet) {
+      navigate('/unlock', { state: { tab } });
     } else {
       navigate('/setup-password', { state: { tab } });
     }

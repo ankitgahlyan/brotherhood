@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { ProtectedRoute } from '@/core/routing';
 import { RouteFallback } from '@/core/components/shared/route-fallback';
 
 const ImportWalletScreen = lazy(() =>
@@ -10,8 +11,10 @@ const ImportWalletScreen = lazy(() =>
 
 export const Route = createFileRoute('/import-wallet')({
   component: () => (
-    <Suspense fallback={<RouteFallback />}>
-      <ImportWalletScreen />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<RouteFallback />}>
+        <ImportWalletScreen />
+      </Suspense>
+    </ProtectedRoute>
   ),
 });
