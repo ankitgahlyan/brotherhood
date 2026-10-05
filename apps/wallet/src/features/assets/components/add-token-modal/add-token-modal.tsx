@@ -180,6 +180,7 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
         force: true,
       });
       const canonInput = parsedInput.toString();
+      const hydratedInInspect = new Set<string>([canonInput]);
       const rawAcc1 = getCachedRawAccountState(parsedInput, net);
       const detectedType: KnownContractType | null = detectKnownType(
         rawAcc1?.code_hash,
@@ -235,26 +236,35 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
 
       // Step 2: Derive FiWallet for ownerAddress and hydrate Owner + FiWallet + known PT Minter
       const fiWalletAddress = getFiWalletAddress(ownerAddress, net);
-      const step2Addresses: Address[] = [ownerAddress, fiWalletAddress];
+      const step2Candidates: Address[] = [ownerAddress, fiWalletAddress];
       const step2KnownTypes: Record<string, KnownContractType> = {
         [ownerAddress.toString()]: 'walletV5R1',
         [fiWalletAddress.toString()]: 'fiWallet',
       };
       if (knownPtMinter) {
-        step2Addresses.push(knownPtMinter);
+        step2Candidates.push(knownPtMinter);
         step2KnownTypes[knownPtMinter.toString()] = 'personalMinter';
       }
       if (knownLocation) {
-        step2Addresses.push(knownLocation);
+        step2Candidates.push(knownLocation);
         step2KnownTypes[knownLocation.toString()] = 'location';
       }
-
-      const step2 = await batchHydrateUniversal(step2Addresses, net, {
-        knownTypes: step2KnownTypes,
-        force: true,
+      const step2Addresses = step2Candidates.filter((a) => {
+        const s = a.toString();
+        if (hydratedInInspect.has(s)) return false;
+        hydratedInInspect.add(s);
+        return true;
       });
+
+      const step2 =
+        step2Addresses.length > 0
+          ? await batchHydrateUniversal(step2Addresses, net, {
+              knownTypes: step2KnownTypes,
+              force: true,
+            })
+          : null;
       const fiStore =
-        step2.decodedStores?.[fiWalletAddress.toString()] ??
+        step2?.decodedStores?.[fiWalletAddress.toString()] ??
         (detectedType === 'fiWallet' ? store1 : null);
 
       // Extract PT Minter & H3 Cell from FiWallet if present
@@ -284,11 +294,11 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
         (h3CellStr ? calculateLocationAddress(h3CellStr) : null);
 
       // Step 3: Hydrate PT Minter, PT Wallet (for current user or inspected owner), and Location
-      const step3Addresses: Address[] = [];
+      const step3Candidates: Address[] = [];
       const step3KnownTypes: Record<string, KnownContractType> = {};
       let derivedPtWallet: Address | null = knownPtWallet;
       if (ptMinterAddress) {
-        step3Addresses.push(ptMinterAddress);
+        step3Candidates.push(ptMinterAddress);
         step3KnownTypes[ptMinterAddress.toString()] = 'personalMinter';
         try {
           const holderOwner = currentWalletAddress
@@ -301,16 +311,22 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
               holderOwner,
               ownerAddress,
             );
-          step3Addresses.push(derivedPtWallet);
+          step3Candidates.push(derivedPtWallet);
           step3KnownTypes[derivedPtWallet.toString()] = 'personalWallet';
         } catch {
           /* ignore */
         }
       }
       if (locationAddress) {
-        step3Addresses.push(locationAddress);
+        step3Candidates.push(locationAddress);
         step3KnownTypes[locationAddress.toString()] = 'location';
       }
+      const step3Addresses = step3Candidates.filter((a) => {
+        const s = a.toString();
+        if (hydratedInInspect.has(s)) return false;
+        hydratedInInspect.add(s);
+        return true;
+      });
 
       const step3 =
         step3Addresses.length > 0
@@ -322,12 +338,12 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
 
       const allStores = {
         ...(step1.decodedStores ?? {}),
-        ...(step2.decodedStores ?? {}),
+        ...(step2?.decodedStores ?? {}),
         ...(step3?.decodedStores ?? {}),
       };
       const allBalances = {
         ...(step1.balances ?? {}),
-        ...(step2.balances ?? {}),
+        ...(step2?.balances ?? {}),
         ...(step3?.balances ?? {}),
       };
 

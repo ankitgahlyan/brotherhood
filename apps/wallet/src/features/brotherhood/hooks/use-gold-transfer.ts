@@ -75,6 +75,7 @@ export function useGoldTransfer({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const recipientAddr = Address.parse(recipient.trim());
+    const recipientFiWalletAddr = getFiWalletAddress(recipientAddr, network);
 
     const payload = AskGoldCoinsTransfer.toCell(
       AskGoldCoinsTransfer.create({
@@ -85,9 +86,10 @@ export function useGoldTransfer({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.GOLD, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.GOLD, payload }],
+      { affectedContracts: [fiWalletAddr, recipientFiWalletAddr] },
+    );
   }, [walletAddress, recipient, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

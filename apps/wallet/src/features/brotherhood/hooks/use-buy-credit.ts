@@ -9,8 +9,15 @@
 import { useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { buildBuyCreditBody, parseUnits } from '@/lib/brotherhood/deploy';
-import { getFiWalletAddress } from '@/lib/brotherhood/ton';
+import {
+  buildBuyCreditBody,
+  getPersonalMinter,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
+import {
+  computePersonalWalletAddress,
+  getFiWalletAddress,
+} from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
@@ -85,6 +92,16 @@ export function useBuyCredit({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const recipientAddr = Address.parse(recipient.trim());
+    const recipientFiWalletAddr = getFiWalletAddress(recipientAddr, network);
+    const borrowerMinterAddr = getPersonalMinter({
+      issuerWallet: recipientFiWalletAddr,
+      adminAddress: recipientAddr,
+    }).contractAddress;
+    const buyerPersonalWalletAddr = computePersonalWalletAddress(
+      borrowerMinterAddr,
+      ownerAddr,
+      recipientAddr,
+    );
     const amountNano = parseUnits(amount, 9);
 
     const payload = buildBuyCreditBody({
@@ -93,9 +110,17 @@ export function useBuyCredit({
       responseAddress: ownerAddr,
     });
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.CREDIT, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.CREDIT, payload }],
+      {
+        affectedContracts: [
+          fiWalletAddr,
+          recipientFiWalletAddr,
+          borrowerMinterAddr,
+          buyerPersonalWalletAddr,
+        ],
+      },
+    );
   }, [walletAddress, recipient, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

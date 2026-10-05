@@ -12,7 +12,7 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { RepayDebt } from '@wrappers/FossFiWallet.gen';
 import { parseUnits } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
@@ -86,9 +86,10 @@ export function useRepayDebt({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.REPAY, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.REPAY, payload }],
+      { affectedContracts: [fiWalletAddr, FI_ADDRESS] },
+    );
   }, [walletAddress, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

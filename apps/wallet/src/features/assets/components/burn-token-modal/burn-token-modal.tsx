@@ -112,6 +112,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
     walletAddress: address,
     asset,
     amount,
+    isPersonal,
     isPayback: effectiveIsPayback,
     comment,
     isEncrypted,

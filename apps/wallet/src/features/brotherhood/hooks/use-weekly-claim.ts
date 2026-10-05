@@ -11,7 +11,7 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { ActClaimWeeklyGrant } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 
@@ -235,9 +235,10 @@ export function useWeeklyClaim({
         }),
       );
 
-      await sendTx([
-        { toAddress: fiWalletAddr.toString(), amount: GAS.CLAIM, payload },
-      ]);
+      await sendTx(
+        [{ toAddress: fiWalletAddr.toString(), amount: GAS.CLAIM, payload }],
+        { affectedContracts: [fiWalletAddr, FI_ADDRESS] },
+      );
     },
     [walletAddress, network, sendTx],
   );

@@ -374,6 +374,8 @@ export function useSetPocketMoney({
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const granteeAddr = Address.parse(grantee.trim());
 
+    const granteeFiWalletAddr = getFiWalletAddress(granteeAddr, network);
+
     const payload = buildSetPocketMoneyBody({
       grantee: granteeAddr,
       unrestricted: resolvedSlots.effUnrestricted,
@@ -382,9 +384,10 @@ export function useSetPocketMoney({
       openRecurring: resolvedSlots.effOpen,
     });
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.ALLOWANCE, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.ALLOWANCE, payload }],
+      { affectedContracts: [fiWalletAddr, granteeFiWalletAddr] },
+    );
     onSuccess?.();
   }, [walletAddress, grantee, network, resolvedSlots, sendTx, onSuccess]);
 

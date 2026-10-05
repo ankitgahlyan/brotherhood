@@ -12,6 +12,7 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { ChangeProfile } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
+import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
@@ -180,9 +181,29 @@ export function useProfile({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.PROFILE, payload },
-    ]);
+    const affectedContracts: (Address | string)[] = [fiWalletAddr];
+    if (isLocationDirty && trimmedH3Cell) {
+      try {
+        const newLoc = calculateLocationAddress(trimmedH3Cell);
+        if (newLoc) affectedContracts.push(newLoc);
+      } catch {
+        /* ignore */
+      }
+      const oldH3 = accountData?.h3Cell?.trim();
+      if (oldH3 && oldH3 !== trimmedH3Cell) {
+        try {
+          const oldLoc = calculateLocationAddress(oldH3);
+          if (oldLoc) affectedContracts.push(oldLoc);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.PROFILE, payload }],
+      { affectedContracts },
+    );
   }, [
     walletAddress,
     isDirty,
@@ -192,6 +213,7 @@ export function useProfile({
     cleanUsername,
     isLocationDirty,
     trimmedH3Cell,
+    accountData?.h3Cell,
     isCountryDirty,
     country,
     isNomineeDirty,

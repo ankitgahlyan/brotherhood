@@ -88,6 +88,7 @@ export function useSpendPocketMoney({
       network,
     );
     const receiverAddr = Address.parse(receiver.trim());
+    const receiverFiWalletAddr = getFiWalletAddress(receiverAddr, network);
     const amountNano = parseUnits(amount, 9);
 
     const payload = buildSpendPocketMoneyBody({
@@ -96,13 +97,16 @@ export function useSpendPocketMoney({
       sendExcessesTo: ownerAddr,
     });
 
-    await sendTx([
-      {
-        toAddress: granterFiWalletAddr.toString(),
-        amount: GAS.ALLOWANCE,
-        payload,
-      },
-    ]);
+    await sendTx(
+      [
+        {
+          toAddress: granterFiWalletAddr.toString(),
+          amount: GAS.ALLOWANCE,
+          payload,
+        },
+      ],
+      { affectedContracts: [granterFiWalletAddr, receiverFiWalletAddr] },
+    );
   }, [walletAddress, granterAddress, receiver, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

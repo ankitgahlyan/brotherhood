@@ -66,9 +66,10 @@ export function useVoteProposal({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload }],
+      { affectedContracts: [fiWalletAddr, pollAddr] },
+    );
   }, [
     walletAddress,
     daoAddress,

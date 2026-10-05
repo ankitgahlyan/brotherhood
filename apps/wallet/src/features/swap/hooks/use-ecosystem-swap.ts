@@ -31,13 +31,10 @@ import {
   buildBuyCreditBody,
   buildBurnBody,
   buildSwapTargetPayload,
+  getPersonalMinter,
   parseUnits,
 } from '@/lib/brotherhood/deploy';
-import {
-  getFiWalletAddress,
-  getPersonalWalletAddress,
-  isZeroAddress,
-} from '@/lib/brotherhood/ton';
+import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import {
   useFiMinterState,
   useFiWalletState,
@@ -905,27 +902,51 @@ export function useEcosystemSwap() {
     if (quote.mode === 'buy-credit') {
       const userFiWalletAddr = getFiWalletAddress(userOwnerAddress, net);
       const targetOwnerAddr = Address.parse(toToken.ownerAddress);
+      const targetFiWalletAddr = getFiWalletAddress(targetOwnerAddr, net);
+      const targetMinterAddr = toToken.minterAddress
+        ? Address.parse(toToken.minterAddress)
+        : getPersonalMinter({
+            issuerWallet: targetFiWalletAddr,
+            adminAddress: targetOwnerAddr,
+          }).contractAddress;
+      const buyerPersonalWalletAddr = computePersonalWalletAddress(
+        targetMinterAddr,
+        userOwnerAddress,
+        targetOwnerAddr,
+      );
       const payload = buildBuyCreditBody({
         transferRecipient: targetOwnerAddr,
         amount: quote.inputNano,
         responseAddress: userOwnerAddress,
       });
 
-      await sendTx([
+      await sendTx(
+        [
+          {
+            toAddress: userFiWalletAddr.toString(),
+            amount: GAS.CREDIT,
+            payload,
+          },
+        ],
         {
-          toAddress: userFiWalletAddr.toString(),
-          amount: GAS.CREDIT,
-          payload,
+          affectedContracts: [
+            userFiWalletAddr,
+            targetFiWalletAddr,
+            targetMinterAddr,
+            buyerPersonalWalletAddr,
+          ],
         },
-      ]);
+      );
     } else if (quote.mode === 'payback') {
       if (!fromToken.minterAddress) {
         throw new Error('Personal token minter address missing');
       }
-      const personalWalletAddr = await getPersonalWalletAddress(
-        Address.parse(fromToken.minterAddress),
+      const fromMinterAddr = Address.parse(fromToken.minterAddress);
+      const fromOwnerAddr = Address.parse(fromToken.ownerAddress);
+      const personalWalletAddr = computePersonalWalletAddress(
+        fromMinterAddr,
         userOwnerAddress,
-        net,
+        fromOwnerAddr,
       );
       const payload = buildBurnBody(
         quote.inputNano,
@@ -934,24 +955,48 @@ export function useEcosystemSwap() {
         null,
       );
 
-      await sendTx([
+      await sendTx(
+        [
+          {
+            toAddress: personalWalletAddr.toString(),
+            amount: GAS.BURN,
+            payload,
+          },
+        ],
         {
-          toAddress: personalWalletAddr.toString(),
-          amount: GAS.BURN,
-          payload,
+          affectedContracts: [
+            personalWalletAddr,
+            fromMinterAddr,
+            getFiWalletAddress(fromOwnerAddr, net),
+            getFiWalletAddress(userOwnerAddress, net),
+          ],
         },
-      ]);
+      );
     } else {
       // Atomic Multi-Hop: P_A -> FI -> P_B
       if (!fromToken.minterAddress) {
         throw new Error('Source personal token minter address missing');
       }
-      const personalWalletAddr = await getPersonalWalletAddress(
-        Address.parse(fromToken.minterAddress),
+      const fromMinterAddr = Address.parse(fromToken.minterAddress);
+      const fromOwnerAddr = Address.parse(fromToken.ownerAddress);
+      const personalWalletAddr = computePersonalWalletAddress(
+        fromMinterAddr,
         userOwnerAddress,
-        net,
+        fromOwnerAddr,
       );
       const targetOwnerAddr = Address.parse(toToken.ownerAddress);
+      const targetFiWalletAddr = getFiWalletAddress(targetOwnerAddr, net);
+      const targetMinterAddr = toToken.minterAddress
+        ? Address.parse(toToken.minterAddress)
+        : getPersonalMinter({
+            issuerWallet: targetFiWalletAddr,
+            adminAddress: targetOwnerAddr,
+          }).contractAddress;
+      const buyerPersonalWalletAddr = computePersonalWalletAddress(
+        targetMinterAddr,
+        userOwnerAddress,
+        targetOwnerAddr,
+      );
       const swapTargetPayload = buildSwapTargetPayload(targetOwnerAddr);
       const payload = buildBurnBody(
         quote.inputNano,
@@ -960,13 +1005,26 @@ export function useEcosystemSwap() {
         swapTargetPayload,
       );
 
-      await sendTx([
+      await sendTx(
+        [
+          {
+            toAddress: personalWalletAddr.toString(),
+            amount: GAS.CREDIT, // 1.5 TON covers both legs; excess returns to user
+            payload,
+          },
+        ],
         {
-          toAddress: personalWalletAddr.toString(),
-          amount: GAS.CREDIT, // 1.5 TON covers both legs; excess returns to user
-          payload,
+          affectedContracts: [
+            personalWalletAddr,
+            fromMinterAddr,
+            getFiWalletAddress(fromOwnerAddr, net),
+            getFiWalletAddress(userOwnerAddress, net),
+            targetFiWalletAddr,
+            targetMinterAddr,
+            buyerPersonalWalletAddr,
+          ],
         },
-      ]);
+      );
     }
 
     setAmountInput('');
@@ -998,10 +1056,12 @@ export function useEcosystemSwap() {
         throw new Error(`Insufficient ${reserveToken.symbol} balance`);
       }
 
-      const personalWalletAddr = await getPersonalWalletAddress(
-        Address.parse(reserveToken.minterAddress),
+      const reserveMinterAddr = Address.parse(reserveToken.minterAddress);
+      const reserveOwnerAddr = Address.parse(reserveToken.ownerAddress);
+      const personalWalletAddr = computePersonalWalletAddress(
+        reserveMinterAddr,
         userOwnerAddress,
-        net,
+        reserveOwnerAddr,
       );
 
       let customPayload: Cell | null = null;
@@ -1059,13 +1119,18 @@ export function useEcosystemSwap() {
       // Normal burn (sendExcessesTo = null) notifies adminAddress with customPayload
       const payload = buildBurnBody(amountNano, null, 0n, customPayload);
 
-      await sendTx([
+      await sendTx(
+        [
+          {
+            toAddress: personalWalletAddr.toString(),
+            amount: toNano('0.6'),
+            payload,
+          },
+        ],
         {
-          toAddress: personalWalletAddr.toString(),
-          amount: toNano('0.6'),
-          payload,
+          affectedContracts: [personalWalletAddr, reserveMinterAddr],
         },
-      ]);
+      );
 
       toast.success(
         `${reserveToken.symbol} burned for fiat settlement! Issuer has been notified.`,

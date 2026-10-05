@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { isValidAddress, type NFT } from '@ton/walletkit';
-import { useWallet, useWalletKit, useNfts } from '@demo/wallet-core';
+import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Flame, Send, AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   ModalContainer,
@@ -65,7 +65,6 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
 }) => {
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const walletKit = useWalletKit();
-  const { refreshNfts } = useNfts();
   const { explorer } = useExplorer();
   const updateDomain = useDnsStore((s) => s.updateDomain);
   const removeDomain = useDnsStore((s) => s.removeDomain);
@@ -119,19 +118,19 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
         responseDestination: Address.parse(address),
       });
 
-      await send([
-        {
-          toAddress: nft.address,
-          amount: NFT_TRANSFER_GAS,
-          payload,
-        },
-      ]);
+      await send(
+        [
+          {
+            toAddress: nft.address,
+            amount: NFT_TRANSFER_GAS,
+            payload,
+          },
+        ],
+        { affectedContracts: [nft.address] },
+      );
 
       // If it was an owned .bro domain, mark as transferred
       updateDomain(nft.address, { isOutdated: true }, network);
-
-      // Refresh on-chain NFT list
-      void refreshNfts();
 
       handleClose();
     } catch (e) {
@@ -144,7 +143,6 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
     send,
     updateDomain,
     network,
-    refreshNfts,
     handleClose,
   ]);
 
@@ -158,13 +156,16 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
       if (isBroDomain) {
         // .bro DnsItem contracts support native DestroyContract (0x646e7364) which burns the NFT & refunds TON storage
         const payload = buildDestroyContractBody(queryId, ownerAddress);
-        await send([
-          {
-            toAddress: nft.address,
-            amount: NFT_DESTROY_GAS,
-            payload,
-          },
-        ]);
+        await send(
+          [
+            {
+              toAddress: nft.address,
+              amount: NFT_DESTROY_GAS,
+              payload,
+            },
+          ],
+          { affectedContracts: [nft.address] },
+        );
         removeDomain(nft.address, network);
         clearDomainResolutionCache();
         clearDomainLookupCache();
@@ -174,30 +175,23 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
           queryId,
           responseDestination: ownerAddress,
         });
-        await send([
-          {
-            toAddress: nft.address,
-            amount: NFT_TRANSFER_GAS,
-            payload,
-          },
-        ]);
+        await send(
+          [
+            {
+              toAddress: nft.address,
+              amount: NFT_TRANSFER_GAS,
+              payload,
+            },
+          ],
+          { affectedContracts: [nft.address] },
+        );
       }
 
-      void refreshNfts();
       handleClose();
     } catch (e) {
       console.warn('[NftTransferModal] burn error:', e);
     }
-  }, [
-    nft,
-    address,
-    isBroDomain,
-    send,
-    removeDomain,
-    network,
-    refreshNfts,
-    handleClose,
-  ]);
+  }, [nft, address, isBroDomain, send, removeDomain, network, handleClose]);
 
   if (!nft) return null;
 

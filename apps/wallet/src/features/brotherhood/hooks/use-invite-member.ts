@@ -11,7 +11,8 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildInviteBody } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
+import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { normalizeProfileUsernameInput } from '@/core/utils/telegram';
@@ -132,22 +133,44 @@ export function useInviteMember({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const inviteeAddr = Address.parse(invitee.trim());
+    const inviteeFiWalletAddr = getFiWalletAddress(inviteeAddr, network);
 
+    const trimmedH3 = h3Cell.trim();
     const cleanUser = normalizeProfileUsernameInput(username);
     const payload = buildInviteBody({
       transferRecipient: inviteeAddr,
       username: cleanUser,
-      h3Cell: h3Cell.trim(),
+      h3Cell: trimmedH3,
       country,
     });
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.INVITE, payload },
-    ]);
+    const affectedContracts: (Address | string)[] = [
+      fiWalletAddr,
+      inviteeFiWalletAddr,
+      FI_ADDRESS,
+    ];
+    if (trimmedH3) {
+      try {
+        const locAddr = calculateLocationAddress(trimmedH3);
+        if (locAddr) affectedContracts.push(locAddr);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.INVITE, payload }],
+      { affectedContracts },
+    );
 
     if (cleanUser && inviteeAddr) {
       try {
         saveUsernameAddressMapping(cleanUser, inviteeAddr.toString(), network);
+        saveUsernameAddressMapping(
+          cleanUser,
+          inviteeFiWalletAddr.toString(),
+          network,
+        );
       } catch {
         /* ignore storage error */
       }

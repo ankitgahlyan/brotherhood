@@ -11,7 +11,7 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildVoteBody, buildUnvoteBody } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
@@ -100,14 +100,16 @@ export function useVote({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const target = Address.parse(targetAddress.trim());
+    const targetFiWalletAddr = getFiWalletAddress(target, network);
 
     const payload = isUnvote
       ? buildUnvoteBody({ transferRecipient: target, count })
       : buildVoteBody({ transferRecipient: target, count });
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.VOTE, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.VOTE, payload }],
+      { affectedContracts: [fiWalletAddr, targetFiWalletAddr, FI_ADDRESS] },
+    );
   }, [walletAddress, targetAddress, isUnvote, count, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

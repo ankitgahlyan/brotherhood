@@ -11,7 +11,7 @@ import { Address, toNano } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import { SetLoanRequirement } from '@wrappers/FossFiWallet.gen';
-import { parseUnits } from '@/lib/brotherhood/deploy';
+import { getPersonalMinter, parseUnits } from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import {
   encodeOnchainMultiplier,
@@ -210,6 +210,10 @@ export function useLoanRequirement({
 
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
+    const personalMinterAddr = getPersonalMinter({
+      issuerWallet: fiWalletAddr,
+      adminAddress: ownerAddr,
+    }).contractAddress;
 
     let amountNano: bigint | null = null;
     if (isAmountDirty) {
@@ -237,13 +241,16 @@ export function useLoanRequirement({
       }),
     );
 
-    await sendTx([
-      {
-        toAddress: fiWalletAddr.toString(),
-        amount: SET_TERMS_GAS,
-        payload: body,
-      },
-    ]);
+    await sendTx(
+      [
+        {
+          toAddress: fiWalletAddr.toString(),
+          amount: SET_TERMS_GAS,
+          payload: body,
+        },
+      ],
+      { affectedContracts: [fiWalletAddr, personalMinterAddr] },
+    );
 
     toast.success('Loan requirement updated successfully!');
     onSuccess?.();

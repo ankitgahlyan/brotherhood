@@ -9,7 +9,12 @@
 import { useCallback } from 'react';
 import { Address, type Cell } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { buildBurnBody, parseUnits } from '@/lib/brotherhood/deploy';
+import {
+  buildBurnBody,
+  getPersonalMinter,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 
 export interface UseBurnPersonalParams {
@@ -59,9 +64,22 @@ export function useBurnPersonal({
       customPayload,
     );
 
-    await sendTx([
-      { toAddress: personalWalletAddress, amount: GAS.BURN, payload },
-    ]);
+    const myFiWalletAddr = getFiWalletAddress(ownerAddr);
+    const myPersonalMinterAddr = getPersonalMinter({
+      issuerWallet: myFiWalletAddr,
+      adminAddress: ownerAddr,
+    }).contractAddress;
+
+    await sendTx(
+      [{ toAddress: personalWalletAddress, amount: GAS.BURN, payload }],
+      {
+        affectedContracts: [
+          personalWalletAddress,
+          myFiWalletAddr,
+          myPersonalMinterAddr,
+        ],
+      },
+    );
   }, [
     walletAddress,
     personalWalletAddress,

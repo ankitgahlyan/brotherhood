@@ -19,6 +19,11 @@ export interface JettonsTransferRequest {
   jettonAddress: UserFriendlyAddress;
 
   /**
+   * Optional pre-resolved sender Jetton wallet address (avoids RPC lookup when already known)
+   */
+  jettonWalletAddress?: UserFriendlyAddress;
+
+  /**
    * Amount to transfer in Jetton's smallest unit
    */
   transferAmount: TokenAmount;

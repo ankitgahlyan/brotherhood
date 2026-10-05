@@ -16,6 +16,7 @@ import {
 } from './contract-cache';
 import { computePersonalWalletAddress } from './account-state-hydrator';
 
+export { computePersonalWalletAddress };
 export type { Network } from './config';
 
 export const queryClient = new QueryClient({
@@ -334,26 +335,30 @@ export async function getFiWalletStateByContractAddress(
 
   if (!options.forceFresh) {
     const cached = await getContractCache<any>(normalizedKey);
-    if (cached && cached.data) {
-      // If cached data is a FiWallet, return it
-      if (
-        cached.data.$ === 'FiWalletStore' ||
-        cached.data.addresses?.ref?.owner
-      ) {
-        return cached.data as FiWalletStateData;
+    if (cached !== null) {
+      if (cached.data) {
+        // If cached data is a FiWallet, return it
+        if (
+          cached.data.$ === 'FiWalletStore' ||
+          cached.data.addresses?.ref?.owner
+        ) {
+          return cached.data as FiWalletStateData;
+        }
+        // If the address is an owner wallet (e.g. WalletV5R1), redirect to its off-chain computed FiWallet
+        if (
+          cached.data.signatureAllowed !== undefined ||
+          cached.data.walletId !== undefined
+        ) {
+          const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
+          return getFiWalletStateByContractAddress(
+            actualFiWalletAddr,
+            net,
+            options,
+          );
+        }
       }
-      // If the address is an owner wallet (e.g. WalletV5R1), redirect to its off-chain computed FiWallet
-      if (
-        cached.data.signatureAllowed !== undefined ||
-        cached.data.walletId !== undefined
-      ) {
-        const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
-        return getFiWalletStateByContractAddress(
-          actualFiWalletAddr,
-          net,
-          options,
-        );
-      }
+      // Already hydrated as uninit/nonexist
+      return null as unknown as FiWalletStateData;
     }
   }
 

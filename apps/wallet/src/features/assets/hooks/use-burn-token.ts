@@ -14,10 +14,16 @@ import {
   type ITonWalletKit,
   type Wallet,
 } from '@ton/walletkit';
-import { useWallet, useWalletStore, getChainNetwork } from '@demo/wallet-core';
+import {
+  useActiveJettons,
+  useWallet,
+  useWalletStore,
+  getChainNetwork,
+} from '@demo/wallet-core';
 import { buildBurnBody, parseUnits } from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction } from '@/features/brotherhood';
 import {
+  computePersonalWalletAddress,
   getFiWalletAddress,
   getPersonalWalletAddress,
   isPersonalMinterContract,
@@ -28,7 +34,7 @@ import {
   packBytesAsSnakeForEncryptedData,
 } from '@/core/utils/encryption';
 import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import type { AssetRowData } from '../components/asset-row';
 
 export const DEFAULT_BURN_GAS_TON = '0.6';
@@ -39,6 +45,7 @@ export interface UseBurnTokenParams {
   walletAddress: string | null | undefined;
   asset: AssetRowData | null;
   amount: string;
+  isPersonal?: boolean;
   isPayback?: boolean;
   comment?: string;
   isEncrypted?: boolean;
@@ -61,6 +68,7 @@ export function useBurnToken({
   walletAddress,
   asset,
   amount,
+  isPersonal: knownIsPersonal,
   isPayback = true,
   comment = '',
   isEncrypted = true,
@@ -74,6 +82,7 @@ export function useBurnToken({
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
   const { getDecryptedMnemonic } = useWallet();
+  const activeJettons = useActiveJettons();
   const savedWallets = useWalletStore(
     (state) => state.walletManagement.savedWallets,
   );
@@ -112,32 +121,69 @@ export function useBurnToken({
     const gasValue = toNano(customGasTon || DEFAULT_BURN_GAS_TON);
 
     let targetWalletAddress: Address;
+    const affectedContracts: (Address | string)[] = [];
 
     if (isFi) {
       // BrotherHood FI: targets the user's FossFiWallet
       targetWalletAddress = getFiWalletAddress(ownerAddr, network);
+      affectedContracts.push(targetWalletAddress, FI_ADDRESS);
     } else {
       // For personal tokens and other Jettons, compute or resolve the user's token wallet
-      let isPersonal = false;
-      try {
-        const parsed = Address.parse(asset.id);
-        isPersonal = await isPersonalMinterContract(parsed);
-      } catch {
-        isPersonal = false;
+      let isPersonal = knownIsPersonal ?? false;
+      if (knownIsPersonal === undefined) {
+        try {
+          const parsed = Address.parse(asset.id);
+          isPersonal = await isPersonalMinterContract(parsed);
+        } catch {
+          isPersonal = false;
+        }
       }
 
       if (isPersonal) {
-        targetWalletAddress = await getPersonalWalletAddress(
-          Address.parse(asset.id),
-          ownerAddr,
-          network,
+        const minterAddr = Address.parse(asset.id);
+        if (adminAddress) {
+          targetWalletAddress = computePersonalWalletAddress(
+            minterAddr,
+            ownerAddr,
+            Address.parse(adminAddress),
+          );
+        } else {
+          targetWalletAddress = await getPersonalWalletAddress(
+            minterAddr,
+            ownerAddr,
+            network,
+          );
+        }
+        affectedContracts.push(
+          targetWalletAddress,
+          minterAddr,
+          getFiWalletAddress(ownerAddr, network),
         );
+        if (adminAddress) {
+          try {
+            affectedContracts.push(
+              getFiWalletAddress(Address.parse(adminAddress), network),
+            );
+          } catch {
+            // ignore
+          }
+        }
       } else {
-        const resolved = await wallet.getJettonWalletAddress(asset.id);
+        const matchingJetton = activeJettons.find((j) => {
+          try {
+            return Address.parse(j.address).equals(Address.parse(asset.id));
+          } catch {
+            return j.address === asset.id;
+          }
+        });
+        const resolved =
+          matchingJetton?.walletAddress ||
+          (await wallet.getJettonWalletAddress(asset.id));
         if (!resolved) {
           throw new Error('Could not resolve Jetton wallet address');
         }
         targetWalletAddress = Address.parse(resolved);
+        affectedContracts.push(targetWalletAddress, asset.id);
       }
     }
 
@@ -204,18 +250,23 @@ export function useBurnToken({
       customPayload,
     );
 
-    await sendTx([
-      {
-        toAddress: targetWalletAddress.toString(),
-        amount: gasValue,
-        payload,
-      },
-    ]);
+    await sendTx(
+      [
+        {
+          toAddress: targetWalletAddress.toString(),
+          amount: gasValue,
+          payload,
+        },
+      ],
+      { affectedContracts },
+    );
   }, [
     wallet,
     walletAddress,
     asset,
     amount,
+    knownIsPersonal,
+    activeJettons,
     comment,
     isEncrypted,
     adminAddress,

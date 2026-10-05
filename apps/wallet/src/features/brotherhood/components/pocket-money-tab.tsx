@@ -271,7 +271,6 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
   circleMembers = [],
   onBoundaryPrev,
   onBoundaryNext,
-  onRefetchAccount,
 }) => {
   const { formatWalletAddress } = useFormatAddress();
   const formatShortWallet = (addr: Address | string | null | undefined) => {
@@ -453,9 +452,6 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
     existingPocketMoney: existingGranteeEntry?.pocketMoney ?? null,
     network,
     accountData,
-    onSuccess: () => {
-      onRefetchAccount?.();
-    },
   });
 
   const spendAllowance = useSpendPocketMoney({

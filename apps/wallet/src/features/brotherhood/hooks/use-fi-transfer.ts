@@ -86,6 +86,7 @@ export function useFiTransfer({
     const ownerAddr = Address.parse(walletAddress);
     const fiWalletAddr = await getFiWalletAddress(ownerAddr, network);
     const recipientAddr = Address.parse(recipient.trim());
+    const recipientFiWalletAddr = getFiWalletAddress(recipientAddr, network);
     const amountNano = parseUnits(amount, 9);
 
     const payload = buildTransferBody({
@@ -95,9 +96,10 @@ export function useFiTransfer({
       forwardTonAmount: 0n,
     });
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.TRANSFER, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.TRANSFER, payload }],
+      { affectedContracts: [fiWalletAddr, recipientFiWalletAddr] },
+    );
   }, [walletAddress, recipient, amount, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import { toast } from 'sonner';
 
@@ -43,15 +44,19 @@ export function usePushUpgrade({ wallet, walletKit }: UsePushUpgradeParams) {
         return;
       }
 
+      const targetFiWalletAddr = getFiWalletAddress(parsedTarget);
       const payload = buildRequestUpgradeBody(parsedTarget);
 
-      await sendTx([
-        {
-          toAddress: FI_ADDRESS,
-          amount: GAS.REQUEST_UPGRADE,
-          payload,
-        },
-      ]);
+      await sendTx(
+        [
+          {
+            toAddress: FI_ADDRESS,
+            amount: GAS.REQUEST_UPGRADE,
+            payload,
+          },
+        ],
+        { affectedContracts: [FI_ADDRESS, targetFiWalletAddr] },
+      );
 
       toast.success('Push upgrade transaction sent to Minter');
     },

@@ -17,7 +17,7 @@ import {
   clearDomainResolutionCache,
   detectSocialPlatform,
 } from '@/core/lib/dns';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
   useMyDomains,
@@ -91,13 +91,6 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
   >({});
   const [sendingFor, setSendingFor] = useState<string | null>(null);
 
-  const schedulePostTxRefresh = useCallback(() => {
-    void refresh();
-    setTimeout(() => {
-      void refresh();
-    }, 4500);
-  }, [refresh]);
-
   const handleRenewFi = useCallback(
     async (nftAddress: string, charCount: number) => {
       if (!address) return;
@@ -113,13 +106,16 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
           Address.parse(nftAddress),
           fee,
         );
-        await send([
-          {
-            toAddress: fiWalletAddress.toString(),
-            amount: toNano('0.15'),
-            payload,
-          },
-        ]);
+        await send(
+          [
+            {
+              toAddress: fiWalletAddress.toString(),
+              amount: toNano('0.15'),
+              payload,
+            },
+          ],
+          { affectedContracts: [fiWalletAddress, nftAddress, FI_ADDRESS] },
+        );
         updateDomain(
           nftAddress,
           { lastFillUpTime: Math.floor(Date.now() / 1000) },
@@ -127,12 +123,11 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [address, network, schedulePostTxRefresh, send, updateDomain],
+    [address, network, send, updateDomain],
   );
 
   const handleSaveChanges = useCallback(
@@ -209,7 +204,7 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       setSendingFor(nftAddress);
 
       try {
-        await send(messages);
+        await send(messages, { affectedContracts: [nftAddress] });
         updateDomain(nftAddress, optimisticPatch, network);
         const existingDomain = domains.find((d) => d.nftAddress === nftAddress);
         if (existingDomain) {
@@ -252,7 +247,6 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
           delete next[nftAddress];
           return next;
         });
-        schedulePostTxRefresh();
       } catch (e: unknown) {
         console.warn('[MyDomainsTab] batch save records error:', e);
       } finally {
@@ -267,7 +261,6 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       domains,
       address,
       saveDnsDomain,
-      schedulePostTxRefresh,
       send,
       updateDomain,
     ],
@@ -284,13 +277,16 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
               ? contactUriDnsKey()
               : channelDescriptionDnsKey();
         const payload = buildChangeDnsRecordBody(key, null);
-        await send([
-          {
-            toAddress: nftAddress,
-            amount: DNS_GAS.CHANGE_RECORD,
-            payload,
-          },
-        ]);
+        await send(
+          [
+            {
+              toAddress: nftAddress,
+              amount: DNS_GAS.CHANGE_RECORD,
+              payload,
+            },
+          ],
+          { affectedContracts: [nftAddress] },
+        );
         updateDomain(
           nftAddress,
           category === 'wallet'
@@ -302,12 +298,11 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [network, schedulePostTxRefresh, send, updateDomain],
+    [network, send, updateDomain],
   );
 
   const handleFinalizeAuction = useCallback(
@@ -315,13 +310,20 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
       setSendingFor(nftAddress);
       try {
         const payload = buildFinalizeAuctionBody(BigInt(Date.now()));
-        await send([
-          {
-            toAddress: nftAddress,
-            amount: toNano('0.6'),
-            payload,
-          },
-        ]);
+        const affected: (Address | string)[] = [nftAddress, FI_ADDRESS];
+        if (address) {
+          affected.push(getFiWalletAddress(Address.parse(address), network));
+        }
+        await send(
+          [
+            {
+              toAddress: nftAddress,
+              amount: toNano('0.6'),
+              payload,
+            },
+          ],
+          { affectedContracts: affected },
+        );
         updateDomain(
           nftAddress,
           {
@@ -333,12 +335,11 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         );
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [network, schedulePostTxRefresh, send, updateDomain],
+    [address, network, send, updateDomain],
   );
 
   const handleDestroyDomain = useCallback(
@@ -350,22 +351,24 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
           BigInt(Date.now()),
           Address.parse(address),
         );
-        await send([
-          {
-            toAddress: nftAddress,
-            amount: toNano('0.05'),
-            payload,
-          },
-        ]);
+        await send(
+          [
+            {
+              toAddress: nftAddress,
+              amount: toNano('0.05'),
+              payload,
+            },
+          ],
+          { affectedContracts: [nftAddress] },
+        );
         removeDomain(nftAddress, network);
         clearDomainResolutionCache();
         clearDomainLookupCache();
-        schedulePostTxRefresh();
       } finally {
         setSendingFor(null);
       }
     },
-    [address, network, removeDomain, schedulePostTxRefresh, send],
+    [address, network, removeDomain, send],
   );
 
   if (domains.length === 0) {

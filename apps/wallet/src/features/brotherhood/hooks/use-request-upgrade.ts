@@ -7,10 +7,10 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
 import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { Address } from '@ton/core';
@@ -39,11 +39,10 @@ export function useRequestUpgrade({
   wallet,
   walletKit,
   walletAddress,
-  network: _network,
+  network,
   accountData,
   minterVersion,
 }: UseRequestUpgradeParams): UseRequestUpgradeResult {
-  const queryClient = useQueryClient();
   const {
     send: sendTx,
     isSending,
@@ -81,21 +80,22 @@ export function useRequestUpgrade({
             : targetAddress;
       }
 
+      const targetOwner = parsedTarget ?? Address.parse(walletAddress);
+      const targetFiWalletAddr = getFiWalletAddress(targetOwner, network);
       const payload = buildRequestUpgradeBody(parsedTarget);
 
-      await sendTx([
-        {
-          toAddress: FI_ADDRESS,
-          amount: GAS.REQUEST_UPGRADE,
-          payload,
-        },
-      ]);
-
-      // Invalidate cached state so new version reflects on next refetch
-      queryClient.invalidateQueries({ queryKey: ['fi-wallet-state'] });
-      queryClient.invalidateQueries({ queryKey: ['fi-minter-state'] });
+      await sendTx(
+        [
+          {
+            toAddress: FI_ADDRESS,
+            amount: GAS.REQUEST_UPGRADE,
+            payload,
+          },
+        ],
+        { affectedContracts: [FI_ADDRESS, targetFiWalletAddr] },
+      );
     },
-    [walletAddress, sendTx, queryClient],
+    [walletAddress, network, sendTx],
   );
 
   const isDisabled = Boolean(validationError) || isSending;

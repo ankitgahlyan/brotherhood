@@ -105,13 +105,18 @@ export function useRequestDeferredPayment({
       queryId,
     });
 
-    await sendTx([
+    await sendTx(
+      [
+        {
+          toAddress: myFiWalletAddr.toString(),
+          amount: GAS.DEFERRED_PAYMENT,
+          payload,
+        },
+      ],
       {
-        toAddress: myFiWalletAddr.toString(),
-        amount: GAS.DEFERRED_PAYMENT,
-        payload,
+        affectedContracts: [myFiWalletAddr, payerFiWalletAddr, holdingAddr],
       },
-    ]);
+    );
 
     return {
       queryId,
@@ -173,13 +178,16 @@ export function useCancelDeferredPayment({
         holdingAddress: targetHoldingAddr,
       });
 
-      await sendTx([
-        {
-          toAddress: myFiWalletAddr.toString(),
-          amount: GAS.DEFERRED_PAYMENT,
-          payload,
-        },
-      ]);
+      await sendTx(
+        [
+          {
+            toAddress: myFiWalletAddr.toString(),
+            amount: GAS.DEFERRED_PAYMENT,
+            payload,
+          },
+        ],
+        { affectedContracts: [myFiWalletAddr, targetHoldingAddr] },
+      );
     },
     [walletAddress, holdingAddress, network, sendTx],
   );
@@ -236,13 +244,16 @@ export function useClaimDeferredPayment({
         holdingAddress: targetHoldingAddr,
       });
 
-      await sendTx([
-        {
-          toAddress: myFiWalletAddr.toString(),
-          amount: GAS.DEFERRED_PAYMENT,
-          payload,
-        },
-      ]);
+      await sendTx(
+        [
+          {
+            toAddress: myFiWalletAddr.toString(),
+            amount: GAS.DEFERRED_PAYMENT,
+            payload,
+          },
+        ],
+        { affectedContracts: [myFiWalletAddr, targetHoldingAddr] },
+      );
     },
     [walletAddress, holdingAddress, network, sendTx],
   );

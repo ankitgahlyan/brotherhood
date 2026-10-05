@@ -89,13 +89,16 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       amountNano,
       recipientAddr,
     );
-    await send([
-      {
-        toAddress: BRO_COLLECTION_RESOLVER,
-        amount: DNS_GAS.WITHDRAW,
-        payload,
-      },
-    ]);
+    await send(
+      [
+        {
+          toAddress: BRO_COLLECTION_RESOLVER,
+          amount: DNS_GAS.WITHDRAW,
+          payload,
+        },
+      ],
+      { affectedContracts: [BRO_COLLECTION_RESOLVER] },
+    );
     setWithdrawAmount('');
   };
 
@@ -106,30 +109,34 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       .trim()
       .toLowerCase()
       .replace(/\.bro$/, '');
+    const derivedNftAddress = deriveDnsItemAddress(
+      Address.parse(BRO_COLLECTION_RESOLVER),
+      bare,
+      network === 'testnet',
+    );
 
     const payload = buildMintDomainForBody(
       BigInt(Date.now()),
       targetAddr,
       bare,
     );
-    await send([
-      {
-        toAddress: BRO_COLLECTION_RESOLVER,
-        amount: toNano('0.25'),
-        payload,
-      },
-    ]);
+    await send(
+      [
+        {
+          toAddress: BRO_COLLECTION_RESOLVER,
+          amount: toNano('0.25'),
+          payload,
+        },
+      ],
+      { affectedContracts: [BRO_COLLECTION_RESOLVER, derivedNftAddress] },
+    );
 
     // Optimistic store add (minted to targetAddr, not current wallet)
     addDomain(
       {
         name: bare,
         zone: 'bro',
-        nftAddress: deriveDnsItemAddress(
-          Address.parse(BRO_COLLECTION_RESOLVER),
-          bare,
-          network === 'testnet',
-        ),
+        nftAddress: derivedNftAddress,
         registeredAt: nowSec,
         lastFillUpTime: nowSec,
       },
@@ -162,13 +169,16 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       itemAddr,
       Address.parse(address),
     );
-    await send([
-      {
-        toAddress: BRO_COLLECTION_RESOLVER,
-        amount: toNano('0.1'),
-        payload,
-      },
-    ]);
+    await send(
+      [
+        {
+          toAddress: BRO_COLLECTION_RESOLVER,
+          amount: toNano('0.1'),
+          payload,
+        },
+      ],
+      { affectedContracts: [BRO_COLLECTION_RESOLVER, itemAddr] },
+    );
     setDestroyItemDomain('');
   };
 
@@ -178,13 +188,16 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       BigInt(Date.now()),
       Address.parse(address),
     );
-    await send([
-      {
-        toAddress: BRO_COLLECTION_RESOLVER,
-        amount: toNano('0.05'),
-        payload,
-      },
-    ]);
+    await send(
+      [
+        {
+          toAddress: BRO_COLLECTION_RESOLVER,
+          amount: toNano('0.05'),
+          payload,
+        },
+      ],
+      { affectedContracts: [BRO_COLLECTION_RESOLVER] },
+    );
   };
 
   return (

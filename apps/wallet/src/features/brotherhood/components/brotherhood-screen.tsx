@@ -57,6 +57,7 @@ import { ActivationBanner } from './activation-banner';
 import { useIsNetworkMember } from '../hooks/use-is-network-member';
 
 import { useFiMinterState } from '@/lib/brotherhood/queries';
+import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import { useFiAccount } from '../hooks/use-fi-account';
 import {
   useMemberProfiles,
@@ -273,11 +274,15 @@ export const BrotherhoodScreen: React.FC = () => {
     if (account.data?.invited) {
       account.data.invited.forEach((i) => list.push(i.addressString));
     }
-    if (account.data?.nominee) {
-      list.push(account.data.nominee.toString());
+    if (account.data?.nominee && !isZeroAddress(account.data.nominee)) {
+      try {
+        list.push(getFiWalletAddress(account.data.nominee, network).toString());
+      } catch {
+        /* ignore */
+      }
     }
     return list;
-  }, [account.data]);
+  }, [account.data, network]);
 
   const resolvedProfiles = useMemberProfiles(addressesToResolve, network);
 

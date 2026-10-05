@@ -11,7 +11,7 @@ import { Address, toNano } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { ActPayEmi } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { useNowSeconds } from '@/core/hooks';
@@ -141,9 +141,10 @@ export function usePayEmi({
       ActPayEmi.create({ queryId: 0n, sendExcessesTo: ownerAddr }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.PAY_EMI, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.PAY_EMI, payload }],
+      { affectedContracts: [fiWalletAddr, FI_ADDRESS] },
+    );
   }, [walletAddress, network, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;

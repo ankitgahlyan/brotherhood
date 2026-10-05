@@ -49,9 +49,12 @@ export class WalletJettonClass implements WalletJettonInterface {
       throw new Error(`Invalid amount: ${params.transferAmount}`);
     }
 
-    const jettonWalletAddress = await CallForSuccess(() =>
-      this.getJettonWalletAddress(params.jettonAddress),
-    );
+    const jettonWalletAddress =
+      params.jettonWalletAddress && isValidAddress(params.jettonWalletAddress)
+        ? params.jettonWalletAddress
+        : await CallForSuccess(() =>
+            this.getJettonWalletAddress(params.jettonAddress),
+          );
 
     const jettonPayload = createJettonTransferPayload({
       amount: BigInt(params.transferAmount),

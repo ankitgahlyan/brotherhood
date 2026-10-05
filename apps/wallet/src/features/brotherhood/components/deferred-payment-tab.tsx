@@ -25,7 +25,9 @@ import { toast } from 'sonner';
 import { useWallet, useWalletKit, useBrotherhood } from '@demo/wallet-core';
 import { formatTonAddress } from '@/core/utils/formatters';
 import { useExplorer, getExplorerAddressUrl } from '@/core/explorer';
+import { Address } from '@ton/core';
 import type { Network } from '@/lib/brotherhood/config';
+import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { FiAccountData } from '../hooks/use-fi-account';
 import { useMemberProfiles } from '../hooks/use-member-profiles';
 import {
@@ -139,10 +141,23 @@ export const DeferredPaymentTab: React.FC<DeferredPaymentTabProps> = ({
     accountData,
   });
 
-  // Resolve profiles of counterparties in pending deferred list
+  // Resolve profiles of counterparties in pending deferred list using their deterministic FiWallet contract addresses
   const counterpartyAddresses = useMemo(() => {
-    return pendingDeferred.map((p) => p.counterpartyAddress);
-  }, [pendingDeferred]);
+    const list: string[] = [];
+    for (const p of pendingDeferred) {
+      try {
+        list.push(
+          getFiWalletAddress(
+            Address.parse(p.counterpartyAddress),
+            network,
+          ).toString(),
+        );
+      } catch {
+        list.push(p.counterpartyAddress);
+      }
+    }
+    return list;
+  }, [pendingDeferred, network]);
 
   const memberProfiles = useMemberProfiles(counterpartyAddresses, network);
   const counterpartyProfiles = memberProfiles.data;

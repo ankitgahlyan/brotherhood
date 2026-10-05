@@ -17,7 +17,7 @@ import {
   EMPTY_CONTACTS_MAP,
   normalizeContactAddress,
 } from '@/core/storage/useContactBookStore';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
   useDomainLookup,
@@ -183,13 +183,22 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       lookup.fiStartingBid,
       Address.parse(BRO_COLLECTION_RESOLVER),
     );
-    await send([
+    await send(
+      [
+        {
+          toAddress: fiWalletAddress.toString(),
+          amount: toNano('1.05'),
+          payload,
+        },
+      ],
       {
-        toAddress: fiWalletAddress.toString(),
-        amount: toNano('1.05'),
-        payload,
+        affectedContracts: [
+          fiWalletAddress,
+          lookup.nftAddress,
+          BRO_COLLECTION_RESOLVER,
+        ],
       },
-    ]);
+    );
 
     clearDomainLookupCache();
     clearDomainResolutionCache();
@@ -240,13 +249,22 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       fiBidAmount,
       Address.parse(BRO_COLLECTION_RESOLVER),
     );
-    await send([
+    await send(
+      [
+        {
+          toAddress: fiWalletAddress.toString(),
+          amount: toNano('1.05'),
+          payload,
+        },
+      ],
       {
-        toAddress: fiWalletAddress.toString(),
-        amount: toNano('1.05'),
-        payload,
+        affectedContracts: [
+          fiWalletAddress,
+          lookup.nftAddress,
+          BRO_COLLECTION_RESOLVER,
+        ],
       },
-    ]);
+    );
     clearDomainLookupCache();
     clearMyDomainsSessionCache();
     setBidInput('');
@@ -254,14 +272,23 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
   const handleFinalize = useCallback(async () => {
     if (!address || !lookup.nftAddress) return;
+    const fiWalletAddress = getFiWalletAddress(
+      Address.parse(address),
+      lookupNet,
+    );
     const payload = buildFinalizeAuctionBody(BigInt(Date.now()));
-    await send([
+    await send(
+      [
+        {
+          toAddress: lookup.nftAddress,
+          amount: toNano('0.6'),
+          payload,
+        },
+      ],
       {
-        toAddress: lookup.nftAddress,
-        amount: toNano('0.6'),
-        payload,
+        affectedContracts: [lookup.nftAddress, fiWalletAddress, FI_ADDRESS],
       },
-    ]);
+    );
     updateDomain(
       lookup.nftAddress,
       {

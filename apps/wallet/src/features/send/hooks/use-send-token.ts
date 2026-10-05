@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
-import { Cell } from '@ton/core';
+import { Address, Cell } from '@ton/core';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { toast } from 'sonner';
 import type {
@@ -37,6 +37,16 @@ import {
   createCommentPayloadBase64,
   createCommentPayload,
 } from '@ton/walletkit';
+import { isFiJetton } from '@/features/jettons';
+import {
+  computePersonalWalletAddress,
+  getFiWalletAddress,
+} from '@/lib/brotherhood/ton';
+import {
+  getContractCacheSync,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
 
 const GRAM_DECIMALS = 9;
 
@@ -183,6 +193,7 @@ export const useSendToken = ({
           const tx = await wallet.createTransferJettonTransaction({
             recipientAddress: recipient,
             jettonAddress: jetton.address,
+            jettonWalletAddress: jetton.walletAddress,
             transferAmount: parseUnits(amount, decimals).toString(),
             forwardPayload: payloadCell,
           });
@@ -210,6 +221,7 @@ export const useSendToken = ({
           const tx = await wallet.createTransferJettonTransaction({
             recipientAddress: recipient,
             jettonAddress: jetton.address,
+            jettonWalletAddress: jetton.walletAddress,
             transferAmount: parseUnits(amount, decimals).toString(),
             forwardPayload: payloadCell,
           });
@@ -218,23 +230,59 @@ export const useSendToken = ({
       }
 
       if (senderAddress) {
+        const isContractTx = tokenType === 'JETTON';
+        const affectedContracts: string[] = [];
+        if (tokenType === 'JETTON' && jetton) {
+          if (jetton.walletAddress) {
+            affectedContracts.push(jetton.walletAddress);
+          }
+          try {
+            const recipientAddr = Address.parse(recipient);
+            if (isFiJetton(jetton)) {
+              affectedContracts.push(
+                getFiWalletAddress(
+                  Address.parse(senderAddress),
+                  net,
+                ).toString(),
+                getFiWalletAddress(recipientAddr, net).toString(),
+              );
+            } else {
+              const minterAddr = Address.parse(jetton.address);
+              const cachedMinter = getContractCacheSync<PersonalStore>(
+                getNormalizedContractCacheKey(net, minterAddr),
+              );
+              if (cachedMinter?.data?.adminAddress) {
+                affectedContracts.push(
+                  computePersonalWalletAddress(
+                    minterAddr,
+                    recipientAddr,
+                    cachedMinter.data.adminAddress,
+                  ).toString(),
+                );
+              }
+            }
+          } catch {
+            // ignore address parse errors
+          }
+        }
+
         if (isFastSendActive) {
           brotherhoodSynchronizer.schedulePostTxReconciliation(
-            [],
+            affectedContracts,
             net,
             queryClient,
             undefined,
             {
               isStreamingConnected,
-              isContractTx: false,
+              isContractTx,
             },
           );
         } else {
           brotherhoodSynchronizer.stagePostTxReconciliation(
-            [],
+            affectedContracts,
             queryClient,
             undefined,
-            false,
+            isContractTx,
           );
         }
       }

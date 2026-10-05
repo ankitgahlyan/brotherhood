@@ -12,7 +12,7 @@ import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { ActSubmitProposal } from '@wrappers/FossFiWallet.gen';
 import { Poll } from '@wrappers/Poll.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 
 export interface UseSubmitProposalParams {
@@ -62,9 +62,10 @@ export function useSubmitProposal({
       }),
     );
 
-    await sendTx([
-      { toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload },
-    ]);
+    await sendTx(
+      [{ toAddress: fiWalletAddr.toString(), amount: GAS.DAO, payload }],
+      { affectedContracts: [fiWalletAddr, daoAddr, FI_ADDRESS] },
+    );
   }, [walletAddress, daoAddress, proposalTargetPayload, network, sendTx]);
 
   const isDisabled = !wallet || !walletAddress || !daoAddress || isSending;
