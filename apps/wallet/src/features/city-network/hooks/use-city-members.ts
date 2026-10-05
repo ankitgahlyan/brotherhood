@@ -37,7 +37,7 @@ export function useLocationMembers(
     let isCancelled = false;
     getContractCache(getNormalizedContractCacheKey(network, cleanAddr)).then(
       (cached) => {
-        if (isCancelled || cached?.data) return;
+        if (isCancelled || cached !== null) return;
         try {
           const parsed = Address.parse(cleanAddr);
           batchHydrateUniversal([parsed], network, {

@@ -17,8 +17,6 @@ import {
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
-import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
-import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 
 export interface UseRegisterPersonalJettonParams {
   wallet: Wallet | null | undefined;
@@ -51,7 +49,6 @@ export function useRegisterPersonalJetton({
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
-  const refreshQueries = useRefreshContractQueries();
 
   const register = useCallback(async () => {
     if (!walletAddress) throw new Error('No wallet connected');
@@ -74,18 +71,18 @@ export function useRegisterPersonalJetton({
       personalWallet: walletAddr,
     });
 
-    await sendTx([
-      {
-        toAddress: fiWalletAddr.toString(),
-        amount: GAS.SET_PERSONAL,
-        payload: setBody,
-      },
-    ]);
+    await sendTx(
+      [
+        {
+          toAddress: fiWalletAddr.toString(),
+          amount: GAS.SET_PERSONAL,
+          payload: setBody,
+        },
+      ],
+      { affectedContracts: [fiWalletAddr, minterAddr, walletAddr] },
+    );
 
-    // Explicitly delete cached fi-wallet-state from IndexedDB so fresh data is loaded
-    await deleteContractCache(`fi-wallet-state:${ownerAddr.toString()}`);
     toast.success('Personal Jetton registered successfully!');
-    await refreshQueries([`fi-wallet-state:${ownerAddr.toString()}`]);
     onSuccess?.();
   }, [
     walletAddress,
@@ -93,7 +90,6 @@ export function useRegisterPersonalJetton({
     personalWalletAddress,
     network,
     sendTx,
-    refreshQueries,
     onSuccess,
   ]);
 

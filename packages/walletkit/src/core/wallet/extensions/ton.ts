@@ -133,9 +133,11 @@ export class WalletTonClass implements WalletTonInterface {
 
       await CallForSuccess(() => this.getClient().sendBoc(boc));
 
-      // Clear cached seqno after successful broadcast so subsequent calls get the updated seqno
-      if (typeof (this as any).clearCachedSeqno === 'function') {
-        (this as any).clearCachedSeqno();
+      // Increment cached seqno (+1) after successful broadcast so subsequent calls avoid an extra seqno RPC
+      if (typeof this.incrementCachedSeqno === 'function') {
+        this.incrementCachedSeqno();
+      } else if (typeof this.clearCachedSeqno === 'function') {
+        this.clearCachedSeqno();
       }
 
       const { hash: normalizedHash, boc: normalizedBoc } =

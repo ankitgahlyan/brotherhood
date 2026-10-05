@@ -73,6 +73,15 @@ export class WalletV4R2Adapter implements WalletAdapter {
       this.cachedSeqno = { value: seqno, timestamp: Date.now() };
     }
   }
+
+  public incrementCachedSeqno(): void {
+    if (this.cachedSeqno) {
+      this.cachedSeqno = {
+        value: this.cachedSeqno.value + 1,
+        timestamp: Date.now(),
+      };
+    }
+  }
   public readonly version = 'v4r2';
 
   /**
@@ -278,7 +287,7 @@ export class WalletV4R2Adapter implements WalletAdapter {
    */
   async getSeqno(forceFresh = false): Promise<number> {
     const now = Date.now();
-    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 60000) {
+    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 1800000) {
       return this.cachedSeqno.value;
     }
 

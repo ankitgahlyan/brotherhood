@@ -505,7 +505,9 @@ export class RequestProcessor {
         }
 
         const wallet = getWalletFromEvent(this.walletManager, event);
-        if (typeof wallet?.clearCachedSeqno === 'function') {
+        if (typeof wallet?.incrementCachedSeqno === 'function') {
+          wallet.incrementCachedSeqno();
+        } else if (typeof wallet?.clearCachedSeqno === 'function') {
           wallet.clearCachedSeqno();
         }
 

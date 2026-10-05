@@ -165,6 +165,8 @@ export function usePersonalJettonInfo(
       : deterministicDeployedQuery.data) || minterDetails,
   );
 
+  const minterAdminAddr = minterDetails?.adminAddress || ownerAddress;
+
   const {
     data: computedWalletAddrObj,
     isLoading: isWalletAddrLoading,
@@ -173,6 +175,8 @@ export function usePersonalJettonInfo(
     activeMinterObj ?? null,
     ownerAddress,
     isDeployedOnChain,
+    undefined,
+    minterAdminAddr,
   );
 
   const {
@@ -183,6 +187,8 @@ export function usePersonalJettonInfo(
     activeMinterObj ?? null,
     ownerAddress,
     isDeployedOnChain,
+    undefined,
+    minterAdminAddr,
   );
 
   const resolvedWallet =

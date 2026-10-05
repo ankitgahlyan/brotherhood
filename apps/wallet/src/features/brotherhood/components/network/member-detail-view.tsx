@@ -164,7 +164,6 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
         toggleActive: lineageToggleActive,
       });
       toast.success('Lineage action broadcasted');
-      setTimeout(() => refetch(), 4000);
     } catch {
       // Handled in useBrotherhoodTransaction
     }
@@ -199,7 +198,6 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({
         toggleActive: authToggleActive,
       });
       toast.success('Authority sanction and fund transfer broadcasted');
-      setTimeout(() => refetch(), 4000);
     } catch {
       // Handled in useBrotherhoodTransaction
     }

@@ -141,8 +141,9 @@ class BrotherhoodSynchronizerImpl {
   async reconcileDnsContacts(
     net: Network = defaultNetwork,
     force = false,
+    usePrehydratedCache = false,
   ): Promise<void> {
-    await syncBroCollectionContacts(net, force);
+    await syncBroCollectionContacts(net, force, usePrehydratedCache);
   }
 
   /**

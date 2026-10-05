@@ -475,9 +475,6 @@ export const createWalletManagementSlice =
             if (!state.walletManagement.isStreamingConnected) {
               await get().startWebSocketStreaming();
             }
-            if (state.walletManagement.balance === undefined) {
-              void get().updateBalance();
-            }
             return;
           }
 
@@ -608,9 +605,6 @@ export const createWalletManagementSlice =
           });
 
           await get().startWebSocketStreaming();
-          if (cachedBalance === undefined) {
-            void get().updateBalance();
-          }
 
           log.info(`Switched to wallet ${walletId} successfully`);
         } catch (error) {
@@ -865,9 +859,6 @@ export const createWalletManagementSlice =
             log.info(`Active wallet ${targetWallet.name} is already active`);
             if (!currentState.walletManagement.isStreamingConnected) {
               await get().startWebSocketStreaming();
-            }
-            if (currentState.walletManagement.balance === undefined) {
-              void get().updateBalance();
             }
           }
 

@@ -77,4 +77,7 @@ export interface WalletAdapter {
 
   /** Seed cached sequence number from pre-hydrated account state BOC */
   setCachedSeqno?(seqno: number): void;
+
+  /** Increment cached sequence number (+1) after successful transaction broadcast */
+  incrementCachedSeqno?(): void;
 }

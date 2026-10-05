@@ -25,8 +25,6 @@ import {
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import type { Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
-import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
-import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 
 export const DEFAULT_TOKEN_DESCRIPTION =
   'Personal Token backed by Member trust on BrotherHood Network';
@@ -69,7 +67,6 @@ export function useDeployPersonalJetton({
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
-  const refreshQueries = useRefreshContractQueries();
 
   const [deployedAddresses, setDeployedAddresses] =
     useState<DeployedPersonalAddresses | null>(null);
@@ -151,11 +148,9 @@ export function useDeployPersonalJetton({
     };
 
     // Send both messages bundled into a single multi-message transaction
-    await sendTx([deployMsg, registerMsg]);
-
-    // Clear local fi-wallet-state cache and trigger query refreshes
-    await deleteContractCache(`fi-wallet-state:${ownerAddr.toString()}`);
-    await refreshQueries([`fi-wallet-state:${ownerAddr.toString()}`]);
+    await sendTx([deployMsg, registerMsg], {
+      affectedContracts: [contractAddress, expectedWallet, fiWalletAddr],
+    });
 
     const result: DeployedPersonalAddresses = {
       minterAddress: contractAddress.toString(),
@@ -174,7 +169,6 @@ export function useDeployPersonalJetton({
     metadata,
     network,
     sendTx,
-    refreshQueries,
     onDeploySuccess,
   ]);
 

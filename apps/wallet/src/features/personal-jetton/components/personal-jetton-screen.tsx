@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Address } from '@ton/core';
 import {
   AlertCircle,
@@ -76,7 +76,6 @@ import {
   normalizeCodeHash,
 } from '@/lib/brotherhood/account-hydrator.worker';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
-import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
 import {
   buildRequestUpgradeBody,
   buildPersonalUpgradeBody,
@@ -249,17 +248,6 @@ export const PersonalJettonScreen: React.FC = () => {
     walletCachedState.codeHash,
   ]);
 
-  const refetchOutdated = useCallback(() => {
-    if (!activeMinterAddress) return;
-    const addrs = [
-      activeMinterAddress,
-      ...(activePersonalWalletAddress ? [activePersonalWalletAddress] : []),
-    ];
-    void brotherhoodSynchronizer.reconcileContracts(addrs, network, {
-      force: true,
-    });
-  }, [activeMinterAddress, activePersonalWalletAddress, network]);
-
   const isAnyPersonalContractOutdated = Boolean(
     outdatedState &&
     (isMinterAdmin
@@ -314,10 +302,13 @@ export const PersonalJettonScreen: React.FC = () => {
 
       if (messages.length === 0) return;
 
-      await sendPersonalUpgradeTx(messages);
+      await sendPersonalUpgradeTx(messages, {
+        affectedContracts: [
+          activeMinter,
+          ...(activePersonalWalletAddress ? [activePersonalWalletAddress] : []),
+        ],
+      });
       toast.success('Personal contract upgrade dispatched!');
-      info.refetch();
-      refetchOutdated();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upgrade failed');
     }
@@ -337,7 +328,6 @@ export const PersonalJettonScreen: React.FC = () => {
       decimals: '9',
     },
     onDeploySuccess: () => {
-      info.refetch();
       setActiveTab('info');
     },
   });
@@ -376,7 +366,6 @@ export const PersonalJettonScreen: React.FC = () => {
     onSuccess: () => {
       setAddressesTabMinter('');
       setAddressesTabWallet('');
-      info.refetch();
     },
   });
 
@@ -396,7 +385,6 @@ export const PersonalJettonScreen: React.FC = () => {
     personalMinterAddress: activeMinter || null,
     onSuccess: () => {
       deployer.resetDeployed();
-      info.refetch();
     },
   });
 

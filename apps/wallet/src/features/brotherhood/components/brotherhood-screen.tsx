@@ -414,7 +414,6 @@ export const BrotherhoodScreen: React.FC = () => {
       setLoanAmountInput('');
       setLoanMaturityDays('');
       setLoanMultiplierInput('');
-      account.refetch();
     },
   });
 

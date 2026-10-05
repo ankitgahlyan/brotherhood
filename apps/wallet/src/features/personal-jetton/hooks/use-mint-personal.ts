@@ -9,7 +9,11 @@
 import { useCallback } from 'react';
 import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
-import { buildMintBody, parseUnits } from '@/lib/brotherhood/deploy';
+import {
+  buildMintBody,
+  getExpectedPersonalWalletAddress,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction, GAS } from '@/features/brotherhood';
 
 export interface UseMintPersonalParams {
@@ -43,6 +47,7 @@ export function useMintPersonal({
   const mint = useCallback(async () => {
     if (!minterAddress || !recipient)
       throw new Error('Missing minter or recipient');
+    const minterAddr = Address.parse(minterAddress);
     const recipientAddr = Address.parse(recipient);
     const amountNano = parseUnits(amount, 9);
 
@@ -53,8 +58,27 @@ export function useMintPersonal({
       totalTonAmount: 700000000n, // 0.7 TON for child wallet deploy & storage
     });
 
-    await sendTx([{ toAddress: minterAddress, amount: GAS.MINT, payload }]);
-  }, [minterAddress, recipient, amount, sendTx]);
+    const affectedContracts: (Address | string)[] = [minterAddr];
+    try {
+      const ownerAddrStr = wallet?.getAddress?.();
+      const deployerAddr = ownerAddrStr
+        ? Address.parse(ownerAddrStr)
+        : recipientAddr;
+      affectedContracts.push(
+        getExpectedPersonalWalletAddress({
+          personalMinter: minterAddr,
+          owner: recipientAddr,
+          adminAddress: deployerAddr,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+
+    await sendTx([{ toAddress: minterAddress, amount: GAS.MINT, payload }], {
+      affectedContracts,
+    });
+  }, [minterAddress, recipient, amount, wallet, sendTx]);
 
   const isDisabled =
     !wallet ||

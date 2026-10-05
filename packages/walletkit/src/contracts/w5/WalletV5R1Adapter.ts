@@ -109,6 +109,15 @@ export class WalletV5R1Adapter implements WalletAdapter {
     }
   }
 
+  public incrementCachedSeqno(): void {
+    if (this.cachedSeqno) {
+      this.cachedSeqno = {
+        value: this.cachedSeqno.value + 1,
+        timestamp: Date.now(),
+      };
+    }
+  }
+
   /**
    * Static factory method to create a WalletV5R1Adapter
    * @param signer - Signer function with publicKey property (from Signer utility)
@@ -273,7 +282,7 @@ export class WalletV5R1Adapter implements WalletAdapter {
    */
   async getSeqno(forceFresh = false): Promise<number> {
     const now = Date.now();
-    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 60000) {
+    if (!forceFresh && this.cachedSeqno && now - this.cachedSeqno.timestamp < 1800000) {
       return this.cachedSeqno.value;
     }
 

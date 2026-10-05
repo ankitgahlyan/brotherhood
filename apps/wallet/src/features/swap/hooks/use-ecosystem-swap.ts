@@ -43,11 +43,9 @@ import {
   useFiWalletState,
   usePersonalMinterDetails,
   usePersonalWalletBalance,
-  useRefreshContractQueries,
 } from '@/lib/brotherhood/queries';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 import {
-  deleteContractCache,
   getContractCacheSync,
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
@@ -150,7 +148,6 @@ export function useEcosystemSwap() {
       ? 'mainnet'
       : 'testnet';
   const nowSec = useNowSeconds();
-  const refreshQueries = useRefreshContractQueries();
 
   const {
     send: sendTx,
@@ -159,9 +156,7 @@ export function useEcosystemSwap() {
   } = useBrotherhoodTransaction(currentWallet, walletKit);
 
   // 1. User's own FI Account & FI Minter State (for on-chain FI metadata & admin address)
-  const { data: accountData, refetch: refetchUserAccount } = useFiAccount(
-    address ?? null,
-  );
+  const { data: accountData } = useFiAccount(address ?? null);
   const fiMinterState = useFiMinterState(true, net);
   const fiOnchainMeta = useMemo(
     () => parseOnchainMetadataCell(fiMinterState.data?.metadata),
@@ -277,7 +272,7 @@ export function useEcosystemSwap() {
 
   const memberProfilesQuery = useMemberProfiles(allMemberFiWalletAddrs, net);
 
-  // Ensure FI minter, FI Admin FiWallet/PersonalMinter, and discovered member PersonalMinters are hydrated for metadata
+  // Ensure discovered member PersonalMinters are hydrated for metadata if not yet in contract-cache
   useEffect(() => {
     const toHydrate: (Address | string)[] = [];
     const knownTypes: Record<string, KnownContractType> = {};
@@ -290,39 +285,16 @@ export function useEcosystemSwap() {
       try {
         const parsed = typeof addr === 'string' ? Address.parse(addr) : addr;
         if (isZeroAddress(parsed)) return;
-        const raw = parsed.toRawString();
+        const std = parsed.toString();
         const key = getNormalizedContractCacheKey(net, parsed);
-        if (!getContractCacheSync(key) && !knownTypes[raw]) {
-          knownTypes[raw] = type;
+        if (getContractCacheSync(key) === null && !knownTypes[std]) {
+          knownTypes[std] = type;
           toHydrate.push(parsed);
         }
       } catch {
         // ignore invalid address
       }
     };
-
-    queueIfUncached(FI_ADDRESS, 'fiMinter');
-    if (treasuryOwnerAddress) {
-      queueIfUncached(
-        getFiWalletAddress(treasuryOwnerAddress, net),
-        'fiWallet',
-      );
-    }
-    if (treasuryMinterAddr) {
-      queueIfUncached(treasuryMinterAddr, 'personalMinter');
-      if (userOwnerAddress && treasuryOwnerAddress) {
-        try {
-          const pw = computePersonalWalletAddress(
-            treasuryMinterAddr,
-            userOwnerAddress,
-            treasuryOwnerAddress,
-          );
-          queueIfUncached(pw, 'personalWallet');
-        } catch {
-          // ignore
-        }
-      }
-    }
 
     const profiles = memberProfilesQuery.data ?? {};
     for (const fwAddr of allMemberFiWalletAddrs) {
@@ -335,14 +307,7 @@ export function useEcosystemSwap() {
     if (toHydrate.length > 0) {
       void batchHydrateUniversal(toHydrate, net, { knownTypes });
     }
-  }, [
-    net,
-    treasuryOwnerAddress,
-    treasuryMinterAddr,
-    userOwnerAddress,
-    allMemberFiWalletAddrs,
-    memberProfilesQuery.data,
-  ]);
+  }, [net, allMemberFiWalletAddrs, memberProfilesQuery.data]);
 
   const addCustomMemberOwner = useCallback((ownerAddrStr: string) => {
     try {
@@ -1004,26 +969,10 @@ export function useEcosystemSwap() {
       ]);
     }
 
-    await deleteContractCache(`fi-wallet-state:${userOwnerAddress.toString()}`);
-    await refreshQueries([
-      `fi-wallet-state:${userOwnerAddress.toString()}`,
-      `member-profiles:${net}`,
-    ]);
-    refetchUserAccount();
     setAmountInput('');
     toast.success(`Swapped ${fromToken.symbol} for ${toToken.symbol}!`);
     return true;
-  }, [
-    address,
-    userOwnerAddress,
-    quote,
-    net,
-    toToken,
-    fromToken,
-    sendTx,
-    refreshQueries,
-    refetchUserAccount,
-  ]);
+  }, [address, userOwnerAddress, quote, net, toToken, fromToken, sendTx]);
 
   // Off-Ramp: Normal Burn of Reserve Token with Encrypted Bank Details to BRO_TREASURY_ADDRESS
   const executeFiatOffRampBurn = useCallback(
@@ -1118,7 +1067,6 @@ export function useEcosystemSwap() {
         },
       ]);
 
-      await refreshQueries([`fi-wallet-state:${userOwnerAddress.toString()}`]);
       toast.success(
         `${reserveToken.symbol} burned for fiat settlement! Issuer has been notified.`,
       );
@@ -1133,7 +1081,6 @@ export function useEcosystemSwap() {
       savedWallets,
       getDecryptedMnemonic,
       sendTx,
-      refreshQueries,
     ],
   );
 

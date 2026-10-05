@@ -18,8 +18,6 @@ import {
   type Network,
 } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction } from './use-brotherhood-transaction';
-import { useRefreshContractQueries } from '@/lib/brotherhood/queries';
-import { deleteContractCache } from '@/lib/brotherhood/contract-cache';
 import type { FiAccountData } from './use-fi-account';
 import { useNowSeconds } from '@/core/hooks';
 import { getAccountActionError } from './use-is-network-member';
@@ -66,7 +64,6 @@ export function useLoanRequirement({
     isSending,
     error,
   } = useBrotherhoodTransaction(wallet, walletKit);
-  const refreshQueries = useRefreshContractQueries();
 
   const hasPersonalToken = useMemo(() => {
     const minter = accountData?.personalJettonMinter;
@@ -248,9 +245,7 @@ export function useLoanRequirement({
       },
     ]);
 
-    await deleteContractCache(`fi-wallet-state:${ownerAddr.toString()}`);
     toast.success('Loan requirement updated successfully!');
-    await refreshQueries([`fi-wallet-state:${ownerAddr.toString()}`]);
     onSuccess?.();
   }, [
     walletAddress,
@@ -265,7 +260,6 @@ export function useLoanRequirement({
     isMultiplierDirty,
     trimmedMultiplier,
     sendTx,
-    refreshQueries,
     onSuccess,
   ]);
 

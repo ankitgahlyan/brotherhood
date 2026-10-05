@@ -35,8 +35,13 @@ import {
   BRO_TREASURY_ADDRESS,
 } from '@/lib/brotherhood/config';
 import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
+import {
+  getPersonalMinter,
+  getExpectedPersonalWalletAddress,
+} from '@/lib/brotherhood/deploy';
 import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
+import { getBroCollectionSyncCandidates } from '@/features/dns/hooks/use-my-domains';
 import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
 import { autoFundUnderfundedFiWallets } from '@/features/brotherhood/hooks/use-auto-fiwallet-funding';
 import { Address, Cell } from '@ton/core';
@@ -47,7 +52,7 @@ import { Address, Cell } from '@ton/core';
  * 2. Fetches jettons for saved wallets only if missing from localStorage (unless force = true)
  * 3. Triggers 1 universal background hydration batch on session start for all persisted addresses
  *    including FI Minter, FI Admin FiWallet + PersonalMinter + user PersonalWallet (for Swap),
- *    saved wallets' FiWallets, and watched locations
+ *    saved wallets' FiWallets + deterministic PersonalMinter/PersonalWallet, .bro DNS candidates, and watched locations
  * 4. Checks FiWallet initialization: uninit -> isMember: false; active -> isMember: true
  * 5. Discovers location and circle invites, adds fresh circle to bro-store
  * 6. Follow-up batch hydrates newly discovered location contracts and FI Admin PersonalMinter/PersonalWallet
@@ -115,13 +120,10 @@ export function useTrackedAddressesSync() {
         refreshDetail?.isPostTx && isStreamingConnected,
       );
 
-      // 2. Fetch jettons (only if missing from localStorage unless force = true) and reconcile .bro DNS contacts
+      // 2. Fetch jettons (only if missing from localStorage unless force = true)
       // Skip when triggered by post-tx refresh while WebSocket is already streaming jetton updates
       if (!skipAuxiliarySync) {
         void loadUserJettons(undefined, force).catch(() => {});
-        void brotherhoodSynchronizer
-          .reconcileDnsContacts(defaultNetwork, force)
-          .catch(() => {});
       }
 
       try {
@@ -157,6 +159,14 @@ export function useTrackedAddressesSync() {
         addContract(FI_ADDRESS);
         if (refreshDetail?.extraAddresses) {
           refreshDetail.extraAddresses.forEach((addr) => addContract(addr));
+        }
+
+        // Pre-include .bro DNS sync candidates so reconcileDnsContacts hits rawAccountStatesCache with 0 extra HTTP requests
+        const dnsSyncCandidates = !skipAuxiliarySync
+          ? getBroCollectionSyncCandidates(defaultNetwork, force)
+          : [];
+        for (const cand of dnsSyncCandidates) {
+          addContract(cand);
         }
 
         // FI Admin FiWallet & PersonalMinter (from cached FiStore.adminAddress or fallback BRO_TREASURY_ADDRESS)
@@ -210,12 +220,25 @@ export function useTrackedAddressesSync() {
           if (!wallet.address) continue;
           addWallet(wallet.address);
 
-          // Deterministic FiWallet, cached Circle/Ring/Personal contracts, & user's PersonalWallet for FI Admin's Personal Token (for Swap)
+          // Deterministic FiWallet, deterministic PersonalMinter + PersonalWallet, cached Circle/Ring/Personal contracts, & user's PersonalWallet for FI Admin's Personal Token (for Swap)
           try {
             const parsedOwner = Address.parse(wallet.address);
             const fiWallet = getFiWalletAddress(parsedOwner, defaultNetwork);
             addContract(fiWallet);
             setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
+
+            const { contractAddress: deterministicPersonalMinter } =
+              getPersonalMinter({
+                issuerWallet: fiWallet,
+                adminAddress: parsedOwner,
+              });
+            addContract(deterministicPersonalMinter);
+
+            const expectedPersonalWallet = getExpectedPersonalWalletAddress({
+              personalMinter: deterministicPersonalMinter,
+              owner: parsedOwner,
+            });
+            addContract(expectedPersonalWallet);
 
             const cachedSelfFiStore = getContractCacheSync<any>(
               getNormalizedContractCacheKey(defaultNetwork, fiWallet),
@@ -307,6 +330,12 @@ export function useTrackedAddressesSync() {
           defaultNetwork,
           { force },
         );
+
+        if (dnsSyncCandidates.length > 0) {
+          void brotherhoodSynchronizer
+            .reconcileDnsContacts(defaultNetwork, force, true)
+            .catch(() => {});
+        }
 
         const combinedBalances: Record<string, string> = {
           ...(res?.balances || {}),

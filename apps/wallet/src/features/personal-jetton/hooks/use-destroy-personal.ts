@@ -47,30 +47,58 @@ export function useDestroyPersonal({
       throw new Error('Missing personal wallet address');
     }
     const payload = buildDestroyBody();
-    await sendTx([
+    await sendTx(
+      [
+        {
+          toAddress: personalWalletAddress,
+          amount: toNano('0.05'),
+          payload,
+        },
+      ],
       {
-        toAddress: personalWalletAddress,
-        amount: toNano('0.05'),
-        payload,
+        affectedContracts: [
+          personalWalletAddress,
+          ...(personalMinterAddress ? [personalMinterAddress] : []),
+        ],
       },
-    ]);
+    );
     onSuccess?.();
-  }, [walletAddress, personalWalletAddress, sendTx, onSuccess]);
+  }, [
+    walletAddress,
+    personalWalletAddress,
+    personalMinterAddress,
+    sendTx,
+    onSuccess,
+  ]);
 
   const destroyMinter = useCallback(async () => {
     if (!walletAddress || !personalMinterAddress) {
       throw new Error('Missing personal minter address');
     }
     const payload = buildDestroyBody();
-    await sendTx([
+    await sendTx(
+      [
+        {
+          toAddress: personalMinterAddress,
+          amount: toNano('0.05'),
+          payload,
+        },
+      ],
       {
-        toAddress: personalMinterAddress,
-        amount: toNano('0.05'),
-        payload,
+        affectedContracts: [
+          personalMinterAddress,
+          ...(personalWalletAddress ? [personalWalletAddress] : []),
+        ],
       },
-    ]);
+    );
     onSuccess?.();
-  }, [walletAddress, personalMinterAddress, sendTx, onSuccess]);
+  }, [
+    walletAddress,
+    personalMinterAddress,
+    personalWalletAddress,
+    sendTx,
+    onSuccess,
+  ]);
 
   return {
     destroyWallet,

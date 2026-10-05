@@ -40,7 +40,7 @@ export function useLotteryState(
     let isCancelled = false;
     getContractCache(getNormalizedContractCacheKey(network, cleanAddr)).then(
       (cached) => {
-        if (isCancelled || cached?.data) return;
+        if (isCancelled || cached !== null) return;
         try {
           const targetAddr = Address.parse(cleanAddr);
           batchHydrateUniversal([targetAddr], network, {

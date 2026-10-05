@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useCallback } from 'react';
-import { type Address } from '@ton/core';
+import { Address } from '@ton/core';
 import {
   useContractState,
   getContractCache,
@@ -20,6 +20,7 @@ import {
   type PersonalMinterDetails,
 } from './ton';
 import { computePersonalWalletAddress } from './account-state-hydrator';
+import { parseOnchainMetadataCell } from './jettonContent';
 import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import type { FiStore } from '@wrappers/FossFi.gen';
 import type { PersonalStore } from '@wrappers/Personal.gen';
@@ -52,7 +53,7 @@ export function useFiWalletState(
       const { batchHydrateUniversal } =
         await import('./account-state-hydrator');
       await batchHydrateUniversal([fiWalletAddress], net, {
-        knownTypes: { [fiWalletAddress.toRawString()]: 'fiWallet' },
+        knownTypes: { [fiWalletAddress.toString()]: 'fiWallet' },
       });
     }
   }, [fiWalletAddress, net]);
@@ -80,12 +81,13 @@ export function useFiWalletStateByContract(
     if (contractAddress) {
       const { batchHydrateUniversal } =
         await import('./account-state-hydrator');
-      const clean =
+      const parsed =
         typeof contractAddress === 'string'
-          ? contractAddress.trim()
-          : contractAddress.toRawString();
-      await batchHydrateUniversal([clean], net, {
-        knownTypes: { [clean]: 'fiWallet' },
+          ? Address.parse(contractAddress.trim())
+          : contractAddress;
+      const std = parsed.toString();
+      await batchHydrateUniversal([parsed], net, {
+        knownTypes: { [std]: 'fiWallet' },
       });
     }
   }, [contractAddress, net]);
@@ -173,9 +175,6 @@ export function usePersonalWalletForIssuer(
   };
 }
 
-import { useEffect } from 'react';
-import { parseOnchainMetadataCell } from './jettonContent';
-
 export function usePersonalMinterDetails(
   personalMinter: Address | string | null | undefined,
   enabled = true,
@@ -189,20 +188,15 @@ export function usePersonalMinterDetails(
   const refetch = useCallback(async () => {
     if (!personalMinter) return;
     const { batchHydrateUniversal } = await import('./account-state-hydrator');
-    const clean =
+    const parsed =
       typeof personalMinter === 'string'
-        ? personalMinter.trim()
-        : personalMinter.toRawString();
-    await batchHydrateUniversal([clean], net, {
-      knownTypes: { [clean]: 'personalMinter' },
+        ? Address.parse(personalMinter.trim())
+        : personalMinter;
+    const std = parsed.toString();
+    await batchHydrateUniversal([parsed], net, {
+      knownTypes: { [std]: 'personalMinter' },
     });
   }, [personalMinter, net]);
-
-  useEffect(() => {
-    if (enabled && personalMinter && isLoading) {
-      void refetch();
-    }
-  }, [enabled, personalMinter, isLoading, refetch]);
 
   const minterDetails: PersonalMinterDetails | null = useMemo(
     () =>
@@ -233,26 +227,36 @@ export function usePersonalWalletAddress(
   ownerAddress: Address | null | undefined,
   enabled = true,
   net: Network = defaultNetwork,
+  adminAddressOverride?: Address | null,
 ) {
-  const minterDetails = usePersonalMinterDetails(personalMinter, enabled, net);
+  const { data: minterStore, isLoading: isMinterLoading } =
+    useContractState<PersonalStore>(
+      enabled && !adminAddressOverride ? personalMinter : null,
+      net,
+    );
+  const resolvedAdmin =
+    adminAddressOverride || minterStore?.adminAddress || ownerAddress;
   const address = useMemo(() => {
-    if (!enabled || !personalMinter || !ownerAddress) return null;
-    const adminAddress = minterDetails.data?.adminAddress || ownerAddress;
+    if (!enabled || !personalMinter || !ownerAddress || !resolvedAdmin) {
+      return null;
+    }
     try {
       return computePersonalWalletAddress(
         personalMinter,
         ownerAddress,
-        adminAddress,
+        resolvedAdmin,
       );
     } catch {
       return null;
     }
-  }, [enabled, personalMinter, ownerAddress, minterDetails.data?.adminAddress]);
+  }, [enabled, personalMinter, ownerAddress, resolvedAdmin]);
+
+  const isLoading = enabled && !adminAddressOverride && isMinterLoading;
 
   return {
     data: address,
-    isLoading: minterDetails.isLoading,
-    isFetching: minterDetails.isFetching,
+    isLoading,
+    isFetching: isLoading,
     error: null as Error | null,
     refetch: async () => {},
   };
@@ -263,12 +267,14 @@ export function usePersonalWalletBalance(
   ownerAddress: Address | null | undefined,
   enabled = true,
   net: Network = defaultNetwork,
+  adminAddressOverride?: Address | null,
 ) {
   const walletAddr = usePersonalWalletAddress(
     personalMinter,
     ownerAddress,
     enabled,
     net,
+    adminAddressOverride,
   );
   const { data: walletStore, isLoading } =
     useContractState<PersonalWalletStore>(walletAddr.data, net);
@@ -330,7 +336,9 @@ export function useRefreshContractQueries() {
   return useCallback(async (_keys?: string[]) => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
-        new CustomEvent('brotherhood_manual_wallet_refresh'),
+        new CustomEvent('brotherhood_manual_wallet_refresh', {
+          detail: { isPostTx: true },
+        }),
       );
     }
   }, []);

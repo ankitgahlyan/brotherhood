@@ -216,10 +216,10 @@ export function extractBroNftAddressesFromNftsStore(
  * LocalStorage-first: if `useDnsStore` or `useContactBookStore` already has persisted
  * `.bro` domains/contacts for `network` and `force === false`, skips network fetching completely.
  */
-export async function syncBroCollectionContacts(
+export function getBroCollectionSyncCandidates(
   network: Network,
   force = false,
-): Promise<void> {
+): string[] {
   const collectionHydratedKey = `${network}:__collection__`;
   const dnsState = useDnsStore.getState();
   const storedDomains = dnsState.domainsByNetwork[network] ?? [];
@@ -253,39 +253,51 @@ export async function syncBroCollectionContacts(
       Boolean(dnsState.hydratedKeys?.[collectionHydratedKey])) &&
     untrackedBroNfts.length === 0
   ) {
-    return;
+    return [];
   }
 
   const now = Date.now();
   const lastSynced = broCollectionSyncCache.get(network) ?? 0;
   if (!force && now - lastSynced < MY_DOMAINS_TTL_MS) {
+    return [];
+  }
+
+  const testOnly = network === 'testnet';
+  const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
+  const genesisNftAddr = deriveDnsItemAddress(
+    collectionAddr,
+    'genesis',
+    testOnly,
+  );
+  const candidateSet = new Set<string>(broNftsFromStore);
+  for (const d of storedDomains) {
+    if (d.nftAddress) candidateSet.add(d.nftAddress);
+  }
+  candidateSet.add(genesisNftAddr);
+  return Array.from(candidateSet);
+}
+
+export async function syncBroCollectionContacts(
+  network: Network,
+  force = false,
+  usePrehydratedCache = false,
+): Promise<void> {
+  const collectionHydratedKey = `${network}:__collection__`;
+  const candidates = getBroCollectionSyncCandidates(network, force);
+  if (candidates.length === 0) {
     return;
   }
+
   const inFlight = inFlightBroCollectionSync.get(network);
   if (!force && inFlight) {
     await inFlight;
     return;
   }
-  broCollectionSyncCache.set(network, now);
+  broCollectionSyncCache.set(network, Date.now());
   const promise = (async () => {
     try {
-      const testOnly = network === 'testnet';
-      const collectionAddr = Address.parse(BRO_COLLECTION_RESOLVER);
-      const genesisNftAddr = deriveDnsItemAddress(
-        collectionAddr,
-        'genesis',
-        testOnly,
-      );
-      const candidateSet = new Set<string>(broNftsFromStore);
-      for (const d of storedDomains) {
-        if (d.nftAddress) candidateSet.add(d.nftAddress);
-      }
-      candidateSet.add(genesisNftAddr);
-      const candidates = Array.from(candidateSet);
-      if (candidates.length === 0) return;
-
       const batch = await batchFetchAccountStates(candidates, network, 30, {
-        force,
+        force: usePrehydratedCache ? false : force,
       });
       for (const acc of batch.accounts) {
         if (acc.status !== 'active' || !acc.data_boc) continue;
