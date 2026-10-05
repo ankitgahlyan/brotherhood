@@ -36,7 +36,12 @@ import {
   getExplorerHoldersUrl,
 } from '@/core/explorer';
 import { useNavigate } from '@/core/routing';
-import { formatLargeValue, shortenAddress, toDecimal } from '@/core/utils';
+import {
+  formatLargeValue,
+  openTestnetFaucet,
+  shortenAddress,
+  toDecimal,
+} from '@/core/utils';
 import type { AssetRowData } from '../asset-row';
 import { isFiJetton } from '@/features/jettons';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
@@ -319,16 +324,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
 
               {/* Testnet Faucet Redirect Button */}
               {network === 'testnet' ? (
-                <a
-                  href="https://t.me/tnfaucet_bot/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm"
+                <button
+                  type="button"
+                  onClick={() => openTestnetFaucet(userAddress, network)}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-primary-foreground animate-pulse" />
                   <span>Get Grams</span>
                   <ExternalLink className="w-4 h-4 ml-auto" />
-                </a>
+                </button>
               ) : (
                 <div className="text-center text-xs text-muted-foreground py-1">
                   Grams is the native coin of The Open Network.

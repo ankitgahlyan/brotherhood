@@ -488,16 +488,16 @@ export const AddTokenModal: React.FC<AddTokenModalProps> = ({
     <Modal.Container
       isOpened={isOpen}
       onOpenChange={(open) => !open && handleClose()}
-      className="px-2 max-w-md w-full"
+      className="px-2 max-w-md w-full h-[88dvh] max-h-[88dvh] sm:h-[85vh] sm:max-h-[85vh] flex flex-col overflow-hidden"
     >
-      <Modal.Header onClose={handleClose}>
+      <Modal.Header onClose={handleClose} className="shrink-0">
         <Modal.Title className="flex items-center gap-2">
           <Search className="w-4 h-4 text-primary" />
           <span>Lookup & Watch-Only Wallet</span>
         </Modal.Title>
       </Modal.Header>
 
-      <Modal.Body className="space-y-4 max-h-[80dvh] overflow-y-auto">
+      <Modal.Body className="space-y-4 overflow-y-auto min-h-0 flex-1">
         <p className="text-xs text-muted-foreground">
           Enter any TON address, <span className="font-mono">.bro</span> domain,
           or <span className="font-mono">@username</span> to inspect its

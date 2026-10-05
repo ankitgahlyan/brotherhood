@@ -35,6 +35,7 @@ import {
   type PendingDeferredPayment,
 } from '@demo/wallet-core';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
+import { openTestnetFaucet } from '@/core/utils/telegram';
 import { Button } from '@/core/components/ui/button';
 import { Modal } from '@/core/components/ui/modal';
 import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
@@ -1025,11 +1026,7 @@ export const NotificationBell: React.FC = () => {
                     <Button
                       size="sm"
                       onClick={() => {
-                        window.open(
-                          'https://t.me/tnfaucet_bot/',
-                          '_blank',
-                          'noopener,noreferrer',
-                        );
+                        openTestnetFaucet(item.walletAddress, network);
                       }}
                       className="w-full text-xs font-semibold py-2 rounded-xl cursor-pointer"
                     >

@@ -7,7 +7,7 @@
  */
 
 import { useState, type FC } from 'react';
-import { ChevronDown, EyeOff, Plus } from 'lucide-react';
+import { ChevronDown, EyeOff, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
@@ -71,7 +71,7 @@ export const AssetsScreen: FC = () => {
                 title="Inspect address or add Watch-Only wallet"
                 aria-label="Inspect address or add Watch-Only wallet"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Search className="w-3.5 h-3.5" />
               </button>
             </div>
           }

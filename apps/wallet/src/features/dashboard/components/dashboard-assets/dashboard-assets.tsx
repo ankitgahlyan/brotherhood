@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, EyeOff, Plus, Coins, Image } from 'lucide-react';
+import { ChevronRight, EyeOff, Search, Coins, Image } from 'lucide-react';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
 import { useNavigate } from '@/core/routing';
 import { useJettons, useNfts, usePreferences } from '@demo/wallet-core';
@@ -173,7 +173,7 @@ export const DashboardAssets: React.FC = () => {
             aria-label="Inspect address or add Watch-Only wallet"
             data-testid="dashboard-assets-add-button"
           >
-            <Plus className="w-4 h-4 shrink-0" />
+            <Search className="w-4 h-4 shrink-0" />
           </button>
         </div>
       </div>

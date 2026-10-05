@@ -117,6 +117,53 @@ import {
 import { useDnsStore } from '@/features/dns/store/dns-store';
 
 /**
+ * Formats a wallet address as non-bounceable (`0Q...` on testnet), copies it to clipboard,
+ * and opens `@tnfaucet_bot` with `?text=<address>` prefilled in the Telegram message input box.
+ */
+export function openTestnetFaucet(
+  walletAddress?: Address | string | null,
+  network: string = 'testnet',
+): void {
+  let formattedAddress = '';
+  if (walletAddress) {
+    try {
+      const addr =
+        typeof walletAddress === 'string'
+          ? Address.parse(walletAddress.trim())
+          : walletAddress;
+      formattedAddress = addr.toString({
+        urlSafe: true,
+        bounceable: false,
+        testOnly: network === 'testnet',
+      });
+    } catch {
+      formattedAddress =
+        typeof walletAddress === 'string' ? walletAddress.trim() : '';
+    }
+  }
+
+  if (
+    formattedAddress &&
+    typeof navigator !== 'undefined' &&
+    navigator.clipboard
+  ) {
+    void navigator.clipboard
+      .writeText(formattedAddress)
+      .then(() => {
+        toast.success('Wallet address copied for faucet');
+      })
+      .catch(() => {
+        /* ignore clipboard errors */
+      });
+  }
+
+  const url = formattedAddress
+    ? `https://t.me/tnfaucet_bot?text=${encodeURIComponent(formattedAddress)}`
+    : 'https://t.me/tnfaucet_bot/';
+  openTelegramLink(url);
+}
+
+/**
  * Opens any detected social or messenger link:
  * - Telegram links open via Telegram SDK / t.me
  * - Custom app schemes (`simplex:/`, `briar://`, `tg://`, `smp://`, `xftp://`)
