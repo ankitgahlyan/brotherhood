@@ -27,6 +27,9 @@ export function usePasteHandler(
           if (
             trimmedText.startsWith('tc://') ||
             trimmedText.startsWith('ton://') ||
+            trimmedText.startsWith('tonconnect://') ||
+            trimmedText.startsWith('web+ton://') ||
+            trimmedText.startsWith('web+tonconnect://') ||
             trimmedText.startsWith('https://') ||
             trimmedText.startsWith('http://')
           ) {

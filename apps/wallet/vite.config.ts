@@ -66,6 +66,16 @@ const webPwaManifest: Partial<ManifestOptions> = {
       type: 'image/png',
     },
   ],
+  protocol_handlers: [
+    {
+      protocol: 'web+ton',
+      url: `${base}ton-connect?url=%s`,
+    },
+    {
+      protocol: 'web+tonconnect',
+      url: `${base}ton-connect?url=%s`,
+    },
+  ],
 };
 
 // TWA manifest: minimal — Telegram controls install/launch UX

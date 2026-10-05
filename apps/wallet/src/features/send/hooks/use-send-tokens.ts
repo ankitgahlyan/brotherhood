@@ -20,11 +20,23 @@ import {
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
+import {
+  getContractCacheSync,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
+import type { PersonalStore } from '@wrappers/Personal.gen';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { useTrackedPersonalTokens } from '@/features/assets/hooks/use-tracked-personal-tokens';
-import { assetUrl, findRate, normalizeAddress, toDecimal } from '@/core/utils';
+import { imageSources } from '@/features/assets/hooks/use-asset-rows';
+import {
+  assetUrl,
+  findRate,
+  normalizeAddress,
+  toDecimal,
+  tokenImageUrls,
+} from '@/core/utils';
 import { BRO_TREASURY_ADDRESS, FI_ADDRESS } from '@/lib/brotherhood/config';
 import { isZeroAddress } from '@/lib/brotherhood/ton';
 
@@ -98,6 +110,15 @@ export const useSendTokens = (): TokenOption[] => {
     const seenAddresses = new Set<string>([normFi]);
     const otherJettons: TokenOption[] = [];
 
+    const personalTokenByNorm = new Map<
+      string,
+      (typeof personalTokens)[number]
+    >();
+    for (const pt of personalTokens) {
+      const normPt = normalizeAddress(pt.minterAddress) || pt.minterAddress;
+      personalTokenByNorm.set(normPt, pt);
+    }
+
     for (const jetton of activeJettons) {
       if (isFiJetton(jetton)) continue;
       const normAddr = normalizeAddress(jetton.address) || jetton.address;
@@ -108,16 +129,40 @@ export const useSendTokens = (): TokenOption[] => {
       if (amount <= 0) continue;
       seenAddresses.add(normAddr);
 
+      const cachedPtStore = getContractCacheSync<PersonalStore>(
+        getNormalizedContractCacheKey(net, jetton.address),
+      )?.data;
+      const ptOnchainMeta = cachedPtStore?.metadataUri
+        ? parseOnchainMetadataCell(cachedPtStore.metadataUri)
+        : null;
+      const trackedPt = personalTokenByNorm.get(normAddr);
+
       const isAdminPt = Boolean(
         adminPtMinterNorm && normAddr === adminPtMinterNorm,
       );
-      const symbol = getJettonsSymbol(jetton) ?? '';
+      const symbol =
+        ptOnchainMeta?.symbol?.trim() ||
+        trackedPt?.symbol?.trim() ||
+        getJettonsSymbol(jetton) ||
+        '';
+      const name =
+        ptOnchainMeta?.name?.trim() ||
+        trackedPt?.name?.trim() ||
+        getJettonsName(jetton) ||
+        symbol;
+      const ptImage =
+        ptOnchainMeta?.image?.trim() || trackedPt?.image?.trim() || '';
+      const iconUrls = [
+        ...(ptImage ? [ptImage] : []),
+        ...tokenImageUrls(jetton.info?.image),
+      ];
+
       otherJettons.push({
         token: { type: 'JETTON', data: jetton },
         id: jetton.address,
-        icon: getJettonsImage(jetton),
+        icon: imageSources(iconUrls, jetton.info?.image?.data),
         fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
-        name: getJettonsName(jetton) ?? symbol,
+        name,
         symbol,
         decimals,
         balance: amount,
@@ -144,10 +189,21 @@ export const useSendTokens = (): TokenOption[] => {
       if (amount <= 0 && !isOwnPersonal) continue;
       seenAddresses.add(normAddr);
 
+      const cachedPtStore = getContractCacheSync<PersonalStore>(
+        getNormalizedContractCacheKey(net, pt.minterAddress),
+      )?.data;
+      const ptOnchainMeta = cachedPtStore?.metadataUri
+        ? parseOnchainMetadataCell(cachedPtStore.metadataUri)
+        : null;
+
       const isAdminPt = Boolean(
         adminPtMinterNorm && normAddr === adminPtMinterNorm,
       );
-      const symbol = pt.symbol || 'PT';
+      const symbol = ptOnchainMeta?.symbol?.trim() || pt.symbol?.trim() || 'PT';
+      const name =
+        ptOnchainMeta?.name?.trim() || pt.name?.trim() || 'Personal Token';
+      const ptImage = ptOnchainMeta?.image?.trim() || pt.image?.trim() || '';
+
       otherJettons.push({
         token: {
           type: 'JETTON',
@@ -158,17 +214,17 @@ export const useSendTokens = (): TokenOption[] => {
             decimalsNumber: GRAM_DECIMALS,
             isVerified: true,
             info: {
-              name: pt.name || 'Personal Token',
+              name,
               symbol,
               decimals: GRAM_DECIMALS,
-              image: pt.image ? { url: pt.image } : undefined,
+              image: ptImage ? { url: ptImage } : undefined,
             },
           } as any,
         },
         id: pt.minterAddress,
-        icon: pt.image,
+        icon: ptImage ? imageSources([ptImage]) : undefined,
         fallbackText: symbol.slice(0, 2).toUpperCase() || 'PT',
-        name: pt.name || 'Personal Token',
+        name,
         symbol,
         decimals: GRAM_DECIMALS,
         balance: amount,
@@ -200,10 +256,15 @@ export const useSendTokens = (): TokenOption[] => {
       fiOnchainMeta.name?.trim() ||
       (fiJetton && getJettonsName(fiJetton)) ||
       fiSymbol;
-    const fiIcon =
+    const fiPrimaryIcon =
       fiOnchainMeta.image?.trim() ||
       (fiJetton && getJettonsImage(fiJetton)) ||
       assetUrl('fi.svg');
+    const fiIconUrls = [
+      ...(fiOnchainMeta.image?.trim() ? [fiOnchainMeta.image.trim()] : []),
+      ...(fiJetton ? tokenImageUrls(fiJetton.info?.image) : []),
+      assetUrl('fi.svg'),
+    ];
 
     const fiOption: TokenOption = {
       token: {
@@ -220,12 +281,12 @@ export const useSendTokens = (): TokenOption[] => {
               name: fiName,
               symbol: fiSymbol,
               decimals: 9,
-              image: { url: fiIcon },
+              image: { url: fiPrimaryIcon },
             },
           } as any),
       },
       id: fiJetton?.address ?? FI_ADDRESS,
-      icon: fiIcon,
+      icon: imageSources(fiIconUrls, fiJetton?.info?.image?.data),
       fallbackText: fiSymbol.slice(0, 2).toUpperCase() || 'HD',
       name: fiName,
       symbol: fiSymbol,
@@ -247,5 +308,6 @@ export const useSendTokens = (): TokenOption[] => {
     isMember,
     fiJettonBalance,
     fiOnchainMeta,
+    net,
   ]);
 };

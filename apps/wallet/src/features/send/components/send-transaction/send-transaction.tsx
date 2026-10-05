@@ -92,12 +92,13 @@ export const SendTransaction: React.FC = () => {
 
   const initialParams = useMemo(() => {
     if (typeof window === 'undefined')
-      return { recipient: '', amount: '', token: '' };
+      return { recipient: '', amount: '', token: '', comment: '' };
     const sp = new URLSearchParams(window.location.search);
     return {
       recipient: sp.get('recipient') || '',
       amount: sp.get('amount') || '',
       token: sp.get('token') || '',
+      comment: sp.get('comment') || sp.get('text') || '',
     };
   }, []);
 
@@ -109,11 +110,47 @@ export const SendTransaction: React.FC = () => {
     string | null
   >(initialParams.recipient ? initialParams.recipient : null);
   const [amount, setAmount] = useState(initialParams.amount);
-  const [comment, setComment] = useState('');
-  const [isEncryptedComment, setIsEncryptedComment] = useState(true);
+  const [comment, setComment] = useState(initialParams.comment);
+  const [isEncryptedComment, setIsEncryptedComment] = useState(
+    () => !initialParams.comment,
+  );
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
+
+  useEffect(() => {
+    const handleNavigateSend = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{
+          recipient?: string;
+          amount?: string;
+          token?: string;
+          comment?: string;
+        }>
+      ).detail;
+      if (!detail) return;
+      if (detail.recipient !== undefined) {
+        setRecipient(detail.recipient);
+        setEffectiveRecipientAddress(detail.recipient || null);
+      }
+      if (detail.amount !== undefined) {
+        setAmount(detail.amount);
+      }
+      if (detail.comment !== undefined) {
+        setComment(detail.comment);
+        if (detail.comment) setIsEncryptedComment(false);
+      }
+      if (detail.token) {
+        setSelectedId(detail.token);
+      }
+    };
+    window.addEventListener('brotherhood_navigate_send', handleNavigateSend);
+    return () =>
+      window.removeEventListener(
+        'brotherhood_navigate_send',
+        handleNavigateSend,
+      );
+  }, []);
 
   const [senderMode, setSenderMode] = useState<SenderMode>('self');
   const [granterInput, setGranterInput] = useState('');

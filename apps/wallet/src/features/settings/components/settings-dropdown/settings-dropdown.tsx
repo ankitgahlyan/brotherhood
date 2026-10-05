@@ -26,6 +26,7 @@ import {
 } from '@/core/lib/developer-mode';
 import { setSettingsModalOpen } from '@/core/lib/settings-modal-state';
 import { InstallPromptDialog } from '@/core/components/pwa';
+import { usePwaInstall } from '@/core/hooks/use-pwa-install';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useBiometrics } from '@/core/security/use-biometrics';
 
@@ -130,6 +131,8 @@ export const SettingsDropdown: React.FC = () => {
   const [biometricError, setBiometricError] = useState('');
   const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const { deferredPrompt, isStandalone, isInstalled, installStandalone } =
+    usePwaInstall();
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isContactsOpen, setIsContactsOpen] = useState(false);
   const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
@@ -468,15 +471,21 @@ export const SettingsDropdown: React.FC = () => {
                     setIsStorageManagerOpen(true);
                   }}
                 />
-                <ActionRow
-                  icon={<Download className="w-5 h-5 text-primary" />}
-                  label="Install App / Shortcut"
-                  subtitle="Add to home screen or desktop"
-                  onClick={() => {
-                    setPanel(null);
-                    setIsInstallOpen(true);
-                  }}
-                />
+                {!isStandalone && !isInstalled && (
+                  <ActionRow
+                    icon={<Download className="w-5 h-5 text-primary" />}
+                    label="Install App"
+                    subtitle="Install standalone app on your device"
+                    onClick={async () => {
+                      setPanel(null);
+                      if (deferredPrompt) {
+                        await installStandalone();
+                      } else {
+                        setIsInstallOpen(true);
+                      }
+                    }}
+                  />
+                )}
               </div>
             </div>
 

@@ -17,7 +17,10 @@ import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
 import { RouteErrorFallback } from '@/core/components/shared/route-error-fallback';
 import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
-import { registerRouterBack } from '@/core/lib/back-stack';
+import {
+  registerRouterBack,
+  notifyRouterNavigation,
+} from '@/core/lib/back-stack';
 
 const FloatingDevButton = React.lazy(() =>
   import('@/features/developer/components/floating-dev-button').then((m) => ({
@@ -34,6 +37,10 @@ function RootComponent() {
     (state) => state.walletCore.isWalletKitInitialized,
   );
   const isHydrated = useWalletStore((state) => state.isHydrated);
+  const isUnlocked = useWalletStore((state) => state.auth.isUnlocked);
+  const handleTonConnectUrl = useWalletStore(
+    (state) => state.handleTonConnectUrl,
+  );
   const initializationError = useWalletStore(
     (state) => state.walletCore.initializationError,
   );
@@ -42,6 +49,7 @@ function RootComponent() {
   const currentPath = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const hasProcessedLaunchLinkRef = React.useRef(false);
 
   // Initialize Telegram Mini App SDK (only in TWA build)
   React.useEffect(() => {
@@ -49,6 +57,107 @@ function RootComponent() {
       initTelegramSdk();
     }
   }, []);
+
+  // Listen for `ton://transfer` links that should open the prefilled `/send` screen
+  React.useEffect(() => {
+    const onNavigateSend = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{
+          recipient?: string;
+          amount?: string;
+          token?: string;
+          comment?: string;
+        }>
+      ).detail;
+      if (!detail) return;
+      const sp = new URLSearchParams();
+      if (detail.recipient) sp.set('recipient', detail.recipient);
+      if (detail.amount) sp.set('amount', detail.amount);
+      if (detail.token) sp.set('token', detail.token);
+      if (detail.comment) sp.set('comment', detail.comment);
+      const qs = sp.toString();
+      notifyRouterNavigation();
+      router.navigate({ to: `/send${qs ? `?${qs}` : ''}` as any });
+    };
+    window.addEventListener('brotherhood_navigate_send', onNavigateSend);
+    return () =>
+      window.removeEventListener('brotherhood_navigate_send', onNavigateSend);
+  }, [router]);
+
+  // Process external launch deep links (TMA start_param, ?url=..., ?tonconnect=..., or ?v=2&id=...&r=...)
+  React.useEffect(() => {
+    if (
+      hasProcessedLaunchLinkRef.current ||
+      !isWalletKitInitialized ||
+      !isHydrated ||
+      !isUnlocked ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+    if (currentPath.endsWith('/ton-connect')) {
+      hasProcessedLaunchLinkRef.current = true;
+      return;
+    }
+
+    const sp = new URLSearchParams(window.location.search);
+    const tgStartParam = (
+      window as unknown as {
+        Telegram?: {
+          WebApp?: { initDataUnsafe?: { start_param?: string } };
+        };
+      }
+    ).Telegram?.WebApp?.initDataUnsafe?.start_param;
+
+    let candidateUrl = '';
+    if (sp.get('url') || sp.get('tonconnect')) {
+      candidateUrl = window.location.href;
+    } else if (sp.get('v') && sp.get('id') && sp.get('r')) {
+      candidateUrl = window.location.href;
+    } else if (sp.get('startapp') || sp.get('tgWebAppStartParam')) {
+      candidateUrl = window.location.href;
+    } else if (
+      tgStartParam &&
+      (tgStartParam.startsWith('tonconnect-') ||
+        tgStartParam.startsWith('ton://') ||
+        tgStartParam.startsWith('tc://'))
+    ) {
+      candidateUrl = tgStartParam;
+    }
+
+    if (candidateUrl) {
+      hasProcessedLaunchLinkRef.current = true;
+      // Clean consumed launch parameters from location bar
+      if (
+        sp.has('url') ||
+        sp.has('tonconnect') ||
+        (sp.has('v') && sp.has('id') && sp.has('r')) ||
+        sp.has('startapp') ||
+        sp.has('tgWebAppStartParam')
+      ) {
+        sp.delete('url');
+        sp.delete('tonconnect');
+        sp.delete('v');
+        sp.delete('id');
+        sp.delete('r');
+        sp.delete('ret');
+        sp.delete('startapp');
+        sp.delete('tgWebAppStartParam');
+        const nextSearch = sp.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+        window.history.replaceState(window.history.state, '', nextUrl);
+      }
+      void handleTonConnectUrl(candidateUrl).catch(() => {
+        /* handled by slice */
+      });
+    }
+  }, [
+    isWalletKitInitialized,
+    isHydrated,
+    isUnlocked,
+    currentPath,
+    handleTonConnectUrl,
+  ]);
 
   // Sync Router back navigation with Unified Back Stack (Tier 2/3)
   React.useEffect(() => {

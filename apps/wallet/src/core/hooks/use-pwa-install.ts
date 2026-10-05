@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isTelegramEnvironment } from '@/core/lib/telegram';
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -12,9 +13,33 @@ export interface BeforeInstallPromptEvent extends Event {
 const STORAGE_KEY_DISMISSED = 'brotherhood-pwa-install-dismissed';
 const DISMISSAL_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
-export interface BrowserInstruction {
+export interface InstallInstruction {
   title: string;
   steps: string[];
+}
+
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+let globalIsInstalled = false;
+const stateListeners = new Set<() => void>();
+
+function notifyListeners() {
+  for (const listener of stateListeners) {
+    listener();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    globalDeferredPrompt = e as BeforeInstallPromptEvent;
+    notifyListeners();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    globalDeferredPrompt = null;
+    globalIsInstalled = true;
+    notifyListeners();
+  });
 }
 
 function getInitialDismissed(): boolean {
@@ -34,28 +59,34 @@ function getInitialDismissed(): boolean {
   return false;
 }
 
-function getInitialStandalone(): boolean {
+export function detectStandaloneMode(): boolean {
   if (typeof window === 'undefined') return false;
-  const isStandaloneMedia = window.matchMedia(
-    '(display-mode: standalone)',
-  ).matches;
+  if (import.meta.env.VITE_APP_TARGET === 'twa' || isTelegramEnvironment()) {
+    return true;
+  }
+  const isStandaloneMedia =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches;
   const isIosStandalone =
     (navigator as unknown as { standalone?: boolean }).standalone === true;
-  return isStandaloneMedia || isIosStandalone;
+  const isAndroidTwa =
+    typeof document !== 'undefined' &&
+    document.referrer.startsWith('android-app://');
+  return isStandaloneMedia || isIosStandalone || isAndroidTwa;
 }
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
+    useState<BeforeInstallPromptEvent | null>(() => globalDeferredPrompt);
   const [isStandalone, setIsStandalone] =
-    useState<boolean>(getInitialStandalone);
+    useState<boolean>(detectStandaloneMode);
   const [isDismissed, setIsDismissed] = useState<boolean>(getInitialDismissed);
-  const [isInstalled, setIsInstalled] = useState<boolean>(getInitialStandalone);
-  const [activeMode, setActiveMode] = useState<'standalone' | 'browser'>(
-    'standalone',
+  const [isInstalled, setIsInstalled] = useState<boolean>(
+    () => globalIsInstalled || detectStandaloneMode(),
   );
 
-  // Platform detection
   const isIos =
     typeof window !== 'undefined' &&
     /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -66,98 +97,48 @@ export function usePwaInstall() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mql = window.matchMedia('(display-mode: standalone)');
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        setIsStandalone(true);
+    const syncGlobalState = () => {
+      const standaloneNow = detectStandaloneMode();
+      setDeferredPrompt(globalDeferredPrompt);
+      setIsStandalone(standaloneNow);
+      if (globalIsInstalled || standaloneNow) {
         setIsInstalled(true);
       }
     };
-    mql.addEventListener('change', handleMediaChange);
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    stateListeners.add(syncGlobalState);
+    syncGlobalState();
+
+    const mqlStandalone = window.matchMedia('(display-mode: standalone)');
+    const mqlOverlay = window.matchMedia(
+      '(display-mode: window-controls-overlay)',
+    );
+    const handleMediaChange = () => {
+      syncGlobalState();
     };
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-      setIsDismissed(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    mqlStandalone.addEventListener('change', handleMediaChange);
+    mqlOverlay.addEventListener('change', handleMediaChange);
 
     return () => {
-      mql.removeEventListener('change', handleMediaChange);
-      window.removeEventListener(
-        'beforeinstallprompt',
-        handleBeforeInstallPrompt,
-      );
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      stateListeners.delete(syncGlobalState);
+      mqlStandalone.removeEventListener('change', handleMediaChange);
+      mqlOverlay.removeEventListener('change', handleMediaChange);
     };
   }, []);
-
-  const setManifestDisplayMode = useCallback(
-    (mode: 'standalone' | 'browser') => {
-      setActiveMode(mode);
-      if (typeof document === 'undefined') return;
-
-      // Switch manifest link
-      let manifestLink = document.querySelector<HTMLLinkElement>(
-        'link[rel="manifest"]',
-      );
-      if (!manifestLink) {
-        manifestLink = document.createElement('link');
-        manifestLink.rel = 'manifest';
-        document.head.appendChild(manifestLink);
-      }
-
-      const base = import.meta.env.BASE_URL || '/';
-      const cleanBase = base.endsWith('/') ? base : `${base}/`;
-
-      if (mode === 'browser') {
-        manifestLink.href = `${cleanBase}site.browser.webmanifest`;
-
-        // Update mobile capability meta tags to prevent standalone launch
-        const appleMeta = document.querySelector<HTMLMetaElement>(
-          'meta[name="apple-mobile-web-app-capable"]',
-        );
-        if (appleMeta) appleMeta.content = 'no';
-        const mobileMeta = document.querySelector<HTMLMetaElement>(
-          'meta[name="mobile-web-app-capable"]',
-        );
-        if (mobileMeta) mobileMeta.content = 'no';
-      } else {
-        manifestLink.href = `${cleanBase}site.webmanifest`;
-
-        const appleMeta = document.querySelector<HTMLMetaElement>(
-          'meta[name="apple-mobile-web-app-capable"]',
-        );
-        if (appleMeta) appleMeta.content = 'yes';
-        const mobileMeta = document.querySelector<HTMLMetaElement>(
-          'meta[name="mobile-web-app-capable"]',
-        );
-        if (mobileMeta) mobileMeta.content = 'yes';
-      }
-    },
-    [],
-  );
 
   const installStandalone = useCallback(async (): Promise<{
     success: boolean;
     outcome: 'accepted' | 'dismissed' | 'unsupported';
   }> => {
-    setManifestDisplayMode('standalone');
-
-    if (deferredPrompt) {
+    const promptEvent = globalDeferredPrompt ?? deferredPrompt;
+    if (promptEvent) {
       try {
-        await deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
+        await promptEvent.prompt();
+        const choiceResult = await promptEvent.userChoice;
         if (choiceResult.outcome === 'accepted') {
-          setDeferredPrompt(null);
-          setIsInstalled(true);
+          globalDeferredPrompt = null;
+          globalIsInstalled = true;
+          notifyListeners();
           return { success: true, outcome: 'accepted' };
         }
         return { success: false, outcome: 'dismissed' };
@@ -168,11 +149,7 @@ export function usePwaInstall() {
     }
 
     return { success: false, outcome: 'unsupported' };
-  }, [deferredPrompt, setManifestDisplayMode]);
-
-  const configureBrowserShortcut = useCallback(() => {
-    setManifestDisplayMode('browser');
-  }, [setManifestDisplayMode]);
+  }, [deferredPrompt]);
 
   const dismissPrompt = useCallback(() => {
     setIsDismissed(true);
@@ -192,36 +169,34 @@ export function usePwaInstall() {
     }
   }, []);
 
-  const getShortcutInstructions = useCallback((): BrowserInstruction => {
+  const getInstallInstructions = useCallback((): InstallInstruction => {
     if (isIos) {
       return {
-        title: 'Add Shortcut on iOS Safari',
+        title: 'Install on iOS Safari',
         steps: [
-          'Tap the Share button (square with arrow pointing up) in Safari navigation bar.',
-          'Scroll down and tap "Add to Home Screen".',
-          'Confirm the title and tap "Add" at top right.',
-          'The shortcut will open directly inside Safari as a browser tab.',
+          'Tap the Share button (square with arrow pointing up) in the Safari toolbar.',
+          'Scroll down the menu and tap "Add to Home Screen".',
+          'Tap "Add" in the top-right corner to launch BrotherHood as a standalone app.',
         ],
       };
     }
 
     if (isAndroid) {
       return {
-        title: 'Add Shortcut on Android Chrome',
+        title: 'Install on Android',
         steps: [
-          'Tap the browser menu button (three vertical dots ⋮) at top right.',
-          'Tap "Add to Home screen" (or "Add shortcut").',
-          'Confirm and tap "Add".',
-          'The shortcut will open in Chrome with full browser tabs and address bar.',
+          'Tap the browser menu button (three vertical dots ⋮) in the top-right corner.',
+          'Tap "Install app" (or "Add to Home screen").',
+          'Confirm by tapping "Install" in the prompt.',
         ],
       };
     }
 
     return {
-      title: 'Add Shortcut on Desktop Browser',
+      title: 'Install Desktop App',
       steps: [
-        'Press Ctrl+D (or Cmd+D on Mac) to bookmark this page.',
-        'Alternatively, drag the URL lock icon from the address bar to your desktop.',
+        'Click the Install icon (monitor with down arrow) on the right side of your browser address bar.',
+        'Or open your browser menu (⋮) and select "Install BrotherHood Wallet" / "Cast, save, and share → Install page as app".',
       ],
     };
   }, [isIos, isAndroid]);
@@ -231,15 +206,13 @@ export function usePwaInstall() {
     isStandalone,
     isInstalled,
     isDismissed,
-    isInstallable: !!deferredPrompt || isIos,
+    isInstallable: !isStandalone && !isInstalled,
     isIos,
     isAndroid,
     isMobile,
-    activeMode,
     installStandalone,
-    configureBrowserShortcut,
     dismissPrompt,
     resetDismissal,
-    getShortcutInstructions,
+    getInstallInstructions,
   };
 }

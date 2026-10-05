@@ -148,6 +148,16 @@ export const RequestModal: React.FC<RequestModalProps> = ({
   const activeWalletId = useWalletStore(
     (state) => state.walletManagement.activeWalletId,
   );
+  const activeAddress = useWalletStore(
+    (state) => state.walletManagement.address,
+  );
+  const activeBalance = useWalletStore(
+    (state) => state.walletManagement.balance,
+  );
+  const balancesByAddress = useWalletStore(
+    (state) => state.walletManagement.balancesByAddress,
+  );
+
   const isWatchOnly = useMemo(() => {
     const target =
       currentWallet ??
@@ -155,6 +165,54 @@ export const RequestModal: React.FC<RequestModalProps> = ({
       null;
     return target?.walletType === 'watch-only' || Boolean(target?.isWatchOnly);
   }, [currentWallet, savedWallets, activeWalletId]);
+
+  const requestMessages = request.request?.messages;
+  const requestWalletAddress =
+    request.walletAddress ?? currentWallet?.address ?? activeAddress ?? '';
+
+  const insufficientBalanceWarning = useMemo(() => {
+    if (previewMode !== 'send' || !requestMessages?.length) return null;
+    const minNeededNano = requestMessages.reduce((acc, msg) => {
+      try {
+        return acc + BigInt(msg.amount || '0');
+      } catch {
+        return acc;
+      }
+    }, 0n);
+    if (minNeededNano <= 0n) return null;
+
+    const walletBalStr: string | undefined =
+      (requestWalletAddress && balancesByAddress?.[requestWalletAddress]) ??
+      (requestWalletAddress &&
+      activeAddress &&
+      requestWalletAddress === activeAddress
+        ? (activeBalance ?? undefined)
+        : undefined);
+
+    if (walletBalStr === undefined) return null;
+    try {
+      const balNano = BigInt(walletBalStr);
+      if (balNano < minNeededNano) {
+        const neededGram = (Number(minNeededNano) / 1e9)
+          .toFixed(4)
+          .replace(/\.?0+$/, '');
+        const availGram = (Number(balNano) / 1e9)
+          .toFixed(4)
+          .replace(/\.?0+$/, '');
+        return `Insufficient GRAM balance: requires ${neededGram} GRAM, available ${availGram} GRAM.`;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }, [
+    previewMode,
+    requestMessages,
+    requestWalletAddress,
+    balancesByAddress,
+    activeAddress,
+    activeBalance,
+  ]);
 
   const primary = isWatchOnly ? (
     <Button fullWidth disabled data-testid={testIds.approve}>
@@ -221,6 +279,11 @@ export const RequestModal: React.FC<RequestModalProps> = ({
         </div>
       ) : (
         <>
+          {insufficientBalanceWarning && (
+            <div className="rounded-2xl bg-amber-500/15 border border-amber-500/30 p-3 text-xs font-medium text-amber-600 dark:text-amber-400">
+              {insufficientBalanceWarning}
+            </div>
+          )}
           {details}
           {preview?.result === 'success' && !hasNoTransfers && (
             <JettonFlow transfers={preview.moneyFlow?.ourTransfers ?? []} />

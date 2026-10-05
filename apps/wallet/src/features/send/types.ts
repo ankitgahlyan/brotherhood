@@ -19,7 +19,7 @@ export interface TokenOption {
   token: SelectedToken;
   /** `'TON'` or the jetton address — also the selection key. */
   id: string;
-  icon?: string;
+  icon?: string | string[];
   fallbackText: string;
   name: string;
   symbol: string;

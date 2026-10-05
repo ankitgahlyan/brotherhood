@@ -6,7 +6,8 @@
  *
  */
 
-import { SEND_TRANSACTION_ERROR_CODES, compareAddress } from '@ton/walletkit';
+import { Address, beginCell, Cell } from '@ton/core';
+import { asAddressFriendly } from '@ton/walletkit';
 import type {
   Wallet,
   SendTransactionRequestEvent,
@@ -14,6 +15,7 @@ import type {
   SignDataRequestEvent,
   SignMessageRequestEvent,
   DisconnectionEvent,
+  TransactionRequestMessage,
 } from '@ton/walletkit';
 
 import { createComponentLogger } from '../../utils/logger';
@@ -30,6 +32,224 @@ const log = createComponentLogger('TonConnectSlice');
 const MAX_QUEUE_SIZE = 100;
 const MODAL_CLOSE_DELAY = 500;
 const REQUEST_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_CONTRACT_CALL_NANO = '50000000'; // 0.05 TON default when bin/init is provided without amount
+
+let pendingExternalReturnStrategy: string | undefined;
+
+function executeReturnStrategy(strategy?: string): void {
+  const target = (strategy || pendingExternalReturnStrategy || '').trim();
+  pendingExternalReturnStrategy = undefined;
+  if (!target || target === 'back' || target === 'none') return;
+  if (typeof window === 'undefined') return;
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(target)) return;
+
+  setTimeout(() => {
+    try {
+      const tgWebApp = (
+        window as unknown as {
+          Telegram?: {
+            WebApp?: {
+              openTelegramLink?: (url: string) => void;
+              openLink?: (url: string) => void;
+            };
+          };
+        }
+      ).Telegram?.WebApp;
+      if (
+        (target.startsWith('https://t.me/') || target.startsWith('tg://')) &&
+        tgWebApp?.openTelegramLink
+      ) {
+        if (target.startsWith('https://t.me/')) {
+          tgWebApp.openTelegramLink(target);
+          return;
+        }
+      }
+      if (/^(https?):\/\//i.test(target) && tgWebApp?.openLink) {
+        tgWebApp.openLink(target);
+        return;
+      }
+      window.location.href = target;
+    } catch (err) {
+      log.warn('Failed to execute returnStrategy redirect:', err);
+    }
+  }, 350);
+}
+
+function decodeTonConnectStartParam(startParam: string): string | null {
+  const trimmed = startParam.trim();
+  if (!trimmed.startsWith('tonconnect-')) return null;
+  const raw = trimmed.slice('tonconnect-'.length);
+  if (!raw) return null;
+
+  // TonConnect TMA startapp encoding:
+  // '--' -> literal '-', '-' -> '&', '__' -> '=', '_XX' -> '%XX'
+  const HYPHEN_TOKEN = '\u0000';
+  const step1 = raw.replace(/--/g, HYPHEN_TOKEN);
+  const pairs = step1.split('-');
+  const queryParts: string[] = [];
+  for (const pair of pairs) {
+    const eqIdx = pair.indexOf('__');
+    if (eqIdx === -1) continue;
+    const key = pair.slice(0, eqIdx).replaceAll(HYPHEN_TOKEN, '-');
+    const valRaw = pair
+      .slice(eqIdx + 2)
+      .replaceAll(HYPHEN_TOKEN, '-')
+      .replace(/_([0-9a-fA-F]{2})/g, '%$1');
+    try {
+      const decodedVal = decodeURIComponent(valRaw);
+      queryParts.push(
+        `${encodeURIComponent(key)}=${encodeURIComponent(decodedVal)}`,
+      );
+    } catch {
+      queryParts.push(`${encodeURIComponent(key)}=${valRaw}`);
+    }
+  }
+  if (queryParts.length === 0) return null;
+  return `tc://?${queryParts.join('&')}`;
+}
+
+function unwrapIncomingTonUrl(rawInput: string): string {
+  let trimmed = rawInput.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('tonconnect-')) {
+    return decodeTonConnectStartParam(trimmed) ?? trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const wrappedUrl =
+      parsed.searchParams.get('url') || parsed.searchParams.get('tonconnect');
+    if (wrappedUrl) {
+      trimmed = decodeURIComponent(wrappedUrl.trim());
+    } else {
+      const startApp =
+        parsed.searchParams.get('startapp') ||
+        parsed.searchParams.get('tgWebAppStartParam');
+      if (startApp) {
+        const decodedStart = decodeTonConnectStartParam(startApp);
+        if (decodedStart) return decodedStart;
+        trimmed = decodeURIComponent(startApp.trim());
+      }
+    }
+  } catch {
+    // Not a standard URL or relative
+  }
+
+  if (trimmed.startsWith('web+ton://')) {
+    return `ton://${trimmed.slice('web+ton://'.length)}`;
+  }
+  if (trimmed.startsWith('web+tonconnect://')) {
+    return `tc://${trimmed.slice('web+tonconnect://'.length)}`;
+  }
+  if (trimmed.startsWith('tonconnect://')) {
+    return `tc://${trimmed.slice('tonconnect://'.length)}`;
+  }
+  return trimmed;
+}
+
+function normalizeBocBase64(rawBoc: string): string {
+  const cleaned = rawBoc.trim().replace(/-/g, '+').replace(/_/g, '/');
+  const padded = cleaned.padEnd(
+    cleaned.length + ((4 - (cleaned.length % 4)) % 4),
+    '=',
+  );
+  const cell = Cell.fromBoc(Buffer.from(padded, 'base64'))[0];
+  if (!cell) {
+    throw new Error('Invalid BOC payload');
+  }
+  return cell.toBoc().toString('base64');
+}
+
+function encodeTextCommentBocBase64(text: string): string {
+  return beginCell()
+    .storeUint(0, 32)
+    .storeStringTail(text)
+    .endCell()
+    .toBoc()
+    .toString('base64');
+}
+
+function nanoToDecimalTonString(nanoStr: string): string {
+  const trimmed = nanoStr.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('.')) return trimmed;
+  try {
+    const n = BigInt(trimmed);
+    if (n <= 0n) return '';
+    const whole = n / 1_000_000_000n;
+    const frac = n % 1_000_000_000n;
+    if (frac === 0n) return whole.toString();
+    const fracStr = frac.toString().padStart(9, '0').replace(/0+$/, '');
+    return `${whole.toString()}.${fracStr}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+interface ParsedTonTransferLink {
+  address: string;
+  amount?: string;
+  bin?: string;
+  init?: string;
+  text?: string;
+  jetton?: string;
+  validUntil?: number;
+  returnStrategy?: string;
+}
+
+function parseTonTransferLink(url: string): ParsedTonTransferLink | null {
+  const trimmed = url.trim();
+  let addressPart = '';
+  let queryString = '';
+
+  const transferMatch = trimmed.match(
+    /^(?:ton:\/\/transfer\/|https?:\/\/[^/]+\/(?:brotherhood\/(?:web\/)?)?transfer\/)([^?#]+)(?:\?([^#]*))?/i,
+  );
+  if (transferMatch) {
+    addressPart = decodeURIComponent(transferMatch[1].replace(/\/+$/, ''));
+    queryString = transferMatch[2] || '';
+  } else {
+    // Also support bare `<tonAddress>?amount=...` (e.g. if prefix was stripped)
+    const bareMatch = trimmed.match(/^([0-9a-zA-Z_:+-]{48,66})(?:\?([^#]*))?$/);
+    if (bareMatch) {
+      addressPart = bareMatch[1];
+      queryString = bareMatch[2] || '';
+    } else {
+      return null;
+    }
+  }
+
+  try {
+    Address.parse(addressPart);
+  } catch {
+    return null;
+  }
+
+  const sp = new URLSearchParams(queryString);
+  const amount = sp.get('amount')?.trim() || undefined;
+  const bin = (sp.get('bin') || sp.get('body'))?.trim() || undefined;
+  const init = (sp.get('init') || sp.get('stateInit'))?.trim() || undefined;
+  const text = (sp.get('text') || sp.get('comment')) ?? undefined;
+  const jetton = sp.get('jetton')?.trim() || undefined;
+  const expRaw = (sp.get('exp') || sp.get('validUntil'))?.trim();
+  const validUntil =
+    expRaw && /^\d+$/.test(expRaw) ? Number(expRaw) : undefined;
+  const returnStrategy =
+    (sp.get('ret') || sp.get('returnStrategy') || sp.get('callback'))?.trim() ||
+    undefined;
+
+  return {
+    address: addressPart,
+    amount,
+    bin,
+    init,
+    text,
+    jetton,
+    validUntil,
+    returnStrategy,
+  };
+}
 
 export const createTonConnectSlice: TonConnectSliceCreator = (
   set: SetState,
@@ -53,15 +273,128 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
     connectedSessions: [],
   },
 
-  // TON Connect URL handling
-  handleTonConnectUrl: async (url: string) => {
+  // TON Connect & ton://transfer URL handling
+  handleTonConnectUrl: async (rawUrl: string) => {
     const state = get();
     if (!state.walletCore.walletKit) {
       throw new Error('WalletKit not initialized');
     }
 
+    const url = unwrapIncomingTonUrl(rawUrl);
+    if (!url) {
+      throw new Error('Empty TON link');
+    }
+
+    // 1. Check if this is a `ton://transfer/<address>?...` deep link
+    const transferLink = parseTonTransferLink(url);
+    if (transferLink) {
+      const hasContractCall = Boolean(transferLink.bin || transferLink.init);
+      const shouldOpenSendForm =
+        Boolean(transferLink.jetton) ||
+        (!transferLink.amount && !hasContractCall);
+
+      if (shouldOpenSendForm) {
+        if (
+          typeof window !== 'undefined' &&
+          typeof window.dispatchEvent === 'function'
+        ) {
+          const formattedAmount = transferLink.amount
+            ? transferLink.jetton
+              ? transferLink.amount
+              : nanoToDecimalTonString(transferLink.amount)
+            : '';
+          window.dispatchEvent(
+            new CustomEvent('brotherhood_navigate_send', {
+              detail: {
+                recipient: transferLink.address,
+                amount: formattedAmount,
+                token: transferLink.jetton || '',
+                comment: transferLink.text || '',
+              },
+            }),
+          );
+        }
+        return;
+      }
+
+      // Route directly into TransactionRequestModal via handleNewTransaction
+      const walletKit = state.walletCore.walletKit;
+      const activeSaved = state.walletManagement.savedWallets.find(
+        (w) => w.id === state.walletManagement.activeWalletId,
+      );
+      let signingWallet: Wallet | null | undefined =
+        state.walletManagement.currentWallet;
+
+      if (
+        !signingWallet ||
+        activeSaved?.walletType === 'watch-only' ||
+        activeSaved?.isWatchOnly
+      ) {
+        const nonWatchSaved = state.walletManagement.savedWallets.find(
+          (w) =>
+            w.walletType !== 'watch-only' && !w.isWatchOnly && w.kitWalletId,
+        );
+        if (nonWatchSaved?.kitWalletId) {
+          signingWallet = walletKit.getWallet(nonWatchSaved.kitWalletId);
+        }
+      }
+      if (!signingWallet) {
+        const allWallets = walletKit.getWallets();
+        signingWallet = allWallets[0];
+      }
+      if (!signingWallet) {
+        throw new Error('No signing wallet available');
+      }
+
+      let payload: string | undefined;
+      if (transferLink.bin) {
+        payload = normalizeBocBase64(transferLink.bin);
+      } else if (transferLink.text) {
+        payload = encodeTextCommentBocBase64(transferLink.text);
+      }
+
+      const stateInit = transferLink.init
+        ? normalizeBocBase64(transferLink.init)
+        : undefined;
+
+      const amountNano =
+        transferLink.amount && /^\d+$/.test(transferLink.amount)
+          ? transferLink.amount
+          : transferLink.amount
+            ? String(
+                Math.round(parseFloat(transferLink.amount) * 1_000_000_000),
+              )
+            : DEFAULT_CONTRACT_CALL_NANO;
+
+      const message: TransactionRequestMessage = {
+        address: asAddressFriendly(transferLink.address),
+        amount: amountNano,
+        ...(payload ? { payload } : {}),
+        ...(stateInit ? { stateInit } : {}),
+      };
+
+      pendingExternalReturnStrategy = transferLink.returnStrategy;
+
+      await walletKit.handleNewTransaction(signingWallet, {
+        messages: [message],
+        validUntil: transferLink.validUntil,
+        network: signingWallet.getNetwork(),
+      });
+      return;
+    }
+
+    // 2. Standard TonConnect v2 URL (`tc://...`, `https://...?v=2&id=...&r=...`)
     try {
       log.info('Handling TON Connect URL:', url);
+      try {
+        const parsedTc = new URL(url);
+        const retParam = parsedTc.searchParams.get('ret');
+        if (retParam) {
+          pendingExternalReturnStrategy = retParam;
+        }
+      } catch {
+        /* ignore */
+      }
       await state.walletCore.walletKit.handleTonConnectUrl(url);
       log.info('Handled TON Connect URL');
     } catch (error) {
@@ -95,6 +428,14 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         walletAddress: selectedWallet.getAddress(),
         walletId: selectedWallet.getWalletId(),
       };
+      const returnStrategy =
+        (
+          event as unknown as {
+            returnStrategy?: string;
+            params?: { returnStrategy?: string };
+          }
+        )?.params?.returnStrategy ??
+        (event as unknown as { returnStrategy?: string })?.returnStrategy;
 
       const embeddedRequest =
         await state.walletCore.walletKit.approveConnectRequest(event);
@@ -126,6 +467,8 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
             });
             break;
         }
+      } else {
+        executeReturnStrategy(returnStrategy);
       }
     } catch (error) {
       log.error('Failed to approve connect request:', error);
@@ -140,6 +483,14 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       log.error('No pending connect request to reject');
       return;
     }
+
+    const pendingEvent = state.tonConnect
+      .pendingConnectRequestEvent as unknown as {
+      returnStrategy?: string;
+      params?: { returnStrategy?: string };
+    };
+    const returnStrategy =
+      pendingEvent?.params?.returnStrategy ?? pendingEvent?.returnStrategy;
 
     const closeModal = () => {
       set((state) => {
@@ -166,6 +517,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
     }
 
     closeModal();
+    executeReturnStrategy(returnStrategy);
   },
 
   closeConnectModal: () => {
@@ -270,6 +622,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
           }),
         );
       }
+      executeReturnStrategy();
       return result;
     } catch (error) {
       log.error('Failed to approve transaction request:', error);
@@ -304,6 +657,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         state.tonConnect.isTransactionModalOpen = false;
       });
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
       return;
     }
 
@@ -321,6 +675,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       });
 
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
     }
   },
 
@@ -362,6 +717,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       });
 
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
     } catch (error) {
       log.error('Failed to approve sign data request:', error);
       state.clearCurrentRequestFromQueue();
@@ -383,6 +739,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         state.tonConnect.isSignDataModalOpen = false;
       });
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
       return;
     }
 
@@ -400,6 +757,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       });
 
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
     }
   },
 
@@ -439,6 +797,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
       });
 
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
     } catch (error) {
       log.error('Failed to approve sign message request:', error);
       state.clearCurrentRequestFromQueue();
@@ -458,6 +817,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         state.tonConnect.isSignMessageModalOpen = false;
       });
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
       return;
     }
     try {
@@ -473,6 +833,7 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         state.tonConnect.isSignMessageModalOpen = false;
       });
       state.clearCurrentRequestFromQueue();
+      executeReturnStrategy();
     }
   },
 
@@ -664,42 +1025,6 @@ export const createTonConnectSlice: TonConnectSliceCreator = (
         if (!wallet) {
           log.error('Wallet not found for transaction request', {
             walletId: event.walletId,
-          });
-          return;
-        }
-
-        const state = get();
-        const walletAddress = wallet.getAddress();
-        let cachedBalance: string | undefined =
-          (walletAddress &&
-            state.walletManagement?.balancesByAddress?.[walletAddress]) ??
-          (walletAddress &&
-          state.walletManagement?.address &&
-          compareAddress(state.walletManagement.address, walletAddress)
-            ? state.walletManagement?.balance
-            : undefined);
-        if (cachedBalance === undefined && walletAddress) {
-          for (const [addrKey, balVal] of Object.entries(
-            state.walletManagement?.balancesByAddress ?? {},
-          )) {
-            if (compareAddress(addrKey, walletAddress)) {
-              cachedBalance = balVal;
-              break;
-            }
-          }
-        }
-        const balance =
-          cachedBalance !== undefined
-            ? cachedBalance
-            : await wallet.getBalance();
-        const minNeededBalance = event.request.messages.reduce(
-          (acc, message) => acc + BigInt(message.amount),
-          0n,
-        );
-        if (BigInt(balance) < minNeededBalance) {
-          await walletKit.rejectTransactionRequest(event, {
-            code: SEND_TRANSACTION_ERROR_CODES.BAD_REQUEST_ERROR,
-            message: 'Insufficient balance',
           });
           return;
         }

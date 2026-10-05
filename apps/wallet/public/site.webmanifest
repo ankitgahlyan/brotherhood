@@ -43,5 +43,15 @@
       "sizes": "180x180",
       "type": "image/png"
     }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+ton",
+      "url": "./?tonlink=%s"
+    },
+    {
+      "protocol": "web+tonconnect",
+      "url": "./?tonlink=%s"
+    }
   ]
 }

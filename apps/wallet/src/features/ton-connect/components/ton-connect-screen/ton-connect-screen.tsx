@@ -28,7 +28,11 @@ export const TonConnectRoute: React.FC = () => {
     const url = window.location.href;
     handleTonConnectUrl(url)
       .catch((err) => log.error('Failed to handle TON Connect URL:', err))
-      .finally(() => navigate('/wallet', { replace: true }));
+      .finally(() => {
+        if (window.location.pathname.endsWith('/ton-connect')) {
+          navigate('/wallet', { replace: true });
+        }
+      });
   }, [handleTonConnectUrl, navigate]);
 
   return (

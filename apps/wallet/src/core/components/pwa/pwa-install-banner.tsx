@@ -6,8 +6,14 @@ import { useLocation } from '@/core/routing';
 import { InstallPromptDialog } from './install-prompt-dialog';
 
 export const PwaInstallBanner: React.FC = () => {
-  const { isStandalone, isDismissed, isInstalled, dismissPrompt } =
-    usePwaInstall();
+  const {
+    deferredPrompt,
+    isStandalone,
+    isDismissed,
+    isInstalled,
+    installStandalone,
+    dismissPrompt,
+  } = usePwaInstall();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { hasWallet } = useWallet();
   const { pathname } = useLocation();
@@ -24,12 +30,23 @@ export const PwaInstallBanner: React.FC = () => {
     cleanPath.endsWith('/unlock') ||
     cleanPath.endsWith('/ledger');
 
-  // If already running standalone or installed or dismissed by user or on onboarding screens, don't show the floating banner
-  if (isExcludedRoute || isStandalone || isDismissed || isInstalled) {
+  if (isStandalone || isInstalled) {
+    return null;
+  }
+
+  if (isExcludedRoute || isDismissed) {
     return (
       <InstallPromptDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     );
   }
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      await installStandalone();
+    } else {
+      setDialogOpen(true);
+    }
+  };
 
   return (
     <>
@@ -37,9 +54,9 @@ export const PwaInstallBanner: React.FC = () => {
         <div className="flex items-center justify-between gap-3 p-3 bg-card/95 backdrop-blur-md border border-primary/20 shadow-xl shadow-black/20 rounded-2xl">
           <button
             type="button"
-            onClick={() => setDialogOpen(true)}
+            onClick={handleInstallClick}
             className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
-            aria-label="Install BrotherHood — Choose standalone app or browser shortcut"
+            aria-label="Install BrotherHood App"
           >
             <div className="w-9 h-9 rounded-xl bg-primary/20 text-primary flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-4 h-4" />
@@ -49,7 +66,7 @@ export const PwaInstallBanner: React.FC = () => {
                 Install BrotherHood
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                Choose standalone app or browser shortcut
+                Install standalone app for faster access
               </div>
             </div>
           </button>
@@ -57,11 +74,11 @@ export const PwaInstallBanner: React.FC = () => {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
-              onClick={() => setDialogOpen(true)}
+              onClick={handleInstallClick}
               className="px-3 py-1.5 text-xs font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer flex items-center gap-1"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Options</span>
+              <span>Install</span>
             </button>
             <button
               type="button"

@@ -210,6 +210,7 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
       return results;
     },
     enabled: Boolean(parsedOwnerAddress && trackedMinters.length > 0),
+    networkMode: 'always',
   });
 
   const [isDiscovering, setIsDiscovering] = useState(false);

@@ -296,6 +296,7 @@ if (typeof window !== 'undefined') {
   const prewarmCoreAssets = () => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const coreAssets = [
+      assetUrl('gram.svg'),
       assetUrl('ton.png'),
       assetUrl('fi.svg'),
       assetUrl('bro-domain-nft.svg'),
