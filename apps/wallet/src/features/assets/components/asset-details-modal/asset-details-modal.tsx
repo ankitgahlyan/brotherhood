@@ -44,8 +44,10 @@ import {
   useFiMinterState,
   useFiTotalAccounts,
   usePersonalMinterDetails,
+  usePersonalWalletAddress,
 } from '@/lib/brotherhood/queries';
-import { isZeroAddress } from '@/lib/brotherhood/ton';
+import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
+import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import { useTrackedPersonalTokens } from '../../hooks/use-tracked-personal-tokens';
 
 interface AssetDetailsModalProps {
@@ -70,7 +72,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   const isGram = asset?.id === 'TON' || asset?.symbol === 'GRAM';
   const isFi = useMemo(() => {
     if (!asset) return false;
-    return isFiJetton({ address: asset.id, symbol: asset.symbol });
+    return isFiJetton({ address: asset.id });
   }, [asset]);
   const isPersonal = Boolean(asset && !isGram && !isFi);
 
@@ -94,6 +96,24 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
   const fiStateQuery = useFiMinterState(isOpen && isFi);
   const fiTotalAccountsQuery = useFiTotalAccounts(isOpen && isFi);
 
+  const userAddressObj = useMemo(() => {
+    if (!userAddress) return null;
+    try {
+      return Address.parse(userAddress);
+    } catch {
+      return null;
+    }
+  }, [userAddress]);
+
+  const userFiWalletAddr = useMemo(() => {
+    if (!userAddressObj) return null;
+    try {
+      return getFiWalletAddress(userAddressObj).toString();
+    } catch {
+      return null;
+    }
+  }, [userAddressObj]);
+
   // Personal minter contract queries
   const assetId = asset?.id;
   const personalMinterAddress = useMemo(() => {
@@ -109,6 +129,57 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
     personalMinterAddress,
     isOpen && isPersonal,
   );
+
+  const personalWalletAddrQuery = usePersonalWalletAddress(
+    personalMinterAddress,
+    userAddressObj,
+    isOpen && isPersonal && Boolean(userAddressObj),
+  );
+  const userPersonalWalletAddr =
+    personalWalletAddrQuery.data?.toString() ?? null;
+
+  const fiMetadataCell = fiStateQuery.data?.metadata;
+  const fiOnchainMeta = useMemo(
+    () => (fiMetadataCell ? parseOnchainMetadataCell(fiMetadataCell) : null),
+    [fiMetadataCell],
+  );
+  const ptOnchainMeta = personalDetailsQuery.data?.metadata ?? null;
+
+  const displayName =
+    (isFi
+      ? fiOnchainMeta?.name?.trim()
+      : isPersonal
+        ? ptOnchainMeta?.name?.trim()
+        : undefined) ||
+    asset?.name ||
+    '';
+  const displaySymbol =
+    (isFi
+      ? fiOnchainMeta?.symbol?.trim()
+      : isPersonal
+        ? ptOnchainMeta?.symbol?.trim()
+        : undefined) ||
+    asset?.symbol ||
+    '';
+  const fiOnchainImage = fiOnchainMeta?.image;
+  const ptOnchainImage = ptOnchainMeta?.image;
+  const assetIcon = asset?.icon;
+  const displayIcon = useMemo(() => {
+    const onchainImg = isFi
+      ? fiOnchainImage?.trim()
+      : isPersonal
+        ? ptOnchainImage?.trim()
+        : undefined;
+    if (!onchainImg) return assetIcon;
+    const baseIcons = Array.isArray(assetIcon)
+      ? assetIcon
+      : assetIcon
+        ? [assetIcon]
+        : [];
+    return [onchainImg, ...baseIcons.filter((u) => u !== onchainImg)];
+  }, [isFi, isPersonal, fiOnchainImage, ptOnchainImage, assetIcon]);
+  const displayFallbackText =
+    displaySymbol.slice(0, 2).toUpperCase() || asset?.fallbackText || '??';
 
   const handleCopy = async (text: string, label: string) => {
     try {
@@ -141,7 +212,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
       >
         <Modal.Header onClose={onClose}>
           <Modal.Title className="flex items-center gap-2">
-            <span>{asset.name}</span>
+            <span>{displayName}</span>
             {(asset.isVerified || isFi) && (
               <BadgeCheck
                 className="w-4 h-4 text-emerald-500 shrink-0 fill-emerald-500/20"
@@ -149,7 +220,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
               />
             )}
             <span className="text-xs font-normal text-muted-foreground">
-              ({asset.symbol})
+              ({displaySymbol})
             </span>
           </Modal.Title>
         </Modal.Header>
@@ -159,18 +230,18 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
           <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-secondary/50 border border-border">
             <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-secondary border border-border flex items-center justify-center mb-3">
               <FallbackImage
-                src={asset.icon}
-                alt={asset.name}
+                src={displayIcon}
+                alt={displayName}
                 className="w-full h-full object-cover"
                 fallback={
                   <span className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-base flex items-center justify-center">
-                    {asset.fallbackText}
+                    {displayFallbackText}
                   </span>
                 }
               />
             </div>
             <div className="text-2xl font-bold text-foreground tabular-nums">
-              {formatLargeValue(String(asset.amount), 4)} {asset.symbol}
+              {formatLargeValue(String(asset.amount), 4)} {displaySymbol}
             </div>
             {asset.fiat !== undefined && (
               <div className="text-sm text-muted-foreground mt-0.5">
@@ -191,7 +262,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
             data-testid="asset-details-transfer-button"
           >
             <Send className="w-4 h-4" />
-            <span>Transfer {asset.symbol}</span>
+            <span>Transfer {displaySymbol}</span>
           </button>
 
           {/* 1. GRAMS SPECIFIC VIEW */}
@@ -430,7 +501,9 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                 )}
 
                 {/* FI Minter Address */}
-                <div className="flex items-center justify-between text-sm py-1">
+                <div
+                  className={`flex items-center justify-between text-sm py-1 ${userFiWalletAddr ? 'border-b border-border/50' : ''}`}
+                >
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Coins className="w-4 h-4 text-primary" /> Minter Address
                   </span>
@@ -453,6 +526,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                         network,
                         FI_ADDRESS,
                         explorer,
+                        'jetton-master',
                       )}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -463,6 +537,44 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                     </a>
                   </div>
                 </div>
+
+                {/* Your FI Wallet Address */}
+                {userFiWalletAddr && (
+                  <div className="flex items-center justify-between text-sm py-1">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-primary" /> Your FI Wallet
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-foreground">
+                        {shortenAddress(userFiWalletAddr, 4, true, network)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(userFiWalletAddr, 'FI Wallet address')
+                        }
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copy FI Wallet address"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <a
+                        href={getExplorerAddressUrl(
+                          network,
+                          userFiWalletAddr,
+                          explorer,
+                          'jetton-wallet',
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="View FI Wallet on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Shortcut to Brotherhood */}
@@ -486,7 +598,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                 data-testid="fi-burn-button"
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>Burn FI</span>
+                <span>Burn {displaySymbol}</span>
               </button>
             </div>
           )}
@@ -513,7 +625,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                     {personalDetailsQuery.isLoading
                       ? 'Loading...'
                       : personalDetailsQuery.data?.totalSupply !== undefined
-                        ? `${formatLargeValue(String(toDecimal(personalDetailsQuery.data.totalSupply, 9)), 2)} ${asset.symbol}`
+                        ? `${formatLargeValue(String(toDecimal(personalDetailsQuery.data.totalSupply, 9)), 2)} ${displaySymbol}`
                         : '—'}
                   </span>
                 </div>
@@ -597,7 +709,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                     <a
-                      href={getExplorerAddressUrl(network, asset.id, explorer)}
+                      href={getExplorerAddressUrl(
+                        network,
+                        asset.id,
+                        explorer,
+                        'jetton-master',
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -607,6 +724,55 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                     </a>
                   </div>
                 </div>
+
+                {/* Your Personal Wallet Address */}
+                {userPersonalWalletAddr && (
+                  <div
+                    className={`flex items-center justify-between text-sm py-1 ${personalDetailsQuery.data?.fiJettonAddress ? 'border-b border-border/50' : ''}`}
+                  >
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-primary" /> Your Token
+                      Wallet
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-foreground">
+                        {shortenAddress(
+                          userPersonalWalletAddr,
+                          4,
+                          true,
+                          network,
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            userPersonalWalletAddr,
+                            'Token Wallet address',
+                          )
+                        }
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copy Token Wallet address"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <a
+                        href={getExplorerAddressUrl(
+                          network,
+                          userPersonalWalletAddr,
+                          explorer,
+                          'jetton-wallet',
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="View Token Wallet on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 {/* FI Reference */}
                 {personalDetailsQuery.data?.fiJettonAddress && (
@@ -641,6 +807,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                           network,
                           personalDetailsQuery.data.fiJettonAddress.toString(),
                           explorer,
+                          'jetton-wallet',
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -656,7 +823,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
 
               {/* Direct Link to Minter on Explorer */}
               <a
-                href={getExplorerAddressUrl(network, asset.id, explorer)}
+                href={getExplorerAddressUrl(
+                  network,
+                  asset.id,
+                  explorer,
+                  'jetton-master',
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border bg-secondary/70 hover:bg-secondary text-foreground text-xs font-semibold transition-colors"
@@ -711,7 +883,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({
                 data-testid="personal-burn-button"
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>Burn {asset.symbol}</span>
+                <span>Burn {displaySymbol}</span>
               </button>
             </div>
           )}

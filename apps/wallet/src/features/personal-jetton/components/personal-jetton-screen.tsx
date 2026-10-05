@@ -140,7 +140,7 @@ export const PersonalJettonScreen: React.FC = () => {
   const [adminTokenName, setAdminTokenName] = useState('');
   const [adminTokenSymbol, setAdminTokenSymbol] = useState('');
   const [adminTokenDesc, setAdminTokenDesc] = useState('');
-  const [adminTokenImage, setAdminTokenImage] = useState(DEFAULT_TOKEN_IMAGE);
+  const [adminTokenImage, setAdminTokenImage] = useState('');
 
   // Manual inputs for other actions
   const [recipient, setRecipient] = useState('');
@@ -923,6 +923,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                   network,
                                   activeMinter,
                                   explorer,
+                                  'jetton-master',
                                 )}
                                 target="_blank"
                                 rel="noreferrer"
@@ -984,6 +985,7 @@ export const PersonalJettonScreen: React.FC = () => {
                                   network,
                                   activePersonalWallet,
                                   explorer,
+                                  'jetton-wallet',
                                 )}
                                 target="_blank"
                                 rel="noreferrer"
@@ -1275,10 +1277,9 @@ export const PersonalJettonScreen: React.FC = () => {
 
                         <TokenImagePicker
                           value={
-                            adminTokenImage !== DEFAULT_TOKEN_IMAGE
-                              ? adminTokenImage
-                              : info.minterDetails?.metadata?.image ||
-                                DEFAULT_TOKEN_IMAGE
+                            adminTokenImage ||
+                            info.minterDetails?.metadata?.image ||
+                            DEFAULT_TOKEN_IMAGE
                           }
                           onChange={setAdminTokenImage}
                           disabled={metadata.isSending}

@@ -17,15 +17,10 @@ export const isFiJetton = (
     | undefined
     | null,
 ): boolean => {
-  if (!jetton) return false;
-  const sym = jetton.symbol || jetton.info?.symbol;
-  if (sym && sym.toUpperCase() === 'FI') return true;
-  if (jetton.address) {
-    if (jetton.address === FI_ADDRESS) return true;
-    const norm = normalizeAddress(jetton.address);
-    if (norm && norm === normalizeAddress(FI_ADDRESS)) return true;
-  }
-  return false;
+  if (!jetton?.address) return false;
+  if (jetton.address === FI_ADDRESS) return true;
+  const norm = normalizeAddress(jetton.address);
+  return Boolean(norm && norm === normalizeAddress(FI_ADDRESS));
 };
 
 export const getJettonsSymbol = (jetton: Jetton): string | undefined => {

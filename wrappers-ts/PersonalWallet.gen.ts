@@ -426,11 +426,11 @@ export const TransferNotificationForRecipient = {
  > struct (0x178d4519) InternalTransferStep {
  >     queryId: uint64
  >     jettonAmount: coins
- >     version: uint10
- >     transferredAsCredit: bool
  >     transferInitiator: address
  >     sendExcessesTo: address?
  >     forwardTonAmount: coins
+ >     version: uint10
+ >     transferredAsCredit: bool
  >     latestWalletCode: cell?
  >     forwardPayload: ForwardPayloadRemainder
  > }
@@ -439,11 +439,11 @@ export interface InternalTransferStep {
     readonly $: 'InternalTransferStep'
     queryId: uint64
     jettonAmount: coins
-    version: uint10
-    transferredAsCredit: boolean /* = false */
     transferInitiator: c.Address
     sendExcessesTo: c.Address | null
     forwardTonAmount: coins
+    version: uint10 /* = 0 */
+    transferredAsCredit: boolean /* = false */
     latestWalletCode: c.Cell | null /* = null */
     forwardPayload: PayloadInline | PayloadInRef
 }
@@ -454,16 +454,17 @@ export const InternalTransferStep = {
     create(args: {
         queryId: uint64
         jettonAmount: coins
-        version: uint10
-        transferredAsCredit?: boolean /* = false */
         transferInitiator: c.Address
         sendExcessesTo: c.Address | null
         forwardTonAmount: coins
+        version?: uint10 /* = 0 */
+        transferredAsCredit?: boolean /* = false */
         latestWalletCode?: c.Cell | null /* = null */
         forwardPayload: PayloadInline | PayloadInRef
     }): InternalTransferStep {
         return {
             $: 'InternalTransferStep',
+            version: 0n,
             transferredAsCredit: false,
             latestWalletCode: null,
             ...args
@@ -475,11 +476,11 @@ export const InternalTransferStep = {
             $: 'InternalTransferStep',
             queryId: s.loadUintBig(64),
             jettonAmount: s.loadCoins(),
-            version: s.loadUintBig(10),
-            transferredAsCredit: s.loadBoolean(),
             transferInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
             forwardTonAmount: s.loadCoins(),
+            version: s.loadUintBig(10),
+            transferredAsCredit: s.loadBoolean(),
             latestWalletCode: s.loadBoolean() ? s.loadRef() : null,
             forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
                 lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
@@ -490,11 +491,11 @@ export const InternalTransferStep = {
         b.storeUint(0x178d4519, 32);
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.jettonAmount);
-        b.storeUint(self.version, 10);
-        b.storeBit(self.transferredAsCredit);
         b.storeAddress(self.transferInitiator);
         b.storeAddress(self.sendExcessesTo);
         b.storeCoins(self.forwardTonAmount);
+        b.storeUint(self.version, 10);
+        b.storeBit(self.transferredAsCredit);
         storeTolkNullable<c.Cell>(self.latestWalletCode, b,
             (v,b) => b.storeRef(v)
         );
@@ -889,7 +890,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABZsAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAWFwPz19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omhrpMCBld1HCXaiaH0AfSR9JH0kaYToiBogmHGGguuWEF41FGZxh+QoAv0BCX0pfSkJfSllhOT2qkGBwgAT6yJmPaiaH0AfSR9JH0ka4WEktz5cW9kKAJ9AQl9KX0pfSllhOT2qkAATO1E0PpI+kj6SNMJMdFwccjPhCBSUPpSUkD6UlIw+lLPiAGAye1UA+Y2BdM/+gDTCjH6SPpQ+gD0AfiSJ8cFjsn4ku1E0PoAMfpIMfpI+kgwiCfI+lIT+lL6Us+IAIDJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31GkoCGUOhNfA+MNIG6RW+MOEgkKAhLXLCB8U/Us4w8LDABUyM+RzYtCcibPCz9QBfoCE/pSGc7JyM+FCFJw+lJY+gJxzwtqzMlz+wAGAGb4l/gnbxCi+C+gcoED6IIQCWYBgHD4N7YJcvsCyM+FCPpSghDVMnbbzwuOyz/JgQCC+wAB/jYF0z/6APpI+lD0AfoAIPQEAW6RMJHR4iP6RDDy0U34l/iTcPg6I3Jx4wT4OSBugRtyIuMEIW6BHplYA+MEUCOoJaCAEoEfQHD4PKABcPg2oAFw+DagcoED6IIQCWYBgHD4N6C88rD4kinHBfLgSVOkvvKvUaShJIIQO5rKALoNA+7XLCLK+D3kj2zXLCAAAIBEjuHXLCAAAIA0jlbXLCAAAILMMY5CNfiSI8cF+JIjxwWx+JIixwWx8uK8+JLIz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsAmIQPBscAFvL04uMN4w3jDQ8QEQL+kvgqkW3i7UTQ+gAx+kgx+kj6SDCIJ8j6UhP6UvpSz4gAgMl4Lm6zlD6LBA7fyM+QXjUUZhrLP1AI+gLPiABAUrD6UhX6VFAD+gIS9AAazsnIz4mIAVR0JcjPg8sEz4WgzMz5FoT3sASACyfXJDYVzhLL94EVDc8LeczMzMmAUBIOAAT7AAL+NviSIscFBtMAMdMJ+kj0BPQF+JLtRND6ADH6SDH6SPpIMIgmyPpSE/pS+lLPiACAyXhRIsjPg8sEz4WgzMz5FoT3sBWAC1AG1yTIz4oAQM4Uy/fPUBPHBRmx8uK8U2G5jhhQVl8FIW6RMZkh+wQB0O0e7VPi8QkT2zHgWzX4lxITAFowNfiSbfgqyM+QAABAGyfPCwlSYPpSEvQA9ADJyM+FCBL6UnHPC27MyYBQ+wAA4Db4l4IQHc1lAL7ysPiX+DkgboESOljjBHGBAqNw+DgBcPg2oIES9XD4NqC88rD4kiTHBfLgSQXTP/oA+lD0BVOCvvKvUYKhyM+R73ZfehTLP1j6AlJQ+lL6VBb0AMnIz4WIUiD6UnHPC27MyYBQ+wABFP8A9KQT9LzyyAsUAI74J28QovgvoHKBA+iCEAlmAYBw+De2CXL7AsjPhQhSMPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAIL7AAFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/FQDs0z8x+gDTCTHSAPpI+lAx+gAx9AVTZMcFlhA2ECVsQY46+CoiyPpSF/pSFfpSz4gAgMl4UWbIz4PLBM+FoMzM+RaE97CAC1AG1yTIz4oAQM4Uy/fPUBTHBfLgSuICghA7msoAurEhbrOw8uL+IPsE0O0e7VPwAAAjv9gXaiaH0AfSR9JBj9JBh8FUACG+t2dqJofQB9JH0kfSRphOjA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABZ0AART/APSkE/S88sgLAQIBYgIDAgLEBAUCASATFAPz19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omhrpMCBld1HCXaiaH0AfSR9JH0kaYToiBogmHGGguuWEF41FGZxh+QoAv0BCX0pfSkJfSllhOT2qkGBwgAT6yJmPaiaH0AfSR9JH0ka4WEktz5cW9kKAJ9AQl9KX0pfSllhOT2qkAATO1E0PpI+kj6SNMJMdFwccjPhCBSUPpSUkD6UlIw+lLPiAGAye1UA+Y2BdM/+gD6SPpQ+gDTCjH0AfiSJ8cFjsn4ku1E0PoAMfpIMfpI+kgwiCfI+lIT+lL6Us+IAIDJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31GkoCGUOhNfA+MNIG6RW+MOFQkKAhLXLCB8U/Us4w8LDABUyM+RzYtCcibPCz9QBfoCE/pSGc7JyM+FCFJw+lJY+gJxzwtqzMlz+wAGAGb4l/gnbxCi+C+gcoED6IIQCWYBgHD4N7YJcvsCyM+FCPpSghDVMnbbzwuOyz/JgQCC+wAB/jYF0z/6APpI+lD0AfoAIPQEAW6RMJHR4iP6RDDy0U34l/iTcPg6I3Jx4wT4OSBugRtyIuMEIW6BHplYA+MEUCOoJaCAEoEfQHD4PKABcPg2oAFw+DagcoED6IIQCWYBgHD4N6C88rD4kinHBfLgSVOkvvKvUaShJIIQO5rKALoNA+7XLCLK+D3kj2zXLCAAAIBEjuHXLCAAAIA0jlbXLCAAAILMMY5CNfiSI8cF+JIjxwWx+JIixwWx8uK8+JLIz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsAmIQPBscAFvL04uMN4w3jDQ8QEQL+kvgqkW3i7UTQ+gAx+kgx+kj6SDCIJ8j6UhP6UvpSz4gAgMl4Lm6zlD6LBA7fyM+QXjUUZhrLP1AI+gJSsPpSFfpUUAP6As+IAEAS9AAazsnIz4mIAVR0JcjPg8sEz4WgzMz5FoT3sASACyfXJDYVzhLL94EVDc8LeczMzMmAUBUOAAT7AAL+NviSIscFBtMAMdMJ+kj0BPQF+JLtRND6ADH6SDH6SPpIMIgmyPpSE/pS+lLPiACAyXhRIsjPg8sEz4WgzMz5FoT3sBWAC1AG1yTIz4oAQM4Uy/fPUBPHBRmx8uK8U2G5jhhQVl8FIW6RMZkh+wQB0O0e7VPi8QkT2zHgWzX4lxUSAFowNfiSbfgqyM+QAABAGyfPCwlSYPpSEvQA9ADJyM+FCBL6UnHPC27MyYBQ+wAA4Db4l4IQHc1lAL7ysPiX+DkgboESOljjBHGBAqNw+DgBcPg2oIES9XD4NqC88rD4kiTHBfLgSQXTP/oA+lD0BVOCvvKvUYKhyM+R73ZfehTLP1j6AlJQ+lL6VBb0AMnIz4WIUiD6UnHPC27MyYBQ+wAAjvgnbxCi+C+gcoED6IIQCWYBgHD4N7YJcvsCyM+FCFIw+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAgvsAASG/2BdqJofQB9JH0kGP0kGERBUAIb63Z2omh9AH0kfSR9JGmE6MART/APSkE/S88sgLFgFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/FwDw0z8x+gD6SPpQMfoAMdMJMdIA9AVTZMcFlRA2NTNbjjz4KiPI+lIX+lIV+lLPiACAyXhRZsjPg8sEz4WgzMz5FoT3sBKAC1AG1yTIz4oAQM4Uy/fPUBTHBfLgSgHiAoIQO5rKALpYsSFus7Dy4v4g+wTQ7R7tU/AA');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -952,11 +953,11 @@ export class PersonalWallet implements c.Contract {
     static createCellOfInternalTransferStep(body: {
         queryId: uint64
         jettonAmount: coins
-        version: uint10
-        transferredAsCredit?: boolean /* = false */
         transferInitiator: c.Address
         sendExcessesTo: c.Address | null
         forwardTonAmount: coins
+        version?: uint10 /* = 0 */
+        transferredAsCredit?: boolean /* = false */
         latestWalletCode?: c.Cell | null /* = null */
         forwardPayload: PayloadInline | PayloadInRef
     }) {
@@ -1024,11 +1025,11 @@ export class PersonalWallet implements c.Contract {
     async sendInternalTransferStep(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         queryId: uint64
         jettonAmount: coins
-        version: uint10
-        transferredAsCredit?: boolean /* = false */
         transferInitiator: c.Address
         sendExcessesTo: c.Address | null
         forwardTonAmount: coins
+        version?: uint10 /* = 0 */
+        transferredAsCredit?: boolean /* = false */
         latestWalletCode?: c.Cell | null /* = null */
         forwardPayload: PayloadInline | PayloadInRef
     }, extraOptions?: ExtraSendOptions) {

@@ -7,6 +7,8 @@ import "@contracts/common/sharding"
 
 import "@contracts/common/utils"
 
+import "@contracts/personalMinter/personal-wallet-code"
+
 import "fees-management"
 import "jetton-utils"
 import "storage"
@@ -258,6 +260,6 @@ get fun get_wallet_data(): JettonWalletDataReply {
         jettonBalance: storage.jettonBalance,
         ownerAddress: storage.owner,
         minterAddress: storage.minterAddress,
-        jettonWalletCode: contract.getCode(),
+        jettonWalletCode: getBasePersonalWalletCode(),
     };
 }

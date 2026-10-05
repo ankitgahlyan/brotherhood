@@ -27,10 +27,10 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'mPXi9oUiQdhCPCLJHFOf1SDbOTMKbdiCe/UaITAvJrA=',
-  fiMinter: 'lNpfoDjRpdGGFt30XrcOp1ZHwsY3lnwK/ELIspsk2Og=',
-  personalMinter: 'uIo/piJt/CPV3fbMWtRKRlmQ0OiHAXBEURRqyU+PX5E=',
-  personalWallet: '3pOnjVQx1OUtTsVIPCLBNVbHHuPlwUPcaSgRc96xddY=',
+  fiWallet: '3e7P+shIHEZl3ukqcPWHp/x/N9Gvj/nLv6lx9+KJuxQ=',
+  fiMinter: 'g2RA6ySzasxk+oWOvZBgiGOFNr7TSmIm8MmNAlHVAM4=',
+  personalMinter: '2/Ohc+5s8OlGN59ZF5RKLdUyhM1ycIB/0osI/54tmSI=',
+  personalWallet: '3i5HTTSBa/XcOqi2wDCLzGuDMuHdHe/winpcaCPbe9Q=',
   location: 'a+VjihVq3hagTGhnUOf7HBS14S4w9KCe9ocolrfxx/E=',
   lottery: 'HHh95xA0sDcOowpVnyULcDbZczqe0zk2oAw8x+ulo9M=',
   poll: 'XECcPFmvdBODJApBlQTvvvUxjHqt3iB5Rb6E0aikhME=',

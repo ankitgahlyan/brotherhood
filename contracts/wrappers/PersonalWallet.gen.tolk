@@ -107,11 +107,11 @@ fun PersonalWallet.sendInternalTransferStep(
     from: address,
     queryId: uint64,
     jettonAmount: coins,
-    version: uint10,
-    transferredAsCredit: bool,
     transferInitiator: address,
     sendExcessesTo: address?,
     forwardTonAmount: coins,
+    version: uint10,
+    transferredAsCredit: bool,
     latestWalletCode: cell?,
     forwardPayload: PayloadInline | PayloadInRef,
     config: SendParams = {},
@@ -121,11 +121,11 @@ fun PersonalWallet.sendInternalTransferStep(
         .storeUint(0x178d4519, 32)
         .storeAny(queryId)
         .storeAny(jettonAmount)
-        .storeAny(version)
-        .storeAny(transferredAsCredit)
         .storeAny(transferInitiator)
         .storeAny(sendExcessesTo)
         .storeAny(forwardTonAmount)
+        .storeAny(version)
+        .storeAny(transferredAsCredit)
         .storeAny(latestWalletCode)
         .storeAny(forwardPayload);
     val genericMsg = createMessage({

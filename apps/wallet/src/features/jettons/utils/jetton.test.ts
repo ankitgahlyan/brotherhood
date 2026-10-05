@@ -11,10 +11,10 @@ import { isFiJetton } from './jetton';
 import { FI_ADDRESS } from '@/lib/brotherhood/config';
 
 describe('isFiJetton', () => {
-  it('returns true when symbol is FI (case insensitive)', () => {
-    expect(isFiJetton({ symbol: 'FI' })).toBe(true);
-    expect(isFiJetton({ symbol: 'fi' })).toBe(true);
-    expect(isFiJetton({ info: { symbol: 'FI' } })).toBe(true);
+  it('returns false when only symbol is provided without FI_ADDRESS', () => {
+    expect(isFiJetton({ symbol: 'FI' })).toBe(false);
+    expect(isFiJetton({ symbol: 'fi' })).toBe(false);
+    expect(isFiJetton({ info: { symbol: 'FI' } })).toBe(false);
   });
 
   it('returns true when address matches FI_ADDRESS', () => {

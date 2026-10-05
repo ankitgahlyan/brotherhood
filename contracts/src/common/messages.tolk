@@ -63,11 +63,11 @@ struct (0x7362d09c) TransferNotificationForRecipient {
 struct (0x178d4519) InternalTransferStep {
     queryId: uint64
     jettonAmount: coins
-    version: uint10
-    transferredAsCredit: bool = false
     transferInitiator: address
     sendExcessesTo: address?
     forwardTonAmount: coins
+    version: uint10 = 0
+    transferredAsCredit: bool = false
     latestWalletCode: cell? = null
     @abi.clientType(PayloadInline | PayloadInRef)
     forwardPayload: ForwardPayloadRemainder

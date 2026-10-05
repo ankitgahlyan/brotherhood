@@ -125,10 +125,13 @@ export function getExplorerTxUrl(
   return `https://${prefix}tonscan.org/tx/${cleanHash}`;
 }
 
+export type ExplorerAddressKind = 'address' | 'jetton-master' | 'jetton-wallet';
+
 export function getExplorerAddressUrl(
   network: NetworkType,
   address: string,
   explorer: ExplorerChoice = 'tonscan',
+  kind: ExplorerAddressKind = 'address',
 ): string {
   if (explorer === 'actonscan') {
     const query = network === 'testnet' ? '?network=testnet' : '';
@@ -137,6 +140,12 @@ export function getExplorerAddressUrl(
   const prefix = getPrefix(network);
   if (explorer === 'tonviewer') {
     return `https://${prefix}tonviewer.com/${address}`;
+  }
+  if (kind === 'jetton-master') {
+    return `https://${prefix}tonscan.org/jetton/${address}`;
+  }
+  if (kind === 'jetton-wallet') {
+    return `https://${prefix}tonscan.org/token-wallet/${address}`;
   }
   return `https://${prefix}tonscan.org/address/${address}`;
 }

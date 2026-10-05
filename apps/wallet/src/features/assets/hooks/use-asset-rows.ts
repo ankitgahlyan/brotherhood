@@ -25,8 +25,13 @@ import {
 } from '@/features/jettons';
 import { useIsNetworkMember } from '@/features/brotherhood';
 import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
+import {
+  getContractCacheSync,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
 import { useFiMinterState, useFiWalletState } from '@/lib/brotherhood/queries';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
+import type { PersonalStore } from '@wrappers/Personal.gen';
 import { usePersonalJettonInfo } from '@/features/personal-jetton/hooks/use-personal-jetton-info';
 import { isPersonalMinterContract, isZeroAddress } from '@/lib/brotherhood/ton';
 import { useTrackedPersonalTokens } from './use-tracked-personal-tokens';
@@ -191,6 +196,15 @@ export const useAssetRows = (): AssetRows => {
     const seenAddresses = new Set<string>();
     const normFi = normalizeAddress(FI_ADDRESS) || FI_ADDRESS;
 
+    const personalTokenByNorm = new Map<
+      string,
+      (typeof personalTokens)[number]
+    >();
+    for (const pt of personalTokens) {
+      const normPt = normalizeAddress(pt.minterAddress) || pt.minterAddress;
+      personalTokenByNorm.set(normPt, pt);
+    }
+
     // 1. Process activeJettons (FI + any personal tokens indexed by walletkit)
     for (const jetton of activeJettons) {
       const isFi = isFiJetton(jetton);
@@ -213,15 +227,31 @@ export const useAssetRows = (): AssetRows => {
         continue;
       }
 
+      const cachedPtStore = !isFi
+        ? getContractCacheSync<PersonalStore>(
+            getNormalizedContractCacheKey(net, jetton.address),
+          )?.data
+        : null;
+      const ptOnchainMeta = cachedPtStore?.metadataUri
+        ? parseOnchainMetadataCell(cachedPtStore.metadataUri)
+        : null;
+      const trackedPt = !isFi ? personalTokenByNorm.get(normAddr) : undefined;
+
       const rateEntry = findRate(rates, jetton.address);
       const decimals = jetton.decimalsNumber ?? 9;
       const amount = toDecimal(jetton.balance, decimals);
       const symbol = isFi
         ? fiOnchainMeta.symbol?.trim() || getJettonsSymbol(jetton) || 'HD'
-        : (getJettonsSymbol(jetton) ?? '');
+        : ptOnchainMeta?.symbol?.trim() ||
+          trackedPt?.symbol?.trim() ||
+          getJettonsSymbol(jetton) ||
+          '';
       const name = isFi
         ? fiOnchainMeta.name?.trim() || getJettonsName(jetton) || symbol
-        : (getJettonsName(jetton) ?? symbol);
+        : ptOnchainMeta?.name?.trim() ||
+          trackedPt?.name?.trim() ||
+          getJettonsName(jetton) ||
+          symbol;
 
       // Per user rule: only show tokens if balance > 0 (FI is shown if member)
       if (!isFi && amount <= 0) continue;
@@ -231,6 +261,8 @@ export const useAssetRows = (): AssetRows => {
       const visKey = normalizeAssetVisibilityKey(
         isFi ? FI_ADDRESS : jetton.address,
       );
+      const ptImage =
+        ptOnchainMeta?.image?.trim() || trackedPt?.image?.trim() || '';
       const iconUrls = isFi
         ? [
             ...(fiOnchainMeta.image?.trim()
@@ -239,7 +271,10 @@ export const useAssetRows = (): AssetRows => {
             ...tokenImageUrls(jetton.info?.image),
             assetUrl('fi.svg'),
           ]
-        : tokenImageUrls(jetton.info?.image);
+        : [
+            ...(ptImage ? [ptImage] : []),
+            ...tokenImageUrls(jetton.info?.image),
+          ];
 
       const isAdminPt = Boolean(
         adminPtMinterNorm && normAddr === adminPtMinterNorm,
@@ -358,6 +393,7 @@ export const useAssetRows = (): AssetRows => {
     fiOnchainMeta,
     pinnedTokenIds,
     hiddenTokenIds,
+    net,
   ]);
 
   return { tonRow, jettonRows, hiddenJettonRows, assetsReady };

@@ -173,6 +173,7 @@ export function usePersonalWalletForIssuer(
   };
 }
 
+import { useEffect } from 'react';
 import { parseOnchainMetadataCell } from './jettonContent';
 
 export function usePersonalMinterDetails(
@@ -184,6 +185,24 @@ export function usePersonalMinterDetails(
     enabled ? personalMinter : null,
     net,
   );
+
+  const refetch = useCallback(async () => {
+    if (!personalMinter) return;
+    const { batchHydrateUniversal } = await import('./account-state-hydrator');
+    const clean =
+      typeof personalMinter === 'string'
+        ? personalMinter.trim()
+        : personalMinter.toRawString();
+    await batchHydrateUniversal([clean], net, {
+      knownTypes: { [clean]: 'personalMinter' },
+    });
+  }, [personalMinter, net]);
+
+  useEffect(() => {
+    if (enabled && personalMinter && isLoading) {
+      void refetch();
+    }
+  }, [enabled, personalMinter, isLoading, refetch]);
 
   const minterDetails: PersonalMinterDetails | null = useMemo(
     () =>
@@ -205,7 +224,7 @@ export function usePersonalMinterDetails(
     isFetching: enabled && isLoading,
     error: null as Error | null,
     timestamp,
-    refetch: async () => {},
+    refetch,
   };
 }
 

@@ -17,6 +17,15 @@ import {
 import type { NetworkType } from '@demo/wallet-core';
 
 import { assetUrl, normalizeAddress } from '@/core/utils';
+import { isFiJetton } from '../utils/jetton';
+import { FI_ADDRESS } from '@/lib/brotherhood/config';
+import {
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
+import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
+import type { FiStore } from '@wrappers/FossFi.gen';
+import type { PersonalStore } from '@wrappers/Personal.gen';
 
 export type TokenInfo = Partial<Omit<JettonInfo, 'decimals' | 'image'>> & {
   decimals?: number;
@@ -88,18 +97,65 @@ export function useJettonInfo(
     if (!rawAddressStr || isTon) return;
 
     let isCancelled = false;
+    const net = network === 'mainnet' ? 'mainnet' : 'testnet';
     async function updateTokenInfo() {
       if (!rawAddressStr) return;
+
+      const isFi = isFiJetton({ address: rawAddressStr });
+      let onchainMeta: {
+        name?: string;
+        symbol?: string;
+        description?: string;
+        image?: string;
+      } | null = null;
+
+      try {
+        if (isFi) {
+          const fiCache = await getContractCache<FiStore>(
+            getNormalizedContractCacheKey(net, FI_ADDRESS),
+          );
+          if (fiCache?.data?.metadata) {
+            onchainMeta = parseOnchainMetadataCell(fiCache.data.metadata);
+          }
+        } else {
+          const ptCache = await getContractCache<PersonalStore>(
+            getNormalizedContractCacheKey(net, rawAddressStr),
+          );
+          if (ptCache?.data?.metadataUri) {
+            onchainMeta = parseOnchainMetadataCell(ptCache.data.metadataUri);
+          }
+        }
+      } catch {
+        // ignore cache read failure
+      }
+
       const info = await walletKit?.jettons?.getJettonInfo(
         rawAddressStr,
         chainNetwork,
       );
       if (!isCancelled) {
-        setTokenInfo(
-          info
-            ? { ...info, images: info.image ? [info.image] : undefined }
-            : null,
-        );
+        const mergedName = onchainMeta?.name?.trim() || info?.name;
+        const mergedSymbol = onchainMeta?.symbol?.trim() || info?.symbol;
+        const mergedDesc =
+          onchainMeta?.description?.trim() || info?.description;
+        const onchainImg = onchainMeta?.image?.trim();
+        const kitImg = info?.image;
+        const images = [
+          ...(onchainImg ? [onchainImg] : []),
+          ...(kitImg && kitImg !== onchainImg ? [kitImg] : []),
+        ];
+
+        if (mergedName || mergedSymbol || info) {
+          setTokenInfo({
+            ...info,
+            name: mergedName,
+            symbol: mergedSymbol,
+            description: mergedDesc,
+            images: images.length > 0 ? images : undefined,
+          });
+        } else {
+          setTokenInfo(null);
+        }
       }
     }
 
@@ -112,7 +168,7 @@ export function useJettonInfo(
     return () => {
       isCancelled = true;
     };
-  }, [rawAddressStr, isTon, walletKit, chainNetwork]);
+  }, [rawAddressStr, isTon, walletKit, chainNetwork, network]);
 
   return tokenInfo;
 }

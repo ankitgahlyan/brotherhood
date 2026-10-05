@@ -644,13 +644,7 @@ export async function getPersonalWalletAddress(
     }
   }
 
-  const fallbackAddr = computePersonalWalletAddress(
-    personalMinter,
-    owner,
-    owner,
-  );
-  setCachedDeterministicWalletAddress(net, personalMinter, owner, fallbackAddr);
-  return fallbackAddr;
+  return computePersonalWalletAddress(personalMinter, owner, owner);
 }
 
 // The raw balance (nano) a buyer holds on the given Personal Token minter.
@@ -740,6 +734,28 @@ export async function fetchPersonalTokenMetadata(
 ): Promise<PersonalTokenMetadata> {
   const addrStr = minterAddress.toString();
   try {
+    // 1. Prefer live on-chain PersonalStore.metadataUri from hydrated BOC cache
+    const normalizedKey = getNormalizedContractCacheKey(network, minterAddress);
+    const minterCached = await getContractCache<any>(normalizedKey);
+    if (minterCached?.data?.metadataUri) {
+      const { parseOnchainMetadataCell } = await import('./jettonContent');
+      const onchain = parseOnchainMetadataCell(minterCached.data.metadataUri);
+      if (
+        onchain.name ||
+        onchain.symbol ||
+        onchain.image ||
+        onchain.description
+      ) {
+        return {
+          name: onchain.name?.trim() || undefined,
+          symbol: onchain.symbol?.trim() || undefined,
+          image: onchain.image?.trim() || undefined,
+          description: onchain.description?.trim() || undefined,
+        };
+      }
+    }
+
+    // 2. Fall back to Toncenter v3 metadata cache only if on-chain BOC metadata is unavailable
     const { getMetadataCache } = await import('./contract-cache');
     const cachedMeta = await getMetadataCache(addrStr);
     if (cachedMeta?.token_info?.[0]) {

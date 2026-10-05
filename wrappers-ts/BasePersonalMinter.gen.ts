@@ -239,11 +239,11 @@ export const PayloadInRef = {
  > struct (0x178d4519) InternalTransferStep {
  >     queryId: uint64
  >     jettonAmount: coins
- >     version: uint10
- >     transferredAsCredit: bool
  >     transferInitiator: address
  >     sendExcessesTo: address?
  >     forwardTonAmount: coins
+ >     version: uint10
+ >     transferredAsCredit: bool
  >     latestWalletCode: cell?
  >     forwardPayload: ForwardPayloadRemainder
  > }
@@ -252,11 +252,11 @@ export interface InternalTransferStep {
     readonly $: 'InternalTransferStep'
     queryId: uint64
     jettonAmount: coins
-    version: uint10
-    transferredAsCredit: boolean /* = false */
     transferInitiator: c.Address
     sendExcessesTo: c.Address | null
     forwardTonAmount: coins
+    version: uint10 /* = 0 */
+    transferredAsCredit: boolean /* = false */
     latestWalletCode: c.Cell | null /* = null */
     forwardPayload: PayloadInline | PayloadInRef
 }
@@ -267,16 +267,17 @@ export const InternalTransferStep = {
     create(args: {
         queryId: uint64
         jettonAmount: coins
-        version: uint10
-        transferredAsCredit?: boolean /* = false */
         transferInitiator: c.Address
         sendExcessesTo: c.Address | null
         forwardTonAmount: coins
+        version?: uint10 /* = 0 */
+        transferredAsCredit?: boolean /* = false */
         latestWalletCode?: c.Cell | null /* = null */
         forwardPayload: PayloadInline | PayloadInRef
     }): InternalTransferStep {
         return {
             $: 'InternalTransferStep',
+            version: 0n,
             transferredAsCredit: false,
             latestWalletCode: null,
             ...args
@@ -288,11 +289,11 @@ export const InternalTransferStep = {
             $: 'InternalTransferStep',
             queryId: s.loadUintBig(64),
             jettonAmount: s.loadCoins(),
-            version: s.loadUintBig(10),
-            transferredAsCredit: s.loadBoolean(),
             transferInitiator: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
             forwardTonAmount: s.loadCoins(),
+            version: s.loadUintBig(10),
+            transferredAsCredit: s.loadBoolean(),
             latestWalletCode: s.loadBoolean() ? s.loadRef() : null,
             forwardPayload: lookupPrefix(s, 0b0, 1) ? PayloadInline.fromSlice(s) :
                 lookupPrefix(s, 0b1, 1) ? PayloadInRef.fromSlice(s) :
@@ -303,11 +304,11 @@ export const InternalTransferStep = {
         b.storeUint(0x178d4519, 32);
         b.storeUint(self.queryId, 64);
         b.storeCoins(self.jettonAmount);
-        b.storeUint(self.version, 10);
-        b.storeBit(self.transferredAsCredit);
         b.storeAddress(self.transferInitiator);
         b.storeAddress(self.sendExcessesTo);
         b.storeCoins(self.forwardTonAmount);
+        b.storeUint(self.version, 10);
+        b.storeBit(self.transferredAsCredit);
         storeTolkNullable<c.Cell>(self.latestWalletCode, b,
             (v,b) => b.storeRef(v)
         );
@@ -500,7 +501,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class BasePersonalMinter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBAEAhQABFP8A9KQT9LzyyAsBAgLHAgMA09fxI+SB2omh9JH0kaYTo/EkR44L8SRHjgtj5cV4R65YQAABABkcQa6Zoa5YQXjUUZnlY6Z+Y/QAY6YUY/SQY/SgY/QAY+gLO65YQAABAHkl5H/D6AvEQN3lpfxB9gmh2j3ap/EkqkHiEV8ACaxXr4LA');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBAEAhQABFP8A9KQT9LzyyAsBAgLHAgMA09fxI+SB2omh9JH0kaYTo/EkR44L8SRHjgtj5cV4R65YQAABABkcQa6Zoa5YQXjUUZnlY6Z+Y/QAY/SQY/SgY/QAY6YUY+gLO65YQAABAHkl5H/D6AvEQN3lpfxB9gmh2j3ap/EkqkHiEV8ACaxXr4LA');
 
     static Errors = {
         'Errors.InvalidMessage': 49,

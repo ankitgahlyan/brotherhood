@@ -155,7 +155,7 @@ export async function buildChangeContentBody(
   metadata: JettonMetadata,
   queryId = 0n,
 ): Promise<Cell> {
-  const content = await buildOnchainMetadata(metadata);
+  const content = await buildTolkOnchainMetadata(metadata);
   return ChangeMinterMetadata.toCell(
     ChangeMinterMetadata.create({ queryId, newMetadata: content }),
   );

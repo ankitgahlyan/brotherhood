@@ -18,11 +18,11 @@ fun makeInternalTransferStep(
     return InternalTransferStep {
         queryId,
         jettonAmount,
-        version,
-        transferredAsCredit,
         transferInitiator,
         sendExcessesTo,
         forwardTonAmount,
+        version,
+        transferredAsCredit,
         latestWalletCode,
         forwardPayload: payload,
     }.toCell();
