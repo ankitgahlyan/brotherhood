@@ -31,6 +31,77 @@ const FloatingDevButton = React.lazy(() =>
 import { motion } from 'framer-motion';
 import { useAnimationSettings } from '@/core/motion/motion-provider';
 
+function extractEmbeddedTonLink(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(
+    /(?:web\+tonconnect|web\+ton|tonconnect|ton|tc):\/\/[^\s"'<>]+/i,
+  );
+  if (match) {
+    return match[0];
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('tonconnect-')) {
+    return trimmed;
+  }
+  return null;
+}
+
+function captureLaunchTonLinkFromWindow(): string {
+  if (typeof window === 'undefined') return '';
+  if (window.location.pathname.endsWith('/ton-connect')) return '';
+
+  const sp = new URLSearchParams(window.location.search);
+  const directCandidate =
+    extractEmbeddedTonLink(sp.get('tonlink')) ||
+    extractEmbeddedTonLink(sp.get('tonconnect')) ||
+    extractEmbeddedTonLink(sp.get('url')) ||
+    extractEmbeddedTonLink(sp.get('text')) ||
+    extractEmbeddedTonLink(sp.get('title'));
+
+  let candidateUrl = '';
+  if (directCandidate) {
+    candidateUrl = directCandidate;
+  } else if (sp.get('v') && sp.get('id') && sp.get('r')) {
+    candidateUrl = window.location.href;
+  } else if (sp.get('startapp') || sp.get('tgWebAppStartParam')) {
+    candidateUrl = window.location.href;
+  }
+
+  if (candidateUrl) {
+    for (const key of [
+      'tonlink',
+      'tonconnect',
+      'url',
+      'text',
+      'title',
+      'v',
+      'id',
+      'r',
+      'ret',
+      'startapp',
+      'tgWebAppStartParam',
+    ]) {
+      sp.delete(key);
+    }
+    const nextSearch = sp.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+    try {
+      window.history.replaceState(window.history.state, '', nextUrl);
+    } catch {
+      /* ignore history state errors */
+    }
+  }
+
+  return candidateUrl;
+}
+
+let pendingInitialLaunchLink =
+  typeof window !== 'undefined' ? captureLaunchTonLinkFromWindow() : '';
+
 function RootComponent() {
   const { isReduced } = useAnimationSettings();
   const isWalletKitInitialized = useWalletStore(
@@ -84,7 +155,7 @@ function RootComponent() {
       window.removeEventListener('brotherhood_navigate_send', onNavigateSend);
   }, [router]);
 
-  // Process external launch deep links (TMA start_param, ?url=..., ?tonconnect=..., or ?v=2&id=...&r=...)
+  // Process external launch deep links (PWA share_target, protocol_handlers, TMA start_param, or ?v=2&id=...&r=...)
   React.useEffect(() => {
     if (
       hasProcessedLaunchLinkRef.current ||
@@ -100,7 +171,6 @@ function RootComponent() {
       return;
     }
 
-    const sp = new URLSearchParams(window.location.search);
     const tgStartParam = (
       window as unknown as {
         Telegram?: {
@@ -109,14 +179,12 @@ function RootComponent() {
       }
     ).Telegram?.WebApp?.initDataUnsafe?.start_param;
 
-    let candidateUrl = '';
-    if (sp.get('url') || sp.get('tonconnect')) {
-      candidateUrl = window.location.href;
-    } else if (sp.get('v') && sp.get('id') && sp.get('r')) {
-      candidateUrl = window.location.href;
-    } else if (sp.get('startapp') || sp.get('tgWebAppStartParam')) {
-      candidateUrl = window.location.href;
-    } else if (
+    let candidateUrl =
+      pendingInitialLaunchLink || captureLaunchTonLinkFromWindow();
+    pendingInitialLaunchLink = '';
+
+    if (
+      !candidateUrl &&
       tgStartParam &&
       (tgStartParam.startsWith('tonconnect-') ||
         tgStartParam.startsWith('ton://') ||
@@ -127,26 +195,6 @@ function RootComponent() {
 
     if (candidateUrl) {
       hasProcessedLaunchLinkRef.current = true;
-      // Clean consumed launch parameters from location bar
-      if (
-        sp.has('url') ||
-        sp.has('tonconnect') ||
-        (sp.has('v') && sp.has('id') && sp.has('r')) ||
-        sp.has('startapp') ||
-        sp.has('tgWebAppStartParam')
-      ) {
-        sp.delete('url');
-        sp.delete('tonconnect');
-        sp.delete('v');
-        sp.delete('id');
-        sp.delete('r');
-        sp.delete('ret');
-        sp.delete('startapp');
-        sp.delete('tgWebAppStartParam');
-        const nextSearch = sp.toString();
-        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
-        window.history.replaceState(window.history.state, '', nextUrl);
-      }
       void handleTonConnectUrl(candidateUrl).catch(() => {
         /* handled by slice */
       });

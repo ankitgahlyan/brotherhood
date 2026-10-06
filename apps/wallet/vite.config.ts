@@ -69,13 +69,23 @@ const webPwaManifest: Partial<ManifestOptions> = {
   protocol_handlers: [
     {
       protocol: 'web+ton',
-      url: `${base}ton-connect?url=%s`,
+      url: `${base}?tonlink=%s`,
     },
     {
       protocol: 'web+tonconnect',
-      url: `${base}ton-connect?url=%s`,
+      url: `${base}?tonlink=%s`,
     },
   ],
+  share_target: {
+    action: base,
+    method: 'GET',
+    enctype: 'application/x-www-form-urlencoded',
+    params: {
+      title: 'title',
+      text: 'text',
+      url: 'url',
+    },
+  },
 };
 
 // TWA manifest: minimal — Telegram controls install/launch UX
