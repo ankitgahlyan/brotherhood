@@ -10,6 +10,7 @@ import React, { useState, useRef } from 'react';
 import {
   ChevronRight,
   Download,
+  Fingerprint,
   KeyRound,
   Lock,
   Palette,
@@ -29,6 +30,7 @@ import { InstallPromptDialog } from '@/core/components/pwa';
 import { usePwaInstall } from '@/core/hooks/use-pwa-install';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useBiometrics } from '@/core/security/use-biometrics';
+import { usePasskeyWallets } from '@/core/security/use-passkey-wallets';
 
 import { ToggleRow } from '../toggle-row';
 import { AppearanceModal } from '../appearance';
@@ -111,6 +113,11 @@ export const SettingsDropdown: React.FC = () => {
     register: registerBiometrics,
     disable: disableBiometrics,
   } = useBiometrics();
+  const { isBackingUp: isBackingUpPasskey, backupAllWallets } =
+    usePasskeyWallets();
+  const mnemonicWalletsCount = savedWallets.filter(
+    (w) => Boolean(w.encryptedMnemonic) && !w.isWatchOnly,
+  ).length;
 
   const [panel, setPanelState] = useState<'menu' | 'mnemonic' | null>(null);
 
@@ -248,6 +255,32 @@ export const SettingsDropdown: React.FC = () => {
     setPanel(null);
     setMnemonic([]);
     setMnemonicError('');
+  };
+
+  const handleBackupToPasskey = async () => {
+    if (isBiometricsInsecure) {
+      toast.error(
+        'Passkeys require a secure connection (HTTPS). On mobile browsers, please access via HTTPS or use Telegram.',
+      );
+      return;
+    }
+    try {
+      const savedCount = await backupAllWallets();
+      if (savedCount > 0) {
+        toast.success(
+          savedCount === 1
+            ? 'Wallet recovery phrase saved to Passkey'
+            : `Saved ${savedCount} wallets to Passkey`,
+        );
+      }
+    } catch (error) {
+      log.error('Failed to backup wallets to Passkey:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to back up wallets to Passkey',
+      );
+    }
   };
 
   return (
@@ -429,6 +462,27 @@ export const SettingsDropdown: React.FC = () => {
                     disabled={isLoadingMnemonic}
                   />
                 )}
+                {!isWatchOnly &&
+                  mnemonicWalletsCount > 0 &&
+                  (isBiometricsSupported || isBiometricsInsecure) && (
+                    <ActionRow
+                      icon={<Fingerprint className="w-5 h-5 text-primary" />}
+                      label={
+                        isBackingUpPasskey
+                          ? 'Saving to Passkey…'
+                          : 'Backup Wallets to Passkey'
+                      }
+                      subtitle={
+                        mnemonicWalletsCount > 1
+                          ? `Save all ${mnemonicWalletsCount} wallet phrases to mobile keystore`
+                          : 'Save recovery phrase to mobile keystore'
+                      }
+                      onClick={() => {
+                        void handleBackupToPasskey();
+                      }}
+                      disabled={isBackingUpPasskey}
+                    />
+                  )}
                 <ActionRow
                   icon={<Lock className="w-5 h-5 text-muted-foreground" />}
                   label="Lock Wallet"

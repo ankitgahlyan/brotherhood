@@ -7,6 +7,8 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Fingerprint } from 'lucide-react';
+import { toast } from 'sonner';
 import { useNavigate } from '@/core/routing';
 import { useAuth, useWallet, generateWalletName } from '@demo/wallet-core';
 import type { NetworkType } from '@demo/wallet-core';
@@ -17,6 +19,7 @@ import { Segmented } from '@/core/components/ui/segmented';
 import type { SegmentedOption } from '@/core/components/ui/segmented';
 import { NetworkSelector } from '@/features/wallets';
 import { useTonWallet } from '@/core/hooks';
+import { usePasskeyWallets } from '@/core/security/use-passkey-wallets';
 import {
   applyMnemonicPaste,
   evaluateBip39Slots,
@@ -39,6 +42,13 @@ export const ImportWalletScreen: React.FC = () => {
   const { importWallet } = useTonWallet();
   const { setUseWalletInterfaceType } = useAuth();
   const { savedWallets } = useWallet();
+  const {
+    isSupported: isPasskeySupported,
+    isInsecureContext: isPasskeyInsecure,
+    isRestoring: isRestoringPasskey,
+    backupAllWallets,
+    restoreFromPasskey,
+  } = usePasskeyWallets();
 
   const defaultName = useMemo(
     () => generateWalletName(savedWallets, 'mnemonic'),
@@ -51,6 +61,7 @@ export const ImportWalletScreen: React.FC = () => {
   const [interfaceType, setInterfaceType] =
     useState<WalletInterface>('mnemonic');
   const [network, setNetwork] = useState<NetworkType>('testnet');
+  const [saveToPasskey, setSaveToPasskey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -103,14 +114,67 @@ export const ImportWalletScreen: React.FC = () => {
   const validation = useMemo(() => evaluateBip39Slots(words), [words]);
   const isValid = isImportableBip39(validation);
 
+  const handleImportFromPasskey = async () => {
+    if (isPasskeyInsecure) {
+      toast.error(
+        'Passkeys require a secure connection (HTTPS). On mobile browsers, please access via HTTPS or use Telegram.',
+      );
+      return;
+    }
+    setError('');
+    try {
+      const result = await restoreFromPasskey();
+      if (!result) return;
+      if (result.importedCount > 0) {
+        toast.success(
+          result.importedCount === 1
+            ? 'Wallet restored from Passkey'
+            : `Restored ${result.importedCount} wallets from Passkey`,
+        );
+      } else {
+        toast.info('Wallet is already imported — switched to wallet');
+      }
+      navigate('/wallet', { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to restore wallet from Passkey',
+      );
+    }
+  };
+
   const handleImport = async () => {
     if (!isValid) return;
     setError('');
     setIsLoading(true);
     try {
-      setUseWalletInterfaceType(interfaceType);
       const subwalletId = network === 'testnet' ? 2147483645 : 2147483409;
       const finalName = walletName.trim() || defaultName;
+      if (saveToPasskey && isPasskeySupported && !isPasskeyInsecure) {
+        try {
+          const savedCount = await backupAllWallets([
+            {
+              mnemonic: validation.nonEmptyWords,
+              name: finalName,
+              network,
+              version: 'v5r1',
+              subwalletId,
+              interfaceType,
+            },
+          ]);
+          if (savedCount > 0) {
+            toast.success('Recovery phrase saved to Passkey');
+          }
+        } catch (passkeyErr) {
+          toast.error(
+            passkeyErr instanceof Error
+              ? passkeyErr.message
+              : 'Failed to save to Passkey; continuing wallet import',
+          );
+        }
+      }
+      setUseWalletInterfaceType(interfaceType);
       await importWallet(
         validation.nonEmptyWords,
         'v5r1',
@@ -269,7 +333,23 @@ export const ImportWalletScreen: React.FC = () => {
           >
             {validation.nonEmptyWords.length}/24 words
           </span>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            {(isPasskeySupported || isPasskeyInsecure) && (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleImportFromPasskey();
+                }}
+                disabled={isRestoringPasskey || isLoading}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:opacity-80 font-semibold disabled:opacity-50 cursor-pointer"
+                data-testid="import-from-passkey"
+              >
+                <Fingerprint className="w-3.5 h-3.5" />
+                <span>
+                  {isRestoringPasskey ? 'Restoring…' : 'Import from Passkey'}
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={clearAll}
@@ -314,6 +394,35 @@ export const ImportWalletScreen: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {isPasskeySupported && !isPasskeyInsecure && (
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2.5">
+            <div className="flex items-center gap-2 text-left">
+              <Fingerprint className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs font-medium text-foreground">
+                Save recovery phrase to Passkey
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={saveToPasskey}
+              onClick={() => setSaveToPasskey((prev) => !prev)}
+              data-testid="toggle-save-passkey"
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 ring-1 ring-inset transition-colors ${
+                saveToPasskey
+                  ? 'bg-primary ring-primary'
+                  : 'bg-secondary ring-border'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-background shadow-xs transition-transform ${
+                  saveToPasskey ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        )}
 
         {error && (
           <p className="mt-4 text-center text-sm text-red-500">{error}</p>

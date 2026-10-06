@@ -19,6 +19,7 @@ import { CenteredScreen } from '@/core/components/shared/centered-screen';
 import { Button } from '@/core/components/ui/button';
 import { NetworkSelector } from '@/features/wallets';
 import { useTonWallet } from '@/core/hooks';
+import { usePasskeyWallets } from '@/core/security/use-passkey-wallets';
 
 /** Dedicated "Recovery phrase" screen for creating a new wallet. */
 export const CreateWalletScreen: React.FC = () => {
@@ -26,6 +27,12 @@ export const CreateWalletScreen: React.FC = () => {
   const { importWallet } = useTonWallet();
   const { setUseWalletInterfaceType } = useAuth();
   const { savedWallets } = useWallet();
+  const {
+    isSupported: isPasskeySupported,
+    isInsecureContext: isPasskeyInsecure,
+    isBackingUp: isSavingPasskey,
+    backupAllWallets,
+  } = usePasskeyWallets();
 
   const defaultName = useMemo(
     () => generateWalletName(savedWallets, 'mnemonic'),
@@ -36,6 +43,7 @@ export const CreateWalletScreen: React.FC = () => {
   const [walletName, setWalletName] = useState('');
   const [network, setNetwork] = useState<NetworkType>('testnet');
   const [revealed, setRevealed] = useState(false);
+  const [savedToPasskey, setSavedToPasskey] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +70,48 @@ export const CreateWalletScreen: React.FC = () => {
       toast.error('Failed to copy');
     }
   }, [mnemonic]);
+
+  const handleSaveToPasskey = useCallback(async () => {
+    if (mnemonic.length === 0) return;
+    if (isPasskeyInsecure) {
+      toast.error(
+        'Passkeys require a secure connection (HTTPS). On mobile browsers, please access via HTTPS or use Telegram.',
+      );
+      return;
+    }
+    try {
+      const subwalletId = network === 'testnet' ? 2147483645 : 2147483409;
+      const finalName = walletName.trim() || defaultName;
+      const count = await backupAllWallets([
+        {
+          mnemonic,
+          name: finalName,
+          network,
+          version: 'v5r1',
+          subwalletId,
+          interfaceType: 'mnemonic',
+        },
+      ]);
+      if (count > 0) {
+        setRevealed(true);
+        setSavedToPasskey(true);
+        toast.success('Recovery phrase saved to Passkey');
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Failed to save recovery phrase to Passkey',
+      );
+    }
+  }, [
+    mnemonic,
+    isPasskeyInsecure,
+    network,
+    walletName,
+    defaultName,
+    backupAllWallets,
+  ]);
 
   const handleContinue = async () => {
     setError('');
@@ -167,7 +217,7 @@ export const CreateWalletScreen: React.FC = () => {
           )}
         </div>
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Button
             variant="gray"
             size="sm"
@@ -176,6 +226,20 @@ export const CreateWalletScreen: React.FC = () => {
           >
             Copy phrase
           </Button>
+          {(isPasskeySupported || isPasskeyInsecure) && (
+            <Button
+              variant="gray"
+              size="sm"
+              onClick={() => {
+                void handleSaveToPasskey();
+              }}
+              loading={isSavingPasskey}
+              disabled={!ready || isSavingPasskey}
+              data-testid="save-mnemonic-passkey"
+            >
+              {savedToPasskey ? 'Saved to Passkey ✓' : 'Save to Passkey'}
+            </Button>
+          )}
         </div>
 
         {error && (

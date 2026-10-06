@@ -22,7 +22,7 @@ import {
  * is present on window.Telegram.WebApp. Outside Telegram (desktop Chrome, regular browsers),
  * telegram-web-app.js exposes a version 6.0 stub with an inert BiometricManager that does not work.
  */
-function hasTelegramBiometricManager(): boolean {
+export function hasTelegramBiometricManager(): boolean {
   if (import.meta.env.VITE_APP_TARGET === 'web') return false;
   return (
     isTelegramEnvironment() && Boolean(getRawTelegramWebApp()?.BiometricManager)
@@ -31,12 +31,64 @@ function hasTelegramBiometricManager(): boolean {
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
 const BIOMETRIC_DISABLED_KEY = 'brotherhood_biometrics_disabled';
+export const TELEGRAM_BUNDLE_CACHE_KEY = 'brotherhood_tg_passkey_bundle';
+export const PASSKEY_BACKED_UP_RECORDS_KEY =
+  'brotherhood_passkey_backed_up_records';
+const TELEGRAM_TOKEN_PREFIX = 'bro1:';
 export const BIOMETRICS_CHANGED_EVENT = 'brotherhood:biometrics-changed';
 
-function notifyBiometricsChanged(): void {
+export function notifyBiometricsChanged(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(BIOMETRICS_CHANGED_EVENT));
   }
+}
+
+export function parseTelegramBiometricToken(rawToken: string | null): {
+  password: string | null;
+  bundleBase64: string | null;
+} {
+  if (!rawToken) return { password: null, bundleBase64: null };
+  if (!rawToken.startsWith(TELEGRAM_TOKEN_PREFIX)) {
+    return { password: rawToken, bundleBase64: null };
+  }
+  const rest = rawToken.slice(TELEGRAM_TOKEN_PREFIX.length);
+  const sepIndex = rest.indexOf(':');
+  if (sepIndex === -1) {
+    try {
+      return { password: decodeURIComponent(rest), bundleBase64: null };
+    } catch {
+      return { password: rest, bundleBase64: null };
+    }
+  }
+  const encodedPassword = rest.slice(0, sepIndex);
+  const bundleBase64 = rest.slice(sepIndex + 1) || null;
+  try {
+    return {
+      password: decodeURIComponent(encodedPassword),
+      bundleBase64,
+    };
+  } catch {
+    return { password: encodedPassword, bundleBase64 };
+  }
+}
+
+export function formatTelegramBiometricToken(
+  password: string,
+  bundleBase64?: string | null,
+): string {
+  let resolvedBundle = bundleBase64;
+  if (resolvedBundle === undefined && typeof window !== 'undefined') {
+    try {
+      resolvedBundle = localStorage.getItem(TELEGRAM_BUNDLE_CACHE_KEY);
+    } catch {
+      resolvedBundle = null;
+    }
+  }
+  if (!resolvedBundle) {
+    return password;
+  }
+  const candidate = `${TELEGRAM_TOKEN_PREFIX}${encodeURIComponent(password)}:${resolvedBundle}`;
+  return candidate.length <= 1024 ? candidate : password;
 }
 
 interface BiometricVaultData {
@@ -46,9 +98,9 @@ interface BiometricVaultData {
   iv: string;
 }
 
-// Utility base64url <-> ArrayBuffer converters
-function bufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
-  const bytes = new Uint8Array(buffer);
+// Utility base64 <-> ArrayBuffer converters
+export function bufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -56,7 +108,7 @@ function bufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   return window.btoa(binary);
 }
 
-function base64ToBuffer(base64: string): ArrayBuffer {
+export function base64ToBuffer(base64: string): ArrayBuffer {
   const binary = window.atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -182,6 +234,36 @@ async function deriveVaultKey(
 }
 
 /**
+ * Encrypt and persist the vault password in localStorage bound to an existing WebAuthn credential ID.
+ */
+export async function enrollBiometricVaultWithCredentialId(
+  credIdString: string,
+  password: string,
+): Promise<void> {
+  if (!credIdString || !password || typeof window === 'undefined') return;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const key = await deriveVaultKey(salt, credIdString);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(password),
+  );
+
+  const vaultData: BiometricVaultData = {
+    credentialId: credIdString,
+    encryptedPassword: bufferToBase64(encrypted),
+    salt: bufferToBase64(salt),
+    iv: bufferToBase64(iv),
+  };
+
+  localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
+  localStorage.setItem(BIOMETRIC_VAULT_KEY, JSON.stringify(vaultData));
+  notifyBiometricsChanged();
+}
+
+/**
  * Register a platform biometric credential (WebAuthn or Telegram BiometricManager) and store the password.
  */
 export async function registerBiometrics(
@@ -199,7 +281,7 @@ export async function registerBiometrics(
 
   if (hasTelegramBiometricManager()) {
     const saved = await saveTelegramBiometricsPassword(
-      password,
+      formatTelegramBiometricToken(password),
       'BrotherHood Wallet',
     );
     if (saved) {
@@ -242,26 +324,7 @@ export async function registerBiometrics(
     }
 
     const credIdString = bufferToBase64(credential.rawId);
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-
-    const key = await deriveVaultKey(salt, credIdString);
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      new TextEncoder().encode(password),
-    );
-
-    const vaultData: BiometricVaultData = {
-      credentialId: credIdString,
-      encryptedPassword: bufferToBase64(encrypted),
-      salt: bufferToBase64(salt),
-      iv: bufferToBase64(iv),
-    };
-
-    localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
-    localStorage.setItem(BIOMETRIC_VAULT_KEY, JSON.stringify(vaultData));
-    notifyBiometricsChanged();
+    await enrollBiometricVaultWithCredentialId(credIdString, password);
     return true;
   } catch (err) {
     if (
@@ -285,7 +348,10 @@ export async function authenticateBiometrics(): Promise<string | null> {
   }
 
   if (hasTelegramBiometricManager()) {
-    return await authenticateTelegramBiometrics('Unlock BrotherHood Wallet');
+    const rawToken = await authenticateTelegramBiometrics(
+      'Unlock BrotherHood Wallet',
+    );
+    return parseTelegramBiometricToken(rawToken).password;
   }
 
   if (!isSecureContextAvailable()) {
@@ -353,6 +419,8 @@ export function clearBiometrics(): void {
   try {
     localStorage.setItem(BIOMETRIC_DISABLED_KEY, 'true');
     localStorage.removeItem(BIOMETRIC_VAULT_KEY);
+    localStorage.removeItem(TELEGRAM_BUNDLE_CACHE_KEY);
+    localStorage.removeItem(PASSKEY_BACKED_UP_RECORDS_KEY);
   } catch {
     // ignore storage errors
   }

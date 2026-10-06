@@ -140,6 +140,7 @@ export const WalletSelectorModal: React.FC<WalletSelectorModalProps> = ({
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSelect={handleAddSelect}
+        onPasskeyRestored={onClose}
       />
 
       <WalletUnlockModal
