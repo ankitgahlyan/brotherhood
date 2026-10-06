@@ -951,18 +951,15 @@ html[data-large-text='true'] [role='dialog'] .grid-cols-5:not(.keep-cols) {
   }
 }
 
-/* When in-app animations are set to Disabled (data-animation="none"), suppress all CSS animations & transitions */
+/* When in-app animations are set to Disabled (data-animation="none"), suppress view transitions and decorative/entry animations without breaking Vaul/Radix transitionend lifecycle events */
 html[data-animation='none'] ::view-transition-group(*),
 html[data-animation='none'] ::view-transition-old(*),
 html[data-animation='none'] ::view-transition-new(*),
-html[data-animation='none'] *,
-html[data-animation='none'] *::before,
-html[data-animation='none'] *::after {
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-  transition-duration: 0s !important;
-  transition-delay: 0s !important;
-  scroll-behavior: auto !important;
+html[data-animation='none'] .liquid-ambient-orb-1,
+html[data-animation='none'] .liquid-ambient-orb-2,
+html[data-animation='none'] .animate-in,
+html[data-animation='none'] .animate-pulse {
+  animation: none !important;
 }
 
 /* Honor prefers-reduced-motion: disable animations for motion sensitivity */

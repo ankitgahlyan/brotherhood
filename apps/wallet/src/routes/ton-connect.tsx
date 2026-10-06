@@ -1,9 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { ProtectedRoute } from '@/core/routing';
-import { RouteFallback } from '@/core/components/shared/route-fallback';
+import {
+  RouteFallback,
+  lazyRoute,
+} from '@/core/components/shared/route-fallback';
 
-const TonConnectRoute = lazy(() =>
+const TonConnectRoute = lazyRoute(() =>
   import('@/features/ton-connect').then((m) => ({
     default: m.TonConnectRoute,
   })),

@@ -32,6 +32,7 @@ export interface ActiveSwipePreview {
 }
 
 let currentPreview: ActiveSwipePreview | null = null;
+let emitRafId: number | null = null;
 const listeners = new Set<() => void>();
 
 function emitChange() {
@@ -43,7 +44,22 @@ function emitChange() {
 export function setActiveSwipePreview(preview: ActiveSwipePreview | null) {
   if (currentPreview === preview) return;
   currentPreview = preview;
-  emitChange();
+
+  if (preview === null || typeof requestAnimationFrame === 'undefined') {
+    if (emitRafId !== null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(emitRafId);
+      emitRafId = null;
+    }
+    emitChange();
+    return;
+  }
+
+  if (emitRafId === null) {
+    emitRafId = requestAnimationFrame(() => {
+      emitRafId = null;
+      emitChange();
+    });
+  }
 }
 
 export function getActiveSwipePreview(): ActiveSwipePreview | null {

@@ -8,10 +8,13 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight, Undo2, Sparkles } from 'lucide-react';
-import type { ActiveSwipePreview } from '@/core/lib/swipe-gesture-store';
+import {
+  useActiveSwipePreview,
+  type ActiveSwipePreview,
+} from '@/core/lib/swipe-gesture-store';
 
 interface PredictiveSwipeOverlayProps {
-  preview: ActiveSwipePreview | null;
+  preview?: ActiveSwipePreview | null;
 }
 
 /**
@@ -20,8 +23,11 @@ interface PredictiveSwipeOverlayProps {
  * circular progress ring, target Icon + Label, and real-time Armed vs Canceled states.
  */
 export const PredictiveSwipeOverlay: React.FC<PredictiveSwipeOverlayProps> = ({
-  preview,
+  preview: propPreview,
 }) => {
+  const storePreview = useActiveSwipePreview();
+  const preview = propPreview !== undefined ? propPreview : storePreview;
+
   if (!preview || Math.abs(preview.dragOffset) < 6) {
     return null;
   }

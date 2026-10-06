@@ -21,7 +21,6 @@ import {
   shouldIgnoreSwipeStart,
   SWIPE_COMMIT_DISTANCE_PX,
   updateSwipeKinematics,
-  useActiveSwipePreview,
   type SwipeKinematicState,
 } from '@/core/lib/swipe-gesture-store';
 
@@ -76,7 +75,6 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const navigate = useNavigate();
   const [isSettingsOpen] = useSettingsModal();
   const { isReduced } = useAnimationSettings();
-  const activePreview = useActiveSwipePreview();
 
   const kinematicsRef = useRef<SwipeKinematicState | null>(null);
   const touchTargetRef = useRef<HTMLElement | null>(null);
@@ -141,7 +139,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (isReduced || isSettingsOpen || isSubTabScreen) {
+    if (isSettingsOpen || isSubTabScreen) {
       isIgnoredRef.current = true;
       return;
     }
@@ -161,7 +159,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (isReduced || isIgnoredRef.current || !kinematicsRef.current) {
+    if (isIgnoredRef.current || !kinematicsRef.current) {
       return;
     }
 
@@ -214,7 +212,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     const preview = getActiveSwipePreview();
     setActiveSwipePreview(null);
 
-    if (isReduced || isIgnoredRef.current || !kin || !kin.isHorizontal) {
+    if (isIgnoredRef.current || !kin || !kin.isHorizontal) {
       return;
     }
 
@@ -249,7 +247,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
         {children}
       </div>
 
-      {!isReduced && <PredictiveSwipeOverlay preview={activePreview} />}
+      {!isReduced && <PredictiveSwipeOverlay />}
     </div>
   );
 };

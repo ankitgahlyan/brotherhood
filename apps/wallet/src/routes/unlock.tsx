@@ -1,8 +1,11 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { RouteFallback } from '@/core/components/shared/route-fallback';
+import {
+  RouteFallback,
+  lazyRoute,
+} from '@/core/components/shared/route-fallback';
 
-const UnlockScreen = lazy(() =>
+const UnlockScreen = lazyRoute(() =>
   import('@/features/auth').then((m) => ({
     default: m.UnlockScreen,
   })),

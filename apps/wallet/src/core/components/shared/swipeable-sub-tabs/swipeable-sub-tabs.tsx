@@ -275,10 +275,6 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
   const onTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
-    if (isReduced) {
-      isIgnoredRef.current = true;
-      return;
-    }
 
     const target = e.target as HTMLElement | null;
     touchTargetRef.current = target;
@@ -296,7 +292,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
   const onTouchMove = (e: React.TouchEvent) => {
     e.stopPropagation();
-    if (isReduced || isIgnoredRef.current || !kinematicsRef.current) {
+    if (isIgnoredRef.current || !kinematicsRef.current) {
       return;
     }
 
@@ -351,7 +347,7 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     const preview = getActiveSwipePreview();
     setActiveSwipePreview(null);
 
-    if (isReduced || isIgnoredRef.current || !kin || !kin.isHorizontal) {
+    if (isIgnoredRef.current || !kin || !kin.isHorizontal) {
       return;
     }
 

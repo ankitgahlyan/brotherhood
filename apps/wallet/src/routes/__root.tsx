@@ -19,6 +19,7 @@ import {
   registerRouterBack,
   notifyRouterNavigation,
 } from '@/core/lib/back-stack';
+import { preloadLazyRoutes } from '@/core/components/shared/route-fallback';
 
 const GlobalRequestModals = React.lazy(() =>
   import('@/features/ton-connect').then((m) => ({
@@ -134,6 +135,13 @@ function RootComponent() {
       initTelegramSdk();
     }
   }, []);
+
+  // Preload lazy route chunks in idle time after initial app startup
+  React.useEffect(() => {
+    if (isWalletKitInitialized && isHydrated) {
+      preloadLazyRoutes();
+    }
+  }, [isWalletKitInitialized, isHydrated]);
 
   // Listen for `ton://transfer` links that should open the prefilled `/send` screen
   React.useEffect(() => {

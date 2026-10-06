@@ -1,9 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { ProtectedRoute } from '@/core/routing';
-import { RouteFallback } from '@/core/components/shared/route-fallback';
+import {
+  lazyRoute,
+  RouteFallback,
+} from '@/core/components/shared/route-fallback';
 
-const WalletDashboard = lazy(() =>
+const WalletDashboard = lazyRoute(() =>
   import('@/features/dashboard').then((m) => ({
     default: m.WalletDashboard,
   })),

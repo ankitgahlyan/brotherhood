@@ -1,9 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { ProtectedRoute } from '@/core/routing';
-import { RouteFallback } from '@/core/components/shared/route-fallback';
+import {
+  lazyRoute,
+  RouteFallback,
+} from '@/core/components/shared/route-fallback';
 
-const AssetsScreen = lazy(() =>
+const AssetsScreen = lazyRoute(() =>
   import('@/features/assets').then((m) => ({
     default: m.AssetsScreen,
   })),
