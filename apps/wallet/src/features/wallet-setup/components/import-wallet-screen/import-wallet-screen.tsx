@@ -61,7 +61,7 @@ export const ImportWalletScreen: React.FC = () => {
   const [interfaceType, setInterfaceType] =
     useState<WalletInterface>('mnemonic');
   const [network, setNetwork] = useState<NetworkType>('testnet');
-  const [saveToPasskey, setSaveToPasskey] = useState(false);
+  const [saveToPasskey, setSaveToPasskey] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);

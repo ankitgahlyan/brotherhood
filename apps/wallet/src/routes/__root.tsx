@@ -12,8 +12,6 @@ import { useReceivedToasts } from '@/features/notifications/hooks/use-received-t
 import { useWalletStore } from '@demo/wallet-core';
 import { LoaderCircle } from '@/core/components/ui/loader-circle';
 import { Button } from '@/core/components/ui/button';
-import { GlobalRequestModals } from '@/features/ton-connect';
-import { PwaInstallBanner } from '@/core/components/pwa';
 import { NotFound } from '@/core/components/shared/not-found';
 import { RouteErrorFallback } from '@/core/components/shared/route-error-fallback';
 import { initTelegramSdk, isTelegramEnvironment } from '@/core/lib/telegram';
@@ -22,14 +20,23 @@ import {
   notifyRouterNavigation,
 } from '@/core/lib/back-stack';
 
+const GlobalRequestModals = React.lazy(() =>
+  import('@/features/ton-connect').then((m) => ({
+    default: m.GlobalRequestModals,
+  })),
+);
+
+const PwaInstallBanner = React.lazy(() =>
+  import('@/core/components/pwa').then((m) => ({
+    default: m.PwaInstallBanner,
+  })),
+);
+
 const FloatingDevButton = React.lazy(() =>
   import('@/features/developer/components/floating-dev-button').then((m) => ({
     default: m.FloatingDevButton,
   })),
 );
-
-import { motion } from 'framer-motion';
-import { useAnimationSettings } from '@/core/motion/motion-provider';
 
 function extractEmbeddedTonLink(raw: string | null): string | null {
   if (!raw) return null;
@@ -103,7 +110,6 @@ let pendingInitialLaunchLink =
   typeof window !== 'undefined' ? captureLaunchTonLinkFromWindow() : '';
 
 function RootComponent() {
-  const { isReduced } = useAnimationSettings();
   const isWalletKitInitialized = useWalletStore(
     (state) => state.walletCore.isWalletKitInitialized,
   );
@@ -284,21 +290,15 @@ function RootComponent() {
 
   return (
     <>
-      {isReduced ? (
-        <Outlet />
-      ) : (
-        <motion.div
-          key={currentPath}
-          initial={{ opacity: 0.85 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.14, ease: 'easeOut' }}
-          className="min-h-screen w-full flex flex-col flex-1"
-        >
-          <Outlet />
-        </motion.div>
+      <Outlet />
+      <React.Suspense fallback={null}>
+        <GlobalRequestModals />
+      </React.Suspense>
+      {!isTma && (
+        <React.Suspense fallback={null}>
+          <PwaInstallBanner />
+        </React.Suspense>
       )}
-      <GlobalRequestModals />
-      {!isTma && <PwaInstallBanner />}
       <React.Suspense fallback={null}>
         <FloatingDevButton />
       </React.Suspense>

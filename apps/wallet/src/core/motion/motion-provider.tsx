@@ -6,7 +6,7 @@
  *
  */
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { MotionConfig } from 'framer-motion';
 import { usePreferences, type AnimationLevel } from '@demo/wallet-core';
 
@@ -59,6 +59,12 @@ export const MOTION_PRESETS = {
 
 export const MotionProvider: React.FC<MotionProviderProps> = ({ children }) => {
   const { animationLevel } = usePreferences();
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-animation', animationLevel);
+    }
+  }, [animationLevel]);
 
   const contextValue = useMemo<MotionContextValue>(
     () => ({

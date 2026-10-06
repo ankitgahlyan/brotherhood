@@ -1,6 +1,17 @@
+import React, { lazy, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { WelcomeScreen } from '@/features/wallet-setup';
+import { RouteFallback } from '@/core/components/shared/route-fallback';
+
+const WelcomeScreen = lazy(() =>
+  import('@/features/wallet-setup').then((m) => ({
+    default: m.WelcomeScreen,
+  })),
+);
 
 export const Route = createFileRoute('/welcome')({
-  component: WelcomeScreen,
+  component: () => (
+    <Suspense fallback={<RouteFallback />}>
+      <WelcomeScreen />
+    </Suspense>
+  ),
 });

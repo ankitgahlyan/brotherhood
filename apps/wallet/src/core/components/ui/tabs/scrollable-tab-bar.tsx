@@ -47,7 +47,7 @@ export function ScrollableTabBar<T extends string = string>({
   viewMode: propViewMode,
   size = 'md',
 }: ScrollableTabBarProps<T>) {
-  const { viewMode: userViewMode } = usePreferences();
+  const { viewMode: userViewMode, animationLevel } = usePreferences();
   const { isGlass } = useTheme();
   const effectiveViewMode = propViewMode ?? userViewMode ?? 'standard';
   const isPictorial = effectiveViewMode === 'icons_only';
@@ -67,11 +67,11 @@ export function ScrollableTabBar<T extends string = string>({
       if (Math.abs(container.scrollLeft - targetLeft) > 2) {
         container.scrollTo({
           left: targetLeft,
-          behavior: 'smooth',
+          behavior: animationLevel === 'none' ? 'auto' : 'smooth',
         });
       }
     }
-  }, [activeTab]);
+  }, [activeTab, animationLevel]);
 
   return (
     <div

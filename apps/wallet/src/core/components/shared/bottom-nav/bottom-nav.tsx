@@ -85,7 +85,7 @@ let lastBottomNavScrollLeft = 0;
 export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { viewMode } = usePreferences();
+  const { viewMode, animationLevel } = usePreferences();
   const isPictorial = viewMode === 'icons_only';
   const activePreview = useActiveSwipePreview();
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -122,12 +122,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isVisible = true }) => {
       if (Math.abs(container.scrollLeft - targetLeft) > 2) {
         container.scrollTo({
           left: targetLeft,
-          behavior: 'smooth',
+          behavior: animationLevel === 'none' ? 'auto' : 'smooth',
         });
       }
       lastBottomNavScrollLeft = targetLeft;
     }
-  }, [pathname]);
+  }, [pathname, animationLevel]);
 
   const { isGlass } = useTheme();
 

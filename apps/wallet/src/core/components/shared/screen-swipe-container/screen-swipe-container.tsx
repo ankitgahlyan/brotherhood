@@ -6,10 +6,11 @@
  *
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { useSettingsModal } from '@/core/lib/settings-modal-state';
+import { useAnimationSettings } from '@/core/motion/motion-provider';
 import { ECOSYSTEM_NAV_ITEMS } from '../bottom-nav';
 import { PredictiveSwipeOverlay } from '../predictive-swipe-overlay';
 import {
@@ -74,15 +75,12 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [isSettingsOpen] = useSettingsModal();
+  const { isReduced } = useAnimationSettings();
   const activePreview = useActiveSwipePreview();
-
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
 
   const kinematicsRef = useRef<SwipeKinematicState | null>(null);
   const touchTargetRef = useRef<HTMLElement | null>(null);
   const isIgnoredRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
 
   const isSubTabScreen = SUB_TAB_ROUTES.some((route) =>
     pathname.startsWith(route),
@@ -143,7 +141,7 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (isSettingsOpen || isSubTabScreen) {
+    if (isReduced || isSettingsOpen || isSubTabScreen) {
       isIgnoredRef.current = true;
       return;
     }
@@ -160,11 +158,10 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
       e.touches[0].clientX,
       e.touches[0].clientY,
     );
-    setIsDragging(true);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (isIgnoredRef.current || !kinematicsRef.current) {
+    if (isReduced || isIgnoredRef.current || !kinematicsRef.current) {
       return;
     }
 
@@ -177,8 +174,6 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
 
     if (step.isHorizontal === false) {
       isIgnoredRef.current = true;
-      setDragOffset(0);
-      setIsDragging(false);
       setActiveSwipePreview(null);
       return;
     }
@@ -186,15 +181,12 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     if (step.isHorizontal) {
       if (canTargetScrollHorizontally(touchTargetRef.current, step.direction)) {
         isIgnoredRef.current = true;
-        setDragOffset(0);
-        setIsDragging(false);
         setActiveSwipePreview(null);
         return;
       }
 
       const targetInfo = resolveTargetForDirection(step.direction);
       if (!targetInfo) {
-        setDragOffset(0);
         setActiveSwipePreview(null);
         return;
       }
@@ -212,32 +204,17 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
         isArmed: step.isArmed,
         isCanceled: step.isCanceled,
       });
-
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
-      rafRef.current = requestAnimationFrame(() => {
-        setDragOffset(step.dragOffset);
-        rafRef.current = null;
-      });
     }
   };
 
   const onTouchEnd = () => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
     const kin = kinematicsRef.current;
     kinematicsRef.current = null;
 
     const preview = getActiveSwipePreview();
     setActiveSwipePreview(null);
-    setDragOffset(0);
-    setIsDragging(false);
 
-    if (isIgnoredRef.current || !kin || !kin.isHorizontal) {
+    if (isReduced || isIgnoredRef.current || !kin || !kin.isHorizontal) {
       return;
     }
 
@@ -263,23 +240,16 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     >
       <div
         key={pathname}
-        className="animate-in fade-in duration-150 w-full flex-1 flex flex-col"
-        style={{
-          transform: dragOffset
-            ? `translate3d(${dragOffset}px, 0, 0)`
-            : undefined,
-          opacity: dragOffset
-            ? Math.max(0.62, 1 - Math.abs(dragOffset) / 340)
-            : undefined,
-          transition: isDragging
-            ? 'none'
-            : 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out',
-        }}
+        className={
+          isReduced
+            ? 'w-full flex-1 flex flex-col'
+            : 'animate-in fade-in duration-150 w-full flex-1 flex flex-col'
+        }
       >
         {children}
       </div>
 
-      <PredictiveSwipeOverlay preview={activePreview} />
+      {!isReduced && <PredictiveSwipeOverlay preview={activePreview} />}
     </div>
   );
 };

@@ -15,7 +15,7 @@ import type {
 
 /** Detect sensible default animation level based on environment & hardware */
 export const detectDefaultAnimationLevel = (): AnimationLevel => {
-  if (typeof window === 'undefined') return 'full';
+  if (typeof window === 'undefined') return 'performance';
 
   // If user has OS-level reduced motion enabled, respect it by default
   if (
@@ -25,23 +25,7 @@ export const detectDefaultAnimationLevel = (): AnimationLevel => {
     return 'none';
   }
 
-  // Telegram Mini Apps / WebViews or low-core mobile browsers get 'performance' by default
-  const isTma =
-    Boolean((window as any).Telegram?.WebApp) ||
-    'TelegramWebviewProxy' in window ||
-    Boolean(window.location?.search?.includes('tgWebAppData')) ||
-    Boolean(window.location?.hash?.includes('tgWebAppData'));
-
-  const isLowEndDevice =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.hardwareConcurrency === 'number' &&
-    navigator.hardwareConcurrency <= 4;
-
-  if (isTma || isLowEndDevice) {
-    return 'performance';
-  }
-
-  return 'full';
+  return 'performance';
 };
 
 const getInitialPreferences = (): PreferencesState => ({

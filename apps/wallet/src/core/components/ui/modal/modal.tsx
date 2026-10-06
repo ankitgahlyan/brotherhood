@@ -70,7 +70,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
       >
         <DrawerContent
           className={cn(
-            'max-w-md mx-auto max-h-[88dvh] overflow-hidden flex flex-col',
+            'max-w-md mx-auto max-h-[88dvh] overflow-hidden overscroll-contain flex flex-col',
             isGlass && 'glass-card bg-popover/85 backdrop-blur-2xl',
             className,
           )}
@@ -87,7 +87,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
     <Dialog open={isOpened} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-2xl p-0 gap-0',
+          'max-w-md max-h-[85vh] overflow-hidden overscroll-contain flex flex-col rounded-2xl p-0 gap-0',
           isGlass && 'glass-card bg-popover/85 backdrop-blur-2xl',
           className,
         )}
@@ -117,12 +117,12 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
 }) => (
   <div
     className={cn(
-      'flex items-center justify-between px-4 pt-3 pb-5 md:pt-5',
+      'flex items-center justify-between gap-2 px-4 pt-3 pb-5 md:pt-5',
       className,
     )}
     {...props}
   >
-    <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center gap-2 min-w-0 flex-1">
       {onBack && (
         <button
           type="button"
@@ -169,7 +169,7 @@ export const ModalBody: React.FC<ComponentProps<'div'>> = ({
 }) => (
   <div
     className={cn(
-      'flex flex-col px-4 pb-6 overflow-y-auto min-h-0 flex-1',
+      'flex flex-col px-4 pb-6 overflow-y-auto overscroll-contain min-h-0 flex-1',
       className,
     )}
     {...props}

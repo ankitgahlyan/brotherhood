@@ -31,15 +31,14 @@ const OPTIONS: AnimationOption[] = [
   {
     level: 'performance',
     title: 'Performance',
-    badge: 'TMA Default',
+    badge: 'Default',
     subtitle:
-      'Smooth rolling numbers and subtle fades. Ideal for mobile & Telegram.',
+      'Smooth rolling numbers and subtle fades. Ideal for mobile & desktop.',
     icon: <Zap className="w-4 h-4 text-amber-500" />,
   },
   {
     level: 'full',
     title: 'Rich & Smooth',
-    badge: 'Desktop Default',
     subtitle:
       'Full spring physics, layout shifts, swipe gestures & overscroll.',
     icon: <Sparkles className="w-4 h-4 text-purple-500" />,

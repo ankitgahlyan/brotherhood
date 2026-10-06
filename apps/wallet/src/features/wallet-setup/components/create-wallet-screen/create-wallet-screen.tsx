@@ -7,6 +7,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fingerprint } from 'lucide-react';
 import { useNavigate } from '@/core/routing';
 import { CreateTonMnemonic } from '@ton/walletkit';
 import { useAuth, useWallet, generateWalletName } from '@demo/wallet-core';
@@ -43,6 +44,7 @@ export const CreateWalletScreen: React.FC = () => {
   const [walletName, setWalletName] = useState('');
   const [network, setNetwork] = useState<NetworkType>('testnet');
   const [revealed, setRevealed] = useState(false);
+  const [saveToPasskey, setSaveToPasskey] = useState(true);
   const [savedToPasskey, setSavedToPasskey] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -117,9 +119,38 @@ export const CreateWalletScreen: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      setUseWalletInterfaceType('mnemonic');
       const subwalletId = network === 'testnet' ? 2147483645 : 2147483409;
       const finalName = walletName.trim() || defaultName;
+      if (
+        saveToPasskey &&
+        !savedToPasskey &&
+        isPasskeySupported &&
+        !isPasskeyInsecure
+      ) {
+        try {
+          const savedCount = await backupAllWallets([
+            {
+              mnemonic,
+              name: finalName,
+              network,
+              version: 'v5r1',
+              subwalletId,
+              interfaceType: 'mnemonic',
+            },
+          ]);
+          if (savedCount > 0) {
+            setSavedToPasskey(true);
+            toast.success('Recovery phrase saved to Passkey');
+          }
+        } catch (passkeyErr) {
+          toast.error(
+            passkeyErr instanceof Error
+              ? passkeyErr.message
+              : 'Failed to save to Passkey; continuing wallet creation',
+          );
+        }
+      }
+      setUseWalletInterfaceType('mnemonic');
       await importWallet(mnemonic, 'v5r1', network, subwalletId, finalName);
       navigate('/wallet', { replace: true });
     } catch (err) {
@@ -241,6 +272,35 @@ export const CreateWalletScreen: React.FC = () => {
             </Button>
           )}
         </div>
+
+        {isPasskeySupported && !isPasskeyInsecure && (
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2.5">
+            <div className="flex items-center gap-2 text-left">
+              <Fingerprint className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs font-medium text-foreground">
+                Save recovery phrase to Passkey
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={saveToPasskey}
+              onClick={() => setSaveToPasskey((prev) => !prev)}
+              data-testid="toggle-save-passkey"
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 ring-1 ring-inset transition-colors ${
+                saveToPasskey
+                  ? 'bg-primary ring-primary'
+                  : 'bg-secondary ring-border'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-background shadow-xs transition-transform ${
+                  saveToPasskey ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        )}
 
         {error && (
           <p className="mt-4 text-center text-sm text-red-500">{error}</p>

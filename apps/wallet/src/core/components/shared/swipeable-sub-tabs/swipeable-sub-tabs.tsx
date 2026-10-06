@@ -6,11 +6,12 @@
  *
  */
 
-import React, { useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Layers } from 'lucide-react';
 import { useLocation, useNavigate } from '@/core/routing';
 import { useScrollDirection } from '@/core/hooks';
+import { useAnimationSettings } from '@/core/motion/motion-provider';
 import {
   ECOSYSTEM_SWIPE_ROUTES,
   getEcosystemRouteMeta,
@@ -65,14 +66,11 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isBarsVisible = useScrollDirection();
-
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const { isReduced } = useAnimationSettings();
 
   const kinematicsRef = useRef<SwipeKinematicState | null>(null);
   const touchTargetRef = useRef<HTMLElement | null>(null);
   const isIgnoredRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
 
   const currentIndex = tabs.indexOf(activeTab);
 
@@ -277,6 +275,11 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
   const onTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
+    if (isReduced) {
+      isIgnoredRef.current = true;
+      return;
+    }
+
     const target = e.target as HTMLElement | null;
     touchTargetRef.current = target;
     if (shouldIgnoreSwipeStart(target)) {
@@ -289,12 +292,11 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
       e.touches[0].clientX,
       e.touches[0].clientY,
     );
-    setIsDragging(true);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     e.stopPropagation();
-    if (isIgnoredRef.current || !kinematicsRef.current) {
+    if (isReduced || isIgnoredRef.current || !kinematicsRef.current) {
       return;
     }
 
@@ -307,8 +309,6 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
 
     if (step.isHorizontal === false) {
       isIgnoredRef.current = true;
-      setDragOffset(0);
-      setIsDragging(false);
       setActiveSwipePreview(null);
       return;
     }
@@ -316,15 +316,12 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
     if (step.isHorizontal) {
       if (canTargetScrollHorizontally(touchTargetRef.current, step.direction)) {
         isIgnoredRef.current = true;
-        setDragOffset(0);
-        setIsDragging(false);
         setActiveSwipePreview(null);
         return;
       }
 
       const dest = resolveSwipeDestination(step.direction);
       if (!dest) {
-        setDragOffset(0);
         setActiveSwipePreview(null);
         return;
       }
@@ -342,33 +339,19 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
         isArmed: step.isArmed,
         isCanceled: step.isCanceled,
       });
-
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
-      rafRef.current = requestAnimationFrame(() => {
-        setDragOffset(step.dragOffset);
-        rafRef.current = null;
-      });
     }
   };
 
   const onTouchEnd = (e?: React.TouchEvent) => {
     e?.stopPropagation();
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
 
     const kin = kinematicsRef.current;
     kinematicsRef.current = null;
 
     const preview = getActiveSwipePreview();
     setActiveSwipePreview(null);
-    setDragOffset(0);
-    setIsDragging(false);
 
-    if (isIgnoredRef.current || !kin || !kin.isHorizontal) {
+    if (isReduced || isIgnoredRef.current || !kin || !kin.isHorizontal) {
       return;
     }
 
@@ -404,9 +387,9 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
           <div className="mb-3">{stickyTabBar}</div>
         ) : (
           <div
-            className={`sticky z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md transition-[top] duration-300 ease-in-out ${
-              isBarsVisible ? 'top-[108px]' : 'top-0'
-            }`}
+            className={`sticky z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md ${
+              isReduced ? '' : 'transition-[top] duration-300 ease-in-out'
+            } ${isBarsVisible ? 'top-[108px]' : 'top-0'}`}
           >
             {stickyTabBar}
           </div>
@@ -414,18 +397,11 @@ export const SwipeableSubTabs: React.FC<SwipeableSubTabsProps> = ({
       <div className="flex-1 flex flex-col w-full overflow-x-clip">
         <div
           key={activeTab}
-          className="animate-in fade-in duration-150 flex-1 flex flex-col w-full"
-          style={{
-            transform: dragOffset
-              ? `translate3d(${dragOffset}px, 0, 0)`
-              : undefined,
-            opacity: dragOffset
-              ? Math.max(0.62, 1 - Math.abs(dragOffset) / 340)
-              : undefined,
-            transition: isDragging
-              ? 'none'
-              : 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out',
-          }}
+          className={
+            isReduced
+              ? 'flex-1 flex flex-col w-full'
+              : 'animate-in fade-in duration-150 flex-1 flex flex-col w-full'
+          }
         >
           {children}
         </div>

@@ -52,7 +52,7 @@ export const applyPaletteToDom = (palette: ColorPalette): ColorPalette => {
 };
 
 export const applySurfaceStyleToDom = (surface: SurfaceStyle): SurfaceStyle => {
-  if (typeof window === 'undefined') return 'glass_hybrid';
+  if (typeof window === 'undefined') return 'flat';
   const root = document.documentElement;
   root.setAttribute('data-surface', surface);
   root.setAttribute('data-glass', surface !== 'flat' ? 'true' : 'false');
@@ -109,7 +109,7 @@ if (typeof window !== 'undefined') {
 let currentSurfaceStyle: SurfaceStyle = settingsStorage.get(
   SURFACE_STORAGE_KEY,
   SurfaceStyleSchema,
-  'glass_hybrid',
+  'flat',
 );
 if (typeof window !== 'undefined') {
   applySurfaceStyleToDom(currentSurfaceStyle);
@@ -145,7 +145,7 @@ let currentSnapshot: ThemeSnapshot = buildSnapshot();
 const SERVER_SNAPSHOT: ThemeSnapshot = {
   theme: 'system',
   palette: 'violet',
-  surfaceStyle: 'glass_hybrid',
+  surfaceStyle: 'flat',
   textScale: DEFAULT_TEXT_SCALE,
 };
 
@@ -218,7 +218,7 @@ settingsStorage.subscribe(SURFACE_STORAGE_KEY, () => {
   const next = settingsStorage.get(
     SURFACE_STORAGE_KEY,
     SurfaceStyleSchema,
-    'glass_hybrid',
+    'flat',
   );
   if (next !== currentSurfaceStyle) {
     currentSurfaceStyle = next;

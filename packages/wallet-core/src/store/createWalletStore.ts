@@ -476,8 +476,10 @@ export function createWalletStore(options: CreateWalletStoreOptions = {}) {
                   ...currentState.preferences,
                   ...persisted?.preferences,
                   animationLevel:
-                    persisted?.preferences?.animationLevel ||
-                    currentState.preferences.animationLevel,
+                    persisted?.preferences?.isCustomAnimationLevel &&
+                    persisted?.preferences?.animationLevel
+                      ? persisted.preferences.animationLevel
+                      : currentState.preferences.animationLevel,
                   viewMode:
                     persisted?.preferences?.viewMode ||
                     currentState.preferences.viewMode,

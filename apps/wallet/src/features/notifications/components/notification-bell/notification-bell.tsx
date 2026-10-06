@@ -920,12 +920,14 @@ export const NotificationBell: React.FC = () => {
         onOpenChange={setIsOpen}
         className="px-2"
       >
-        <Modal.Header onClose={() => setIsOpen(false)}>
-          <div className="flex items-center justify-between w-full pr-2">
-            <div className="flex items-center gap-2">
-              <Modal.Title>Notifications & Upgrades</Modal.Title>
+        <Modal.Header onClose={() => setIsOpen(false)} className="items-start">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 w-full min-w-0 pr-1">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <Modal.Title className="whitespace-normal break-words overflow-visible text-clip leading-tight text-lg sm:text-xl">
+                Notifications &amp; Upgrades
+              </Modal.Title>
               {count > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/30">
+                <span className="shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/30">
                   {count} action{count > 1 ? 's' : ''}
                 </span>
               )}
@@ -935,7 +937,7 @@ export const NotificationBell: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-2 py-1.5 min-h-9 rounded-lg hover:bg-secondary/60"
+                className="shrink-0 whitespace-nowrap text-xs font-semibold text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-2.5 py-1 min-h-8 rounded-lg bg-secondary/60 hover:bg-secondary border border-border/60"
                 data-testid="notifications-clear-all-btn"
               >
                 Clear all
