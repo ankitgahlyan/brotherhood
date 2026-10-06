@@ -33,6 +33,7 @@ export const CreateWalletScreen: React.FC = () => {
     isInsecureContext: isPasskeyInsecure,
     isBackingUp: isSavingPasskey,
     backupAllWallets,
+    syncEncryptedVault,
   } = usePasskeyWallets();
 
   const defaultName = useMemo(
@@ -152,6 +153,7 @@ export const CreateWalletScreen: React.FC = () => {
       }
       setUseWalletInterfaceType('mnemonic');
       await importWallet(mnemonic, 'v5r1', network, subwalletId, finalName);
+      await syncEncryptedVault();
       navigate('/wallet', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create wallet');

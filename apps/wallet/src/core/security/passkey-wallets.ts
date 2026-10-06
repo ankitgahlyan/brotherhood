@@ -37,6 +37,15 @@ const FLAG_V4R2 = 0x02;
 const FLAG_SIGNER = 0x04;
 const FLAG_WORDS_12 = 0x08;
 
+const ENCRYPTED_BUNDLES_STORAGE_KEY =
+  'brotherhood_passkey_encrypted_bundles_v1';
+const PASSKEY_VAULT_DB_NAME = 'brotherhood_passkey_vault_db';
+const PASSKEY_VAULT_STORE_NAME = 'encrypted_bundles';
+const PASSKEY_VAULT_DB_KEY = 'bundles_map';
+const PASSKEY_VAULT_CACHE_NAME = 'brotherhood-passkey-vault-v1';
+const PASSKEY_VAULT_CACHE_URL =
+  'https://passkey.brotherhood.local/bundles.json';
+
 const WORD_TO_INDEX = new Map<string, number>(
   englishWordlist.map((word, index) => [word, index]),
 );
@@ -53,6 +62,7 @@ export interface PasskeyWalletPayload {
 export interface SavePasskeyResult {
   savedCount: number;
   usedLargeBlob: boolean;
+  backedUpTag?: string;
 }
 
 export interface RestorePasskeyResult {
@@ -60,6 +70,15 @@ export interface RestorePasskeyResult {
   credentialId?: string;
   vaultPassword?: string;
 }
+
+interface EncryptedBundleEntry {
+  salt: string;
+  iv: string;
+  ciphertext: string;
+  updatedAt: number;
+}
+
+type EncryptedBundleMap = Record<string, EncryptedBundleEntry>;
 
 function computeRecordChecksum(record: Uint8Array): number {
   let hash = 0x97;
@@ -70,7 +89,7 @@ function computeRecordChecksum(record: Uint8Array): number {
   return hash;
 }
 
-function getWalletKey(wallet: PasskeyWalletPayload): string {
+export function getPasskeyWalletKey(wallet: PasskeyWalletPayload): string {
   const normalizedWords = wallet.mnemonic
     .map((w) => w.trim().toLowerCase())
     .join(' ');
@@ -92,11 +111,11 @@ export function generateRandomVaultPassword(): string {
  * Encodes a single 12- or 24-word wallet + metadata into a 64-byte WebAuthn userHandle record.
  *
  * Byte layout (64 bytes total):
- * - [0]:     Magic byte (0x42 = 'B')
- * - [1]:     Version nibble (0x10) | flags (network, version, interfaceType, 12-word flag)
- * - [2..5]:  subwalletId (Uint32 big-endian)
- * - [6]:     Checksum byte over [0..5] and [7..63]
- * - [7..39]: 33 bytes (264 bits) of 11-bit BIP-39 word indices
+ * - [0]:      Magic byte (0x42 = 'B')
+ * - [1]:      Version nibble (0x10) | flags (network, version, interfaceType, 12-word flag)
+ * - [2..5]:   subwalletId (Uint32 big-endian)
+ * - [6]:      Checksum byte over [0..5] and [7..63]
+ * - [7..39]:  33 bytes (264 bits) of 11-bit BIP-39 word indices
  * - [40..63]: 24 bytes of UTF-8 wallet name (zero-padded)
  */
 export function encodePasskeyWalletRecord(
@@ -228,7 +247,7 @@ export function decodePasskeyWalletRecord(
 }
 
 /**
- * Concatenates multiple 64-byte wallet records into a binary bundle for WebAuthn largeBlob or Telegram token storage.
+ * Concatenates multiple 64-byte wallet records into a binary bundle.
  */
 export function encodePasskeyWalletBundle(
   wallets: readonly PasskeyWalletPayload[],
@@ -236,7 +255,7 @@ export function encodePasskeyWalletBundle(
   const unique: PasskeyWalletPayload[] = [];
   const seen = new Set<string>();
   for (const w of wallets) {
-    const key = getWalletKey(w);
+    const key = getPasskeyWalletKey(w);
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(w);
@@ -274,7 +293,7 @@ export function decodePasskeyWalletBundle(
     );
     const decoded = decodePasskeyWalletRecord(slice);
     if (decoded) {
-      const key = getWalletKey(decoded);
+      const key = getPasskeyWalletKey(decoded);
       if (!seen.has(key)) {
         seen.add(key);
         wallets.push(decoded);
@@ -285,7 +304,269 @@ export function decodePasskeyWalletBundle(
   return wallets;
 }
 
-function getBackedUpRecordSet(): Set<string> {
+/**
+ * Computes a one-way SHA-256 lookup tag from theimmutable identity bytes [0..39] of a 64-byte Passkey record
+ * (flags + subwalletId + 33-byte packed mnemonic, ignoring wallet name renames).
+ */
+export async function computePasskeyRecordTag(
+  recordBytes: Uint8Array,
+): Promise<string> {
+  const prefix = new TextEncoder().encode('bro_passkey_tag_v1:');
+  const identitySlice = recordBytes.subarray(0, 40);
+  const input = new Uint8Array(prefix.byteLength + identitySlice.byteLength);
+  input.set(prefix, 0);
+  input.set(identitySlice, prefix.byteLength);
+  // Zero out checksum byte at index 6 of identitySlice since it depends on name bytes [40..63]
+  input[prefix.byteLength + 6] = 0;
+
+  const digest = await crypto.subtle.digest('SHA-256', input);
+  return bufferToBase64(new Uint8Array(digest).subarray(0, 16));
+}
+
+export async function computeWalletPasskeyTag(
+  wallet: PasskeyWalletPayload,
+): Promise<string> {
+  const record = encodePasskeyWalletRecord(wallet);
+  return computePasskeyRecordTag(record);
+}
+
+/**
+ * Derives an AES-256-GCM key from the immutable 33-byte mnemonic entropy [7..39] inside a Passkey userHandle.
+ */
+async function deriveBundleKeyFromRecord(
+  recordBytes: Uint8Array,
+  salt: Uint8Array,
+): Promise<CryptoKey> {
+  const prefix = new TextEncoder().encode('bro_passkey_bundle_key_v1:');
+  const entropySlice = recordBytes.subarray(7, 40);
+  const keyMaterial = new Uint8Array(
+    prefix.byteLength + entropySlice.byteLength,
+  );
+  keyMaterial.set(prefix, 0);
+  keyMaterial.set(entropySlice, prefix.byteLength);
+
+  const importedMaterial = await crypto.subtle.importKey(
+    'raw',
+    keyMaterial,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey'],
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: salt as BufferSource,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    importedMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+function openPasskeyVaultDb(): Promise<IDBDatabase | null> {
+  if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(PASSKEY_VAULT_DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(PASSKEY_VAULT_STORE_NAME)) {
+          db.createObjectStore(PASSKEY_VAULT_STORE_NAME);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function readIdbBundleMap(): Promise<EncryptedBundleMap | null> {
+  const db = await openPasskeyVaultDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(PASSKEY_VAULT_STORE_NAME, 'readonly');
+      const store = tx.objectStore(PASSKEY_VAULT_STORE_NAME);
+      const req = store.get(PASSKEY_VAULT_DB_KEY);
+      req.onsuccess = () => {
+        db.close();
+        resolve((req.result as EncryptedBundleMap) || null);
+      };
+      req.onerror = () => {
+        db.close();
+        resolve(null);
+      };
+    } catch {
+      db.close();
+      resolve(null);
+    }
+  });
+}
+
+async function writeIdbBundleMap(map: EncryptedBundleMap): Promise<void> {
+  const db = await openPasskeyVaultDb();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(PASSKEY_VAULT_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(PASSKEY_VAULT_STORE_NAME);
+      store.put(map, PASSKEY_VAULT_DB_KEY);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch {
+      db.close();
+      resolve();
+    }
+  });
+}
+
+async function readCacheStorageBundleMap(): Promise<EncryptedBundleMap | null> {
+  if (typeof caches === 'undefined') return null;
+  try {
+    const cache = await caches.open(PASSKEY_VAULT_CACHE_NAME);
+    const res = await cache.match(PASSKEY_VAULT_CACHE_URL);
+    if (!res || res.status !== 200) return null;
+    const data = (await res.json()) as EncryptedBundleMap;
+    return data && typeof data === 'object' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCacheStorageBundleMap(
+  map: EncryptedBundleMap,
+): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  try {
+    const cache = await caches.open(PASSKEY_VAULT_CACHE_NAME);
+    const response = new Response(JSON.stringify(map), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    await cache.put(PASSKEY_VAULT_CACHE_URL, response);
+  } catch {
+    // ignore CacheStorage quota errors
+  }
+}
+
+async function readEncryptedBundleMap(): Promise<EncryptedBundleMap> {
+  const merged: EncryptedBundleMap = {};
+
+  const fromCache = await readCacheStorageBundleMap();
+  if (fromCache) Object.assign(merged, fromCache);
+
+  const fromIdb = await readIdbBundleMap();
+  if (fromIdb) Object.assign(merged, fromIdb);
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(ENCRYPTED_BUNDLES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as EncryptedBundleMap;
+        if (parsed && typeof parsed === 'object') {
+          Object.assign(merged, parsed);
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  return merged;
+}
+
+async function persistEncryptedBundleMap(
+  map: EncryptedBundleMap,
+): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(ENCRYPTED_BUNDLES_STORAGE_KEY, JSON.stringify(map));
+    } catch {
+      // ignore localStorage quota errors
+    }
+  }
+  await Promise.all([writeIdbBundleMap(map), writeCacheStorageBundleMap(map)]);
+}
+
+/**
+ * Encrypts the full multi-wallet bundle under every wallet's Passkey record key and persists
+ * the encrypted ciphertexts to localStorage, IndexedDB, and CacheStorage.
+ * Because the AES-256-GCM keys are derived from the 33-byte mnemonic entropy inside each Passkey's
+ * userHandle, the stored ciphertexts can only be decrypted after authenticating to a Passkey.
+ */
+export async function syncEncryptedPasskeyBundles(
+  wallets: readonly PasskeyWalletPayload[],
+): Promise<void> {
+  const validWallets = wallets.filter(
+    (w) => w.mnemonic.length === 12 || w.mnemonic.length === 24,
+  );
+  if (validWallets.length === 0) return;
+
+  const bundleBytes = encodePasskeyWalletBundle(validWallets);
+  const map = await readEncryptedBundleMap();
+  const now = Date.now();
+
+  for (const wallet of validWallets) {
+    const recordBytes = encodePasskeyWalletRecord(wallet);
+    const tag = await computePasskeyRecordTag(recordBytes);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveBundleKeyFromRecord(recordBytes, salt);
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      bundleBytes as BufferSource,
+    );
+
+    map[tag] = {
+      salt: bufferToBase64(salt),
+      iv: bufferToBase64(iv),
+      ciphertext: bufferToBase64(encrypted),
+      updatedAt: now,
+    };
+  }
+
+  await persistEncryptedBundleMap(map);
+}
+
+async function decryptPasskeyBundleWithRecord(
+  recordBytes: Uint8Array,
+): Promise<PasskeyWalletPayload[]> {
+  try {
+    const tag = await computePasskeyRecordTag(recordBytes);
+    const map = await readEncryptedBundleMap();
+    const entry = map[tag];
+    if (!entry) return [];
+
+    const salt = new Uint8Array(base64ToBuffer(entry.salt));
+    const iv = new Uint8Array(base64ToBuffer(entry.iv));
+    const ciphertext = base64ToBuffer(entry.ciphertext);
+    const key = await deriveBundleKeyFromRecord(recordBytes, salt);
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv as BufferSource },
+      key,
+      ciphertext,
+    );
+    return decodePasskeyWalletBundle(decrypted);
+  } catch {
+    return [];
+  }
+}
+
+export function getBackedUpPasskeyTags(): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
     const raw = localStorage.getItem(PASSKEY_BACKED_UP_RECORDS_KEY);
@@ -297,11 +578,11 @@ function getBackedUpRecordSet(): Set<string> {
   }
 }
 
-function markRecordBackedUp(recordId: string): void {
+function markTagBackedUp(tag: string): void {
   if (typeof window === 'undefined') return;
   try {
-    const set = getBackedUpRecordSet();
-    set.add(recordId);
+    const set = getBackedUpPasskeyTags();
+    set.add(tag);
     localStorage.setItem(
       PASSKEY_BACKED_UP_RECORDS_KEY,
       JSON.stringify(Array.from(set)),
@@ -317,7 +598,7 @@ function formatPasskeyLabel(
 ): string {
   const netTag = wallet.network === 'mainnet' ? 'Mainnet' : 'Testnet';
   if (totalInBundle > 1) {
-    return `BrotherHood (${wallet.name} + ${totalInBundle - 1} more • ${netTag})`;
+    return `BrotherHood: ${wallet.name} (+${totalInBundle - 1} synced • ${netTag})`;
   }
   return `BrotherHood: ${wallet.name} (${netTag})`;
 }
@@ -325,15 +606,14 @@ function formatPasskeyLabel(
 async function createDiscoverableWalletPasskey(
   wallet: PasskeyWalletPayload,
   label: string,
-  requestLargeBlob: boolean,
 ): Promise<{
   credential: PublicKeyCredential;
-  recordBase64: string;
-  largeBlobSupported: boolean;
+  recordBytes: Uint8Array;
+  tag: string;
 }> {
   const challenge = crypto.getRandomValues(new Uint8Array(32));
   const recordBytes = encodePasskeyWalletRecord(wallet);
-  const recordBase64 = bufferToBase64(recordBytes);
+  const tag = await computePasskeyRecordTag(recordBytes);
 
   const publicKeyOptions: PublicKeyCredentialCreationOptions = {
     challenge,
@@ -356,13 +636,6 @@ async function createDiscoverableWalletPasskey(
       requireResidentKey: true,
     },
     timeout: 60000,
-    ...(requestLargeBlob
-      ? {
-          extensions: {
-            largeBlob: { support: 'preferred' },
-          } as AuthenticationExtensionsClientInputs,
-        }
-      : {}),
   };
 
   const credential = (await navigator.credentials.create({
@@ -373,30 +646,22 @@ async function createDiscoverableWalletPasskey(
     throw new Error('Passkey registration was not completed');
   }
 
-  const extResults = credential.getClientExtensionResults() as {
-    largeBlob?: { supported?: boolean };
-  };
-
   return {
     credential,
-    recordBase64,
-    largeBlobSupported: Boolean(extResults?.largeBlob?.supported),
+    recordBytes,
+    tag,
   };
 }
 
 /**
- * Saves one or more mnemonic wallets into the mobile OS Passkey keystore (or Telegram BiometricManager inside TWA).
- *
- * Strategy:
- * 1. Inside Telegram Mini App: packs up to 11 wallets into a compact binary bundle stored inside
- *    Telegram's hardware-backed BiometricManager token alongside the vault password.
- * 2. On Web / PWA: creates a discoverable Passkey with the primary wallet's 64-byte record in `user.id`
- *    (supported on 100% of mobile keystores in 1 tap). If multiple wallets are provided, tries WebAuthn
- *    `largeBlob` first, and falls back to storing 1 compact 64-byte Passkey per independent wallet.
+ * Saves a target wallet into the mobile OS Passkey keystore in a single user-gesture WebAuthn prompt,
+ * AND encrypts the full multi-wallet bundle of all `wallets` into IndexedDB + CacheStorage + localStorage
+ * keyed by every wallet's Passkey userHandle.
  */
 export async function saveWalletsToPasskey(
   wallets: readonly PasskeyWalletPayload[],
   vaultPassword?: string,
+  targetWalletIndex = 0,
 ): Promise<SavePasskeyResult> {
   const validWallets = wallets.filter(
     (w) => w.mnemonic.length === 12 || w.mnemonic.length === 24,
@@ -425,6 +690,7 @@ export async function saveWalletsToPasskey(
     } catch {
       // ignore storage errors
     }
+    await syncEncryptedPasskeyBundles(validWallets);
     const effectivePassword = vaultPassword || generateRandomVaultPassword();
     const token = formatTelegramBiometricToken(effectivePassword, bundleBase64);
     const saved = await saveTelegramBiometricsPassword(
@@ -434,22 +700,31 @@ export async function saveWalletsToPasskey(
     if (!saved) {
       return { savedCount: 0, usedLargeBlob: false };
     }
+    for (const w of maxTgWallets) {
+      markTagBackedUp(await computeWalletPasskeyTag(w));
+    }
     notifyBiometricsChanged();
     return { savedCount: maxTgWallets.length, usedLargeBlob: true };
   }
 
   try {
-    const primaryWallet = validWallets[0];
-    const primaryLabel = formatPasskeyLabel(primaryWallet, validWallets.length);
+    const safeIndex = Math.min(
+      Math.max(0, targetWalletIndex),
+      validWallets.length - 1,
+    );
+    const targetWallet = validWallets[safeIndex];
+    const label = formatPasskeyLabel(targetWallet, validWallets.length);
 
-    const { credential, recordBase64, largeBlobSupported } =
-      await createDiscoverableWalletPasskey(
-        primaryWallet,
-        primaryLabel,
-        validWallets.length > 1,
-      );
+    // Trigger WebAuthn create immediately inside the user's click gesture
+    const { credential, tag } = await createDiscoverableWalletPasskey(
+      targetWallet,
+      label,
+    );
 
-    markRecordBackedUp(recordBase64);
+    markTagBackedUp(tag);
+
+    // Persist the AES-256-GCM encrypted bundle of ALL wallets bound to every wallet's Passkey userHandle
+    await syncEncryptedPasskeyBundles(validWallets);
 
     if (vaultPassword) {
       await enrollBiometricVaultWithCredentialId(
@@ -458,75 +733,11 @@ export async function saveWalletsToPasskey(
       );
     }
 
-    if (validWallets.length === 1) {
-      return { savedCount: 1, usedLargeBlob: false };
-    }
-
-    // Try writing all wallets into WebAuthn largeBlob if supported by the authenticator
-    if (largeBlobSupported) {
-      try {
-        const bundleBytes = encodePasskeyWalletBundle(validWallets);
-        const writeChallenge = crypto.getRandomValues(new Uint8Array(32));
-        const writeAssertion = (await navigator.credentials.get({
-          publicKey: {
-            challenge: writeChallenge,
-            allowCredentials: [
-              {
-                type: 'public-key',
-                id: credential.rawId,
-              },
-            ],
-            userVerification: 'preferred',
-            timeout: 60000,
-            extensions: {
-              largeBlob: {
-                write: bundleBytes,
-              },
-            } as AuthenticationExtensionsClientInputs,
-          },
-        })) as PublicKeyCredential | null;
-
-        const writeExt = writeAssertion?.getClientExtensionResults() as
-          { largeBlob?: { written?: boolean } } | undefined;
-        if (writeExt?.largeBlob?.written) {
-          for (const w of validWallets) {
-            markRecordBackedUp(bufferToBase64(encodePasskeyWalletRecord(w)));
-          }
-          return { savedCount: validWallets.length, usedLargeBlob: true };
-        }
-      } catch (blobErr) {
-        console.warn(
-          '[Passkey] largeBlob write unsupported or skipped, falling back to per-wallet Passkeys:',
-          blobErr,
-        );
-      }
-    }
-
-    // Fallback when largeBlob is unsupported (e.g. Android Google Password Manager):
-    // Save each remaining wallet in its own 64-byte Passkey user.id
-    let savedCount = 1;
-    const backedUpSet = getBackedUpRecordSet();
-
-    for (let i = 1; i < validWallets.length; i++) {
-      const nextWallet = validWallets[i];
-      const nextRecordBase64 = bufferToBase64(
-        encodePasskeyWalletRecord(nextWallet),
-      );
-      if (backedUpSet.has(nextRecordBase64)) {
-        savedCount++;
-        continue;
-      }
-      const nextLabel = formatPasskeyLabel(nextWallet, 1);
-      const nextRes = await createDiscoverableWalletPasskey(
-        nextWallet,
-        nextLabel,
-        false,
-      );
-      markRecordBackedUp(nextRes.recordBase64);
-      savedCount++;
-    }
-
-    return { savedCount, usedLargeBlob: false };
+    return {
+      savedCount: validWallets.length,
+      usedLargeBlob: validWallets.length > 1,
+      backedUpTag: tag,
+    };
   } catch (err) {
     if (
       err instanceof Error &&
@@ -540,6 +751,8 @@ export async function saveWalletsToPasskey(
 
 /**
  * Prompts the mobile OS Passkey picker (or Telegram BiometricManager) and decodes all stored wallet phrases.
+ * Restores both the selected Passkey's 64-byte userHandle wallet AND any multi-wallet bundle encrypted
+ * under that Passkey's userHandle in IndexedDB / CacheStorage / localStorage.
  */
 export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult | null> {
   if (!isSecureContextAvailable() && !hasTelegramBiometricManager()) {
@@ -593,7 +806,6 @@ export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult 
         },
       })) as PublicKeyCredential | null;
     } catch (extErr) {
-      // Some older mobile authenticators reject unknown extensions; retry without largeBlob
       if (
         extErr instanceof Error &&
         (extErr.name === 'NotAllowedError' || extErr.name === 'AbortError')
@@ -621,24 +833,31 @@ export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult 
     const combinedWallets: PasskeyWalletPayload[] = [];
     const seenKeys = new Set<string>();
 
-    if (extResults?.largeBlob?.blob) {
-      for (const w of decodePasskeyWalletBundle(extResults.largeBlob.blob)) {
-        const key = getWalletKey(w);
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          combinedWallets.push(w);
+    const addUniqueWallet = (w: PasskeyWalletPayload) => {
+      const key = getPasskeyWalletKey(w);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        combinedWallets.push(w);
+      }
+    };
+
+    if (response.userHandle) {
+      const handleBytes = new Uint8Array(response.userHandle);
+      const fromHandle = decodePasskeyWalletRecord(handleBytes);
+      if (fromHandle) {
+        addUniqueWallet(fromHandle);
+        // Decrypt the full multi-wallet bundle unlocked by this Passkey's userHandle
+        const fromEncryptedVault =
+          await decryptPasskeyBundleWithRecord(handleBytes);
+        for (const w of fromEncryptedVault) {
+          addUniqueWallet(w);
         }
       }
     }
 
-    if (response.userHandle) {
-      const fromHandle = decodePasskeyWalletRecord(response.userHandle);
-      if (fromHandle) {
-        const key = getWalletKey(fromHandle);
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          combinedWallets.push(fromHandle);
-        }
+    if (extResults?.largeBlob?.blob) {
+      for (const w of decodePasskeyWalletBundle(extResults.largeBlob.blob)) {
+        addUniqueWallet(w);
       }
     }
 
@@ -649,7 +868,7 @@ export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult 
     }
 
     for (const w of combinedWallets) {
-      markRecordBackedUp(bufferToBase64(encodePasskeyWalletRecord(w)));
+      markTagBackedUp(await computeWalletPasskeyTag(w));
     }
 
     return {

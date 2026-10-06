@@ -420,7 +420,6 @@ export function clearBiometrics(): void {
     localStorage.setItem(BIOMETRIC_DISABLED_KEY, 'true');
     localStorage.removeItem(BIOMETRIC_VAULT_KEY);
     localStorage.removeItem(TELEGRAM_BUNDLE_CACHE_KEY);
-    localStorage.removeItem(PASSKEY_BACKED_UP_RECORDS_KEY);
   } catch {
     // ignore storage errors
   }

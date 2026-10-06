@@ -31,6 +31,7 @@ import { usePwaInstall } from '@/core/hooks/use-pwa-install';
 import { useAuth, useWallet } from '@demo/wallet-core';
 import { useBiometrics } from '@/core/security/use-biometrics';
 import { usePasskeyWallets } from '@/core/security/use-passkey-wallets';
+import type { PasskeyWalletStatusItem } from '@/core/security/use-passkey-wallets';
 
 import { ToggleRow } from '../toggle-row';
 import { AppearanceModal } from '../appearance';
@@ -113,15 +114,21 @@ export const SettingsDropdown: React.FC = () => {
     register: registerBiometrics,
     disable: disableBiometrics,
   } = useBiometrics();
-  const { isBackingUp: isBackingUpPasskey, backupAllWallets } =
-    usePasskeyWallets();
+  const {
+    isBackingUp: isBackingUpPasskey,
+    backupAllWallets,
+    getWalletBackupStatuses,
+    syncEncryptedVault,
+  } = usePasskeyWallets();
   const mnemonicWalletsCount = savedWallets.filter(
     (w) => Boolean(w.encryptedMnemonic) && !w.isWatchOnly,
   ).length;
 
-  const [panel, setPanelState] = useState<'menu' | 'mnemonic' | null>(null);
+  const [panel, setPanelState] = useState<
+    'menu' | 'mnemonic' | 'passkey' | null
+  >(null);
 
-  const setPanel = (next: 'menu' | 'mnemonic' | null) => {
+  const setPanel = (next: 'menu' | 'mnemonic' | 'passkey' | null) => {
     setPanelState(next);
     setSettingsModalOpen(next !== null);
   };
@@ -148,6 +155,12 @@ export const SettingsDropdown: React.FC = () => {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
   const [mnemonicError, setMnemonicError] = useState('');
+  const [passkeyStatuses, setPasskeyStatuses] = useState<
+    PasskeyWalletStatusItem[]
+  >([]);
+  const [savingPasskeyWalletId, setSavingPasskeyWalletId] = useState<
+    string | null
+  >(null);
 
   const [isDeveloperMode, setDeveloperMode] = useDeveloperMode();
   const [devTapCount, setDevTapCount] = useState(0);
@@ -265,6 +278,14 @@ export const SettingsDropdown: React.FC = () => {
       return;
     }
     try {
+      if (mnemonicWalletsCount > 1) {
+        await syncEncryptedVault();
+        const statuses = await getWalletBackupStatuses();
+        setPasskeyStatuses(statuses);
+        setPanel('passkey');
+        return;
+      }
+
       const savedCount = await backupAllWallets();
       if (savedCount > 0) {
         toast.success(
@@ -280,6 +301,29 @@ export const SettingsDropdown: React.FC = () => {
           ? error.message
           : 'Failed to back up wallets to Passkey',
       );
+    }
+  };
+
+  const handleSaveSingleWalletToPasskey = async (walletId: string) => {
+    setSavingPasskeyWalletId(walletId);
+    try {
+      const savedCount = await backupAllWallets([], walletId);
+      const statuses = await getWalletBackupStatuses();
+      setPasskeyStatuses(statuses);
+      if (savedCount > 0) {
+        toast.success(
+          `Passkey saved & all ${savedCount} wallets synced to encrypted vault`,
+        );
+      }
+    } catch (error) {
+      log.error('Failed to save wallet Passkey:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save wallet to Passkey',
+      );
+    } finally {
+      setSavingPasskeyWalletId(null);
     }
   };
 
@@ -656,6 +700,114 @@ export const SettingsDropdown: React.FC = () => {
               warningText="Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet."
             />
           )}
+        </Modal.Body>
+      </Modal.Container>
+
+      <Modal.Container
+        isOpened={panel === 'passkey'}
+        onOpenChange={(open) => !open && setPanel(null)}
+        className="px-2 max-w-md"
+      >
+        <Modal.Header onClose={() => setPanel(null)}>
+          <div className="flex items-center gap-2">
+            <Fingerprint className="w-5 h-5 text-primary" />
+            <Modal.Title>Passkey Backup</Modal.Title>
+          </div>
+        </Modal.Header>
+        <Modal.Body className="gap-3 px-3 pb-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Saving any wallet below encrypts all {passkeyStatuses.length}{' '}
+            wallets into your local Passkey vault for instant 1-tap restore. You
+            can also save each wallet individually so every wallet has its own
+            Passkey in your mobile keystore for cross-device recovery.
+          </p>
+
+          <div className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-secondary/40 overflow-hidden max-h-[48dvh] overflow-y-auto">
+            {passkeyStatuses.map((item, idx) => {
+              const shortAddr =
+                item.address.length > 12
+                  ? `${item.address.slice(0, 6)}…${item.address.slice(-4)}`
+                  : item.address;
+              const isSavingThis = savingPasskeyWalletId === item.id;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 px-3.5 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground truncate">
+                        {idx + 1}. {item.payload.name}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
+                        {item.payload.network}
+                      </span>
+                      {item.isBackedUp ? (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                          Saved ✓
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                      {shortAddr}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={item.isBackedUp ? 'gray' : 'primary'}
+                    loading={isSavingThis}
+                    disabled={isBackingUpPasskey}
+                    onClick={() => {
+                      void handleSaveSingleWalletToPasskey(item.id);
+                    }}
+                    data-testid={`passkey-save-wallet-${idx}`}
+                  >
+                    {item.isBackedUp ? 'Update' : 'Save'}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          {(() => {
+            const nextPendingIdx = passkeyStatuses.findIndex(
+              (w) => !w.isBackedUp,
+            );
+            const backedUpTotal = passkeyStatuses.filter(
+              (w) => w.isBackedUp,
+            ).length;
+            if (nextPendingIdx !== -1) {
+              const nextItem = passkeyStatuses[nextPendingIdx];
+              return (
+                <Button
+                  fullWidth
+                  loading={isBackingUpPasskey}
+                  disabled={isBackingUpPasskey}
+                  onClick={() => {
+                    void handleSaveSingleWalletToPasskey(nextItem.id);
+                  }}
+                  data-testid="passkey-save-next"
+                >
+                  Save &ldquo;{nextItem.payload.name}&rdquo; (
+                  {backedUpTotal + 1} of {passkeyStatuses.length})
+                </Button>
+              );
+            }
+            return (
+              <Button
+                fullWidth
+                variant="gray"
+                onClick={() => setPanel(null)}
+                data-testid="passkey-backup-done"
+              >
+                All {passkeyStatuses.length} wallets backed up ✓ — Done
+              </Button>
+            );
+          })()}
         </Modal.Body>
       </Modal.Container>
 

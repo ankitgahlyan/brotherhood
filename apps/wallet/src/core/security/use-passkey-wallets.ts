@@ -14,20 +14,34 @@ import {
   enrollBiometricVaultWithCredentialId,
 } from './biometrics';
 import {
+  computeWalletPasskeyTag,
   generateRandomVaultPassword,
+  getBackedUpPasskeyTags,
   restoreWalletsFromPasskey,
   saveWalletsToPasskey,
+  syncEncryptedPasskeyBundles,
 } from './passkey-wallets';
 import type { PasskeyWalletPayload } from './passkey-wallets';
 import { useBiometrics } from './use-biometrics';
+
+export interface PasskeyWalletStatusItem {
+  id: string;
+  address: string;
+  tag: string;
+  isBackedUp: boolean;
+  payload: PasskeyWalletPayload;
+}
 
 export interface UsePasskeyWalletsResult {
   isSupported: boolean;
   isInsecureContext: boolean;
   isBackingUp: boolean;
   isRestoring: boolean;
+  getWalletBackupStatuses: () => Promise<PasskeyWalletStatusItem[]>;
+  syncEncryptedVault: () => Promise<void>;
   backupAllWallets: (
     extraWallets?: readonly PasskeyWalletPayload[],
+    targetWalletId?: string,
   ) => Promise<number>;
   restoreFromPasskey: () => Promise<{
     importedCount: number;
@@ -41,52 +55,112 @@ export function usePasskeyWallets(): UsePasskeyWalletsResult {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  const collectSavedWalletPayloads = useCallback(async (): Promise<
+    Array<{ id: string; address: string; payload: PasskeyWalletPayload }>
+  > => {
+    const state = storeApi.getState();
+    if (!state.auth.currentPassword) return [];
+
+    const activeId = state.walletManagement.activeWalletId;
+    const orderedSaved = [...state.walletManagement.savedWallets].sort(
+      (a, b) => (a.id === activeId ? -1 : b.id === activeId ? 1 : 0),
+    );
+
+    const items: Array<{
+      id: string;
+      address: string;
+      payload: PasskeyWalletPayload;
+    }> = [];
+
+    for (const saved of orderedSaved) {
+      if (!saved.encryptedMnemonic || saved.isWatchOnly) continue;
+      const words = await state.getDecryptedMnemonic(saved.id);
+      if (words && (words.length === 12 || words.length === 24)) {
+        items.push({
+          id: saved.id,
+          address: saved.address,
+          payload: {
+            mnemonic: words,
+            name: saved.name,
+            network: saved.network,
+            version: saved.version || 'v5r1',
+            subwalletId:
+              saved.subwalletId ??
+              (saved.network === 'testnet' ? 2147483645 : 2147483409),
+            interfaceType:
+              saved.walletInterfaceType === 'signer' ? 'signer' : 'mnemonic',
+          },
+        });
+      }
+    }
+
+    return items;
+  }, [storeApi]);
+
+  const getWalletBackupStatuses = useCallback(async (): Promise<
+    PasskeyWalletStatusItem[]
+  > => {
+    const items = await collectSavedWalletPayloads();
+    const backedUpTags = getBackedUpPasskeyTags();
+    const statuses: PasskeyWalletStatusItem[] = [];
+
+    for (const item of items) {
+      const tag = await computeWalletPasskeyTag(item.payload);
+      statuses.push({
+        id: item.id,
+        address: item.address,
+        tag,
+        isBackedUp: backedUpTags.has(tag),
+        payload: item.payload,
+      });
+    }
+
+    return statuses;
+  }, [collectSavedWalletPayloads]);
+
+  const syncEncryptedVault = useCallback(async (): Promise<void> => {
+    try {
+      const items = await collectSavedWalletPayloads();
+      if (items.length === 0) return;
+      await syncEncryptedPasskeyBundles(items.map((i) => i.payload));
+    } catch {
+      // non-fatal background sync
+    }
+  }, [collectSavedWalletPayloads]);
+
   const backupAllWallets = useCallback(
     async (
       extraWallets: readonly PasskeyWalletPayload[] = [],
+      targetWalletId?: string,
     ): Promise<number> => {
       setIsBackingUp(true);
       try {
         const state = storeApi.getState();
-        const payloads: PasskeyWalletPayload[] = [...extraWallets];
+        const savedItems = await collectSavedWalletPayloads();
+        const payloads: PasskeyWalletPayload[] = [
+          ...extraWallets,
+          ...savedItems.map((i) => i.payload),
+        ];
 
-        if (state.auth.currentPassword) {
-          const activeId = state.walletManagement.activeWalletId;
-          const orderedSaved = [...state.walletManagement.savedWallets].sort(
-            (a, b) => (a.id === activeId ? -1 : b.id === activeId ? 1 : 0),
-          );
-
-          for (const saved of orderedSaved) {
-            if (!saved.encryptedMnemonic || saved.isWatchOnly) continue;
-            const words = await state.getDecryptedMnemonic(saved.id);
-            if (words && (words.length === 12 || words.length === 24)) {
-              payloads.push({
-                mnemonic: words,
-                name: saved.name,
-                network: saved.network,
-                version: saved.version || 'v5r1',
-                subwalletId:
-                  saved.subwalletId ??
-                  (saved.network === 'testnet' ? 2147483645 : 2147483409),
-                interfaceType:
-                  saved.walletInterfaceType === 'signer'
-                    ? 'signer'
-                    : 'mnemonic',
-              });
-            }
+        let targetIndex = 0;
+        if (targetWalletId) {
+          const foundIdx = savedItems.findIndex((i) => i.id === targetWalletId);
+          if (foundIdx !== -1) {
+            targetIndex = extraWallets.length + foundIdx;
           }
         }
 
         const result = await saveWalletsToPasskey(
           payloads,
           state.auth.currentPassword,
+          targetIndex,
         );
         return result.savedCount;
       } finally {
         setIsBackingUp(false);
       }
     },
-    [storeApi],
+    [storeApi, collectSavedWalletPayloads],
   );
 
   const restoreFromPasskey = useCallback(async (): Promise<{
@@ -194,6 +268,12 @@ export function usePasskeyWallets(): UsePasskeyWalletsResult {
         await storeApi.getState().switchWallet(targetWalletId);
       }
 
+      // Sync the full restored + existing wallet set back into the encrypted vault
+      const allItems = await collectSavedWalletPayloads();
+      if (allItems.length > 0) {
+        await syncEncryptedPasskeyBundles(allItems.map((i) => i.payload));
+      }
+
       return {
         importedCount,
         totalFound: result.wallets.length,
@@ -201,13 +281,15 @@ export function usePasskeyWallets(): UsePasskeyWalletsResult {
     } finally {
       setIsRestoring(false);
     }
-  }, [storeApi]);
+  }, [storeApi, collectSavedWalletPayloads]);
 
   return {
     isSupported,
     isInsecureContext,
     isBackingUp,
     isRestoring,
+    getWalletBackupStatuses,
+    syncEncryptedVault,
     backupAllWallets,
     restoreFromPasskey,
   };

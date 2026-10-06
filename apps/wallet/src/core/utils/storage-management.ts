@@ -10,9 +10,27 @@ export async function clearWholeAppStorage(): Promise<void> {
 
   await clearFallbackImageCaches();
 
-  // 1. Clear LocalStorage & SessionStorage
+  // 1. Clear LocalStorage & SessionStorage (preserving only the Passkey-encrypted vault ciphertexts)
   try {
+    const passkeyBundles = window.localStorage.getItem(
+      'brotherhood_passkey_encrypted_bundles_v1',
+    );
+    const passkeyTags = window.localStorage.getItem(
+      'brotherhood_passkey_backed_up_records',
+    );
     window.localStorage.clear();
+    if (passkeyBundles) {
+      window.localStorage.setItem(
+        'brotherhood_passkey_encrypted_bundles_v1',
+        passkeyBundles,
+      );
+    }
+    if (passkeyTags) {
+      window.localStorage.setItem(
+        'brotherhood_passkey_backed_up_records',
+        passkeyTags,
+      );
+    }
   } catch (err) {
     console.warn('[storage-management] Failed to clear localStorage:', err);
   }
@@ -23,7 +41,7 @@ export async function clearWholeAppStorage(): Promise<void> {
     console.warn('[storage-management] Failed to clear sessionStorage:', err);
   }
 
-  // 2. Clear IndexedDB
+  // 2. Clear IndexedDB (preserving brotherhood_passkey_vault_db)
   try {
     if ('indexedDB' in window) {
       const knownDbs = [
@@ -41,7 +59,7 @@ export async function clearWholeAppStorage(): Promise<void> {
         try {
           const dbs = await indexedDB.databases();
           for (const db of dbs) {
-            if (db.name) {
+            if (db.name && db.name !== 'brotherhood_passkey_vault_db') {
               indexedDB.deleteDatabase(db.name);
             }
           }
@@ -62,11 +80,15 @@ export async function clearWholeAppStorage(): Promise<void> {
     console.warn('[storage-management] Failed to clear IndexedDB:', err);
   }
 
-  // 3. Clear CacheStorage
+  // 3. Clear CacheStorage (preserving brotherhood-passkey-vault-v1)
   try {
     if ('caches' in window) {
       const keys = await window.caches.keys();
-      await Promise.all(keys.map((key) => window.caches.delete(key)));
+      await Promise.all(
+        keys
+          .filter((key) => key !== 'brotherhood-passkey-vault-v1')
+          .map((key) => window.caches.delete(key)),
+      );
     }
   } catch (err) {
     console.warn('[storage-management] Failed to clear caches:', err);
@@ -85,7 +107,11 @@ export async function clearRuntimeCacheStorage(): Promise<void> {
     const keys = await window.caches.keys();
     await Promise.all(
       keys
-        .filter((key) => !key.startsWith('workbox-precache'))
+        .filter(
+          (key) =>
+            !key.startsWith('workbox-precache') &&
+            key !== 'brotherhood-passkey-vault-v1',
+        )
         .map((key) => window.caches.delete(key)),
     );
   } catch (err) {

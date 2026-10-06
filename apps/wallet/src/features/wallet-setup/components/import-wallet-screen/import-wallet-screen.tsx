@@ -48,6 +48,7 @@ export const ImportWalletScreen: React.FC = () => {
     isRestoring: isRestoringPasskey,
     backupAllWallets,
     restoreFromPasskey,
+    syncEncryptedVault,
   } = usePasskeyWallets();
 
   const defaultName = useMemo(
@@ -182,6 +183,7 @@ export const ImportWalletScreen: React.FC = () => {
         subwalletId,
         finalName,
       );
+      await syncEncryptedVault();
       navigate('/wallet', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import wallet');
