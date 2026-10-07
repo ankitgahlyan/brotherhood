@@ -12,7 +12,6 @@ import {
   initTelegramBiometrics,
   saveTelegramBiometricsPassword,
   authenticateTelegramBiometrics,
-  clearTelegramBiometrics,
   getRawTelegramWebApp,
   isTelegramEnvironment,
 } from '../lib/telegram';
@@ -30,7 +29,7 @@ export function hasTelegramBiometricManager(): boolean {
 }
 
 const BIOMETRIC_VAULT_KEY = 'brotherhood_biometric_vault';
-const BIOMETRIC_DISABLED_KEY = 'brotherhood_biometrics_disabled';
+export const BIOMETRIC_DISABLED_KEY = 'brotherhood_biometrics_disabled';
 export const TELEGRAM_BUNDLE_CACHE_KEY = 'brotherhood_tg_passkey_bundle';
 export const PASSKEY_BACKED_UP_RECORDS_KEY =
   'brotherhood_passkey_backed_up_records';
@@ -412,19 +411,15 @@ export async function authenticateBiometrics(): Promise<string | null> {
 }
 
 /**
- * Remove biometrics from this device.
+ * Disable biometric auto-unlock on this device while preserving any hardware Keystore Passkey backup token.
  */
 export function clearBiometrics(): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(BIOMETRIC_DISABLED_KEY, 'true');
     localStorage.removeItem(BIOMETRIC_VAULT_KEY);
-    localStorage.removeItem(TELEGRAM_BUNDLE_CACHE_KEY);
   } catch {
     // ignore storage errors
-  }
-  if (hasTelegramBiometricManager()) {
-    void clearTelegramBiometrics();
   }
   notifyBiometricsChanged();
 }

@@ -29,6 +29,7 @@ import { setSettingsModalOpen } from '@/core/lib/settings-modal-state';
 import { InstallPromptDialog } from '@/core/components/pwa';
 import { usePwaInstall } from '@/core/hooks/use-pwa-install';
 import { useAuth, useWallet } from '@demo/wallet-core';
+import { hasTelegramBiometricManager } from '@/core/security/biometrics';
 import { useBiometrics } from '@/core/security/use-biometrics';
 import { usePasskeyWallets } from '@/core/security/use-passkey-wallets';
 import type { PasskeyWalletStatusItem } from '@/core/security/use-passkey-wallets';
@@ -278,7 +279,7 @@ export const SettingsDropdown: React.FC = () => {
       return;
     }
     try {
-      if (mnemonicWalletsCount > 1) {
+      if (mnemonicWalletsCount > 1 && !hasTelegramBiometricManager()) {
         await syncEncryptedVault();
         const statuses = await getWalletBackupStatuses();
         setPasskeyStatuses(statuses);

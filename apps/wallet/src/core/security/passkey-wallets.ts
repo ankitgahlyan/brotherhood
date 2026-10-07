@@ -12,9 +12,12 @@ import type { NetworkType } from '@demo/wallet-core';
 import {
   authenticateTelegramBiometrics,
   initTelegramBiometrics,
+  readTelegramCloudStorageItem,
   saveTelegramBiometricsPassword,
+  writeTelegramCloudStorageItem,
 } from '../lib/telegram';
 import {
+  BIOMETRIC_DISABLED_KEY,
   PASSKEY_BACKED_UP_RECORDS_KEY,
   TELEGRAM_BUNDLE_CACHE_KEY,
   base64ToBuffer,
@@ -39,6 +42,7 @@ const FLAG_WORDS_12 = 0x08;
 
 const ENCRYPTED_BUNDLES_STORAGE_KEY =
   'brotherhood_passkey_encrypted_bundles_v1';
+const TELEGRAM_CLOUD_STORAGE_VAULT_KEY = 'bro_passkey_vault_v1';
 const PASSKEY_VAULT_DB_NAME = 'brotherhood_passkey_vault_db';
 const PASSKEY_VAULT_STORE_NAME = 'encrypted_bundles';
 const PASSKEY_VAULT_DB_KEY = 'bundles_map';
@@ -461,23 +465,47 @@ async function writeCacheStorageBundleMap(
   }
 }
 
+function mergeEncryptedBundleMaps(
+  target: EncryptedBundleMap,
+  source: EncryptedBundleMap | null | undefined,
+): void {
+  if (!source || typeof source !== 'object') return;
+  for (const [tag, entry] of Object.entries(source)) {
+    if (!entry || typeof entry.ciphertext !== 'string') continue;
+    const existing = target[tag];
+    if (!existing || (entry.updatedAt ?? 0) >= (existing.updatedAt ?? 0)) {
+      target[tag] = entry;
+    }
+  }
+}
+
 async function readEncryptedBundleMap(): Promise<EncryptedBundleMap> {
   const merged: EncryptedBundleMap = {};
 
-  const fromCache = await readCacheStorageBundleMap();
-  if (fromCache) Object.assign(merged, fromCache);
+  const [fromCache, fromIdb, fromTgCloudRaw] = await Promise.all([
+    readCacheStorageBundleMap(),
+    readIdbBundleMap(),
+    readTelegramCloudStorageItem(TELEGRAM_CLOUD_STORAGE_VAULT_KEY),
+  ]);
 
-  const fromIdb = await readIdbBundleMap();
-  if (fromIdb) Object.assign(merged, fromIdb);
+  mergeEncryptedBundleMaps(merged, fromCache);
+  mergeEncryptedBundleMaps(merged, fromIdb);
+
+  if (fromTgCloudRaw) {
+    try {
+      const parsedTg = JSON.parse(fromTgCloudRaw) as EncryptedBundleMap;
+      mergeEncryptedBundleMaps(merged, parsedTg);
+    } catch {
+      // ignore parse errors
+    }
+  }
 
   if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem(ENCRYPTED_BUNDLES_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as EncryptedBundleMap;
-        if (parsed && typeof parsed === 'object') {
-          Object.assign(merged, parsed);
-        }
+        mergeEncryptedBundleMaps(merged, parsed);
       }
     } catch {
       // ignore parse errors
@@ -490,21 +518,27 @@ async function readEncryptedBundleMap(): Promise<EncryptedBundleMap> {
 async function persistEncryptedBundleMap(
   map: EncryptedBundleMap,
 ): Promise<void> {
+  const serialized = JSON.stringify(map);
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(ENCRYPTED_BUNDLES_STORAGE_KEY, JSON.stringify(map));
+      localStorage.setItem(ENCRYPTED_BUNDLES_STORAGE_KEY, serialized);
     } catch {
       // ignore localStorage quota errors
     }
   }
-  await Promise.all([writeIdbBundleMap(map), writeCacheStorageBundleMap(map)]);
+  await Promise.all([
+    writeIdbBundleMap(map),
+    writeCacheStorageBundleMap(map),
+    writeTelegramCloudStorageItem(TELEGRAM_CLOUD_STORAGE_VAULT_KEY, serialized),
+  ]);
 }
 
 /**
  * Encrypts the full multi-wallet bundle under every wallet's Passkey record key and persists
- * the encrypted ciphertexts to localStorage, IndexedDB, and CacheStorage.
+ * the encrypted ciphertexts to localStorage, IndexedDB, CacheStorage, and Telegram CloudStorage.
  * Because the AES-256-GCM keys are derived from the 33-byte mnemonic entropy inside each Passkey's
- * userHandle, the stored ciphertexts can only be decrypted after authenticating to a Passkey.
+ * userHandle (or Telegram Keystore 64-byte record), the stored ciphertexts can only be decrypted
+ * after biometric authentication.
  */
 export async function syncEncryptedPasskeyBundles(
   wallets: readonly PasskeyWalletPayload[],
@@ -513,6 +547,20 @@ export async function syncEncryptedPasskeyBundles(
     (w) => w.mnemonic.length === 12 || w.mnemonic.length === 24,
   );
   if (validWallets.length === 0) return;
+
+  if (hasTelegramBiometricManager() && typeof window !== 'undefined') {
+    try {
+      if (!localStorage.getItem(TELEGRAM_BUNDLE_CACHE_KEY)) {
+        const primaryRecord = encodePasskeyWalletRecord(validWallets[0]);
+        localStorage.setItem(
+          TELEGRAM_BUNDLE_CACHE_KEY,
+          bufferToBase64(primaryRecord),
+        );
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
 
   const bundleBytes = encodePasskeyWalletBundle(validWallets);
   const map = await readEncryptedBundleMap();
@@ -656,7 +704,7 @@ async function createDiscoverableWalletPasskey(
 /**
  * Saves a target wallet into the mobile OS Passkey keystore in a single user-gesture WebAuthn prompt,
  * AND encrypts the full multi-wallet bundle of all `wallets` into IndexedDB + CacheStorage + localStorage
- * keyed by every wallet's Passkey userHandle.
+ * + Telegram CloudStorage keyed by every wallet's Passkey userHandle.
  */
 export async function saveWalletsToPasskey(
   wallets: readonly PasskeyWalletPayload[],
@@ -679,32 +727,46 @@ export async function saveWalletsToPasskey(
     throw new Error('Passkeys are not supported on this device');
   }
 
-  // Telegram Mini App hardware keystore path
+  // Telegram Mini App hardware keystore path:
+  // Store a fixed-size 64-byte primary record (88 base64 chars) in Telegram BiometricManager
+  // so Android Keystore block limits are never exceeded, and persist the AES-256-GCM encrypted
+  // multi-wallet bundle in Telegram CloudStorage + IndexedDB + CacheStorage + localStorage.
   if (hasTelegramBiometricManager()) {
     await initTelegramBiometrics();
-    const maxTgWallets = validWallets.slice(0, 11);
-    const bundleBytes = encodePasskeyWalletBundle(maxTgWallets);
-    const bundleBase64 = bufferToBase64(bundleBytes);
+    const primaryRecordBytes = encodePasskeyWalletRecord(validWallets[0]);
+    const primaryRecordBase64 = bufferToBase64(primaryRecordBytes);
     try {
-      localStorage.setItem(TELEGRAM_BUNDLE_CACHE_KEY, bundleBase64);
+      localStorage.setItem(TELEGRAM_BUNDLE_CACHE_KEY, primaryRecordBase64);
     } catch {
       // ignore storage errors
     }
     await syncEncryptedPasskeyBundles(validWallets);
     const effectivePassword = vaultPassword || generateRandomVaultPassword();
-    const token = formatTelegramBiometricToken(effectivePassword, bundleBase64);
+    const token = formatTelegramBiometricToken(
+      effectivePassword,
+      primaryRecordBase64,
+    );
     const saved = await saveTelegramBiometricsPassword(
       token,
       'Backup BrotherHood Wallets to Keystore',
+      true,
     );
     if (!saved) {
       return { savedCount: 0, usedLargeBlob: false };
     }
-    for (const w of maxTgWallets) {
+    try {
+      localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    for (const w of validWallets) {
       markTagBackedUp(await computeWalletPasskeyTag(w));
     }
     notifyBiometricsChanged();
-    return { savedCount: maxTgWallets.length, usedLargeBlob: true };
+    return {
+      savedCount: validWallets.length,
+      usedLargeBlob: validWallets.length > 1,
+    };
   }
 
   try {
@@ -752,7 +814,7 @@ export async function saveWalletsToPasskey(
 /**
  * Prompts the mobile OS Passkey picker (or Telegram BiometricManager) and decodes all stored wallet phrases.
  * Restores both the selected Passkey's 64-byte userHandle wallet AND any multi-wallet bundle encrypted
- * under that Passkey's userHandle in IndexedDB / CacheStorage / localStorage.
+ * under that Passkey's userHandle in Telegram CloudStorage / IndexedDB / CacheStorage / localStorage.
  */
 export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult | null> {
   if (!isSecureContextAvailable() && !hasTelegramBiometricManager()) {
@@ -779,13 +841,49 @@ export async function restoreWalletsFromPasskey(): Promise<RestorePasskeyResult 
       );
     }
 
-    const wallets = decodePasskeyWalletBundle(base64ToBuffer(resolvedBundle));
-    if (wallets.length === 0) {
+    const rawBytes = new Uint8Array(base64ToBuffer(resolvedBundle));
+    const combinedWallets: PasskeyWalletPayload[] = [];
+    const seenKeys = new Set<string>();
+
+    const addUniqueWallet = (w: PasskeyWalletPayload) => {
+      const key = getPasskeyWalletKey(w);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        combinedWallets.push(w);
+      }
+    };
+
+    for (const w of decodePasskeyWalletBundle(rawBytes)) {
+      addUniqueWallet(w);
+    }
+
+    if (rawBytes.byteLength >= PASSKEY_RECORD_BYTES) {
+      const primaryRecord = rawBytes.subarray(0, PASSKEY_RECORD_BYTES);
+      const fromEncryptedVault =
+        await decryptPasskeyBundleWithRecord(primaryRecord);
+      for (const w of fromEncryptedVault) {
+        addUniqueWallet(w);
+      }
+    }
+
+    if (combinedWallets.length === 0) {
       throw new Error('Telegram Keystore backup could not be decoded.');
     }
 
+    try {
+      localStorage.setItem(TELEGRAM_BUNDLE_CACHE_KEY, resolvedBundle);
+      localStorage.removeItem(BIOMETRIC_DISABLED_KEY);
+    } catch {
+      // ignore storage errors
+    }
+
+    for (const w of combinedWallets) {
+      markTagBackedUp(await computeWalletPasskeyTag(w));
+    }
+    notifyBiometricsChanged();
+
     return {
-      wallets,
+      wallets: combinedWallets,
       vaultPassword: password || undefined,
     };
   }

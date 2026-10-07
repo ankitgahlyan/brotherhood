@@ -58,6 +58,22 @@ export interface TelegramBiometricManager {
   openSettings: () => void;
 }
 
+export interface TelegramCloudStorage {
+  getItem: (
+    key: string,
+    callback: (error: string | null, value?: string) => void,
+  ) => void;
+  setItem: (
+    key: string,
+    value: string,
+    callback?: (error: string | null, isStored?: boolean) => void,
+  ) => void;
+  removeItem: (
+    key: string,
+    callback?: (error: string | null, isRemoved?: boolean) => void,
+  ) => void;
+}
+
 export interface TelegramWebApp {
   initData?: string;
   initDataUnsafe?: {
@@ -84,6 +100,7 @@ export interface TelegramWebApp {
   safeAreaInset?: TelegramSafeAreaInset;
   contentSafeAreaInset?: TelegramSafeAreaInset;
   BiometricManager?: TelegramBiometricManager;
+  CloudStorage?: TelegramCloudStorage;
   BackButton?: {
     isVisible?: boolean;
     show: () => void;
@@ -279,6 +296,7 @@ export function requestTelegramBiometricsAccess(
 export async function saveTelegramBiometricsPassword(
   password: string,
   reason = 'BrotherHood Wallet',
+  requireAuthPrompt = false,
 ): Promise<boolean> {
   const rawApp = getRawTelegramWebApp();
   const bm = rawApp?.BiometricManager;
@@ -294,12 +312,81 @@ export async function saveTelegramBiometricsPassword(
     if (!granted) {
       return false;
     }
+  } else if (requireAuthPrompt) {
+    const authenticated = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => resolve(false), 15000);
+      try {
+        bm.authenticate({ reason }, (success) => {
+          clearTimeout(timer);
+          resolve(Boolean(success));
+        });
+      } catch {
+        clearTimeout(timer);
+        resolve(false);
+      }
+    });
+    if (!authenticated) {
+      return false;
+    }
   }
 
   return new Promise((resolve) => {
-    bm.updateBiometricToken(password, (success) => {
-      resolve(Boolean(success));
-    });
+    try {
+      bm.updateBiometricToken(password, (success) => {
+        resolve(Boolean(success));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+export function readTelegramCloudStorageItem(
+  key: string,
+): Promise<string | null> {
+  if (!isTelegramEnvironment()) return Promise.resolve(null);
+  const cs = getRawTelegramWebApp()?.CloudStorage;
+  if (!cs || typeof cs.getItem !== 'function') return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 2500);
+    try {
+      cs.getItem(key, (err, value) => {
+        clearTimeout(timer);
+        if (err || !value) {
+          resolve(null);
+        } else {
+          resolve(value);
+        }
+      });
+    } catch {
+      clearTimeout(timer);
+      resolve(null);
+    }
+  });
+}
+
+export function writeTelegramCloudStorageItem(
+  key: string,
+  value: string,
+): Promise<boolean> {
+  if (!isTelegramEnvironment() || value.length > 4096) {
+    return Promise.resolve(false);
+  }
+  const cs = getRawTelegramWebApp()?.CloudStorage;
+  if (!cs || typeof cs.setItem !== 'function') return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 2500);
+    try {
+      cs.setItem(key, value, (err, stored) => {
+        clearTimeout(timer);
+        resolve(!err && Boolean(stored));
+      });
+    } catch {
+      clearTimeout(timer);
+      resolve(false);
+    }
   });
 }
 

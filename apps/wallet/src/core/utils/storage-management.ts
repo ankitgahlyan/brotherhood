@@ -18,7 +18,11 @@ export async function clearWholeAppStorage(): Promise<void> {
     const passkeyTags = window.localStorage.getItem(
       'brotherhood_passkey_backed_up_records',
     );
+    const tgPasskeyBundle = window.localStorage.getItem(
+      'brotherhood_tg_passkey_bundle',
+    );
     window.localStorage.clear();
+    window.localStorage.setItem('brotherhood_biometrics_disabled', 'true');
     if (passkeyBundles) {
       window.localStorage.setItem(
         'brotherhood_passkey_encrypted_bundles_v1',
@@ -29,6 +33,12 @@ export async function clearWholeAppStorage(): Promise<void> {
       window.localStorage.setItem(
         'brotherhood_passkey_backed_up_records',
         passkeyTags,
+      );
+    }
+    if (tgPasskeyBundle) {
+      window.localStorage.setItem(
+        'brotherhood_tg_passkey_bundle',
+        tgPasskeyBundle,
       );
     }
   } catch (err) {
