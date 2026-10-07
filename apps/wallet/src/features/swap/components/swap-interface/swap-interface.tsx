@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { FC } from 'react';
 import {
   ArrowDownUp,
@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCodeStyling from 'qr-code-styling';
-import type { Options as QrOptions } from 'qr-code-styling';
 
 import { useWalletStore } from '@demo/wallet-core';
 import { SwapField } from '../swap-field';
@@ -40,7 +39,9 @@ import {
 import { Button } from '@/core/components/ui/button';
 import { Modal } from '@/core/components/ui/modal';
 import { FallbackImage } from '@/core/components/ui/fallback-image';
+import { useTheme } from '@/core/theme';
 import { CommentField } from '@/features/send/components/comment-field';
+import { buildPaletteQrOptions, StyledQrCode } from '@/features/wallets';
 import { formatFi } from '@/features/brotherhood/components/credit/credit-member-card';
 import { useAddressUsernameResolution } from '@/core/hooks/use-address-username-resolution';
 import {
@@ -49,76 +50,6 @@ import {
   buildReserveUpiLinks,
 } from '@/lib/brotherhood/config';
 import { cn } from '@/core/lib/utils';
-
-const UPI_QR_OPTIONS: Partial<QrOptions> = {
-  type: 'svg',
-  margin: 0,
-  dotsOptions: {
-    type: 'rounded',
-    gradient: {
-      type: 'linear',
-      rotation: Math.PI / 4,
-      colorStops: [
-        { offset: 0, color: '#059669' },
-        { offset: 0.45, color: '#0284C7' },
-        { offset: 1, color: '#4F46E5' },
-      ],
-    },
-  },
-  cornersSquareOptions: {
-    type: 'extra-rounded',
-    gradient: {
-      type: 'linear',
-      rotation: Math.PI / 4,
-      colorStops: [
-        { offset: 0, color: '#047857' },
-        { offset: 1, color: '#4338CA' },
-      ],
-    },
-  },
-  cornersDotOptions: {
-    type: 'dot',
-    gradient: {
-      type: 'radial',
-      rotation: 0,
-      colorStops: [
-        { offset: 0, color: '#0284C7' },
-        { offset: 1, color: '#4F46E5' },
-      ],
-    },
-  },
-  backgroundOptions: { color: '#ffffff' },
-  qrOptions: { errorCorrectionLevel: 'M' },
-};
-
-const UpiQrCode: FC<{ value: string; size?: number }> = ({
-  value,
-  size = 180,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current || !value) return;
-    const qr = new QRCodeStyling({
-      ...UPI_QR_OPTIONS,
-      width: size,
-      height: size,
-      data: value,
-    });
-    const renderQr = () => {
-      if (!containerRef.current) return;
-      containerRef.current.replaceChildren();
-      qr.append(containerRef.current);
-    };
-    if (qr._svgDrawingPromise) {
-      qr._svgDrawingPromise.then(renderQr).catch(renderQr);
-    } else {
-      renderQr();
-    }
-  }, [value, size]);
-
-  return <div ref={containerRef} style={{ width: size, height: size }} />;
-};
 
 interface SwapInterfaceProps {
   className?: string;
@@ -160,6 +91,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     executeFiatOffRampBurn,
   } = useEcosystemSwap();
 
+  const { palette, resolvedTheme } = useTheme();
   const [selectorSide, setSelectorSide] = useState<'from' | 'to' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -212,7 +144,7 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
     fileName: string;
   }> => {
     const qr = new QRCodeStyling({
-      ...UPI_QR_OPTIONS,
+      ...buildPaletteQrOptions(palette, resolvedTheme, { showLogo: false }),
       width: 512,
       height: 512,
       margin: 24,
@@ -979,12 +911,17 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
           {/* UPI QR Code */}
           <div
             className={cn(
-              'flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-border shadow-2xs space-y-2 transition-opacity',
+              'flex flex-col items-center justify-center p-4 rounded-2xl bg-card border border-border shadow-2xs space-y-2 transition-opacity',
               upiLinks.isBelowMinAmount && 'opacity-40 pointer-events-none',
             )}
           >
-            <UpiQrCode value={upiLinks.qrUpiUrl} size={184} />
-            <span className="text-[11px] font-medium text-slate-600 text-center">
+            <StyledQrCode
+              value={upiLinks.qrUpiUrl}
+              walletKey="upi_onramp"
+              size={184}
+              showLogo={false}
+            />
+            <span className="text-[11px] font-medium text-muted-foreground text-center">
               {upiLinks.isBelowMinAmount
                 ? `Enter at least ₹${upiLinks.minAmount} to activate QR`
                 : `Scan or share with your UPI app (${upiLinks.payeeName} · ₹${upiLinks.amountStr})`}

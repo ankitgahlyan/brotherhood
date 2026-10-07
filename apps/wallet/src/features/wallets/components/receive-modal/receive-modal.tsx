@@ -15,60 +15,177 @@ import QRCodeStyling from 'qr-code-styling';
 import type { Options as QrOptions } from 'qr-code-styling';
 
 import { Modal } from '@/core/components/ui/modal';
+import { useTheme } from '@/core/theme';
+import type { ColorPalette, ResolvedTheme } from '@/core/theme';
 import { assetUrl } from '@/core/utils';
 
-const QR_OPTIONS: Partial<QrOptions> = {
-  type: 'svg',
-  margin: 0,
-  image: assetUrl('favicon.svg'),
-  dotsOptions: {
-    type: 'rounded',
-    gradient: {
-      type: 'linear',
-      rotation: Math.PI / 4,
-      colorStops: [
-        { offset: 0, color: '#0284C7' },
-        { offset: 0.36, color: '#4F46E5' },
-        { offset: 0.7, color: '#9333EA' },
-        { offset: 1, color: '#E11D48' },
-      ],
+interface QrPaletteGradient {
+  dots: [string, string, string];
+  cornersSquare: [string, string];
+  cornersDot: [string, string];
+  lightBg: string;
+  darkBg: string;
+}
+
+const PALETTE_QR_GRADIENTS: Record<
+  ColorPalette,
+  { light: QrPaletteGradient; dark: QrPaletteGradient }
+> = {
+  violet: {
+    light: {
+      dots: ['#7C3AED', '#4F46E5', '#9333EA'],
+      cornersSquare: ['#6D28D9', '#4338CA'],
+      cornersDot: ['#7E22CE', '#4F46E5'],
+      lightBg: '#F6F5FB',
+      darkBg: '#1A162B',
+    },
+    dark: {
+      dots: ['#C084FC', '#818CF8', '#E879F9'],
+      cornersSquare: ['#A855F7', '#6366F1'],
+      cornersDot: ['#C084FC', '#818CF8'],
+      lightBg: '#F6F5FB',
+      darkBg: '#1A162B',
     },
   },
-  cornersSquareOptions: {
-    type: 'extra-rounded',
-    gradient: {
-      type: 'linear',
-      rotation: Math.PI / 4,
-      colorStops: [
-        { offset: 0, color: '#0369A1' },
-        { offset: 0.5, color: '#4338CA' },
-        { offset: 1, color: '#BE123C' },
-      ],
+  ton: {
+    light: {
+      dots: ['#0891B2', '#0284C7', '#2563EB'],
+      cornersSquare: ['#0E7490', '#1D4ED8'],
+      cornersDot: ['#0284C7', '#2563EB'],
+      lightBg: '#F3F7FB',
+      darkBg: '#131D2B',
+    },
+    dark: {
+      dots: ['#22D3EE', '#38BDF8', '#60A5FA'],
+      cornersSquare: ['#06B6D4', '#3B82F6'],
+      cornersDot: ['#38BDF8', '#60A5FA'],
+      lightBg: '#F3F7FB',
+      darkBg: '#131D2B',
     },
   },
-  cornersDotOptions: {
-    type: 'dot',
-    gradient: {
-      type: 'radial',
-      rotation: 0,
-      colorStops: [
-        { offset: 0, color: '#7E22CE' },
-        { offset: 1, color: '#E11D48' },
-      ],
+  emerald: {
+    light: {
+      dots: ['#059669', '#0D9488', '#047857'],
+      cornersSquare: ['#047857', '#0F766E'],
+      cornersDot: ['#059669', '#0D9488'],
+      lightBg: '#F3F9F6',
+      darkBg: '#11211C',
+    },
+    dark: {
+      dots: ['#34D399', '#2DD4BF', '#10B981'],
+      cornersSquare: ['#10B981', '#14B8A6'],
+      cornersDot: ['#34D399', '#2DD4BF'],
+      lightBg: '#F3F9F6',
+      darkBg: '#11211C',
     },
   },
-  backgroundOptions: { color: '#ffffff' },
-  imageOptions: {
-    crossOrigin: 'anonymous',
-    margin: 4,
-    imageSize: 0.32,
-    hideBackgroundDots: true,
+  sunset: {
+    light: {
+      dots: ['#D97706', '#EA580C', '#E11D48'],
+      cornersSquare: ['#B45309', '#BE123C'],
+      cornersDot: ['#EA580C', '#E11D48'],
+      lightBg: '#FAF6F2',
+      darkBg: '#221915',
+    },
+    dark: {
+      dots: ['#FBBF24', '#FB923C', '#FB7185'],
+      cornersSquare: ['#F59E0B', '#F43F5E'],
+      cornersDot: ['#FB923C', '#FB7185'],
+      lightBg: '#FAF6F2',
+      darkBg: '#221915',
+    },
   },
-  qrOptions: { errorCorrectionLevel: 'H' },
+  fuchsia: {
+    light: {
+      dots: ['#DB2777', '#C026D3', '#9333EA'],
+      cornersSquare: ['#BE185D', '#7E22CE'],
+      cornersDot: ['#C026D3', '#9333EA'],
+      lightBg: '#FAF4F9',
+      darkBg: '#221426',
+    },
+    dark: {
+      dots: ['#F472B6', '#E879F9', '#C084FC'],
+      cornersSquare: ['#EC4899', '#D946EF'],
+      cornersDot: ['#E879F9', '#C084FC'],
+      lightBg: '#FAF4F9',
+      darkBg: '#221426',
+    },
+  },
 };
 
+export function buildPaletteQrOptions(
+  palette: ColorPalette = 'violet',
+  resolvedTheme: ResolvedTheme = 'light',
+  options?: { showLogo?: boolean },
+): Partial<QrOptions> {
+  const showLogo = options?.showLogo ?? true;
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'oled';
+  const entry = PALETTE_QR_GRADIENTS[palette] ?? PALETTE_QR_GRADIENTS.violet;
+  const spec = isDark ? entry.dark : entry.light;
+  const bgColor =
+    resolvedTheme === 'oled'
+      ? '#09090D'
+      : resolvedTheme === 'dark'
+        ? spec.darkBg
+        : resolvedTheme === 'warm'
+          ? '#F4EFE6'
+          : spec.lightBg;
+
+  return {
+    type: 'svg',
+    margin: 0,
+    ...(showLogo ? { image: assetUrl('favicon.svg') } : {}),
+    dotsOptions: {
+      type: 'rounded',
+      gradient: {
+        type: 'linear',
+        rotation: Math.PI / 4,
+        colorStops: [
+          { offset: 0, color: spec.dots[0] },
+          { offset: 0.5, color: spec.dots[1] },
+          { offset: 1, color: spec.dots[2] },
+        ],
+      },
+    },
+    cornersSquareOptions: {
+      type: 'extra-rounded',
+      gradient: {
+        type: 'linear',
+        rotation: Math.PI / 4,
+        colorStops: [
+          { offset: 0, color: spec.cornersSquare[0] },
+          { offset: 1, color: spec.cornersSquare[1] },
+        ],
+      },
+    },
+    cornersDotOptions: {
+      type: 'dot',
+      gradient: {
+        type: 'radial',
+        rotation: 0,
+        colorStops: [
+          { offset: 0, color: spec.cornersDot[0] },
+          { offset: 1, color: spec.cornersDot[1] },
+        ],
+      },
+    },
+    backgroundOptions: { color: bgColor },
+    ...(showLogo
+      ? {
+          imageOptions: {
+            crossOrigin: 'anonymous',
+            margin: 4,
+            imageSize: 0.32,
+            hideBackgroundDots: true,
+          },
+        }
+      : {}),
+    qrOptions: { errorCorrectionLevel: showLogo ? 'H' : 'M' },
+  };
+}
+
 const LEGACY_STORAGE_PREFIX = 'bro_receive_qr_';
-const CACHE_KEY_PREFIX = 'bro_receive_qr_v2_';
+const CACHE_KEY_PREFIX = 'bro_receive_qr_v3_';
 const QR_IDB_NAME = 'brotherhood_offline_images_db';
 const QR_IDB_STORE = 'blobs';
 
@@ -172,8 +289,10 @@ async function saveCachedQrSvgToIdb(
 async function getOrCreateReceiveQrPngBlob(
   walletKey: string,
   addressValue: string,
+  palette: ColorPalette,
+  resolvedTheme: ResolvedTheme,
 ): Promise<Blob> {
-  const pngCacheKey = `${CACHE_KEY_PREFIX}png_${walletKey}_${addressValue}`;
+  const pngCacheKey = `${CACHE_KEY_PREFIX}png_${palette}_${resolvedTheme}_${walletKey}_${addressValue}`;
   const memBlob = MEMORY_QR_PNG_CACHE.get(pngCacheKey);
   if (memBlob && memBlob.size > 0) return memBlob;
 
@@ -198,7 +317,7 @@ async function getOrCreateReceiveQrPngBlob(
   }
 
   const qr = new QRCodeStyling({
-    ...QR_OPTIONS,
+    ...buildPaletteQrOptions(palette, resolvedTheme),
     width: 512,
     height: 512,
     margin: 24,
@@ -229,20 +348,22 @@ async function getOrCreateReceiveQrPngBlob(
   return blob;
 }
 
-const StyledQrCode: React.FC<{
+export const StyledQrCode: React.FC<{
   value: string;
   walletKey: string;
   size?: number;
-}> = ({ value, walletKey, size = 220 }) => {
+  showLogo?: boolean;
+}> = ({ value, walletKey, size = 220, showLogo = true }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QRCodeStyling | null>(null);
+  const { palette, resolvedTheme } = useTheme();
 
   // Create the QR instance and append it to the container with per-wallet IndexedDB caching.
   useEffect(() => {
     if (!containerRef.current || !value) return;
 
     let isCancelled = false;
-    const cacheKey = `${CACHE_KEY_PREFIX}svg_${walletKey}_${value}_${size}`;
+    const cacheKey = `${CACHE_KEY_PREFIX}svg_${palette}_${resolvedTheme}_${showLogo ? 'logo' : 'plain'}_${walletKey}_${value}_${size}`;
 
     const memCached = MEMORY_QR_SVG_CACHE.get(cacheKey);
     if (memCached && containerRef.current) {
@@ -261,7 +382,7 @@ const StyledQrCode: React.FC<{
     }
 
     const qr = new QRCodeStyling({
-      ...QR_OPTIONS,
+      ...buildPaletteQrOptions(palette, resolvedTheme, { showLogo }),
       width: size,
       height: size,
       data: value,
@@ -287,7 +408,7 @@ const StyledQrCode: React.FC<{
     return () => {
       isCancelled = true;
     };
-  }, [size, value, walletKey]);
+  }, [palette, resolvedTheme, showLogo, size, value, walletKey]);
 
   return <div ref={containerRef} style={{ width: size, height: size }} />;
 };
@@ -302,6 +423,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
   onClose,
 }) => {
   const { address, activeWalletId, getActiveWallet } = useWallet();
+  const { palette, resolvedTheme } = useTheme();
   const activeWallet = getActiveWallet();
   const network = activeWallet?.network ?? 'testnet';
   const [isSharingQr, setIsSharingQr] = useState(false);
@@ -356,6 +478,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
       const blob = await getOrCreateReceiveQrPngBlob(
         walletCacheKey,
         formattedAddress,
+        palette,
+        resolvedTheme,
       );
       const shortAddr = formattedAddress.slice(-8);
       const fileName = `ton-receive-${shortAddr}.png`;
@@ -391,6 +515,8 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
       const blob = await getOrCreateReceiveQrPngBlob(
         walletCacheKey,
         formattedAddress,
+        palette,
+        resolvedTheme,
       );
       const shortAddr = formattedAddress.slice(-8);
       const fileName = `ton-receive-${shortAddr}.png`;
@@ -414,7 +540,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({
       </Modal.Header>
 
       <Modal.Body className="items-center gap-4">
-        <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
+        <div className="rounded-2xl border border-border p-4 bg-card shadow-sm">
           {formattedAddress ? (
             <StyledQrCode value={formattedAddress} walletKey={walletCacheKey} />
           ) : (

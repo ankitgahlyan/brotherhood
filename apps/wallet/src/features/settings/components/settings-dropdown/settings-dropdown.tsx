@@ -9,11 +9,14 @@
 import React, { useState, useRef } from 'react';
 import {
   ChevronRight,
+  Copy,
   Download,
   Fingerprint,
   KeyRound,
   Lock,
   Palette,
+  QrCode,
+  Share2,
   Trash2,
   X,
   Users,
@@ -40,7 +43,7 @@ import { ContactsManagerModal } from '../contacts-manager';
 import { StorageManagerModal } from '../storage-manager/storage-manager-modal';
 import { TonconnectAppsModal } from '../tonconnect-apps/tonconnect-apps-modal';
 
-import { MnemonicDisplay } from '@/features/wallets';
+import { MnemonicDisplay, StyledQrCode } from '@/features/wallets';
 import { createComponentLogger } from '@/core/lib/logger';
 import { Modal } from '@/core/components/ui/modal';
 import { cn } from '@/core/lib/utils';
@@ -48,6 +51,8 @@ import { Button } from '@/core/components/ui/button';
 import { SettingsIcon } from '@/core/components/ui/icons';
 
 const log = createComponentLogger('SettingsDropdown');
+const BROTHERHOOD_WEB_APP_URL =
+  'https://ankitgahlyan.github.io/brotherhood/web/';
 
 interface ActionRowProps {
   icon: React.ReactNode;
@@ -152,6 +157,33 @@ export const SettingsDropdown: React.FC = () => {
   const [isContactsOpen, setIsContactsOpen] = useState(false);
   const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
   const [isTonConnectAppsOpen, setIsTonConnectAppsOpen] = useState(false);
+  const [isShareAppOpen, setIsShareAppOpen] = useState(false);
+
+  const handleCopyAppUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(BROTHERHOOD_WEB_APP_URL);
+      toast.success('App link copied');
+    } catch {
+      toast.error('Failed to copy app link');
+    }
+  };
+
+  const handleShareAppUrl = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: 'Brotherhood Wallet',
+          url: BROTHERHOOD_WEB_APP_URL,
+        });
+      } else {
+        await handleCopyAppUrl();
+      }
+    } catch (err: unknown) {
+      if ((err as { name?: string })?.name !== 'AbortError') {
+        await handleCopyAppUrl();
+      }
+    }
+  };
 
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
@@ -585,6 +617,15 @@ export const SettingsDropdown: React.FC = () => {
                     }}
                   />
                 )}
+                <ActionRow
+                  icon={<QrCode className="w-5 h-5 text-primary" />}
+                  label="Share App"
+                  subtitle="Show QR code & link to Brotherhood web app"
+                  onClick={() => {
+                    setPanel(null);
+                    setIsShareAppOpen(true);
+                  }}
+                />
               </div>
             </div>
 
@@ -836,6 +877,48 @@ export const SettingsDropdown: React.FC = () => {
         isOpen={isTonConnectAppsOpen}
         onClose={() => setIsTonConnectAppsOpen(false)}
       />
+
+      <Modal.Container
+        isOpened={isShareAppOpen}
+        onOpenChange={(open) => !open && setIsShareAppOpen(false)}
+        className="px-2"
+      >
+        <Modal.Header onClose={() => setIsShareAppOpen(false)}>
+          <Modal.Title>Share App</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body className="items-center gap-4">
+          <div className="rounded-2xl border border-border p-4 bg-card shadow-sm">
+            <StyledQrCode
+              value={BROTHERHOOD_WEB_APP_URL}
+              walletKey="brotherhood_app_url"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleCopyAppUrl()}
+            className="w-full flex items-center gap-2 bg-secondary/70 border border-border rounded-2xl px-4 py-3 text-left hover:bg-secondary transition-colors cursor-pointer"
+            aria-label="Copy app link"
+            data-testid="share-app-copy-url"
+          >
+            <span className="flex-1 min-w-0 text-sm font-mono text-foreground break-all">
+              {BROTHERHOOD_WEB_APP_URL}
+            </span>
+            <Copy className="w-4 h-4 text-muted-foreground shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleShareAppUrl()}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity cursor-pointer"
+            data-testid="share-app-link-button"
+          >
+            <Share2 className="w-4 h-4 shrink-0" />
+            <span>Share Link</span>
+          </button>
+        </Modal.Body>
+      </Modal.Container>
     </>
   );
 };
