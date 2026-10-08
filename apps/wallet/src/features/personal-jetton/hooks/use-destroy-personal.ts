@@ -24,6 +24,7 @@ export interface UseDestroyPersonalParams {
 export interface UseDestroyPersonalResult {
   destroyWallet: () => Promise<void>;
   destroyMinter: () => Promise<void>;
+  destroyAll: () => Promise<void>;
   isSending: boolean;
   error: string | null;
 }
@@ -100,9 +101,56 @@ export function useDestroyPersonal({
     onSuccess,
   ]);
 
+  const destroyAll = useCallback(async () => {
+    if (!walletAddress) {
+      throw new Error('Missing wallet address');
+    }
+    const payload = buildDestroyBody();
+    const messages: {
+      toAddress: string;
+      amount: bigint;
+      payload: typeof payload;
+    }[] = [];
+    const affectedContracts: string[] = [];
+
+    if (personalWalletAddress) {
+      messages.push({
+        toAddress: personalWalletAddress,
+        amount: toNano('0.05'),
+        payload,
+      });
+      affectedContracts.push(personalWalletAddress);
+    }
+
+    if (personalMinterAddress) {
+      messages.push({
+        toAddress: personalMinterAddress,
+        amount: toNano('0.05'),
+        payload,
+      });
+      affectedContracts.push(personalMinterAddress);
+    }
+
+    if (messages.length === 0) {
+      throw new Error('No active personal contracts to destroy');
+    }
+
+    await sendTx(messages, {
+      affectedContracts,
+    });
+    onSuccess?.();
+  }, [
+    walletAddress,
+    personalWalletAddress,
+    personalMinterAddress,
+    sendTx,
+    onSuccess,
+  ]);
+
   return {
     destroyWallet,
     destroyMinter,
+    destroyAll,
     isSending,
     error,
   };

@@ -122,6 +122,7 @@ export const useWallet = () => {
       switchWallet: state.switchWallet,
       removeWallet: state.removeWallet,
       renameWallet: state.renameWallet,
+      reorderWallets: state.reorderWallets,
       createLedgerWallet: state.createLedgerWallet,
       addWatchOnlyWallet: state.addWatchOnlyWallet,
       addPendingTransaction: state.addPendingTransaction,

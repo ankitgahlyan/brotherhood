@@ -135,6 +135,7 @@ export interface WalletManagementSlice {
   switchWallet: (walletId: string) => Promise<void>;
   removeWallet: (walletId: string) => void;
   renameWallet: (walletId: string, newName: string) => void;
+  reorderWallets: (wallets: SavedWallet[]) => void;
   loadAllWallets: () => Promise<void>;
   loadSavedWalletsIntoKit: (walletKit: ITonWalletKit) => Promise<void>;
   createAdapterFromSavedWallet: (

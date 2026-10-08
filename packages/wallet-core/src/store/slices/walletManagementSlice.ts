@@ -757,6 +757,13 @@ export const createWalletManagementSlice =
       log.info(`Renamed wallet ${walletId} to ${newName}`);
     },
 
+    reorderWallets: (wallets: SavedWallet[]) => {
+      set((state) => {
+        state.walletManagement.savedWallets = wallets;
+      });
+      log.info(`Reordered ${wallets.length} wallets`);
+    },
+
     loadAllWallets: async () => {
       if (inFlightLoadAllWallets) {
         return inFlightLoadAllWallets;

@@ -35,11 +35,30 @@ export const SettingsWalletsModal: React.FC<SettingsWalletsModalProps> = ({
     switchWallet,
     renameWallet,
     removeWallet,
+    reorderWallets,
   } = useWallet();
   const navigate = useNavigate();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [pendingWalletId, setPendingWalletId] = useState<string | null>(null);
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
+
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return;
+    const next = [...savedWallets];
+    const item = next[index];
+    next[index] = next[index - 1];
+    next[index - 1] = item;
+    reorderWallets(next);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index >= savedWallets.length - 1) return;
+    const next = [...savedWallets];
+    const item = next[index];
+    next[index] = next[index + 1];
+    next[index + 1] = item;
+    reorderWallets(next);
+  };
 
   const pendingWallet = savedWallets.find((w) => w.id === pendingWalletId);
 
@@ -113,7 +132,7 @@ export const SettingsWalletsModal: React.FC<SettingsWalletsModalProps> = ({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-secondary/40 overflow-hidden">
-              {savedWallets.map((wallet) => (
+              {savedWallets.map((wallet, index) => (
                 <WalletRow
                   key={wallet.id}
                   wallet={wallet}
@@ -121,6 +140,18 @@ export const SettingsWalletsModal: React.FC<SettingsWalletsModalProps> = ({
                   onSelect={() => handleSelect(wallet.id)}
                   onRename={renameWallet}
                   onRemove={handleRemoveWallet}
+                  onMoveUp={
+                    savedWallets.length > 1
+                      ? () => handleMoveUp(index)
+                      : undefined
+                  }
+                  onMoveDown={
+                    savedWallets.length > 1
+                      ? () => handleMoveDown(index)
+                      : undefined
+                  }
+                  canMoveUp={index > 0}
+                  canMoveDown={index < savedWallets.length - 1}
                 />
               ))}
             </div>

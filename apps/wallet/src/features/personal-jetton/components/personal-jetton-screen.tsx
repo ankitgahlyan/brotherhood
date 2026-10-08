@@ -160,8 +160,7 @@ export const PersonalJettonScreen: React.FC = () => {
     isEnabled: isBiometricEnabled,
     authenticate: authenticateBiometrics,
   } = useBiometrics();
-  const [isConfirmWalletOpen, setIsConfirmWalletOpen] = useState(false);
-  const [isConfirmMinterOpen, setIsConfirmMinterOpen] = useState(false);
+  const [isConfirmDestroyOpen, setIsConfirmDestroyOpen] = useState(false);
   const [confirmDestroyPhrase, setConfirmDestroyPhrase] = useState('');
   const [confirmDestroyPassword, setConfirmDestroyPassword] = useState('');
   const [destroyAuthError, setDestroyAuthError] = useState('');
@@ -1404,69 +1403,40 @@ export const PersonalJettonScreen: React.FC = () => {
                   {/* Section 3: Danger Zone (Destroy) */}
                   {manageSection === 'danger' && (
                     <div className="space-y-4 pt-1">
-                      {/* Wallet Destroy Card */}
-                      <div className="p-3.5 border border-border rounded-xl space-y-2.5 bg-secondary/20">
+                      <div className="p-3.5 border border-destructive/30 rounded-xl space-y-2.5 bg-destructive/5">
                         <div className="flex items-center gap-2 text-destructive">
                           <Trash2 className="w-4.5 h-4.5 shrink-0" />
                           <h3 className="font-semibold text-sm text-foreground">
-                            Destroy Personal Wallet
+                            Destroy Personal Token
                           </h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Permanently destroys your Personal Jetton Wallet
-                          contract (
-                          {formatContractAddress(activePersonalWallet)}) and
-                          reclaims remaining TON balance to your wallet.
+                          {activePersonalWallet && isMinterAdmin && activeMinter
+                            ? `Permanently destroys both your Personal Jetton Wallet (${formatContractAddress(activePersonalWallet)}) and Personal Token Minter (${formatContractAddress(activeMinter)}) in a single transaction. Remaining TON balances will be returned to your wallet.`
+                            : activePersonalWallet
+                              ? `Permanently destroys your Personal Jetton Wallet contract (${formatContractAddress(activePersonalWallet)}) and reclaims remaining TON balance to your wallet.`
+                              : `Permanently destroys the Personal Token Minter contract (${formatContractAddress(activeMinter)}) and returns its remaining TON balance to your admin wallet.`}
                         </p>
                         <Button
                           variant="danger"
-                          onClick={() => setIsConfirmWalletOpen(true)}
+                          onClick={() => setIsConfirmDestroyOpen(true)}
                           disabled={
                             !canOperate ||
-                            !activePersonalWallet ||
+                            (!activePersonalWallet && !activeMinter) ||
                             destroyer.isSending
                           }
                           loading={destroyer.isSending}
                           fullWidth
-                          data-testid="personal-destroy-wallet-trigger"
+                          data-testid="personal-destroy-trigger"
                         >
                           <Trash2 className="w-4 h-4 mr-1.5" />
-                          Destroy Personal Wallet
+                          {activePersonalWallet && isMinterAdmin && activeMinter
+                            ? 'Destroy Wallet & Minter (1 Txn)'
+                            : activePersonalWallet
+                              ? 'Destroy Personal Wallet'
+                              : 'Destroy Personal Minter'}
                         </Button>
                       </div>
-
-                      {/* Minter Destroy Card */}
-                      {isMinterAdmin && (
-                        <div className="p-3.5 border border-destructive/30 rounded-xl space-y-2.5 bg-destructive/5">
-                          <div className="flex items-center gap-2 text-destructive">
-                            <Trash2 className="w-4.5 h-4.5 shrink-0" />
-                            <h3 className="font-semibold text-sm text-foreground">
-                              Destroy Personal Minter
-                            </h3>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            Permanently destroys the Personal Token Minter
-                            contract ({formatContractAddress(activeMinter)}) and
-                            returns its remaining TON balance to your admin
-                            wallet.
-                          </p>
-                          <Button
-                            variant="danger"
-                            onClick={() => setIsConfirmMinterOpen(true)}
-                            disabled={
-                              !canOperate ||
-                              !activeMinter ||
-                              destroyer.isSending
-                            }
-                            loading={destroyer.isSending}
-                            fullWidth
-                            data-testid="personal-destroy-minter-trigger"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1.5" />
-                            Destroy Personal Minter
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </SwipeableSubTabs>
@@ -1475,11 +1445,11 @@ export const PersonalJettonScreen: React.FC = () => {
           </SwipeableSubTabs>
         )}
 
-        {/* Confirmation Dialog: Wallet */}
+        {/* Unified Confirmation Dialog: Destroy */}
         <Dialog
-          open={isConfirmWalletOpen}
+          open={isConfirmDestroyOpen}
           onOpenChange={(open) => {
-            setIsConfirmWalletOpen(open);
+            setIsConfirmDestroyOpen(open);
             if (!open) {
               resetDestroyState();
             }
@@ -1489,14 +1459,14 @@ export const PersonalJettonScreen: React.FC = () => {
             <DialogHeader>
               <DialogTitle className="text-destructive flex items-center gap-2">
                 <Trash2 className="w-5 h-5" />
-                Confirm Destroy Personal Wallet
+                Confirm Destroy Personal Token
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground pt-1">
-                Are you sure you want to permanently self-destruct your Personal
-                Jetton Wallet contract (
-                {formatContractAddress(activePersonalWallet)})? Any remaining
-                TON balance will be refunded to your address. This cannot be
-                undone.
+                {activePersonalWallet && isMinterAdmin && activeMinter
+                  ? `Are you sure you want to permanently self-destruct your Personal Jetton Wallet (${formatContractAddress(activePersonalWallet)}) and Minter (${formatContractAddress(activeMinter)}) in a single transaction? Any remaining TON balances will be refunded to your address. This cannot be undone.`
+                  : activePersonalWallet
+                    ? `Are you sure you want to permanently self-destruct your Personal Jetton Wallet (${formatContractAddress(activePersonalWallet)})? Any remaining TON balance will be refunded to your address. This cannot be undone.`
+                    : `Are you sure you want to permanently self-destruct your Personal Token Minter (${formatContractAddress(activeMinter)})? Remaining TON balance will be refunded to your admin address. This cannot be undone.`}
               </DialogDescription>
             </DialogHeader>
 
@@ -1515,7 +1485,7 @@ export const PersonalJettonScreen: React.FC = () => {
                           loading={isBiometricAuthenticating}
                           onClick={handleBiometricDestroyAuth}
                           className="flex items-center justify-center gap-2"
-                          data-testid="personal-destroy-wallet-biometric-btn"
+                          data-testid="personal-destroy-biometric-btn"
                         >
                           <Fingerprint className="w-4 h-4 text-primary" />
                           Authorize with Biometrics
@@ -1547,7 +1517,7 @@ export const PersonalJettonScreen: React.FC = () => {
                         }}
                         placeholder="Enter your wallet passcode"
                         className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                        data-testid="personal-destroy-wallet-password"
+                        data-testid="personal-destroy-password"
                       />
                     </div>
                   )}
@@ -1571,7 +1541,7 @@ export const PersonalJettonScreen: React.FC = () => {
                   }}
                   placeholder="DESTROY"
                   className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  data-testid="personal-destroy-wallet-phrase"
+                  data-testid="personal-destroy-phrase"
                 />
               </div>
 
@@ -1587,7 +1557,7 @@ export const PersonalJettonScreen: React.FC = () => {
                 variant="gray"
                 size="sm"
                 onClick={() => {
-                  setIsConfirmWalletOpen(false);
+                  setIsConfirmDestroyOpen(false);
                   resetDestroyState();
                 }}
                 disabled={
@@ -1632,9 +1602,9 @@ export const PersonalJettonScreen: React.FC = () => {
                     }
                     setIsAuthenticatingDestroy(false);
                   }
-                  setIsConfirmWalletOpen(false);
+                  setIsConfirmDestroyOpen(false);
                   resetDestroyState();
-                  await destroyer.destroyWallet();
+                  await destroyer.destroyAll();
                 }}
                 loading={
                   destroyer.isSending ||
@@ -1647,188 +1617,9 @@ export const PersonalJettonScreen: React.FC = () => {
                     !isDestroyAuthenticated &&
                     !confirmDestroyPassword.trim())
                 }
-                data-testid="personal-destroy-wallet-confirm"
+                data-testid="personal-destroy-confirm"
               >
-                Yes, Destroy Wallet
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Confirmation Dialog: Minter */}
-        <Dialog
-          open={isConfirmMinterOpen}
-          onOpenChange={(open) => {
-            setIsConfirmMinterOpen(open);
-            if (!open) {
-              resetDestroyState();
-            }
-          }}
-        >
-          <DialogContent className="max-w-md w-[92vw] sm:w-full p-5 gap-4">
-            <DialogHeader>
-              <DialogTitle className="text-destructive flex items-center gap-2">
-                <Trash2 className="w-5 h-5" />
-                Confirm Destroy Personal Minter
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground pt-1">
-                Are you sure you want to permanently self-destruct your Personal
-                Token Minter contract ({formatContractAddress(activeMinter)})?
-                All token operations will terminate and remaining TON balance
-                will be refunded to your admin address. This cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 py-1">
-              {isPasswordSet && (
-                <div className="space-y-2">
-                  {isBiometricSupported &&
-                    isBiometricEnabled &&
-                    !isDestroyAuthenticated && (
-                      <div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          fullWidth
-                          loading={isBiometricAuthenticating}
-                          onClick={handleBiometricDestroyAuth}
-                          className="flex items-center justify-center gap-2"
-                          data-testid="personal-destroy-minter-biometric-btn"
-                        >
-                          <Fingerprint className="w-4 h-4 text-primary" />
-                          Authorize with Biometrics
-                        </Button>
-                        <div className="flex items-center gap-2 my-2 text-[11px] text-muted-foreground">
-                          <div className="h-px bg-border flex-1" />
-                          <span>or enter passcode</span>
-                          <div className="h-px bg-border flex-1" />
-                        </div>
-                      </div>
-                    )}
-
-                  {isDestroyAuthenticated ? (
-                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                      <ShieldCheck className="w-4 h-4 shrink-0" />
-                      <span>Authorized via Biometrics</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-foreground block">
-                        Wallet Passcode / Password
-                      </label>
-                      <input
-                        type="password"
-                        value={confirmDestroyPassword}
-                        onChange={(e) => {
-                          setConfirmDestroyPassword(e.target.value);
-                          setDestroyAuthError('');
-                        }}
-                        placeholder="Enter your wallet passcode"
-                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                        data-testid="personal-destroy-minter-password"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-foreground block">
-                  Type{' '}
-                  <span className="font-mono font-bold text-rose-500">
-                    DESTROY
-                  </span>{' '}
-                  to confirm
-                </label>
-                <input
-                  type="text"
-                  value={confirmDestroyPhrase}
-                  onChange={(e) => {
-                    setConfirmDestroyPhrase(e.target.value);
-                    setDestroyAuthError('');
-                  }}
-                  placeholder="DESTROY"
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  data-testid="personal-destroy-minter-phrase"
-                />
-              </div>
-
-              {destroyAuthError && (
-                <p className="text-xs text-rose-500 font-medium">
-                  {destroyAuthError}
-                </p>
-              )}
-            </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
-              <Button
-                variant="gray"
-                size="sm"
-                onClick={() => {
-                  setIsConfirmMinterOpen(false);
-                  resetDestroyState();
-                }}
-                disabled={
-                  destroyer.isSending ||
-                  isAuthenticatingDestroy ||
-                  isBiometricAuthenticating
-                }
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={async () => {
-                  if (confirmDestroyPhrase.trim().toUpperCase() !== 'DESTROY') {
-                    setDestroyAuthError('Please type DESTROY to confirm.');
-                    return;
-                  }
-                  if (isPasswordSet && !isDestroyAuthenticated) {
-                    if (!confirmDestroyPassword.trim()) {
-                      setDestroyAuthError(
-                        'Passcode is required to authorize destruction.',
-                      );
-                      return;
-                    }
-                    setIsAuthenticatingDestroy(true);
-                    try {
-                      const ok = await unlock(confirmDestroyPassword.trim());
-                      if (!ok) {
-                        setDestroyAuthError('Incorrect passcode.');
-                        setIsAuthenticatingDestroy(false);
-                        return;
-                      }
-                    } catch (e) {
-                      setDestroyAuthError(
-                        e instanceof Error
-                          ? e.message
-                          : 'Authentication failed.',
-                      );
-                      setIsAuthenticatingDestroy(false);
-                      return;
-                    }
-                    setIsAuthenticatingDestroy(false);
-                  }
-                  setIsConfirmMinterOpen(false);
-                  resetDestroyState();
-                  await destroyer.destroyMinter();
-                }}
-                loading={
-                  destroyer.isSending ||
-                  isAuthenticatingDestroy ||
-                  isBiometricAuthenticating
-                }
-                disabled={
-                  confirmDestroyPhrase.trim().toUpperCase() !== 'DESTROY' ||
-                  (isPasswordSet &&
-                    !isDestroyAuthenticated &&
-                    !confirmDestroyPassword.trim())
-                }
-                data-testid="personal-destroy-minter-confirm"
-              >
-                Yes, Destroy Minter
+                Yes, Destroy Now
               </Button>
             </DialogFooter>
           </DialogContent>

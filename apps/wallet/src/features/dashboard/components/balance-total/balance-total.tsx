@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useWallet, useActiveJettons, useRates } from '@demo/wallet-core';
 
 import { AnimatedBalance } from '@/components/ui/animated-balance';
@@ -21,7 +21,8 @@ import { FI_ADDRESS } from '@/lib/brotherhood/config';
 const GRAM_DECIMALS = 9;
 
 export const BalanceTotal: React.FC = () => {
-  const { address, balance } = useWallet();
+  const { address, balance, savedWallets, activeWalletId, switchWallet } =
+    useWallet();
   const { formatWalletAddress, copyWalletAddress } = useFormatAddress();
   const activeJettons = useActiveJettons();
   const { entries: rates, lastUpdated: ratesUpdated } = useRates();
@@ -89,6 +90,44 @@ export const BalanceTotal: React.FC = () => {
 
   const [copied, setCopied] = React.useState(false);
 
+  const currentWalletIndex = useMemo(() => {
+    return savedWallets.findIndex((w) => w.id === activeWalletId);
+  }, [savedWallets, activeWalletId]);
+
+  const hasMultipleWallets = savedWallets.length > 1;
+
+  const handlePrevWallet = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!hasMultipleWallets) return;
+      const prevIdx =
+        currentWalletIndex <= 0
+          ? savedWallets.length - 1
+          : currentWalletIndex - 1;
+      const target = savedWallets[prevIdx];
+      if (target) {
+        void switchWallet(target.id);
+      }
+    },
+    [hasMultipleWallets, currentWalletIndex, savedWallets, switchWallet],
+  );
+
+  const handleNextWallet = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!hasMultipleWallets) return;
+      const nextIdx =
+        currentWalletIndex >= savedWallets.length - 1
+          ? 0
+          : currentWalletIndex + 1;
+      const target = savedWallets[nextIdx];
+      if (target) {
+        void switchWallet(target.id);
+      }
+    },
+    [hasMultipleWallets, currentWalletIndex, savedWallets, switchWallet],
+  );
+
   const handleCopy = useCallback(async () => {
     if (!address) return;
     await copyWalletAddress(address);
@@ -150,32 +189,58 @@ export const BalanceTotal: React.FC = () => {
       )}
 
       {address ? (
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="mt-3.5 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/70 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
-          aria-label="Copy address"
-        >
-          <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
-            <img
-              src={assetUrl('fi.svg')}
-              alt="FI"
-              width={16}
-              height={16}
-              className="w-full h-full"
-            />
-          </span>
-          <span className="text-xs font-semibold text-foreground">
-            {formatWalletAddress(address, true, 4)}
-          </span>
-          {copied ? (
-            <span className="text-emerald-500 flex items-center gap-1 text-xs font-semibold">
-              Copied
-            </span>
-          ) : (
-            <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+        <div className="mt-3.5 flex items-center gap-2">
+          {hasMultipleWallets && (
+            <button
+              type="button"
+              onClick={handlePrevWallet}
+              className="w-7 h-7 rounded-full bg-secondary/70 hover:bg-secondary border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer shadow-2xs"
+              aria-label="Previous wallet"
+              title="Previous wallet"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
           )}
-        </button>
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-secondary/70 hover:bg-secondary border border-border/70 active:scale-[0.96] transition-all cursor-pointer shadow-2xs"
+            aria-label="Copy address"
+          >
+            <span className="w-4 h-4 rounded-full overflow-hidden inline-block shrink-0 ring-1 ring-border/50">
+              <img
+                src={assetUrl('fi.svg')}
+                alt="FI"
+                width={16}
+                height={16}
+                className="w-full h-full"
+              />
+            </span>
+            <span className="text-xs font-semibold text-foreground">
+              {formatWalletAddress(address, true, 4)}
+            </span>
+            {copied ? (
+              <span className="text-emerald-500 flex items-center gap-1 text-xs font-semibold">
+                Copied
+              </span>
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+            )}
+          </button>
+
+          {hasMultipleWallets && (
+            <button
+              type="button"
+              onClick={handleNextWallet}
+              className="w-7 h-7 rounded-full bg-secondary/70 hover:bg-secondary border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer shadow-2xs"
+              aria-label="Next wallet"
+              title="Next wallet"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       ) : (
         <div className="mt-3.5 h-7 w-32 rounded-full bg-muted/60 animate-pulse" />
       )}

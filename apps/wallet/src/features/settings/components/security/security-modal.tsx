@@ -284,7 +284,6 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({
             onClose();
           }
         }}
-        className="px-2 max-w-md"
       >
         <Modal.Header
           onClose={() => {
@@ -298,14 +297,17 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({
           </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body className="gap-5 p-4 max-h-[80vh] overflow-y-auto">
+        <Modal.Body className="gap-5">
           {/* Section 1: Master Passcode */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 block">
               Master Passcode
             </span>
 
-            <div className="rounded-2xl bg-secondary/60 p-3.5 border border-border flex flex-col gap-3">
+            <div
+              className="rounded-2xl bg-secondary/60 p-3.5 border border-border flex flex-col gap-3"
+              data-vaul-no-drag
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
@@ -342,6 +344,7 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({
                   onSubmit={handleSaveNewPasscode}
                   className="pt-2 border-t border-border/60 space-y-3"
                   data-testid="change-passcode-form"
+                  data-vaul-no-drag
                 >
                   {!isCurrentVerified ? (
                     <div className="space-y-1.5">
@@ -628,7 +631,6 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({
       <Modal.Container
         isOpened={isBiometricPromptOpen}
         onOpenChange={(open) => !open && setIsBiometricPromptOpen(false)}
-        className="px-2"
       >
         <Modal.Header onClose={() => setIsBiometricPromptOpen(false)}>
           <Modal.Title>Enable Fingerprint Unlock</Modal.Title>

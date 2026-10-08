@@ -9,6 +9,8 @@
 import React, { useState } from 'react';
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   MoreHorizontal,
   Pencil,
@@ -49,6 +51,10 @@ interface WalletRowProps {
   /** Omit both to render a select-only row (no "⋯" management menu). */
   onRename?: (id: string, name: string) => void;
   onRemove?: (id: string) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export const WalletRow: React.FC<WalletRowProps> = ({
@@ -57,6 +63,10 @@ export const WalletRow: React.FC<WalletRowProps> = ({
   onSelect,
   onRename,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -173,6 +183,34 @@ export const WalletRow: React.FC<WalletRowProps> = ({
           <Copy className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2} />
         </button>
       </div>
+
+      {(onMoveUp || onMoveDown) && (
+        <div
+          className="flex items-center gap-0.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
+            aria-label="Move wallet up"
+            title="Move up"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
+            aria-label="Move wallet down"
+            title="Move down"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {hasActions && (
         <Popover
