@@ -42,6 +42,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
 
   const [amount, setAmount] = useState('');
   const [isPayback, setIsPayback] = useState(true);
+  const [paybackTargetAddress, setPaybackTargetAddress] = useState('');
   const [comment, setComment] = useState('');
   const [isEncrypted, setIsEncrypted] = useState(true);
   const [customGasTon, setCustomGasTon] = useState(DEFAULT_BURN_GAS_TON);
@@ -114,6 +115,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
     amount,
     isPersonal,
     isPayback: effectiveIsPayback,
+    paybackTargetAddress,
     comment,
     isEncrypted,
     adminAddress: adminAddressStr,
@@ -132,6 +134,7 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
       await burner.burn();
       setAmount('');
       setComment('');
+      setPaybackTargetAddress('');
       onClose();
       onSuccess?.();
     } catch {
@@ -212,29 +215,52 @@ export const BurnTokenModal: React.FC<BurnTokenModalProps> = ({
 
         {/* Payback vs Simple Burn Checkbox (only on Personal Tokens issued by other members) */}
         {canBurnForPayback && (
-          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 cursor-pointer select-none transition-colors">
-            <input
-              type="checkbox"
-              checked={isPayback}
-              onChange={(e) => setIsPayback(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary"
-              data-testid="burn-payback-checkbox"
-            />
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div className="font-semibold text-foreground flex items-center gap-1.5">
-                <span>Burn for FI Token Payback</span>
-                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                  Recommended
-                </span>
+          <div className="space-y-3">
+            <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 cursor-pointer select-none transition-colors">
+              <input
+                type="checkbox"
+                checked={isPayback}
+                onChange={(e) => setIsPayback(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary"
+                data-testid="burn-payback-checkbox"
+              />
+              <div className="flex flex-col gap-0.5 text-xs">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <span>Burn for Token Payback</span>
+                  <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Sends your wallet address with the burn request to trigger an
+                  automatic token payback from the issuer's account (requires
+                  credit maturity). Uncheck for a normal burn (e.g. off-chain
+                  fiat settlement with encrypted bank details).
+                </p>
               </div>
-              <p className="text-muted-foreground leading-relaxed">
-                Sends your wallet address with the burn request to trigger an
-                automatic FI token payback from the issuer's account (requires
-                credit maturity). Uncheck for a normal burn (e.g. off-chain fiat
-                settlement with encrypted bank details).
-              </p>
-            </div>
-          </label>
+            </label>
+
+            {effectiveIsPayback && (
+              <div className="p-3 rounded-xl border border-border bg-secondary/20 space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  Payback Target Token Address (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={paybackTargetAddress}
+                  onChange={(e) => setPaybackTargetAddress(e.target.value)}
+                  placeholder="Default: FI token (or enter target wallet/contract address)"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary font-mono placeholder:text-muted-foreground"
+                  data-testid="burn-payback-target-address"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Leave empty for default FI token payback, or provide a target
+                  token address to settle payback in Reserve or another Personal
+                  token.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Encrypted / Plain Comment Field for Normal Burn (Off-Ramp Settlement) */}

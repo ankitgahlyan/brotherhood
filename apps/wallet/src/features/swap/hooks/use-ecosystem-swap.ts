@@ -91,6 +91,7 @@ export interface EcosystemToken {
   userBalanceFormatted: string;
   creditNeedNano: bigint;
   issuerFiBalanceNano: bigint;
+  creditCutoff: number;
   creditMaturity: number;
   multiplier: number;
   degree: 'fi' | 'reserve' | 'circle' | 'ring' | 'voted' | 'custom';
@@ -358,6 +359,7 @@ export function useEcosystemSwap() {
       userBalanceFormatted: formatNanoToken(userFiBalance),
       creditNeedNano: 0n,
       issuerFiBalanceNano: userFiBalance,
+      creditCutoff: 0,
       creditMaturity: 0,
       multiplier: 1,
       degree: 'fi',
@@ -435,6 +437,7 @@ export function useEcosystemSwap() {
       userBalanceFormatted: formatNanoToken(reserveUserBal),
       creditNeedNano: treasuryStore?.creditNeed ?? 0n,
       issuerFiBalanceNano: treasuryStore?.jettonBalance ?? 0n,
+      creditCutoff: Number(treasuryStore?.timestamps?.ref?.creditCutoff ?? 0),
       creditMaturity: Number(treasuryStore?.creditMaturity ?? 0),
       multiplier: treasuryMultiplier,
       degree: 'reserve',
@@ -575,6 +578,7 @@ export function useEcosystemSwap() {
         userBalanceFormatted: formatNanoToken(userPtBal),
         creditNeedNano: prof.creditNeed ?? 0n,
         issuerFiBalanceNano: prof.jettonBalance ?? 0n,
+        creditCutoff: prof.creditCutoff ?? 0,
         creditMaturity: prof.creditMaturity ?? 0,
         multiplier: prof.multiplier ?? 1,
         degree,
@@ -813,6 +817,12 @@ export function useEcosystemSwap() {
         validationError = `${fromToken.symbol} matures on ${formatMaturityDate(fromToken.creditMaturity)} — cannot redeem for ${fiSym} before maturity`;
       } else if (
         (mode === 'buy-credit' || mode === 'multi-hop') &&
+        toToken.creditCutoff > 0 &&
+        nowSec >= toToken.creditCutoff
+      ) {
+        validationError = `${toToken.symbol} credit funding deadline (${formatMaturityDate(toToken.creditCutoff)}) has passed`;
+      } else if (
+        (mode === 'buy-credit' || mode === 'multi-hop') &&
         toToken.multiplier > 1 &&
         toToken.creditMaturity > 0 &&
         nowSec >= toToken.creditMaturity
@@ -900,7 +910,6 @@ export function useEcosystemSwap() {
     }
 
     if (quote.mode === 'buy-credit') {
-      const userFiWalletAddr = getFiWalletAddress(userOwnerAddress, net);
       const targetOwnerAddr = Address.parse(toToken.ownerAddress);
       const targetFiWalletAddr = getFiWalletAddress(targetOwnerAddr, net);
       const targetMinterAddr = toToken.minterAddress
@@ -914,6 +923,20 @@ export function useEcosystemSwap() {
         userOwnerAddress,
         targetOwnerAddr,
       );
+
+      let sourceWalletAddr: Address;
+      if (fromToken.kind === 'personal') {
+        const fromMinterAddr = Address.parse(fromToken.minterAddress!);
+        const fromOwnerAddr = Address.parse(fromToken.ownerAddress);
+        sourceWalletAddr = computePersonalWalletAddress(
+          fromMinterAddr,
+          userOwnerAddress,
+          fromOwnerAddr,
+        );
+      } else {
+        sourceWalletAddr = getFiWalletAddress(userOwnerAddress, net);
+      }
+
       const payload = buildBuyCreditBody({
         transferRecipient: targetOwnerAddr,
         amount: quote.inputNano,
@@ -923,14 +946,14 @@ export function useEcosystemSwap() {
       await sendTx(
         [
           {
-            toAddress: userFiWalletAddr.toString(),
+            toAddress: sourceWalletAddr.toString(),
             amount: GAS.CREDIT,
             payload,
           },
         ],
         {
           affectedContracts: [
-            userFiWalletAddr,
+            sourceWalletAddr,
             targetFiWalletAddr,
             targetMinterAddr,
             buyerPersonalWalletAddr,

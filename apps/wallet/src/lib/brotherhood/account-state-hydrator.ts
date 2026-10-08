@@ -36,6 +36,9 @@ import {
   deserializeLocationDataBoc,
   deserializeLotteryDataBoc,
   deserializePollDataBoc,
+  deserializeDaoProxyDataBoc,
+  deserializeFollowingDataBoc,
+  deserializeVoterDataBoc,
   deserializeWalletV5R1DataBoc,
 } from './account-hydrator.worker';
 
@@ -51,6 +54,9 @@ export {
   deserializeLocationDataBoc,
   deserializeLotteryDataBoc,
   deserializePollDataBoc,
+  deserializeDaoProxyDataBoc,
+  deserializeFollowingDataBoc,
+  deserializeVoterDataBoc,
   deserializeWalletV5R1DataBoc,
 };
 

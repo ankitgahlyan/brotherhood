@@ -49,6 +49,16 @@ get fun `test bench: measure Personal storage, init-state, and message sizes`() 
         owner: recipient.address,
         deployer: deployer.address,
         minterAddress: minter.address,
+        version: 1,
+        credit: PersonalCreditInfo {
+            creditNeed: grams("1000000"),
+            creditCutoff: 1_800_000_000,
+            creditMaturity: 1_800_000_000,
+            multiplier: 2000,
+            totalCreditReceived: grams("1000000"),
+            totalPaybackSettled: grams("1000000"),
+            totalPaybackShortfall: grams("1000000"),
+        }.toCell(),
     };
     val walletStoreCell = walletStore.toCell();
     val (storeCells, storeBits, _) = walletStoreCell.calculateSizeStrict(4096);

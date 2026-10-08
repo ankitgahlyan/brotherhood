@@ -60,6 +60,8 @@ fun PersonalMinter.sendMintNewJettons(
     mintRecipient: address,
     tonAmount: coins,
     internalTransferMsg: InternalTransferStep,
+    tokenMinter: address?,
+    deployer: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
@@ -71,6 +73,8 @@ fun PersonalMinter.sendMintNewJettons(
             mintRecipient,
             tonAmount,
             internalTransferMsg: internalTransferMsg.toCell(),
+            tokenMinter,
+            deployer,
         },
     });
     return net.send(from, genericMsg);
@@ -215,6 +219,25 @@ fun PersonalMinter.sendDestroy(self, from: address, config: SendParams = {}): Se
         value: config.value,
         dest: self.address,
         body: Destroy {},
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalMinter.sendPaybackShortfall(
+    self,
+    from: address,
+    queryId: uint64,
+    lender: address,
+    shortfall: coins,
+    tokenMinter: address?,
+    deployer: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: PaybackShortfall { queryId, lender, shortfall, tokenMinter, deployer },
     });
     return net.send(from, genericMsg);
 }

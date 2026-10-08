@@ -16,24 +16,34 @@ import {
   PocketMoney,
   ReportInfo,
   SocialMaps,
+  TimeStamps,
 } from '@wrappers/FossFiWallet.gen';
 import { FiStore } from '@wrappers/FossFi.gen';
 import { PersonalStore } from '@wrappers/Personal.gen';
-import { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
+import {
+  PersonalCreditInfo,
+  PersonalWalletStore,
+} from '@wrappers/PersonalWallet.gen';
 import { LocationStore } from '@wrappers/Location.gen';
 import { LotteryStorage } from '@wrappers/Lottery.gen';
 import { PollStore } from '@wrappers/Poll.gen';
+import { DaoProxyStore } from '@wrappers/DaoProxy.gen';
+import { FollowingStore } from '@wrappers/Following.gen';
+import { VoterStore } from '@wrappers/Voter.gen';
 import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: '3e7P+shIHEZl3ukqcPWHp/x/N9Gvj/nLv6lx9+KJuxQ=',
+  fiWallet: 'xuwiUs8ChQIlWb8KCITEV9KSGKs3O9JkZUmvL6r8QtI=',
   fiMinter: 'g2RA6ySzasxk+oWOvZBgiGOFNr7TSmIm8MmNAlHVAM4=',
-  personalMinter: '2/Ohc+5s8OlGN59ZF5RKLdUyhM1ycIB/0osI/54tmSI=',
-  personalWallet: '3i5HTTSBa/XcOqi2wDCLzGuDMuHdHe/winpcaCPbe9Q=',
+  personalMinter: 'vrWIUTVTC80Q8mA99z5LlTWWMxkNkv9uOH/47KsbzOk=',
+  personalWallet: 'j+OzGVH4KXxxviEsa0QH9oKyzLoMR6aTEl5JmD1HONU=',
   location: 'a+VjihVq3hagTGhnUOf7HBS14S4w9KCe9ocolrfxx/E=',
   lottery: 'HHh95xA0sDcOowpVnyULcDbZczqe0zk2oAw8x+ulo9M=',
   poll: 'XECcPFmvdBODJApBlQTvvvUxjHqt3iB5Rb6E0aikhME=',
+  daoProxy: 'g3MHt1CZpvfXtmvgFvJoxNFzhdoeDAVu3v02EZ0hNOQ=',
+  following: 'Y5t8oXamAtEW/WbYYTFq49JLrzERsVkna1KNok64AFM=',
+  voter: 'Fx+PYZGBMbl0wYpgIYRnJ7S2FLPnBZMdbc1dK35Lymg=',
   walletV5R1: 'IINLe3KxEhR+Gy+0V7hOdNGjDwT3N9T2KmaOlVLSty8=',
 } as const;
 
@@ -44,6 +54,9 @@ export type KnownContractType =
   | 'location'
   | 'lottery'
   | 'poll'
+  | 'daoProxy'
+  | 'following'
+  | 'voter'
   | 'fiMinter'
   | 'walletV5R1';
 
@@ -97,69 +110,102 @@ export function deserializeFiWalletDataBoc(
 ): FiWalletStore | null {
   try {
     const cell = Cell.fromBase64(dataBoc);
+    // 1. Try native v3 format
     try {
       return FiWalletStore.fromSlice(cell.beginParse());
     } catch {
-      // Fallback for storeVersion=1 wallets with non-empty legacy `allowances: map<address, coins>`
+      // 2. Fallback for v1/v2 wallets where timestamps has 128 bits or maps has legacy allowances
       const rootSlice = cell.beginParse();
       if (rootSlice.remainingRefs !== 4) return null;
-      const addressesRef = rootSlice.loadRef();
-      const legacyMapsRef = rootSlice.loadRef();
-      const timestampsRef = rootSlice.loadRef();
       const profileRef = rootSlice.loadRef();
+      const timestampsRef = rootSlice.loadRef();
+      const addressesRef = rootSlice.loadRef();
+      const mapsRef = rootSlice.loadRef();
 
-      const ms = legacyMapsRef.beginParse();
-      const invited = Dictionary.load(
-        Dictionary.Keys.Address(),
-        Dictionary.Values.BigVarUint(4),
-        ms,
-      );
-      const legacyAllowances = Dictionary.load(
-        Dictionary.Keys.Address(),
-        Dictionary.Values.BigVarUint(4),
-        ms,
-      );
-      const socialRef = ms.loadRef();
-      const reportInfoRef = ms.loadRef();
+      // Migrate timestamps if missing creditCutoff (128 bits -> 160 bits)
+      let migratedTimestampsCell = timestampsRef;
+      try {
+        TimeStamps.fromSlice(timestampsRef.beginParse());
+      } catch {
+        const tsSlice = timestampsRef.beginParse();
+        const accountInit = tsSlice.loadUintBig(32);
+        const lastInvite = tsSlice.loadUintBig(32);
+        const lastClaim = tsSlice.loadUintBig(32);
+        const lastDecay = tsSlice.loadUintBig(32);
+        const creditCutoff =
+          tsSlice.remainingBits >= 32 ? tsSlice.loadUintBig(32) : 0n;
+        migratedTimestampsCell = TimeStamps.toCell(
+          TimeStamps.create({
+            accountInit,
+            lastInvite,
+            lastClaim,
+            lastDecay,
+            creditCutoff,
+          }),
+        );
+      }
 
-      const pocketMoney = Dictionary.empty<
-        import('@ton/core').Address,
-        { ref: PocketMoney }
-      >(Dictionary.Keys.Address());
-      for (const addr of legacyAllowances.keys()) {
-        const amt = legacyAllowances.get(addr) ?? 0n;
-        if (amt > 0n) {
-          pocketMoney.set(addr, {
-            ref: PocketMoney.create({
-              unrestricted: false,
-              oneTime: null,
-              fixedRecurring: null,
-              openRecurring: OpenRecurringPocketMoney.create({
-                limit: amt,
-                spent: 0n,
-                period: 0n,
-                startTime: 0n,
+      // Migrate maps if storeVersion=1 legacy allowances
+      let migratedMapsCell = mapsRef;
+      try {
+        Maps.fromSlice(mapsRef.beginParse());
+      } catch {
+        const ms = mapsRef.beginParse();
+        const invited = Dictionary.load(
+          Dictionary.Keys.Address(),
+          Dictionary.Values.BigVarUint(4),
+          ms,
+        );
+        const legacyAllowances = Dictionary.load(
+          Dictionary.Keys.Address(),
+          Dictionary.Values.BigVarUint(4),
+          ms,
+        );
+        const socialRef = ms.loadRef();
+        const reportInfoRef = ms.loadRef();
+
+        const pocketMoney = Dictionary.empty<
+          import('@ton/core').Address,
+          { ref: PocketMoney }
+        >(Dictionary.Keys.Address());
+        for (const addr of legacyAllowances.keys()) {
+          const amt = legacyAllowances.get(addr) ?? 0n;
+          if (amt > 0n) {
+            pocketMoney.set(addr, {
+              ref: PocketMoney.create({
+                unrestricted: false,
+                oneTime: null,
+                fixedRecurring: null,
+                openRecurring: OpenRecurringPocketMoney.create({
+                  limit: amt,
+                  spent: 0n,
+                  period: 0n,
+                  startTime: 0n,
+                }),
               }),
-            }),
-          });
+            });
+          }
         }
+
+        migratedMapsCell = Maps.toCell(
+          Maps.create({
+            invited,
+            pocketMoney,
+            social: { ref: SocialMaps.fromSlice(socialRef.beginParse()) },
+            reportInfo: {
+              ref: ReportInfo.fromSlice(reportInfoRef.beginParse()),
+            },
+          }),
+        );
       }
 
       const rootBits = rootSlice.loadBits(rootSlice.remainingBits);
-      const migratedMapsCell = Maps.toCell(
-        Maps.create({
-          invited,
-          pocketMoney,
-          social: { ref: SocialMaps.fromSlice(socialRef.beginParse()) },
-          reportInfo: { ref: ReportInfo.fromSlice(reportInfoRef.beginParse()) },
-        }),
-      );
       const migratedRootCell = beginCell()
         .storeBits(rootBits)
+        .storeRef(profileRef)
+        .storeRef(migratedTimestampsCell)
         .storeRef(addressesRef)
         .storeRef(migratedMapsCell)
-        .storeRef(timestampsRef)
-        .storeRef(profileRef)
         .endCell();
       return FiWalletStore.fromSlice(migratedRootCell.beginParse());
     }
@@ -193,7 +239,35 @@ export function deserializePersonalWalletDataBoc(
 ): PersonalWalletStore | null {
   try {
     const cell = Cell.fromBase64(dataBoc);
-    return PersonalWalletStore.fromSlice(cell.beginParse());
+    try {
+      return PersonalWalletStore.fromSlice(cell.beginParse());
+    } catch {
+      // Fallback for v1 PersonalWallet without credit CellRef
+      const s = cell.beginParse();
+      const jettonBalance = s.loadCoins();
+      const owner = s.loadAddress();
+      const deployer = s.loadAddress();
+      const minterAddress = s.loadAddress();
+      const version = s.remainingBits >= 10 ? s.loadUintBig(10) : 1n;
+      return PersonalWalletStore.create({
+        jettonBalance,
+        owner,
+        deployer,
+        minterAddress,
+        version,
+        credit: {
+          ref: PersonalCreditInfo.create({
+            creditNeed: 0n,
+            creditCutoff: 0n,
+            creditMaturity: 0n,
+            multiplier: 1000n,
+            totalCreditReceived: 0n,
+            totalPaybackSettled: 0n,
+            totalPaybackShortfall: 0n,
+          }),
+        },
+      });
+    }
   } catch {
     return null;
   }
@@ -225,6 +299,37 @@ export function deserializePollDataBoc(dataBoc: string): PollStore | null {
   try {
     const cell = Cell.fromBase64(dataBoc);
     return PollStore.fromSlice(cell.beginParse());
+  } catch {
+    return null;
+  }
+}
+
+export function deserializeDaoProxyDataBoc(
+  dataBoc: string,
+): DaoProxyStore | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    return DaoProxyStore.fromSlice(cell.beginParse());
+  } catch {
+    return null;
+  }
+}
+
+export function deserializeFollowingDataBoc(
+  dataBoc: string,
+): FollowingStore | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    return FollowingStore.fromSlice(cell.beginParse());
+  } catch {
+    return null;
+  }
+}
+
+export function deserializeVoterDataBoc(dataBoc: string): VoterStore | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    return VoterStore.fromSlice(cell.beginParse());
   } catch {
     return null;
   }
@@ -364,6 +469,12 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
         decodedStore = deserializeLotteryDataBoc(dataBoc);
       } else if (detectedType === 'poll') {
         decodedStore = deserializePollDataBoc(dataBoc);
+      } else if (detectedType === 'daoProxy') {
+        decodedStore = deserializeDaoProxyDataBoc(dataBoc);
+      } else if (detectedType === 'following') {
+        decodedStore = deserializeFollowingDataBoc(dataBoc);
+      } else if (detectedType === 'voter') {
+        decodedStore = deserializeVoterDataBoc(dataBoc);
       } else if (detectedType === 'fiMinter') {
         decodedStore =
           deserializeFiMinterDataBoc(dataBoc) ||
@@ -382,6 +493,9 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
           deserializePersonalWalletDataBoc(dataBoc) ||
           deserializeLotteryDataBoc(dataBoc) ||
           deserializePollDataBoc(dataBoc) ||
+          deserializeDaoProxyDataBoc(dataBoc) ||
+          deserializeFollowingDataBoc(dataBoc) ||
+          deserializeVoterDataBoc(dataBoc) ||
           deserializeFiMinterDataBoc(dataBoc) ||
           deserializeWalletV5R1DataBoc(dataBoc);
       }

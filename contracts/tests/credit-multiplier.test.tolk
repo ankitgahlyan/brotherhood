@@ -18,6 +18,7 @@ get fun `test credit multiplier: allows setting and updating multiplier by owner
         0,
         null,
         null,
+        null,
         2000,
         { value: grams("0.1") },
     );
@@ -36,6 +37,7 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
         0,
         null,
         null,
+        null,
         2000,
         { value: grams("0.1") },
     );
@@ -52,6 +54,7 @@ get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessa
     val setTx = wallet.sendSetLoanRequirement(
         owner.address,
         0,
+        null,
         null,
         null,
         0, // invalid multiplier 0
@@ -78,6 +81,7 @@ get fun `test credit multiplier: multiplier=2000 (2.000x) mints 2x personal toke
     issuerWallet.sendSetLoanRequirement(
         notDeployer.address,
         0,
+        null,
         null,
         null,
         2000,
@@ -128,6 +132,7 @@ get fun `test credit multiplier: fractional multiplier=950 (0.950x) deducts 5% s
         0,
         null,
         null,
+        null,
         950,
         { value: grams("0.1") },
     );
@@ -176,6 +181,7 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         0,
         creditNeedAmount,
         1_800_000_000 + 86400,
+        null,
         2000,
         { value: grams("0.1") },
     );

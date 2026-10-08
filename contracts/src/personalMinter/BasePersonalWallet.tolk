@@ -72,7 +72,8 @@ fun onInternalMessage(
             }
 
             assert (
-                ((msg.jettonAmount == grams("1")) | msg.transferredAsCredit) &
+                ((msg.jettonAmount == grams("1")) | msg.transferredAsCredit |
+                    (senderAddress == store.minterAddress)) &
                 (msg.latestWalletCode != null)
             ) throw Errors.NotOnboardedWallet;
 

@@ -332,6 +332,8 @@ export const InternalTransferStep = {
  >     mintRecipient: address
  >     tonAmount: coins
  >     internalTransferMsg: Cell<InternalTransferStep>
+ >     tokenMinter: address?
+ >     deployer: address?
  > }
  */
 export interface MintNewJettons {
@@ -340,6 +342,8 @@ export interface MintNewJettons {
     mintRecipient: c.Address
     tonAmount: coins
     internalTransferMsg: CellRef<InternalTransferStep>
+    tokenMinter: c.Address | null /* = null */
+    deployer: c.Address | null /* = null */
 }
 
 export const MintNewJettons = {
@@ -350,9 +354,13 @@ export const MintNewJettons = {
         mintRecipient: c.Address
         tonAmount: coins
         internalTransferMsg: CellRef<InternalTransferStep>
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
     }): MintNewJettons {
         return {
             $: 'MintNewJettons',
+            tokenMinter: null,
+            deployer: null,
             ...args
         }
     },
@@ -364,6 +372,8 @@ export const MintNewJettons = {
             mintRecipient: s.loadAddress(),
             tonAmount: s.loadCoins(),
             internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+            tokenMinter: s.loadMaybeAddress(),
+            deployer: s.loadMaybeAddress(),
         }
     },
     store(self: MintNewJettons, b: c.Builder): void {
@@ -372,6 +382,8 @@ export const MintNewJettons = {
         b.storeAddress(self.mintRecipient);
         b.storeCoins(self.tonAmount);
         storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+        b.storeAddress(self.tokenMinter);
+        b.storeAddress(self.deployer);
     },
     toCell(self: MintNewJettons): c.Cell {
         return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
@@ -539,6 +551,8 @@ export class BasePersonalMinter implements c.Contract {
         mintRecipient: c.Address
         tonAmount: coins
         internalTransferMsg: CellRef<InternalTransferStep>
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
     }) {
         return MintNewJettons.toCell(MintNewJettons.create(body));
     }
@@ -562,6 +576,8 @@ export class BasePersonalMinter implements c.Contract {
         mintRecipient: c.Address
         tonAmount: coins
         internalTransferMsg: CellRef<InternalTransferStep>
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

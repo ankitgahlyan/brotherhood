@@ -298,19 +298,45 @@ export function decodeContractGetter(
       // 4. Personal Wallet: get_personal_wallet_state (4 or 6 items)
       case 'get_personal_wallet_state': {
         if (n === 6) {
-          const r = StackReader.fromStack(6, tuple);
-          return {
-            structName: 'PersonalWalletStore',
-            data: sanitizeForJson({
-              $: 'PersonalWalletStore',
-              jettonBalance: r.readBigInt(),
-              owner: r.readSlice().loadAddress(),
-              deployer: r.readSlice().loadAddress(),
-              minterAddress: r.readSlice().loadAddress(),
-              baseWalletCode: r.readCell(),
-              version: r.readBigInt(),
-            }),
-          };
+          const item4 = tuple[4];
+          if (item4 && item4.type === 'int') {
+            const r = StackReader.fromStack(6, tuple);
+            return {
+              structName: 'PersonalWalletStore',
+              data: sanitizeForJson({
+                $: 'PersonalWalletStore',
+                jettonBalance: r.readBigInt(),
+                owner: r.readSlice().loadAddress(),
+                deployer: r.readSlice().loadAddress(),
+                minterAddress: r.readSlice().loadAddress(),
+                version: r.readBigInt(),
+                credit: r.readCellRef((s) => ({
+                  $: 'PersonalCreditInfo',
+                  creditNeed: s.loadCoins(),
+                  creditCutoff: s.loadUintBig(32),
+                  creditMaturity: s.loadUintBig(32),
+                  multiplier: s.loadUintBig(16),
+                  totalCreditReceived: s.loadCoins(),
+                  totalPaybackSettled: s.loadCoins(),
+                  totalPaybackShortfall: s.loadCoins(),
+                })),
+              }),
+            };
+          } else {
+            const r = StackReader.fromStack(6, tuple);
+            return {
+              structName: 'PersonalWalletStore',
+              data: sanitizeForJson({
+                $: 'PersonalWalletStore',
+                jettonBalance: r.readBigInt(),
+                owner: r.readSlice().loadAddress(),
+                deployer: r.readSlice().loadAddress(),
+                minterAddress: r.readSlice().loadAddress(),
+                baseWalletCode: r.readCell(),
+                version: r.readBigInt(),
+              }),
+            };
+          }
         } else if (n === 4) {
           const r = StackReader.fromStack(4, tuple);
           return {

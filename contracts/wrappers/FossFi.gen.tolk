@@ -62,6 +62,8 @@ fun FossFi.sendMintNewJettons(
     mintRecipient: address,
     tonAmount: coins,
     internalTransferMsg: InternalTransferStep,
+    tokenMinter: address?,
+    deployer: address?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
@@ -73,6 +75,8 @@ fun FossFi.sendMintNewJettons(
             mintRecipient,
             tonAmount,
             internalTransferMsg: internalTransferMsg.toCell(),
+            tokenMinter,
+            deployer,
         },
     });
     return net.send(from, genericMsg);

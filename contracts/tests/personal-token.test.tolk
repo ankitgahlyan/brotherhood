@@ -112,6 +112,7 @@ fun setupPersonalScenario(): (
         grams("1000"),
         1_800_000_000 + 86400,
         null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -863,6 +864,7 @@ get fun `test personal token: first-time buyer auto-onboards BasePersonalWallet 
         0,
         grams("500"),
         0,
+        null,
         1000,
         { value: grams("0.1") },
     );
@@ -910,6 +912,7 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         0,
         grams("1000"),
         0,
+        null,
         1000,
         { value: grams("0.1") },
     );
@@ -927,6 +930,7 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         0,
         grams("500"),
         0,
+        null,
         950,
         { value: grams("0.1") },
     );
@@ -971,6 +975,7 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         issuerB.address,
         0,
         0,
+        null,
         null,
         null,
         { value: grams("0.1") },

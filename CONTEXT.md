@@ -75,13 +75,15 @@ _Avoid_: Offline payment, pull transfer, async payment
 **Holding Contract** — an ephemeral child contract deployed per Deferred Payment, locking the transferred FI until the 72-hour challenge window expires, or self-destructing early if cancelled by the Payer.
 _Avoid_: Holding wallet, storage patch contract, escrow wallet
 
-**Loan Requirement** — an Account's recorded terms for borrowing FI credit, combining the needed FI amount (Credit Need), loan maturity timestamp, and Personal Token mint ratio (Credit Multiplier). Can only be configured when the Account has a registered Personal Token.
-_Avoid_: Borrow terms, credit profile, loan application
+**Loan Requirement** — an Account or Personal Wallet's recorded terms for borrowing credit (in FI, Reserve Token, or another Personal Token), combining the needed token amount (Credit Need), loan deadline (Credit Cutoff), loan maturity timestamp, and Personal Token mint ratio (Credit Multiplier).
 
-**Credit Need** — an Account's recorded amount of FI requested as a loan under its Loan Requirement, checked before an incoming credit transfer is processed. Setting amount to zero cancels active borrowing while preserving maturity for existing loans.
+**Credit Need** — an Account or Personal Wallet's recorded amount of tokens requested as a loan under its Loan Requirement, checked before an incoming credit transfer is processed. Setting amount to zero cancels active borrowing while preserving maturity for existing loans.
 _Avoid_: Credit score, risk rating
 
-**Credit Multiplier** — the positive ratio of Personal Tokens minted to a buyer per unit of FI extended under an Account's Loan Requirement (defaults to 1; values above 1 mint bonus tokens for credit risk, while fractional values between 0 and 1 deduct a service charge on token issuance).
+**Credit Cutoff** — an Account or Personal Wallet's recorded timestamp after which no further credit can be purchased under its Loan Requirement.
+_Avoid_: Funding deadline, expiration
+
+**Credit Multiplier** — the positive ratio of Personal Tokens minted to a buyer per unit of credit tokens extended under a Loan Requirement (defaults to 1.000x; values above 1 mint bonus tokens for credit risk, while fractional values between 0 and 1 deduct a service charge on token issuance).
 _Avoid_: Interest rate, token bonus, leverage
 
 **Accumulated Fees** — fees an Account collects and forwards to the minter in a single transaction once a threshold is crossed.
@@ -90,16 +92,21 @@ _Avoid_: Fee pool, fees payable
 **Nominee** — the Account designated to receive a Member's remaining tokens when that Member's Account closes on death.
 _Avoid_: Heir, beneficiary (when precision matters), successor
 
-**Personal Token** — a jetton minted by a Member against their own trust. Buying it via Credit Need is how another Member extends that Member a loan: the buyer's FI flows to the issuer, and at or after maturity the holder redeems the token by burning it to pull FI from the issuer's Account.
+**Personal Token** — a jetton minted by a Member against their own trust. Buying it via Credit Need is how another Member extends that Member a loan: the buyer's tokens (FI, Reserve Token, or another Personal Token) flow to the issuer, and at or after maturity the holder redeems the token by burning it to pull the agreed target token from the issuer's Account or Personal Wallet.
 _Avoid_: Credit token, IOU, social token
 
-**Payback** — the holder-initiated redemption of a Personal Token at or after the issuer's loan maturity, burning the Personal Token to pull FI from the issuer's Account.
+**Payback** — the holder-initiated redemption of a Personal Token at or after the issuer's loan maturity, burning the Personal Token to pull the requested target token (FI, Reserve Token, or designated Personal Token) from the issuer's Account or Personal Wallet.
 _Avoid_: Buyback, liquidation, standard burn
+
+**Payback Shortfall** — the unredeemed portion of a Payback request when the issuer's wallet holds insufficient target balance to settle the full claim; available balance is settled and the unpaid remainder automatically re-mints Personal Tokens back to the holder.
+_Avoid_: Default, partial liquidation
+
+**Multi-Token Payback** — holder-initiated redemption of a Personal Token specifying a target currency (FI, Reserve Token, or another Personal Token) for repayment.
 
 **Reserve Token** — the Personal Token issued by the Treasury Account, acting as the ecosystem's fiat-backed stable instrument and secondary routing hub alongside FI. It can be purchased with fiat currency or redeemed for fiat off-chain by burning or transferring to the Treasury with encrypted bank details.
 _Avoid_: Admin token, external stablecoin, USDT
 
-**Loan** — FI owed between Members, collateralized by a borrower's Personal Token.
+**Loan** — tokens (FI, Reserve Token, or Personal Token) owed between Members, collateralized by a borrower's Personal Token.
 _Avoid_: Debt (reserved for the Account-level liability below)
 
 **Debt** — an Account's outstanding liability. Arises when a followed Account closes on death and the follower lacks enough tokens to burn, or when an Account defaults on its Monthly Due (EMI) past the 24-hour grace period (which applies an additional 5% penalty on total debt). Debt blocks transfers, invites, and following, and is automatically garnished by incoming Weekly Claims.

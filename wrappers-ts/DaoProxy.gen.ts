@@ -341,6 +341,8 @@ export const InternalTransferStep = {
  >     mintRecipient: address
  >     tonAmount: coins
  >     internalTransferMsg: Cell<InternalTransferStep>
+ >     tokenMinter: address?
+ >     deployer: address?
  > }
  */
 export interface MintNewJettons {
@@ -349,6 +351,8 @@ export interface MintNewJettons {
     mintRecipient: c.Address
     tonAmount: coins
     internalTransferMsg: CellRef<InternalTransferStep>
+    tokenMinter: c.Address | null /* = null */
+    deployer: c.Address | null /* = null */
 }
 
 export const MintNewJettons = {
@@ -359,9 +363,13 @@ export const MintNewJettons = {
         mintRecipient: c.Address
         tonAmount: coins
         internalTransferMsg: CellRef<InternalTransferStep>
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
     }): MintNewJettons {
         return {
             $: 'MintNewJettons',
+            tokenMinter: null,
+            deployer: null,
             ...args
         }
     },
@@ -373,6 +381,8 @@ export const MintNewJettons = {
             mintRecipient: s.loadAddress(),
             tonAmount: s.loadCoins(),
             internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+            tokenMinter: s.loadMaybeAddress(),
+            deployer: s.loadMaybeAddress(),
         }
     },
     store(self: MintNewJettons, b: c.Builder): void {
@@ -381,6 +391,8 @@ export const MintNewJettons = {
         b.storeAddress(self.mintRecipient);
         b.storeCoins(self.tonAmount);
         storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+        b.storeAddress(self.tokenMinter);
+        b.storeAddress(self.deployer);
     },
     toCell(self: MintNewJettons): c.Cell {
         return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
@@ -655,7 +667,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DaoProxy implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.NotOwner': 73,

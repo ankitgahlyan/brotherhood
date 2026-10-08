@@ -90,7 +90,7 @@ fun migrateFromInit(
         active: true,
         mintable: true,
         version: walletVersion,
-        storeVersion: 2,
+        storeVersion: 3,
 
         profile: ProfileInfo { username, h3Cell, country }.toCell(),
         timestamps: TimeStamps {
@@ -98,6 +98,7 @@ fun migrateFromInit(
             lastInvite: 0,
             lastClaim: 0,
             lastDecay: 0,
+            creditCutoff: 0,
         }.toCell(),
         addresses: Addresses {
             owner: initStore.owner,
@@ -133,8 +134,11 @@ fun migrateFiWalletFromPrevious(oldStore: FiWalletStore, version: uint10): void 
     assert (oldStore.version < version) throw Errors.VersionMismatch;
     if (oldStore.storeVersion < 2) {
         oldStore.maps = migrateLegacyMapsToV2(oldStore.maps as unknown as cell);
-        oldStore.storeVersion = 2;
     }
+    if (oldStore.storeVersion < 3) {
+        oldStore.timestamps = loadTimeStamps(oldStore.timestamps).toCell();
+    }
+    oldStore.storeVersion = 3;
     oldStore.version = version;
     contract.setData(oldStore.toCell());
 }

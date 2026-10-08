@@ -20,7 +20,11 @@ import {
   useWalletStore,
   getChainNetwork,
 } from '@demo/wallet-core';
-import { buildBurnBody, parseUnits } from '@/lib/brotherhood/deploy';
+import {
+  buildBurnBody,
+  buildSwapTargetPayload,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
 import { useBrotherhoodTransaction } from '@/features/brotherhood';
 import {
   computePersonalWalletAddress,
@@ -47,6 +51,7 @@ export interface UseBurnTokenParams {
   amount: string;
   isPersonal?: boolean;
   isPayback?: boolean;
+  paybackTargetAddress?: string | null;
   comment?: string;
   isEncrypted?: boolean;
   adminAddress?: string | null;
@@ -70,6 +75,7 @@ export function useBurnToken({
   amount,
   isPersonal: knownIsPersonal,
   isPayback = true,
+  paybackTargetAddress = null,
   comment = '',
   isEncrypted = true,
   adminAddress = null,
@@ -187,55 +193,72 @@ export function useBurnToken({
       }
     }
 
-    // Build optional customPayload for normal burn (e.g. encrypted bank details for fiat off-ramp)
+    // Build optional customPayload:
+    // If payback with a specific target token (Reserve, other Personal token, etc.), pack target address.
+    // Otherwise fallback to comment encryption for normal fiat off-ramp burns.
     let customPayload: Cell | null = null;
-    const trimmedComment = comment.trim();
-    if (!isFi && !isPayback && trimmedComment) {
-      let didEncrypt = false;
-      if (isEncrypted && adminAddress) {
-        try {
-          let tonClient: any;
-          if (walletKit) {
-            try {
-              const targetNet = getChainNetwork(network);
-              tonClient =
-                typeof walletKit.getApiClient === 'function'
-                  ? walletKit.getApiClient(targetNet)
-                  : (walletKit as any).getClient?.();
-            } catch {
-              tonClient = undefined;
-            }
-          }
-          const theirPublicKey = await resolveRecipientPublicKey(
-            adminAddress,
-            network,
-            tonClient,
-            savedWallets,
-          );
-          if (theirPublicKey) {
-            const mnemonic = await getDecryptedMnemonic();
-            if (mnemonic && mnemonic.length > 0) {
-              const keyPair = await mnemonicToPrivateKey(mnemonic);
-              const encryptedBytes = await encryptMessageComment(
-                trimmedComment,
-                keyPair.publicKey,
-                theirPublicKey,
-                keyPair.secretKey,
-                walletAddress,
-              );
-              customPayload = packBytesAsSnakeForEncryptedData(encryptedBytes);
-              didEncrypt = true;
-            }
-          }
-        } catch (err) {
-          console.warn(
-            '[useBurnToken] Comment encryption failed, fallback to plain:',
-            err,
-          );
-        }
+    const trimmedTargetAddress = paybackTargetAddress?.trim();
+    if (isPayback && trimmedTargetAddress) {
+      try {
+        const targetOwnerAddr = Address.parse(trimmedTargetAddress);
+        customPayload = buildSwapTargetPayload(targetOwnerAddr);
+        affectedContracts.push(targetOwnerAddr);
+      } catch (err) {
+        console.warn(
+          '[useBurnToken] Failed to parse payback target address:',
+          err,
+        );
       }
-      if (!didEncrypt) {
-        customPayload = createCommentPayload(trimmedComment);
+    } else {
+      const trimmedComment = comment.trim();
+      if (!isFi && !isPayback && trimmedComment) {
+        let didEncrypt = false;
+        if (isEncrypted && adminAddress) {
+          try {
+            let tonClient: any;
+            if (walletKit) {
+              try {
+                const targetNet = getChainNetwork(network);
+                tonClient =
+                  typeof walletKit.getApiClient === 'function'
+                    ? walletKit.getApiClient(targetNet)
+                    : (walletKit as any).getClient?.();
+              } catch {
+                tonClient = undefined;
+              }
+            }
+            const theirPublicKey = await resolveRecipientPublicKey(
+              adminAddress,
+              network,
+              tonClient,
+              savedWallets,
+            );
+            if (theirPublicKey) {
+              const mnemonic = await getDecryptedMnemonic();
+              if (mnemonic && mnemonic.length > 0) {
+                const keyPair = await mnemonicToPrivateKey(mnemonic);
+                const encryptedBytes = await encryptMessageComment(
+                  trimmedComment,
+                  keyPair.publicKey,
+                  theirPublicKey,
+                  keyPair.secretKey,
+                  walletAddress,
+                );
+                customPayload =
+                  packBytesAsSnakeForEncryptedData(encryptedBytes);
+                didEncrypt = true;
+              }
+            }
+          } catch (err) {
+            console.warn(
+              '[useBurnToken] Comment encryption failed, fallback to plain:',
+              err,
+            );
+          }
+        }
+        if (!didEncrypt) {
+          customPayload = createCommentPayload(trimmedComment);
+        }
       }
     }
 
@@ -273,6 +296,7 @@ export function useBurnToken({
     customGasTon,
     isFi,
     isPayback,
+    paybackTargetAddress,
     network,
     walletKit,
     savedWallets,

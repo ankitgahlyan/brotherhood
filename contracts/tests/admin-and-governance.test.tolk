@@ -443,6 +443,8 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
             forwardTonAmount: 0,
             forwardPayload: createEmptyCell().beginParse(),
         },
+        null,
+        null,
         { value: grams("0.2") },
     );
     expect(daoMintResult).toNotHaveTx({ bounced: true });
@@ -472,6 +474,8 @@ get fun `test admin: admin or dao can set daoAddress and dao can perform privile
             forwardTonAmount: 0,
             forwardPayload: createEmptyCell().beginParse(),
         },
+        null,
+        null,
         { value: grams("0.2") },
     );
     expect(unauthorizedMintResult).toHaveTx({

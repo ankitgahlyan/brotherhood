@@ -46,6 +46,7 @@ export interface FiAccountData {
   isAuthorityAccount: boolean;
   isPrevilegedAccount: boolean;
   creditNeed: bigint;
+  creditCutoff: number;
   creditMaturity: number;
   multiplier: number;
   accumulatedFees: bigint;
@@ -102,6 +103,7 @@ export interface MemberProfileInfo {
   jettonBalance: bigint;
   status: number;
   creditNeed: bigint;
+  creditCutoff: number;
   creditMaturity: number;
   multiplier: number;
   personalJettonMinter?: string;
@@ -236,6 +238,9 @@ export function projectFiAccountData(
     isAuthorityAccount: Boolean(rawData.isAuthorityAccount),
     isPrevilegedAccount: Boolean(rawData.isPrevilegedAccount),
     creditNeed: rawData.creditNeed ?? 0n,
+    creditCutoff: Number(
+      timestamps?.creditCutoff ?? (rawData as any)?.creditCutoff ?? 0,
+    ),
     creditMaturity: Number(rawData.creditMaturity ?? 0),
     multiplier: normalizeOnchainMultiplier(rawData.multiplier),
     accumulatedFees: rawData.accumulatedFees ?? 0n,
@@ -380,6 +385,9 @@ export function projectMemberProfileInfo(
     jettonBalance: store?.jettonBalance ?? 0n,
     status: store?.status ? Number(store.status) : 0,
     creditNeed: store?.creditNeed ?? 0n,
+    creditCutoff: Number(
+      store?.timestamps?.ref?.creditCutoff ?? (store as any)?.creditCutoff ?? 0,
+    ),
     creditMaturity: Number(store?.creditMaturity ?? 0),
     multiplier: normalizeOnchainMultiplier(store?.multiplier),
     personalJettonMinter,

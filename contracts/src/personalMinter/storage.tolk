@@ -11,12 +11,23 @@ struct BasePersonalMinterStore {
     version: uint10 = 0
 }
 
+struct PersonalCreditInfo {
+    creditNeed: coins = 0
+    creditCutoff: uint32 = 0
+    creditMaturity: uint32 = 0
+    multiplier: uint16 = 1000
+    totalCreditReceived: coins = 0
+    totalPaybackSettled: coins = 0
+    totalPaybackShortfall: coins = 0
+}
+
 struct PersonalWalletStore {
     jettonBalance: coins = 0
     owner: address
     deployer: address
     minterAddress: address
     version: uint10 = 1
+    credit: Cell<PersonalCreditInfo>
 }
 
 struct PersonalCodes {

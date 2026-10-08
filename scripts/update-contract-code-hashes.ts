@@ -30,6 +30,9 @@ export const CONTRACT_MAP: Record<string, string> = {
   location: 'Location',
   lottery: 'Lottery',
   poll: 'Poll',
+  daoProxy: 'DaoProxy',
+  following: 'Following',
+  voter: 'Voter',
   // aliases
   FossFiWallet: 'FossFiWallet',
   FossFi: 'FossFi',
@@ -38,6 +41,9 @@ export const CONTRACT_MAP: Record<string, string> = {
   Location: 'Location',
   Lottery: 'Lottery',
   Poll: 'Poll',
+  DaoProxy: 'DaoProxy',
+  Following: 'Following',
+  Voter: 'Voter',
 };
 
 // Canonical keys in CONTRACT_CODE_HASHES
@@ -49,6 +55,9 @@ export const CANONICAL_KEYS: Record<string, string> = {
   location: 'location',
   lottery: 'lottery',
   poll: 'poll',
+  daoProxy: 'daoProxy',
+  following: 'following',
+  voter: 'voter',
   FossFiWallet: 'fiWallet',
   FossFi: 'fiMinter',
   PersonalMinter: 'personalMinter',
@@ -56,6 +65,9 @@ export const CANONICAL_KEYS: Record<string, string> = {
   Location: 'location',
   Lottery: 'lottery',
   Poll: 'poll',
+  DaoProxy: 'daoProxy',
+  Following: 'following',
+  Voter: 'voter',
 };
 
 function getCompiledHashBase64(contractJsonName: string): string | null {
@@ -108,41 +120,56 @@ async function promptForTarget(): Promise<string> {
     console.log('  5. location       (Location contract)');
     console.log('  6. lottery        (Lottery contract)');
     console.log('  7. poll           (Poll contract)');
-    console.log('  8. all            (Sync all changed)');
-    rl.question('\nSelect target contract to update [1-8 or name]: ', (ans) => {
-      rl.close();
-      const choice = ans.trim();
-      switch (choice) {
-        case '1':
-          resolve('fiWallet');
-          break;
-        case '2':
-          resolve('fiMinter');
-          break;
-        case '3':
-          resolve('personalMinter');
-          break;
-        case '4':
-          resolve('personalWallet');
-          break;
-        case '5':
-          resolve('location');
-          break;
-        case '6':
-          resolve('lottery');
-          break;
-        case '7':
-          resolve('poll');
-          break;
-        case '8':
-        case 'all':
-          resolve('all');
-          break;
-        default:
-          resolve(choice || 'all');
-          break;
-      }
-    });
+    console.log('  8. daoProxy       (DAO Proxy contract)');
+    console.log('  9. following      (Following contract)');
+    console.log('  10. voter         (Voter contract)');
+    console.log('  11. all           (Sync all changed)');
+    rl.question(
+      '\nSelect target contract to update [1-11 or name]: ',
+      (ans) => {
+        rl.close();
+        const choice = ans.trim();
+        switch (choice) {
+          case '1':
+            resolve('fiWallet');
+            break;
+          case '2':
+            resolve('fiMinter');
+            break;
+          case '3':
+            resolve('personalMinter');
+            break;
+          case '4':
+            resolve('personalWallet');
+            break;
+          case '5':
+            resolve('location');
+            break;
+          case '6':
+            resolve('lottery');
+            break;
+          case '7':
+            resolve('poll');
+            break;
+          case '8':
+            resolve('daoProxy');
+            break;
+          case '9':
+            resolve('following');
+            break;
+          case '10':
+            resolve('voter');
+            break;
+          case '11':
+          case 'all':
+            resolve('all');
+            break;
+          default:
+            resolve(choice || 'all');
+            break;
+        }
+      },
+    );
   });
 }
 
@@ -186,6 +213,9 @@ export async function main() {
           'location',
           'lottery',
           'poll',
+          'daoProxy',
+          'following',
+          'voter',
         ]
       : [targetArg];
 

@@ -447,6 +447,6 @@ get fun `test pocketMoney: migration from v1 LegacyMapsV1 converts bare coins al
 
     val migratedData = v1Wallet.getWalletDataAll();
     expect(migratedData.version).toEqual(2);
-    expect(migratedData.storeVersion).toEqual(2);
+    expect(migratedData.storeVersion).toEqual(3);
     expect(v1Wallet.getPocketMoney(friend.address)).toEqual(grams("42"));
 }

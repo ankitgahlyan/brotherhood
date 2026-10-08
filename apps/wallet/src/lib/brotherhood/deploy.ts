@@ -22,6 +22,7 @@ import {
   ActVote,
   BuyCredit,
   Destroy,
+  SetLoanRequirement,
   SetPocketMoney,
   SpendPocketMoney,
   OneTimePocketMoney,
@@ -342,6 +343,24 @@ export function buildBuyCreditBody(params: {
       jettonAmount: amount,
       transferRecipient,
       sendExcessesTo: responseAddress,
+    }),
+  );
+}
+
+export function buildSetLoanRequirementBody(params: {
+  amount?: bigint | null;
+  maturityDate?: bigint | null;
+  cutoffDate?: bigint | null;
+  multiplier?: bigint | null;
+  queryId?: bigint;
+}): Cell {
+  return SetLoanRequirement.toCell(
+    SetLoanRequirement.create({
+      queryId: params.queryId ?? 0n,
+      amount: params.amount ?? null,
+      maturityDate: params.maturityDate ?? null,
+      cutoffDate: params.cutoffDate ?? null,
+      multiplier: params.multiplier ?? null,
     }),
   );
 }

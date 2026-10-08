@@ -24,6 +24,7 @@ type AllowedMsgToPersonalMinter =
     | RequestUpgradeCode
     | TopUpTons
     | Destroy
+    | PaybackShortfall
 
 type AllowedBounced = InternalTransferStep | Payback
 
@@ -95,16 +96,21 @@ fun onInternalMessage(in: InMessage) {
             // now transfer MINTS if payback
             if (msg.sendExcessesTo != null) {
                 var swapTargetOwner: address? = null;
+                var targetWallet: address? = null;
                 if (msg.customPayload != null) {
                     var cs = msg.customPayload.beginParse();
-                    if (cs.remainingBitsCount() >= 267) {
+                    if (cs.remainingBitsCount() >= 534) {
+                        targetWallet = cs.loadAddress();
+                        swapTargetOwner = cs.loadAddress();
+                    } else if (cs.remainingBitsCount() >= 267) {
                         swapTargetOwner = cs.loadAddress();
                     }
                 }
+                val paybackDest = targetWallet != null ? targetWallet : storage.fiJettonAddress;
                 val paybackMsg = createMessage({
                     bounce: BounceMode.RichBounceOnlyRootCell, // todo: ok?
                     value: 0,
-                    dest: storage.fiJettonAddress,
+                    dest: paybackDest,
                     body: Payback {
                         queryId: msg.queryId,
                         amount: msg.jettonAmount,
@@ -161,9 +167,20 @@ fun onInternalMessage(in: InMessage) {
         }
 
         MintNewJettons => {
+            var isPeerWallet = false;
+            if ((msg.tokenMinter != null) && (msg.deployer != null)) {
+                val expectedPeer = calcDeployPriWallet(
+                    storage.adminAddress,
+                    msg.deployer,
+                    msg.tokenMinter,
+                    getBasePersonalWalletCode(),
+                ).calculateAddress();
+                isPeerWallet = in.senderAddress == expectedPeer;
+            }
             assert (
                 (in.senderAddress == storage.fiJettonAddress) |
-                (in.senderAddress == storage.adminAddress)
+                (in.senderAddress == storage.adminAddress) |
+                isPeerWallet
             ) throw Errors.IncorrectSender;
             assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw Errors.WrongWorkchain;
 
@@ -188,7 +205,8 @@ fun onInternalMessage(in: InMessage) {
             if (
                 (internalTransferMsg.jettonAmount == grams("1")) |
                 internalTransferMsg.transferredAsCredit |
-                (in.senderAddress == storage.adminAddress)
+                (in.senderAddress == storage.adminAddress) |
+                isPeerWallet
             ) {
                 internalTransferBody = makeInternalTransferStep(
                     internalTransferMsg.queryId,
@@ -198,8 +216,7 @@ fun onInternalMessage(in: InMessage) {
                     internalTransferMsg.forwardTonAmount,
                     internalTransferMsg.forwardPayload,
                     internalTransferMsg.version,
-                    internalTransferMsg.transferredAsCredit |
-                        (in.senderAddress == storage.adminAddress),
+                    false,
                     storage.codes.latestPersonalWalletCode,
                 );
             }
@@ -314,6 +331,35 @@ fun onInternalMessage(in: InMessage) {
             // just accept tons
         }
 
+        PaybackShortfall => {
+            var isPeerWallet = false;
+            if ((msg.tokenMinter != null) && (msg.deployer != null)) {
+                val expectedPeer = calcDeployPriWallet(
+                    storage.adminAddress,
+                    msg.deployer,
+                    msg.tokenMinter,
+                    getBasePersonalWalletCode(),
+                ).calculateAddress();
+                isPeerWallet = in.senderAddress == expectedPeer;
+            }
+            assert (isPeerWallet) throw Errors.IncorrectSender;
+
+            storage.totalSupply += msg.shortfall;
+            val remintMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: autoAddrPriWalletMinter(msg.lender),
+                value: 0,
+                body: makeInternalTransferStep(
+                    msg.queryId,
+                    msg.shortfall,
+                    storage.adminAddress,
+                ),
+            });
+            remintMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
+        }
+
         Destroy => {
             assert (
                 (in.senderAddress == storage.adminAddress) |
@@ -379,7 +425,7 @@ fun migratePersonalMinterFromBase(
                 internalTransferMsg.forwardTonAmount,
                 beginCell().storeMaybeRef(null).endCell().beginParse(),
                 internalTransferMsg.version,
-                true,
+                false,
                 storage.codes.latestPersonalWalletCode,
             );
 

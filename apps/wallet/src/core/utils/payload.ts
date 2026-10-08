@@ -91,6 +91,7 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x0000114b: 'RepayDebt',
   0x0000114d: 'TriggerDefaultEmi',
   0x0000114e: 'TriggerDecay',
+  0x00001150: 'PaybackShortfall',
 
   // Brotherhood Group 6: Mini-Apps, Lottery & Follow
   0x00001191: 'ActJoinLottery',
@@ -225,6 +226,7 @@ export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
   SetLoanRequirement: 'Configure Loan Rules',
   TriggerDefaultEmi: 'Trigger Default EMI',
   TriggerDecay: 'Trigger Token Decay',
+  PaybackShortfall: 'Payback Shortfall',
   MintPersonal: 'Mint Personal Token',
 
   // Mini-Apps, Lottery & Follow

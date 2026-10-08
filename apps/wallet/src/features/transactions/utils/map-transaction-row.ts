@@ -254,7 +254,7 @@ export function getContractContextBadge(opcode?: number): string | undefined {
     (opcode >= 0x00001051 && opcode <= 0x0000105b) ||
     (opcode >= 0x000010a1 && opcode <= 0x000010a8) ||
     (opcode >= 0x000010f1 && opcode <= 0x000010f7) ||
-    (opcode >= 0x00001141 && opcode <= 0x0000114e)
+    (opcode >= 0x00001141 && opcode <= 0x00001150)
   ) {
     return 'Brotherhood Member';
   }
@@ -638,6 +638,8 @@ const FI_STRUCT_NAMES = new Set([
   'InternalGoldCoinsTransfer',
   'BuyCredit',
   'Payback',
+  'PaybackShortfall',
+  'SetLoanRequirement',
   'RepayDebt',
   'TriggerDefaultEmi',
   'TriggerDecay',

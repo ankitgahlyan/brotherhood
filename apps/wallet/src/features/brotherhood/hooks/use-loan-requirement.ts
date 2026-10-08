@@ -30,6 +30,7 @@ export interface UseLoanRequirementParams {
   accountData?: FiAccountData | null;
   amount: string;
   maturityDays: string;
+  cutoffDays?: string;
   multiplier: string;
   onSuccess?: () => void;
 }
@@ -43,6 +44,7 @@ export interface UseLoanRequirementResult {
   hasPersonalToken: boolean;
   amountValidationError: string | null;
   maturityValidationError: string | null;
+  cutoffValidationError: string | null;
   multiplierValidationError: string | null;
 }
 
@@ -56,6 +58,7 @@ export function useLoanRequirement({
   accountData,
   amount,
   maturityDays,
+  cutoffDays = '',
   multiplier,
   onSuccess,
 }: UseLoanRequirementParams): UseLoanRequirementResult {
@@ -76,10 +79,14 @@ export function useLoanRequirement({
   const trimmedMaturityDays = maturityDays.trim();
   const isMaturityDirty = Boolean(trimmedMaturityDays);
 
+  const trimmedCutoffDays = cutoffDays.trim();
+  const isCutoffDirty = Boolean(trimmedCutoffDays);
+
   const trimmedMultiplier = multiplier.trim();
   const isMultiplierDirty = Boolean(trimmedMultiplier);
 
-  const isDirty = isAmountDirty || isMaturityDirty || isMultiplierDirty;
+  const isDirty =
+    isAmountDirty || isMaturityDirty || isCutoffDirty || isMultiplierDirty;
 
   const nowSec = useNowSeconds();
   const creditMaturity = accountData?.creditMaturity;
@@ -157,6 +164,37 @@ export function useLoanRequirement({
     nowSec,
   ]);
 
+  const cutoffValidationError = useMemo<string | null>(() => {
+    if (!isCutoffDirty) return null;
+    const days = parseInt(trimmedCutoffDays, 10);
+    if (isNaN(days) || days < 0) {
+      return 'Funding deadline days cannot be negative';
+    }
+
+    const targetCutoff = days === 0 ? 0 : nowSec + days * 86400;
+
+    let effectiveMaturity = creditMaturity ?? 0;
+    if (isMaturityDirty) {
+      const matDays = parseInt(trimmedMaturityDays, 10);
+      if (!isNaN(matDays)) {
+        effectiveMaturity = matDays === 0 ? 0 : nowSec + matDays * 86400;
+      }
+    }
+
+    if (effectiveMaturity > 0 && targetCutoff > effectiveMaturity) {
+      return 'Funding deadline must be on or before maturity date';
+    }
+
+    return null;
+  }, [
+    isCutoffDirty,
+    trimmedCutoffDays,
+    isMaturityDirty,
+    trimmedMaturityDays,
+    creditMaturity,
+    nowSec,
+  ]);
+
   const multiplierValidationError = useMemo<string | null>(() => {
     if (!isMultiplierDirty) return null;
     if (!/^\d+(\.\d{1,3})?$/.test(trimmedMultiplier)) {
@@ -191,6 +229,7 @@ export function useLoanRequirement({
   const hasValidationError =
     Boolean(amountValidationError) ||
     Boolean(maturityValidationError) ||
+    Boolean(cutoffValidationError) ||
     Boolean(multiplierValidationError);
 
   const isDisabled =
@@ -227,6 +266,13 @@ export function useLoanRequirement({
         days === 0 ? 0n : BigInt(Math.floor(Date.now() / 1000) + days * 86400);
     }
 
+    let cutoffSec: bigint | null = null;
+    if (isCutoffDirty) {
+      const days = parseInt(trimmedCutoffDays, 10);
+      cutoffSec =
+        days === 0 ? 0n : BigInt(Math.floor(Date.now() / 1000) + days * 86400);
+    }
+
     let multBigInt: bigint | null = null;
     if (isMultiplierDirty) {
       multBigInt = encodeOnchainMultiplier(parseFloat(trimmedMultiplier));
@@ -237,6 +283,7 @@ export function useLoanRequirement({
         queryId: 0n,
         amount: amountNano,
         maturityDate: maturitySec,
+        cutoffDate: cutoffSec,
         multiplier: multBigInt,
       }),
     );
@@ -264,6 +311,8 @@ export function useLoanRequirement({
     trimmedAmount,
     isMaturityDirty,
     trimmedMaturityDays,
+    isCutoffDirty,
+    trimmedCutoffDays,
     isMultiplierDirty,
     trimmedMultiplier,
     sendTx,
@@ -279,6 +328,7 @@ export function useLoanRequirement({
     hasPersonalToken,
     amountValidationError,
     maturityValidationError,
+    cutoffValidationError,
     multiplierValidationError,
   };
 }

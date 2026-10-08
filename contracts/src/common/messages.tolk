@@ -122,6 +122,8 @@ struct (0x00001001) MintNewJettons {
     mintRecipient: address
     tonAmount: coins
     internalTransferMsg: Cell<InternalTransferStep>
+    tokenMinter: address? = null
+    deployer: address? = null
 }
 
 struct (0x00001002) ChangeMinterAdmin {
@@ -492,12 +494,21 @@ struct (0x0000114a) SetLoanRequirement {
     queryId: uint64 = 0
     amount: coins? = null
     maturityDate: uint32? = null
+    cutoffDate: uint32? = null
     multiplier: uint16? = null
 }
 
 struct (0x0000114b) RepayDebt {
     queryId: uint64 = 0
     amount: coins
+}
+
+struct (0x00001150) PaybackShortfall {
+    queryId: uint64
+    lender: address
+    shortfall: coins
+    tokenMinter: address? = null
+    deployer: address? = null
 }
 
 struct (0x0000105a) ActCloseAccount {

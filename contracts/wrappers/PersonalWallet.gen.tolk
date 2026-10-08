@@ -181,6 +181,61 @@ fun PersonalWallet.sendDestroy(self, from: address, config: SendParams = {}): Se
     return net.send(from, genericMsg);
 }
 
+fun PersonalWallet.sendBuyCredit(
+    self,
+    from: address,
+    queryId: uint64,
+    jettonAmount: coins,
+    transferRecipient: address,
+    sendExcessesTo: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: BuyCredit { queryId, jettonAmount, transferRecipient, sendExcessesTo },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendPayback(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: coins,
+    sender: address,
+    swapTargetOwner: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: Payback { queryId, amount, sender, swapTargetOwner },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.sendSetLoanRequirement(
+    self,
+    from: address,
+    queryId: uint64,
+    amount: coins?,
+    maturityDate: uint32?,
+    cutoffDate: uint32?,
+    multiplier: uint16?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: SetLoanRequirement { queryId, amount, maturityDate, cutoffDate, multiplier },
+    });
+    return net.send(from, genericMsg);
+}
+
 /// Send message to the contract with a custom body cell
 fun PersonalWallet.sendAny(
     self,
@@ -195,6 +250,10 @@ fun PersonalWallet.sendAny(
         body,
     });
     return net.send(from, genericMsg);
+}
+
+fun PersonalWallet.getPersonalCreditInfo(self): PersonalCreditInfo {
+    return net.runGetMethod(self.address, "get_personal_credit_info");
 }
 
 fun PersonalWallet.getPersonalWalletState(self): PersonalWalletStore {

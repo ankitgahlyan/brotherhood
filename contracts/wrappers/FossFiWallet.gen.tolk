@@ -883,6 +883,7 @@ fun FossFiWallet.sendSetLoanRequirement(
     queryId: uint64,
     amount: coins?,
     maturityDate: uint32?,
+    cutoffDate: uint32?,
     multiplier: uint16?,
     config: SendParams = {},
 ): SendResultList {
@@ -890,7 +891,7 @@ fun FossFiWallet.sendSetLoanRequirement(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SetLoanRequirement { queryId, amount, maturityDate, multiplier },
+        body: SetLoanRequirement { queryId, amount, maturityDate, cutoffDate, multiplier },
     });
     return net.send(from, genericMsg);
 }
@@ -1125,4 +1126,8 @@ fun FossFiWallet.getPocketMoney(self, grantee: address): coins {
 
 fun FossFiWallet.getPocketMoneyData(self, grantee: address): PocketMoney {
     return net.runGetMethod(self.address, "get_pocket_money_data", [grantee]);
+}
+
+fun FossFiWallet.getCreditCutoff(self): uint32 {
+    return net.runGetMethod(self.address, "get_credit_cutoff");
 }

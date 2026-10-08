@@ -313,7 +313,7 @@ fun onInternalMessage(in: InMessage): void {
     val msg = lazy AllowedMessageToWallet.fromSlice(in.body);
     var store = lazy FiWalletStore.load();
     var profile = lazy store.profile.load();
-    var time = lazy store.timestamps.load();
+    var time = loadTimeStamps(store.timestamps);
     var addrs = lazy store.addresses.load();
     var trustedAddrs = lazy addrs.trustedJettonAddrs.load();
     var maps = lazy store.maps.load();
@@ -631,6 +631,9 @@ fun onInternalMessage(in: InMessage): void {
                     trustedAddrs.personalJettonMinter != ZERO_ADDRESS
                 ) throw Errors.CreditNeedExceeded;
                 assert (store.creditNeed > 0) throw Errors.CreditNeedExceeded;
+                if (time.creditCutoff > 0) {
+                    assert (blockchain.now() < time.creditCutoff) throw Errors.CreditNeedExceeded;
+                }
                 if (store.multiplier > MULTIPLIER_SCALE) {
                     assert (
                         blockchain.now() < store.creditMaturity
@@ -1713,8 +1716,16 @@ fun onInternalMessage(in: InMessage): void {
                 trustedAddrs.personalJettonMinter != RAW_ZERO_ADDRESS
             ) throw Errors.PersonalJettonNotRegistered;
             assert (
-                msg.amount != null || msg.maturityDate != null || msg.multiplier != null
+                msg.amount != null || msg.maturityDate != null || msg.cutoffDate != null ||
+                msg.multiplier != null
             ) throw Errors.InvalidMessage;
+
+            if (msg.cutoffDate != null) {
+                time.creditCutoff = msg.cutoffDate;
+            }
+            if ((time.creditCutoff > 0) && (store.creditMaturity > 0)) {
+                assert (time.creditCutoff <= store.creditMaturity) throw Errors.InvalidMessage;
+            }
 
             if (msg.multiplier != null) {
                 assert (msg.multiplier >= 1) throw Errors.InvalidMessage;
@@ -2316,4 +2327,10 @@ get fun get_pocket_money_data(grantee: address): PocketMoney {
         return {};
     }
     return normalizePocketMoney(granted.loadValue().load(), blockchain.now());
+}
+
+get fun get_credit_cutoff(): uint32 {
+    val store = lazy FiWalletStore.load();
+    val time = loadTimeStamps(store.timestamps);
+    return time.creditCutoff;
 }

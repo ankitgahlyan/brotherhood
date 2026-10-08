@@ -69,6 +69,7 @@ struct TimeStamps {
     lastInvite: uint32 = 0
     lastClaim: uint32 = 0
     lastDecay: uint32 = 0
+    creditCutoff: uint32 = 0
 }
 
 struct ProfileInfo {
@@ -97,12 +98,31 @@ struct FiWalletStore {
     active: bool = false
     mintable: bool = true
     version: uint10 = 0
-    storeVersion: uint10 = 0
+    storeVersion: uint10 = 3
 
     profile: Cell<ProfileInfo>
     timestamps: Cell<TimeStamps>
     addresses: Cell<Addresses>
     maps: Cell<Maps>
+}
+
+fun loadTimeStamps(timestampsCell: Cell<TimeStamps>): TimeStamps {
+    var cs = (timestampsCell as unknown as cell).beginParse();
+    val accountInit = cs.loadUint(32);
+    val lastInvite = cs.loadUint(32);
+    val lastClaim = cs.loadUint(32);
+    val lastDecay = cs.loadUint(32);
+    var creditCutoff: uint32 = 0;
+    if (cs.remainingBitsCount() >= 32) {
+        creditCutoff = cs.loadUint(32);
+    }
+    return {
+        accountInit,
+        lastInvite,
+        lastClaim,
+        lastDecay,
+        creditCutoff,
+    };
 }
 
 struct FiStore {

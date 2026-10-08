@@ -133,6 +133,10 @@ class StackReader {
     readSlice(): c.Slice {
         return this.popCellLike().beginParse();
     }
+
+    readCellRef<T>(loadFn_T: LoadCallback<T>): CellRef<T> {
+        return { ref: loadFn_T(this.readCell().beginParse()) };
+    }
 }
 
 // ————————————————————————————————————————————
@@ -142,6 +146,8 @@ class StackReader {
 type coins = bigint
 
 type uint10 = bigint
+type uint16 = bigint
+type uint32 = bigint
 type uint64 = bigint
 
 /**
@@ -665,6 +671,70 @@ export const NotifyMinter = {
 }
 
 /**
+ > struct (0x00001001) MintNewJettons {
+ >     queryId: uint64
+ >     mintRecipient: address
+ >     tonAmount: coins
+ >     internalTransferMsg: Cell<InternalTransferStep>
+ >     tokenMinter: address?
+ >     deployer: address?
+ > }
+ */
+export interface MintNewJettons {
+    readonly $: 'MintNewJettons'
+    queryId: uint64
+    mintRecipient: c.Address
+    tonAmount: coins
+    internalTransferMsg: CellRef<InternalTransferStep>
+    tokenMinter: c.Address | null /* = null */
+    deployer: c.Address | null /* = null */
+}
+
+export const MintNewJettons = {
+    PREFIX: 0x00001001,
+
+    create(args: {
+        queryId: uint64
+        mintRecipient: c.Address
+        tonAmount: coins
+        internalTransferMsg: CellRef<InternalTransferStep>
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
+    }): MintNewJettons {
+        return {
+            $: 'MintNewJettons',
+            tokenMinter: null,
+            deployer: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): MintNewJettons {
+        loadAndCheckPrefix32(s, 0x00001001, 'MintNewJettons');
+        return {
+            $: 'MintNewJettons',
+            queryId: s.loadUintBig(64),
+            mintRecipient: s.loadAddress(),
+            tonAmount: s.loadCoins(),
+            internalTransferMsg: loadCellRef<InternalTransferStep>(s, InternalTransferStep.fromSlice),
+            tokenMinter: s.loadMaybeAddress(),
+            deployer: s.loadMaybeAddress(),
+        }
+    },
+    store(self: MintNewJettons, b: c.Builder): void {
+        b.storeUint(0x00001001, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.mintRecipient);
+        b.storeCoins(self.tonAmount);
+        storeCellRef<InternalTransferStep>(self.internalTransferMsg, b, InternalTransferStep.store);
+        b.storeAddress(self.tokenMinter);
+        b.storeAddress(self.deployer);
+    },
+    toCell(self: MintNewJettons): c.Cell {
+        return makeCellFrom<MintNewJettons>(self, MintNewJettons.store);
+    }
+}
+
+/**
  > struct (0x00001006) Upgrade {
  >     walletUpgrade: bool
  >     walletVersion: uint10
@@ -797,12 +867,317 @@ export const Destroy = {
 }
 
 /**
+ > struct (0x00001147) BuyCredit {
+ >     queryId: uint64
+ >     jettonAmount: coins
+ >     transferRecipient: address
+ >     sendExcessesTo: address?
+ > }
+ */
+export interface BuyCredit {
+    readonly $: 'BuyCredit'
+    queryId: uint64
+    jettonAmount: coins
+    transferRecipient: c.Address
+    sendExcessesTo: c.Address | null
+}
+
+export const BuyCredit = {
+    PREFIX: 0x00001147,
+
+    create(args: {
+        queryId: uint64
+        jettonAmount: coins
+        transferRecipient: c.Address
+        sendExcessesTo: c.Address | null
+    }): BuyCredit {
+        return {
+            $: 'BuyCredit',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): BuyCredit {
+        loadAndCheckPrefix32(s, 0x00001147, 'BuyCredit');
+        return {
+            $: 'BuyCredit',
+            queryId: s.loadUintBig(64),
+            jettonAmount: s.loadCoins(),
+            transferRecipient: s.loadAddress(),
+            sendExcessesTo: s.loadMaybeAddress(),
+        }
+    },
+    store(self: BuyCredit, b: c.Builder): void {
+        b.storeUint(0x00001147, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.jettonAmount);
+        b.storeAddress(self.transferRecipient);
+        b.storeAddress(self.sendExcessesTo);
+    },
+    toCell(self: BuyCredit): c.Cell {
+        return makeCellFrom<BuyCredit>(self, BuyCredit.store);
+    }
+}
+
+/**
+ > struct (0x00001148) Payback {
+ >     queryId: uint64
+ >     amount: coins
+ >     sender: address
+ >     swapTargetOwner: address?
+ > }
+ */
+export interface Payback {
+    readonly $: 'Payback'
+    queryId: uint64
+    amount: coins
+    sender: c.Address
+    swapTargetOwner: c.Address | null /* = null */
+}
+
+export const Payback = {
+    PREFIX: 0x00001148,
+
+    create(args: {
+        queryId: uint64
+        amount: coins
+        sender: c.Address
+        swapTargetOwner?: c.Address | null /* = null */
+    }): Payback {
+        return {
+            $: 'Payback',
+            swapTargetOwner: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): Payback {
+        loadAndCheckPrefix32(s, 0x00001148, 'Payback');
+        return {
+            $: 'Payback',
+            queryId: s.loadUintBig(64),
+            amount: s.loadCoins(),
+            sender: s.loadAddress(),
+            swapTargetOwner: s.loadMaybeAddress(),
+        }
+    },
+    store(self: Payback, b: c.Builder): void {
+        b.storeUint(0x00001148, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeCoins(self.amount);
+        b.storeAddress(self.sender);
+        b.storeAddress(self.swapTargetOwner);
+    },
+    toCell(self: Payback): c.Cell {
+        return makeCellFrom<Payback>(self, Payback.store);
+    }
+}
+
+/**
+ > struct (0x0000114a) SetLoanRequirement {
+ >     queryId: uint64
+ >     amount: coins?
+ >     maturityDate: uint32?
+ >     cutoffDate: uint32?
+ >     multiplier: uint16?
+ > }
+ */
+export interface SetLoanRequirement {
+    readonly $: 'SetLoanRequirement'
+    queryId: uint64 /* = 0 */
+    amount: coins | null /* = null */
+    maturityDate: uint32 | null /* = null */
+    cutoffDate: uint32 | null /* = null */
+    multiplier: uint16 | null /* = null */
+}
+
+export const SetLoanRequirement = {
+    PREFIX: 0x0000114a,
+
+    create(args: {
+        queryId?: uint64 /* = 0 */
+        amount?: coins | null /* = null */
+        maturityDate?: uint32 | null /* = null */
+        cutoffDate?: uint32 | null /* = null */
+        multiplier?: uint16 | null /* = null */
+    }): SetLoanRequirement {
+        return {
+            $: 'SetLoanRequirement',
+            queryId: 0n,
+            amount: null,
+            maturityDate: null,
+            cutoffDate: null,
+            multiplier: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): SetLoanRequirement {
+        loadAndCheckPrefix32(s, 0x0000114a, 'SetLoanRequirement');
+        return {
+            $: 'SetLoanRequirement',
+            queryId: s.loadUintBig(64),
+            amount: s.loadBoolean() ? s.loadCoins() : null,
+            maturityDate: s.loadBoolean() ? s.loadUintBig(32) : null,
+            cutoffDate: s.loadBoolean() ? s.loadUintBig(32) : null,
+            multiplier: s.loadBoolean() ? s.loadUintBig(16) : null,
+        }
+    },
+    store(self: SetLoanRequirement, b: c.Builder): void {
+        b.storeUint(0x0000114a, 32);
+        b.storeUint(self.queryId, 64);
+        storeTolkNullable<coins>(self.amount, b,
+            (v,b) => b.storeCoins(v)
+        );
+        storeTolkNullable<uint32>(self.maturityDate, b,
+            (v,b) => b.storeUint(v, 32)
+        );
+        storeTolkNullable<uint32>(self.cutoffDate, b,
+            (v,b) => b.storeUint(v, 32)
+        );
+        storeTolkNullable<uint16>(self.multiplier, b,
+            (v,b) => b.storeUint(v, 16)
+        );
+    },
+    toCell(self: SetLoanRequirement): c.Cell {
+        return makeCellFrom<SetLoanRequirement>(self, SetLoanRequirement.store);
+    }
+}
+
+/**
+ > struct (0x00001150) PaybackShortfall {
+ >     queryId: uint64
+ >     lender: address
+ >     shortfall: coins
+ >     tokenMinter: address?
+ >     deployer: address?
+ > }
+ */
+export interface PaybackShortfall {
+    readonly $: 'PaybackShortfall'
+    queryId: uint64
+    lender: c.Address
+    shortfall: coins
+    tokenMinter: c.Address | null /* = null */
+    deployer: c.Address | null /* = null */
+}
+
+export const PaybackShortfall = {
+    PREFIX: 0x00001150,
+
+    create(args: {
+        queryId: uint64
+        lender: c.Address
+        shortfall: coins
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
+    }): PaybackShortfall {
+        return {
+            $: 'PaybackShortfall',
+            tokenMinter: null,
+            deployer: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PaybackShortfall {
+        loadAndCheckPrefix32(s, 0x00001150, 'PaybackShortfall');
+        return {
+            $: 'PaybackShortfall',
+            queryId: s.loadUintBig(64),
+            lender: s.loadAddress(),
+            shortfall: s.loadCoins(),
+            tokenMinter: s.loadMaybeAddress(),
+            deployer: s.loadMaybeAddress(),
+        }
+    },
+    store(self: PaybackShortfall, b: c.Builder): void {
+        b.storeUint(0x00001150, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.lender);
+        b.storeCoins(self.shortfall);
+        b.storeAddress(self.tokenMinter);
+        b.storeAddress(self.deployer);
+    },
+    toCell(self: PaybackShortfall): c.Cell {
+        return makeCellFrom<PaybackShortfall>(self, PaybackShortfall.store);
+    }
+}
+
+/**
+ > struct PersonalCreditInfo {
+ >     creditNeed: coins
+ >     creditCutoff: uint32
+ >     creditMaturity: uint32
+ >     multiplier: uint16
+ >     totalCreditReceived: coins
+ >     totalPaybackSettled: coins
+ >     totalPaybackShortfall: coins
+ > }
+ */
+export interface PersonalCreditInfo {
+    readonly $: 'PersonalCreditInfo'
+    creditNeed: coins /* = 0 */
+    creditCutoff: uint32 /* = 0 */
+    creditMaturity: uint32 /* = 0 */
+    multiplier: uint16 /* = 1000 */
+    totalCreditReceived: coins /* = 0 */
+    totalPaybackSettled: coins /* = 0 */
+    totalPaybackShortfall: coins /* = 0 */
+}
+
+export const PersonalCreditInfo = {
+    create(args: {
+        creditNeed?: coins /* = 0 */
+        creditCutoff?: uint32 /* = 0 */
+        creditMaturity?: uint32 /* = 0 */
+        multiplier?: uint16 /* = 1000 */
+        totalCreditReceived?: coins /* = 0 */
+        totalPaybackSettled?: coins /* = 0 */
+        totalPaybackShortfall?: coins /* = 0 */
+    }): PersonalCreditInfo {
+        return {
+            $: 'PersonalCreditInfo',
+            creditNeed: 0n,
+            creditCutoff: 0n,
+            creditMaturity: 0n,
+            multiplier: 1000n,
+            totalCreditReceived: 0n,
+            totalPaybackSettled: 0n,
+            totalPaybackShortfall: 0n,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): PersonalCreditInfo {
+        return {
+            $: 'PersonalCreditInfo',
+            creditNeed: s.loadCoins(),
+            creditCutoff: s.loadUintBig(32),
+            creditMaturity: s.loadUintBig(32),
+            multiplier: s.loadUintBig(16),
+            totalCreditReceived: s.loadCoins(),
+            totalPaybackSettled: s.loadCoins(),
+            totalPaybackShortfall: s.loadCoins(),
+        }
+    },
+    store(self: PersonalCreditInfo, b: c.Builder): void {
+        b.storeCoins(self.creditNeed);
+        b.storeUint(self.creditCutoff, 32);
+        b.storeUint(self.creditMaturity, 32);
+        b.storeUint(self.multiplier, 16);
+        b.storeCoins(self.totalCreditReceived);
+        b.storeCoins(self.totalPaybackSettled);
+        b.storeCoins(self.totalPaybackShortfall);
+    },
+    toCell(self: PersonalCreditInfo): c.Cell {
+        return makeCellFrom<PersonalCreditInfo>(self, PersonalCreditInfo.store);
+    }
+}
+
+/**
  > struct PersonalWalletStore {
  >     jettonBalance: coins
  >     owner: address
  >     deployer: address
  >     minterAddress: address
  >     version: uint10
+ >     credit: Cell<PersonalCreditInfo>
  > }
  */
 export interface PersonalWalletStore {
@@ -812,6 +1187,7 @@ export interface PersonalWalletStore {
     deployer: c.Address
     minterAddress: c.Address
     version: uint10 /* = 1 */
+    credit: CellRef<PersonalCreditInfo>
 }
 
 export const PersonalWalletStore = {
@@ -821,6 +1197,7 @@ export const PersonalWalletStore = {
         deployer: c.Address
         minterAddress: c.Address
         version?: uint10 /* = 1 */
+        credit: CellRef<PersonalCreditInfo>
     }): PersonalWalletStore {
         return {
             $: 'PersonalWalletStore',
@@ -837,6 +1214,7 @@ export const PersonalWalletStore = {
             deployer: s.loadAddress(),
             minterAddress: s.loadAddress(),
             version: s.loadUintBig(10),
+            credit: loadCellRef<PersonalCreditInfo>(s, PersonalCreditInfo.fromSlice),
         }
     },
     store(self: PersonalWalletStore, b: c.Builder): void {
@@ -845,6 +1223,7 @@ export const PersonalWalletStore = {
         b.storeAddress(self.deployer);
         b.storeAddress(self.minterAddress);
         b.storeUint(self.version, 10);
+        storeCellRef<PersonalCreditInfo>(self.credit, b, PersonalCreditInfo.store);
     },
     toCell(self: PersonalWalletStore): c.Cell {
         return makeCellFrom<PersonalWalletStore>(self, PersonalWalletStore.store);
@@ -890,16 +1269,20 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECGAEABZ0AART/APSkE/S88sgLAQIBYgIDAgLEBAUCASATFAPz19tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omhrpMCBld1HCXaiaH0AfSR9JH0kaYToiBogmHGGguuWEF41FGZxh+QoAv0BCX0pfSkJfSllhOT2qkGBwgAT6yJmPaiaH0AfSR9JH0ka4WEktz5cW9kKAJ9AQl9KX0pfSllhOT2qkAATO1E0PpI+kj6SNMJMdFwccjPhCBSUPpSUkD6UlIw+lLPiAGAye1UA+Y2BdM/+gD6SPpQ+gDTCjH0AfiSJ8cFjsn4ku1E0PoAMfpIMfpI+kgwiCfI+lIT+lL6Us+IAIDJeCdUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31GkoCGUOhNfA+MNIG6RW+MOFQkKAhLXLCB8U/Us4w8LDABUyM+RzYtCcibPCz9QBfoCE/pSGc7JyM+FCFJw+lJY+gJxzwtqzMlz+wAGAGb4l/gnbxCi+C+gcoED6IIQCWYBgHD4N7YJcvsCyM+FCPpSghDVMnbbzwuOyz/JgQCC+wAB/jYF0z/6APpI+lD0AfoAIPQEAW6RMJHR4iP6RDDy0U34l/iTcPg6I3Jx4wT4OSBugRtyIuMEIW6BHplYA+MEUCOoJaCAEoEfQHD4PKABcPg2oAFw+DagcoED6IIQCWYBgHD4N6C88rD4kinHBfLgSVOkvvKvUaShJIIQO5rKALoNA+7XLCLK+D3kj2zXLCAAAIBEjuHXLCAAAIA0jlbXLCAAAILMMY5CNfiSI8cF+JIjxwWx+JIixwWx8uK8+JLIz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsAmIQPBscAFvL04uMN4w3jDQ8QEQL+kvgqkW3i7UTQ+gAx+kgx+kj6SDCIJ8j6UhP6UvpSz4gAgMl4Lm6zlD6LBA7fyM+QXjUUZhrLP1AI+gJSsPpSFfpUUAP6As+IAEAS9AAazsnIz4mIAVR0JcjPg8sEz4WgzMz5FoT3sASACyfXJDYVzhLL94EVDc8LeczMzMmAUBUOAAT7AAL+NviSIscFBtMAMdMJ+kj0BPQF+JLtRND6ADH6SDH6SPpIMIgmyPpSE/pS+lLPiACAyXhRIsjPg8sEz4WgzMz5FoT3sBWAC1AG1yTIz4oAQM4Uy/fPUBPHBRmx8uK8U2G5jhhQVl8FIW6RMZkh+wQB0O0e7VPi8QkT2zHgWzX4lxUSAFowNfiSbfgqyM+QAABAGyfPCwlSYPpSEvQA9ADJyM+FCBL6UnHPC27MyYBQ+wAA4Db4l4IQHc1lAL7ysPiX+DkgboESOljjBHGBAqNw+DgBcPg2oIES9XD4NqC88rD4kiTHBfLgSQXTP/oA+lD0BVOCvvKvUYKhyM+R73ZfehTLP1j6AlJQ+lL6VBb0AMnIz4WIUiD6UnHPC27MyYBQ+wAAjvgnbxCi+C+gcoED6IIQCWYBgHD4N7YJcvsCyM+FCFIw+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAgvsAASG/2BdqJofQB9JH0kGP0kGERBUAIb63Z2omh9AH0kfSR9JGmE6MART/APSkE/S88sgLFgFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/FwDw0z8x+gD6SPpQMfoAMdMJMdIA9AVTZMcFlRA2NTNbjjz4KiPI+lIX+lIV+lLPiACAyXhRZsjPg8sEz4WgzMz5FoT3sBKAC1AG1yTIz4oAQM4Uy/fPUBTHBfLgSgHiAoIQO5rKALpYsSFus7Dy4v4g+wTQ7R7tU/AA');
+    static CodeCell = c.Cell.fromBase64('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');
 
     static Errors = {
         'Errors.BalanceError': 47,
         'Errors.NotEnoughGas': 48,
+        'Errors.InvalidMessage': 49,
         'Errors.NotOwner': 73,
         'Errors.NotValidWallet': 74,
         'Errors.WrongWorkchain': 333,
         'Errors.IncorrectSender': 700,
+        'Errors.InsufficientBalance': 709,
         'Errors.VersionMismatch': 734,
+        'Errors.CreditNeedExceeded': 760,
+        'Errors.CreditNotMatured': 763,
     }
 
     readonly address: c.Address
@@ -920,6 +1303,7 @@ export class PersonalWallet implements c.Contract {
         deployer: c.Address
         minterAddress: c.Address
         version?: uint10 /* = 1 */
+        credit: CellRef<PersonalCreditInfo>
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? PersonalWallet.CodeCell,
@@ -983,6 +1367,34 @@ export class PersonalWallet implements c.Contract {
     static createCellOfDestroy(body: {
     }) {
         return Destroy.toCell(Destroy.create());
+    }
+
+    static createCellOfBuyCredit(body: {
+        queryId: uint64
+        jettonAmount: coins
+        transferRecipient: c.Address
+        sendExcessesTo: c.Address | null
+    }) {
+        return BuyCredit.toCell(BuyCredit.create(body));
+    }
+
+    static createCellOfPayback(body: {
+        queryId: uint64
+        amount: coins
+        sender: c.Address
+        swapTargetOwner?: c.Address | null /* = null */
+    }) {
+        return Payback.toCell(Payback.create(body));
+    }
+
+    static createCellOfSetLoanRequirement(body: {
+        queryId?: uint64 /* = 0 */
+        amount?: coins | null /* = null */
+        maturityDate?: uint32 | null /* = null */
+        cutoffDate?: uint32 | null /* = null */
+        multiplier?: uint16 | null /* = null */
+    }) {
+        return SetLoanRequirement.toCell(SetLoanRequirement.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -1073,8 +1485,62 @@ export class PersonalWallet implements c.Contract {
         });
     }
 
+    async sendBuyCredit(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        jettonAmount: coins
+        transferRecipient: c.Address
+        sendExcessesTo: c.Address | null
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: BuyCredit.toCell(BuyCredit.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendPayback(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        amount: coins
+        sender: c.Address
+        swapTargetOwner?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: Payback.toCell(Payback.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendSetLoanRequirement(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId?: uint64 /* = 0 */
+        amount?: coins | null /* = null */
+        maturityDate?: uint32 | null /* = null */
+        cutoffDate?: uint32 | null /* = null */
+        multiplier?: uint16 | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: SetLoanRequirement.toCell(SetLoanRequirement.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async getPersonalCreditInfo(provider: ContractProvider): Promise<PersonalCreditInfo> {
+        const r = StackReader.fromGetMethod(7, await provider.get('get_personal_credit_info', []));
+        return ({
+            $: 'PersonalCreditInfo',
+            creditNeed: r.readBigInt(),
+            creditCutoff: r.readBigInt(),
+            creditMaturity: r.readBigInt(),
+            multiplier: r.readBigInt(),
+            totalCreditReceived: r.readBigInt(),
+            totalPaybackSettled: r.readBigInt(),
+            totalPaybackShortfall: r.readBigInt(),
+        });
+    }
+
     async getPersonalWalletState(provider: ContractProvider): Promise<PersonalWalletStore> {
-        const r = StackReader.fromGetMethod(5, await provider.get('get_personal_wallet_state', []));
+        const r = StackReader.fromGetMethod(6, await provider.get('get_personal_wallet_state', []));
         return ({
             $: 'PersonalWalletStore',
             jettonBalance: r.readBigInt(),
@@ -1082,6 +1548,7 @@ export class PersonalWallet implements c.Contract {
             deployer: r.readSlice().loadAddress(),
             minterAddress: r.readSlice().loadAddress(),
             version: r.readBigInt(),
+            credit: r.readCellRef<PersonalCreditInfo>(PersonalCreditInfo.fromSlice),
         });
     }
 

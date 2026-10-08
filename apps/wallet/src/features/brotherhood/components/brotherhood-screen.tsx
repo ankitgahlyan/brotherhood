@@ -403,6 +403,7 @@ export const BrotherhoodScreen: React.FC = () => {
 
   // Loan requirement state
   const [loanAmountInput, setLoanAmountInput] = useState('');
+  const [loanCutoffDays, setLoanCutoffDays] = useState('');
   const [loanMaturityDays, setLoanMaturityDays] = useState('');
   const [loanMultiplierInput, setLoanMultiplierInput] = useState('');
 
@@ -413,10 +414,12 @@ export const BrotherhoodScreen: React.FC = () => {
     network,
     accountData: account.data,
     amount: loanAmountInput,
+    cutoffDays: loanCutoffDays,
     maturityDays: loanMaturityDays,
     multiplier: loanMultiplierInput,
     onSuccess: () => {
       setLoanAmountInput('');
+      setLoanCutoffDays('');
       setLoanMaturityDays('');
       setLoanMultiplierInput('');
     },
@@ -2372,6 +2375,35 @@ export const BrotherhoodScreen: React.FC = () => {
                               type="number"
                               step="1"
                               min="0"
+                              value={loanCutoffDays}
+                              onChange={(e) =>
+                                setLoanCutoffDays(e.target.value)
+                              }
+                              placeholder={
+                                account.data?.creditCutoff
+                                  ? `Deadline (${formatDate(account.data.creditCutoff)})`
+                                  : 'Cutoff (Days, 0 = None)'
+                              }
+                              disabled={
+                                !canOperate ||
+                                !loanRequirement.hasPersonalToken ||
+                                loanRequirement.isSending
+                              }
+                              className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                              data-testid="brotherhood-loan-cutoff-input"
+                            />
+                            {loanRequirement.cutoffValidationError && (
+                              <p className="text-[11px] text-rose-500 mt-1">
+                                {loanRequirement.cutoffValidationError}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
                               value={loanMaturityDays}
                               onChange={(e) =>
                                 setLoanMaturityDays(e.target.value)
@@ -2395,32 +2427,32 @@ export const BrotherhoodScreen: React.FC = () => {
                               </p>
                             )}
                           </div>
+                        </div>
 
-                          <div>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min="0.001"
-                              max="65.535"
-                              value={loanMultiplierInput}
-                              onChange={(e) =>
-                                setLoanMultiplierInput(e.target.value)
-                              }
-                              placeholder={`Multiplier (Current: ${account.data?.multiplier ?? 1}x)`}
-                              disabled={
-                                !canOperate ||
-                                !loanRequirement.hasPersonalToken ||
-                                loanRequirement.isSending
-                              }
-                              className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                              data-testid="brotherhood-loan-multiplier-input"
-                            />
-                            {loanRequirement.multiplierValidationError && (
-                              <p className="text-[11px] text-rose-500 mt-1">
-                                {loanRequirement.multiplierValidationError}
-                              </p>
-                            )}
-                          </div>
+                        <div>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0.001"
+                            max="65.535"
+                            value={loanMultiplierInput}
+                            onChange={(e) =>
+                              setLoanMultiplierInput(e.target.value)
+                            }
+                            placeholder={`Multiplier (Current: ${account.data?.multiplier ?? 1}x)`}
+                            disabled={
+                              !canOperate ||
+                              !loanRequirement.hasPersonalToken ||
+                              loanRequirement.isSending
+                            }
+                            className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                            data-testid="brotherhood-loan-multiplier-input"
+                          />
+                          {loanRequirement.multiplierValidationError && (
+                            <p className="text-[11px] text-rose-500 mt-1">
+                              {loanRequirement.multiplierValidationError}
+                            </p>
+                          )}
                         </div>
                       </div>
 
