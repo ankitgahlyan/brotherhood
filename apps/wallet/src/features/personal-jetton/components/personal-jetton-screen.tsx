@@ -22,11 +22,13 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
+  Fingerprint,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from '@/core/routing';
 import { useWallet, useWalletKit, useAuth } from '@demo/wallet-core';
+import { useBiometrics } from '@/core/security/use-biometrics';
 import {
   useExplorer,
   getExplorerAddressUrl,
@@ -153,12 +155,57 @@ export const PersonalJettonScreen: React.FC = () => {
 
   // Destroy confirmation dialog states & auth gate
   const { isPasswordSet, unlock } = useAuth();
+  const {
+    isSupported: isBiometricSupported,
+    isEnabled: isBiometricEnabled,
+    authenticate: authenticateBiometrics,
+  } = useBiometrics();
   const [isConfirmWalletOpen, setIsConfirmWalletOpen] = useState(false);
   const [isConfirmMinterOpen, setIsConfirmMinterOpen] = useState(false);
   const [confirmDestroyPhrase, setConfirmDestroyPhrase] = useState('');
   const [confirmDestroyPassword, setConfirmDestroyPassword] = useState('');
   const [destroyAuthError, setDestroyAuthError] = useState('');
   const [isAuthenticatingDestroy, setIsAuthenticatingDestroy] = useState(false);
+  const [isBiometricAuthenticating, setIsBiometricAuthenticating] =
+    useState(false);
+  const [isDestroyAuthenticated, setIsDestroyAuthenticated] = useState(false);
+
+  const resetDestroyState = () => {
+    setConfirmDestroyPhrase('');
+    setConfirmDestroyPassword('');
+    setDestroyAuthError('');
+    setIsDestroyAuthenticated(false);
+    setIsAuthenticatingDestroy(false);
+    setIsBiometricAuthenticating(false);
+  };
+
+  const handleBiometricDestroyAuth = async () => {
+    setDestroyAuthError('');
+    setIsBiometricAuthenticating(true);
+    try {
+      const bioPassword = await authenticateBiometrics();
+      if (bioPassword) {
+        const ok = await unlock(bioPassword);
+        if (ok) {
+          setIsDestroyAuthenticated(true);
+          setConfirmDestroyPassword(bioPassword);
+          toast.success('Authorized with biometrics');
+        } else {
+          setDestroyAuthError(
+            'Biometric authentication failed to verify passcode.',
+          );
+        }
+      } else {
+        setDestroyAuthError('Biometric authentication cancelled.');
+      }
+    } catch (err) {
+      setDestroyAuthError(
+        err instanceof Error ? err.message : 'Biometric authentication failed',
+      );
+    } finally {
+      setIsBiometricAuthenticating(false);
+    }
+  };
 
   const info = usePersonalJettonInfo(address ?? null);
 
@@ -1434,9 +1481,7 @@ export const PersonalJettonScreen: React.FC = () => {
           onOpenChange={(open) => {
             setIsConfirmWalletOpen(open);
             if (!open) {
-              setConfirmDestroyPhrase('');
-              setConfirmDestroyPassword('');
-              setDestroyAuthError('');
+              resetDestroyState();
             }
           }}
         >
@@ -1457,21 +1502,55 @@ export const PersonalJettonScreen: React.FC = () => {
 
             <div className="space-y-3 py-1">
               {isPasswordSet && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-foreground block">
-                    Wallet Passcode / Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmDestroyPassword}
-                    onChange={(e) => {
-                      setConfirmDestroyPassword(e.target.value);
-                      setDestroyAuthError('');
-                    }}
-                    placeholder="Enter your wallet passcode"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    data-testid="personal-destroy-wallet-password"
-                  />
+                <div className="space-y-2">
+                  {isBiometricSupported &&
+                    isBiometricEnabled &&
+                    !isDestroyAuthenticated && (
+                      <div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          loading={isBiometricAuthenticating}
+                          onClick={handleBiometricDestroyAuth}
+                          className="flex items-center justify-center gap-2"
+                          data-testid="personal-destroy-wallet-biometric-btn"
+                        >
+                          <Fingerprint className="w-4 h-4 text-primary" />
+                          Authorize with Biometrics
+                        </Button>
+                        <div className="flex items-center gap-2 my-2 text-[11px] text-muted-foreground">
+                          <div className="h-px bg-border flex-1" />
+                          <span>or enter passcode</span>
+                          <div className="h-px bg-border flex-1" />
+                        </div>
+                      </div>
+                    )}
+
+                  {isDestroyAuthenticated ? (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      <span>Authorized via Biometrics</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground block">
+                        Wallet Passcode / Password
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmDestroyPassword}
+                        onChange={(e) => {
+                          setConfirmDestroyPassword(e.target.value);
+                          setDestroyAuthError('');
+                        }}
+                        placeholder="Enter your wallet passcode"
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        data-testid="personal-destroy-wallet-password"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1507,8 +1586,15 @@ export const PersonalJettonScreen: React.FC = () => {
               <Button
                 variant="gray"
                 size="sm"
-                onClick={() => setIsConfirmWalletOpen(false)}
-                disabled={destroyer.isSending || isAuthenticatingDestroy}
+                onClick={() => {
+                  setIsConfirmWalletOpen(false);
+                  resetDestroyState();
+                }}
+                disabled={
+                  destroyer.isSending ||
+                  isAuthenticatingDestroy ||
+                  isBiometricAuthenticating
+                }
               >
                 Cancel
               </Button>
@@ -1520,8 +1606,8 @@ export const PersonalJettonScreen: React.FC = () => {
                     setDestroyAuthError('Please type DESTROY to confirm.');
                     return;
                   }
-                  if (isPasswordSet) {
-                    if (!confirmDestroyPassword) {
+                  if (isPasswordSet && !isDestroyAuthenticated) {
+                    if (!confirmDestroyPassword.trim()) {
                       setDestroyAuthError(
                         'Passcode is required to authorize destruction.',
                       );
@@ -1529,7 +1615,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     }
                     setIsAuthenticatingDestroy(true);
                     try {
-                      const ok = await unlock(confirmDestroyPassword);
+                      const ok = await unlock(confirmDestroyPassword.trim());
                       if (!ok) {
                         setDestroyAuthError('Incorrect passcode.');
                         setIsAuthenticatingDestroy(false);
@@ -1547,12 +1633,19 @@ export const PersonalJettonScreen: React.FC = () => {
                     setIsAuthenticatingDestroy(false);
                   }
                   setIsConfirmWalletOpen(false);
+                  resetDestroyState();
                   await destroyer.destroyWallet();
                 }}
-                loading={destroyer.isSending || isAuthenticatingDestroy}
+                loading={
+                  destroyer.isSending ||
+                  isAuthenticatingDestroy ||
+                  isBiometricAuthenticating
+                }
                 disabled={
                   confirmDestroyPhrase.trim().toUpperCase() !== 'DESTROY' ||
-                  (isPasswordSet && !confirmDestroyPassword)
+                  (isPasswordSet &&
+                    !isDestroyAuthenticated &&
+                    !confirmDestroyPassword.trim())
                 }
                 data-testid="personal-destroy-wallet-confirm"
               >
@@ -1568,9 +1661,7 @@ export const PersonalJettonScreen: React.FC = () => {
           onOpenChange={(open) => {
             setIsConfirmMinterOpen(open);
             if (!open) {
-              setConfirmDestroyPhrase('');
-              setConfirmDestroyPassword('');
-              setDestroyAuthError('');
+              resetDestroyState();
             }
           }}
         >
@@ -1590,21 +1681,55 @@ export const PersonalJettonScreen: React.FC = () => {
 
             <div className="space-y-3 py-1">
               {isPasswordSet && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-foreground block">
-                    Wallet Passcode / Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmDestroyPassword}
-                    onChange={(e) => {
-                      setConfirmDestroyPassword(e.target.value);
-                      setDestroyAuthError('');
-                    }}
-                    placeholder="Enter your wallet passcode"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    data-testid="personal-destroy-minter-password"
-                  />
+                <div className="space-y-2">
+                  {isBiometricSupported &&
+                    isBiometricEnabled &&
+                    !isDestroyAuthenticated && (
+                      <div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          loading={isBiometricAuthenticating}
+                          onClick={handleBiometricDestroyAuth}
+                          className="flex items-center justify-center gap-2"
+                          data-testid="personal-destroy-minter-biometric-btn"
+                        >
+                          <Fingerprint className="w-4 h-4 text-primary" />
+                          Authorize with Biometrics
+                        </Button>
+                        <div className="flex items-center gap-2 my-2 text-[11px] text-muted-foreground">
+                          <div className="h-px bg-border flex-1" />
+                          <span>or enter passcode</span>
+                          <div className="h-px bg-border flex-1" />
+                        </div>
+                      </div>
+                    )}
+
+                  {isDestroyAuthenticated ? (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      <span>Authorized via Biometrics</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground block">
+                        Wallet Passcode / Password
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmDestroyPassword}
+                        onChange={(e) => {
+                          setConfirmDestroyPassword(e.target.value);
+                          setDestroyAuthError('');
+                        }}
+                        placeholder="Enter your wallet passcode"
+                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        data-testid="personal-destroy-minter-password"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1640,8 +1765,15 @@ export const PersonalJettonScreen: React.FC = () => {
               <Button
                 variant="gray"
                 size="sm"
-                onClick={() => setIsConfirmMinterOpen(false)}
-                disabled={destroyer.isSending || isAuthenticatingDestroy}
+                onClick={() => {
+                  setIsConfirmMinterOpen(false);
+                  resetDestroyState();
+                }}
+                disabled={
+                  destroyer.isSending ||
+                  isAuthenticatingDestroy ||
+                  isBiometricAuthenticating
+                }
               >
                 Cancel
               </Button>
@@ -1653,8 +1785,8 @@ export const PersonalJettonScreen: React.FC = () => {
                     setDestroyAuthError('Please type DESTROY to confirm.');
                     return;
                   }
-                  if (isPasswordSet) {
-                    if (!confirmDestroyPassword) {
+                  if (isPasswordSet && !isDestroyAuthenticated) {
+                    if (!confirmDestroyPassword.trim()) {
                       setDestroyAuthError(
                         'Passcode is required to authorize destruction.',
                       );
@@ -1662,7 +1794,7 @@ export const PersonalJettonScreen: React.FC = () => {
                     }
                     setIsAuthenticatingDestroy(true);
                     try {
-                      const ok = await unlock(confirmDestroyPassword);
+                      const ok = await unlock(confirmDestroyPassword.trim());
                       if (!ok) {
                         setDestroyAuthError('Incorrect passcode.');
                         setIsAuthenticatingDestroy(false);
@@ -1680,12 +1812,19 @@ export const PersonalJettonScreen: React.FC = () => {
                     setIsAuthenticatingDestroy(false);
                   }
                   setIsConfirmMinterOpen(false);
+                  resetDestroyState();
                   await destroyer.destroyMinter();
                 }}
-                loading={destroyer.isSending || isAuthenticatingDestroy}
+                loading={
+                  destroyer.isSending ||
+                  isAuthenticatingDestroy ||
+                  isBiometricAuthenticating
+                }
                 disabled={
                   confirmDestroyPhrase.trim().toUpperCase() !== 'DESTROY' ||
-                  (isPasswordSet && !confirmDestroyPassword)
+                  (isPasswordSet &&
+                    !isDestroyAuthenticated &&
+                    !confirmDestroyPassword.trim())
                 }
                 data-testid="personal-destroy-minter-confirm"
               >

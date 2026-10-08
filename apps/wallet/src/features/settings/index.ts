@@ -10,3 +10,4 @@ export * from './components/settings-dropdown';
 export * from './components/settings-wallets';
 export * from './components/network-api-keys';
 export * from './components/toggle-row';
+export * from './components/security';
