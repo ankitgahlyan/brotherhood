@@ -49,6 +49,7 @@ import {
 import {
   batchHydrateUniversal,
   computePersonalWalletAddress,
+  getCachedRawAccountState,
   type KnownContractType,
 } from '@/lib/brotherhood/account-state-hydrator';
 import {
@@ -482,6 +483,16 @@ export function useEcosystemSwap() {
         }
       }
 
+      // Skip members who have no Personal Token configured or whose minter is uninit (not deployed)
+      if (!hasPt || !minterParsed) continue;
+
+      const cachedMinter = getContractCacheSync<PersonalStore>(
+        getNormalizedContractCacheKey(net, minterParsed),
+      );
+      if (cachedMinter?.status === 'uninit') continue;
+      const rawMinter = getCachedRawAccountState(minterParsed, net);
+      if (rawMinter?.status === 'uninit') continue;
+
       // Check on-chain PersonalStore metadata & user's held balance of this member's Personal Token
       let userPtBal = 0n;
       let jettonSymbol: string | undefined;
@@ -490,9 +501,6 @@ export function useEcosystemSwap() {
 
       if (hasPt && minterParsed) {
         try {
-          const cachedMinter = getContractCacheSync<PersonalStore>(
-            getNormalizedContractCacheKey(net, minterParsed),
-          );
           if (cachedMinter?.data?.metadataUri) {
             const meta = parseOnchainMetadataCell(
               cachedMinter.data.metadataUri,

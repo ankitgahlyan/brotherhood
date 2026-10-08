@@ -7,7 +7,6 @@ import { InstallPromptDialog } from './install-prompt-dialog';
 
 export const PwaInstallBanner: React.FC = () => {
   const {
-    deferredPrompt,
     isStandalone,
     isDismissed,
     isInstalled,
@@ -41,9 +40,8 @@ export const PwaInstallBanner: React.FC = () => {
   }
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      await installStandalone();
-    } else {
+    const res = await installStandalone();
+    if (res.outcome === 'unsupported') {
       setDialogOpen(true);
     }
   };

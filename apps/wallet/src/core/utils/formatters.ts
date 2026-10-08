@@ -82,7 +82,13 @@ export function resolveAddressContactName(
     contactsMap ??
     useContactBookStore.getState().contactsByNetwork[net] ??
     EMPTY_CONTACTS_MAP;
-  const contact = map[rawKey];
+  const contact =
+    map[rawKey] ??
+    Object.values(map).find(
+      (c) =>
+        c.rawAddress === rawKey ||
+        normalizeContactAddress(c.address) === rawKey,
+    );
   if (contact) {
     if (contact.customName) return contact.customName;
     if (contact.onChainUsername)

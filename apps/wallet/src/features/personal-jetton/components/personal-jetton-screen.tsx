@@ -522,10 +522,8 @@ export const PersonalJettonScreen: React.FC = () => {
                       <input
                         type="text"
                         value={deployTokenSymbol}
-                        onChange={(e) =>
-                          setDeployTokenSymbol(e.target.value.toUpperCase())
-                        }
-                        placeholder="e.g. ALICE"
+                        onChange={(e) => setDeployTokenSymbol(e.target.value)}
+                        placeholder="e.g. alice / ALICE"
                         className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                         data-testid="personal-deploy-symbol"
                       />

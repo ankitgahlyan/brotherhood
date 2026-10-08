@@ -7,7 +7,14 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Copy, Zap, Loader2, Wallet } from 'lucide-react';
+import {
+  Copy,
+  Zap,
+  Loader2,
+  Wallet,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import {
   useWallet,
   useWalletKit,
@@ -279,6 +286,20 @@ export const WalletCardCarousel: React.FC = () => {
     }
   };
 
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const prevIdx =
+      currentIndex <= 0 ? savedWallets.length - 1 : currentIndex - 1;
+    void handleSwitchTo(prevIdx);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextIdx =
+      currentIndex >= savedWallets.length - 1 ? 0 : currentIndex + 1;
+    void handleSwitchTo(nextIdx);
+  };
+
   const animatedFi = useCountUp(fiAmount);
   const { intPart, fracPart } = formatNumberParts(animatedFi);
   const tonDecimal =
@@ -332,6 +353,34 @@ export const WalletCardCarousel: React.FC = () => {
 
       {/* Ambient Top Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-12 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
+
+      {/* Edge Chevron Navigation Buttons */}
+      {hasMultipleWallets && (
+        <>
+          <button
+            type="button"
+            onClick={handlePrev}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="absolute left-2.5 top-[45%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-background/70 hover:bg-background/95 text-muted-foreground hover:text-foreground border border-border/60 shadow-xs backdrop-blur-md transition-all active:scale-95 cursor-pointer flex items-center justify-center group"
+            aria-label="Previous wallet"
+            title="Previous wallet"
+          >
+            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="absolute right-2.5 top-[45%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-background/70 hover:bg-background/95 text-muted-foreground hover:text-foreground border border-border/60 shadow-xs backdrop-blur-md transition-all active:scale-95 cursor-pointer flex items-center justify-center group"
+            aria-label="Next wallet"
+            title="Next wallet"
+          >
+            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
+        </>
+      )}
 
       {/* Swipeable & Animating Balance Area */}
       <div

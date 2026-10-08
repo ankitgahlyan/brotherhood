@@ -129,8 +129,7 @@ export const SettingsDropdown: React.FC = () => {
   };
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
-  const { deferredPrompt, isStandalone, isInstalled, installStandalone } =
-    usePwaInstall();
+  const { isStandalone, isInstalled, installStandalone } = usePwaInstall();
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isContactsOpen, setIsContactsOpen] = useState(false);
   const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false);
@@ -447,9 +446,8 @@ export const SettingsDropdown: React.FC = () => {
                     subtitle="Install standalone app on your device"
                     onClick={async () => {
                       setPanel(null);
-                      if (deferredPrompt) {
-                        await installStandalone();
-                      } else {
+                      const res = await installStandalone();
+                      if (res.outcome === 'unsupported') {
                         setIsInstallOpen(true);
                       }
                     }}

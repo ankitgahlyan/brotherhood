@@ -23,6 +23,7 @@ import { isValidAddress } from '@ton/walletkit';
 import { useWallet } from '@demo/wallet-core';
 import {
   useContactBookStore,
+  formatContactAddress,
   EMPTY_CONTACTS_MAP,
   type ContactItem,
 } from '@/core/storage/useContactBookStore';
@@ -59,6 +60,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
 
   // Form states for Add / Edit
   const [formAddress, setFormAddress] = useState('');
+  const [formDnsDomain, setFormDnsDomain] = useState('');
   const [formName, setFormName] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
@@ -99,6 +101,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
 
   const handleOpenAdd = () => {
     setFormAddress('');
+    setFormDnsDomain('');
     setFormName('');
     setFormNotes('');
     setEditingContact(null);
@@ -106,7 +109,8 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
   };
 
   const handleOpenEdit = (contact: ContactItem) => {
-    setFormAddress(contact.dnsDomain || contact.address);
+    setFormAddress(formatContactAddress(contact.address, network));
+    setFormDnsDomain(contact.dnsDomain || contact.dnsDomains?.[0] || '');
     setFormName(contact.customName || contact.onChainUsername || '');
     setFormNotes(contact.notes || '');
     setEditingContact(contact);
@@ -115,27 +119,29 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
 
   const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanAddr = formAddress.trim();
+    let cleanAddr = formAddress.trim();
+    let cleanDns = formDnsDomain.trim().toLowerCase();
     let cleanName = formName.trim().replace(/^@+/, '');
 
-    let targetAddr = cleanAddr;
-    let detectedDomain: string | undefined;
+    // If user provided a domain in the address field, move it to DNS
+    if (cleanAddr && isTonChainDns(cleanAddr)) {
+      if (!cleanDns) {
+        cleanDns = cleanAddr.toLowerCase();
+      }
+      cleanAddr = '';
+    }
 
-    if (isTonChainDns(cleanAddr)) {
-      detectedDomain = cleanAddr.toLowerCase();
+    if (!cleanAddr && cleanDns && isTonChainDns(cleanDns)) {
       try {
         const resolved = await resolveAddressByDomain(
-          cleanAddr,
+          cleanDns,
           network === 'mainnet' ? 'mainnet' : 'testnet',
         );
         if (!resolved) {
-          toast.error(`Could not resolve TON DNS domain: ${cleanAddr}`);
+          toast.error(`Could not resolve TON DNS domain: ${cleanDns}`);
           return;
         }
-        targetAddr = resolved;
-        if (!cleanName) {
-          cleanName = cleanAddr;
-        }
+        cleanAddr = resolved;
       } catch (err) {
         toast.error(
           `Failed to resolve domain: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -144,19 +150,24 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
       }
     }
 
-    if (!targetAddr || !isValidAddress(targetAddr)) {
-      toast.error('Please provide a valid TON address or domain');
+    if (!cleanAddr || !isValidAddress(cleanAddr)) {
+      toast.error('Please provide a valid TON address');
       return;
     }
 
+    const nonBounceable = formatContactAddress(cleanAddr, network);
+    if (!cleanName && cleanDns) {
+      cleanName = cleanDns;
+    }
+
     setCustomName(
-      targetAddr,
+      nonBounceable,
       cleanName,
       formNotes.trim() || undefined,
       network,
     );
-    if (detectedDomain) {
-      saveDnsDomain(targetAddr, detectedDomain, network);
+    if (cleanDns) {
+      saveDnsDomain(nonBounceable, cleanDns, network);
     }
     toast.success(editingContact ? 'Contact updated' : 'Contact added');
     setIsAddingNew(false);
@@ -443,16 +454,29 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
           <form onSubmit={handleSaveContact} className="space-y-3.5 pt-3">
             <div>
               <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                TON Address or Domain *
+                TON Address *
               </label>
               <input
                 type="text"
-                placeholder="EQ... / 0:... or alice.ton"
+                placeholder="0Q... / UQ... or raw"
                 value={formAddress}
                 onChange={(e) => setFormAddress(e.target.value)}
                 disabled={Boolean(editingContact)}
                 className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-                required
+                required={!formDnsDomain.trim()}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                DNS Domain (.bro / .ton)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. alice.bro or alice.ton"
+                value={formDnsDomain}
+                onChange={(e) => setFormDnsDomain(e.target.value)}
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 

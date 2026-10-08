@@ -6,12 +6,17 @@
  */
 
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { useContactBookStore } from './useContactBookStore';
+import {
+  useContactBookStore,
+  formatContactAddress,
+} from './useContactBookStore';
 
 describe('useContactBookStore with TON DNS domains', () => {
   const testAddress1 = 'UQCdqXGvONLwOr3zCNX5FjapflorB6ZsOdcdfLrjsDLt3AF4';
   const testAddress2 = 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG';
   const network = 'testnet';
+  const expectedAddr1 = formatContactAddress(testAddress1, network);
+  const expectedAddr2 = formatContactAddress(testAddress2, network);
 
   beforeEach(() => {
     useContactBookStore.getState().clearContacts('testnet');
@@ -28,7 +33,7 @@ describe('useContactBookStore with TON DNS domains', () => {
         .getState()
         .getContact(testAddress1, network);
       expect(contact).not.toBeNull();
-      expect(contact?.address).toBe(testAddress1);
+      expect(contact?.address).toBe(expectedAddr1);
       expect(contact?.dnsDomain).toBe('alice.ton');
       expect(contact?.dnsDomains).toEqual(['alice.ton']);
       expect(contact?.customName).toBeUndefined();
@@ -103,31 +108,31 @@ describe('useContactBookStore with TON DNS domains', () => {
       const resolved = useContactBookStore
         .getState()
         .resolveAddress('Alice', network);
-      expect(resolved).toBe(testAddress1);
+      expect(resolved).toBe(expectedAddr1);
 
       const resolvedAt = useContactBookStore
         .getState()
         .resolveAddress('@Alice', network);
-      expect(resolvedAt).toBe(testAddress1);
+      expect(resolvedAt).toBe(expectedAddr1);
     });
 
     it('resolves by primary dnsDomain', () => {
       const resolved = useContactBookStore
         .getState()
         .resolveAddress('bob.ton', network);
-      expect(resolved).toBe(testAddress2);
+      expect(resolved).toBe(expectedAddr2);
     });
 
     it('resolves by any domain in dnsDomains alias list', () => {
       const resolvedFirst = useContactBookStore
         .getState()
         .resolveAddress('alice.ton', network);
-      expect(resolvedFirst).toBe(testAddress1);
+      expect(resolvedFirst).toBe(expectedAddr1);
 
       const resolvedSecond = useContactBookStore
         .getState()
         .resolveAddress('alice.t.me', network);
-      expect(resolvedSecond).toBe(testAddress1);
+      expect(resolvedSecond).toBe(expectedAddr1);
     });
 
     it('returns null for unknown domain or name', () => {
@@ -135,6 +140,58 @@ describe('useContactBookStore with TON DNS domains', () => {
         .getState()
         .resolveAddress('unknown.ton', network);
       expect(resolved).toBeNull();
+    });
+  });
+
+  describe('non-bounceable format and bounceable (kQ) address normalization', () => {
+    const bounceableTestnetAddr =
+      'kQCdqXGvONLwOr3zCNX5FjapflorB6ZsOdcdfLrjsDLt3Oc3';
+    const nonBounceableTestnetAddr = formatContactAddress(
+      bounceableTestnetAddr,
+      network,
+    );
+
+    it('saves non-bounceable address when given a bounceable kQ address', () => {
+      useContactBookStore
+        .getState()
+        .setCustomName(bounceableTestnetAddr, 'Charlie', undefined, network);
+
+      const contact = useContactBookStore
+        .getState()
+        .getContact(bounceableTestnetAddr, network);
+      expect(contact).not.toBeNull();
+      expect(contact?.address).toBe(nonBounceableTestnetAddr);
+      expect(contact?.address.startsWith('0Q')).toBe(true);
+    });
+
+    it('does not create duplicate entries when setting custom name with kQ vs 0Q', () => {
+      useContactBookStore
+        .getState()
+        .setCustomName(bounceableTestnetAddr, 'Charlie', undefined, network);
+      useContactBookStore
+        .getState()
+        .setCustomName(
+          nonBounceableTestnetAddr,
+          'Charlie Friend',
+          undefined,
+          network,
+        );
+
+      const list = useContactBookStore.getState().getContactsList(network);
+      expect(list.length).toBe(1);
+      expect(list[0].address).toBe(nonBounceableTestnetAddr);
+      expect(list[0].customName).toBe('Charlie Friend');
+    });
+
+    it('resolves effective name when queried with a bounceable kQ address', () => {
+      useContactBookStore
+        .getState()
+        .setCustomName(nonBounceableTestnetAddr, 'Charlie', undefined, network);
+
+      const effective = useContactBookStore
+        .getState()
+        .getEffectiveName(bounceableTestnetAddr, network);
+      expect(effective?.name).toBe('Charlie');
     });
   });
 

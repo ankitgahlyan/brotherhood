@@ -64,7 +64,16 @@ export const EditableAddressName: React.FC<EditableAddressNameProps> = ({
   // Reactively subscribe to contact for this address
   const contact = useContactBookStore((state) => {
     const net = network || 'testnet';
-    return state.contactsByNetwork[net]?.[rawKey];
+    const map = state.contactsByNetwork[net];
+    if (!map || !rawKey) return undefined;
+    return (
+      map[rawKey] ??
+      Object.values(map).find(
+        (c) =>
+          c.rawAddress === rawKey ||
+          normalizeContactAddress(c.address) === rawKey,
+      )
+    );
   });
 
   const setCustomName = useContactBookStore((state) => state.setCustomName);
