@@ -12,7 +12,7 @@ const OP_DESTROY = 0x00001059 // 'dest' or match your contract's specific op::de
 
 fun main() {
     // 1. Prompt for sender ActonWallet
-    val sender = promptJettonWallet("SENDE", "Select sender ActonWallet to authorize destroy");
+    val sender = promptJettonWallet("SENDER", "Select sender ActonWallet to authorize destroy");
     val targetAddress = promptAddress("Enter target contract address to destroy");
 
     val genericMsg = createMessage({

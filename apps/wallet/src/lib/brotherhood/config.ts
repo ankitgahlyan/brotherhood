@@ -28,7 +28,7 @@ export const DAO_PROXY_ADDRESS =
 
 /** Credit Proxy address (from emulate-fork-credit.tolk / deploy-credit-proxy.tolk) */
 export const CREDIT_PROXY_ADDRESS =
-  'kQAzXKI6Pn2KcbEA1dnVvxAi9uzIuA2ck_OBTcUujwkaRgOu';
+  'kQBMR4spXIkbHeBEYKjx1sd7RBzaf1amKp0EGqjbg9M8wxVV';
 
 /** Standard Null Address */
 export const ZERO_ADDRESS =

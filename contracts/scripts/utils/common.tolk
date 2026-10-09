@@ -50,6 +50,14 @@ fun promptJettonAddress(envName: string, message: string, default: address? = nu
     if (fromEnv != null) {
         return parseAddress(fromEnv);
     }
+    val fallbackAdmin = env<string>("ADMIN_ADDRESS") ?? env<string>("JETTON_ADMIN_ADDRESS");
+    if (
+        fallbackAdmin != null &&
+        (envName.equalTo("ADMIN_ADDRESS") || envName.equalTo("JETTON_ADMIN_ADDRESS") ||
+            envName.equalTo("PERSONAL_ADMIN_ADDRESS"))
+    ) {
+        return parseAddress(fallbackAdmin);
+    }
     if (default != null) {
         return parseAddress(prompt(message, "", format("{}", default)));
     }
@@ -76,6 +84,27 @@ fun promptJettonWallet(envName: string, message: string): ActonWallet {
     val nameFromEnv = env<string>(envName);
     if (nameFromEnv != null) {
         return scripts.wallet(nameFromEnv);
+    }
+    val fallbackAdmin = env<string>("ADMIN") ?? env<string>("JETTON_ADMIN");
+    if (fallbackAdmin != null && (envName.equalTo("JETTON_ADMIN") || envName.equalTo("ADMIN"))) {
+        return scripts.wallet(fallbackAdmin);
+    }
+    val fallbackDeployer = env<string>("DEPLOYER") ??
+        env<string>("JETTON_DEPLOYER") ?? env<string>("ADMIN");
+    if (
+        fallbackDeployer != null &&
+        (envName.equalTo("DEPLOYER") || envName.equalTo("JETTON_DEPLOYER") ||
+            envName.equalTo("PERSONAL_DEPLOYER"))
+    ) {
+        return scripts.wallet(fallbackDeployer);
+    }
+    val fallbackSender = env<string>("SENDER") ??
+        env<string>("JETTON_SENDER") ?? env<string>("ADMIN");
+    if (
+        fallbackSender != null &&
+        (envName.equalTo("JETTON_SENDER") || envName.equalTo("SENDER") || envName.equalTo("SENDE"))
+    ) {
+        return scripts.wallet(fallbackSender);
     }
     return scripts.wallet(promptWallet(message));
 }

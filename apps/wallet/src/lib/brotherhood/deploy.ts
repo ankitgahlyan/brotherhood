@@ -1,6 +1,6 @@
 import { Address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { LocationCredit } from '@wrappers/LocationCredit.gen';
-import { CREDIT_PROXY_ADDRESS, DAO_PROXY_ADDRESS, FI_ADDRESS } from './config';
+import { CREDIT_PROXY_ADDRESS, BRO_TREASURY_ADDRESS } from './config';
 import {
   FossFi,
   MintNewJettons,
@@ -365,7 +365,7 @@ export function calculateLocationCreditAddress(params: {
   adminAddress?: Address;
 }): Address {
   const proxyAddr = params.proxyAddress ?? Address.parse(CREDIT_PROXY_ADDRESS);
-  const adminAddr = params.adminAddress ?? Address.parse(DAO_PROXY_ADDRESS);
+  const adminAddr = params.adminAddress ?? Address.parse(BRO_TREASURY_ADDRESS);
   const locCredit = LocationCredit.fromStorage(
     {
       h3Cell: params.h3Cell,
