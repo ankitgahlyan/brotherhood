@@ -11,6 +11,7 @@ import "@wrappers/PersonalWallet.gen"
 import "@contracts/common/constants"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
+import "@contracts/personalMinter/base-personal-minter-code"
 import "@contracts/personalMinter/storage"
 
 fun assertEq(label: string, got: int, want: int) {
@@ -39,7 +40,7 @@ fun deployPersonalToken(
         version: 0,
     };
     val stateInit = ContractState {
-        code: build("BasePersonalMinter"),
+        code: getBasePersonalMinterCode(),
         data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: owner };

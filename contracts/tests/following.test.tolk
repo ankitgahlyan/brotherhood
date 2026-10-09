@@ -1,4 +1,3 @@
-import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -10,6 +9,7 @@ import "@wrappers/utils"
 import "@contracts/common/constants"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/followers/base-following-code"
 import "@contracts/followers/consts"
 import "@contracts/followers/following-utils"
 import "@contracts/followers/messages"
@@ -71,7 +71,7 @@ get fun `test follow: follower deploys following child, followee receives 1000 F
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("BaseFollowing"),
+        getBaseFollowingCode(),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
     val followingChild = Followers.fromAddress(followingChildAddr);
@@ -86,7 +86,7 @@ get fun `test follow: following child contract data and lifecycle`() {
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("BaseFollowing"),
+        getBaseFollowingCode(),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
 
@@ -126,7 +126,7 @@ get fun `test follow: unfollow burns 1000 FI from followee and decrements counte
     val followingChildAddr = calcDeployFollowing(
         followerWallet.address,
         followeeWallet.address,
-        build("BaseFollowing"),
+        getBaseFollowingCode(),
         FOLLOW_MINT_AMOUNT,
     ).calculateAddress();
     val followingChild = Followers.fromAddress(followingChildAddr);

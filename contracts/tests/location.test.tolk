@@ -1,4 +1,3 @@
-import "@acton/build"
 import "@acton/emulation/network"
 import "@acton/emulation/testing"
 import "@acton/testing/expect"
@@ -8,6 +7,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Location.gen"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/location/base-location-code"
 import "@contracts/location/location-utils"
 
 import "test-utils"
@@ -16,7 +16,7 @@ const H3_NYC = "882a100d31fffff"
 const H3_SF = "8828308281fffff"
 
 fun getLocationContract(minterAddress: address, h3Cell: string): Location {
-    val deployInfo = calcDeployLocation(h3Cell, minterAddress, build("BaseLocation"));
+    val deployInfo = calcDeployLocation(h3Cell, minterAddress, getBaseLocationCode());
     return Location.fromAddress(deployInfo.calculateAddress());
 }
 

@@ -6,7 +6,7 @@ if (typeof globalThis !== 'undefined') {
 }
 
 import { Address, Cell } from '@ton/core';
-import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
+import { BasePersonalWallet } from '@wrappers';
 import { WalletV5R1CodeBoc, CallForSuccess } from '@ton/walletkit';
 import {
   setContractCache,

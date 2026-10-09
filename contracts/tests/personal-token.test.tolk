@@ -11,6 +11,7 @@ import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/personalMinter/base-personal-minter-code"
 import "@contracts/personalMinter/storage"
 
 import "test-utils"
@@ -23,7 +24,7 @@ fun deployPersonalMinter(issuerWallet: address, admin: address): Personal {
         version: 0,
     };
     val stateInit = ContractState {
-        code: build("BasePersonalMinter"),
+        code: getBasePersonalMinterCode(),
         data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };

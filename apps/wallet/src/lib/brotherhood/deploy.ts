@@ -47,9 +47,8 @@ export {
 };
 import { Holding } from '@wrappers/Holding.gen';
 import { DaoProxy } from '@wrappers/DaoProxy.gen';
-import { BasePersonalMinter } from '@wrappers/BasePersonalMinter.gen';
+import { BasePersonalMinter, BasePersonalWallet } from '@wrappers';
 import { PersonalMinter, Upgrade } from '@wrappers/PersonalMinter.gen';
-import { BasePersonalWallet } from '@wrappers/BasePersonalWallet.gen';
 import { PersonalWallet } from '@wrappers/PersonalWallet.gen';
 import {
   buildOnchainMetadata,

@@ -8,7 +8,7 @@
 
 import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
-import { BaseLocation } from '@wrappers/BaseLocation.gen';
+import { BaseLocation } from '@wrappers';
 import { type LocationStore } from '@wrappers/Location.gen';
 import { network, FI_ADDRESS } from '@/lib/brotherhood/config';
 import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';

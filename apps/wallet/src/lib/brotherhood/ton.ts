@@ -3,7 +3,7 @@ import { Address } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
 import { FossFiWallet, type PocketMoney } from '@wrappers/FossFiWallet.gen';
-import { BaseFiWallet } from '@wrappers/BaseFiWallet.gen';
+import { BaseFiWallet } from '@wrappers';
 import {
   rateLimitedFetch,
   createTonClientAxiosAdapter,

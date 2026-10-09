@@ -13,7 +13,6 @@ src = "contracts/src/fossFi/FossFi.tolk"
 depends = [
     # small number deployed easy upgrades
     "Lottery",
-    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Location", kind = "embed_code", function = "locationCompiledCodeLibraryRef" },
 ]
 
@@ -21,20 +20,9 @@ depends = [
 display-name = "FossFiWallet Child"
 src = "contracts/src/fossFi/FossFiWallet.tolk"
 depends = [
-    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Following", kind = "embed_code", function = "followingCompiledCodeLibraryRef" },
     { name = "Holding", kind = "embed_code", function = "holdingCompiledCodeLibraryRef" },
 ]
-
-[contracts.BaseFiWallet]
-display-name = "BaseFiWallet Proxy"
-src = "contracts/src/fossFi/BaseFiWallet.tolk"
-depends = []
-
-[contracts.BaseFollowing]
-display-name = "BaseFollowing Proxy"
-src = "contracts/src/followers/BaseFollowing.tolk"
-depends = []
 
 [contracts.Following]
 display-name = "Following Child"
@@ -44,11 +32,6 @@ depends = []
 [contracts.Holding]
 display-name = "Holding Child"
 src = "contracts/src/holding/holding.tolk"
-depends = []
-
-[contracts.BaseLocation]
-display-name = "BaseLocation Proxy"
-src = "contracts/src/location/BaseLocation.tolk"
 depends = []
 
 [contracts.Location]
@@ -61,22 +44,9 @@ display-name = "Lottery"
 src = "contracts/src/lottery/lottery.tolk"
 depends = []
 
-[contracts.BasePersonalMinter]
-display-name = "BasePersonalMinter Proxy"
-src = "contracts/src/personalMinter/BasePersonalMinter.tolk"
-depends = []
-
 [contracts.PersonalMinter]
 display-name = "Personal Token Minter"
 src = "contracts/src/personalMinter/personal.tolk"
-depends = [
-    { name = "BasePersonalWallet", kind = "embed_code", function = "basePersonalWalletCompiledCode" },
-    { name = "PersonalWallet", kind = "embed_code", function = "personalWalletCompiledCodeLibraryRef" },
-]
-
-[contracts.BasePersonalWallet]
-display-name = "BasePersonalWallet Proxy"
-src = "contracts/src/personalMinter/BasePersonalWallet.tolk"
 depends = [
     { name = "PersonalWallet", kind = "embed_code", function = "personalWalletCompiledCodeLibraryRef" },
 ]
@@ -97,7 +67,6 @@ depends = [
 display-name = "Poll Governance"
 src = "contracts/src/dao/Poll.tolk"
 depends = [
-    { name = "BaseFiWallet", kind = "embed_code", function = "baseFiWalletCompiledCode" },
     { name = "Voter", kind = "embed_code", function = "voterCompiledCodeLibraryRef" },
 ]
 

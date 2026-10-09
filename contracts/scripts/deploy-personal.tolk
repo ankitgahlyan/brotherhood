@@ -7,6 +7,7 @@ import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Personal.gen"
 import "@contracts/common/messages"
+import "@contracts/personalMinter/base-personal-minter-code"
 import "@contracts/personalMinter/storage"
 
 import "utils/common"
@@ -49,7 +50,7 @@ fun main() {
         version: 0,
     };
     val stateInit = ContractState {
-        code: build("BasePersonalMinter"),
+        code: getBasePersonalMinterCode(),
         data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: admin };

@@ -1,5 +1,5 @@
-// AUTO-GENERATED, do not edit
-// It's a TypeScript wrapper for a BaseLocation contract in Tolk.
+// STATIC FROZEN BASE CONTRACT WRAPPER - IMMUTABLE BYTECODE & STRUCTS
+// Do not regenerate or edit without explicit user permission.
 /* eslint-disable */
 
 import * as c from '@ton/core';
@@ -119,123 +119,124 @@ type uint10 = bigint
 type uint64 = bigint
 
 /**
- > type AllowedMessageToBaseLocation = LocationAddMember
+ > type AllowedMessageToBaseFollowing = InitFollow
  */
-export type AllowedMessageToBaseLocation = LocationAddMember
+export type AllowedMessageToBaseFollowing = InitFollow
 
-export const AllowedMessageToBaseLocation = {
-    fromSlice(s: c.Slice): AllowedMessageToBaseLocation {
-        return LocationAddMember.fromSlice(s);
+export const AllowedMessageToBaseFollowing = {
+    fromSlice(s: c.Slice): AllowedMessageToBaseFollowing {
+        return InitFollow.fromSlice(s);
     },
-    store(self: AllowedMessageToBaseLocation, b: c.Builder): void {
-        LocationAddMember.store(self, b);
+    store(self: AllowedMessageToBaseFollowing, b: c.Builder): void {
+        InitFollow.store(self, b);
     },
-    toCell(self: AllowedMessageToBaseLocation): c.Cell {
-        return makeCellFrom<AllowedMessageToBaseLocation>(self, AllowedMessageToBaseLocation.store);
+    toCell(self: AllowedMessageToBaseFollowing): c.Cell {
+        return makeCellFrom<AllowedMessageToBaseFollowing>(self, AllowedMessageToBaseFollowing.store);
     }
 }
 
 /**
- > struct (0x000010a4) LocationAddMember {
+ > struct (0x00001201) InitFollow {
  >     queryId: uint64
- >     userAddress: address
- >     sendExcessesTo: address?
- >     latestLocationCode: cell?
+ >     followerOwner: address
+ >     mintAmount: coins
+ >     latestFollowingCode: cell?
  > }
  */
-export interface LocationAddMember {
-    readonly $: 'LocationAddMember'
+export interface InitFollow {
+    readonly $: 'InitFollow'
     queryId: uint64
-    userAddress: c.Address
-    sendExcessesTo: c.Address | null
-    latestLocationCode: c.Cell | null /* = null */
+    followerOwner: c.Address
+    mintAmount: coins /* = 0 */
+    latestFollowingCode: c.Cell | null /* = null */
 }
 
-export const LocationAddMember = {
-    PREFIX: 0x000010a4,
+export const InitFollow = {
+    PREFIX: 0x00001201,
 
     create(args: {
         queryId: uint64
-        userAddress: c.Address
-        sendExcessesTo: c.Address | null
-        latestLocationCode?: c.Cell | null /* = null */
-    }): LocationAddMember {
+        followerOwner: c.Address
+        mintAmount?: coins /* = 0 */
+        latestFollowingCode?: c.Cell | null /* = null */
+    }): InitFollow {
         return {
-            $: 'LocationAddMember',
-            latestLocationCode: null,
+            $: 'InitFollow',
+            mintAmount: 0n,
+            latestFollowingCode: null,
             ...args
         }
     },
-    fromSlice(s: c.Slice): LocationAddMember {
-        loadAndCheckPrefix32(s, 0x000010a4, 'LocationAddMember');
+    fromSlice(s: c.Slice): InitFollow {
+        loadAndCheckPrefix32(s, 0x00001201, 'InitFollow');
         return {
-            $: 'LocationAddMember',
+            $: 'InitFollow',
             queryId: s.loadUintBig(64),
-            userAddress: s.loadAddress(),
-            sendExcessesTo: s.loadMaybeAddress(),
-            latestLocationCode: s.loadBoolean() ? s.loadRef() : null,
+            followerOwner: s.loadAddress(),
+            mintAmount: s.loadCoins(),
+            latestFollowingCode: s.loadBoolean() ? s.loadRef() : null,
         }
     },
-    store(self: LocationAddMember, b: c.Builder): void {
-        b.storeUint(0x000010a4, 32);
+    store(self: InitFollow, b: c.Builder): void {
+        b.storeUint(0x00001201, 32);
         b.storeUint(self.queryId, 64);
-        b.storeAddress(self.userAddress);
-        b.storeAddress(self.sendExcessesTo);
-        storeTolkNullable<c.Cell>(self.latestLocationCode, b,
+        b.storeAddress(self.followerOwner);
+        b.storeCoins(self.mintAmount);
+        storeTolkNullable<c.Cell>(self.latestFollowingCode, b,
             (v,b) => b.storeRef(v)
         );
     },
-    toCell(self: LocationAddMember): c.Cell {
-        return makeCellFrom<LocationAddMember>(self, LocationAddMember.store);
+    toCell(self: InitFollow): c.Cell {
+        return makeCellFrom<InitFollow>(self, InitFollow.store);
     }
 }
 
 /**
- > struct BaseLocationStore {
- >     h3Cell: string
- >     minterAddress: address
+ > struct BaseFollowingStore {
+ >     follower: address
+ >     followee: address
  >     version: uint10
  > }
  */
-export interface BaseLocationStore {
-    readonly $: 'BaseLocationStore'
-    h3Cell: string
-    minterAddress: c.Address
+export interface BaseFollowingStore {
+    readonly $: 'BaseFollowingStore'
+    follower: c.Address
+    followee: c.Address
     version: uint10 /* = 0 */
 }
 
-export const BaseLocationStore = {
+export const BaseFollowingStore = {
     create(args: {
-        h3Cell: string
-        minterAddress: c.Address
+        follower: c.Address
+        followee: c.Address
         version?: uint10 /* = 0 */
-    }): BaseLocationStore {
+    }): BaseFollowingStore {
         return {
-            $: 'BaseLocationStore',
+            $: 'BaseFollowingStore',
             version: 0n,
             ...args
         }
     },
-    fromSlice(s: c.Slice): BaseLocationStore {
+    fromSlice(s: c.Slice): BaseFollowingStore {
         return {
-            $: 'BaseLocationStore',
-            h3Cell: s.loadStringRefTail(),
-            minterAddress: s.loadAddress(),
+            $: 'BaseFollowingStore',
+            follower: s.loadAddress(),
+            followee: s.loadAddress(),
             version: s.loadUintBig(10),
         }
     },
-    store(self: BaseLocationStore, b: c.Builder): void {
-        b.storeStringRefTail(self.h3Cell);
-        b.storeAddress(self.minterAddress);
+    store(self: BaseFollowingStore, b: c.Builder): void {
+        b.storeAddress(self.follower);
+        b.storeAddress(self.followee);
         b.storeUint(self.version, 10);
     },
-    toCell(self: BaseLocationStore): c.Cell {
-        return makeCellFrom<BaseLocationStore>(self, BaseLocationStore.store);
+    toCell(self: BaseFollowingStore): c.Cell {
+        return makeCellFrom<BaseFollowingStore>(self, BaseFollowingStore.store);
     }
 }
 
 // ————————————————————————————————————————————
-//    class BaseLocation
+//    class BaseFollowing
 //
 
 interface ExtraSendOptions {
@@ -272,11 +273,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
     return new c.Address(options.workchain ?? 0, addrHash);
 }
 
-export class BaseLocation implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBAEAXQABFP8A9KQT9LzyyAsBAgLHAgMAg9fxI+SB2omhqfSRphOj8SRFjgvlwJJHrlhAAAEKSRw/pn5j9JBj9KBj6ApA3eWl/EH2CaHaPdqn8SSqQeIRX8HkfwAJrFevgsA=');
+export class BaseFollowing implements c.Contract {
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBAEAZAABFP8A9KQT9LzyyAsBAgLHAgMAkdfxI+SB2omh9JH0kaYTo/EkRY4L8SRJjgtj5cV4R65YQAABIBkcP6Z+Y/SQY/QAY+gKQN3lpfxB9gmh2j3ap/EkqkHiEV/B5H8ACaxXr4LA');
 
     static Errors = {
-        'Errors.NotOwner': 73,
+        'Errors.IncorrectSender': 700,
         'Errors.NotOnboardedWallet': 766,
     }
 
@@ -289,24 +290,24 @@ export class BaseLocation implements c.Contract {
     }
 
     static fromAddress(address: c.Address) {
-        return new BaseLocation(address);
+        return new BaseFollowing(address);
     }
 
     static fromStorage(emptyStorage: {
-        h3Cell: string
-        minterAddress: c.Address
+        follower: c.Address
+        followee: c.Address
         version?: uint10 /* = 0 */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
-            code: deployedOptions?.overrideContractCode ?? BaseLocation.CodeCell,
-            data: BaseLocationStore.toCell(BaseLocationStore.create(emptyStorage)),
+            code: deployedOptions?.overrideContractCode ?? BaseFollowing.CodeCell,
+            data: BaseFollowingStore.toCell(BaseFollowingStore.create(emptyStorage)),
         };
         const address = calculateDeployedAddress(initialState.code, initialState.data, deployedOptions ?? {});
-        return new BaseLocation(address, initialState);
+        return new BaseFollowing(address, initialState);
     }
 
-    static createCellOfAllowedMessageToBaseLocation(body: AllowedMessageToBaseLocation) {
-        return AllowedMessageToBaseLocation.toCell(body);
+    static createCellOfAllowedMessageToBaseFollowing(body: AllowedMessageToBaseFollowing) {
+        return AllowedMessageToBaseFollowing.toCell(body);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -317,10 +318,10 @@ export class BaseLocation implements c.Contract {
         });
     }
 
-    async sendAllowedMessageToBaseLocation(provider: ContractProvider, via: Sender, msgValue: coins, body: AllowedMessageToBaseLocation, extraOptions?: ExtraSendOptions) {
+    async sendAllowedMessageToBaseFollowing(provider: ContractProvider, via: Sender, msgValue: coins, body: AllowedMessageToBaseFollowing, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
-            body: AllowedMessageToBaseLocation.toCell(body),
+            body: AllowedMessageToBaseFollowing.toCell(body),
             ...extraOptions
         });
     }

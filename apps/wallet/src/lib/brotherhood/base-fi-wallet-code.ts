@@ -1,3 +1,3 @@
-import { BaseFiWallet } from '@wrappers/BaseFiWallet.gen';
+import { BaseFiWallet } from '@wrappers';
 
 export const baseFiWalletCodeCell = BaseFiWallet.CodeCell;

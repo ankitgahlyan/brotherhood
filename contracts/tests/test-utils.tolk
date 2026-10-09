@@ -12,6 +12,7 @@ import "@wrappers/FossFiWallet.gen"
 import "@wrappers/Lottery.gen"
 import "@wrappers/utils"
 import "@contracts/common/constants"
+import "@contracts/common/fi-wallet-code"
 import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/utils"
@@ -153,7 +154,7 @@ fun deployWalletFromStorage(
         ? calcDeployBaseFiWallet(
             storage.addresses.load().owner,
             storage.addresses.load().trustedJettonAddrs.load().minterAddr,
-            build("BaseFiWallet"),
+            getBaseFiWalletCode(),
         )
         : AutoDeployAddress { stateInit: walletStateInit(storage) };
     val address = init.calculateAddress();

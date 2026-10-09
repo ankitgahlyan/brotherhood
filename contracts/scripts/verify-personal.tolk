@@ -11,6 +11,7 @@ import "@wrappers/PersonalWallet.gen"
 import "@wrappers/utils"
 import "@contracts/common/messages"
 import "@contracts/fossFi/storage"
+import "@contracts/personalMinter/base-personal-minter-code"
 import "@contracts/personalMinter/storage"
 
 fun mintToPersonal(minter: FossFi, from: address, recipient: address, amount: coins): address {
@@ -60,7 +61,7 @@ fun main() {
         version: 0,
     };
     val stateInit = ContractState {
-        code: build("BasePersonalMinter"),
+        code: getBasePersonalMinterCode(),
         data: baseStore.toCell(),
     };
     val toShard: AddressShardingOptions = { fixedPrefixLength: 8, closeTo: issuerOwner };
@@ -115,6 +116,7 @@ fun main() {
             0,
             grams("1000"),
             1_800_000_000 + 86400,
+            null,
             null,
             { value: grams("0.1") },
         );

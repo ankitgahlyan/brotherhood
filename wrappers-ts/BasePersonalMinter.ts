@@ -1,5 +1,5 @@
-// AUTO-GENERATED, do not edit
-// It's a TypeScript wrapper for a BasePersonalMinter contract in Tolk.
+// STATIC FROZEN BASE CONTRACT WRAPPER - IMMUTABLE BYTECODE & STRUCTS
+// Do not regenerate or edit without explicit user permission.
 /* eslint-disable */
 
 import * as c from '@ton/core';
