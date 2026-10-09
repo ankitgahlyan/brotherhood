@@ -92,6 +92,10 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x0000114d: 'TriggerDefaultEmi',
   0x0000114e: 'TriggerDecay',
   0x00001150: 'PaybackShortfall',
+  0x00001160: 'CreditProxySetNeed',
+  0x00001161: 'CreditProxyRemoveNeed',
+  0x00001162: 'AddLocationCreditEntry',
+  0x00001163: 'RemoveLocationCreditEntry',
 
   // Brotherhood Group 6: Mini-Apps, Lottery & Follow
   0x00001191: 'ActJoinLottery',
@@ -227,6 +231,10 @@ export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
   TriggerDefaultEmi: 'Trigger Default EMI',
   TriggerDecay: 'Trigger Token Decay',
   PaybackShortfall: 'Payback Shortfall',
+  CreditProxySetNeed: 'Register Location Credit Need',
+  CreditProxyRemoveNeed: 'Remove Location Credit Need',
+  AddLocationCreditEntry: 'Add Location Credit Entry',
+  RemoveLocationCreditEntry: 'Remove Location Credit Entry',
   MintPersonal: 'Mint Personal Token',
 
   // Mini-Apps, Lottery & Follow

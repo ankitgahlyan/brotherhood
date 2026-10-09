@@ -11,6 +11,7 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import {
   buildBuyCreditBody,
+  calculateLocationCreditAddress,
   getPersonalMinter,
   parseUnits,
 } from '@/lib/brotherhood/deploy';
@@ -18,7 +19,7 @@ import {
   computePersonalWalletAddress,
   getFiWalletAddress,
 } from '@/lib/brotherhood/ton';
-import type { Network } from '@/lib/brotherhood/config';
+import { CREDIT_PROXY_ADDRESS, type Network } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction, GAS } from './use-brotherhood-transaction';
 import type { FiAccountData } from './use-fi-account';
 import { getAccountActionError } from './use-is-network-member';
@@ -31,6 +32,7 @@ export interface UseBuyCreditParams {
   amount: string;
   network: Network;
   accountData?: FiAccountData | null;
+  borrowerH3Cell?: string | null;
 }
 
 export interface UseBuyCreditResult {
@@ -49,6 +51,7 @@ export function useBuyCredit({
   amount,
   network,
   accountData,
+  borrowerH3Cell,
 }: UseBuyCreditParams): UseBuyCreditResult {
   const {
     send: sendTx,
@@ -103,25 +106,42 @@ export function useBuyCredit({
       recipientAddr,
     );
     const amountNano = parseUnits(amount, 9);
+    const creditProxyAddr = Address.parse(CREDIT_PROXY_ADDRESS);
+    const resolvedH3Cell = borrowerH3Cell?.trim() || null;
 
     const payload = buildBuyCreditBody({
       transferRecipient: recipientAddr,
       amount: amountNano,
       responseAddress: ownerAddr,
+      creditProxyAddress: creditProxyAddr,
+      h3Cell: resolvedH3Cell,
     });
+
+    const affectedContracts = [
+      fiWalletAddr,
+      recipientFiWalletAddr,
+      borrowerMinterAddr,
+      buyerPersonalWalletAddr,
+    ];
+    if (resolvedH3Cell) {
+      try {
+        const locCreditAddr = calculateLocationCreditAddress({
+          h3Cell: resolvedH3Cell,
+          proxyAddress: creditProxyAddr,
+        });
+        affectedContracts.push(locCreditAddr);
+      } catch {
+        /* invalid H3 cell */
+      }
+    }
 
     await sendTx(
       [{ toAddress: fiWalletAddr.toString(), amount: GAS.CREDIT, payload }],
       {
-        affectedContracts: [
-          fiWalletAddr,
-          recipientFiWalletAddr,
-          borrowerMinterAddr,
-          buyerPersonalWalletAddr,
-        ],
+        affectedContracts,
       },
     );
-  }, [walletAddress, recipient, amount, network, sendTx]);
+  }, [walletAddress, recipient, amount, network, borrowerH3Cell, sendTx]);
 
   const isDisabled = Boolean(validationError) || isSending;
 

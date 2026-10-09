@@ -7,6 +7,7 @@ import "@contracts/common/internal-transfer"
 import "@contracts/common/messages"
 import "@contracts/common/sharding"
 import "@contracts/common/utils"
+import "@contracts/credit/messages"
 import "@contracts/personalMinter/BasePersonalMinter"
 import "@contracts/personalMinter/base-personal-minter-code"
 import "@contracts/personalMinter/personal-wallet-code"
@@ -139,6 +140,30 @@ fun onInternalMessage(in: InMessage) {
                 credit.creditNeed -= acceptedAmount;
                 credit.totalCreditReceived += acceptedAmount;
                 storage.credit = credit.toCell();
+
+                if (credit.creditNeed == 0) {
+                    val fwd = msg.forwardPayload;
+                    if (fwd.remainingBitsCount() >= 267) {
+                        val payload = lazy CreditDelistPayload.fromSlice(fwd);
+                        if (isNonEmptyString(payload.h3Cell)) {
+                            val delistMsg = createMessage({
+                                bounce: BounceMode.NoBounce,
+                                dest: payload.proxyAddress,
+                                value: grams("0.05"),
+                                body: CreditProxyRemoveNeed {
+                                    queryId: msg.queryId,
+                                    owner: storage.owner,
+                                    h3Cell: payload.h3Cell,
+                                    tokenInfo: CreditTokenInfo {
+                                        tokenMinter: storage.minterAddress,
+                                        deployer: storage.deployer,
+                                    }.toCell(),
+                                },
+                            });
+                            delistMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                        }
+                    }
+                }
 
                 if (refundAmount > 0) {
                     storage.jettonBalance -= refundAmount;
@@ -345,6 +370,15 @@ fun onInternalMessage(in: InMessage) {
             assert (storage.jettonBalance >= msg.jettonAmount) throw Errors.BalanceError;
             storage.jettonBalance -= msg.jettonAmount;
 
+            val fwdPayload = (msg.creditProxyAddress != null && msg.h3Cell != null)
+                ? CreditDelistPayload {
+                    proxyAddress: msg.creditProxyAddress,
+                    h3Cell: msg.h3Cell,
+                }
+                .toCell()
+                .beginParse()
+                : null;
+
             val transferMsg = createMessage({
                 bounce: BounceMode.Only256BitsOfBody,
                 dest: autoAddrPriWallet(msg.transferRecipient),
@@ -355,7 +389,7 @@ fun onInternalMessage(in: InMessage) {
                     storage.owner,
                     msg.sendExcessesTo,
                     0,
-                    null,
+                    fwdPayload,
                     0,
                     true,
                     contract.getCode(),
@@ -446,6 +480,54 @@ fun onInternalMessage(in: InMessage) {
                 credit.creditNeed = msg.amount;
             }
             storage.credit = credit.toCell();
+
+            if (
+                msg.creditProxyAddress != null && msg.h3Cell != null && isNonEmptyString(msg.h3Cell)
+            ) {
+                val tokenInfo = CreditTokenInfo {
+                    tokenMinter: storage.minterAddress,
+                    deployer: storage.deployer,
+                }.toCell();
+                if (credit.creditNeed > 0) {
+                    val proxyMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: msg.creditProxyAddress,
+                        value: 0,
+                        body: CreditProxySetNeed {
+                            queryId: msg.queryId,
+                            owner: storage.owner,
+                            h3Cell: msg.h3Cell,
+                            terms: LocationCreditTerms {
+                                amount: credit.creditNeed,
+                                multiplier: credit.multiplier,
+                                cutoffDate: credit.creditCutoff,
+                                maturityDate: credit.creditMaturity,
+                            }.toCell(),
+                            tokenInfo,
+                        },
+                    });
+                    proxyMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                    return;
+                } else if (msg.amount != null && msg.amount == 0) {
+                    val proxyMsg = createMessage({
+                        bounce: BounceMode.NoBounce,
+                        dest: msg.creditProxyAddress,
+                        value: 0,
+                        body: CreditProxyRemoveNeed {
+                            queryId: msg.queryId,
+                            owner: storage.owner,
+                            h3Cell: msg.h3Cell,
+                            tokenInfo,
+                        },
+                    });
+                    proxyMsg.send(
+                        SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                    );
+                    return;
+                }
+            }
 
             reserveForPersonalWalletBalance(in.valueCoins);
             val excessMsg = createMessage({

@@ -30,6 +30,8 @@ import { PollStore } from '@wrappers/Poll.gen';
 import { DaoProxyStore } from '@wrappers/DaoProxy.gen';
 import { FollowingStore } from '@wrappers/Following.gen';
 import { VoterStore } from '@wrappers/Voter.gen';
+import { LocationCreditStore } from '@wrappers/LocationCredit.gen';
+import { CreditProxyStore } from '@wrappers/CreditProxy.gen';
 import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
@@ -45,6 +47,8 @@ export const CONTRACT_CODE_HASHES = {
   following: 'Y5t8oXamAtEW/WbYYTFq49JLrzERsVkna1KNok64AFM=',
   voter: 'Fx+PYZGBMbl0wYpgIYRnJ7S2FLPnBZMdbc1dK35Lymg=',
   walletV5R1: 'IINLe3KxEhR+Gy+0V7hOdNGjDwT3N9T2KmaOlVLSty8=',
+  locationCredit: '+sh2LVZLi+j5nM7nOQXVg8KDRcjRm83AHHRiiiIl+VQ=',
+  creditProxy: '/h5oT/f02kqveyQqHa338T4qF3utHynCIY4oeviS0Mw=',
 } as const;
 
 export type KnownContractType =
@@ -58,7 +62,9 @@ export type KnownContractType =
   | 'following'
   | 'voter'
   | 'fiMinter'
-  | 'walletV5R1';
+  | 'walletV5R1'
+  | 'locationCredit'
+  | 'creditProxy';
 
 export function normalizeCodeHash(hash?: string | null): string {
   if (!hash) return '';
@@ -361,6 +367,28 @@ export function deserializeWalletV5R1DataBoc(
   }
 }
 
+export function deserializeLocationCreditDataBoc(
+  dataBoc: string,
+): LocationCreditStore | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    return LocationCreditStore.fromSlice(cell.beginParse());
+  } catch {
+    return null;
+  }
+}
+
+export function deserializeCreditProxyDataBoc(
+  dataBoc: string,
+): CreditProxyStore | null {
+  try {
+    const cell = Cell.fromBase64(dataBoc);
+    return CreditProxyStore.fromSlice(cell.beginParse());
+  } catch {
+    return null;
+  }
+}
+
 export interface WorkerAccountItem {
   address: string;
   code_hash?: string;
@@ -461,6 +489,10 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
     try {
       if (detectedType === 'location') {
         decodedStore = deserializeLocationDataBoc(dataBoc);
+      } else if (detectedType === 'locationCredit') {
+        decodedStore = deserializeLocationCreditDataBoc(dataBoc);
+      } else if (detectedType === 'creditProxy') {
+        decodedStore = deserializeCreditProxyDataBoc(dataBoc);
       } else if (detectedType === 'personalMinter') {
         decodedStore = deserializePersonalStoreDataBoc(dataBoc);
       } else if (detectedType === 'personalWallet') {
@@ -488,6 +520,8 @@ export function processAccountItems(accounts: WorkerAccountItem[]): {
       } else {
         decodedStore =
           deserializeFiWalletDataBoc(dataBoc) ||
+          deserializeLocationCreditDataBoc(dataBoc) ||
+          deserializeCreditProxyDataBoc(dataBoc) ||
           deserializeLocationDataBoc(dataBoc) ||
           deserializePersonalStoreDataBoc(dataBoc) ||
           deserializePersonalWalletDataBoc(dataBoc) ||

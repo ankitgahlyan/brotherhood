@@ -80,6 +80,12 @@ _Avoid_: Holding wallet, storage patch contract, escrow wallet
 **Credit Need** — an Account or Personal Wallet's recorded amount of tokens requested as a loan under its Loan Requirement, checked before an incoming credit transfer is processed. Setting amount to zero cancels active borrowing while preserving maturity for existing loans.
 _Avoid_: Credit score, risk rating
 
+**Credit Proxy** — the network coordinator contract that authenticates credit requirement announcements from Accounts and Personal Wallets and relays them to the corresponding Location Credit contract.
+_Avoid_: Loan proxy, credit router, credit controller
+
+**Location Credit** — an on-chain child contract indexing active Member credit requests within a specific H3 cell, keyed by token wallet address, enabling single-read local credit discovery.
+_Avoid_: Loan market, credit board, local credit registry
+
 **Credit Cutoff** — an Account or Personal Wallet's recorded timestamp after which no further credit can be purchased under its Loan Requirement.
 _Avoid_: Funding deadline, expiration
 

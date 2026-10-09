@@ -35,3 +35,4 @@ export * from './hooks/use-deferred-payment';
 export * from './components/deferred-payment-tab';
 export * from './components/pocket-money-tab';
 export * from './components/network';
+export * from './hooks/use-location-credit';

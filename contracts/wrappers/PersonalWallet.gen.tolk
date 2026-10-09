@@ -188,13 +188,22 @@ fun PersonalWallet.sendBuyCredit(
     jettonAmount: coins,
     transferRecipient: address,
     sendExcessesTo: address?,
+    creditProxyAddress: address?,
+    h3Cell: string?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: BuyCredit { queryId, jettonAmount, transferRecipient, sendExcessesTo },
+        body: BuyCredit {
+            queryId,
+            jettonAmount,
+            transferRecipient,
+            sendExcessesTo,
+            creditProxyAddress,
+            h3Cell,
+        },
     });
     return net.send(from, genericMsg);
 }
@@ -225,13 +234,23 @@ fun PersonalWallet.sendSetLoanRequirement(
     maturityDate: uint32?,
     cutoffDate: uint32?,
     multiplier: uint16?,
+    creditProxyAddress: address?,
+    h3Cell: string?,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: SetLoanRequirement { queryId, amount, maturityDate, cutoffDate, multiplier },
+        body: SetLoanRequirement {
+            queryId,
+            amount,
+            maturityDate,
+            cutoffDate,
+            multiplier,
+            creditProxyAddress,
+            h3Cell,
+        },
     });
     return net.send(from, genericMsg);
 }

@@ -1,4 +1,6 @@
-import { Address, beginCell, Cell, toNano } from '@ton/core';
+import { Address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
+import { LocationCredit } from '@wrappers/LocationCredit.gen';
+import { CREDIT_PROXY_ADDRESS, DAO_PROXY_ADDRESS, FI_ADDRESS } from './config';
 import {
   FossFi,
   MintNewJettons,
@@ -334,16 +336,50 @@ export function buildBuyCreditBody(params: {
   amount: bigint;
   responseAddress: Address;
   queryId?: bigint;
+  creditProxyAddress?: Address | null;
+  h3Cell?: string | null;
 }): Cell {
-  const { transferRecipient, amount, responseAddress, queryId = 0n } = params;
+  const {
+    transferRecipient,
+    amount,
+    responseAddress,
+    queryId = 0n,
+    creditProxyAddress = null,
+    h3Cell = null,
+  } = params;
   return BuyCredit.toCell(
     BuyCredit.create({
       queryId,
       jettonAmount: amount,
       transferRecipient,
       sendExcessesTo: responseAddress,
+      creditProxyAddress,
+      h3Cell,
     }),
   );
+}
+
+export function calculateLocationCreditAddress(params: {
+  h3Cell: string;
+  proxyAddress?: Address;
+  adminAddress?: Address;
+}): Address {
+  const proxyAddr = params.proxyAddress ?? Address.parse(CREDIT_PROXY_ADDRESS);
+  const adminAddr = params.adminAddress ?? Address.parse(DAO_PROXY_ADDRESS);
+  const locCredit = LocationCredit.fromStorage(
+    {
+      h3Cell: params.h3Cell,
+      proxyAddress: proxyAddr,
+      adminAddress: adminAddr,
+      entryCount: 0n,
+      entries: Dictionary.empty(),
+      version: 1n,
+    },
+    {
+      toShard: { fixedPrefixLength: 8, closeTo: proxyAddr },
+    },
+  );
+  return locCredit.address;
 }
 
 export function buildSetLoanRequirementBody(params: {
@@ -352,6 +388,8 @@ export function buildSetLoanRequirementBody(params: {
   cutoffDate?: bigint | null;
   multiplier?: bigint | null;
   queryId?: bigint;
+  creditProxyAddress?: Address | null;
+  h3Cell?: string | null;
 }): Cell {
   return SetLoanRequirement.toCell(
     SetLoanRequirement.create({
@@ -360,6 +398,8 @@ export function buildSetLoanRequirementBody(params: {
       maturityDate: params.maturityDate ?? null,
       cutoffDate: params.cutoffDate ?? null,
       multiplier: params.multiplier ?? null,
+      creditProxyAddress: params.creditProxyAddress ?? null,
+      h3Cell: params.h3Cell ?? null,
     }),
   );
 }

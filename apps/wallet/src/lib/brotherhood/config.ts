@@ -26,6 +26,10 @@ export const DAO_PROXY_ADDRESS =
   'kQCe-0dlNfCYRw_YWKjunlJmxIDfSRWxvHS6FI-eflPgY1jZ';
 // 'kQBs0efjOXMJ_mTYkUqB16JynaYqMNpt2eTNzy79Ge0eLGk7';
 
+/** Credit Proxy address (from emulate-fork-credit.tolk / deploy-credit-proxy.tolk) */
+export const CREDIT_PROXY_ADDRESS =
+  'kQAzXKI6Pn2KcbEA1dnVvxAi9uzIuA2ck_OBTcUujwkaRgOu';
+
 /** Standard Null Address */
 export const ZERO_ADDRESS =
   '0:0000000000000000000000000000000000000000000000000000000000000000';

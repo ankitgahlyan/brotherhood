@@ -872,6 +872,8 @@ export const Destroy = {
  >     jettonAmount: coins
  >     transferRecipient: address
  >     sendExcessesTo: address?
+ >     creditProxyAddress: address?
+ >     h3Cell: string?
  > }
  */
 export interface BuyCredit {
@@ -880,6 +882,8 @@ export interface BuyCredit {
     jettonAmount: coins
     transferRecipient: c.Address
     sendExcessesTo: c.Address | null
+    creditProxyAddress: c.Address | null /* = null */
+    h3Cell: string | null /* = null */
 }
 
 export const BuyCredit = {
@@ -890,9 +894,13 @@ export const BuyCredit = {
         jettonAmount: coins
         transferRecipient: c.Address
         sendExcessesTo: c.Address | null
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }): BuyCredit {
         return {
             $: 'BuyCredit',
+            creditProxyAddress: null,
+            h3Cell: null,
             ...args
         }
     },
@@ -904,6 +912,8 @@ export const BuyCredit = {
             jettonAmount: s.loadCoins(),
             transferRecipient: s.loadAddress(),
             sendExcessesTo: s.loadMaybeAddress(),
+            creditProxyAddress: s.loadMaybeAddress(),
+            h3Cell: s.loadBoolean() ? s.loadStringRefTail() : null,
         }
     },
     store(self: BuyCredit, b: c.Builder): void {
@@ -912,6 +922,10 @@ export const BuyCredit = {
         b.storeCoins(self.jettonAmount);
         b.storeAddress(self.transferRecipient);
         b.storeAddress(self.sendExcessesTo);
+        b.storeAddress(self.creditProxyAddress);
+        storeTolkNullable<string>(self.h3Cell, b,
+            (v,b) => b.storeStringRefTail(v)
+        );
     },
     toCell(self: BuyCredit): c.Cell {
         return makeCellFrom<BuyCredit>(self, BuyCredit.store);
@@ -978,6 +992,8 @@ export const Payback = {
  >     maturityDate: uint32?
  >     cutoffDate: uint32?
  >     multiplier: uint16?
+ >     creditProxyAddress: address?
+ >     h3Cell: string?
  > }
  */
 export interface SetLoanRequirement {
@@ -987,6 +1003,8 @@ export interface SetLoanRequirement {
     maturityDate: uint32 | null /* = null */
     cutoffDate: uint32 | null /* = null */
     multiplier: uint16 | null /* = null */
+    creditProxyAddress: c.Address | null /* = null */
+    h3Cell: string | null /* = null */
 }
 
 export const SetLoanRequirement = {
@@ -998,6 +1016,8 @@ export const SetLoanRequirement = {
         maturityDate?: uint32 | null /* = null */
         cutoffDate?: uint32 | null /* = null */
         multiplier?: uint16 | null /* = null */
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }): SetLoanRequirement {
         return {
             $: 'SetLoanRequirement',
@@ -1006,6 +1026,8 @@ export const SetLoanRequirement = {
             maturityDate: null,
             cutoffDate: null,
             multiplier: null,
+            creditProxyAddress: null,
+            h3Cell: null,
             ...args
         }
     },
@@ -1018,6 +1040,8 @@ export const SetLoanRequirement = {
             maturityDate: s.loadBoolean() ? s.loadUintBig(32) : null,
             cutoffDate: s.loadBoolean() ? s.loadUintBig(32) : null,
             multiplier: s.loadBoolean() ? s.loadUintBig(16) : null,
+            creditProxyAddress: s.loadMaybeAddress(),
+            h3Cell: s.loadBoolean() ? s.loadStringRefTail() : null,
         }
     },
     store(self: SetLoanRequirement, b: c.Builder): void {
@@ -1034,6 +1058,10 @@ export const SetLoanRequirement = {
         );
         storeTolkNullable<uint16>(self.multiplier, b,
             (v,b) => b.storeUint(v, 16)
+        );
+        b.storeAddress(self.creditProxyAddress);
+        storeTolkNullable<string>(self.h3Cell, b,
+            (v,b) => b.storeStringRefTail(v)
         );
     },
     toCell(self: SetLoanRequirement): c.Cell {
@@ -1097,6 +1125,209 @@ export const PaybackShortfall = {
     },
     toCell(self: PaybackShortfall): c.Cell {
         return makeCellFrom<PaybackShortfall>(self, PaybackShortfall.store);
+    }
+}
+
+/**
+ > struct LocationCreditTerms {
+ >     amount: coins
+ >     multiplier: uint16
+ >     cutoffDate: uint32
+ >     maturityDate: uint32
+ > }
+ */
+export interface LocationCreditTerms {
+    readonly $: 'LocationCreditTerms'
+    amount: coins
+    multiplier: uint16
+    cutoffDate: uint32
+    maturityDate: uint32
+}
+
+export const LocationCreditTerms = {
+    create(args: {
+        amount: coins
+        multiplier: uint16
+        cutoffDate: uint32
+        maturityDate: uint32
+    }): LocationCreditTerms {
+        return {
+            $: 'LocationCreditTerms',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): LocationCreditTerms {
+        return {
+            $: 'LocationCreditTerms',
+            amount: s.loadCoins(),
+            multiplier: s.loadUintBig(16),
+            cutoffDate: s.loadUintBig(32),
+            maturityDate: s.loadUintBig(32),
+        }
+    },
+    store(self: LocationCreditTerms, b: c.Builder): void {
+        b.storeCoins(self.amount);
+        b.storeUint(self.multiplier, 16);
+        b.storeUint(self.cutoffDate, 32);
+        b.storeUint(self.maturityDate, 32);
+    },
+    toCell(self: LocationCreditTerms): c.Cell {
+        return makeCellFrom<LocationCreditTerms>(self, LocationCreditTerms.store);
+    }
+}
+
+/**
+ > struct CreditTokenInfo {
+ >     tokenMinter: address?
+ >     deployer: address?
+ > }
+ */
+export interface CreditTokenInfo {
+    readonly $: 'CreditTokenInfo'
+    tokenMinter: c.Address | null /* = null */
+    deployer: c.Address | null /* = null */
+}
+
+export const CreditTokenInfo = {
+    create(args: {
+        tokenMinter?: c.Address | null /* = null */
+        deployer?: c.Address | null /* = null */
+    }): CreditTokenInfo {
+        return {
+            $: 'CreditTokenInfo',
+            tokenMinter: null,
+            deployer: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): CreditTokenInfo {
+        return {
+            $: 'CreditTokenInfo',
+            tokenMinter: s.loadMaybeAddress(),
+            deployer: s.loadMaybeAddress(),
+        }
+    },
+    store(self: CreditTokenInfo, b: c.Builder): void {
+        b.storeAddress(self.tokenMinter);
+        b.storeAddress(self.deployer);
+    },
+    toCell(self: CreditTokenInfo): c.Cell {
+        return makeCellFrom<CreditTokenInfo>(self, CreditTokenInfo.store);
+    }
+}
+
+/**
+ > struct (0x00001160) CreditProxySetNeed {
+ >     queryId: uint64
+ >     owner: address
+ >     h3Cell: string
+ >     terms: Cell<LocationCreditTerms>
+ >     tokenInfo: Cell<CreditTokenInfo>?
+ > }
+ */
+export interface CreditProxySetNeed {
+    readonly $: 'CreditProxySetNeed'
+    queryId: uint64
+    owner: c.Address
+    h3Cell: string
+    terms: CellRef<LocationCreditTerms>
+    tokenInfo: CellRef<CreditTokenInfo> | null /* = null */
+}
+
+export const CreditProxySetNeed = {
+    PREFIX: 0x00001160,
+
+    create(args: {
+        queryId: uint64
+        owner: c.Address
+        h3Cell: string
+        terms: CellRef<LocationCreditTerms>
+        tokenInfo?: CellRef<CreditTokenInfo> | null /* = null */
+    }): CreditProxySetNeed {
+        return {
+            $: 'CreditProxySetNeed',
+            tokenInfo: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): CreditProxySetNeed {
+        loadAndCheckPrefix32(s, 0x00001160, 'CreditProxySetNeed');
+        return {
+            $: 'CreditProxySetNeed',
+            queryId: s.loadUintBig(64),
+            owner: s.loadAddress(),
+            h3Cell: s.loadStringRefTail(),
+            terms: loadCellRef<LocationCreditTerms>(s, LocationCreditTerms.fromSlice),
+            tokenInfo: s.loadBoolean() ? loadCellRef<CreditTokenInfo>(s, CreditTokenInfo.fromSlice) : null,
+        }
+    },
+    store(self: CreditProxySetNeed, b: c.Builder): void {
+        b.storeUint(0x00001160, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.owner);
+        b.storeStringRefTail(self.h3Cell);
+        storeCellRef<LocationCreditTerms>(self.terms, b, LocationCreditTerms.store);
+        storeTolkNullable<CellRef<CreditTokenInfo>>(self.tokenInfo, b,
+            (v,b) => storeCellRef<CreditTokenInfo>(v, b, CreditTokenInfo.store)
+        );
+    },
+    toCell(self: CreditProxySetNeed): c.Cell {
+        return makeCellFrom<CreditProxySetNeed>(self, CreditProxySetNeed.store);
+    }
+}
+
+/**
+ > struct (0x00001161) CreditProxyRemoveNeed {
+ >     queryId: uint64
+ >     owner: address
+ >     h3Cell: string
+ >     tokenInfo: Cell<CreditTokenInfo>?
+ > }
+ */
+export interface CreditProxyRemoveNeed {
+    readonly $: 'CreditProxyRemoveNeed'
+    queryId: uint64
+    owner: c.Address
+    h3Cell: string
+    tokenInfo: CellRef<CreditTokenInfo> | null /* = null */
+}
+
+export const CreditProxyRemoveNeed = {
+    PREFIX: 0x00001161,
+
+    create(args: {
+        queryId: uint64
+        owner: c.Address
+        h3Cell: string
+        tokenInfo?: CellRef<CreditTokenInfo> | null /* = null */
+    }): CreditProxyRemoveNeed {
+        return {
+            $: 'CreditProxyRemoveNeed',
+            tokenInfo: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): CreditProxyRemoveNeed {
+        loadAndCheckPrefix32(s, 0x00001161, 'CreditProxyRemoveNeed');
+        return {
+            $: 'CreditProxyRemoveNeed',
+            queryId: s.loadUintBig(64),
+            owner: s.loadAddress(),
+            h3Cell: s.loadStringRefTail(),
+            tokenInfo: s.loadBoolean() ? loadCellRef<CreditTokenInfo>(s, CreditTokenInfo.fromSlice) : null,
+        }
+    },
+    store(self: CreditProxyRemoveNeed, b: c.Builder): void {
+        b.storeUint(0x00001161, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.owner);
+        b.storeStringRefTail(self.h3Cell);
+        storeTolkNullable<CellRef<CreditTokenInfo>>(self.tokenInfo, b,
+            (v,b) => storeCellRef<CreditTokenInfo>(v, b, CreditTokenInfo.store)
+        );
+    },
+    toCell(self: CreditProxyRemoveNeed): c.Cell {
+        return makeCellFrom<CreditProxyRemoveNeed>(self, CreditProxyRemoveNeed.store);
     }
 }
 
@@ -1269,7 +1500,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class PersonalWallet implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('te6ccgECPAEADnkAART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAXGAT119tF2/fxIxxppj5jrlhBeNRRmS2mfmP0AGEcI65YR73Zfekl5H/Dpn5j9ABhxdqJofQABUGQA/QFnZPaqcBB2omhrpMCBld1HCvaiaH0AfSR9JH0kaYTqaIgiiBoIEfGGg2uWEF41FGZxh+QA/QEJ/Sl9KX0pCWWE5mTBgcICQIBYhUWAGTtRND6SPpI+kjTCTHRcHGCCD6AAMjLX8nIz4QgUmD6UlJQ+lJSQPpSz4gBgCHPFMntVAT+NwbTP/oA+kj6UPoA0wkx0gD0AfiSKccFjsn4ku1E0PoAMfpIMfpI+kgwiCjI+lIT+lL6Us+IAIDJeChUEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUMcF8uBK31F1oAGY+JIoxwWzwwCRcOLjACGUNhNfA+MNIDkKCwwCEtcsIHxT9SzjDxscAATtVATcCtD6ANMf0x/TD/oA+gD6ANEmwgDy4vglwgCX+CMmu/Li+N4jgQPovJf4IyW58uL43lOmtghTsKFRgaFRQaDIJfoCGMsfFssfJM8LD1AG+gIB+gJQBPoCyQPjASPCAJEz4w1YgQPoqYQgwgDysYkNDg8QAFTIz5HNi0JyJs8LP1AF+gIT+lIVzsnIz4UIUoD6Ulj6AnHPC2rMyXP7AAIAcm6RW44z+Jf4J28QovgvoHKBA+iCEAlmAYBw+De2CXL7AsjPhQj6UoIQ1TJ2288Ljss/yYEAgvsA4gCmU5nXSYEBC76ORvpI10wg0NdJwgCON4IK+vCALcj6VFLw+lTJyM+QAABFhi3PCz9WEQH6UhPMEvQAycjPhQgT+lIB+gJxzwtqzMlz+wCRW+KRMOIC/FHToe1E0PoAMfpIMfpI+kgwiCnI+lIT+lL6Us+IAIDJeCmCCvrwgG1tIW6zlDGLBAHfyM+QXjUUZlYQzws/UAv6AlYTAfpSUsD6VM+IAAQa9AAZzsnIz4mIAVR0U8jPg8sEz4WgzMz5FoT3sAOACyXXJDQTzsv3UAf6AoEVDTkRAEOADkrJyHgj/V6dogIFi1FuEHSJ92hFM23wcoJ6Dbwhno6wBPqILMj6UhL6Us+IAIDJeC1UEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUIgsAsj6UhL6Us+IAIDJeC1UEjLIz4PLBM+FoMzM+RaE97ASgAtQA9ckyM+KAEDOy/fPUIIQKbknAG2CAYagbcj0AM9QbSFus+MByCssEhMAHM8LdRLMzBTMyXP7ABAsAAgxiwQBAbiJzxYtzws/UAf6AlKg+lIT+lQB+gLPiABAFPQAE87JVHhqLoIQLLQXgMjPkAAAQAYVyz8T+lJQBvoCE8wU+lT6VMnIz4WIEvpSWPoCz4Fz+gJxzwtlzMmAEfsAChQACBeNRRkAB6K9fBYAUaBMx7UTQ+gD6SPpI+kjTCVEWufLi3shQBfoCE/pS+lL6UhLLCc7J7VSAgFuGRoAI763Z2omh9AH0kfSR9JGmE6mjADPs027UTQ10mBAyu6jjPtRND6SPpI+kjTCTHRggg+gADIy1/JyM+EIFJA+lI0UiT6UjJSAvpSMc+IAYAhzxTJ7VSOFO1E0PoAMfpIMfpIMfpIMdMJMdTR4tD6ANMf0x/TD/oA+gD6ANGABIbLAu1E0PoA+kj6SDH6SDCIgOQH+NwbTP/oA+kj6UPQB+gAg9AQBbpEwkdHiI/pEMPLRTfiX+JNw+DojcnHjBPg5IG6BG3Ii4wQhboEemVgD4wRQI6gloIASgR9AcPg8oAFw+DagAXD4NqBygQPoghAJZgGAcPg3oLzysPiSKscF8uBJU2S+8q9RZKEkghA7msoAuh0DmtcsIsr4PeSPQtcsIAAAgESOLTA2+JJt+CrIz5AAAEAbKc8LCVJw+lIS9AD0AMnIz4UIEvpScc8LbszJgFD7AI8J1ywgAACANOMP4uMNHyAhAv6S+CqRbeLtRND6ADH6SDH6SPpIMIgnyPpSE/pS+lLPiACAyXgqbrOUOosECt/Iz5BeNRRmGss/UAj6AlLA+lIV+lRQA/oCz4gAQBL0ABbOycjPiYgBVHQlyM+DywTPhaDMzPkWhPewBIALJ9ckNhXOEsv3gRUNzwt5zMzMyYBQOR4ABPsAAvw3+JIjxwUH0wAx0wn6SPQE9AX4ku1E0PoAMfpIMfpI+kgwiCbI+lIT+lL6Us+IAIDJeFEiyM+DywTPhaDMzPkWhPewFYALUAbXJMjPigBAzhTL989QE8cFGrHy4rxTIbmOFWxiIG6RMJgg+wTQ7R7tU+LxCRPbMeBbNviX+Cc5IgP21ywgAACKPI9w1ywgAACKRI7j1ywgAACKVI5W1ywgAACCzDGOQjb4kiTHBfiSJMcFsfiSI8cFsfLivPiSyM+FCPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAKD7AJiEDwfHABfy9OLjDQUE4w0EBeMNIyQlAOA3+JeCEB3NZQC+8rD4l/g5IG6BEjpY4wRxgQKjcPg4AXD4NqCBEvVw+DagvPKw+JIlxwXy4EkG0z/6APpQ9AVTQr7yr1FCocjPke92X3oUyz9Y+gJSYPpS+lQS9ADJyM+FiFIw+lJxzwtuzMmAUPsAAIpvEKL4L6BygQPoghAJZgGAcPg3tgly+wLIz4UIUkD6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCC+wAC/jf4kiXHBfLgSQbTP9MAAZL6AJJtAeLTAAGS0x+SbQHi0wABktMfkm0B4tMAAZLTD5JtAeL6UNMAAZLXTJIwbeIlbrORf5UkbrPDAOKRf5UjbrPDAOKRf5UibrPDAOLysQvQ+gDTH9Mf0w/6APoA+gDRKG6YMyfCAPKxECfjDSgmJwP8N40IYAOSsnIeCP9Xp2iAgWLUW4QdIn3aEUzbfBygnoNvCGejrIgmyPpSEvpSz4gAgMl4J1QSMsjPg8sEz4WgzMz5FoT3sBKAC1AD1yTIz4oAQM7L989QiCYCyPpSEvpSz4gAgMl4J1QSMsjPg8sEz4WgzMz5FoT3sBKAC1ADKywtA/43+JIlxwXy4EkG0z/6APpI+lD6UNMAAZLXTJIwbeIj+kQw8tFN+Jf4k3D4OnH4OSBugRtyIuMEIW6BHplYA+MEUCOogBKBH0Bw+DygAXD4NqABcPg2oHKBA+iCEAlmAYBw+DegvPKwU2S+8q9RZKEhbrOVJm6zwwCRcOLjD+1ENjc4AAI4Av5ukTiTNBA34ihukTiSMhfiIsIAlSHCAMMAkXDilVMhu/Kx3ihukzMnA9/IJPoCI88LHyLPCx8hzwsPUAj6AlAG+gJQBPoCySJus5UsbrPDAJFw4pgs0NdJwgDDAJFw4pM8XwbjDfiX+CdvEKL4L6BygQPoghAJZgGAcPg3tglyKCkBwCnI+lRSsPpUySLCAI49MTY3Nzc5yFAE+gITyw8Uyx8Wyx/JyM+QAABFghPLPxP6UhPMEswS9ADJyM+FCBL6UnHPC27MyYBC+wDbMeAybDMjbrOVA8AAwwCSM3Di4wJbNioANvsCyM+FCFJQ+lKCENUydtvPC47LP8mBAIL7AABSMmwzNcjPkAAARYYSyz8S+lISzPQAycjPhQgS+lJxzwtuzMmAQvsA2zEBFP8A9KQT9LzyyAsuART/APSkE/S88sgLMQL+1yTIz4oAQM7L989Q+JLHBfLivAXQ+gDTH9Mf0w/6APoA+gDR+CMlvvLi+yfCAPLixQzTP/oA+kgwUxm2CFEioVGioVFCoFH6oMhQCvoCGMsfFssfFMsPWPoCUAv6AlAE+gLJ7UTQ+gAx+kgx+kj6SDCIJcj6UhP6UvpSz4gAgDk0AgLHLzMB99fxI+SB2omh9JH0kaYTotpJrlhAAAEFKRyHppJj9JGumfEl8FSmx5H0pfSlnxABAZLwokWRnweWCZ8LQZmZ8i0J72ApABagC65JkZ8UAIGcJ5fvnqAljgsiYyJhxRwsY65YQAABAHkl5H/D8SRHjgvlxXnoC8RA3SS+C8EwAB4g+wTQ7R7tU/iSVSDxCK8CAscyMwDT1/Ej5IHaiaH0kfSRphOj8SRHjgvxJEeOC2PlxXhHrlhAAAEAGRxBrpmhrlhBeNRRmeVjpn5j9ABj9JBj9KBj9ABjphRj6As7rlhAAAEAeSXkf8PoC8RA3eWl/EH2CaHaPdqn8SSqQeIRXwAJrFevgsAB8sl4U1fCAIIQBfXhAHDjBG1tIW6zlDGLBAHfyM+QXjUUZivPCz9QCfoCUuD6UlKQ+lTPiAAEGPQAF87JyM+JiAFUdFPIz4PLBM+FoMzM+RaE97ADgAsl1yQ0E87L91AF+gKBFQ3PC3USzMwSzMkkwgCWbDKAUPsA4w01AHSAEfsAghAdzWUA+JLIz5AAAEVCFcs/E/pSUAT6AlJA+lRSUPpUycjPhQgT+lIB+gJxzwtqzMmAEfsAABAByPpSFszPUAAGMTVtAfDQ+gAx+kgx+kj6SDCIJcj6UhP6UvpSz4gAgMl4+CokbrOUNIsEBN/Iz5BeNRRmGcs/UAf6AlKw+lIU+lTPiAAMFvQAzsnIz4mIAVRyVMjPg8sEz4WgzMz5FoT3sASACybXJDUUzhLL94EVDc8LeRPMEszMyYBQ+wA5ART/APSkE/S88sgLOgFO0yHQ0wMBcbDycfpIMO1E0PpIMfpI+kjTCTHRI9csILxqKMzjAvI/OwD20z8x+gD6SPpQMfoAMdMJMdIA9AVTZMcFkjI0jjz4KlNTyPpSGPpSF/pSz4gAgMl4UXfIz4PLBM+FoMzM+RaE97ATgAtQB9ckyM+KAEDOFcv3z1AlxwXy4EriAYIQO5rKALpQA7EDxwUSsSFus7Dy4v4g+wTQ7R7tU/AA');
 
     static Errors = {
         'Errors.BalanceError': 47,
@@ -1374,6 +1605,8 @@ export class PersonalWallet implements c.Contract {
         jettonAmount: coins
         transferRecipient: c.Address
         sendExcessesTo: c.Address | null
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }) {
         return BuyCredit.toCell(BuyCredit.create(body));
     }
@@ -1393,6 +1626,8 @@ export class PersonalWallet implements c.Contract {
         maturityDate?: uint32 | null /* = null */
         cutoffDate?: uint32 | null /* = null */
         multiplier?: uint16 | null /* = null */
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }) {
         return SetLoanRequirement.toCell(SetLoanRequirement.create(body));
     }
@@ -1490,6 +1725,8 @@ export class PersonalWallet implements c.Contract {
         jettonAmount: coins
         transferRecipient: c.Address
         sendExcessesTo: c.Address | null
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -1517,6 +1754,8 @@ export class PersonalWallet implements c.Contract {
         maturityDate?: uint32 | null /* = null */
         cutoffDate?: uint32 | null /* = null */
         multiplier?: uint16 | null /* = null */
+        creditProxyAddress?: c.Address | null /* = null */
+        h3Cell?: string | null /* = null */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,

@@ -8,6 +8,7 @@ import "@acton/prompts"
 import "@acton/emulation/network"
 import "@acton/emulation/scripts"
 
+import "@wrappers/CreditProxy.gen"
 import "@wrappers/DaoProxy.gen"
 import "@wrappers/FossFi.gen"
 import "@wrappers/FossFiWallet.gen"
@@ -15,6 +16,7 @@ import "@wrappers/Personal.gen"
 import "@wrappers/utils"
 import "@contracts/common/constants"
 import "@contracts/common/messages"
+import "@contracts/credit/storage"
 import "@contracts/dao/storage"
 import "@contracts/fossFi/storage"
 
@@ -155,6 +157,23 @@ fun deployDaoProxy(deployer: ActonWallet, admin: address, target: address): DaoP
     val initRes = daoProxy.sendInitDaoProxy(deployer.address, 0, target);
     initRes.waitForFirstTransaction();
     return daoProxy;
+}
+
+fun deployCreditProxy(
+    deployer: ActonWallet,
+    admin: address,
+    fiMinterAddress: address,
+): CreditProxy {
+    val locationCreditCode = build("LocationCredit");
+    val creditProxy = CreditProxy.fromStorage({
+        adminAddress: admin,
+        fiMinterAddress,
+        locationCreditCode,
+        version: 1,
+    });
+    val res = creditProxy.deploy(deployer.address, { value: grams("0.2") });
+    res.waitForFirstTransaction();
+    return creditProxy;
 }
 
 fun readOnchainMetadataField(metadata: OnchainMetadataReply, key: uint256): string? {

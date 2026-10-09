@@ -7,13 +7,19 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { toNano } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import { SetLoanRequirement as FiSetLoanRequirement } from '@wrappers/FossFiWallet.gen';
 import { SetLoanRequirement as PersonalSetLoanRequirement } from '@wrappers/PersonalWallet.gen';
-import { parseUnits } from '@/lib/brotherhood/deploy';
-import { encodeOnchainMultiplier } from '@/lib/brotherhood/config';
+import {
+  calculateLocationCreditAddress,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
+import {
+  CREDIT_PROXY_ADDRESS,
+  encodeOnchainMultiplier,
+} from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction } from '@/features/brotherhood/hooks/use-brotherhood-transaction';
 import { useNowSeconds } from '@/core/hooks';
 import type { BorrowToken } from '../types';
@@ -27,6 +33,7 @@ export interface UseBorrowTermsParams {
   maturityDays: string;
   cutoffDays?: string;
   multiplier: string;
+  h3Cell?: string | null;
   onSuccess?: () => void;
 }
 
@@ -53,6 +60,7 @@ export function useBorrowTerms({
   maturityDays,
   cutoffDays = '',
   multiplier,
+  h3Cell,
   onSuccess,
 }: UseBorrowTermsParams): UseBorrowTermsResult {
   const {
@@ -227,6 +235,9 @@ export function useBorrowTerms({
       multBigInt = encodeOnchainMultiplier(parseFloat(trimmedMultiplier));
     }
 
+    const creditProxyAddr = Address.parse(CREDIT_PROXY_ADDRESS);
+    const resolvedH3Cell = h3Cell?.trim() || null;
+
     // Build payload according to token kind
     const bodyCell =
       token.kind === 'fi'
@@ -237,6 +248,8 @@ export function useBorrowTerms({
               maturityDate: maturitySec,
               cutoffDate: cutoffSec,
               multiplier: multBigInt,
+              creditProxyAddress: creditProxyAddr,
+              h3Cell: resolvedH3Cell,
             }),
           )
         : PersonalSetLoanRequirement.toCell(
@@ -246,12 +259,25 @@ export function useBorrowTerms({
               maturityDate: maturitySec,
               cutoffDate: cutoffSec,
               multiplier: multBigInt,
+              creditProxyAddress: creditProxyAddr,
+              h3Cell: resolvedH3Cell,
             }),
           );
 
     const affectedContracts = [token.userWalletAddress];
     if (token.kind !== 'fi' && token.minterAddress) {
       affectedContracts.push(token.minterAddress);
+    }
+    if (resolvedH3Cell) {
+      try {
+        const locCreditAddr = calculateLocationCreditAddress({
+          h3Cell: resolvedH3Cell,
+          proxyAddress: creditProxyAddr,
+        });
+        affectedContracts.push(locCreditAddr.toString());
+      } catch {
+        /* invalid H3 cell calculation */
+      }
     }
 
     await sendTx(
@@ -280,6 +306,7 @@ export function useBorrowTerms({
     trimmedCutoffDays,
     isMultiplierDirty,
     trimmedMultiplier,
+    h3Cell,
     sendTx,
     onSuccess,
   ]);

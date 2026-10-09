@@ -90,6 +90,19 @@ display-name = "Root DNS"
 src = "contracts/src/dns/RootDns.tolk"
 depends = []
 
+[contracts.LocationCredit]
+display-name = "Location Credit Child"
+src = "contracts/src/credit/LocationCredit.tolk"
+depends = []
+
+[contracts.CreditProxy]
+display-name = "Credit Proxy"
+src = "contracts/src/credit/CreditProxy.tolk"
+depends = [
+    { name = "LocationCredit", kind = "embed_code", function = "locationCreditCompiledCodeLibraryRef" },
+]
+
+
 [test]
 # ui = true
 # ui-port = 12345
@@ -150,6 +163,8 @@ update-code-hashes = "bun scripts/update-contract-code-hashes.ts"
 test-dns = "acton test contracts/tests/dns"
 deploy-bro = "acton script contracts/scripts/dns/deploy-bro.tolk"
 emulate-fork-upgrade = "acton script contracts/scripts/emulate-fork-upgrade.tolk --fork-net testnet"
+emulate-fork-credit = "acton script contracts/scripts/emulate-fork-credit.tolk --fork-net testnet"
+deploy-credit-proxy = "acton script contracts/scripts/deploy-credit-proxy.tolk --net testnet"
 
 
 [import-mappings]

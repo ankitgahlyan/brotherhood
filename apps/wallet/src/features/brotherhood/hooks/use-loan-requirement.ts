@@ -11,9 +11,14 @@ import { Address, toNano } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
 import { SetLoanRequirement } from '@wrappers/FossFiWallet.gen';
-import { getPersonalMinter, parseUnits } from '@/lib/brotherhood/deploy';
+import {
+  calculateLocationCreditAddress,
+  getPersonalMinter,
+  parseUnits,
+} from '@/lib/brotherhood/deploy';
 import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import {
+  CREDIT_PROXY_ADDRESS,
   encodeOnchainMultiplier,
   type Network,
 } from '@/lib/brotherhood/config';
@@ -278,6 +283,9 @@ export function useLoanRequirement({
       multBigInt = encodeOnchainMultiplier(parseFloat(trimmedMultiplier));
     }
 
+    const creditProxyAddr = Address.parse(CREDIT_PROXY_ADDRESS);
+    const resolvedH3Cell = accountData?.h3Cell?.trim() || null;
+
     const body = SetLoanRequirement.toCell(
       SetLoanRequirement.create({
         queryId: 0n,
@@ -285,8 +293,23 @@ export function useLoanRequirement({
         maturityDate: maturitySec,
         cutoffDate: cutoffSec,
         multiplier: multBigInt,
+        creditProxyAddress: creditProxyAddr,
+        h3Cell: resolvedH3Cell,
       }),
     );
+
+    const affectedContracts = [fiWalletAddr, personalMinterAddr];
+    if (resolvedH3Cell) {
+      try {
+        const locCreditAddr = calculateLocationCreditAddress({
+          h3Cell: resolvedH3Cell,
+          proxyAddress: creditProxyAddr,
+        });
+        affectedContracts.push(locCreditAddr);
+      } catch {
+        /* invalid H3 cell */
+      }
+    }
 
     await sendTx(
       [
@@ -296,7 +319,7 @@ export function useLoanRequirement({
           payload: body,
         },
       ],
-      { affectedContracts: [fiWalletAddr, personalMinterAddr] },
+      { affectedContracts },
     );
 
     toast.success('Loan requirement updated successfully!');
@@ -307,6 +330,7 @@ export function useLoanRequirement({
     isDirty,
     hasValidationError,
     network,
+    accountData?.h3Cell,
     isAmountDirty,
     trimmedAmount,
     isMaturityDirty,

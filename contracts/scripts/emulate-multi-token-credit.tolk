@@ -138,6 +138,8 @@ fun main() {
         testFiMaturity,
         testFiCutoff,
         1000,
+        null,
+        null,
         { value: grams("0.2") },
     );
     setFiLoanRes.waitForTrace();
@@ -357,6 +359,8 @@ fun main() {
         maturity,
         cutoff,
         1000,        // 1.000x multiplier
+        null,
+        null,
         { value: grams("0.2") },
     );
     setLoanRes.waitForTrace();
@@ -380,6 +384,8 @@ fun main() {
         grams("20"),
         tst1Owner,
         admin,
+        null,
+        null,
         { value: grams("1.5") },
     );
     val tBuy = buyCreditRes.waitForTrace();
@@ -417,6 +423,8 @@ fun main() {
         grams("5"),
         tst1Owner,
         admin,
+        null,
+        null,
         { value: grams("1.5") },
     );
     val _lateTrace = lateCreditRes.waitForTrace();

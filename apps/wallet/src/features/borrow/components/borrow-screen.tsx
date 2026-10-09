@@ -37,7 +37,11 @@ import {
 } from '@/core/explorer/use-explorer';
 import { formatMaturityDate } from '@/features/swap/hooks/use-ecosystem-swap';
 import { useNowSeconds } from '@/core/hooks';
-import { MemberGuard, useIsNetworkMember } from '@/features/brotherhood';
+import {
+  MemberGuard,
+  useIsNetworkMember,
+  useFiAccount,
+} from '@/features/brotherhood';
 import { useBorrowTokens } from '../hooks/use-borrow-tokens';
 import { useBorrowTerms } from '../hooks/use-borrow-terms';
 
@@ -50,6 +54,7 @@ export const BorrowScreen: React.FC = () => {
   const { formatContractAddress } = useFormatAddress();
   const { explorer } = useExplorer();
   const { canOperate } = useIsNetworkMember();
+  const account = useFiAccount(address ?? null);
   const nowSec = useNowSeconds();
 
   const {
@@ -81,6 +86,7 @@ export const BorrowScreen: React.FC = () => {
     cutoffDays: cutoffDaysInput,
     maturityDays: maturityDaysInput,
     multiplier: multiplierInput,
+    h3Cell: account.data?.h3Cell,
     onSuccess: () => {
       setAmountInput('');
       setCutoffDaysInput('');

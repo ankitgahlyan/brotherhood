@@ -19,6 +19,8 @@ get fun `test loan requirement: allows setting and updating creditNeed`() {
         1_800_000_000 + 86400,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -43,6 +45,8 @@ get fun `test loan requirement: fails with PersonalJettonNotRegistered when pers
         1_800_000_000 + 86400,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -61,6 +65,8 @@ get fun `test loan requirement: non-owner set loan requirement fails with NotOwn
         0,
         grams("50"),
         1_800_000_000 + 86400,
+        null,
+        null,
         null,
         null,
         { value: grams("0.1") },
@@ -84,6 +90,8 @@ get fun `test loan requirement: setting maturity in past fails with InvalidMessa
         1_800_000_000,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -105,6 +113,8 @@ get fun `test loan requirement: shortening active future maturity fails with Inv
         1_800_000_000 + 172800,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -114,6 +124,8 @@ get fun `test loan requirement: shortening active future maturity fails with Inv
         0,
         grams("60"),
         1_800_000_000 + 86400,
+        null,
+        null,
         null,
         null,
         { value: grams("0.1") },
@@ -130,6 +142,8 @@ get fun `test loan requirement: shortening active future maturity fails with Inv
         0,
         grams("60"),
         1_800_000_000 + 259200,
+        null,
+        null,
         null,
         null,
         { value: grams("0.1") },
@@ -157,6 +171,8 @@ get fun `test loan requirement: setting amount 0 preserves existing future matur
         1_800_000_000 + 172800,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -165,6 +181,8 @@ get fun `test loan requirement: setting amount 0 preserves existing future matur
         owner.address,
         0,
         0,
+        null,
+        null,
         null,
         null,
         null,

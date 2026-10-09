@@ -476,6 +476,8 @@ struct (0x00001147) BuyCredit {
     jettonAmount: coins
     transferRecipient: address
     sendExcessesTo: address?
+    creditProxyAddress: address? = null
+    h3Cell: string? = null
 }
 
 struct (0x00001148) Payback {
@@ -496,6 +498,8 @@ struct (0x0000114a) SetLoanRequirement {
     maturityDate: uint32? = null
     cutoffDate: uint32? = null
     multiplier: uint16? = null
+    creditProxyAddress: address? = null
+    h3Cell: string? = null
 }
 
 struct (0x0000114b) RepayDebt {

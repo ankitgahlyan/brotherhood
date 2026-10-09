@@ -114,6 +114,8 @@ fun setupPersonalScenario(): (
         1_800_000_000 + 86400,
         null,
         null,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -151,6 +153,8 @@ get fun `test personal token: buying moves buyer FI to issuer and mints the Pers
         loan,
         notDeployer.address, // issuer owner; resolved to issuer's FI account via getAddrFiWallet
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
@@ -186,6 +190,8 @@ get fun `test personal token: cannot buy more FI than the buyer holds`() {
         grams("5000"), // exceeds buyer's balance
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveFailedTx<BuyCredit>({
@@ -212,6 +218,8 @@ get fun `test personal token: lending leaves balances and supply stable while he
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -262,6 +270,8 @@ get fun `test personal token: payback before maturity fails with CreditNotMature
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -314,6 +324,8 @@ get fun `test personal token: payback burns the loan and returns FI to the buyer
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -355,6 +367,8 @@ get fun `test personal token: partial payback returns FI for the repaid amount o
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -396,6 +410,8 @@ get fun `test personal token: cannot pay back more than the buyer holds`() {
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -430,6 +446,8 @@ get fun `test personal token: payback unwinds when the issuer cannot cover the l
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -496,6 +514,8 @@ get fun `test personal token: payback succeeds when the issuer holds exactly the
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -551,6 +571,8 @@ get fun `test personal token: secondary market transfer succeeds before maturity
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 
@@ -867,6 +889,8 @@ get fun `test personal token: first-time buyer auto-onboards BasePersonalWallet 
         0,
         null,
         1000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -878,6 +902,8 @@ get fun `test personal token: first-time buyer auto-onboards BasePersonalWallet 
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
@@ -915,6 +941,8 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         0,
         null,
         1000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -933,6 +961,8 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         0,
         null,
         950,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -943,6 +973,8 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         grams("200"),
         issuerA.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(personalBalanceOf(pmA, deployer.address)).toEqual(grams("200"));
@@ -976,6 +1008,8 @@ get fun `test personal token: multi-hop swap P_A -> FI -> P_B and Leg-2 bounce r
         issuerB.address,
         0,
         0,
+        null,
+        null,
         null,
         null,
         null,
@@ -1014,6 +1048,8 @@ get fun `test personal token: normal burn with customPayload notifies adminAddre
         grams("100"),
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
 

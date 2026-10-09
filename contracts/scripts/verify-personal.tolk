@@ -118,6 +118,8 @@ fun main() {
             1_800_000_000 + 86400,
             null,
             null,
+            null,
+            null,
             { value: grams("0.1") },
         );
     // Onboard buyer's personal wallet with 1 GRAM deploy signal
@@ -145,6 +147,8 @@ fun main() {
             loan,
             issuerOwner,
             deployer,
+            null,
+            null,
             { value: grams("1.5") },
         );
     buyerRes.waitForFirstTransaction();

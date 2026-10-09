@@ -20,6 +20,8 @@ get fun `test credit multiplier: allows setting and updating multiplier by owner
         null,
         null,
         2000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -39,6 +41,8 @@ get fun `test credit multiplier: non-owner set multiplier fails with NotOwner`()
         null,
         null,
         2000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -58,6 +62,8 @@ get fun `test credit multiplier: setting multiplier to 0 fails with InvalidMessa
         null,
         null,
         0, // invalid multiplier 0
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -85,6 +91,8 @@ get fun `test credit multiplier: multiplier=2000 (2.000x) mints 2x personal toke
         null,
         null,
         2000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -99,6 +107,8 @@ get fun `test credit multiplier: multiplier=2000 (2.000x) mints 2x personal toke
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
@@ -134,6 +144,8 @@ get fun `test credit multiplier: fractional multiplier=950 (0.950x) deducts 5% s
         null,
         null,
         950,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -148,6 +160,8 @@ get fun `test credit multiplier: fractional multiplier=950 (0.950x) deducts 5% s
         loan,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({
@@ -183,6 +197,8 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         1_800_000_000 + 86400,
         null,
         2000,
+        null,
+        null,
         { value: grams("0.1") },
     );
 
@@ -196,6 +212,8 @@ get fun `test credit multiplier: sent tokens > creditNeed mints required and ret
         sentAmount,
         notDeployer.address,
         deployer.address,
+        null,
+        null,
         { value: grams("1.5") },
     );
     expect(res).toHaveSuccessfulTx<BuyCredit>({

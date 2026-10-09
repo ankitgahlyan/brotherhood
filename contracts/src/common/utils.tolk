@@ -23,6 +23,10 @@ fun SnakeString.packToBuilder(self, mutate b: builder) {
     b.storeSlice(self);
 }
 
+fun isNonEmptyString(str: string): bool {
+    return str.beginParse().remainingBitsCount() > 0;
+}
+
 @inline
 fun destroyContract(dest: address) {
     val outMsg = createMessage({

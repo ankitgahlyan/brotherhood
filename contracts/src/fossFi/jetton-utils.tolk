@@ -139,7 +139,3 @@ fun notifyOwner(
     });
     outMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS); // bounce back to sender
 }
-
-fun isNonEmptyString(str: string): bool {
-    return str.beginParse().remainingBitsCount() > 0;
-}
