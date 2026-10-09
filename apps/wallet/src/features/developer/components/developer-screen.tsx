@@ -43,6 +43,11 @@ import { PayloadViewer, isTonAddress, isAddressKey } from './payload-viewer';
 import { DbStateExplorer } from './db-state-explorer';
 import { ComponentAnalyticsView } from './component-analytics-view';
 import { NetworkSettingsPanel } from './network-settings-panel';
+import {
+  useAddressNameResolver,
+  getResolutionBadgeClass,
+  type AddressNameResolver,
+} from '../hooks/use-address-name-resolver';
 
 export interface DeveloperScreenProps {
   onClose?: () => void;
@@ -57,6 +62,12 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
 }) => {
   const navigate = useNavigate();
   const [developerMode, setDeveloperMode] = useDeveloperMode();
+  const { currentWallet } = useWallet();
+  const network: NetworkType =
+    String(currentWallet?.getNetwork()?.chainId) === '-239'
+      ? 'mainnet'
+      : 'testnet';
+  const resolver = useAddressNameResolver(network);
   const [items, setItems] = useState<TelemetryItem[]>(() =>
     devTelemetry.getItems(),
   );
@@ -170,7 +181,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
       const q = searchQuery.toLowerCase();
 
       if (item.type === 'api') {
-        return (
+        const matchesDirect =
           item.url.toLowerCase().includes(q) ||
           item.method.toLowerCase().includes(q) ||
           String(item.status).toLowerCase().includes(q) ||
@@ -178,8 +189,15 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
           (item.responsePreview &&
             item.responsePreview.toLowerCase().includes(q)) ||
           (item.requestBody && item.requestBody.toLowerCase().includes(q)) ||
-          (item.error && item.error.toLowerCase().includes(q))
-        );
+          (item.error && item.error.toLowerCase().includes(q));
+
+        if (matchesDirect) return true;
+
+        return resolver.matchesSearch(q, [
+          item.url,
+          item.requestBody,
+          item.responsePreview,
+        ]);
       } else {
         return (
           item.level.toLowerCase().includes(q) ||
@@ -187,7 +205,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
         );
       }
     });
-  }, [displayedItems, activeTab, filterLevel, searchQuery]);
+  }, [displayedItems, activeTab, filterLevel, searchQuery, resolver]);
 
   return (
     <div
@@ -563,6 +581,7 @@ export const DeveloperScreen: React.FC<DeveloperScreenProps> = ({
                         item={item}
                         isExpanded={!!expandedIds[item.id]}
                         onToggle={() => toggleExpand(item.id)}
+                        resolver={resolver}
                       />
                     );
                   } else {
@@ -606,7 +625,8 @@ const ApiCard: React.FC<{
   item: ApiCallLog;
   isExpanded: boolean;
   onToggle: () => void;
-}> = ({ item, isExpanded, onToggle }) => {
+  resolver: AddressNameResolver;
+}> = ({ item, isExpanded, onToggle, resolver }) => {
   const isPending = item.status === 'pending';
   const isFailed =
     item.status === 'failed' ||
@@ -634,22 +654,39 @@ const ApiCard: React.FC<{
   }, [item.requestBody]);
 
   const renderAddressLink = (addr: string, truncate = true) => {
-    const url = getExplorerAddressUrl(network, addr, explorer);
+    const trimmed = addr.trim();
+    const url = getExplorerAddressUrl(network, trimmed, explorer);
+    const resolution = resolver.resolve(trimmed);
     const display =
-      truncate && addr.length > 20
-        ? `${addr.slice(0, 6)}…${addr.slice(-6)}`
-        : addr;
+      truncate && trimmed.length > 20
+        ? `${trimmed.slice(0, 6)}…${trimmed.slice(-6)}`
+        : trimmed;
+
     return (
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="text-blue-500 hover:text-blue-400 underline decoration-blue-500/40 hover:decoration-blue-400 inline-flex items-center gap-0.5 font-mono cursor-pointer"
-        title={`Open ${addr} on ${explorer}`}
+        className="hover:underline decoration-blue-500/40 hover:decoration-blue-400 inline-flex items-center gap-1 font-mono cursor-pointer flex-wrap"
+        title={
+          resolution
+            ? `${resolution.name} (${trimmed}) - Open on ${explorer}`
+            : `Open ${trimmed} on ${explorer}`
+        }
       >
-        <span>{display}</span>
-        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-70" />
+        <span className="text-blue-500 hover:text-blue-400">{display}</span>
+        {resolution && (
+          <span
+            className={cn(
+              'text-[10px] font-sans font-medium px-1.5 py-0.2 rounded-md border inline-flex items-center no-underline',
+              getResolutionBadgeClass(resolution.source),
+            )}
+          >
+            {resolution.name}
+          </span>
+        )}
+        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-70 text-blue-500" />
       </a>
     );
   };
@@ -657,7 +694,12 @@ const ApiCard: React.FC<{
   const renderPathSegments = (pathStr: string) => {
     const segments = pathStr.split('/');
     return segments.map((seg, idx) => {
-      const cleanSeg = seg.trim();
+      let cleanSeg = seg.trim();
+      try {
+        cleanSeg = decodeURIComponent(cleanSeg);
+      } catch {
+        // ignore
+      }
       const isAddr = isTonAddress(cleanSeg);
       return (
         <React.Fragment key={idx}>
@@ -881,6 +923,7 @@ const ApiCard: React.FC<{
               title="Request Body"
               payload={item.requestBody}
               isRequest
+              resolveAddress={resolver.resolve}
             />
           )}
 
@@ -889,6 +932,7 @@ const ApiCard: React.FC<{
               title="Response Body"
               payload={item.responsePreview}
               requestPayload={item.requestBody}
+              resolveAddress={resolver.resolve}
             />
           )}
         </div>

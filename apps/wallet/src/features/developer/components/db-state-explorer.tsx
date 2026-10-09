@@ -26,6 +26,7 @@ import { clearRuntimeCacheStorage } from '@/core/utils/storage-management';
 import { queryClient } from '@/lib/brotherhood/ton';
 import { StorageEditorDialog } from './storage-editor-dialog';
 import { FormattedValue, type RenderCtx } from './payload-viewer';
+import { useAddressNameResolver } from '../hooks/use-address-name-resolver';
 
 /** JSON.stringify that handles BigInt, undefined, Symbol, and circular refs. */
 function safeStringify(value: unknown, indent = 2): string {
@@ -93,9 +94,10 @@ export const DbStateExplorer: React.FC = () => {
     String(currentWallet?.getNetwork()?.chainId) === '-239'
       ? 'mainnet'
       : 'testnet';
+  const resolver = useAddressNameResolver(network);
   const renderCtx: RenderCtx = useMemo(
-    () => ({ network, explorer }),
-    [network, explorer],
+    () => ({ network, explorer, resolveAddress: resolver.resolve }),
+    [network, explorer, resolver.resolve],
   );
 
   const [subTab, setSubTab] = useState<

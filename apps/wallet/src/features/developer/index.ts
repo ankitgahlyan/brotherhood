@@ -5,3 +5,4 @@ export * from './components/headers-viewer';
 export * from './components/payload-viewer';
 export * from './components/db-state-explorer';
 export * from './components/storage-editor-dialog';
+export * from './hooks/use-address-name-resolver';

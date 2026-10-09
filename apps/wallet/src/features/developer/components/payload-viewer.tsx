@@ -15,12 +15,20 @@ import {
   sanitizeBocFields,
   tryParseOrRepairJson,
 } from '@/core/lib/json-boc-sanitizer';
+import { cn } from '@/core/lib/utils';
+import {
+  type AddressResolution,
+  getResolutionBadgeClass,
+} from '../hooks/use-address-name-resolver';
 
 interface PayloadViewerProps {
   title: string;
   payload: string | null | undefined;
   requestPayload?: string | null | undefined;
   isRequest?: boolean;
+  resolveAddress?: (
+    addr: string | null | undefined,
+  ) => AddressResolution | null;
 }
 
 /** Matches TON friendly-format addresses (48 chars) and raw hex format (-1:... or 0:...) */
@@ -63,6 +71,9 @@ export interface RenderCtx {
   explorer: ExplorerChoice;
   /** parent key name for key-name hinting */
   parentKey?: string;
+  resolveAddress?: (
+    addr: string | null | undefined,
+  ) => AddressResolution | null;
 }
 
 function formatBytes(bytes: number): string {
@@ -172,27 +183,44 @@ export const FormattedValue: React.FC<{
       isTonAddress(strVal) ||
       (!!ctx.parentKey && isAddressKey(ctx.parentKey) && strVal.length > 20);
     if (isAddr) {
-      const url = getExplorerAddressUrl(
-        ctx.network,
-        strVal.trim(),
-        ctx.explorer,
-      );
+      const trimmed = strVal.trim();
+      const url = getExplorerAddressUrl(ctx.network, trimmed, ctx.explorer);
+      const resolution = ctx.resolveAddress?.(trimmed);
+
       return (
-        <span className="inline-flex items-center gap-0.5">
-          <span className="text-emerald-600 dark:text-emerald-400 select-all">
-            &quot;
+        <span className="inline-flex items-center gap-1 flex-wrap">
+          <span className="inline-flex items-center gap-0.5">
+            <span className="text-emerald-600 dark:text-emerald-400 select-all">
+              &quot;
+            </span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline underline-offset-2 break-all select-all"
+              title={
+                resolution
+                  ? `${resolution.name} (${trimmed}) - Open in ${ctx.explorer}`
+                  : `Open ${strVal} in ${ctx.explorer}`
+              }
+            >
+              {strVal}
+              <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />
+            </a>
+            <span className="text-emerald-600 dark:text-emerald-400">
+              &quot;
+            </span>
           </span>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline underline-offset-2 break-all select-all"
-            title={`Open ${strVal} in ${ctx.explorer}`}
-          >
-            {strVal}
-            <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />
-          </a>
-          <span className="text-emerald-600 dark:text-emerald-400">&quot;</span>
+          {resolution && (
+            <span
+              className={cn(
+                'text-[10px] font-sans font-medium px-1.5 py-0.2 rounded-md border inline-flex items-center',
+                getResolutionBadgeClass(resolution.source),
+              )}
+            >
+              {resolution.name}
+            </span>
+          )}
         </span>
       );
     }
@@ -276,6 +304,7 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
   payload,
   requestPayload,
   isRequest = false,
+  resolveAddress,
 }) => {
   const { currentWallet } = useWallet();
   const { explorer } = useExplorer();
@@ -283,7 +312,7 @@ export const PayloadViewer: React.FC<PayloadViewerProps> = ({
     String(currentWallet?.getNetwork()?.chainId) === '-239'
       ? 'mainnet'
       : 'testnet';
-  const ctx: RenderCtx = { network, explorer };
+  const ctx: RenderCtx = { network, explorer, resolveAddress };
 
   // Parse JSON if possible (with automatic recovery for truncated payloads)
   const { parsedJson } = useMemo(() => {
