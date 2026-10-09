@@ -36,9 +36,10 @@ import {
 } from '@/lib/brotherhood/config';
 import { getFiWalletAddress, isZeroAddress } from '@/lib/brotherhood/ton';
 import {
-  getPersonalMinter,
-  getExpectedPersonalWalletAddress,
-} from '@/lib/brotherhood/deploy';
+  filterDormantAddresses,
+  awakenAddresses,
+  awakenAddress,
+} from '@/lib/brotherhood/dormant-hydration-store';
 import { extractInvitedAndLocationFromFiWallet } from '@/lib/brotherhood/use-tracked-contract-addresses';
 import { calculateLocationAddress } from '@/features/city-network/hooks/use-cities';
 import { getBroCollectionSyncCandidates } from '@/features/dns/hooks/use-my-domains';
@@ -220,25 +221,12 @@ export function useTrackedAddressesSync() {
           if (!wallet.address) continue;
           addWallet(wallet.address);
 
-          // Deterministic FiWallet, deterministic PersonalMinter + PersonalWallet, cached Circle/Ring/Personal contracts, & user's PersonalWallet for FI Admin's Personal Token (for Swap)
+          // Deterministic FiWallet, cached Circle/Ring/Personal contracts, & user's PersonalWallet for FI Admin's Personal Token (for Swap / Stablecoin)
           try {
             const parsedOwner = Address.parse(wallet.address);
             const fiWallet = getFiWalletAddress(parsedOwner, defaultNetwork);
             addContract(fiWallet);
             setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
-
-            const { contractAddress: deterministicPersonalMinter } =
-              getPersonalMinter({
-                issuerWallet: fiWallet,
-                adminAddress: parsedOwner,
-              });
-            addContract(deterministicPersonalMinter);
-
-            const expectedPersonalWallet = getExpectedPersonalWalletAddress({
-              personalMinter: deterministicPersonalMinter,
-              owner: parsedOwner,
-            });
-            addContract(expectedPersonalWallet);
 
             const cachedSelfFiStore = getContractCacheSync<any>(
               getNormalizedContractCacheKey(defaultNetwork, fiWallet),
@@ -288,6 +276,14 @@ export function useTrackedAddressesSync() {
           for (const j of walletJettons) {
             if (j.address) addContract(j.address);
             if (j.walletAddress) addContract(j.walletAddress);
+            try {
+              if (j.balance && BigInt(j.balance) > 0n) {
+                if (j.address) awakenAddress(j.address);
+                if (j.walletAddress) awakenAddress(j.walletAddress);
+              }
+            } catch {
+              /* ignore balance parse error */
+            }
           }
 
           // Known location, circle, and ring contracts for this wallet
@@ -324,9 +320,19 @@ export function useTrackedAddressesSync() {
         const masterAddressList = Array.from(masterSet);
         if (masterAddressList.length === 0) return;
 
+        if (refreshDetail?.extraAddresses) {
+          awakenAddresses(refreshDetail.extraAddresses);
+        }
+
+        const addressesToHydrate = force
+          ? masterAddressList
+          : filterDormantAddresses(masterAddressList);
+
+        if (addressesToHydrate.length === 0) return;
+
         // 4. Pass 1: Execute single universal batch hydration
         const res = await brotherhoodSynchronizer.reconcileContracts(
-          masterAddressList,
+          addressesToHydrate,
           defaultNetwork,
           { force },
         );

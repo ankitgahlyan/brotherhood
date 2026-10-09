@@ -22,6 +22,7 @@ import {
   network as defaultNetwork,
   type Network,
 } from '@/lib/brotherhood/config';
+import { isDormantAddress } from '@/lib/brotherhood/dormant-hydration-store';
 
 export const MIN_FIWALLET_BALANCE_NANO = 2_000_000_000n; // 2 TON / 2 grams threshold
 export const FUNDING_AMOUNT_NANO = 2_000_000_000n; // 2 TON to fund
@@ -150,7 +151,11 @@ export async function autoFundUnderfundedFiWallets({
         try {
           const fiAddr = getFiWalletAddress(Address.parse(sw.address), network);
           const canonical = toCanonicalAddressString(fiAddr);
-          if (canonical && !sessionFundedFiWallets.has(canonical)) {
+          if (
+            canonical &&
+            !sessionFundedFiWallets.has(canonical) &&
+            !isDormantAddress(canonical)
+          ) {
             candidateSet.add(canonical);
           }
         } catch {
@@ -165,7 +170,11 @@ export async function autoFundUnderfundedFiWallets({
         if (!extra) continue;
         try {
           const canonical = toCanonicalAddressString(extra);
-          if (canonical && !sessionFundedFiWallets.has(canonical)) {
+          if (
+            canonical &&
+            !sessionFundedFiWallets.has(canonical) &&
+            !isDormantAddress(canonical)
+          ) {
             candidateSet.add(canonical);
           }
         } catch {

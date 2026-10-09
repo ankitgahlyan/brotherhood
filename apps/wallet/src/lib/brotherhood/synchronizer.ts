@@ -10,6 +10,7 @@ import { type Address } from '@ton/core';
 import { type QueryClient } from '@tanstack/react-query';
 import { type Network, network as defaultNetwork } from './config';
 import { batchHydrateUniversal } from './account-state-hydrator';
+import { awakenAddress, awakenAddresses } from './dormant-hydration-store';
 import { syncBroCollectionContacts } from '@/features/dns/hooks/use-my-domains';
 
 export interface ManualWalletRefreshDetail {
@@ -53,15 +54,24 @@ class BrotherhoodSynchronizerImpl {
       return;
     }
     this.wsListenerBound = true;
-    window.addEventListener('brotherhood_ws_transaction_finalized', () => {
-      if (
-        this.awaitingTargets.size === 0 &&
-        this.awaitingCallbacks.size === 0
-      ) {
-        return;
-      }
-      this.dispatchMasterRefresh(defaultNetwork);
-    });
+    window.addEventListener(
+      'brotherhood_ws_transaction_finalized',
+      (event: Event) => {
+        const customEvent = event as CustomEvent<
+          { address?: string } | undefined
+        >;
+        if (customEvent.detail?.address) {
+          awakenAddress(customEvent.detail.address);
+        }
+        if (
+          this.awaitingTargets.size === 0 &&
+          this.awaitingCallbacks.size === 0
+        ) {
+          return;
+        }
+        this.dispatchMasterRefresh(defaultNetwork);
+      },
+    );
     window.addEventListener('brotherhood_tx_modal_approved', (event: Event) => {
       const customEvent = event as CustomEvent<
         { isStreamingConnected?: boolean } | undefined
@@ -83,6 +93,9 @@ class BrotherhoodSynchronizerImpl {
     }
 
     const extraAddresses = Array.from(this.awaitingTargets);
+    if (extraAddresses.length > 0) {
+      awakenAddresses(extraAddresses);
+    }
     const queryClient = this.awaitingQueryClient;
     const callbacks = Array.from(this.awaitingCallbacks);
 
@@ -265,7 +278,10 @@ class BrotherhoodSynchronizerImpl {
     }
 
     targetAddresses.forEach((addr) => {
-      if (addr) this.awaitingTargets.add(addr);
+      if (addr) {
+        this.awaitingTargets.add(addr);
+        awakenAddress(addr);
+      }
     });
     if (queryClient) {
       this.awaitingQueryClient = queryClient;

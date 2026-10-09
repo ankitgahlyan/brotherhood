@@ -19,7 +19,14 @@ import {
 } from './contract-cache';
 import { rateLimitedFetch } from './rate-limiter';
 import { toncenterApiKey, type Network } from './ton';
-import { network as defaultNetwork } from './config';
+import { FI_ADDRESS, network as defaultNetwork } from './config';
+import {
+  markAddressProbed,
+  markAddressDormant,
+  awakenAddress,
+  toDormantAddressKey,
+  isDormantAddress,
+} from './dormant-hydration-store';
 import {
   CONTRACT_CODE_HASHES,
   type KnownContractType,
@@ -543,6 +550,25 @@ export function batchHydrateUniversal(
 
     const addressesToFetch: string[] = [];
     for (const addr of normalizedAddresses) {
+      const isDormant = !options?.force && isDormantAddress(addr);
+      if (isDormant) {
+        // Address is marked dormant: suppress network fetch, populate from cache if present
+        const cacheKey = getNormalizedContractCacheKey(net, addr);
+        const cached = await getContractCache(cacheKey);
+        if (cached?.data && result.decodedStores) {
+          result.decodedStores[addr] = cached.data;
+        }
+        const resolvedBal = cached?.balance ?? '0';
+        if (result.balances) {
+          result.balances[addr] = resolvedBal;
+          try {
+            result.balances[Address.parse(addr).toRawString()] = resolvedBal;
+          } catch {
+            /* ignore */
+          }
+        }
+        continue;
+      }
       const key = `${net}:${addr}`;
       const last = hydrationCooldowns.get(key) ?? 0;
       if (options?.force || now - last >= cooldownLimit) {
@@ -633,7 +659,7 @@ export function batchHydrateUniversal(
       parsedAddress: Address;
     }[] = [];
 
-    for (const addrInput of normalizedAddresses) {
+    for (const addrInput of addressesToFetch) {
       let parsedAddress: Address;
       let standardAddrStr: string;
 
@@ -676,6 +702,13 @@ export function batchHydrateUniversal(
           status: rawAcc?.status ?? 'uninit',
         }).catch(() => {});
         result.failedAddresses.push(standardAddrStr);
+        markAddressProbed(standardAddrStr);
+        if (
+          toDormantAddressKey(standardAddrStr) !==
+          toDormantAddressKey(FI_ADDRESS)
+        ) {
+          markAddressDormant(standardAddrStr);
+        }
         continue;
       }
 
@@ -787,6 +820,23 @@ export function batchHydrateUniversal(
             status: rawAcc.status ?? 'active',
           }).catch(() => {});
         }
+        markAddressProbed(standardAddrStr);
+        if (
+          toDormantAddressKey(standardAddrStr) !==
+          toDormantAddressKey(FI_ADDRESS)
+        ) {
+          let tonBal = 0n;
+          try {
+            if (rawAcc?.balance) tonBal = BigInt(rawAcc.balance);
+          } catch {
+            tonBal = 0n;
+          }
+          if (tonBal > 0n) {
+            awakenAddress(standardAddrStr);
+          } else {
+            markAddressDormant(standardAddrStr);
+          }
+        }
         continue;
       }
 
@@ -825,6 +875,38 @@ export function batchHydrateUniversal(
             err,
           );
         });
+      }
+
+      markAddressProbed(standardAddrStr);
+      if (
+        toDormantAddressKey(standardAddrStr) !== toDormantAddressKey(FI_ADDRESS)
+      ) {
+        let tonBal = 0n;
+        try {
+          if (rawAcc?.balance) tonBal = BigInt(rawAcc.balance);
+        } catch {
+          tonBal = 0n;
+        }
+
+        let jettonBal = 0n;
+        if (
+          decodedStore &&
+          typeof decodedStore === 'object' &&
+          'jettonBalance' in decodedStore &&
+          (decodedStore as any).jettonBalance !== undefined
+        ) {
+          try {
+            jettonBal = BigInt((decodedStore as any).jettonBalance);
+          } catch {
+            jettonBal = 0n;
+          }
+        }
+
+        if (tonBal > 0n || jettonBal > 0n) {
+          awakenAddress(standardAddrStr);
+        } else {
+          markAddressDormant(standardAddrStr);
+        }
       }
 
       if (result.decodedStores) {

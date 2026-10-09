@@ -4,10 +4,12 @@
  */
 
 import { clearFallbackImageCaches } from '@/core/components/ui/fallback-image';
+import { clearDormancyStorage } from '@/lib/brotherhood/dormant-hydration-store';
 
 export async function clearWholeAppStorage(): Promise<void> {
   if (typeof window === 'undefined') return;
 
+  clearDormancyStorage();
   await clearFallbackImageCaches();
 
   // 1. Clear LocalStorage & SessionStorage (preserving only the Passkey-encrypted vault ciphertexts)
@@ -111,6 +113,7 @@ export async function clearWholeAppStorage(): Promise<void> {
  */
 export async function clearRuntimeCacheStorage(): Promise<void> {
   if (typeof window === 'undefined') return;
+  clearDormancyStorage();
   await clearFallbackImageCaches();
   if (!('caches' in window)) return;
   try {
