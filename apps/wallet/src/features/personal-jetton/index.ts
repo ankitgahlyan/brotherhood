@@ -12,3 +12,4 @@ export * from './hooks/use-mint-personal';
 export * from './hooks/use-burn-personal';
 export * from './hooks/use-personal-minter-actions';
 export * from './hooks/use-personal-jetton-info';
+export * from './hooks/use-personal-loan-requirement';
