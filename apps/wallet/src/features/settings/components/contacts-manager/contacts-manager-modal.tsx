@@ -24,6 +24,7 @@ import { useWallet } from '@demo/wallet-core';
 import {
   useContactBookStore,
   formatContactAddress,
+  normalizeContactAddress,
   EMPTY_CONTACTS_MAP,
   type ContactItem,
 } from '@/core/storage/useContactBookStore';
@@ -168,6 +169,12 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
     );
     if (cleanDns) {
       saveDnsDomain(nonBounceable, cleanDns, network);
+    }
+    if (
+      editingContact &&
+      editingContact.rawAddress !== normalizeContactAddress(cleanAddr)
+    ) {
+      deleteContact(editingContact.address, network);
     }
     toast.success(editingContact ? 'Contact updated' : 'Contact added');
     setIsAddingNew(false);
@@ -336,11 +343,16 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
               dnsDomain ||
               contact.onChainUsername ||
               'Unnamed Contact';
+            const cleanEffective = effective.replace(/^@+/, '');
+            const isDnsName = cleanEffective.includes('.');
+            const displayName = isDnsName
+              ? cleanEffective
+              : `@${cleanEffective}`;
             const contactDisplay = getMemberContactDisplay({
               username: contact.onChainUsername,
               dnsDomain,
               contactLink,
-              fallbackLabel: `@${effective}`,
+              fallbackLabel: displayName,
             });
             return (
               <div
@@ -349,7 +361,7 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
-                    {effective.replace(/^@+/, '').charAt(0).toUpperCase()}
+                    {cleanEffective.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground truncate">
@@ -366,10 +378,10 @@ export const ContactsManagerModal: React.FC<ContactsManagerModalProps> = ({
                           className="hover:text-primary hover:underline cursor-pointer truncate text-left"
                           title={contactDisplay.title}
                         >
-                          @{effective.replace(/^@+/, '')}
+                          {displayName}
                         </button>
                       ) : (
-                        <span>@{effective.replace(/^@+/, '')}</span>
+                        <span>{displayName}</span>
                       )}
                       {contact.customName && (
                         <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.2 rounded font-medium">

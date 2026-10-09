@@ -257,4 +257,28 @@ describe('useContactBookStore with TON DNS domains', () => {
       expect(restored?.dnsDomains).toEqual(['alice.ton', 'alias.ton']);
     });
   });
+
+  describe('domain deduplication across multiple addresses', () => {
+    it('deduplicates contacts when the same domain is saved for a second address', () => {
+      // First save domain for testAddress1
+      useContactBookStore
+        .getState()
+        .saveDnsDomain(testAddress1, 'anki.bro', network);
+
+      let list = useContactBookStore.getState().getContactsList(network);
+      expect(list.length).toBe(1);
+      expect(list[0].dnsDomain).toBe('anki.bro');
+
+      // Now save the exact same domain for testAddress2 (e.g. FiWallet address vs EOA)
+      useContactBookStore
+        .getState()
+        .saveDnsDomain(testAddress2, 'anki.bro', network);
+
+      list = useContactBookStore.getState().getContactsList(network);
+      // Must not create duplicate entries for anki.bro!
+      expect(list.length).toBe(1);
+      expect(list[0].dnsDomain).toBe('anki.bro');
+      expect(list[0].address).toBe(expectedAddr2);
+    });
+  });
 });

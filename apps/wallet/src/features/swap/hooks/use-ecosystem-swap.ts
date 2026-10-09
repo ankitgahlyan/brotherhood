@@ -254,11 +254,35 @@ export function useEcosystemSwap() {
     return out;
   }, [customOwnerAddresses, net]);
 
+  const invitor = accountData?.invitor;
+  const invitor0 = accountData?.invitor0;
+  const inviterFiWalletAddrs = useMemo(() => {
+    const out: string[] = [];
+    if (invitor && !isZeroAddress(invitor)) {
+      out.push(
+        formatTonAddress(invitor, {
+          isContract: true,
+          network: net,
+        }),
+      );
+    }
+    if (invitor0 && !isZeroAddress(invitor0)) {
+      out.push(
+        formatTonAddress(invitor0, {
+          isContract: true,
+          network: net,
+        }),
+      );
+    }
+    return out;
+  }, [invitor, invitor0, net]);
+
   const allMemberFiWalletAddrs = useMemo(() => {
     const set = new Set<string>([
       ...circleFiWalletAddrs,
       ...ringFiWalletAddrs,
       ...votedFiWalletAddrs,
+      ...inviterFiWalletAddrs,
       ...customFiWalletAddrs,
     ]);
     return Array.from(set);
@@ -266,6 +290,7 @@ export function useEcosystemSwap() {
     circleFiWalletAddrs,
     ringFiWalletAddrs,
     votedFiWalletAddrs,
+    inviterFiWalletAddrs,
     customFiWalletAddrs,
   ]);
 
@@ -483,15 +508,35 @@ export function useEcosystemSwap() {
         }
       }
 
-      // Skip members who have no Personal Token configured or whose minter is uninit (not deployed)
+      // Skip members who have no Personal Token configured
       if (!hasPt || !minterParsed) continue;
 
       const cachedMinter = getContractCacheSync<PersonalStore>(
         getNormalizedContractCacheKey(net, minterParsed),
       );
-      if (cachedMinter?.status === 'uninit') continue;
       const rawMinter = getCachedRawAccountState(minterParsed, net);
-      if (rawMinter?.status === 'uninit') continue;
+
+      const matchingJetton = activeJettons.find((j) => {
+        try {
+          return Address.parse(j.address).equals(minterParsed!);
+        } catch {
+          return false;
+        }
+      });
+
+      // Strict on-chain deployment check:
+      // A personal token MUST NOT be uninit, AND must either have hydrated data or be active on-chain
+      const isMinterExplicitlyUninit =
+        cachedMinter?.status === 'uninit' || rawMinter?.status === 'uninit';
+      if (isMinterExplicitlyUninit) continue;
+
+      const isMinterActive =
+        Boolean(cachedMinter?.data) ||
+        cachedMinter?.status === 'active' ||
+        rawMinter?.status === 'active' ||
+        Boolean(matchingJetton);
+
+      if (!isMinterActive) continue;
 
       // Check on-chain PersonalStore metadata & user's held balance of this member's Personal Token
       let userPtBal = 0n;
@@ -512,14 +557,6 @@ export function useEcosystemSwap() {
         } catch {
           // ignore
         }
-
-        const matchingJetton = activeJettons.find((j) => {
-          try {
-            return Address.parse(j.address).equals(minterParsed!);
-          } catch {
-            return false;
-          }
-        });
         if (matchingJetton) {
           if (!jettonSymbol) jettonSymbol = getJettonsSymbol(matchingJetton);
           if (!jettonName) jettonName = getJettonsName(matchingJetton);

@@ -8,5 +8,6 @@
 
 export * from './circle-tab';
 export * from './ring-tab';
+export * from './inviter-circle-tab';
 export * from './member-detail-view';
 export * from './network-tab';

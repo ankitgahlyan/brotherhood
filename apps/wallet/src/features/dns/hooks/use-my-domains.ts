@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Address } from '@ton/core';
 import { useWalletStoreApi } from '@demo/wallet-core';
-import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { batchFetchAccountStates } from '@/lib/brotherhood/account-state-hydrator';
 import {
   setContractCache,
@@ -95,26 +94,8 @@ function syncParsedDnsContactToBook(
     ? domainName.toLowerCase()
     : `${domainName.toLowerCase()}.bro`;
   const saveDnsDomain = useContactBookStore.getState().saveDnsDomain;
-  const targets = new Set<string>();
-
-  for (const rawTarget of [ownerAddress, walletRecord]) {
-    if (!rawTarget) continue;
-    targets.add(rawTarget);
-    try {
-      const fiWallet = getFiWalletAddress(
-        Address.parse(rawTarget),
-        network,
-      ).toString({
-        bounceable: true,
-        testOnly: network === 'testnet',
-      });
-      targets.add(fiWallet);
-    } catch {
-      /* ignore invalid address */
-    }
-  }
-
-  for (const target of targets) {
+  const target = walletRecord || ownerAddress;
+  if (target) {
     saveDnsDomain(target, fullDomain, network, contactLink ?? undefined);
   }
 }

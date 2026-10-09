@@ -115,29 +115,14 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
   const handleAddToContacts = useCallback(() => {
     if (!targetContactAddress || !fullSearchedDomain) return;
-    const targets = new Set<string>([targetContactAddress]);
-    if (lookup.owner) targets.add(lookup.owner);
-    if (lookup.walletRecord) targets.add(lookup.walletRecord);
-    for (const addr of Array.from(targets)) {
-      try {
-        targets.add(
-          getFiWalletAddress(Address.parse(addr), lookupNet).toString({
-            bounceable: true,
-            testOnly: lookupNet === 'testnet',
-          }),
-        );
-      } catch {
-        /* ignore */
-      }
-    }
-    for (const addr of targets) {
-      saveDnsDomain(
-        addr,
-        fullSearchedDomain,
-        lookupNet,
-        lookup.contactLink ?? undefined,
-      );
-    }
+    const canonicalAddr =
+      lookup.walletRecord || lookup.owner || targetContactAddress;
+    saveDnsDomain(
+      canonicalAddr,
+      fullSearchedDomain,
+      lookupNet,
+      lookup.contactLink ?? undefined,
+    );
   }, [
     targetContactAddress,
     fullSearchedDomain,

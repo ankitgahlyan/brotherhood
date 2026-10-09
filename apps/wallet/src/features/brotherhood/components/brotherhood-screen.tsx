@@ -943,6 +943,8 @@ export const BrotherhoodScreen: React.FC = () => {
             }
             resolvedProfiles={resolvedProfiles.data}
             isLoading={account.isLoading || resolvedProfiles.isLoading}
+            invitorAddress={account.data?.invitor}
+            invitor0Address={account.data?.invitor0}
             onNavigateToInvite={() => setActiveTab('invite')}
             onBoundaryPrev={() => setActiveTab('account')}
             onBoundaryNext={() => setActiveTab('claim')}

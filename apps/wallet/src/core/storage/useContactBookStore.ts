@@ -144,6 +144,55 @@ export function sanitizeContactsByNetwork(
         };
       }
     }
+
+    // Pass 2: Deduplicate entries sharing the same DNS domain
+    const domainOwnerMap = new Map<string, string>(); // domain (lowercase) -> canonical rawAddress
+    for (const [raw, item] of Object.entries(result[net])) {
+      const domains = [
+        ...(item.dnsDomain ? [item.dnsDomain.toLowerCase()] : []),
+        ...(item.dnsDomains ? item.dnsDomains.map((d) => d.toLowerCase()) : []),
+      ];
+      for (const d of domains) {
+        if (!d) continue;
+        const ownerRaw = domainOwnerMap.get(d);
+        if (!ownerRaw) {
+          domainOwnerMap.set(d, raw);
+        } else if (ownerRaw !== raw && result[net][ownerRaw]) {
+          const ownerItem = result[net][ownerRaw];
+          // Determine which contact to keep: prefer one with customName, or newer updatedAt
+          const preferCurrent =
+            (!ownerItem.customName && Boolean(item.customName)) ||
+            (item.updatedAt || 0) > (ownerItem.updatedAt || 0);
+
+          const canonical = preferCurrent ? item : ownerItem;
+          const duplicate = preferCurrent ? ownerItem : item;
+          const canonicalRaw = preferCurrent ? raw : ownerRaw;
+          const duplicateRaw = preferCurrent ? ownerRaw : raw;
+
+          result[net][canonicalRaw] = {
+            ...canonical,
+            customName: canonical.customName || duplicate.customName,
+            onChainUsername:
+              canonical.onChainUsername || duplicate.onChainUsername,
+            dnsDomain: canonical.dnsDomain || duplicate.dnsDomain,
+            dnsDomains: Array.from(
+              new Set([
+                ...(canonical.dnsDomains || []),
+                ...(duplicate.dnsDomains || []),
+              ]),
+            ),
+            notes: canonical.notes || duplicate.notes,
+            contactLink: canonical.contactLink || duplicate.contactLink,
+            updatedAt: Math.max(
+              canonical.updatedAt || 0,
+              duplicate.updatedAt || 0,
+            ),
+          };
+          delete result[net][duplicateRaw];
+          domainOwnerMap.set(d, canonicalRaw);
+        }
+      }
+    }
   }
   return result;
 }
@@ -468,23 +517,49 @@ export const useContactBookStore = create<ContactBookState>()(
               return state;
             }
 
-            netContacts[raw] = {
-              address: canonicalAddress,
-              rawAddress: raw,
-              customName: existing?.customName,
-              onChainUsername: existing?.onChainUsername,
-              dnsDomain: cleanDomain,
-              dnsDomains: updatedDomains,
-              contactLink: nextContactLink,
-              notes: existing?.notes,
-              updatedAt: Date.now(),
-            };
+            let inheritedCustomName = existing?.customName;
+            let inheritedNotes = existing?.notes;
+            let inheritedUsername = existing?.onChainUsername;
 
-            for (const k of Object.keys(netContacts)) {
-              if (k !== raw && normalizeContactAddress(k) === raw) {
+            for (const [k, v] of Object.entries(netContacts)) {
+              if (k === raw) continue;
+              const matchesAddress = normalizeContactAddress(k) === raw;
+              const matchesDomain =
+                v.dnsDomain?.toLowerCase() === cleanDomain ||
+                v.dnsDomains?.some((d) => d.toLowerCase() === cleanDomain);
+
+              if (matchesAddress || matchesDomain) {
+                if (!inheritedCustomName && v.customName) {
+                  inheritedCustomName = v.customName;
+                }
+                if (!inheritedNotes && v.notes) {
+                  inheritedNotes = v.notes;
+                }
+                if (!inheritedUsername && v.onChainUsername) {
+                  inheritedUsername = v.onChainUsername;
+                }
+                if (v.dnsDomains) {
+                  for (const d of v.dnsDomains) {
+                    if (!updatedDomains.includes(d.toLowerCase())) {
+                      updatedDomains.push(d.toLowerCase());
+                    }
+                  }
+                }
                 delete netContacts[k];
               }
             }
+
+            netContacts[raw] = {
+              address: canonicalAddress,
+              rawAddress: raw,
+              customName: inheritedCustomName,
+              onChainUsername: inheritedUsername,
+              dnsDomain: cleanDomain,
+              dnsDomains: updatedDomains,
+              contactLink: nextContactLink,
+              notes: inheritedNotes,
+              updatedAt: Date.now(),
+            };
 
             // Sync recent list
             const currentRecent = state.recentByNetwork[net] || [];

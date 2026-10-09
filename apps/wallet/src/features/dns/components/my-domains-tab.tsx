@@ -216,18 +216,6 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
           for (const target of [address, nextWallet]) {
             if (!target) continue;
             saveDnsDomain(target, fullDomain, network, nextContact);
-            try {
-              const fiWallet = getFiWalletAddress(
-                Address.parse(target),
-                network,
-              ).toString({
-                bounceable: true,
-                testOnly: network === 'testnet',
-              });
-              saveDnsDomain(fiWallet, fullDomain, network, nextContact);
-            } catch {
-              /* ignore */
-            }
           }
         }
         clearDomainResolutionCache();
