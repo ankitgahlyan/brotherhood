@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BorrowRouteImport } from './routes/borrow'
 import { Route as BrotherhoodRouteImport } from './routes/brotherhood'
 import { Route as CityNetworkRouteImport } from './routes/city-network'
 import { Route as CreateWalletRouteImport } from './routes/create-wallet'
@@ -35,6 +36,11 @@ import { Route as WalletNftRouteImport } from './routes/wallet.nft'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BorrowRoute = BorrowRouteImport.update({
+  id: '/borrow',
+  path: '/borrow',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrotherhoodRoute = BrotherhoodRouteImport.update({
@@ -145,6 +151,7 @@ const WalletNftRoute = WalletNftRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/borrow': typeof BorrowRoute
   '/brotherhood': typeof BrotherhoodRoute
   '/city-network': typeof CityNetworkRoute
   '/create-wallet': typeof CreateWalletRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/borrow': typeof BorrowRoute
   '/brotherhood': typeof BrotherhoodRoute
   '/city-network': typeof CityNetworkRoute
   '/create-wallet': typeof CreateWalletRoute
@@ -194,6 +202,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/borrow': typeof BorrowRoute
   '/brotherhood': typeof BrotherhoodRoute
   '/city-network': typeof CityNetworkRoute
   '/create-wallet': typeof CreateWalletRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/borrow'
     | '/brotherhood'
     | '/city-network'
     | '/create-wallet'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/borrow'
     | '/brotherhood'
     | '/city-network'
     | '/create-wallet'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/borrow'
     | '/brotherhood'
     | '/city-network'
     | '/create-wallet'
@@ -293,6 +305,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BorrowRoute: typeof BorrowRoute
   BrotherhoodRoute: typeof BrotherhoodRoute
   CityNetworkRoute: typeof CityNetworkRoute
   CreateWalletRoute: typeof CreateWalletRoute
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/borrow': {
+      id: '/borrow'
+      path: '/borrow'
+      fullPath: '/borrow'
+      preLoaderRoute: typeof BorrowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brotherhood': {
@@ -477,6 +497,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BorrowRoute: BorrowRoute,
   BrotherhoodRoute: BrotherhoodRoute,
   CityNetworkRoute: CityNetworkRoute,
   CreateWalletRoute: CreateWalletRoute,

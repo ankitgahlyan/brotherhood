@@ -15,6 +15,7 @@ import {
   Wallet,
   Coins,
   Sparkles,
+  HandCoins,
   Building2,
   Vote,
   Ticket,
@@ -49,6 +50,12 @@ export const ECOSYSTEM_NAV_ITEMS: NavItem[] = [
     label: 'Personal',
     icon: Sparkles,
     path: '/personal-jetton',
+  },
+  {
+    id: 'borrow',
+    label: 'Borrow',
+    icon: HandCoins,
+    path: '/borrow',
   },
   {
     id: 'city',

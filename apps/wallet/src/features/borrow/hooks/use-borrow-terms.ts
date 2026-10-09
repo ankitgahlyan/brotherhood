@@ -10,20 +10,19 @@ import { useCallback, useMemo } from 'react';
 import { toNano } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import { toast } from 'sonner';
-import { SetLoanRequirement } from '@wrappers/PersonalWallet.gen';
+import { SetLoanRequirement as FiSetLoanRequirement } from '@wrappers/FossFiWallet.gen';
+import { SetLoanRequirement as PersonalSetLoanRequirement } from '@wrappers/PersonalWallet.gen';
 import { parseUnits } from '@/lib/brotherhood/deploy';
 import { encodeOnchainMultiplier } from '@/lib/brotherhood/config';
 import { useBrotherhoodTransaction } from '@/features/brotherhood/hooks/use-brotherhood-transaction';
 import { useNowSeconds } from '@/core/hooks';
-import type { PersonalCreditInfo } from '@wrappers/PersonalWallet.gen';
+import type { BorrowToken } from '../types';
 
-export interface UsePersonalLoanRequirementParams {
+export interface UseBorrowTermsParams {
   wallet: Wallet | null | undefined;
   walletKit: ITonWalletKit | null;
   walletAddress: string | null;
-  personalWalletAddress: string | null;
-  personalMinterAddress: string | null;
-  creditInfo?: PersonalCreditInfo | null;
+  token: BorrowToken;
   amount: string;
   maturityDays: string;
   cutoffDays?: string;
@@ -31,8 +30,8 @@ export interface UsePersonalLoanRequirementParams {
   onSuccess?: () => void;
 }
 
-export interface UsePersonalLoanRequirementResult {
-  updateLoanRequirement: () => Promise<void>;
+export interface UseBorrowTermsResult {
+  updateBorrowTerms: () => Promise<void>;
   isDisabled: boolean;
   isSending: boolean;
   isDirty: boolean;
@@ -45,19 +44,17 @@ export interface UsePersonalLoanRequirementResult {
 
 const SET_TERMS_GAS = toNano('0.2');
 
-export function usePersonalLoanRequirement({
+export function useBorrowTerms({
   wallet,
   walletKit,
   walletAddress,
-  personalWalletAddress,
-  personalMinterAddress,
-  creditInfo,
+  token,
   amount,
   maturityDays,
   cutoffDays = '',
   multiplier,
   onSuccess,
-}: UsePersonalLoanRequirementParams): UsePersonalLoanRequirementResult {
+}: UseBorrowTermsParams): UseBorrowTermsResult {
   const {
     send: sendTx,
     isSending,
@@ -70,55 +67,70 @@ export function usePersonalLoanRequirement({
   const trimmedCutoffDays = cutoffDays.trim();
   const trimmedMultiplier = multiplier.trim();
 
-  // Dirty check against current on-chain state
+  // On-chain active values for comparison
+  const onchainNeed = useMemo<bigint | null>(() => {
+    if (token.kind === 'fi') return token.fiCreditNeed ?? null;
+    return token.creditInfo?.creditNeed ?? null;
+  }, [token]);
+
+  const onchainMaturitySec = useMemo<number>(() => {
+    if (token.kind === 'fi') return token.fiCreditMaturity ?? 0;
+    return Number(token.creditInfo?.creditMaturity ?? 0);
+  }, [token]);
+
+  const onchainCutoffSec = useMemo<number>(() => {
+    if (token.kind === 'fi') return token.fiCreditCutoff ?? 0;
+    return Number(token.creditInfo?.creditCutoff ?? 0);
+  }, [token]);
+
+  const onchainMultiplier = useMemo<number>(() => {
+    if (token.kind === 'fi') return token.fiMultiplier ?? 1.0;
+    if (token.creditInfo && token.creditInfo.multiplier > 0) {
+      return Number(token.creditInfo.multiplier) / 1000;
+    }
+    return 1.0;
+  }, [token]);
+
+  // Dirty checks
   const isAmountDirty = useMemo(() => {
-    if (!creditInfo) return trimmedAmount !== '';
-    const currentNeedFormatted = (
-      Number(creditInfo.creditNeed) / 1e9
-    ).toString();
+    if (onchainNeed === null) return trimmedAmount !== '';
+    const currentNeedFormatted = (Number(onchainNeed) / 1e9).toString();
     return trimmedAmount !== '' && trimmedAmount !== currentNeedFormatted;
-  }, [creditInfo, trimmedAmount]);
+  }, [onchainNeed, trimmedAmount]);
 
   const isMaturityDirty = useMemo(() => {
-    if (!creditInfo) return trimmedMaturityDays !== '';
-    const currentMaturitySec = Number(creditInfo.creditMaturity);
-    if (currentMaturitySec === 0) {
+    if (onchainMaturitySec === 0) {
       return trimmedMaturityDays !== '' && trimmedMaturityDays !== '0';
     }
     const currentDays = Math.max(
       0,
-      Math.round((currentMaturitySec - nowSec) / 86400),
+      Math.round((onchainMaturitySec - nowSec) / 86400),
     ).toString();
     return trimmedMaturityDays !== '' && trimmedMaturityDays !== currentDays;
-  }, [creditInfo, trimmedMaturityDays, nowSec]);
+  }, [onchainMaturitySec, trimmedMaturityDays, nowSec]);
 
   const isCutoffDirty = useMemo(() => {
-    if (!creditInfo) return trimmedCutoffDays !== '';
-    const currentCutoffSec = Number(creditInfo.creditCutoff ?? 0);
-    if (currentCutoffSec === 0) {
+    if (onchainCutoffSec === 0) {
       return trimmedCutoffDays !== '' && trimmedCutoffDays !== '0';
     }
     const currentDays = Math.max(
       0,
-      Math.round((currentCutoffSec - nowSec) / 86400),
+      Math.round((onchainCutoffSec - nowSec) / 86400),
     ).toString();
     return trimmedCutoffDays !== '' && trimmedCutoffDays !== currentDays;
-  }, [creditInfo, trimmedCutoffDays, nowSec]);
+  }, [onchainCutoffSec, trimmedCutoffDays, nowSec]);
 
   const isMultiplierDirty = useMemo(() => {
-    if (!creditInfo) return trimmedMultiplier !== '';
-    const currentMultiplierFormatted = (
-      Number(creditInfo.multiplier) / 1000
-    ).toFixed(3);
-    const parsedInput = parseFloat(trimmedMultiplier);
-    if (isNaN(parsedInput)) return false;
-    return parsedInput.toFixed(3) !== currentMultiplierFormatted;
-  }, [creditInfo, trimmedMultiplier]);
+    if (!trimmedMultiplier) return false;
+    const parsed = parseFloat(trimmedMultiplier);
+    if (isNaN(parsed)) return false;
+    return parsed.toFixed(3) !== onchainMultiplier.toFixed(3);
+  }, [onchainMultiplier, trimmedMultiplier]);
 
   const isDirty =
     isAmountDirty || isMaturityDirty || isCutoffDirty || isMultiplierDirty;
 
-  // Amount validation
+  // Validation
   const amountValidationError = useMemo<string | null>(() => {
     if (!trimmedAmount) return null;
     const parsed = parseFloat(trimmedAmount);
@@ -128,7 +140,6 @@ export function usePersonalLoanRequirement({
     return null;
   }, [trimmedAmount]);
 
-  // Multiplier validation
   const multiplierValidationError = useMemo<string | null>(() => {
     if (!trimmedMultiplier) return null;
     const parsed = parseFloat(trimmedMultiplier);
@@ -138,7 +149,6 @@ export function usePersonalLoanRequirement({
     return null;
   }, [trimmedMultiplier]);
 
-  // Maturity days validation
   const maturityValidationError = useMemo<string | null>(() => {
     if (!trimmedMaturityDays) return null;
     const parsed = parseInt(trimmedMaturityDays, 10);
@@ -146,18 +156,13 @@ export function usePersonalLoanRequirement({
       return 'Maturity must be 0 (instant) or a positive number of days';
     }
     const multParsed = parseFloat(trimmedMultiplier);
-    const effectiveMult = !isNaN(multParsed)
-      ? multParsed
-      : creditInfo && creditInfo.multiplier > 0
-        ? Number(creditInfo.multiplier) / 1000
-        : 1.0;
+    const effectiveMult = !isNaN(multParsed) ? multParsed : onchainMultiplier;
     if (effectiveMult > 1.0 && parsed === 0) {
       return 'Bonus multipliers (> 1.000x) require a future maturity date (> 0 days)';
     }
     return null;
-  }, [creditInfo, trimmedMaturityDays, trimmedMultiplier]);
+  }, [onchainMultiplier, trimmedMaturityDays, trimmedMultiplier]);
 
-  // Cutoff days validation
   const cutoffValidationError = useMemo<string | null>(() => {
     if (!trimmedCutoffDays) return null;
     const cutoffParsed = parseInt(trimmedCutoffDays, 10);
@@ -166,11 +171,8 @@ export function usePersonalLoanRequirement({
     }
     const maturityParsed = trimmedMaturityDays
       ? parseInt(trimmedMaturityDays, 10)
-      : creditInfo && Number(creditInfo.creditMaturity) > 0
-        ? Math.max(
-            0,
-            Math.round((Number(creditInfo.creditMaturity) - nowSec) / 86400),
-          )
+      : onchainMaturitySec > 0
+        ? Math.max(0, Math.round((onchainMaturitySec - nowSec) / 86400))
         : null;
     if (
       maturityParsed !== null &&
@@ -180,7 +182,7 @@ export function usePersonalLoanRequirement({
       return 'Funding deadline cannot exceed loan maturity date';
     }
     return null;
-  }, [creditInfo, nowSec, trimmedCutoffDays, trimmedMaturityDays]);
+  }, [nowSec, onchainMaturitySec, trimmedCutoffDays, trimmedMaturityDays]);
 
   const hasValidationError =
     Boolean(amountValidationError) ||
@@ -189,11 +191,15 @@ export function usePersonalLoanRequirement({
     Boolean(multiplierValidationError);
 
   const isDisabled =
-    !personalWalletAddress || !isDirty || hasValidationError || isSending;
+    !token.userWalletAddress ||
+    !token.isDeployed ||
+    !isDirty ||
+    hasValidationError ||
+    isSending;
 
-  const updateLoanRequirement = useCallback(async () => {
-    if (!walletAddress || !personalWalletAddress) {
-      throw new Error('Personal Token wallet not available');
+  const updateBorrowTerms = useCallback(async () => {
+    if (!walletAddress || !token.userWalletAddress) {
+      throw new Error('Wallet not available');
     }
     if (!isDirty || hasValidationError) return;
 
@@ -221,38 +227,49 @@ export function usePersonalLoanRequirement({
       multBigInt = encodeOnchainMultiplier(parseFloat(trimmedMultiplier));
     }
 
-    const body = SetLoanRequirement.toCell(
-      SetLoanRequirement.create({
-        queryId: 0n,
-        amount: amountNano,
-        maturityDate: maturitySec,
-        cutoffDate: cutoffSec,
-        multiplier: multBigInt,
-      }),
-    );
+    // Build payload according to token kind
+    const bodyCell =
+      token.kind === 'fi'
+        ? FiSetLoanRequirement.toCell(
+            FiSetLoanRequirement.create({
+              queryId: 0n,
+              amount: amountNano,
+              maturityDate: maturitySec,
+              cutoffDate: cutoffSec,
+              multiplier: multBigInt,
+            }),
+          )
+        : PersonalSetLoanRequirement.toCell(
+            PersonalSetLoanRequirement.create({
+              queryId: 0n,
+              amount: amountNano,
+              maturityDate: maturitySec,
+              cutoffDate: cutoffSec,
+              multiplier: multBigInt,
+            }),
+          );
 
-    const affected = [personalWalletAddress];
-    if (personalMinterAddress) {
-      affected.push(personalMinterAddress);
+    const affectedContracts = [token.userWalletAddress];
+    if (token.kind !== 'fi' && token.minterAddress) {
+      affectedContracts.push(token.minterAddress);
     }
 
     await sendTx(
       [
         {
-          toAddress: personalWalletAddress,
+          toAddress: token.userWalletAddress,
           amount: SET_TERMS_GAS,
-          payload: body,
+          payload: bodyCell,
         },
       ],
-      { affectedContracts: affected },
+      { affectedContracts },
     );
 
-    toast.success('Personal token credit terms updated successfully!');
+    toast.success(`${token.symbol} borrowing terms updated successfully!`);
     onSuccess?.();
   }, [
     walletAddress,
-    personalWalletAddress,
-    personalMinterAddress,
+    token,
     isDirty,
     hasValidationError,
     isAmountDirty,
@@ -268,7 +285,7 @@ export function usePersonalLoanRequirement({
   ]);
 
   return {
-    updateLoanRequirement,
+    updateBorrowTerms,
     isDisabled,
     isSending,
     isDirty,

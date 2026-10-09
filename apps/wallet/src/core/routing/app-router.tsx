@@ -30,6 +30,7 @@ import {
 } from '@/features/wallet-setup';
 import { BrotherhoodScreen } from '@/features/brotherhood';
 import { PersonalJettonScreen } from '@/features/personal-jetton';
+import { BorrowScreen } from '@/features/borrow';
 import { DaoScreen } from '@/features/dao';
 import { LotteryScreen } from '@/features/lottery';
 import { CityNetworkScreen } from '@/features/city-network';
@@ -212,6 +213,14 @@ export const AppRouter: React.FC = () => {
           element={
             <ProtectedRoute requiresWallet>
               <PersonalJettonScreen />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/borrow"
+          element={
+            <ProtectedRoute requiresWallet>
+              <BorrowScreen />
             </ProtectedRoute>
           }
         />

@@ -24,10 +24,6 @@ import {
   ChevronUp,
   Fingerprint,
   HandCoins,
-  Clock,
-  TrendingUp,
-  Calendar,
-  Percent,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,7 +50,6 @@ import {
   DialogFooter,
 } from '@/core/components/ui/dialog';
 import { useFormatAddress } from '@/core/utils/formatters';
-import { useNowSeconds } from '@/core/hooks';
 import {
   MemberGuard,
   ActivationBanner,
@@ -88,12 +83,7 @@ import {
   buildRequestUpgradeBody,
   buildPersonalUpgradeBody,
 } from '@/lib/brotherhood/deploy';
-import { formatUnits } from '@ton/walletkit';
-import { formatMaturityDate } from '@/features/swap/hooks/use-ecosystem-swap';
-import { usePersonalLoanRequirement } from '../hooks/use-personal-loan-requirement';
-import type { PersonalCreditInfo } from '@wrappers/PersonalWallet.gen';
-
-type Tab = 'info' | 'credit' | 'mint' | 'admin';
+type Tab = 'info' | 'mint' | 'admin';
 
 type ManageSection = 'metadata' | 'operations' | 'danger';
 
@@ -110,12 +100,6 @@ const PERSONAL_JETTON_TAB_CONFIG: Record<
     icon: Info,
     activeColorClass:
       'bg-card text-blue-500 font-semibold border border-border shadow-xs',
-  },
-  credit: {
-    label: 'Credit Terms',
-    icon: HandCoins,
-    activeColorClass:
-      'bg-card text-amber-500 font-semibold border border-border shadow-xs',
   },
   mint: {
     label: 'Mint',
@@ -145,7 +129,6 @@ export const PersonalJettonScreen: React.FC = () => {
   const [showManualLinkInWizard, setShowManualLinkInWizard] = useState(false);
 
   const { explorer } = useExplorer();
-  const nowSec = useNowSeconds();
 
   // Issuance Wizard metadata + initial mint inputs
   const [deployTokenName, setDeployTokenName] = useState('');
@@ -169,12 +152,6 @@ export const PersonalJettonScreen: React.FC = () => {
   // Explicit registration overrides
   const [addressesTabMinter, setAddressesTabMinter] = useState('');
   const [addressesTabWallet, setAddressesTabWallet] = useState('');
-
-  // Credit Terms tab inputs
-  const [creditAmount, setCreditAmount] = useState('');
-  const [creditMaturityDays, setCreditMaturityDays] = useState('');
-  const [creditCutoffDays, setCreditCutoffDays] = useState('');
-  const [creditMultiplier, setCreditMultiplier] = useState('');
 
   // Destroy confirmation dialog states & auth gate
   const { isPasswordSet, unlock } = useAuth();
@@ -404,30 +381,7 @@ export const PersonalJettonScreen: React.FC = () => {
   const isDeployed =
     info.isDeployedOnChain || Boolean(deployer.deployedAddresses);
 
-  const availableTabs: Tab[] = ['info', 'credit', 'mint', 'admin'];
-
-  const creditInfo = useMemo<PersonalCreditInfo | undefined>(() => {
-    return walletCachedState.data?.credit?.ref;
-  }, [walletCachedState.data]);
-
-  const personalLoanManager = usePersonalLoanRequirement({
-    wallet: currentWallet,
-    walletKit,
-    walletAddress: address ?? null,
-    personalWalletAddress: activePersonalWallet,
-    personalMinterAddress: activeMinter,
-    creditInfo,
-    amount: creditAmount,
-    maturityDays: creditMaturityDays,
-    cutoffDays: creditCutoffDays,
-    multiplier: creditMultiplier,
-    onSuccess: () => {
-      setCreditAmount('');
-      setCreditMaturityDays('');
-      setCreditCutoffDays('');
-      setCreditMultiplier('');
-    },
-  });
+  const availableTabs: Tab[] = ['info', 'mint', 'admin'];
 
   // Effective addresses to register
   const defaultRegisterMinter =
@@ -1116,11 +1070,11 @@ export const PersonalJettonScreen: React.FC = () => {
                       <Button
                         size="sm"
                         variant="gray"
-                        onClick={() => setActiveTab('credit')}
+                        onClick={() => navigate('/borrow')}
                         className="text-xs font-medium"
                       >
                         <HandCoins className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
-                        Credit Terms
+                        Borrow Terms
                       </Button>
                       <Button
                         size="sm"
@@ -1143,280 +1097,6 @@ export const PersonalJettonScreen: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Credit Terms Tab */}
-            {activeTab === 'credit' && (
-              <div className="space-y-4">
-                {/* Active Terms Summary Card */}
-                <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-base flex items-center gap-2">
-                      <HandCoins className="w-4.5 h-4.5 text-amber-500" />
-                      Personal Token Credit Rules
-                    </h3>
-                    {creditInfo && (
-                      <span
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
-                          creditInfo.creditNeed > 0n
-                            ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                            : 'text-muted-foreground bg-secondary/50 border-border/50'
-                        }`}
-                      >
-                        {creditInfo.creditNeed > 0n
-                          ? 'Credit Active'
-                          : 'Credit Inactive'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Configure borrowing terms for your personal token. When
-                    active, members can lend to you via the Swap screen,
-                    receiving your minted tokens as debt IOUs.
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                    <div className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl space-y-1">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-primary" /> Target
-                        Need
-                      </span>
-                      <span className="text-sm font-semibold text-foreground tabular-nums block">
-                        {creditInfo && creditInfo.creditNeed > 0n
-                          ? `${formatUnits(creditInfo.creditNeed.toString(), 9)} ${info.minterDetails?.metadata?.symbol || 'Tokens'}`
-                          : 'Inactive (0 Need)'}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl space-y-1">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-amber-500" />{' '}
-                        Multiplier
-                      </span>
-                      <span className="text-sm font-semibold text-foreground tabular-nums block">
-                        {creditInfo
-                          ? `${(Number(creditInfo.multiplier) / 1000).toFixed(3)}x`
-                          : '1.000x'}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl space-y-1">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-purple-500" /> Cutoff
-                        Deadline
-                      </span>
-                      <span className="text-xs font-semibold text-foreground block">
-                        {creditInfo && Number(creditInfo.creditCutoff ?? 0) > 0
-                          ? formatMaturityDate(Number(creditInfo.creditCutoff))
-                          : 'Open (No cutoff)'}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 bg-secondary/40 border border-border/50 rounded-xl space-y-1">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-blue-500" /> Maturity
-                        Lock
-                      </span>
-                      <span className="text-xs font-semibold text-foreground block">
-                        {creditInfo && Number(creditInfo.creditMaturity) > 0
-                          ? formatMaturityDate(
-                              Number(creditInfo.creditMaturity),
-                            )
-                          : 'Instant (No Lock)'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lifetime Settlement & Performance */}
-                <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm space-y-3">
-                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
-                    Lifetime Credit & Settlement
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div className="p-2.5 bg-secondary/30 border border-border/50 rounded-xl">
-                      <span className="text-[11px] text-muted-foreground block">
-                        Total Credit Received
-                      </span>
-                      <span className="text-sm font-semibold text-foreground tabular-nums mt-0.5 block">
-                        {creditInfo
-                          ? `${formatUnits(creditInfo.totalCreditReceived.toString(), 9)} ${info.minterDetails?.metadata?.symbol || ''}`
-                          : '0'}
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-secondary/30 border border-border/50 rounded-xl">
-                      <span className="text-[11px] text-muted-foreground block">
-                        Total Payback Settled
-                      </span>
-                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5 block">
-                        {creditInfo
-                          ? `${formatUnits(creditInfo.totalPaybackSettled.toString(), 9)} ${info.minterDetails?.metadata?.symbol || ''}`
-                          : '0'}
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-secondary/30 border border-border/50 rounded-xl">
-                      <span className="text-[11px] text-muted-foreground block">
-                        Payback Shortfall
-                      </span>
-                      <span
-                        className={`text-sm font-semibold tabular-nums mt-0.5 block ${
-                          creditInfo && creditInfo.totalPaybackShortfall > 0n
-                            ? 'text-destructive'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {creditInfo
-                          ? `${formatUnits(creditInfo.totalPaybackShortfall.toString(), 9)} ${info.minterDetails?.metadata?.symbol || ''}`
-                          : '0'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Update Parameters Form */}
-                <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm space-y-3.5">
-                  <h4 className="font-semibold text-base flex items-center gap-2">
-                    <ShieldCheck className="w-4.5 h-4.5 text-primary" />
-                    Configure Loan Requirement
-                  </h4>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-medium text-foreground block mb-1">
-                        Credit Need Amount (
-                        {info.minterDetails?.metadata?.symbol || 'Tokens'})
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={creditAmount}
-                        onChange={(e) => setCreditAmount(e.target.value)}
-                        placeholder={
-                          creditInfo && creditInfo.creditNeed > 0n
-                            ? `Current: ${(Number(creditInfo.creditNeed) / 1e9).toString()} (0 to close)`
-                            : 'e.g. 500 (Set to 0 to close credit)'
-                        }
-                        className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-testid="personal-credit-amount"
-                      />
-                      <span className="text-[11px] text-muted-foreground block mt-1">
-                        Max amount of personal tokens you wish to borrow.
-                      </span>
-                      {personalLoanManager.amountValidationError && (
-                        <span className="text-[11px] text-destructive block mt-0.5">
-                          {personalLoanManager.amountValidationError}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Funding Deadline (Days)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={creditCutoffDays}
-                          onChange={(e) => setCreditCutoffDays(e.target.value)}
-                          placeholder={
-                            creditInfo &&
-                            Number(creditInfo.creditCutoff ?? 0) > 0
-                              ? `Current: ${Math.max(0, Math.round((Number(creditInfo.creditCutoff) - nowSec) / 86400))} days`
-                              : 'e.g. 7 (0 for none)'
-                          }
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          data-testid="personal-credit-cutoff"
-                        />
-                        <span className="text-[11px] text-muted-foreground block mt-1">
-                          Days until credit purchases close.
-                        </span>
-                        {personalLoanManager.cutoffValidationError && (
-                          <span className="text-[11px] text-destructive block mt-0.5">
-                            {personalLoanManager.cutoffValidationError}
-                          </span>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Loan Maturity (Days)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={creditMaturityDays}
-                          onChange={(e) =>
-                            setCreditMaturityDays(e.target.value)
-                          }
-                          placeholder={
-                            creditInfo && Number(creditInfo.creditMaturity) > 0
-                              ? `Current: ${Math.max(0, Math.round((Number(creditInfo.creditMaturity) - nowSec) / 86400))} days`
-                              : 'e.g. 30 (0 for instant)'
-                          }
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          data-testid="personal-credit-maturity"
-                        />
-                        <span className="text-[11px] text-muted-foreground block mt-1">
-                          Days lock before payback is allowed.
-                        </span>
-                        {personalLoanManager.maturityValidationError && (
-                          <span className="text-[11px] text-destructive block mt-0.5">
-                            {personalLoanManager.maturityValidationError}
-                          </span>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-foreground block mb-1">
-                          Multiplier Ratio (x)
-                        </label>
-                        <input
-                          type="number"
-                          min="0.001"
-                          step="0.001"
-                          value={creditMultiplier}
-                          onChange={(e) => setCreditMultiplier(e.target.value)}
-                          placeholder={
-                            creditInfo && creditInfo.multiplier > 0
-                              ? `Current: ${(Number(creditInfo.multiplier) / 1000).toFixed(3)}x`
-                              : 'e.g. 1.000'
-                          }
-                          className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          data-testid="personal-credit-multiplier"
-                        />
-                        <span className="text-[11px] text-muted-foreground block mt-1">
-                          1.000 = 1:1 parity (1000 fixed-point).
-                        </span>
-                        {personalLoanManager.multiplierValidationError && (
-                          <span className="text-[11px] text-destructive block mt-0.5">
-                            {personalLoanManager.multiplierValidationError}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <Button
-                        size="md"
-                        variant="primary"
-                        onClick={() =>
-                          personalLoanManager.updateLoanRequirement()
-                        }
-                        disabled={personalLoanManager.isDisabled}
-                        loading={personalLoanManager.isSending}
-                        fullWidth
-                        data-testid="personal-credit-submit"
-                      >
-                        Update Credit Terms
-                      </Button>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 

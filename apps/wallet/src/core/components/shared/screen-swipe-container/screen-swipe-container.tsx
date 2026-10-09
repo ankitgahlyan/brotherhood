@@ -28,6 +28,7 @@ export const ECOSYSTEM_SWIPE_ROUTES = [
   '/wallet',
   '/brotherhood',
   '/personal-jetton',
+  '/borrow',
   '/city-network',
   '/dao',
   '/lottery',
@@ -38,6 +39,7 @@ const SUB_TAB_ROUTES = [
   '/wallet/history',
   '/brotherhood',
   '/personal-jetton',
+  '/borrow',
   '/city-network',
   '/dao',
   '/dns',
@@ -90,10 +92,11 @@ export const ScreenSwipeContainer: React.FC<ScreenSwipeContainerProps> = ({
     if (pathname === '/' || pathname === '/wallet') return 0;
     if (pathname.startsWith('/brotherhood')) return 1;
     if (pathname.startsWith('/personal-jetton')) return 2;
-    if (pathname.startsWith('/city-network')) return 3;
-    if (pathname.startsWith('/dao')) return 4;
-    if (pathname.startsWith('/lottery')) return 5;
-    if (pathname.startsWith('/dns')) return 6;
+    if (pathname.startsWith('/borrow')) return 3;
+    if (pathname.startsWith('/city-network')) return 4;
+    if (pathname.startsWith('/dao')) return 5;
+    if (pathname.startsWith('/lottery')) return 6;
+    if (pathname.startsWith('/dns')) return 7;
     return -1;
   };
 
