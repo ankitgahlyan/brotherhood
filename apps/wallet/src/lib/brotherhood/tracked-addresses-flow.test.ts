@@ -10,6 +10,7 @@ import {
 } from '@demo/wallet-core';
 import { purgeLegacyTrackedAddressesStorage } from './clean-legacy-storage';
 import { extractInvitedAndLocationFromFiWallet } from './use-tracked-contract-addresses';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
 // Mock localStorage for test environment
 const storageMock = new Map<string, string>();
@@ -176,7 +177,7 @@ describe('Brotherhood State & Normalization Flow', () => {
 
   it('extracts invited members and h3Cell from FiWalletStore properly', () => {
     const mockStore = {
-      $: 'FiWalletStore',
+      $: 'FiWalletStore' as const,
       profile: {
         ref: {
           h3Cell: '881f1d4887fffff',
@@ -194,8 +195,9 @@ describe('Brotherhood State & Normalization Flow', () => {
       },
     };
 
-    const { invited, h3Cell } =
-      extractInvitedAndLocationFromFiWallet(mockStore);
+    const { invited, h3Cell } = extractInvitedAndLocationFromFiWallet(
+      mockStore as unknown as FiWalletStore,
+    );
     expect(h3Cell).toBe('881f1d4887fffff');
     expect(invited.length).toBe(2);
   });

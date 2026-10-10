@@ -176,6 +176,21 @@ function runScopedTypecheck(workspaceDir, stagedSet, isStaged) {
   let ignoredUnstagedCount = 0;
   let currentRelevant = false;
 
+  // Track files that actually have unstaged working tree diffs
+  const dirtyUnstagedSet = new Set();
+  try {
+    const diffDirty = execSync('git diff --name-only', {
+      encoding: 'utf-8',
+    }).trim();
+    if (diffDirty) {
+      diffDirty
+        .split('\n')
+        .map((f) => f.trim())
+        .filter(Boolean)
+        .forEach((f) => dirtyUnstagedSet.add(f));
+    }
+  } catch {}
+
   for (const line of lines) {
     const match = line.match(/^([^(]+)\(\d+,\d+\):\s+error\s+TS\d+:/);
     if (match) {
@@ -183,7 +198,8 @@ function runScopedTypecheck(workspaceDir, stagedSet, isStaged) {
       const repoRelPath = path
         .relative(process.cwd(), path.resolve(workspaceDir, rawFile))
         .replace(/\\/g, '/');
-      if (stagedSet.has(repoRelPath)) {
+      // If the file is staged, or clean (no unstaged modifications), the error is in the committed repo and must be reported!
+      if (stagedSet.has(repoRelPath) || !dirtyUnstagedSet.has(repoRelPath)) {
         currentRelevant = true;
         relevantErrors.push(line);
       } else {
