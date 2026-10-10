@@ -166,11 +166,6 @@ export function useInviteMember({
     if (cleanUser && inviteeAddr) {
       try {
         saveUsernameAddressMapping(cleanUser, inviteeAddr.toString(), network);
-        saveUsernameAddressMapping(
-          cleanUser,
-          inviteeFiWalletAddr.toString(),
-          network,
-        );
       } catch {
         /* ignore storage error */
       }

@@ -227,9 +227,18 @@ export function useAddressUsernameResolution({
         const directEntry = getContractCacheSync<any>(directKey);
         const directUname = extractUsernameFromState(directEntry?.data);
         if (directUname) {
-          queueMicrotask(() => {
-            saveUsernameAddressMapping(directUname, trimmed, net);
-          });
+          const directOwner =
+            directEntry?.data?.addresses?.ref?.owner ??
+            directEntry?.data?.addresses?.owner;
+          if (directOwner) {
+            const ownerStr =
+              typeof directOwner.toString === 'function'
+                ? directOwner.toString()
+                : String(directOwner);
+            queueMicrotask(() => {
+              saveUsernameAddressMapping(directUname, ownerStr, net);
+            });
+          }
           return {
             name: directUname,
             isCustom: false,
@@ -544,10 +553,9 @@ export function useAddressUsernameResolution({
     onResolvedAddressChange,
   ]);
 
+  const childContractOwner = childContractCorrection?.ownerAddress;
   const effectiveTargetOwner =
-    childContractCorrection?.ownerAddress ||
-    resolvedAddress ||
-    (isDirectAddress ? trimmed : null);
+    childContractOwner || resolvedAddress || (isDirectAddress ? trimmed : null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -597,7 +605,10 @@ export function useAddressUsernameResolution({
   );
 
   const refetchProfile = useCallback(async () => {
-    const targetAddress = resolvedAddress || (isDirectAddress ? trimmed : null);
+    const targetAddress =
+      childContractOwner ||
+      resolvedAddress ||
+      (isDirectAddress ? trimmed : null);
     if (!targetAddress) return;
 
     let parsedAddress: Address;
@@ -632,7 +643,7 @@ export function useAddressUsernameResolution({
     } finally {
       setIsResolving(false);
     }
-  }, [resolvedAddress, isDirectAddress, trimmed, net]);
+  }, [childContractOwner, resolvedAddress, isDirectAddress, trimmed, net]);
 
   const setCustomName = useCallback(
     (name: string) => {

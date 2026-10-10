@@ -230,7 +230,7 @@ export const SendTransaction: React.FC = () => {
   }
 
   useEffect(() => {
-    if (!isDeveloperMode || !address || tokenContext.tokenType !== 'JETTON') {
+    if (!address || tokenContext.tokenType !== 'JETTON') {
       return;
     }
 
@@ -250,7 +250,7 @@ export const SendTransaction: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [isDeveloperMode, address, tokenContext, network]);
+  }, [address, tokenContext, network]);
 
   const trimmedGranter = granterInput.trim();
   const isGranterDns = isTonChainDns(trimmedGranter);
@@ -427,14 +427,23 @@ export const SendTransaction: React.FC = () => {
 
     try {
       let targetRecipient = (effectiveRecipientAddress || recipient).trim();
-      if (!isValidAddress(targetRecipient) && isTonChainDns(targetRecipient)) {
-        const resolved = await resolveAddressByDomain(
-          targetRecipient,
-          network === 'mainnet' ? 'mainnet' : 'testnet',
-        );
-        if (resolved) {
-          targetRecipient = resolved;
-          setEffectiveRecipientAddress(resolved);
+      if (!isValidAddress(targetRecipient)) {
+        if (isTonChainDns(targetRecipient)) {
+          const resolved = await resolveAddressByDomain(
+            targetRecipient,
+            network === 'mainnet' ? 'mainnet' : 'testnet',
+          );
+          if (resolved) {
+            targetRecipient = resolved;
+            setEffectiveRecipientAddress(resolved);
+          }
+        } else {
+          const clean = targetRecipient.replace(/^@+/, '');
+          const cached = getCachedAddressByUsername(clean, network);
+          if (cached) {
+            targetRecipient = cached;
+            setEffectiveRecipientAddress(cached);
+          }
         }
       }
       if (!isValidAddress(targetRecipient)) {
@@ -451,7 +460,7 @@ export const SendTransaction: React.FC = () => {
           throw new Error('Insufficient balance');
         }
 
-        if (isDeveloperMode && tokenContext.tokenType === 'JETTON' && address) {
+        if (tokenContext.tokenType === 'JETTON' && address) {
           await deriveTokenWalletAddressOffchain({
             minterAddress: tokenContext.minterAddress,
             ownerAddress: address,
@@ -459,6 +468,15 @@ export const SendTransaction: React.FC = () => {
             tokenSymbol: tokenContext.symbol,
             adminAddress: tokenContext.adminAddress,
           });
+          if (targetRecipient && isValidAddress(targetRecipient)) {
+            await deriveTokenWalletAddressOffchain({
+              minterAddress: tokenContext.minterAddress,
+              ownerAddress: targetRecipient,
+              network: network === 'mainnet' ? 'mainnet' : 'testnet',
+              tokenSymbol: tokenContext.symbol,
+              adminAddress: tokenContext.adminAddress,
+            });
+          }
         }
 
         const result = await sender.send(options);

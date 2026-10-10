@@ -193,6 +193,51 @@ export function sanitizeContactsByNetwork(
         }
       }
     }
+
+    // Pass 2b: Deduplicate entries sharing the same onChainUsername
+    const usernameOwnerMap = new Map<string, string>(); // username (lowercase) -> canonical rawAddress
+    for (const [raw, item] of Object.entries(result[net])) {
+      if (!item.onChainUsername) continue;
+      const uname = item.onChainUsername.trim().toLowerCase();
+      if (!uname) continue;
+      const ownerRaw = usernameOwnerMap.get(uname);
+      if (!ownerRaw) {
+        usernameOwnerMap.set(uname, raw);
+      } else if (ownerRaw !== raw && result[net][ownerRaw]) {
+        const ownerItem = result[net][ownerRaw];
+        // Prefer one with customName, or newer updatedAt
+        const preferCurrent =
+          (!ownerItem.customName && Boolean(item.customName)) ||
+          (item.updatedAt || 0) > (ownerItem.updatedAt || 0);
+
+        const canonical = preferCurrent ? item : ownerItem;
+        const duplicate = preferCurrent ? ownerItem : item;
+        const canonicalRaw = preferCurrent ? raw : ownerRaw;
+        const duplicateRaw = preferCurrent ? ownerRaw : raw;
+
+        result[net][canonicalRaw] = {
+          ...canonical,
+          customName: canonical.customName || duplicate.customName,
+          onChainUsername:
+            canonical.onChainUsername || duplicate.onChainUsername,
+          dnsDomain: canonical.dnsDomain || duplicate.dnsDomain,
+          dnsDomains: Array.from(
+            new Set([
+              ...(canonical.dnsDomains || []),
+              ...(duplicate.dnsDomains || []),
+            ]),
+          ),
+          notes: canonical.notes || duplicate.notes,
+          contactLink: canonical.contactLink || duplicate.contactLink,
+          updatedAt: Math.max(
+            canonical.updatedAt || 0,
+            duplicate.updatedAt || 0,
+          ),
+        };
+        delete result[net][duplicateRaw];
+        usernameOwnerMap.set(uname, canonicalRaw);
+      }
+    }
   }
   return result;
 }

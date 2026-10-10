@@ -250,9 +250,20 @@ export const RecipientField: React.FC<RecipientFieldProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-emerald-400/90 truncate max-w-45">
-              {formatWalletAddress(resolvedAddress, false)}
-            </span>
+            {isUsernameInput ? (
+              <button
+                type="button"
+                onClick={() => onChange(resolvedAddress)}
+                className="text-[11px] font-mono text-emerald-400/90 hover:underline transition-colors truncate max-w-45 cursor-pointer"
+                title="Click to fill address"
+              >
+                {formatWalletAddress(resolvedAddress, false)}
+              </button>
+            ) : (
+              <span className="text-[11px] font-mono text-emerald-400/90 truncate max-w-45">
+                {formatWalletAddress(resolvedAddress, false)}
+              </span>
+            )}
             {isDirectAddress && (
               <button
                 type="button"

@@ -150,15 +150,8 @@ export function useMemberProfiles(
             const rawProfileUsername = (
               store?.profile?.ref?.username ?? ''
             ).trim();
-            if (rawProfileUsername) {
-              saveUsernameAddressMapping(rawProfileUsername, addrStr, net);
-              if (ownerAddress) {
-                saveUsernameAddressMapping(
-                  rawProfileUsername,
-                  ownerAddress,
-                  net,
-                );
-              }
+            if (rawProfileUsername && ownerAddress) {
+              saveUsernameAddressMapping(rawProfileUsername, ownerAddress, net);
             }
             const fallbackUsername =
               rawProfileUsername ||

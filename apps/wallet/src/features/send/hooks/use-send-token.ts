@@ -36,6 +36,7 @@ import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
 import {
   createCommentPayloadBase64,
   createCommentPayload,
+  isValidAddress,
 } from '@ton/walletkit';
 import { isFiJetton } from '@/features/jettons';
 import {
@@ -178,6 +179,38 @@ export const useSendToken = ({
         (showFastSend || options?.fastSend) && isUnlocked,
       );
 
+      let senderJettonWallet = jetton?.walletAddress;
+      if (
+        tokenType === 'JETTON' &&
+        jetton &&
+        !senderJettonWallet &&
+        senderAddress
+      ) {
+        try {
+          const senderOwner = Address.parse(senderAddress);
+          if (isFiJetton(jetton)) {
+            senderJettonWallet = getFiWalletAddress(
+              senderOwner,
+              net,
+            ).toString();
+          } else if (jetton.address && isValidAddress(jetton.address)) {
+            const minterAddr = Address.parse(jetton.address);
+            const cachedMinter = getContractCacheSync<PersonalStore>(
+              getNormalizedContractCacheKey(net, minterAddr),
+            );
+            if (cachedMinter?.data?.adminAddress) {
+              senderJettonWallet = computePersonalWalletAddress(
+                minterAddr,
+                senderOwner,
+                cachedMinter.data.adminAddress,
+              ).toString();
+            }
+          }
+        } catch {
+          /* ignore derivation error */
+        }
+      }
+
       if (isFastSendActive) {
         if (tokenType === 'TON') {
           const tx = await wallet.createTransferTonTransaction({
@@ -193,7 +226,7 @@ export const useSendToken = ({
           const tx = await wallet.createTransferJettonTransaction({
             recipientAddress: recipient,
             jettonAddress: jetton.address,
-            jettonWalletAddress: jetton.walletAddress,
+            jettonWalletAddress: senderJettonWallet || jetton.walletAddress,
             transferAmount: parseUnits(amount, decimals).toString(),
             forwardPayload: payloadCell,
           });
@@ -221,7 +254,7 @@ export const useSendToken = ({
           const tx = await wallet.createTransferJettonTransaction({
             recipientAddress: recipient,
             jettonAddress: jetton.address,
-            jettonWalletAddress: jetton.walletAddress,
+            jettonWalletAddress: senderJettonWallet || jetton.walletAddress,
             transferAmount: parseUnits(amount, decimals).toString(),
             forwardPayload: payloadCell,
           });
@@ -233,8 +266,10 @@ export const useSendToken = ({
         const isContractTx = tokenType === 'JETTON';
         const affectedContracts: string[] = [];
         if (tokenType === 'JETTON' && jetton) {
-          if (jetton.walletAddress) {
-            affectedContracts.push(jetton.walletAddress);
+          const effectiveSenderWallet =
+            senderJettonWallet || jetton.walletAddress;
+          if (effectiveSenderWallet) {
+            affectedContracts.push(effectiveSenderWallet);
           }
           try {
             const recipientAddr = Address.parse(recipient);
