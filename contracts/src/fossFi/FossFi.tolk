@@ -53,6 +53,7 @@ type BounceOpToHandle =
 type BounceRichOpToHandle =
     | BidBroDomain
     | RenewBroDomain
+    | EnterLottery
 
 contract FossFi {
     author: "zeta"
@@ -101,6 +102,24 @@ fun onBouncedMessage(in: InMessageBounced): void {
                         bouncedMsg.fiAmount,
                         contract.getAddress(),
                         bouncedMsg.renewer,
+                    ),
+                });
+                refundMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+
+            EnterLottery => {
+                val refundWallet = getAutoAddress(bouncedMsg.sender).calculateAddress();
+                val refundMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: refundWallet,
+                    value: 0,
+                    body: makeInternalTransferStep(
+                        0,
+                        bouncedMsg.amount,
+                        contract.getAddress(),
+                        bouncedMsg.sender,
                     ),
                 });
                 refundMsg.send(
@@ -396,6 +415,7 @@ fun onInternalMessage(in: InMessage): void {
 
                     if (data != null) {
                         contract.setData(data);
+                        return;
                     }
                 }
             }
@@ -532,6 +552,9 @@ fun onInternalMessage(in: InMessage): void {
 
         BidBroDomain => {
             assertCorrectSender(in.senderAddress, msg.bidder);
+            assert (
+                msg.collectionAddress == DEPLOYED_BRO_COLLECTION_RESOLVER
+            ) throw Errors.IncorrectSender;
             assert (in.valueCoins >= grams("1.0")) throw Errors.InsufficientGasSent;
 
             val collectionMsg = createMessage({
@@ -544,6 +567,10 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         DnsOutbidNotification => {
+            assert (
+                in.senderAddress == DEPLOYED_BRO_COLLECTION_RESOLVER
+            ) throw Errors.IncorrectSender;
+
             val refundWallet = getAutoAddress(msg.outbidAddress).calculateAddress();
             val refundMsg = createMessage({
                 bounce: BounceMode.NoBounce,
@@ -560,6 +587,10 @@ fun onInternalMessage(in: InMessage): void {
         }
 
         DnsAuctionFinalized => {
+            assert (
+                in.senderAddress == DEPLOYED_BRO_COLLECTION_RESOLVER
+            ) throw Errors.IncorrectSender;
+            assert (store.totalSupply >= msg.winningFiAmount) throw Errors.InvalidMessage;
             store.totalSupply -= msg.winningFiAmount;
 
             val treasuryAddr = store.adminAddress;

@@ -41,6 +41,7 @@ fun calcDeployVoter(
         pollAddress,
         voted: false,
         vote: false,
+        expiresAt: 0,
     };
     return { stateInit: { code: voterCode, data: store.toCell() }, toShard: null };
 }

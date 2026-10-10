@@ -12,7 +12,9 @@ fun processBidOrTopUp(
     auctionComplete: bool,
 ) {
     if (auctionComplete) {
-        assert (senderAddress == st.ownerAddress!) throw Errors.OnlyOwnerCanFillUpAfterAuction;
+        assert (
+            st.ownerAddress != null && senderAddress == st.ownerAddress
+        ) throw Errors.OnlyOwnerCanFillUpAfterAuction;
 
         st.lastFillUpTime = blockchain.now();
         st.save();

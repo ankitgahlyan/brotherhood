@@ -11,7 +11,7 @@ import { Address } from '@ton/core';
 import type { ITonWalletKit, Wallet } from '@ton/walletkit';
 import {
   SetStatus,
-  AuthorityCloseAccount,
+  ActAuthorityCloseAccount,
   ActDispatchAuthorityAction,
 } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
@@ -122,8 +122,8 @@ export function useAuthorityActions({
       // ignore
     }
 
-    const payload = AuthorityCloseAccount.toCell(
-      AuthorityCloseAccount.create({
+    const payload = ActAuthorityCloseAccount.toCell(
+      ActAuthorityCloseAccount.create({
         queryId: 0n,
         target,
       }),

@@ -60,13 +60,14 @@ fun Voter.sendVoteProposalChild(
     proposalId: uint64,
     vote: bool,
     voterOwner: address,
+    expiresAt: uint32,
     config: SendParams = {},
 ): SendResultList {
     val genericMsg = createMessage({
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: VoteProposalChild { queryId, proposalId, vote, voterOwner },
+        body: VoteProposalChild { queryId, proposalId, vote, voterOwner, expiresAt },
     });
     return net.send(from, genericMsg);
 }

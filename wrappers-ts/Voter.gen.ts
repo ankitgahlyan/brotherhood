@@ -115,6 +115,7 @@ class StackReader {
 
 type coins = bigint
 
+type uint32 = bigint
 type uint64 = bigint
 
 /**
@@ -160,6 +161,7 @@ export const ReturnExcessesBack = {
  >     proposalId: uint64
  >     vote: bool
  >     voterOwner: address
+ >     expiresAt: uint32
  > }
  */
 export interface VoteProposalChild {
@@ -168,6 +170,7 @@ export interface VoteProposalChild {
     proposalId: uint64
     vote: boolean
     voterOwner: c.Address
+    expiresAt: uint32 /* = 0 */
 }
 
 export const VoteProposalChild = {
@@ -178,9 +181,11 @@ export const VoteProposalChild = {
         proposalId: uint64
         vote: boolean
         voterOwner: c.Address
+        expiresAt?: uint32 /* = 0 */
     }): VoteProposalChild {
         return {
             $: 'VoteProposalChild',
+            expiresAt: 0n,
             ...args
         }
     },
@@ -192,6 +197,7 @@ export const VoteProposalChild = {
             proposalId: s.loadUintBig(64),
             vote: s.loadBoolean(),
             voterOwner: s.loadAddress(),
+            expiresAt: s.loadUintBig(32),
         }
     },
     store(self: VoteProposalChild, b: c.Builder): void {
@@ -200,6 +206,7 @@ export const VoteProposalChild = {
         b.storeUint(self.proposalId, 64);
         b.storeBit(self.vote);
         b.storeAddress(self.voterOwner);
+        b.storeUint(self.expiresAt, 32);
     },
     toCell(self: VoteProposalChild): c.Cell {
         return makeCellFrom<VoteProposalChild>(self, VoteProposalChild.store);
@@ -254,6 +261,7 @@ export const CleanupProposalVotes = {
  >     pollAddress: address
  >     voted: bool
  >     vote: bool
+ >     expiresAt: uint32
  > }
  */
 export interface VoterStore {
@@ -262,6 +270,7 @@ export interface VoterStore {
     pollAddress: c.Address
     voted: boolean /* = false */
     vote: boolean /* = false */
+    expiresAt: uint32 /* = 0 */
 }
 
 export const VoterStore = {
@@ -270,11 +279,13 @@ export const VoterStore = {
         pollAddress: c.Address
         voted?: boolean /* = false */
         vote?: boolean /* = false */
+        expiresAt?: uint32 /* = 0 */
     }): VoterStore {
         return {
             $: 'VoterStore',
             voted: false,
             vote: false,
+            expiresAt: 0n,
             ...args
         }
     },
@@ -285,6 +296,7 @@ export const VoterStore = {
             pollAddress: s.loadAddress(),
             voted: s.loadBoolean(),
             vote: s.loadBoolean(),
+            expiresAt: s.loadUintBig(32),
         }
     },
     store(self: VoterStore, b: c.Builder): void {
@@ -292,6 +304,7 @@ export const VoterStore = {
         b.storeAddress(self.pollAddress);
         b.storeBit(self.voted);
         b.storeBit(self.vote);
+        b.storeUint(self.expiresAt, 32);
     },
     toCell(self: VoterStore): c.Cell {
         return makeCellFrom<VoterStore>(self, VoterStore.store);
@@ -337,10 +350,11 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Voter implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEAugABFP8A9KQT9LzyyAsBAgFiAgMBvND4kfJAIO1E0PpI+kjSANcKAATXLCAAAIfsjiw1+JIixwXy4rwE038x1woABJVRI7rDAJIycOKT8sL14Mj6UvpSz4PKAMntVOA0WwHXLCAAAIf8MeMCMIQPAccA8vQEAB2gxLPaiaH0kfSRpAGkAaMAaDH4kiHHBfLivMjPhQj6Uo0GgAAAAAAAAAAAAAAAAABqmTttgAAAAAAAAABAzxbJgQCg+wA=');
+    static CodeCell = c.Cell.fromBase64('te6ccgEBBQEAzQABFP8A9KQT9LzyyAsBAgFiAgMB0tD4kfJAIO1E0PpI+kjSANIA1wsfBdcsIAAAh+yONjU1+JIixwXy4rwD038x0gD6SDHXCx8ElVFEusMAkjRw4pPywvXgAcj6UvpSz4MSygDLH8ntVOBsMdcsIAAAh/wx4wJbhA8BxwDy9AQAIaDEs9qJofSR9JGkAaQBpj+jAHQy+JIixwXy4rz4I7vy4t/Iz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsA');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
+        'Errors.WaitMore': 735,
         'Errors.DuplicateVote': 757,
     }
 
@@ -361,6 +375,7 @@ export class Voter implements c.Contract {
         pollAddress: c.Address
         voted?: boolean /* = false */
         vote?: boolean /* = false */
+        expiresAt?: uint32 /* = 0 */
     }, deployedOptions?: DeployedAddrOptions) {
         const initialState = {
             code: deployedOptions?.overrideContractCode ?? Voter.CodeCell,
@@ -375,6 +390,7 @@ export class Voter implements c.Contract {
         proposalId: uint64
         vote: boolean
         voterOwner: c.Address
+        expiresAt?: uint32 /* = 0 */
     }) {
         return VoteProposalChild.toCell(VoteProposalChild.create(body));
     }
@@ -399,6 +415,7 @@ export class Voter implements c.Contract {
         proposalId: uint64
         vote: boolean
         voterOwner: c.Address
+        expiresAt?: uint32 /* = 0 */
     }, extraOptions?: ExtraSendOptions) {
         return provider.internal(via, {
             value: msgValue,
@@ -419,13 +436,14 @@ export class Voter implements c.Contract {
     }
 
     async getVoterData(provider: ContractProvider): Promise<VoterStore> {
-        const r = StackReader.fromGetMethod(4, await provider.get('get_voter_data', []));
+        const r = StackReader.fromGetMethod(5, await provider.get('get_voter_data', []));
         return ({
             $: 'VoterStore',
             voterOwner: r.readSlice().loadAddress(),
             pollAddress: r.readSlice().loadAddress(),
             voted: r.readBoolean(),
             vote: r.readBoolean(),
+            expiresAt: r.readBigInt(),
         });
     }
 }

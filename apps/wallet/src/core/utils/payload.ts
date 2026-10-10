@@ -54,7 +54,8 @@ export const KNOWN_OPCODES: Record<number, string> = {
   0x00001058: 'ActDestroyAccount',
   0x00001059: 'Destroy',
   0x0000105a: 'ActCloseAccount',
-  0x0000105b: 'AuthorityCloseAccount',
+  0x0000105b: 'ActAuthorityCloseAccount',
+  0x0000105c: 'AuthorityCloseAccountInternal',
 
   // Brotherhood Group 3: Profile & Location Indexing
   0x000010a1: 'ChangeProfile',
@@ -191,7 +192,8 @@ export const FRIENDLY_OPCODE_TITLES: Record<string, string> = {
   ActDestroyAccount: 'Destroy Account',
   Destroy: 'Process Destroy Account',
   ActCloseAccount: 'Close Account',
-  AuthorityCloseAccount: 'Authority Close Account',
+  ActAuthorityCloseAccount: 'Authority Close Account',
+  AuthorityCloseAccountInternal: 'Process Authority Close Account',
 
   // Profile & Location
   ChangeProfile: 'Update Profile',

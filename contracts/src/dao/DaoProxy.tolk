@@ -65,6 +65,9 @@ fun onInternalMessage(in: InMessage): void {
                 pollCompiledCodeLibraryRef(),
             ).calculateAddress();
             assert (in.senderAddress == expectedPoll) throw Errors.IncorrectSender;
+            assert (
+                contract.getOriginalBalance() >= calculateDaoMinStorageFee() + grams("0.15")
+            ) throw Errors.NotEnoughGas;
 
             reserveDaoStorageFee();
 

@@ -44,6 +44,7 @@ fun onInternalMessage(in: InMessage) {
             }
 
             assert (msg.amount == storage.entryAmount) throw Errors.InvalidMessage;
+            assert (storage.participantCount < 100) throw Errors.InvalidMessage;
 
             // add if not already entered
             if (!storage.participants.exists(msg.sender)) {
@@ -73,7 +74,7 @@ fun onInternalMessage(in: InMessage) {
             );
             // Send prize to winner
             val prizeMsg = createMessage({
-                bounce: BounceMode.NoBounce,
+                bounce: BounceMode.Only256BitsOfBody,
                 dest: storage.owner,
                 value: 0,
                 body: LotteryWin {
@@ -82,8 +83,10 @@ fun onInternalMessage(in: InMessage) {
                     winner,
                 },
             });
-            // forward the pot so the minter can mint + deploy the winner's wallet
-            prizeMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+            // forward the accumulated pot so the minter can mint + deploy the winner's wallet
+            reserveGramsOnBalance(grams("0.05"), RESERVE_MODE_EXACT_AMOUNT);
+            // SAFETY: send accumulated prize pool to minter after reserving minimal storage fee
+            prizeMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
 
             // Reset storage for new lottery
             storage.participants = [];
@@ -111,7 +114,8 @@ fun onInternalMessage(in: InMessage) {
                     // SAFETY: updating continuation register C3 for new code
                     setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
                 }
-                hotUpgradeLotteryData(msg.newData);
+                storage.save();
+                return;
             }
         }
 

@@ -43,6 +43,7 @@ struct VoterStore {
     pollAddress: address
     voted: bool = false
     vote: bool = false
+    expiresAt: uint32 = 0
 }
 
 fun VoterStore.load(): VoterStore {

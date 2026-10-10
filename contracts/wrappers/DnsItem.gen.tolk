@@ -265,3 +265,7 @@ fun DnsItem.getLastFillUpTime(self): int {
 fun DnsItem.dnsresolve(self, subdomain: slice, category: uint256): DnsResolveResponse {
     return net.runGetMethod(self.address, "dnsresolve", [subdomain, category]);
 }
+
+fun DnsItem.getVersion(self): uint16 {
+    return net.runGetMethod(self.address, "get_version");
+}

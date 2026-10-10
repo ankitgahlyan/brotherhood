@@ -49,7 +49,7 @@ fun onInternalMessage(in: InMessage): void {
                         maturityDate: terms.maturityDate,
                     },
                 );
-            reserveForLocationCreditBalance(in.valueCoins);
+            reserveForLocationCreditBalance(in.valueCoins, store.entryCount);
             store.save();
 
             if (msg.sendExcessesTo != null) {
@@ -73,7 +73,7 @@ fun onInternalMessage(in: InMessage): void {
                 if (store.entryCount > 0) {
                     store.entryCount -= 1;
                 }
-                reserveForLocationCreditBalance(in.valueCoins);
+                reserveForLocationCreditBalance(in.valueCoins, store.entryCount);
                 store.save();
             }
 

@@ -5,6 +5,7 @@ import "@acton/types/transaction"
 
 import "@wrappers/DnsCollection.gen"
 import "@contracts/common/constants"
+import "@contracts/common/messages"
 import "@contracts/dns/dns-utils"
 import "@contracts/dns/errors"
 import "@contracts/dns/messages"
@@ -265,4 +266,24 @@ get fun `test collection: getters are stable and content getter is pass-through`
     val sampleContent = makeDnsTextRecord("pass-through");
     val passthrough = collection.getNftContent(0, sampleContent);
     expect(passthrough.hash()).toEqual(sampleContent.hash());
+}
+
+get fun `test collection: request upgrade code forwards HotUpgrade with latest nftItemCode to target`() {
+    val (collection, _, user) = deployCollectionContract();
+
+    val targetItem = testing.treasury("target-dns-item");
+    val res = collection.sendRequestUpgradeCode(
+        user.address,
+        targetItem.address,
+        { value: grams("0.1"), bounce: false },
+    );
+
+    expect(res).toHaveSuccessfulTx<RequestUpgradeCode>({
+        from: user.address,
+        to: collection.address,
+    });
+    expect(res).toHaveSuccessfulTx<HotUpgrade>({
+        from: collection.address,
+        to: targetItem.address,
+    });
 }

@@ -128,6 +128,52 @@ fun DnsCollection.sendBidBroDomain(
     return net.send(from, genericMsg);
 }
 
+fun DnsCollection.sendDnsOutbidNotification(
+    self,
+    from: address,
+    queryId: uint64,
+    outbidAddress: address,
+    fiAmount: coins,
+    domain: RemainingBitsAndRefs,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsOutbidNotification {
+            queryId,
+            outbidAddress,
+            fiAmount,
+            domain: domain.toCell(),
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendDnsAuctionFinalized(
+    self,
+    from: address,
+    queryId: uint64,
+    winner: address,
+    winningFiAmount: coins,
+    domain: RemainingBitsAndRefs,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: DnsAuctionFinalized {
+            queryId,
+            winner,
+            winningFiAmount,
+            domain: domain.toCell(),
+        },
+    });
+    return net.send(from, genericMsg);
+}
+
 fun DnsCollection.sendHotUpgrade(
     self,
     from: address,
@@ -191,6 +237,21 @@ fun DnsCollection.sendDestroyDnsItem(
         value: config.value,
         dest: self.address,
         body: DestroyDnsItem { queryId, itemAddress, recipient },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun DnsCollection.sendRequestUpgradeCode(
+    self,
+    from: address,
+    targetAddress: address?,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: RequestUpgradeCode { targetAddress },
     });
     return net.send(from, genericMsg);
 }

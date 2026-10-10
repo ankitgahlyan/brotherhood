@@ -21,11 +21,12 @@ fun onBouncedMessage(_in: InMessageBounced) {}
 fun onInternalMessage(in: InMessage) {
     var store = lazy HoldingStore.load();
 
+    if (store.createdAt == 0) {
+        store.createdAt = blockchain.now();
+        store.save();
+    }
+
     if (in.body.isEmpty()) {
-        if (store.createdAt == 0) {
-            store.createdAt = blockchain.now();
-            store.save();
-        }
         return;
     }
 

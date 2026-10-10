@@ -33,6 +33,10 @@ export const CONTRACT_MAP: Record<string, string> = {
   daoProxy: 'DaoProxy',
   following: 'Following',
   voter: 'Voter',
+  locationCredit: 'LocationCredit',
+  creditProxy: 'CreditProxy',
+  dnsCollection: 'DnsCollection',
+  dnsItem: 'DnsItem',
   // aliases
   FossFiWallet: 'FossFiWallet',
   FossFi: 'FossFi',
@@ -44,6 +48,10 @@ export const CONTRACT_MAP: Record<string, string> = {
   DaoProxy: 'DaoProxy',
   Following: 'Following',
   Voter: 'Voter',
+  LocationCredit: 'LocationCredit',
+  CreditProxy: 'CreditProxy',
+  DnsCollection: 'DnsCollection',
+  DnsItem: 'DnsItem',
 };
 
 // Canonical keys in CONTRACT_CODE_HASHES
@@ -58,6 +66,10 @@ export const CANONICAL_KEYS: Record<string, string> = {
   daoProxy: 'daoProxy',
   following: 'following',
   voter: 'voter',
+  locationCredit: 'locationCredit',
+  creditProxy: 'creditProxy',
+  dnsCollection: 'dnsCollection',
+  dnsItem: 'dnsItem',
   FossFiWallet: 'fiWallet',
   FossFi: 'fiMinter',
   PersonalMinter: 'personalMinter',
@@ -68,6 +80,10 @@ export const CANONICAL_KEYS: Record<string, string> = {
   DaoProxy: 'daoProxy',
   Following: 'following',
   Voter: 'voter',
+  LocationCredit: 'locationCredit',
+  CreditProxy: 'creditProxy',
+  DnsCollection: 'dnsCollection',
+  DnsItem: 'dnsItem',
 };
 
 function getCompiledHashBase64(contractJsonName: string): string | null {
@@ -123,9 +139,13 @@ async function promptForTarget(): Promise<string> {
     console.log('  8. daoProxy       (DAO Proxy contract)');
     console.log('  9. following      (Following contract)');
     console.log('  10. voter         (Voter contract)');
-    console.log('  11. all           (Sync all changed)');
+    console.log('  11. locationCredit (LocationCredit contract)');
+    console.log('  12. creditProxy   (CreditProxy contract)');
+    console.log('  13. dnsCollection (DnsCollection contract)');
+    console.log('  14. dnsItem       (DnsItem contract)');
+    console.log('  15. all           (Sync all changed)');
     rl.question(
-      '\nSelect target contract to update [1-11 or name]: ',
+      '\nSelect target contract to update [1-15 or name]: ',
       (ans) => {
         rl.close();
         const choice = ans.trim();
@@ -161,6 +181,18 @@ async function promptForTarget(): Promise<string> {
             resolve('voter');
             break;
           case '11':
+            resolve('locationCredit');
+            break;
+          case '12':
+            resolve('creditProxy');
+            break;
+          case '13':
+            resolve('dnsCollection');
+            break;
+          case '14':
+            resolve('dnsItem');
+            break;
+          case '15':
           case 'all':
             resolve('all');
             break;
@@ -216,6 +248,10 @@ export async function main() {
           'daoProxy',
           'following',
           'voter',
+          'locationCredit',
+          'creditProxy',
+          'dnsCollection',
+          'dnsItem',
         ]
       : [targetArg];
 

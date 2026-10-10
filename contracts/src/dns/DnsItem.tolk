@@ -137,7 +137,7 @@ fun onInternalMessage(in: InMessage) {
         if (fiMinterAddr != null && auction.maxBidAddress != null) {
             val refundNotifyMsg = createMessage({
                 bounce: BounceMode.NoBounce,
-                dest: fiMinterAddr,
+                dest: storage.collectionAddress,
                 value: grams("0.05"),
                 body: DnsOutbidNotification {
                     queryId: blockchain.logicalTime(),
@@ -169,6 +169,9 @@ fun onInternalMessage(in: InMessage) {
     val isAuctionComplete = blockchain.now() > auction.auctionEndTime;
 
     if (in.body.isEmpty() || in.body.preloadUint(32) == 0) {
+        if (storage.getFiMinterAddress() != null) {
+            return;
+        }
         processBidOrTopUp(
             in.senderAddress,
             in.valueCoins,
@@ -234,6 +237,7 @@ fun onInternalMessage(in: InMessage) {
                 storage.ownerAddress != null && in.senderAddress == storage.ownerAddress
             ) throw Errors.OnlyOwnerCanEditContent;
 
+            val _validated = msg.newContent.load();
             storage.content = msg.newContent;
             val now = blockchain.now();
             if (now > (storage.lastFillUpTime as int)) {
@@ -387,7 +391,7 @@ fun onInternalMessage(in: InMessage) {
             if (fiMinterAddr != null) {
                 val notifyMsg = createMessage({
                     bounce: BounceMode.NoBounce,
-                    dest: fiMinterAddr,
+                    dest: storage.collectionAddress,
                     value: grams("0.5"),
                     body: DnsAuctionFinalized {
                         queryId: msg.queryId,
@@ -544,6 +548,10 @@ get fun dnsresolve(subdomain: slice, category: uint256): DnsResolveResponse {
 
     val dnsRecord = st.content.load();
 
+    if (subdomainBits < BYTE_SIZE) {
+        return { resolvedPrefixLengthBits: 0, resolvedRecord: null };
+    }
+
     val startsWithZeroByte = subdomain.preloadInt(BYTE_SIZE) == 0;
     assert (startsWithZeroByte) throw Errors.GovernanceRequiresNoAuction;
 
@@ -561,4 +569,10 @@ get fun dnsresolve(subdomain: slice, category: uint256): DnsResolveResponse {
     }
 
     return { resolvedPrefixLengthBits: BYTE_SIZE, resolvedRecord: value.loadValue() };
+}
+
+const DNS_ITEM_VERSION: uint16 = 1
+
+get fun get_version(): uint16 {
+    return DNS_ITEM_VERSION;
 }

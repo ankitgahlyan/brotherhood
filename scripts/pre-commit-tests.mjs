@@ -392,10 +392,13 @@ async function main() {
       // Only check formatting of staged Tolk files, never unstaged ones
       run(`acton fmt --check ${escapedAllStagedTolk}`);
 
-      // Check only the staged Tolk files individually
+      // Check and fix staged Tolk files individually
       for (const tolkFile of existingTolk) {
         if (!tolkFile.startsWith('contracts/wrappers/')) {
-          run(`acton check "${tolkFile}"`);
+          run(`acton check --fix "${tolkFile}"`);
+          if (isStaged) {
+            run(`git add "${tolkFile}"`);
+          }
         }
       }
     }

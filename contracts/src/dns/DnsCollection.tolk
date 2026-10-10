@@ -21,10 +21,13 @@ type AllowedCollectionMessage =
     | WithdrawFees
     | MintDomainFor
     | BidBroDomain
+    | DnsOutbidNotification
+    | DnsAuctionFinalized
     | HotUpgrade
     | UpgradeDnsItem
     | DestroyContract
     | DestroyDnsItem
+    | RequestUpgradeCode
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedCollectionMessage.fromSlice(in.body);
@@ -135,9 +138,9 @@ fun onInternalMessage(in: InMessage) {
                 assert (!found) throw Errors.DomainIsBlacklisted;
             }
 
-            val storageGas = grams("0.2");
+            val storageGas = grams("0.8");
             val deployItemMsg = createMessage({
-                bounce: BounceMode.Only256BitsOfBody,
+                bounce: BounceMode.RichBounce,
                 dest: calcDeployedNftItem(itemIndex, storage.nftItemCode),
                 value: storageGas,
                 body: ItemInitData {
@@ -149,6 +152,44 @@ fun onInternalMessage(in: InMessage) {
                 },
             });
             deployItemMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
+        }
+
+        DnsOutbidNotification => {
+            val storage = lazy CollectionStorage.load();
+            val itemIndex = (msg.domain as cell).hash();
+            val expectedItem = calcDeployedNftItem(
+                itemIndex,
+                storage.nftItemCode,
+            ).calculateAddress();
+            assert (in.senderAddress == expectedItem) throw Errors.IncorrectSender;
+            if (storage.fiMinterAddress != null) {
+                val fwdMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: storage.fiMinterAddress,
+                    value: 0,
+                    body: msg,
+                });
+                fwdMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            }
+        }
+
+        DnsAuctionFinalized => {
+            val storage = lazy CollectionStorage.load();
+            val itemIndex = (msg.domain as cell).hash();
+            val expectedItem = calcDeployedNftItem(
+                itemIndex,
+                storage.nftItemCode,
+            ).calculateAddress();
+            assert (in.senderAddress == expectedItem) throw Errors.IncorrectSender;
+            if (storage.fiMinterAddress != null) {
+                val fwdMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: storage.fiMinterAddress,
+                    value: 0,
+                    body: msg,
+                });
+                fwdMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            }
         }
 
         HotUpgrade => {
@@ -206,7 +247,51 @@ fun onInternalMessage(in: InMessage) {
             destroyItemMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
+        RequestUpgradeCode => {
+            val storage = lazy CollectionStorage.load();
+            val target = msg.targetAddress != null ? msg.targetAddress : in.senderAddress;
+            val upgradeMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: target,
+                value: 0,
+                body: HotUpgrade {
+                    additionalData: null,
+                    code: storage.nftItemCode,
+                },
+            });
+            upgradeMsg.send(
+                SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+            );
+        }
+
         else => throw Errors.UnknownOp,
+    }
+}
+
+fun onBouncedMessage(in: InMessageBounced) {
+    if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
+        val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
+        val cs = rich.originalBody.beginParse();
+        if (cs.remainingBitsCount() >= 32 && cs.preloadUint(32) == 0x00000001) {
+            val storage = lazy CollectionStorage.load();
+            if (storage.fiMinterAddress != null) {
+                val initData = ItemInitData.fromSlice(cs);
+                val refundMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: storage.fiMinterAddress,
+                    value: 0,
+                    body: DnsOutbidNotification {
+                        queryId: 0,
+                        outbidAddress: initData.fromAddress,
+                        fiAmount: initData.fiAmount,
+                        domain: initData.domain as Cell<RemainingBitsAndRefs>,
+                    },
+                });
+                refundMsg.send(
+                    SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
+                );
+            }
+        }
     }
 }
 
@@ -257,6 +342,9 @@ get fun get_nft_content(_index: int, individualNftContent: cell): cell {
 
 get fun dnsresolve(subdomain: slice, _category: int): DnsResolveResponse {
     assert (subdomain.remainingBitsCount() % BYTE_SIZE == 0) throw Errors.DnsInvalidSubdomainBits;
+    if (subdomain.remainingBitsCount() < BYTE_SIZE) {
+        return { resolvedPrefixLengthBits: 0, resolvedRecord: null };
+    }
 
     val startsWithZeroByte = subdomain.preloadInt(BYTE_SIZE) == 0;
 

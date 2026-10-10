@@ -238,7 +238,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class RootDns implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECBgEAAQoAART/APSkE/S88sgLAQIBYgIDAAzQMPiR8kAC+6HGGdtF2/ZgQa6TUnAF5aCMQa4UDkGAAEWukgUi4SpDgBGGAcUovgbw28BBKgWmDmIFvdqJoRZuje3RkZ2fCAUWbu7u8Z4tnwgFnqAD9JH0kfSQYEuEfxxATa46fqAJjgscKLZmYvDhxglMcZGfFdScJfSlk7ZjwGUkYGXFEwQFAAZ0b24AzsjOz4QCz1Akwh+OHiXXHR/HBY4UMTMxeHDjBKYYyM+K6k4S+lLJ2zHgMJFb4osm1ljIzs+EAosXSM8Wz4QCz1ADwieOHAPXHSdYxwWOEXhw4wSmIMjPiupOEvpSydsx4FuSXwTicG0=');
+    static CodeCell = c.Cell.fromBase64('te6ccgECBwEAARYAART/APSkE/S88sgLAQIBYgIDAAzQMPiR8kAD+6HGGdtF2/ZgQa6TUnAF5aCMQa6TghEmYODbwEGuFA5BgABFrpIFIuEqQ4ARhgHFKL4G8NvAQSoFpg5iBb3aiaEWbo3t0ZGdnwgFFm7u7vGeLZ8IBZ6gA/SR9JH0kGBLhH8kYGXGGxZuje3RkZ2fCAWeoEmEPyK3xhsWTayxkQQFBgBAJtcdP1AExwWOFFszMXhw4wSmOMjPiupOEvpSydsx4DIAPCXXHR/HBY4UMTMxeHDjBKYYyM+K6k4S+lLJ2zHgMABqzs+EAosXSM8Wz4QCz1ADwieOHAPXHSdYxwWOEXhw4wSmIMjPiupOEvpSydsx4FuSXwTicG0=');
 
     static Errors = {
         'Errors.DnsInvalidSubdomainBits': 70,

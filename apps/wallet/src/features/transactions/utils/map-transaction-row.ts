@@ -251,7 +251,7 @@ export function getContractContextBadge(opcode?: number): string | undefined {
   }
   // Brotherhood Member / FiWallet
   if (
-    (opcode >= 0x00001051 && opcode <= 0x0000105b) ||
+    (opcode >= 0x00001051 && opcode <= 0x0000105c) ||
     (opcode >= 0x000010a1 && opcode <= 0x000010a8) ||
     (opcode >= 0x000010f1 && opcode <= 0x000010f7) ||
     (opcode >= 0x00001141 && opcode <= 0x00001150)

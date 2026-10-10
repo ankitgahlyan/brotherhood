@@ -946,7 +946,7 @@ fun FossFiWallet.sendActCloseAccount(
     return net.send(from, genericMsg);
 }
 
-fun FossFiWallet.sendAuthorityCloseAccount(
+fun FossFiWallet.sendActAuthorityCloseAccount(
     self,
     from: address,
     queryId: uint64,
@@ -957,7 +957,22 @@ fun FossFiWallet.sendAuthorityCloseAccount(
         bounce: config.bounce,
         value: config.value,
         dest: self.address,
-        body: AuthorityCloseAccount { queryId, target },
+        body: ActAuthorityCloseAccount { queryId, target },
+    });
+    return net.send(from, genericMsg);
+}
+
+fun FossFiWallet.sendAuthorityCloseAccountInternal(
+    self,
+    from: address,
+    queryId: uint64,
+    config: SendParams = {},
+): SendResultList {
+    val genericMsg = createMessage({
+        bounce: config.bounce,
+        value: config.value,
+        dest: self.address,
+        body: AuthorityCloseAccountInternal { queryId },
     });
     return net.send(from, genericMsg);
 }

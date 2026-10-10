@@ -25,6 +25,10 @@ import {
   EMPTY_DOMAINS,
   type OwnedDomain,
 } from '../store/dns-store';
+import {
+  CONTRACT_CODE_HASHES,
+  normalizeCodeHash,
+} from '@/lib/brotherhood/account-hydrator.worker';
 import { ONE_YEAR_SEC } from '../lib/dns-bodies';
 
 const MY_DOMAINS_TTL_MS = 5 * 60 * 1000; // 5-minute session TTL cache
@@ -530,6 +534,13 @@ export function useMyDomains(
               walletAddress,
             );
             const hasOwner = Boolean(parsed.ownerAddress);
+            const expectedDnsItemHash = CONTRACT_CODE_HASHES.dnsItem;
+            const isOutdated = Boolean(
+              acc.code_hash &&
+              expectedDnsItemHash &&
+              normalizeCodeHash(acc.code_hash) !==
+                normalizeCodeHash(expectedDnsItemHash),
+            );
 
             if (existing) {
               if (!parsed.ownerAddress && !parsed.auction?.maxBidAddress) {
@@ -546,7 +557,7 @@ export function useMyDomains(
                   walletRecord: parsed.walletRecord ?? undefined,
                   contactLink: parsed.contactLink ?? undefined,
                   channelLink: parsed.channelLink ?? undefined,
-                  isOutdated: false,
+                  isOutdated,
                   auctionEndTime: parsed.auction?.auctionEndTime,
                   maxBidAddress: parsed.auction?.maxBidAddress,
                   isAuctionActive: parsed.auction?.isActive ?? false,
@@ -567,7 +578,7 @@ export function useMyDomains(
                   walletRecord: parsed.walletRecord ?? undefined,
                   contactLink: parsed.contactLink ?? undefined,
                   channelLink: parsed.channelLink ?? undefined,
-                  isOutdated: false,
+                  isOutdated,
                   auctionEndTime: parsed.auction?.auctionEndTime,
                   maxBidAddress: parsed.auction?.maxBidAddress,
                   isAuctionActive: parsed.auction?.isActive ?? false,

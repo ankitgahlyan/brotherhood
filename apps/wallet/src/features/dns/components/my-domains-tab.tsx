@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { toast } from 'sonner';
 import { TxButton } from '@/core/components/ui/tx-button';
 import { CopyButton } from '@/core/components/ui/copy-button';
 import { RefreshButton } from '@/core/components/ui/refresh-button';
@@ -17,7 +18,11 @@ import {
   clearDomainResolutionCache,
   detectSocialPlatform,
 } from '@/core/lib/dns';
-import { FI_ADDRESS, type Network } from '@/lib/brotherhood/config';
+import {
+  FI_ADDRESS,
+  BRO_COLLECTION_RESOLVER,
+  type Network,
+} from '@/lib/brotherhood/config';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
   useMyDomains,
@@ -35,6 +40,7 @@ import {
   buildDnsRenewRequestBody,
   buildFinalizeAuctionBody,
   buildDestroyContractBody,
+  buildRequestDnsUpgradeBody,
   walletDnsKey,
   contactUriDnsKey,
   channelDescriptionDnsKey,
@@ -359,6 +365,35 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
     [address, network, removeDomain, send],
   );
 
+  const handleUpgradeDomain = useCallback(
+    async (nftAddress: string, domainName: string, domainZone: string) => {
+      if (!address) return;
+      setSendingFor(nftAddress);
+      try {
+        const payload = buildRequestDnsUpgradeBody(Address.parse(nftAddress));
+        await send(
+          [
+            {
+              toAddress: BRO_COLLECTION_RESOLVER,
+              amount: toNano('0.1'),
+              payload,
+            },
+          ],
+          { affectedContracts: [nftAddress, BRO_COLLECTION_RESOLVER] },
+        );
+        toast.success(`Upgrade requested for ${domainName}.${domainZone}`);
+        void refresh();
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Upgrade request failed',
+        );
+      } finally {
+        setSendingFor(null);
+      }
+    },
+    [address, refresh, send],
+  );
+
   if (domains.length === 0) {
     return (
       <div className="space-y-3">
@@ -422,7 +457,6 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
         const isThisSending = sendingFor === domain.nftAddress || isSending;
         const charCount = domain.name.length;
         const canManageDomain =
-          !domain.isOutdated &&
           !isLiveAuctionActive &&
           !isLiveAuctionEnded &&
           domain.hasOwner !== false;
@@ -460,8 +494,8 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
                   <CopyButton address={domain.nftAddress} />
                 </div>
                 {domain.isOutdated && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
-                    Transferred
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+                    Update Available
                   </span>
                 )}
               </div>
@@ -488,287 +522,313 @@ export const MyDomainsTab: React.FC<MyDomainsTabProps> = ({ network }) => {
               </span>
             </div>
 
+            {/* Outdated contract upgrade banner */}
+            {domain.isOutdated && (
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">Contract Update Available</p>
+                  <TxButton
+                    size="sm"
+                    className="h-7 px-3 text-xs shrink-0"
+                    disabled={isThisSending}
+                    loading={isThisSending && sendingFor === domain.nftAddress}
+                    onAction={() =>
+                      handleUpgradeDomain(
+                        domain.nftAddress,
+                        domain.name,
+                        domain.zone,
+                      )
+                    }
+                    actionLabel="Upgrade (0.1 TON)"
+                    completeLabel="Upgraded!"
+                  >
+                    Upgrade (0.1 TON)
+                  </TxButton>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Upgrade your .bro domain contract to the latest version to
+                  ensure full compatibility.
+                </p>
+              </div>
+            )}
+
             {/* Actions */}
-            {!domain.isOutdated && (
-              <>
-                {isLiveAuctionActive && (
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
-                    <p className="font-medium">Active 5-Minute Auction</p>
+            <>
+              {isLiveAuctionActive && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
+                  <p className="font-medium">Active 5-Minute Auction</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Once the auction ends and is finalized, you can configure
+                    wallet and social contact records.
+                  </p>
+                </div>
+              )}
+
+              {isLiveAuctionEnded && (
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-600 dark:text-purple-400">
+                    <p className="font-medium">Auction Completed!</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Once the auction ends and is finalized, you can configure
-                      wallet and social contact records.
+                      Finalize the auction to claim domain ownership and burn
+                      the winning FI bid.
                     </p>
                   </div>
-                )}
+                  <TxButton
+                    size="sm"
+                    fullWidth
+                    className="w-full"
+                    disabled={isThisSending}
+                    loading={isThisSending && sendingFor === domain.nftAddress}
+                    onAction={() => handleFinalizeAuction(domain.nftAddress)}
+                    actionLabel="Finalize Domain (0.6 TON)"
+                    completeLabel="Finalized!"
+                  >
+                    Finalize Domain (0.6 TON)
+                  </TxButton>
+                </div>
+              )}
 
-                {isLiveAuctionEnded && (
-                  <div className="space-y-2">
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-600 dark:text-purple-400">
-                      <p className="font-medium">Auction Completed!</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Finalize the auction to claim domain ownership and burn
-                        the winning FI bid.
-                      </p>
+              {canManageDomain && (
+                <div className="space-y-3 pt-1 border-t border-border/60">
+                  {/* Unified DNS Records Form (existing values shown as placeholders like Profile tab) */}
+                  <div className="space-y-2.5">
+                    {/* 1. Wallet Record */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          Wallet Address
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {domain.walletRecord && (
+                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <CopyButton address={domain.walletRecord} />
+                              <button
+                                type="button"
+                                disabled={isThisSending}
+                                onClick={() =>
+                                  void handleClearSingleRecord(
+                                    domain.nftAddress,
+                                    'wallet',
+                                  )
+                                }
+                                className="text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          )}
+                          {address &&
+                            walletDraft !== address &&
+                            domain.walletRecord !== address && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRecordDrafts((prev) => ({
+                                    ...prev,
+                                    [domain.nftAddress]: address,
+                                  }))
+                                }
+                                className="text-[11px] text-primary hover:underline cursor-pointer"
+                              >
+                                Use my wallet
+                              </button>
+                            )}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={walletDraft}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setRecordDrafts((prev) => ({
+                            ...prev,
+                            [domain.nftAddress]: val,
+                          }));
+                          if (localError) {
+                            setValidationErrors((prev) => {
+                              const next = { ...prev };
+                              delete next[domain.nftAddress];
+                              return next;
+                            });
+                          }
+                        }}
+                        placeholder={
+                          (domain.walletRecord
+                            ? formatWalletAddress(domain.walletRecord, false)
+                            : '') ||
+                          (address
+                            ? formatWalletAddress(address, false)
+                            : '') ||
+                          'Wallet address (0Q… / UQ…)'
+                        }
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        data-testid={`dns-record-input-${domain.nftAddress}`}
+                      />
                     </div>
+
+                    {/* 2. Contact Link (uri) */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          Contact Link (ThatsApp, Briar, Telegram…)
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {activeContactBadge && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                              {activeContactBadge.icon}{' '}
+                              {activeContactBadge.label}
+                            </span>
+                          )}
+                          {domain.contactLink && (
+                            <>
+                              <CopyButton address={domain.contactLink} />
+                              <button
+                                type="button"
+                                disabled={isThisSending}
+                                onClick={() =>
+                                  void handleClearSingleRecord(
+                                    domain.nftAddress,
+                                    'uri',
+                                  )
+                                }
+                                className="text-[11px] text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
+                              >
+                                Clear
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={contactDraft}
+                        onChange={(e) =>
+                          setContactDrafts((prev) => ({
+                            ...prev,
+                            [domain.nftAddress]: e.target.value,
+                          }))
+                        }
+                        placeholder={
+                          domain.contactLink ||
+                          'simplex:/... or briar://... or https://t.me/...'
+                        }
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        data-testid={`dns-contact-input-${domain.nftAddress}`}
+                      />
+                    </div>
+
+                    {/* 3. Channel / Group Link (description) */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          Channel / Group Link
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {activeChannelBadge && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                              📢 {activeChannelBadge.label}
+                            </span>
+                          )}
+                          {domain.channelLink && (
+                            <>
+                              <CopyButton address={domain.channelLink} />
+                              <button
+                                type="button"
+                                disabled={isThisSending}
+                                onClick={() =>
+                                  void handleClearSingleRecord(
+                                    domain.nftAddress,
+                                    'description',
+                                  )
+                                }
+                                className="text-[11px] text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
+                              >
+                                Clear
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={channelDraft}
+                        onChange={(e) =>
+                          setChannelDrafts((prev) => ({
+                            ...prev,
+                            [domain.nftAddress]: e.target.value,
+                          }))
+                        }
+                        placeholder={
+                          domain.channelLink ||
+                          'SimpleX group, Briar forum, t.me channel…'
+                        }
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        data-testid={`dns-channel-input-${domain.nftAddress}`}
+                      />
+                    </div>
+
+                    {localError && (
+                      <p className="text-xs text-rose-500 font-medium">
+                        {localError}
+                      </p>
+                    )}
+
                     <TxButton
                       size="sm"
+                      fullWidth
+                      className="w-full"
+                      disabled={!hasPendingChanges || isThisSending}
+                      loading={
+                        isThisSending && sendingFor === domain.nftAddress
+                      }
+                      onAction={() => handleSaveChanges(domain.nftAddress)}
+                      actionLabel={
+                        hasPendingChanges ? 'Update Records' : 'No Changes'
+                      }
+                      completeLabel="Updated!"
+                    >
+                      {hasPendingChanges ? 'Update Records' : 'No Changes'}
+                    </TxButton>
+                  </div>
+
+                  {/* Compact Footer: Renew & Destroy */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border/60">
+                    <TxButton
+                      size="sm"
+                      variant="secondary"
                       fullWidth
                       className="w-full"
                       disabled={isThisSending}
                       loading={
                         isThisSending && sendingFor === domain.nftAddress
                       }
-                      onAction={() => handleFinalizeAuction(domain.nftAddress)}
-                      actionLabel="Finalize Domain (0.6 TON)"
-                      completeLabel="Finalized!"
+                      onAction={() =>
+                        handleRenewFi(domain.nftAddress, charCount)
+                      }
+                      actionLabel={`Renew (${formatFi(broFiRenewalFee(charCount))})`}
+                      completeLabel="Renewed!"
                     >
-                      Finalize Domain (0.6 TON)
+                      Renew ({formatFi(broFiRenewalFee(charCount))})
+                    </TxButton>
+                    <TxButton
+                      size="sm"
+                      variant="danger"
+                      fullWidth
+                      className="w-full"
+                      disabled={isThisSending}
+                      loading={
+                        isThisSending && sendingFor === domain.nftAddress
+                      }
+                      onAction={() => handleDestroyDomain(domain.nftAddress)}
+                      actionLabel="Destroy Domain"
+                      completeLabel="Destroyed!"
+                    >
+                      Destroy Domain
                     </TxButton>
                   </div>
-                )}
-
-                {canManageDomain && (
-                  <div className="space-y-3 pt-1 border-t border-border/60">
-                    {/* Unified DNS Records Form (existing values shown as placeholders like Profile tab) */}
-                    <div className="space-y-2.5">
-                      {/* 1. Wallet Record */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-medium">
-                            Wallet Address
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {domain.walletRecord && (
-                              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                <CopyButton address={domain.walletRecord} />
-                                <button
-                                  type="button"
-                                  disabled={isThisSending}
-                                  onClick={() =>
-                                    void handleClearSingleRecord(
-                                      domain.nftAddress,
-                                      'wallet',
-                                    )
-                                  }
-                                  className="text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                            )}
-                            {address &&
-                              walletDraft !== address &&
-                              domain.walletRecord !== address && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setRecordDrafts((prev) => ({
-                                      ...prev,
-                                      [domain.nftAddress]: address,
-                                    }))
-                                  }
-                                  className="text-[11px] text-primary hover:underline cursor-pointer"
-                                >
-                                  Use my wallet
-                                </button>
-                              )}
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={walletDraft}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setRecordDrafts((prev) => ({
-                              ...prev,
-                              [domain.nftAddress]: val,
-                            }));
-                            if (localError) {
-                              setValidationErrors((prev) => {
-                                const next = { ...prev };
-                                delete next[domain.nftAddress];
-                                return next;
-                              });
-                            }
-                          }}
-                          placeholder={
-                            (domain.walletRecord
-                              ? formatWalletAddress(domain.walletRecord, false)
-                              : '') ||
-                            (address
-                              ? formatWalletAddress(address, false)
-                              : '') ||
-                            'Wallet address (0Q… / UQ…)'
-                          }
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                          data-testid={`dns-record-input-${domain.nftAddress}`}
-                        />
-                      </div>
-
-                      {/* 2. Contact Link (uri) */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-medium">
-                            Contact Link (ThatsApp, Briar, Telegram…)
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {activeContactBadge && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                {activeContactBadge.icon}{' '}
-                                {activeContactBadge.label}
-                              </span>
-                            )}
-                            {domain.contactLink && (
-                              <>
-                                <CopyButton address={domain.contactLink} />
-                                <button
-                                  type="button"
-                                  disabled={isThisSending}
-                                  onClick={() =>
-                                    void handleClearSingleRecord(
-                                      domain.nftAddress,
-                                      'uri',
-                                    )
-                                  }
-                                  className="text-[11px] text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
-                                >
-                                  Clear
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={contactDraft}
-                          onChange={(e) =>
-                            setContactDrafts((prev) => ({
-                              ...prev,
-                              [domain.nftAddress]: e.target.value,
-                            }))
-                          }
-                          placeholder={
-                            domain.contactLink ||
-                            'simplex:/... or briar://... or https://t.me/...'
-                          }
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                          data-testid={`dns-contact-input-${domain.nftAddress}`}
-                        />
-                      </div>
-
-                      {/* 3. Channel / Group Link (description) */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-medium">
-                            Channel / Group Link
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {activeChannelBadge && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                📢 {activeChannelBadge.label}
-                              </span>
-                            )}
-                            {domain.channelLink && (
-                              <>
-                                <CopyButton address={domain.channelLink} />
-                                <button
-                                  type="button"
-                                  disabled={isThisSending}
-                                  onClick={() =>
-                                    void handleClearSingleRecord(
-                                      domain.nftAddress,
-                                      'description',
-                                    )
-                                  }
-                                  className="text-[11px] text-rose-500 hover:underline cursor-pointer disabled:opacity-50"
-                                >
-                                  Clear
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={channelDraft}
-                          onChange={(e) =>
-                            setChannelDrafts((prev) => ({
-                              ...prev,
-                              [domain.nftAddress]: e.target.value,
-                            }))
-                          }
-                          placeholder={
-                            domain.channelLink ||
-                            'SimpleX group, Briar forum, t.me channel…'
-                          }
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                          data-testid={`dns-channel-input-${domain.nftAddress}`}
-                        />
-                      </div>
-
-                      {localError && (
-                        <p className="text-xs text-rose-500 font-medium">
-                          {localError}
-                        </p>
-                      )}
-
-                      <TxButton
-                        size="sm"
-                        fullWidth
-                        className="w-full"
-                        disabled={!hasPendingChanges || isThisSending}
-                        loading={
-                          isThisSending && sendingFor === domain.nftAddress
-                        }
-                        onAction={() => handleSaveChanges(domain.nftAddress)}
-                        actionLabel={
-                          hasPendingChanges ? 'Update Records' : 'No Changes'
-                        }
-                        completeLabel="Updated!"
-                      >
-                        {hasPendingChanges ? 'Update Records' : 'No Changes'}
-                      </TxButton>
-                    </div>
-
-                    {/* Compact Footer: Renew & Destroy */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border/60">
-                      <TxButton
-                        size="sm"
-                        variant="secondary"
-                        fullWidth
-                        className="w-full"
-                        disabled={isThisSending}
-                        loading={
-                          isThisSending && sendingFor === domain.nftAddress
-                        }
-                        onAction={() =>
-                          handleRenewFi(domain.nftAddress, charCount)
-                        }
-                        actionLabel={`Renew (${formatFi(broFiRenewalFee(charCount))})`}
-                        completeLabel="Renewed!"
-                      >
-                        Renew ({formatFi(broFiRenewalFee(charCount))})
-                      </TxButton>
-                      <TxButton
-                        size="sm"
-                        variant="danger"
-                        fullWidth
-                        className="w-full"
-                        disabled={isThisSending}
-                        loading={
-                          isThisSending && sendingFor === domain.nftAddress
-                        }
-                        onAction={() => handleDestroyDomain(domain.nftAddress)}
-                        actionLabel="Destroy Domain"
-                        completeLabel="Destroyed!"
-                      >
-                        Destroy Domain
-                      </TxButton>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
+            </>
 
             {error && sendingFor === domain.nftAddress && (
               <p className="text-xs text-rose-500">{error}</p>

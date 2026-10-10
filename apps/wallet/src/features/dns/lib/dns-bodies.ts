@@ -40,11 +40,14 @@ export {
 
 // ─── Domain encoding & derivation (re-exported from centralized @/core/lib/dns) ─
 
+import { buildRequestUpgradeBody } from '@/lib/brotherhood/deploy';
+
 export {
   encodeDomainCell,
   domainItemIndex,
   deriveDnsItemAddress,
   buildSnakeStringCell,
+  buildRequestUpgradeBody as buildRequestDnsUpgradeBody,
 };
 
 // ─── Message body builders ────────────────────────────────────────────────────

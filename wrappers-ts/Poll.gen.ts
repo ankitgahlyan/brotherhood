@@ -422,6 +422,7 @@ export const InitPoll = {
  >     proposalId: uint64
  >     vote: bool
  >     voterOwner: address
+ >     expiresAt: uint32
  > }
  */
 export interface VoteProposalChild {
@@ -430,6 +431,7 @@ export interface VoteProposalChild {
     proposalId: uint64
     vote: boolean
     voterOwner: c.Address
+    expiresAt: uint32 /* = 0 */
 }
 
 export const VoteProposalChild = {
@@ -440,9 +442,11 @@ export const VoteProposalChild = {
         proposalId: uint64
         vote: boolean
         voterOwner: c.Address
+        expiresAt?: uint32 /* = 0 */
     }): VoteProposalChild {
         return {
             $: 'VoteProposalChild',
+            expiresAt: 0n,
             ...args
         }
     },
@@ -454,6 +458,7 @@ export const VoteProposalChild = {
             proposalId: s.loadUintBig(64),
             vote: s.loadBoolean(),
             voterOwner: s.loadAddress(),
+            expiresAt: s.loadUintBig(32),
         }
     },
     store(self: VoteProposalChild, b: c.Builder): void {
@@ -462,6 +467,7 @@ export const VoteProposalChild = {
         b.storeUint(self.proposalId, 64);
         b.storeBit(self.vote);
         b.storeAddress(self.voterOwner);
+        b.storeUint(self.expiresAt, 32);
     },
     toCell(self: VoteProposalChild): c.Cell {
         return makeCellFrom<VoteProposalChild>(self, VoteProposalChild.store);
@@ -725,11 +731,13 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class Poll implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('te6ccgECFgEABBgAART/APSkE/S88sgLAQIBYgIDAfbQ+JGOS9MfMSDXScIfjj/THwGBEP26jjTTPzHTPzHXCgDtRNDWP9TU0yDTIAaYIcIAkwGlAd6WIMIAkaXe4gTIzhPMzMsgyyDOye1U4DDgMOAgxwCRMOAg7UTQ0z/U1NMg0yDTINMf1woAJtD6SPpI+kgwC9csIAAAh9wEAgFYDxACzo4WXwoyyM+FCPpSgRAOzwuOyz/JgEL7AODXLCAAAIB8jic1Wzn4klAIxwXy4rzTPzHXCyAFyMs/FMwSzMsgyyDLIMsfygDJ7VTg1ywgAACH9OMCMWyS1ywgAACH/OMCW4QPAccA8vQFBgT+PAvTP9M/+kjTAAGS0gCSbQHi1woAiCPI+lIBERAB+lLPiACAyXgkERFUEgLIz4PLBM+FoMzM+RaE97ABERABgAsBERHXJMjPigBAzh/L989Q+JLHBfLivCXy0u/4Iye58uLyIG6OEy29niyUCKQHpZQIpQek4gcI3gjjDfgoiAoHEQgASjL4kiHHBfLivAHXCz/Iz4UIEvpSghDVMnbbzwuOyz/JgQCg+wAAFjAskgiklAekBwjiAfQqyPpSEvpSz4SAyYIJMS0AyM+JiAFTI8jPhNDMzPkWzwv/AfoCgQCMzwtwEszMz5AAAEP2I88LPxLLPxzKABf6UsmAEfsAI5gjqgCmAnOpBJFx4iq7lCGzwwCRcOKTMDQ44w0FyMs/FMwSzBTLIMsgyyASyx/KAMntVAkBYjF/iMjPkAAAQDYXyz8pzws/EvpSIs8LHxXMJc8UycjPhQga+lJxzwtuGczJgQCw+wAKART/APSkE/S88sgLCwICxwwNAffX8SPkgdqJofSR9JGmE6LaSa5YQAABBSkch6aSY/SRrpnxJfBUpseR9KX0pZ8QAQGS8KJFkZ8HlgmfC0GZmfItCe9gKQAWoAuuSZGfFACBnCeX756gJY4LImMiYcUcLGOuWEAAAQB5JeR/w/EkR44L5cV56AvEQN0kvgvBDgAJrFevgsAAHiD7BNDtHu1T+JJVIPEIrwFDuczvgoiALI+lL6Us+EgMkByM+E0MzM+RbIz4oAQMv/z1CBEAR7p5vtRNDTP9TU0yDTINMg0x/XCgAG0PpI+kj6SDBIFkR0FROAEU/wD0pBP0vPLICxICAWITFAG80PiR8kAg7UTQ+kj6SNIA1woABNcsIAAAh+yOLDX4kiLHBfLivATTfzHXCgAElVEjusMAkjJw4pPywvXgyPpS+lLPg8oAye1U4DRbAdcsIAAAh/wx4wIwhA8BxwDy9BUAHaDEs9qJofSR9JGkAaQBowBoMfiSIccF8uK8yM+FCPpSjQaAAAAAAAAAAAAAAAAAAGqZO22AAAAAAAAAAEDPFsmBAKD7AA==');
+    static CodeCell = c.Cell.fromBase64('te6ccgECFgEABFAAART/APSkE/S88sgLAQIBYgIDAfbQ+JGOS9MfMSDXScIfjj/THwGBEP26jjTTPzHTPzHXCgDtRNDWP9TU0yDTIAaYIcIAkwGlAd6WIMIAkaXe4gTIzhPMzMsgyyDOye1U4DDgMOAgxwCRMOAg7UTQ0z/U1NMg0yDTINMf1woAJtD6SPpI+kgwC9csIAAAh9wEAgFYDxAC1I4WXwoyyM+FCPpSgRAOzwuOyz/JgEL7AODXLCAAAIB8jic1Wzn4klAIxwXy4rzTPzHXCyAFyMs/FMwSzMsgyyDLIMsfygDJ7VTg1ywgAACH9OMCMTJsYzPXLCAAAIf84wJfA4QPAccA8vQFBgT8PAvTP9M/+kjTAAGS0gCSbQHi1woAiCPI+lIBERAB+lLPiACAyXgkERFUEgLIz4PLBM+FoMzM+RaE97ABERABgAsBERHXJMjPigBAzh/L989Q+JLHBfLivCfCAPLi8CXy0u/4Iye58uLyIG6bMCySCKSUB6QHCOLjDvgoiCrICgcRCABWM/iSIscF8uK8+CO78uLfAdcLP8jPhQgS+lKCENUydtvPC47LP8mBAKD7AABCLb2OGyyaCKQnwgCTB6UH3pwowgCTCKUI3gekBwjiCN4IAfD6UhL6UnDPCyHJggkxLQDIz4mIAVMjyM+E0MzM+RbPC/8B+gKBAIzPC3ASzMzPkAAAQ/Yjzws/Ess/HMoAF/pSI88LH8mAEfsAI6oApgJzqQQqu5Qhs8MAkXDikzA0OOMNBcjLPxTMEswUyyDLIMsgEssfygDJ7VQJAXIxf4IQBfXhAIjIz5AAAEA2GMs/Ks8LPxP6UiPPCx8WzCbPFMnIz4UIG/pSAfoCcc8LahnMyYAR+wAKART/APSkE/S88sgLCwICxwwNAffX8SPkgdqJofSR9JGmE6LaSa5YQAABBSkch6aSY/SRrpnxJfBUpseR9KX0pZ8QAQGS8KJFkZ8HlgmfC0GZmfItCe9gKQAWoAuuSZGfFACBnCeX756gJY4LImMiYcUcLGOuWEAAAQB5JeR/w/EkR44L5cV56AvEQN0kvgvBDgAJrFevgsAAHiD7BNDtHu1T+JJVIPEIrwFFuczvgoiALI+lL6UnDPCyHJAcjPhNDMzPkWyM+KAEDL/89QgRAEe6eb7UTQ0z/U1NMg0yDTINMf1woABtD6SPpI+kgwSBZEdBUTgBFP8A9KQT9LzyyAsSAgFiExQB0tD4kfJAIO1E0PpI+kjSANIA1wsfBdcsIAAAh+yONjU1+JIixwXy4rwD038x0gD6SDHXCx8ElVFEusMAkjRw4pPywvXgAcj6UvpSz4MSygDLH8ntVOBsMdcsIAAAh/wx4wJbhA8BxwDy9BUAIaDEs9qJofSR9JGkAaQBpj+jAHQy+JIixwXy4rz4I7vy4t/Iz4UI+lKNBoAAAAAAAAAAAAAAAAAAapk7bYAAAAAAAAAAQM8WyYEAoPsA');
 
     static Errors = {
         'Errors.IncorrectSender': 700,
+        'Errors.WaitMore': 735,
         'Errors.ProposalNotFound': 751,
+        'Errors.ProposalPendingAccounts': 752,
         'Errors.ProposalExpired': 754,
     }
 

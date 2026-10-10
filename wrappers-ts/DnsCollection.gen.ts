@@ -142,6 +142,44 @@ type uint32 = bigint
 type uint64 = bigint
 
 /**
+ > struct (0x00001008) RequestUpgradeCode {
+ >     targetAddress: address?
+ > }
+ */
+export interface RequestUpgradeCode {
+    readonly $: 'RequestUpgradeCode'
+    targetAddress: c.Address | null /* = null */
+}
+
+export const RequestUpgradeCode = {
+    PREFIX: 0x00001008,
+
+    create(args: {
+        targetAddress?: c.Address | null /* = null */
+    }): RequestUpgradeCode {
+        return {
+            $: 'RequestUpgradeCode',
+            targetAddress: null,
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): RequestUpgradeCode {
+        loadAndCheckPrefix32(s, 0x00001008, 'RequestUpgradeCode');
+        return {
+            $: 'RequestUpgradeCode',
+            targetAddress: s.loadMaybeAddress(),
+        }
+    },
+    store(self: RequestUpgradeCode, b: c.Builder): void {
+        b.storeUint(0x00001008, 32);
+        b.storeAddress(self.targetAddress);
+    },
+    toCell(self: RequestUpgradeCode): c.Cell {
+        return makeCellFrom<RequestUpgradeCode>(self, RequestUpgradeCode.store);
+    }
+}
+
+/**
  > struct (0x0000100b) HotUpgrade {
  >     additionalData: cell?
  >     code: cell
@@ -616,6 +654,110 @@ export const BidBroDomain = {
 }
 
 /**
+ > struct (0x6f757462) DnsOutbidNotification {
+ >     queryId: uint64
+ >     outbidAddress: address
+ >     fiAmount: coins
+ >     domain: Cell<RemainingBitsAndRefs>
+ > }
+ */
+export interface DnsOutbidNotification {
+    readonly $: 'DnsOutbidNotification'
+    queryId: uint64
+    outbidAddress: c.Address
+    fiAmount: coins
+    domain: CellRef<RemainingBitsAndRefs>
+}
+
+export const DnsOutbidNotification = {
+    PREFIX: 0x6f757462,
+
+    create(args: {
+        queryId: uint64
+        outbidAddress: c.Address
+        fiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }): DnsOutbidNotification {
+        return {
+            $: 'DnsOutbidNotification',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DnsOutbidNotification {
+        loadAndCheckPrefix32(s, 0x6f757462, 'DnsOutbidNotification');
+        return {
+            $: 'DnsOutbidNotification',
+            queryId: s.loadUintBig(64),
+            outbidAddress: s.loadAddress(),
+            fiAmount: s.loadCoins(),
+            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+        }
+    },
+    store(self: DnsOutbidNotification, b: c.Builder): void {
+        b.storeUint(0x6f757462, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.outbidAddress);
+        b.storeCoins(self.fiAmount);
+        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
+    },
+    toCell(self: DnsOutbidNotification): c.Cell {
+        return makeCellFrom<DnsOutbidNotification>(self, DnsOutbidNotification.store);
+    }
+}
+
+/**
+ > struct (0x6275726e) DnsAuctionFinalized {
+ >     queryId: uint64
+ >     winner: address
+ >     winningFiAmount: coins
+ >     domain: Cell<RemainingBitsAndRefs>
+ > }
+ */
+export interface DnsAuctionFinalized {
+    readonly $: 'DnsAuctionFinalized'
+    queryId: uint64
+    winner: c.Address
+    winningFiAmount: coins
+    domain: CellRef<RemainingBitsAndRefs>
+}
+
+export const DnsAuctionFinalized = {
+    PREFIX: 0x6275726e,
+
+    create(args: {
+        queryId: uint64
+        winner: c.Address
+        winningFiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }): DnsAuctionFinalized {
+        return {
+            $: 'DnsAuctionFinalized',
+            ...args
+        }
+    },
+    fromSlice(s: c.Slice): DnsAuctionFinalized {
+        loadAndCheckPrefix32(s, 0x6275726e, 'DnsAuctionFinalized');
+        return {
+            $: 'DnsAuctionFinalized',
+            queryId: s.loadUintBig(64),
+            winner: s.loadAddress(),
+            winningFiAmount: s.loadCoins(),
+            domain: loadCellRef<RemainingBitsAndRefs>(s, loadTolkRemaining),
+        }
+    },
+    store(self: DnsAuctionFinalized, b: c.Builder): void {
+        b.storeUint(0x6275726e, 32);
+        b.storeUint(self.queryId, 64);
+        b.storeAddress(self.winner);
+        b.storeCoins(self.winningFiAmount);
+        storeCellRef<RemainingBitsAndRefs>(self.domain, b, storeTolkRemaining);
+    },
+    toCell(self: DnsAuctionFinalized): c.Cell {
+        return makeCellFrom<DnsAuctionFinalized>(self, DnsAuctionFinalized.store);
+    }
+}
+
+/**
  > struct CollectionStorage {
  >     treasuryAddress: address
  >     content: cell
@@ -778,7 +920,7 @@ function calculateDeployedAddress(code: c.Cell, data: c.Cell, options: DeployedA
 }
 
 export class DnsCollection implements c.Contract {
-    static CodeCell = c.Cell.fromBase64('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');
+    static CodeCell = c.Cell.fromBase64('te6ccgECIgEACH4AART/APSkE/S88sgLAQIBYgIDAgLEBAUCASAXGAIB0wYHAOGsJJA3SXaqcJh2omh9JGoY6mmP/ShoxohNDo6ODmdF5ewtzW0ujOwtDY8sLcXM7S6NDqxFzS3l7E5N7o0Mrk0N7eyF7I3OZexOTeWsbe2NjKxujS3txc1Obe3QZGfCA2dkgmR9KQpmCWZlj/0qZPaqQATfT4keMC1ywizR5BDI5I7UTQ+kgw+JLHBfLhoYIQBfXhAPgnbxCiAdM/+gD6SDBTE7ySMQKRM+IgwgDy4ZLIz4UIE/pSWPoCghDVMnbbzwuKyz/JcfsA4NcsIbh/YozjAtcsIWCs36TjAtcsIxNLIYyAgJCgsAkUIMECmTCCIAkYTnKgAOAgwAKZMIIgBIwnOVAA4CDAA5gwghpGE5yoAOAgwASYMIIY6NSlEADgwQmXghh0alKIAOCCGBdIdugAgB/iDXCx+CEP////66jnHXLCf////08r/XTNAg10nCH5gg1wsfwAHDAJFw4o5Q7UTQ+kgx0x8x+lAwIG6RW+AB+kjU0gAx+gD6UDHRyM+FCBT6Uo0GgAAAAAAAAAAAAAAAAAA3uroxAAAAAAAAAABAzxYS+lJY+gLMyYBC+wDgMOAMAF7tRND6SNTU0x/6UNEF1ws/AZIwcJTCAMMA4o4Q+CMDyPpSEszMyx/6VMntVOBfBAP87UTQ+kjUMdTTHzH6UDD4klADxwXy4aEC0z8x+kjIIddJEtcYAs4h12SOEyHXSsAB8uDKAddM0CDXSdcYAs7kMc9QINdJIMIA8uDIIIED8Lvy4MkgqTgC8tDKUhDbPPLgyyDIzvkWgFD4MyBun9D0BVIQgwf0Dm+hMfLQzeMNEAwNAv6O/e1E0PpI1DHU0x/6UDAgbpj4kiHHBfLhqN/4IyCCEGLk8xC88uDHBdM/MfpI+gDXTCTCAI4UBIECWKAXuZdSBccF8uGikTTiEDSVECc0NTDiAdDIIddJEtcYAs4h12SOEyHXSsAB8uDKAddM0CDXSdcYAs7kMc9QINdJIMIADg8AAjAAiIIQC+vCAPgoAsjL/xL6UskCyM7JA8j6UhPMz4YQE/pUycjPiYgBUzTIz4TQzMz5Fs8L/1j6AoEAjc8LcBPMzMzJcfsAAv7y4MgggQPwu/LgySCpOALy0Mpc2zzy4MurAvACJLvy4MwgyM75FoBQ+DMgbpEwn9D0BVIQgwf0Dm+hMfLQzeKCEC+vCAD4KALIy/8S+lLJAsjOyQbI+lIWzM+BUAT6AvpUycjPiYgBXcjPhNDMzPkWzwv/UAT6As+Bc/oCgQCNEBEC/ODXLCN7q6MUjmPtRNAB0z/6SPoA10wg+QAF+kgx1DHU0x8x+lAw+CgHyMv/F/pSyQHIz4TQzMz5FsjPigBAy//PUPiSxwXy4rwkbpJfBeDIz4UIFfpSghBvdXRizwuOE8s/+lIB+gLMyYBA+wDg1ywjE6uTdOMC1ywgAACAXBITALjtou37cAGrAiClAY5LAtMHIcIvlSHBOsMAkXDiIsJglSLBe8MAkXDiAZIwf5LDAOIgkTKOFzABwC2VIcIAwwCRcOKVUxK5wwCRcOIB4gGVXwNw2zHhAaRY5F8DfwAUzwtrzMzMyXH7AADG7UTQAdM/+kj6ANdMIPkABfpIMdQx1NMfMfpQMPgoB8jL/xf6UskByM+E0MzM+RbIz4oAQMv/z1D4kscF8uK8JG6SXwXgyM+FCBX6UoIQYnVybs8LjhPLP/pSAfoCzMmAQPsAA/KOHO1E0PpIMPiSxwXy4aH0BNdMIPsE0O0e7VPxCEng1ywjI3ObrI4x7UTQ+kgw+JLHBfLhodM/MfpI1PQFyM+QAABALvQAzMnIz4UIEvpScc8LbszJgED7AODXLCMjc5sk4wLXLCMjc5vE4wLXLCAAAIBE4wKED/LwFBUWAGTtRND6SDD4kiHHBfLhoQHTP/pQMCBus0AT4wTIz4UI+lKCENUydtvPC47LP8mBAKD7AABs7UTQ+kgw+JIhxwXy4aEB0z/6SPpQMCBus0AU4wTIz4UIE/pSghBkbnNkzwuOyz/6VMmAQPsAAGLtRNAB+lAwIG6z+JIS4wQB1DHXTG3Iz5AAAEAu9ADMycjPhQgS+lJxzwtuzMmAQvsAAgEgGRoCASAeHwExuLXTEg0CDXScAIl9cLB8AAwwCSMHDi4wKBsAXbp6PtRND6SDHUMdTTHzH6UDHR+CgCyMv/EvpSyQHIz4TQzMz5FsjPigBAy//PUIAtLQ0wcB8tGc9ATRgvBhBdbMdq9AAyXpTViM5RG+W/27c7Q33FHspDkX16Q+PSGDB/QOb6Ex4wGC8MkEb3o3rQ6nzuczVZhPpUKJgvizfI97zskfescafNEEIYMH9A5voTHjAcjPhAL0AMkcHQDggvBhBdbMdq9AAyXpTViM5RG+W/27c7Q33FHspDkX16Q+PcjPhAKND9odHRwczovL2Fua2l0Z2FobHlhbi5naXRodWIuaW8vYnJvdGhlcmhvb2QvZG5zL2Jyby1kbnMtbG9nby5wbmeDPFskCgwf0FwCsgvDJBG96N60Op87nM1WYT6VCiYL4s3yPe87JH3rHGnzRBMjPhAKNCVCcm90aGVyaG9vZCAuYnJvIERlY2VudHJhbGl6ZWQgRG9tYWlugzxbJAoMH9BcAJ7kFvtRND6SNTUMdMfMfpQMdF/AoAgFYICEA47DDDAg10mpOALy0EYg10nBCJMwcG3gINcKByDAAAGRcJch10nACMMA4pNbeG3gIJUB0wcxAd4hcHCRs54B0wchwAAClAKmCALeWegxIMIA8uDJUSLXGcjO+RaCAWej7UPYAXhw4wQSoMjPiupOEvpSyYAAtsWb7UTQ+kjUMdQx0x8x+lAx0XWAZFiA=');
 
     static Errors = {
         'Errors.DnsInvalidSubdomainBits': 70,
@@ -794,6 +936,7 @@ export class DnsCollection implements c.Contract {
         'Errors.NotAuthorizedTreasury': 417,
         'Errors.ReservationPeriodActive': 418,
         'Errors.DnsIncorrectSender': 424,
+        'Errors.IncorrectSender': 700,
         'Errors.UnknownOp': 65535,
     }
 
@@ -856,6 +999,24 @@ export class DnsCollection implements c.Contract {
         return BidBroDomain.toCell(BidBroDomain.create(body));
     }
 
+    static createCellOfDnsOutbidNotification(body: {
+        queryId: uint64
+        outbidAddress: c.Address
+        fiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }) {
+        return DnsOutbidNotification.toCell(DnsOutbidNotification.create(body));
+    }
+
+    static createCellOfDnsAuctionFinalized(body: {
+        queryId: uint64
+        winner: c.Address
+        winningFiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }) {
+        return DnsAuctionFinalized.toCell(DnsAuctionFinalized.create(body));
+    }
+
     static createCellOfHotUpgrade(body: {
         additionalData: c.Cell | null
         code: c.Cell
@@ -885,6 +1046,12 @@ export class DnsCollection implements c.Contract {
         recipient?: c.Address | null /* = null */
     }) {
         return DestroyDnsItem.toCell(DestroyDnsItem.create(body));
+    }
+
+    static createCellOfRequestUpgradeCode(body: {
+        targetAddress?: c.Address | null /* = null */
+    }) {
+        return RequestUpgradeCode.toCell(RequestUpgradeCode.create(body));
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, msgValue: coins, extraOptions?: ExtraSendOptions) {
@@ -943,6 +1110,32 @@ export class DnsCollection implements c.Contract {
         });
     }
 
+    async sendDnsOutbidNotification(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        outbidAddress: c.Address
+        fiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: DnsOutbidNotification.toCell(DnsOutbidNotification.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendDnsAuctionFinalized(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        queryId: uint64
+        winner: c.Address
+        winningFiAmount: coins
+        domain: CellRef<RemainingBitsAndRefs>
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: DnsAuctionFinalized.toCell(DnsAuctionFinalized.create(body)),
+            ...extraOptions
+        });
+    }
+
     async sendHotUpgrade(provider: ContractProvider, via: Sender, msgValue: coins, body: {
         additionalData: c.Cell | null
         code: c.Cell
@@ -986,6 +1179,16 @@ export class DnsCollection implements c.Contract {
         return provider.internal(via, {
             value: msgValue,
             body: DestroyDnsItem.toCell(DestroyDnsItem.create(body)),
+            ...extraOptions
+        });
+    }
+
+    async sendRequestUpgradeCode(provider: ContractProvider, via: Sender, msgValue: coins, body: {
+        targetAddress?: c.Address | null /* = null */
+    }, extraOptions?: ExtraSendOptions) {
+        return provider.internal(via, {
+            value: msgValue,
+            body: RequestUpgradeCode.toCell(RequestUpgradeCode.create(body)),
             ...extraOptions
         });
     }

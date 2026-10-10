@@ -156,9 +156,9 @@ get fun `test bro-fi: outbid requires at least 105 percent and sends outbid noti
     );
     expect(resOutbid).toHaveSuccessfulTx({ to: item.address });
 
-    // Verify outbid notification was sent back to minter to refund user1
+    // Verify outbid notification was forwarded through collection to minter to refund user1
     val refundNotificationTx = resOutbid.findTransaction({
-        from: item.address,
+        from: collection.address,
         to: minter.address,
     });
     expect(refundNotificationTx).toBeNotNull();
@@ -284,9 +284,9 @@ get fun `test bro-fi: auction finalization grants ownership and triggers minter 
     );
     expect(finalizeRes).toHaveSuccessfulTx({ to: item.address });
 
-    // Verify finalize notification was sent to minter with winning bid
+    // Verify finalize notification was forwarded through collection to minter with winning bid
     val burnNotificationTx = finalizeRes.findTransaction({
-        from: item.address,
+        from: collection.address,
         to: minter.address,
     });
     expect(burnNotificationTx).toBeNotNull();

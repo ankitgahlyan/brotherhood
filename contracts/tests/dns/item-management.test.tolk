@@ -511,3 +511,8 @@ get fun `test item management: static data, governance guard, and release flow i
     expect(restartedAuction.maxBidAmount).toEqual(grams("20000"));
     expect(restartedAuction.auctionEndTime).toEqual((testing.getNow() + AUCTION_START_DURATION));
 }
+
+get fun `test item management: get_version getter returns current version`() {
+    val (item, _, _, _) = setupCompletedItem();
+    expect(item.getVersion()).toEqual(1);
+}

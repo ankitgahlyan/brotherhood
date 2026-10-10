@@ -20,6 +20,9 @@ fun onInternalMessage(_in: InMessage) {
 
 get fun dnsresolve(subdomain: slice, _category: int): DnsResolveResponse {
     assert (subdomain.remainingBitsCount() % BYTE_SIZE == 0) throw Errors.DnsInvalidSubdomainBits;
+    if (subdomain.remainingBitsCount() < BYTE_SIZE) {
+        return { resolvedPrefixLengthBits: 0, resolvedRecord: null };
+    }
 
     val startsWithZeroByte = subdomain.preloadInt(BYTE_SIZE) == 0;
     val subdomainLengthInBits = subdomain.remainingBitsCount();

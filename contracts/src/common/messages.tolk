@@ -360,6 +360,7 @@ struct (0x000010fd) VoteProposalChild {
     proposalId: uint64
     vote: bool
     voterOwner: address
+    expiresAt: uint32 = 0
 }
 
 struct (0x000010fe) VoteProposal {
@@ -519,9 +520,13 @@ struct (0x0000105a) ActCloseAccount {
     queryId: uint64 = 0
 }
 
-struct (0x0000105b) AuthorityCloseAccount {
+struct (0x0000105b) ActAuthorityCloseAccount {
     queryId: uint64 = 0
     target: address
+}
+
+struct (0x0000105c) AuthorityCloseAccountInternal {
+    queryId: uint64 = 0
 }
 
 // ============================================================================

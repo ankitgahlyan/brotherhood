@@ -38,6 +38,21 @@ contract PersonalWallet {
 }
 
 fun onBouncedMessage(in: InMessageBounced) {
+    if (in.bouncedBody.preloadUint(32) == 0xfffffffe) {
+        val rich = lazy RichBounceBody.fromSlice(in.bouncedBody);
+        val cs = rich.originalBody.beginParse();
+        if (cs.remainingBitsCount() >= 32 && cs.preloadUint(32) == 0x00001001) {
+            var storage = lazy PersonalWalletStore.load();
+            var credit = lazy storage.credit.load();
+            val mintMsg = MintNewJettons.fromSlice(cs);
+            val internalStep = lazy mintMsg.internalTransferMsg.load();
+            credit.creditNeed += internalStep.jettonAmount;
+            storage.credit = credit.toCell();
+            storage.save();
+        }
+        return;
+    }
+
     in.bouncedBody.skipBouncedPrefix();
 
     val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
@@ -210,6 +225,7 @@ fun onInternalMessage(in: InMessage) {
                     tokenMinter: storage.minterAddress,
                     deployer: storage.deployer,
                 };
+                assert (in.valueCoins >= grams("0.85")) throw Errors.NotEnoughGas;
                 val mintMsg = createMessage({
                     bounce: BounceMode.RichBounce,
                     value: grams("0.75"),

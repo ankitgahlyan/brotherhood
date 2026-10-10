@@ -56,6 +56,7 @@ fun onInternalMessage(in: InMessage): void {
             ).calculateAddress();
             assert (in.senderAddress == expectedWallet) throw Errors.IncorrectSender;
 
+            assert (store.totalAccounts > 0) throw Errors.ProposalPendingAccounts;
             assert (!store.executed) throw Errors.ProposalNotFound;
             assert (blockchain.now() < store.expiresAt) throw Errors.ProposalExpired;
 
@@ -68,9 +69,13 @@ fun onInternalMessage(in: InMessage): void {
             } else if (msg.oldVote != msg.newVote) {
                 if (msg.newVote) {
                     store.yesVotes += 1;
-                    store.noVotes -= 1;
+                    if (store.noVotes > 0) {
+                        store.noVotes -= 1;
+                    }
                 } else {
-                    store.yesVotes -= 1;
+                    if (store.yesVotes > 0) {
+                        store.yesVotes -= 1;
+                    }
                     store.noVotes += 1;
                 }
             }
@@ -89,20 +94,19 @@ fun onInternalMessage(in: InMessage): void {
                     proposalId: msg.proposalId,
                     vote: msg.newVote,
                     voterOwner: msg.voterOwner,
+                    expiresAt: store.expiresAt,
                 },
             });
             voterMsg.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
 
-            val threshold: uint33 = store.totalAccounts == 0
-                ? 1
-                : (store.totalAccounts * 2 + 2) / 3;
+            val threshold: uint33 = (store.totalAccounts * 2 + 2) / 3;
 
             if (store.yesVotes >= threshold && !store.executed) {
                 store.executed = true;
 
                 val execMsg = createMessage({
                     bounce: BounceMode.NoBounce,
-                    value: 0,
+                    value: grams("0.1"),
                     dest: addrs.daoProxyAddress,
                     body: ExecuteDaoProposal {
                         queryId: msg.queryId,
@@ -113,10 +117,9 @@ fun onInternalMessage(in: InMessage): void {
                         targetMsg: store.targetMsg,
                     },
                 });
-                // safety:
+                // safety: do not destroy poll yet so vote bounces can be handled; destroyed on cleanup
                 execMsg.send(
-                    SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL |
-                        SEND_MODE_DESTROY,
+                    SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL,
                 );
             }
 
@@ -125,6 +128,7 @@ fun onInternalMessage(in: InMessage): void {
 
         CleanupProposalVotes => {
             assert (in.senderAddress == addrs.proposerOwner) throw Errors.IncorrectSender;
+            assert (blockchain.now() >= store.expiresAt) throw Errors.WaitMore;
 
             val excessesMsg = createMessage({
                 bounce: BounceMode.NoBounce,

@@ -2,6 +2,7 @@ import "@stdlib/tvm-lowlevel"
 
 import "@contracts/common/errors"
 import "@contracts/common/messages"
+import "@contracts/location/fees-management"
 import "@contracts/location/location-utils"
 
 type AllowedMessageToLocation =
@@ -34,6 +35,7 @@ fun onInternalMessage(in: InMessage): void {
             }
 
             if (msg.sendExcessesTo != null) {
+                reserveForLocationBalance(in.valueCoins);
                 val retMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: msg.sendExcessesTo,
@@ -59,6 +61,7 @@ fun onInternalMessage(in: InMessage): void {
             }
 
             if (msg.sendExcessesTo != null) {
+                reserveForLocationBalance(in.valueCoins);
                 val retMsg = createMessage({
                     bounce: BounceMode.NoBounce,
                     dest: msg.sendExcessesTo,
@@ -89,7 +92,8 @@ fun onInternalMessage(in: InMessage): void {
                     // SAFETY: updating continuation register C3 for new code
                     setTvmRegisterC3(transformSliceToContinuation(msg.newCode.beginParse()));
                 }
-                hotUpgradeLocationData(msg.newData);
+                store.save();
+                return;
             }
         }
 

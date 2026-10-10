@@ -87,7 +87,7 @@ fun onInternalMessage(in: InMessage) {
                         followerOwner: msg.initiator,
                     },
                 });
-                revFollower.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_IGNORE_ERRORS);
+                revFollower.send(SEND_MODE_PAY_FEES_SEPARATELY | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
 
                 val revFollowee = createMessage({
                     bounce: BounceMode.NoBounce,
@@ -100,7 +100,7 @@ fun onInternalMessage(in: InMessage) {
                     },
                 });
                 // SAFETY: refund remaining balance to followee when reverting
-                revFollowee.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+                revFollowee.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
                 return;
             }
 

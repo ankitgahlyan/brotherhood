@@ -29,12 +29,13 @@ fun onInternalMessage(in: InMessage): void {
 
             store.voted = true;
             store.vote = msg.vote;
+            store.expiresAt = msg.expiresAt;
             store.save();
         }
 
         CleanupProposalVotes => {
             assert (in.senderAddress == store.voterOwner) throw Errors.IncorrectSender;
-            // todo: fixme: release some fi funds to encourage housekeeping and add time guard to not destroy before Poll ends otherwise someone will vote delete vote repeat for infinite vote glitch
+            assert (blockchain.now() >= store.expiresAt) throw Errors.WaitMore;
             destroyContract(store.voterOwner);
         }
 

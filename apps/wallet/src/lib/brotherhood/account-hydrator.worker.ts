@@ -36,19 +36,21 @@ import type { WalletV5Config } from '@ton/walletkit';
 import { serializeForStorage } from './contract-serialization';
 
 export const CONTRACT_CODE_HASHES = {
-  fiWallet: 'xuwiUs8ChQIlWb8KCITEV9KSGKs3O9JkZUmvL6r8QtI=',
-  fiMinter: 'g2RA6ySzasxk+oWOvZBgiGOFNr7TSmIm8MmNAlHVAM4=',
-  personalMinter: 'vrWIUTVTC80Q8mA99z5LlTWWMxkNkv9uOH/47KsbzOk=',
-  personalWallet: 'j+OzGVH4KXxxviEsa0QH9oKyzLoMR6aTEl5JmD1HONU=',
-  location: 'a+VjihVq3hagTGhnUOf7HBS14S4w9KCe9ocolrfxx/E=',
-  lottery: 'HHh95xA0sDcOowpVnyULcDbZczqe0zk2oAw8x+ulo9M=',
-  poll: 'XECcPFmvdBODJApBlQTvvvUxjHqt3iB5Rb6E0aikhME=',
-  daoProxy: 'g3MHt1CZpvfXtmvgFvJoxNFzhdoeDAVu3v02EZ0hNOQ=',
-  following: 'Y5t8oXamAtEW/WbYYTFq49JLrzERsVkna1KNok64AFM=',
-  voter: 'Fx+PYZGBMbl0wYpgIYRnJ7S2FLPnBZMdbc1dK35Lymg=',
+  fiWallet: 'DVLt+9f0OV9Cf7LletkLnCJE1lnVbjDuXDI45D3skaI=',
+  fiMinter: 'yocE383wCxoENVGNuIQcAwtcX0GTMw+w2l0NUU4hP8w=',
+  personalMinter: 'EzvGbHqtaRlRF7iIc7FCHrcdw90bP2cYfjXll/QciMA=',
+  personalWallet: 'OvIHYd4bYSQ7tP0raFlRW34t9QpUDzir69N38xo10iw=',
+  location: 'NbBSDLJ39Ue29f0vGvpfVPoxhchn24A4bx0XdltuCik=',
+  lottery: 'gQLndLDREuz3pzWMoUn+7SHsEvCM5gSHBqfxIWv8ANw=',
+  poll: 'jf1Y+Q9I6ORMnh7nYrVJL1ZDL+plTXOtuj8L8SJmWQQ=',
+  daoProxy: 'dELoQ/QwyEK1ledytk27GT+vnN/jvO3irAF4UpmKAPs=',
+  following: 'DqMHKQJwWj2v1JcGrlQ1HgubJ11pBM3MN7pR84mY9IQ=',
+  voter: 'WrWUmrtc8WqjW0B6ajFQRwJ+8+rXOGYwQrlYGZci6vw=',
   walletV5R1: 'IINLe3KxEhR+Gy+0V7hOdNGjDwT3N9T2KmaOlVLSty8=',
-  locationCredit: '+sh2LVZLi+j5nM7nOQXVg8KDRcjRm83AHHRiiiIl+VQ=',
+  locationCredit: 's1HlVefd88ASMpbGZn9e39z39Z2e/iLQhQ+gvVNcjAs=',
   creditProxy: '/h5oT/f02kqveyQqHa338T4qF3utHynCIY4oeviS0Mw=',
+  dnsCollection: '3YvkjjV31F5w7ANvm52xce9gWnA2CLDOPk/15oLFRXQ=',
+  dnsItem: '2BknC+fMaELo9B9ir2XQwJZSc0aPlEpQddn0xU3TYCU=',
 } as const;
 
 export type KnownContractType =
@@ -64,7 +66,9 @@ export type KnownContractType =
   | 'fiMinter'
   | 'walletV5R1'
   | 'locationCredit'
-  | 'creditProxy';
+  | 'creditProxy'
+  | 'dnsCollection'
+  | 'dnsItem';
 
 export function normalizeCodeHash(hash?: string | null): string {
   if (!hash) return '';
@@ -335,7 +339,20 @@ export function deserializeFollowingDataBoc(
 export function deserializeVoterDataBoc(dataBoc: string): VoterStore | null {
   try {
     const cell = Cell.fromBase64(dataBoc);
-    return VoterStore.fromSlice(cell.beginParse());
+    const slice = cell.beginParse();
+    const voterOwner = slice.loadAddress();
+    const pollAddress = slice.loadAddress();
+    const voted = slice.loadBoolean();
+    const vote = slice.loadBoolean();
+    const expiresAt = slice.remainingBits >= 32 ? slice.loadUintBig(32) : 0n;
+    return {
+      $: 'VoterStore',
+      voterOwner,
+      pollAddress,
+      voted,
+      vote,
+      expiresAt,
+    };
   } catch {
     return null;
   }
