@@ -26,13 +26,75 @@ const MAX_L1_CONTRACT_ENTRIES = 500;
 const MAX_L1_METADATA_ENTRIES = 500;
 const MAX_L1_ADDRESS_BOOK_ENTRIES = 500;
 
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import type { FiStore } from '@wrappers/FossFi.gen';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
+import type { LocationStore } from '@wrappers/Location.gen';
+import type { LocationCreditStore } from '@wrappers/LocationCredit.gen';
+import type { CreditProxyStore } from '@wrappers/CreditProxy.gen';
+import type { LotteryStorage } from '@wrappers/Lottery.gen';
+import type { PollStore } from '@wrappers/Poll.gen';
+import type { DaoProxyStore } from '@wrappers/DaoProxy.gen';
+import type { FollowingStore } from '@wrappers/Following.gen';
+import type { VoterStore } from '@wrappers/Voter.gen';
+import type { WalletV5Config } from '@ton/walletkit';
+import type { BroCollectionState, ParsedDnsItemState } from '@/core/lib/dns';
+
+export type BrotherhoodContractStore =
+  | FiWalletStore
+  | FiStore
+  | PersonalStore
+  | PersonalWalletStore
+  | LocationStore
+  | LocationCreditStore
+  | CreditProxyStore
+  | LotteryStorage
+  | PollStore
+  | DaoProxyStore
+  | FollowingStore
+  | VoterStore
+  | WalletV5Config
+  | BroCollectionState
+  | ParsedDnsItemState;
+
+export function isFiWalletStore(data: unknown): data is FiWalletStore {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Partial<FiWalletStore> & { addresses?: any; maps?: any };
+  return (
+    d.$ === 'FiWalletStore' ||
+    Boolean(d.addresses?.ref?.owner ?? d.addresses?.owner) ||
+    Boolean(d.maps?.ref?.invited)
+  );
+}
+
+export function isPersonalWalletStore(
+  data: unknown,
+): data is PersonalWalletStore {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Partial<PersonalWalletStore>;
+  return d.$ === 'PersonalWalletStore' || Boolean(d.owner && d.minterAddress);
+}
+
+export function isFiStore(data: unknown): data is FiStore {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Partial<FiStore>;
+  return d.$ === 'FiStore' || Boolean(d.adminAddress && d.others);
+}
+
+export function isPersonalStore(data: unknown): data is PersonalStore {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Partial<PersonalStore>;
+  return d.$ === 'PersonalStore' || Boolean(d.adminAddress && d.codes);
+}
+
 export interface CacheEntryMeta {
   codeHash?: string;
   balance?: string;
   status?: string;
 }
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = BrotherhoodContractStore> {
   key: string;
   data: T;
   timestamp: number;
@@ -54,7 +116,7 @@ export interface AddressBookEntry {
 }
 
 // In-Memory L1 Cache (ultra-fast 0ms reads, eliminates redundant IDB & JSON serialization on main thread)
-const memoryContractCache = new Map<string, CacheEntry>();
+const memoryContractCache = new Map<string, CacheEntry<any>>();
 const memoryMetadataCache = new Map<string, MetadataEntry>();
 const memoryAddressBookCache = new Map<string, AddressBookEntry>();
 let lastKnownGlobalFetchTime: number | null = null;
@@ -164,7 +226,7 @@ export async function flushPendingDbWrites(): Promise<void> {
           codeHash: val.codeHash,
           balance: val.balance,
           status: val.status,
-        } satisfies CacheEntry);
+        } satisfies CacheEntry<string>);
       }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -371,9 +433,9 @@ export async function getAddressBookCache(
   }
 }
 
-export async function setContractCache(
+export async function setContractCache<T = BrotherhoodContractStore>(
   key: string,
-  data: any,
+  data: T,
   meta?: CacheEntryMeta,
 ): Promise<void> {
   const timestamp = Date.now();
@@ -466,7 +528,7 @@ export function notifyCacheUpdated(
   }
 }
 
-export async function getContractCache<T = any>(
+export async function getContractCache<T = BrotherhoodContractStore>(
   key: string,
 ): Promise<{
   data: T;
@@ -660,7 +722,7 @@ export async function invalidateContractCache(
   broadcastBus.post('contract_cache_invalidated', { key });
 }
 
-export function getContractCacheSync<T = any>(
+export function getContractCacheSync<T = BrotherhoodContractStore>(
   key: string,
 ): {
   data: T;
@@ -744,7 +806,7 @@ if (typeof window !== 'undefined') {
   preloadContractCacheFromDb().catch(() => {});
 }
 
-export function useContractState<T = any>(
+export function useContractState<T = BrotherhoodContractStore>(
   contractAddress: Address | string | null | undefined,
   net: string = 'testnet',
 ): {

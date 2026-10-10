@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import { Address } from '@ton/core';
 import { useFormatAddress, formatTonAddress } from '@/core/utils/formatters';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
 export interface RingInviteeEntry {
   address: Address;
@@ -43,7 +44,7 @@ export function useRingInvitees(
     return circleMemberAddress;
   }, [circleMemberAddress]);
 
-  const { data: store, isLoading } = useContractState<any>(
+  const { data: store, isLoading } = useContractState<FiWalletStore>(
     enabled ? parsedAddress : null,
     net,
   );

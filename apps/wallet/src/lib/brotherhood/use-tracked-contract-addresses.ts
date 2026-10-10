@@ -13,6 +13,10 @@ import {
   type UniversalHydrateResult,
 } from './account-state-hydrator';
 import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import {
+  isFiWalletStore,
+  type BrotherhoodContractStore,
+} from './contract-cache';
 
 export function normalizeAddressString(addr: Address | string): string {
   try {
@@ -26,7 +30,14 @@ export function normalizeAddressString(addr: Address | string): string {
 /**
  * Extract invited, followed, inviter FiWallet addresses and h3Cell from a deserialized FiWallet store
  */
-export function extractInvitedAndLocationFromFiWallet(store: any): {
+export function extractInvitedAndLocationFromFiWallet(
+  store:
+    | BrotherhoodContractStore
+    | FiWalletStore
+    | Partial<FiWalletStore>
+    | null
+    | undefined,
+): {
   invited: string[];
   followed: string[];
   inviter: string | null;
@@ -38,7 +49,7 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
   let h3Cell: string | null = null;
 
   try {
-    if (store && (store.$ === 'FiWalletStore' || store.addresses?.ref?.owner)) {
+    if (store && isFiWalletStore(store)) {
       const fiStore = store as FiWalletStore;
       const dict = fiStore.maps?.ref?.invited;
       if (dict && typeof dict.keys === 'function') {
@@ -51,8 +62,9 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
         }
       }
 
+      const rawStore = store as any;
       const followedDict =
-        store.socialMaps?.ref?.followed ?? store.maps?.ref?.followed;
+        rawStore.socialMaps?.ref?.followed ?? rawStore.maps?.ref?.followed;
       if (followedDict && typeof followedDict.keys === 'function') {
         const keys = followedDict.keys();
         for (const k of keys) {
@@ -64,7 +76,10 @@ export function extractInvitedAndLocationFromFiWallet(store: any): {
       }
 
       const rawInviter =
-        store.addresses?.ref?.inviter ?? store.inviterAddress ?? null;
+        fiStore.addresses?.ref?.nomInAddrs?.ref?.invitor ??
+        rawStore.addresses?.ref?.inviter ??
+        rawStore.inviterAddress ??
+        null;
       if (rawInviter) {
         const invStr = normalizeAddressString(rawInviter);
         if (

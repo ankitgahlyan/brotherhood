@@ -17,7 +17,12 @@ import {
   getContractCache,
   getContractCacheSync,
   getNormalizedContractCacheKey,
+  isFiWalletStore,
+  isPersonalWalletStore,
 } from '@/lib/brotherhood/contract-cache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
 
 export interface TokenContractContext {
@@ -103,7 +108,7 @@ export async function deriveTokenWalletAddressOffchain({
         deployerAdmin = Address.parse(adminAddress);
       } else {
         const normKey = getNormalizedContractCacheKey(network, minter);
-        const cached = await getContractCache<any>(normKey);
+        const cached = await getContractCache<PersonalStore>(normKey);
         if (cached?.data?.adminAddress) {
           deployerAdmin = Address.parse(cached.data.adminAddress.toString());
         }
@@ -161,17 +166,21 @@ export async function detectAndResolveOwnerFromChildContract(
 
   // 1. Check cached contract data
   const normalizedKey = getNormalizedContractCacheKey(network, parsed);
-  let cached = getContractCacheSync<any>(normalizedKey);
+  let cached = getContractCacheSync<FiWalletStore | PersonalWalletStore>(
+    normalizedKey,
+  );
   if (!cached) {
-    cached = await getContractCache<any>(normalizedKey);
+    cached = await getContractCache<FiWalletStore | PersonalWalletStore>(
+      normalizedKey,
+    );
   }
 
   if (cached?.data) {
     const data = cached.data;
     // FiWalletStore check
-    if (data.$ === 'FiWalletStore' || data.addresses?.ref?.owner) {
+    if (isFiWalletStore(data)) {
       const ownerRaw =
-        data.addresses?.ref?.owner || data.addresses?.owner || null;
+        data.addresses?.ref?.owner || (data as any).addresses?.owner || null;
       if (ownerRaw) {
         const ownerStr =
           typeof ownerRaw.toString === 'function'
@@ -187,10 +196,7 @@ export async function detectAndResolveOwnerFromChildContract(
     }
 
     // PersonalWalletStore check
-    if (
-      data.$ === 'PersonalWalletStore' ||
-      (data.owner && data.minterAddress)
-    ) {
+    if (isPersonalWalletStore(data)) {
       const ownerRaw = data.owner || null;
       if (ownerRaw) {
         const ownerStr =

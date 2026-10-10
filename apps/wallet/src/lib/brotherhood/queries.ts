@@ -293,10 +293,7 @@ export function useIsContractDeployed(
   enabled = true,
   net: Network = defaultNetwork,
 ) {
-  const { data, isLoading } = useContractState<any>(
-    enabled ? address : null,
-    net,
-  );
+  const { data, isLoading } = useContractState(enabled ? address : null, net);
   return {
     data: Boolean(data),
     isLoading: enabled && isLoading,

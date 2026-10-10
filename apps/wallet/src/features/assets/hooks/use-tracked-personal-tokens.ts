@@ -29,6 +29,9 @@ import {
   getContractCache,
   setContractCache,
 } from '@/lib/brotherhood/contract-cache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
+import type { FiStore } from '@wrappers/FossFi.gen';
 
 export function useTrackedPersonalTokens(additionalMinters?: string[]) {
   const queryClient = useQueryClient();
@@ -152,14 +155,16 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
         seenRaw.add(rawKey);
 
         const cacheKey = getNormalizedContractCacheKey(network, minterAddr);
-        const minterCache = await getContractCache<any>(cacheKey);
+        const minterCache = await getContractCache<PersonalStore | FiStore>(
+          cacheKey,
+        );
         const data = minterCache?.data;
         const isPersonalMinter = Boolean(
           data?.adminAddress &&
-          (data?.fiJettonAddress || data?.issuerWallet || data?.metadataUri) &&
-          !data?.others,
+          ('fiJettonAddress' in data || 'codes' in data) &&
+          !('others' in data),
         );
-        if (isPersonalMinter) {
+        if (isPersonalMinter && data?.adminAddress) {
           try {
             const walletAddr = computePersonalWalletAddress(
               minterAddr,
@@ -181,7 +186,8 @@ export function useTrackedPersonalTokens(additionalMinters?: string[]) {
             network,
             walletAddr,
           );
-          const walletCache = await getContractCache<any>(walletCacheKey);
+          const walletCache =
+            await getContractCache<PersonalWalletStore>(walletCacheKey);
           const balance = walletCache?.data?.jettonBalance ?? 0n;
 
           const meta = await fetchPersonalTokenMetadata(minterAddr);

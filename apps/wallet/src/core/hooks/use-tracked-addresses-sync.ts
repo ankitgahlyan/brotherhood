@@ -46,6 +46,8 @@ import { getBroCollectionSyncCandidates } from '@/features/dns/hooks/use-my-doma
 import { purgeLegacyTrackedAddressesStorage } from '@/lib/brotherhood/clean-legacy-storage';
 import { autoFundUnderfundedFiWallets } from '@/features/brotherhood/hooks/use-auto-fiwallet-funding';
 import { Address, Cell } from '@ton/core';
+import type { FiStore } from '@wrappers/FossFi.gen';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
 /**
  * Top-level hook to manage tracked contract addresses lifecycle in bro-store:
@@ -173,7 +175,7 @@ export function useTrackedAddressesSync() {
         // FI Admin FiWallet & PersonalMinter (from cached FiStore.adminAddress or fallback BRO_TREASURY_ADDRESS)
         let cachedAdminOwner: Address | null = null;
         try {
-          const cachedFiMinter = getContractCacheSync<any>(
+          const cachedFiMinter = getContractCacheSync<FiStore>(
             getNormalizedContractCacheKey(defaultNetwork, FI_ADDRESS),
           )?.data;
           if (
@@ -199,7 +201,7 @@ export function useTrackedAddressesSync() {
               defaultNetwork,
             );
             addContract(adminFiWallet);
-            const cachedAdminFiStore = getContractCacheSync<any>(
+            const cachedAdminFiStore = getContractCacheSync<FiWalletStore>(
               getNormalizedContractCacheKey(defaultNetwork, adminFiWallet),
             )?.data;
             const minterCandidate =
@@ -228,7 +230,7 @@ export function useTrackedAddressesSync() {
             addContract(fiWallet);
             setAssociatedAddresses(wallet.address, [fiWallet.toString()]);
 
-            const cachedSelfFiStore = getContractCacheSync<any>(
+            const cachedSelfFiStore = getContractCacheSync<FiWalletStore>(
               getNormalizedContractCacheKey(defaultNetwork, fiWallet),
             )?.data;
             if (cachedSelfFiStore) {
@@ -571,7 +573,7 @@ export function useTrackedAddressesSync() {
 
             const decodedAdminFiStore =
               findDecodedStore(res.decodedStores, normAdminFiWallet) ??
-              getContractCacheSync<any>(
+              getContractCacheSync<FiWalletStore>(
                 getNormalizedContractCacheKey(defaultNetwork, adminFiWallet),
               )?.data;
             const minterCandidate =

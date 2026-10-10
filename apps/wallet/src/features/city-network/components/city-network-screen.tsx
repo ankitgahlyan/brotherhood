@@ -44,6 +44,7 @@ import { useFiAccount } from '@/features/brotherhood/hooks/use-fi-account';
 import { useMemberProfiles } from '@/features/brotherhood/hooks/use-member-profiles';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
+import type { LocationStore } from '@wrappers/Location.gen';
 import {
   getOnChainCachedUsername,
   getEffectiveUsername,
@@ -60,7 +61,7 @@ const TrackedLocationItem: React.FC<{
   onUnwatch: (address: string) => void;
   formatContractAddress: (addr: string) => string;
 }> = ({ locationAddress, onInspect, onUnwatch, formatContractAddress }) => {
-  const contractState = useContractState(locationAddress);
+  const contractState = useContractState<LocationStore>(locationAddress);
   const locationData = contractState?.data;
   const h3Cell = locationData?.h3Cell || '';
   const memberCount =

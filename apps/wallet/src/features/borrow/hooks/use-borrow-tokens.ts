@@ -26,6 +26,7 @@ import {
   usePersonalMinterDetails,
 } from '@/lib/brotherhood/queries';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 import { resolveBroDomainContact } from '@/core/lib/dns';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
 import { assetUrl } from '@/core/utils';
@@ -152,7 +153,7 @@ export function useBorrowTokens(network: Network) {
     }
   }, [treasuryMinterAddr, userOwnerAddress, treasuryOwnerAddress]);
 
-  const reserveUserWalletState = useContractState<any>(
+  const reserveUserWalletState = useContractState<PersonalWalletStore>(
     reserveUserWalletAddressObj,
     currentNetwork,
   );
@@ -227,7 +228,7 @@ export function useBorrowTokens(network: Network) {
     return null;
   }, [selectedTokenId, searchedToken, pinnedEntries, userOwnerAddress]);
 
-  const activeCustomWalletState = useContractState<any>(
+  const activeCustomWalletState = useContractState<PersonalWalletStore>(
     activeCustomWalletAddrObj,
     currentNetwork,
   );

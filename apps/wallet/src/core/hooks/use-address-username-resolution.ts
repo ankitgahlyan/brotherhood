@@ -18,7 +18,9 @@ import {
 import {
   getContractCacheSync,
   getNormalizedContractCacheKey,
+  type BrotherhoodContractStore,
 } from '@/lib/brotherhood/contract-cache';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import {
   getCachedAddressByUsername,
   getAllUsernames,
@@ -110,12 +112,25 @@ export interface UseAddressUsernameResolutionResult {
   applyChildContractCorrection: () => void;
 }
 
-function extractUsernameFromState(state: any): string | null {
-  if (!state) return null;
+function extractUsernameFromState(
+  state:
+    | BrotherhoodContractStore
+    | FiWalletStore
+    | Partial<FiWalletStore>
+    | null
+    | undefined,
+): string | null {
+  if (!state || typeof state !== 'object') return null;
+  const s = state as Partial<FiWalletStore> & {
+    profile?: {
+      ref?: { username?: string; profile?: { username?: string } };
+      username?: string;
+    };
+  };
   const username =
-    state.profile?.ref?.username ??
-    state.profile?.username ??
-    state.profile?.ref?.profile?.username;
+    s.profile?.ref?.username ??
+    s.profile?.username ??
+    s.profile?.ref?.profile?.username;
   if (typeof username === 'string' && username.trim().length > 0) {
     return username.trim().replace(/^@+/, '');
   }
@@ -213,7 +228,7 @@ export function useAddressUsernameResolution({
         // Try offchain FiWallet address cache
         const offchainFiWallet = getFiWalletAddress(parsed, net);
         const cacheKey = getNormalizedContractCacheKey(net, offchainFiWallet);
-        const cachedEntry = getContractCacheSync<any>(cacheKey);
+        const cachedEntry = getContractCacheSync<FiWalletStore>(cacheKey);
         const uname = extractUsernameFromState(cachedEntry?.data);
         if (uname) {
           queueMicrotask(() => {
@@ -224,12 +239,10 @@ export function useAddressUsernameResolution({
 
         // Also check if trimmed is already a direct FiWallet address
         const directKey = getNormalizedContractCacheKey(net, parsed);
-        const directEntry = getContractCacheSync<any>(directKey);
+        const directEntry = getContractCacheSync<FiWalletStore>(directKey);
         const directUname = extractUsernameFromState(directEntry?.data);
         if (directUname) {
-          const directOwner =
-            directEntry?.data?.addresses?.ref?.owner ??
-            directEntry?.data?.addresses?.owner;
+          const directOwner = directEntry?.data?.addresses?.ref?.owner;
           if (directOwner) {
             const ownerStr =
               typeof directOwner.toString === 'function'

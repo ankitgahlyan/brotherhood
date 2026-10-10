@@ -9,6 +9,7 @@
 import { useMemo, useEffect } from 'react';
 import { Address } from '@ton/core';
 import type { DaoProxyStore } from '@wrappers/DaoProxy.gen';
+import type { PollStore } from '@wrappers/Poll.gen';
 import { network } from '@/lib/brotherhood/config';
 import {
   useContractState,
@@ -65,7 +66,9 @@ export function useProposals(addressString: string | null): UseProposalsResult {
     };
   }, [cleanAddr]);
 
-  const { data: store, isLoading } = useContractState<any>(cleanAddr, network);
+  const { data: store, isLoading } = useContractState<
+    PollStore | DaoProxyStore
+  >(cleanAddr, network);
 
   const result = useMemo<UseProposalsResult>(() => {
     if (!store) {
@@ -80,7 +83,12 @@ export function useProposals(addressString: string | null): UseProposalsResult {
     }
 
     // Check if store is PollStore
-    if (store.$ === 'PollStore' || store.proposalId !== undefined) {
+    if (store.$ === 'PollStore') {
+      const addrs = store.addresses?.ref;
+      const proposer = addrs?.proposerOwner ?? (store as any).proposerOwner;
+      const daoProxy = addrs?.daoProxyAddress ?? (store as any).daoProxyAddress;
+      const fiAddr = addrs?.fiAddress ?? (store as any).fiAddress;
+
       return {
         totalAccounts: store.totalAccounts ?? null,
         proposalCount: 1n,
@@ -88,16 +96,14 @@ export function useProposals(addressString: string | null): UseProposalsResult {
         proposals: [
           {
             id: store.proposalId ? store.proposalId.toString() : '0',
-            proposer: store.proposerOwner ? store.proposerOwner.toString() : '',
+            proposer: proposer ? proposer.toString() : '',
             yesVotes: store.yesVotes ?? 0n,
             noVotes: store.noVotes ?? 0n,
             totalAccounts: store.totalAccounts ?? 0n,
             deadline: store.expiresAt ? Number(store.expiresAt) : 0,
             executed: Boolean(store.executed),
-            daoProxyAddress: store.daoProxyAddress
-              ? store.daoProxyAddress.toString()
-              : '',
-            fiAddress: store.fiAddress ? store.fiAddress.toString() : '',
+            daoProxyAddress: daoProxy ? daoProxy.toString() : '',
+            fiAddress: fiAddr ? fiAddr.toString() : '',
           },
         ],
         isLoading: false,

@@ -79,6 +79,8 @@ import {
   normalizeCodeHash,
 } from '@/lib/brotherhood/account-hydrator.worker';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 import {
   buildRequestUpgradeBody,
   buildPersonalUpgradeBody,
@@ -253,8 +255,11 @@ export const PersonalJettonScreen: React.FC = () => {
     }
   }, [activePersonalWallet]);
 
-  const minterCachedState = useContractState<any>(activeMinterAddress, network);
-  const walletCachedState = useContractState<any>(
+  const minterCachedState = useContractState<PersonalStore>(
+    activeMinterAddress,
+    network,
+  );
+  const walletCachedState = useContractState<PersonalWalletStore>(
     activePersonalWalletAddress,
     network,
   );

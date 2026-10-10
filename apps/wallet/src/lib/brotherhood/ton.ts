@@ -2,7 +2,15 @@ import { TonClient } from '@ton/ton';
 import { Address } from '@ton/core';
 import { QueryClient } from '@tanstack/react-query';
 import { FI_ADDRESS, network, type Network } from './config';
-import { FossFiWallet, type PocketMoney } from '@wrappers/FossFiWallet.gen';
+import {
+  FossFiWallet,
+  type PocketMoney,
+  type FiWalletStore,
+} from '@wrappers/FossFiWallet.gen';
+import type { FiStore } from '@wrappers/FossFi.gen';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
+import type { WalletV5Config } from '@ton/walletkit';
 import { BaseFiWallet } from '@wrappers';
 import {
   rateLimitedFetch,
@@ -13,6 +21,7 @@ import { testnetRpcManager } from './testnet-rpc-manager';
 import {
   getContractCache,
   getNormalizedContractCacheKey,
+  isFiWalletStore,
 } from './contract-cache';
 import { computePersonalWalletAddress } from './account-state-hydrator';
 
@@ -186,7 +195,7 @@ export async function checkIsContractDeployed(
   net: Network = network,
 ): Promise<boolean> {
   const normalizedKey = getNormalizedContractCacheKey(net, address);
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache(normalizedKey);
   return Boolean(cached && cached.data);
 }
 
@@ -334,21 +343,17 @@ export async function getFiWalletStateByContractAddress(
   const normalizedKey = getNormalizedContractCacheKey(net, contractAddress);
 
   if (!options.forceFresh) {
-    const cached = await getContractCache<any>(normalizedKey);
+    const cached = await getContractCache<FiWalletStore | WalletV5Config>(
+      normalizedKey,
+    );
     if (cached !== null) {
       if (cached.data) {
         // If cached data is a FiWallet, return it
-        if (
-          cached.data.$ === 'FiWalletStore' ||
-          cached.data.addresses?.ref?.owner
-        ) {
+        if (isFiWalletStore(cached.data)) {
           return cached.data as FiWalletStateData;
         }
         // If the address is an owner wallet (e.g. WalletV5R1), redirect to its off-chain computed FiWallet
-        if (
-          cached.data.signatureAllowed !== undefined ||
-          cached.data.walletId !== undefined
-        ) {
+        if ('signatureAllowed' in cached.data || 'walletId' in cached.data) {
           const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
           return getFiWalletStateByContractAddress(
             actualFiWalletAddr,
@@ -368,19 +373,15 @@ export async function getFiWalletStateByContractAddress(
     const { batchHydrateUniversal } = await import('./account-state-hydrator');
     // Let batchHydrateUniversal auto-detect the true contract type by bytecode hash
     hydrateResult = await batchHydrateUniversal([contractAddress], net);
-    const hydrated = await getContractCache<any>(normalizedKey);
+    const hydrated = await getContractCache<FiWalletStore | WalletV5Config>(
+      normalizedKey,
+    );
     if (hydrated && hydrated.data) {
-      if (
-        hydrated.data.$ === 'FiWalletStore' ||
-        hydrated.data.addresses?.ref?.owner
-      ) {
+      if (isFiWalletStore(hydrated.data)) {
         return hydrated.data as FiWalletStateData;
       }
       // If the address turned out to be an owner wallet, redirect to its FiWallet
-      if (
-        hydrated.data.signatureAllowed !== undefined ||
-        hydrated.data.walletId !== undefined
-      ) {
+      if ('signatureAllowed' in hydrated.data || 'walletId' in hydrated.data) {
         const actualFiWalletAddr = getFiWalletAddress(contractAddress, net);
         return getFiWalletStateByContractAddress(
           actualFiWalletAddr,
@@ -403,7 +404,7 @@ export async function getFiWalletStateByContractAddress(
     hydrateResult?.outdatedAccounts?.includes(addrString) ||
     hydrateResult?.failedAddresses?.includes(addrString)
   ) {
-    const cached = await getContractCache<any>(normalizedKey);
+    const cached = await getContractCache<FiWalletStore>(normalizedKey);
     if (cached?.data) {
       return cached.data as FiWalletStateData;
     }
@@ -412,7 +413,7 @@ export async function getFiWalletStateByContractAddress(
     );
   }
 
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache<FiWalletStore>(normalizedKey);
   return (cached?.data as FiWalletStateData) ?? null;
 }
 
@@ -421,7 +422,7 @@ export async function getFiMinterState() {
   const normalizedKey = getNormalizedContractCacheKey(network, minterAddr);
 
   // Check normalized cache first
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache<FiStore>(normalizedKey);
   if (cached && cached.data) {
     return cached.data;
   }
@@ -432,7 +433,7 @@ export async function getFiMinterState() {
     await batchHydrateUniversal([minterAddr], network, {
       knownTypes: { [minterAddr.toString()]: 'fiMinter' },
     });
-    const hydrated = await getContractCache<any>(normalizedKey);
+    const hydrated = await getContractCache<FiStore>(normalizedKey);
     if (hydrated && hydrated.data) {
       return hydrated.data;
     }
@@ -440,7 +441,7 @@ export async function getFiMinterState() {
     console.debug('[getFiMinterState] in-memory batch hydration skipped:', err);
   }
 
-  const finalCached = await getContractCache<any>(normalizedKey);
+  const finalCached = await getContractCache<FiStore>(normalizedKey);
   return finalCached?.data ?? null;
 }
 
@@ -628,7 +629,7 @@ export async function getPersonalWalletAddress(
 
   // Fast off-chain derivation if minter store is in cache
   const normalizedKey = getNormalizedContractCacheKey(net, personalMinter);
-  const minterCache = await getContractCache<any>(normalizedKey);
+  const minterCache = await getContractCache<PersonalStore>(normalizedKey);
   const adminAddress = minterCache?.data?.adminAddress;
   if (adminAddress) {
     try {
@@ -662,7 +663,7 @@ export async function getPersonalWalletBalance(
     const walletAddr = await getPersonalWalletAddress(personalMinter, owner);
     if (!walletAddr || isZeroAddress(walletAddr)) return 0n;
     const normalizedKey = getNormalizedContractCacheKey(network, walletAddr);
-    const cached = await getContractCache<any>(normalizedKey);
+    const cached = await getContractCache<PersonalWalletStore>(normalizedKey);
     return cached?.data?.jettonBalance ?? 0n;
   } catch {
     return 0n;
@@ -672,9 +673,9 @@ export async function getPersonalWalletBalance(
 export async function getFiMinterTotalAccounts(): Promise<bigint> {
   const minterAddr = Address.parse(FI_ADDRESS);
   const normalizedKey = getNormalizedContractCacheKey(network, minterAddr);
-  const cached = await getContractCache<any>(normalizedKey);
-  if (cached?.data?.totalAccounts !== undefined) {
-    return BigInt(cached.data.totalAccounts);
+  const cached = await getContractCache<FiStore>(normalizedKey);
+  if (cached?.data?.totalSupply !== undefined) {
+    return BigInt(cached.data.totalSupply);
   }
   return 0n;
 }
@@ -700,12 +701,13 @@ export async function getPersonalMinterDetails(
   if (isZeroAddress(personalMinter)) return null;
 
   const normalizedKey = getNormalizedContractCacheKey(network, personalMinter);
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache<PersonalStore>(normalizedKey);
   if (cached?.data?.adminAddress) {
     const { parseOnchainMetadataCell } = await import('./jettonContent');
     return {
       totalSupply: cached.data.totalSupply ?? 0n,
-      fiJettonAddress: cached.data.fiJettonAddress || cached.data.issuerWallet,
+      fiJettonAddress:
+        cached.data.fiJettonAddress || (cached.data as any).issuerWallet,
       adminAddress: cached.data.adminAddress,
       mintable: true,
       metadata: parseOnchainMetadataCell(cached.data.metadataUri),
@@ -725,12 +727,13 @@ export async function isPersonalMinterContract(
   }
 
   const normalizedKey = getNormalizedContractCacheKey(network, address);
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache<PersonalStore | FiStore>(normalizedKey);
   const data = cached?.data;
   return Boolean(
     data?.adminAddress &&
-    (data?.fiJettonAddress || data?.issuerWallet || data?.metadataUri) &&
-    !data?.others,
+    (('fiJettonAddress' in data && data.fiJettonAddress) ||
+      ('codes' in data && data.codes)) &&
+    !('others' in data),
   );
 }
 
@@ -741,7 +744,7 @@ export async function fetchPersonalTokenMetadata(
   try {
     // 1. Prefer live on-chain PersonalStore.metadataUri from hydrated BOC cache
     const normalizedKey = getNormalizedContractCacheKey(network, minterAddress);
-    const minterCached = await getContractCache<any>(normalizedKey);
+    const minterCached = await getContractCache<PersonalStore>(normalizedKey);
     if (minterCached?.data?.metadataUri) {
       const { parseOnchainMetadataCell } = await import('./jettonContent');
       const onchain = parseOnchainMetadataCell(minterCached.data.metadataUri);
@@ -783,7 +786,7 @@ export async function isPersonalWalletContract(
 ): Promise<{ owner: Address; minterAddress: Address; balance: bigint } | null> {
   if (isZeroAddress(address)) return null;
   const normalizedKey = getNormalizedContractCacheKey(network, address);
-  const cached = await getContractCache<any>(normalizedKey);
+  const cached = await getContractCache<PersonalWalletStore>(normalizedKey);
   if (cached?.data && cached.data.owner && cached.data.minterAddress) {
     return {
       owner: cached.data.owner,

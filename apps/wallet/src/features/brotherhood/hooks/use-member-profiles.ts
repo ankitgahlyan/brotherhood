@@ -15,7 +15,9 @@ import { brotherhoodSynchronizer } from '@/lib/brotherhood/synchronizer';
 import {
   getContractCache,
   getNormalizedContractCacheKey,
+  isFiWalletStore,
 } from '@/lib/brotherhood/contract-cache';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 import { getFiWalletAddress } from '@/lib/brotherhood/ton';
 import {
   getOnChainCachedUsername,
@@ -70,17 +72,13 @@ export function useMemberProfiles(
 
       // 1. Check local cache first (handling FiWallet, owner wallet redirects, and uninit accounts)
       const missingAddresses: string[] = [];
-      const cachedStores: Record<string, any> = {};
+      const cachedStores: Record<string, FiWalletStore | null | undefined> = {};
 
       for (const addrStr of addressStrings) {
         const normKey = getNormalizedContractCacheKey(net, addrStr);
-        const cached = await getContractCache<any>(normKey);
+        const cached = await getContractCache<FiWalletStore>(normKey);
         if (cached !== null) {
-          if (
-            cached.data &&
-            (cached.data.$ === 'FiWalletStore' ||
-              cached.data.addresses?.ref?.owner)
-          ) {
+          if (cached.data && isFiWalletStore(cached.data)) {
             cachedStores[addrStr] = cached.data;
             continue;
           }
@@ -94,13 +92,10 @@ export function useMemberProfiles(
               net,
               derivedFiWallet,
             );
-            const derivedCached = await getContractCache<any>(derivedKey);
+            const derivedCached =
+              await getContractCache<FiWalletStore>(derivedKey);
             if (derivedCached !== null) {
-              if (
-                derivedCached.data &&
-                (derivedCached.data.$ === 'FiWalletStore' ||
-                  derivedCached.data.addresses?.ref?.owner)
-              ) {
+              if (derivedCached.data && isFiWalletStore(derivedCached.data)) {
                 cachedStores[addrStr] = derivedCached.data;
               }
               continue;
@@ -138,7 +133,7 @@ export function useMemberProfiles(
             let store = cachedStores[addrStr];
             if (!store) {
               const normKey = getNormalizedContractCacheKey(net, addrStr);
-              const cached = await getContractCache<any>(normKey);
+              const cached = await getContractCache<FiWalletStore>(normKey);
               store = cached?.data;
             }
 

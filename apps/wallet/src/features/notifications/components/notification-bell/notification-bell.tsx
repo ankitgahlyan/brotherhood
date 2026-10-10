@@ -60,6 +60,8 @@ import {
   normalizeCodeHash,
 } from '@/lib/brotherhood/account-hydrator.worker';
 import { useContractState } from '@/lib/brotherhood/contract-cache';
+import type { PersonalStore } from '@wrappers/Personal.gen';
+import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 import type { Network } from '@/lib/brotherhood/config';
 
 import { isZeroAddress } from '@/lib/brotherhood/ton';
@@ -410,11 +412,11 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
 
   const notifKey = `personal-upgrade-${wallet.id}`;
   const walletNet = wallet.network ?? 'testnet';
-  const minterCachedState = useContractState<any>(
+  const minterCachedState = useContractState<PersonalStore>(
     personalMinterAddr,
     walletNet,
   );
-  const walletCachedState = useContractState<any>(
+  const walletCachedState = useContractState<PersonalWalletStore>(
     personalWalletAddr,
     walletNet,
   );

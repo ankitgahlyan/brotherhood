@@ -76,6 +76,7 @@ import {
 import { resolveRecipientPublicKey } from '@/core/storage/publicKeyCache';
 import type { PersonalStore } from '@wrappers/Personal.gen';
 import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
+import type { FiWalletStore } from '@wrappers/FossFiWallet.gen';
 
 export type EcosystemTokenKind = 'fi' | 'reserve' | 'personal';
 
@@ -219,7 +220,7 @@ export function useEcosystemSwap() {
     const out: string[] = [];
     for (const circleAddr of circleFiWalletAddrs) {
       try {
-        const cached = getContractCacheSync<any>(
+        const cached = getContractCacheSync<FiWalletStore>(
           getNormalizedContractCacheKey(net, circleAddr),
         );
         const invitedMap = cached?.data?.maps?.ref?.invited;
