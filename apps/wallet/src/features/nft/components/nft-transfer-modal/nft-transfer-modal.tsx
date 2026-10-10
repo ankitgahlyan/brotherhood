@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Address } from '@ton/core';
 import { isValidAddress, type NFT } from '@ton/walletkit';
-import { useWallet, useWalletKit } from '@demo/wallet-core';
+import { useWallet, useWalletKit, useWalletStoreApi } from '@demo/wallet-core';
 import { Flame, Send, AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   ModalContainer,
@@ -65,8 +65,8 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
 }) => {
   const { currentWallet, address, savedWallets, activeWalletId } = useWallet();
   const walletKit = useWalletKit();
+  const storeApi = useWalletStoreApi();
   const { explorer } = useExplorer();
-  const updateDomain = useDnsStore((s) => s.updateDomain);
   const removeDomain = useDnsStore((s) => s.removeDomain);
 
   const network = (savedWallets.find((w) => w.id === activeWalletId)?.network ??
@@ -126,11 +126,34 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
             payload,
           },
         ],
-        { affectedContracts: [nft.address] },
+        { affectedContracts: isBroDomain ? [nft.address] : [] },
       );
 
-      // If it was an owned .bro domain, mark as transferred
-      updateDomain(nft.address, { isOutdated: true }, network);
+      // If it was an owned .bro domain, remove it from owned domains and clear resolution caches
+      if (isBroDomain) {
+        removeDomain(nft.address, network);
+        clearDomainResolutionCache();
+        clearDomainLookupCache();
+      }
+
+      // Optimistically remove the transferred NFT from wallet state
+      storeApi.setState((state) => {
+        const filterList = (list: NFT[] = []) =>
+          list.filter((item) => item.address !== nft.address);
+        const updatedByAddress: Record<string, NFT[]> = {};
+        for (const [key, list] of Object.entries(
+          state.nfts.nftsByAddress || {},
+        )) {
+          updatedByAddress[key] = filterList(list);
+        }
+        return {
+          nfts: {
+            ...state.nfts,
+            userNfts: filterList(state.nfts.userNfts),
+            nftsByAddress: updatedByAddress,
+          },
+        };
+      });
 
       handleClose();
     } catch (e) {
@@ -141,8 +164,10 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
     effectiveRecipient,
     address,
     send,
-    updateDomain,
+    isBroDomain,
+    removeDomain,
     network,
+    storeApi,
     handleClose,
   ]);
 
@@ -183,15 +208,43 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
               payload,
             },
           ],
-          { affectedContracts: [nft.address] },
+          { affectedContracts: [] },
         );
       }
+
+      // Optimistically remove the burned NFT from wallet state
+      storeApi.setState((state) => {
+        const filterList = (list: NFT[] = []) =>
+          list.filter((item) => item.address !== nft.address);
+        const updatedByAddress: Record<string, NFT[]> = {};
+        for (const [key, list] of Object.entries(
+          state.nfts.nftsByAddress || {},
+        )) {
+          updatedByAddress[key] = filterList(list);
+        }
+        return {
+          nfts: {
+            ...state.nfts,
+            userNfts: filterList(state.nfts.userNfts),
+            nftsByAddress: updatedByAddress,
+          },
+        };
+      });
 
       handleClose();
     } catch (e) {
       console.warn('[NftTransferModal] burn error:', e);
     }
-  }, [nft, address, isBroDomain, send, removeDomain, network, handleClose]);
+  }, [
+    nft,
+    address,
+    isBroDomain,
+    send,
+    removeDomain,
+    network,
+    storeApi,
+    handleClose,
+  ]);
 
   if (!nft) return null;
 
@@ -264,7 +317,7 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
         {/* NFT Preview banner */}
         <div className="p-3 bg-secondary/50 border border-border rounded-2xl space-y-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+            <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted shrink-0">
               <FallbackImage
                 src={getNftImageSources(nft)}
                 alt={name}
@@ -351,7 +404,9 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
             {/* Gas disclosure */}
             <div className="flex items-center justify-between text-xs px-1 text-muted-foreground">
               <span>Network & Transfer Fee</span>
-              <span className="font-medium text-foreground">~0.08 TON</span>
+              <span className="font-medium text-foreground">
+                ~0.2 TON (Excess refunded)
+              </span>
             </div>
 
             {error && <p className="text-xs text-rose-500 px-1">{error}</p>}
@@ -396,7 +451,9 @@ export const NftTransferModal: React.FC<NftTransferModalProps> = ({
             <div className="flex items-center justify-between text-xs px-1 text-muted-foreground">
               <span>Network Fee</span>
               <span className="font-medium text-foreground">
-                {isBroDomain ? '~0.05 TON (Storage refunded)' : '~0.08 TON'}
+                {isBroDomain
+                  ? '~0.15 TON (Storage refunded)'
+                  : '~0.2 TON (Excess refunded)'}
               </span>
             </div>
 

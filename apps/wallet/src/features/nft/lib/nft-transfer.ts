@@ -12,8 +12,8 @@ import { BRO_COLLECTION_RESOLVER } from '@/lib/brotherhood/config';
 import { BRO_DEFAULT_DESCRIPTION, BRO_DEFAULT_IMAGE_URI } from '@/core/lib/dns';
 import type { OwnedDomain } from '@/features/dns/store/dns-store';
 
-export const NFT_TRANSFER_GAS = toNano('0.08');
-export const NFT_DESTROY_GAS = toNano('0.05');
+export const NFT_TRANSFER_GAS = toNano('0.2');
+export const NFT_DESTROY_GAS = toNano('0.15');
 
 function toRawAddr(addr?: string | null): string | null {
   if (!addr) return null;

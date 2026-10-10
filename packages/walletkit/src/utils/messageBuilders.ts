@@ -26,8 +26,8 @@ import { validateTransactionMessage } from '../validation';
 /** Default gas fee for jetton transfers (0.05 GRAM) */
 export const DEFAULT_JETTON_GAS_FEE = '50000000';
 
-/** Default gas fee for NFT transfers (0.1 GRAM) */
-export const DEFAULT_NFT_GAS_FEE = '100000000';
+/** Default gas fee for NFT transfers (0.2 GRAM) */
+export const DEFAULT_NFT_GAS_FEE = '200000000';
 
 /** Default forward amount for jetton/NFT transfers (1 nano unit) */
 export const DEFAULT_FORWARD_AMOUNT = 1n;
