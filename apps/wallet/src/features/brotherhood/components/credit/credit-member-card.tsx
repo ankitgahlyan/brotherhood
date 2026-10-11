@@ -28,7 +28,7 @@ export function formatFi(amountNano: bigint | undefined | null): string {
 export interface CreditMemberCardProps {
   profile: MemberProfileInfo;
   inviterUsername?: string;
-  degree?: 'circle' | 'ring';
+  degree?: 'circle' | 'ring' | 'location';
   onSendCredit: (ownerAddress: string, creditNeed: bigint) => void;
 }
 
@@ -125,10 +125,16 @@ export const CreditMemberCard: React.FC<CreditMemberCardProps> = ({
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
               degree === 'circle'
                 ? 'bg-primary/10 text-primary border-primary/20'
-                : 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400'
+                : degree === 'ring'
+                  ? 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400'
+                  : 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400'
             }`}
           >
-            {degree === 'circle' ? 'Circle (1st)' : 'Ring (2nd)'}
+            {degree === 'circle'
+              ? 'Circle (1st)'
+              : degree === 'ring'
+                ? 'Ring (2nd)'
+                : 'Location'}
           </span>
         </div>
       </div>

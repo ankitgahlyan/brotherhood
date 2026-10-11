@@ -9,4 +9,5 @@
 export * from './credit-member-card';
 export * from './circle-credit-list';
 export * from './ring-credit-list';
+export * from './location-credit-list';
 export * from './member-combobox-input';

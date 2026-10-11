@@ -81,6 +81,7 @@ import { PocketMoneyTab, type PocketMoneySubTab } from './pocket-money-tab';
 import {
   CircleCreditList,
   RingCreditList,
+  LocationCreditList,
   MemberComboboxInput,
   type SelectableMemberOption,
 } from './credit';
@@ -2284,6 +2285,17 @@ export const BrotherhoodScreen: React.FC = () => {
                     onSendCredit={handleSendCredit}
                     onRegisterRingMembers={handleRegisterRingMembers}
                   />
+
+                  {account.data?.h3Cell && (
+                    <>
+                      <hr className="border-border/60" />
+                      <LocationCreditList
+                        h3Cell={account.data.h3Cell}
+                        onSendCredit={handleSendCredit}
+                        onRegisterLocationMembers={handleRegisterRingMembers}
+                      />
+                    </>
+                  )}
                 </div>
               )}
 

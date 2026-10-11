@@ -96,6 +96,10 @@ export interface EcosystemToken {
   creditCutoff: number;
   creditMaturity: number;
   multiplier: number;
+  reserveCreditNeedNano?: bigint;
+  reserveCreditCutoff?: number;
+  reserveCreditMaturity?: number;
+  reserveMultiplier?: number;
   degree: 'fi' | 'reserve' | 'circle' | 'ring' | 'voted' | 'custom';
   hasPersonalToken: boolean;
 }
@@ -327,12 +331,32 @@ export function useEcosystemSwap() {
       if (minterStr) {
         queueIfUncached(minterStr, 'personalMinter');
       }
+      const ownerStr = profiles[fwAddr]?.ownerAddress;
+      if (ownerStr && treasuryMinterAddr && treasuryOwnerAddress) {
+        try {
+          const ownerParsed = Address.parse(ownerStr);
+          const memberReservePw = computePersonalWalletAddress(
+            treasuryMinterAddr,
+            ownerParsed,
+            treasuryOwnerAddress,
+          );
+          queueIfUncached(memberReservePw, 'personalWallet');
+        } catch {
+          // ignore parse errors
+        }
+      }
     }
 
     if (toHydrate.length > 0) {
       void batchHydrateUniversal(toHydrate, net, { knownTypes });
     }
-  }, [net, allMemberFiWalletAddrs, memberProfilesQuery.data]);
+  }, [
+    net,
+    allMemberFiWalletAddrs,
+    memberProfilesQuery.data,
+    treasuryMinterAddr,
+    treasuryOwnerAddress,
+  ]);
 
   const addCustomMemberOwner = useCallback((ownerAddrStr: string) => {
     try {
@@ -589,6 +613,33 @@ export function useEcosystemSwap() {
         }
       }
 
+      // Check member's Credit Need in Reserve Token (stored in their Reserve Personal Wallet)
+      let reserveCreditNeed: bigint | undefined;
+      let reserveCreditCutoff: number | undefined;
+      let reserveCreditMaturity: number | undefined;
+      let reserveMultiplier: number | undefined;
+      if (treasuryMinterAddr && treasuryOwnerAddress) {
+        try {
+          const memberReservePw = computePersonalWalletAddress(
+            treasuryMinterAddr,
+            ownerParsed,
+            treasuryOwnerAddress,
+          );
+          const cachedReservePw = getContractCacheSync<PersonalWalletStore>(
+            getNormalizedContractCacheKey(net, memberReservePw),
+          );
+          const rCred = cachedReservePw?.data?.credit?.ref;
+          if (rCred) {
+            reserveCreditNeed = rCred.creditNeed;
+            reserveCreditCutoff = Number(rCred.creditCutoff);
+            reserveCreditMaturity = Number(rCred.creditMaturity);
+            reserveMultiplier = normalizeOnchainMultiplier(rCred.multiplier);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       const cleanUsername = prof.username
         ? prof.username.replace(/^@/, '')
         : '';
@@ -627,6 +678,10 @@ export function useEcosystemSwap() {
         creditCutoff: prof.creditCutoff ?? 0,
         creditMaturity: prof.creditMaturity ?? 0,
         multiplier: prof.multiplier ?? 1,
+        reserveCreditNeedNano: reserveCreditNeed,
+        reserveCreditCutoff: reserveCreditCutoff,
+        reserveCreditMaturity: reserveCreditMaturity,
+        reserveMultiplier: reserveMultiplier,
         degree,
         hasPersonalToken: hasPt,
       });
@@ -681,56 +736,34 @@ export function useEcosystemSwap() {
   const handleSelectFromToken = useCallback(
     (id: string) => {
       if (id === toToken.id) {
-        if (fromToken.kind === 'reserve' && fromToken.creditNeedNano <= 0n) {
-          const fallbackTo =
-            tokens.find(
-              (t) =>
-                t.id !== id &&
-                !(t.kind === 'reserve' && t.creditNeedNano <= 0n),
-            ) ?? fiToken;
-          setToTokenId(fallbackTo.id);
-        } else {
-          setToTokenId(fromToken.id);
-        }
+        setToTokenId(fromToken.id);
       }
       setFromTokenId(id);
     },
-    [fromToken, toToken.id, tokens, fiToken],
+    [fromToken.id, toToken.id],
   );
 
   const handleSelectToToken = useCallback(
     (id: string) => {
-      const candidate = tokens.find((t) => t.id === id);
-      if (candidate?.kind === 'reserve' && candidate.creditNeedNano <= 0n) {
-        toast.error(
-          `Swap to ${candidate.symbol} is disabled unless its FiWallet sets credit required`,
-        );
-        return;
-      }
       if (id === fromToken.id) {
         setFromTokenId(toToken.id);
       }
       setToTokenId(id);
     },
-    [tokens, fromToken.id, toToken.id],
+    [fromToken.id, toToken.id],
   );
 
   const flipDirection = useCallback(() => {
-    if (fromToken.kind === 'reserve' && fromToken.creditNeedNano <= 0n) {
-      toast.error(
-        `Swap from ${toToken.symbol} to ${fromToken.symbol} is disabled unless ${fromToken.symbol} FiWallet sets credit required`,
-      );
-      return;
-    }
     setFromTokenId(toToken.id);
     setToTokenId(fromToken.id);
     setIsReverseInput(false);
-  }, [fromToken, toToken]);
+  }, [fromToken.id, toToken.id]);
 
   // Compute deterministic Swap Quote
   const quote = useMemo<EcosystemSwapQuote>(() => {
     const mode: EcosystemSwapMode =
-      fromToken.kind === 'fi'
+      fromToken.kind === 'fi' ||
+      (fromToken.kind === 'reserve' && toToken.kind === 'personal')
         ? 'buy-credit'
         : toToken.kind === 'fi'
           ? 'payback'
@@ -738,8 +771,24 @@ export function useEcosystemSwap() {
 
     const fiSym = fiToken.symbol;
 
+    // Check effective counterparty credit terms based on selected fromToken
+    const isPayingWithReserve =
+      fromToken.kind === 'reserve' && toToken.kind === 'personal';
+    const effectiveCreditNeedNano = isPayingWithReserve
+      ? (toToken.reserveCreditNeedNano ?? 0n)
+      : toToken.creditNeedNano;
+    const effectiveCreditCutoff = isPayingWithReserve
+      ? (toToken.reserveCreditCutoff ?? 0)
+      : toToken.creditCutoff;
+    const effectiveCreditMaturity = isPayingWithReserve
+      ? (toToken.reserveCreditMaturity ?? 0)
+      : toToken.creditMaturity;
+    const effectiveMultiplier = isPayingWithReserve
+      ? (toToken.reserveMultiplier ?? 1)
+      : toToken.multiplier;
+
     const targetMultScaled = BigInt(
-      Math.max(1, Math.round(toToken.multiplier * MULTIPLIER_SCALE)),
+      Math.max(1, Math.round(effectiveMultiplier * MULTIPLIER_SCALE)),
     );
     const scaleBig = BigInt(MULTIPLIER_SCALE);
 
@@ -799,8 +848,8 @@ export function useEcosystemSwap() {
       }
     }
     if (mode === 'buy-credit' || mode === 'multi-hop') {
-      if (toToken.creditNeedNano < maxInputNano) {
-        maxInputNano = toToken.creditNeedNano;
+      if (effectiveCreditNeedNano < maxInputNano) {
+        maxInputNano = effectiveCreditNeedNano;
       }
     }
 
@@ -818,7 +867,9 @@ export function useEcosystemSwap() {
 
     const routeDescription =
       mode === 'buy-credit'
-        ? `Sends ${fiSym} to ${toToken.symbol} issuer's FossFiWallet and mints ${toToken.symbol} at ${toToken.multiplier}x.`
+        ? isPayingWithReserve
+          ? `Transfers ${fromToken.symbol} to ${toToken.symbol} issuer's Reserve Personal Wallet and mints ${toToken.symbol} at ${effectiveMultiplier}x.`
+          : `Sends ${fiSym} to ${toToken.symbol} issuer's FossFiWallet and mints ${toToken.symbol} at ${effectiveMultiplier}x.`
         : mode === 'payback'
           ? `Burns ${fromToken.symbol} and redeems 1:1 ${fiSym} from the issuer's FossFiWallet.`
           : `Single-signature atomic hop: burns ${fromToken.symbol} for 1:1 ${fiSym}, then automatically forwards ${fiSym} to mint ${toToken.symbol} at ${toToken.multiplier}x.`;
@@ -833,10 +884,9 @@ export function useEcosystemSwap() {
       validationError = 'Select two different tokens';
     } else if (
       (mode === 'buy-credit' || mode === 'multi-hop') &&
-      toToken.kind === 'reserve' &&
-      toToken.creditNeedNano <= 0n
+      effectiveCreditNeedNano <= 0n
     ) {
-      validationError = `Swap from ${fromToken.symbol} to ${toToken.symbol} is disabled unless ${toToken.symbol} FiWallet sets credit required`;
+      validationError = `${toToken.symbol} issuer has not requested credit in ${fromToken.symbol}`;
     } else {
       const actionErr = getAccountActionError(accountData);
       if (actionErr && (mode === 'buy-credit' || mode === 'multi-hop')) {
@@ -863,17 +913,17 @@ export function useEcosystemSwap() {
         validationError = `${fromToken.symbol} matures on ${formatMaturityDate(fromToken.creditMaturity)} — cannot redeem for ${fiSym} before maturity`;
       } else if (
         (mode === 'buy-credit' || mode === 'multi-hop') &&
-        toToken.creditCutoff > 0 &&
-        nowSec >= toToken.creditCutoff
+        effectiveCreditCutoff > 0 &&
+        nowSec >= effectiveCreditCutoff
       ) {
-        validationError = `${toToken.symbol} credit funding deadline (${formatMaturityDate(toToken.creditCutoff)}) has passed`;
+        validationError = `${toToken.symbol} credit funding deadline (${formatMaturityDate(effectiveCreditCutoff)}) has passed`;
       } else if (
         (mode === 'buy-credit' || mode === 'multi-hop') &&
-        toToken.multiplier > 1 &&
-        toToken.creditMaturity > 0 &&
-        nowSec >= toToken.creditMaturity
+        effectiveMultiplier > 1 &&
+        effectiveCreditMaturity > 0 &&
+        nowSec >= effectiveCreditMaturity
       ) {
-        validationError = `${toToken.symbol} bonus credit offer (${toToken.multiplier}x) has already matured`;
+        validationError = `${toToken.symbol} bonus credit offer (${effectiveMultiplier}x) has already matured`;
       } else if (inputNano > 0n) {
         if (inputNano > fromToken.userBalanceNano) {
           validationError = `Insufficient ${fromToken.symbol} balance (available: ${formatFi(fromToken.userBalanceNano)} ${fromToken.symbol})`;
@@ -884,9 +934,9 @@ export function useEcosystemSwap() {
           validationError = `Amount exceeds ${fromToken.symbol} issuer's available ${fiSym} reserve (${formatFi(fromToken.issuerFiBalanceNano)} ${fiSym})`;
         } else if (
           (mode === 'buy-credit' || mode === 'multi-hop') &&
-          intermediateFiNano > toToken.creditNeedNano
+          intermediateFiNano > effectiveCreditNeedNano
         ) {
-          validationError = `Amount exceeds ${toToken.symbol} issuer's Credit Need capacity (${formatFi(toToken.creditNeedNano)} ${fiSym} available)`;
+          validationError = `Amount exceeds ${toToken.symbol} issuer's Credit Need capacity (${formatFi(effectiveCreditNeedNano)} ${fromToken.symbol} available)`;
         } else if (outputNano <= 0n) {
           validationError = 'Output amount is too small';
         }
@@ -971,7 +1021,28 @@ export function useEcosystemSwap() {
       );
 
       let sourceWalletAddr: Address;
-      if (fromToken.kind === 'personal') {
+      const affectedContracts: (Address | string)[] = [
+        targetFiWalletAddr,
+        targetMinterAddr,
+        buyerPersonalWalletAddr,
+      ];
+
+      if (fromToken.kind === 'reserve') {
+        if (!treasuryMinterAddr) {
+          throw new Error('Reserve token minter address missing');
+        }
+        sourceWalletAddr = computePersonalWalletAddress(
+          treasuryMinterAddr,
+          userOwnerAddress,
+          treasuryOwnerAddress ?? userOwnerAddress,
+        );
+        const targetReserveWalletAddr = computePersonalWalletAddress(
+          treasuryMinterAddr,
+          targetOwnerAddr,
+          treasuryOwnerAddress ?? targetOwnerAddr,
+        );
+        affectedContracts.push(sourceWalletAddr, targetReserveWalletAddr);
+      } else if (fromToken.kind === 'personal') {
         const fromMinterAddr = Address.parse(fromToken.minterAddress!);
         const fromOwnerAddr = Address.parse(fromToken.ownerAddress);
         sourceWalletAddr = computePersonalWalletAddress(
@@ -979,8 +1050,10 @@ export function useEcosystemSwap() {
           userOwnerAddress,
           fromOwnerAddr,
         );
+        affectedContracts.push(sourceWalletAddr);
       } else {
         sourceWalletAddr = getFiWalletAddress(userOwnerAddress, net);
+        affectedContracts.push(sourceWalletAddr);
       }
 
       const payload = buildBuyCreditBody({
@@ -998,12 +1071,7 @@ export function useEcosystemSwap() {
           },
         ],
         {
-          affectedContracts: [
-            sourceWalletAddr,
-            targetFiWalletAddr,
-            targetMinterAddr,
-            buyerPersonalWalletAddr,
-          ],
+          affectedContracts,
         },
       );
     } else if (quote.mode === 'payback') {
@@ -1099,7 +1167,17 @@ export function useEcosystemSwap() {
     setAmountInput('');
     toast.success(`Swapped ${fromToken.symbol} for ${toToken.symbol}!`);
     return true;
-  }, [address, userOwnerAddress, quote, net, toToken, fromToken, sendTx]);
+  }, [
+    address,
+    userOwnerAddress,
+    quote,
+    net,
+    toToken,
+    fromToken,
+    sendTx,
+    treasuryMinterAddr,
+    treasuryOwnerAddress,
+  ]);
 
   // Off-Ramp: Normal Burn of Reserve Token with Encrypted Bank Details to BRO_TREASURY_ADDRESS
   const executeFiatOffRampBurn = useCallback(

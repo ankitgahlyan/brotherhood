@@ -42,6 +42,7 @@ import {
   useIsNetworkMember,
   useFiAccount,
 } from '@/features/brotherhood';
+import { LocationCreditList } from '@/features/brotherhood/components/credit';
 import { useBorrowTokens } from '../hooks/use-borrow-tokens';
 import { useBorrowTerms } from '../hooks/use-borrow-terms';
 
@@ -617,6 +618,21 @@ export const BorrowScreen: React.FC = () => {
                   </Button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Location Credit Seekers Section */}
+          {account.data?.h3Cell && (
+            <div className="bg-card text-card-foreground p-4 border border-border rounded-2xl shadow-sm text-sm space-y-3">
+              <LocationCreditList
+                h3Cell={account.data.h3Cell}
+                onSendCredit={(ownerAddr) => {
+                  navigate({
+                    to: '/swap',
+                    search: () => ({ target: ownerAddr }),
+                  });
+                }}
+              />
             </div>
           )}
         </MemberGuard>

@@ -439,7 +439,14 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                 {toToken.symbol} Credit Need Capacity
               </span>
               <span className="font-mono font-semibold text-foreground">
-                {formatFi(toToken.creditNeedNano)} {fiToken.symbol}
+                {formatFi(
+                  fromToken.kind === 'reserve' && toToken.kind === 'personal'
+                    ? (toToken.reserveCreditNeedNano ?? 0n)
+                    : toToken.creditNeedNano,
+                )}{' '}
+                {fromToken.kind === 'reserve' && toToken.kind === 'personal'
+                  ? fromToken.symbol
+                  : fiToken.symbol}
               </span>
             </div>
           )}
@@ -623,24 +630,27 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
               const isSelected =
                 (selectorSide === 'from' && token.id === fromToken.id) ||
                 (selectorSide === 'to' && token.id === toToken.id);
-              const isDisabledAsDestination =
+              const isPayingWithReserve =
                 selectorSide === 'to' &&
-                token.kind === 'reserve' &&
-                token.creditNeedNano <= 0n;
+                fromToken.kind === 'reserve' &&
+                token.kind === 'personal';
+              const displayNeed = isPayingWithReserve
+                ? (token.reserveCreditNeedNano ?? 0n)
+                : token.creditNeedNano;
+              const displayNeedSym = isPayingWithReserve
+                ? fromToken.symbol
+                : fiToken.symbol;
 
               return (
                 <button
                   key={token.id}
                   type="button"
-                  disabled={isDisabledAsDestination}
                   onClick={() => handleSelectTokenFromModal(token.id)}
                   className={cn(
                     'w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-colors',
-                    isDisabledAsDestination
-                      ? 'opacity-50 cursor-not-allowed bg-secondary/20 border-border/40'
-                      : isSelected
-                        ? 'bg-primary/10 border-primary/40 cursor-pointer'
-                        : 'bg-card hover:bg-secondary/50 border-border/60 cursor-pointer',
+                    isSelected
+                      ? 'bg-primary/10 border-primary/40 cursor-pointer'
+                      : 'bg-card hover:bg-secondary/50 border-border/60 cursor-pointer',
                   )}
                   data-testid={`swap-token-option-${token.symbol}`}
                 >
@@ -678,9 +688,9 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
                       <div className="text-[11px] text-muted-foreground truncate mt-0.5">
                         {token.kind === 'fi'
                           ? token.name
-                          : isDisabledAsDestination
-                            ? `No credit required (0 ${fiToken.symbol} need)`
-                            : `Need: ${formatFi(token.creditNeedNano)} ${fiToken.symbol} · Reserve: ${formatFi(token.issuerFiBalanceNano)} ${fiToken.symbol}`}
+                          : displayNeed <= 0n
+                            ? `No credit required in ${displayNeedSym}`
+                            : `Need: ${formatFi(displayNeed)} ${displayNeedSym} · Reserve: ${formatFi(token.issuerFiBalanceNano)} ${fiToken.symbol}`}
                       </div>
                     </div>
                   </div>

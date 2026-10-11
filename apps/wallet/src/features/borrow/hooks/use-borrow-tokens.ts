@@ -6,7 +6,7 @@
  *
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Address } from '@ton/core';
 import { useWallet } from '@demo/wallet-core';
 import {
@@ -25,7 +25,12 @@ import {
   useFiWalletState,
   usePersonalMinterDetails,
 } from '@/lib/brotherhood/queries';
-import { useContractState } from '@/lib/brotherhood/contract-cache';
+import {
+  useContractState,
+  getContractCache,
+  getNormalizedContractCacheKey,
+} from '@/lib/brotherhood/contract-cache';
+import { batchHydrateUniversal } from '@/lib/brotherhood/account-state-hydrator';
 import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
 import { resolveBroDomainContact } from '@/core/lib/dns';
 import { parseOnchainMetadataCell } from '@/lib/brotherhood/jettonContent';
@@ -153,6 +158,26 @@ export function useBorrowTokens(network: Network) {
     }
   }, [treasuryMinterAddr, userOwnerAddress, treasuryOwnerAddress]);
 
+  // Ensure reserve user wallet is hydrated as 'personalWallet'
+  useEffect(() => {
+    if (!reserveUserWalletAddressObj) return;
+    const stdAddr = reserveUserWalletAddressObj.toString();
+    const cacheKey = getNormalizedContractCacheKey(
+      currentNetwork,
+      reserveUserWalletAddressObj,
+    );
+    let isCancelled = false;
+    getContractCache(cacheKey).then((cached) => {
+      if (isCancelled || (cached !== null && cached !== undefined)) return;
+      batchHydrateUniversal([reserveUserWalletAddressObj], currentNetwork, {
+        knownTypes: { [stdAddr]: 'personalWallet' },
+      }).catch(() => {});
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [reserveUserWalletAddressObj, currentNetwork]);
+
   const reserveUserWalletState = useContractState<PersonalWalletStore>(
     reserveUserWalletAddressObj,
     currentNetwork,
@@ -227,6 +252,26 @@ export function useBorrowTokens(network: Network) {
     }
     return null;
   }, [selectedTokenId, searchedToken, pinnedEntries, userOwnerAddress]);
+
+  // Ensure active custom personal wallet is hydrated as 'personalWallet'
+  useEffect(() => {
+    if (!activeCustomWalletAddrObj) return;
+    const stdAddr = activeCustomWalletAddrObj.toString();
+    const cacheKey = getNormalizedContractCacheKey(
+      currentNetwork,
+      activeCustomWalletAddrObj,
+    );
+    let isCancelled = false;
+    getContractCache(cacheKey).then((cached) => {
+      if (isCancelled || (cached !== null && cached !== undefined)) return;
+      batchHydrateUniversal([activeCustomWalletAddrObj], currentNetwork, {
+        knownTypes: { [stdAddr]: 'personalWallet' },
+      }).catch(() => {});
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeCustomWalletAddrObj, currentNetwork]);
 
   const activeCustomWalletState = useContractState<PersonalWalletStore>(
     activeCustomWalletAddrObj,
