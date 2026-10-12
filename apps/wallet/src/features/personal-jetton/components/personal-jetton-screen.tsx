@@ -24,6 +24,8 @@ import {
   ChevronUp,
   Fingerprint,
   HandCoins,
+  Check,
+  Copy,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -155,6 +157,11 @@ export const PersonalJettonScreen: React.FC = () => {
   const [addressesTabMinter, setAddressesTabMinter] = useState('');
   const [addressesTabWallet, setAddressesTabWallet] = useState('');
 
+  // Personal Wallet Address Inspector / Lookup Search Box
+  const [lookupWalletInput, setLookupWalletInput] = useState('');
+  const [isRawStateOpen, setIsRawStateOpen] = useState(false);
+  const [copiedRawJson, setCopiedRawJson] = useState(false);
+
   // Destroy confirmation dialog states & auth gate
   const { isPasswordSet, unlock } = useAuth();
   const {
@@ -255,12 +262,29 @@ export const PersonalJettonScreen: React.FC = () => {
     }
   }, [activePersonalWallet]);
 
+  // If user searched for an address, inspect that address; otherwise inspect user's own active personal wallet
+  const inspectedPersonalWalletAddress = useMemo(() => {
+    const trimmed = lookupWalletInput.trim();
+    if (trimmed) {
+      try {
+        return Address.parse(trimmed);
+      } catch {
+        return null;
+      }
+    }
+    return activePersonalWalletAddress;
+  }, [lookupWalletInput, activePersonalWalletAddress]);
+
   const minterCachedState = useContractState<PersonalStore>(
     activeMinterAddress,
     network,
   );
   const walletCachedState = useContractState<PersonalWalletStore>(
     activePersonalWalletAddress,
+    network,
+  );
+  const inspectedWalletState = useContractState<PersonalWalletStore>(
+    inspectedPersonalWalletAddress,
     network,
   );
   const isOutdatedChecking = minterCachedState.isLoading;
@@ -380,6 +404,10 @@ export const PersonalJettonScreen: React.FC = () => {
     },
     onDeploySuccess: () => {
       setActiveTab('info');
+      setDeployTokenName('');
+      setDeployTokenSymbol('');
+      setDeployTokenDesc('');
+      setInitialMintAmount('');
     },
   });
 
@@ -426,6 +454,10 @@ export const PersonalJettonScreen: React.FC = () => {
     minterAddress: activeMinter,
     recipient,
     amount,
+    onSuccess: () => {
+      setAmount('');
+      setRecipient('');
+    },
   });
 
   const destroyer = useDestroyPersonal({
@@ -1099,6 +1131,377 @@ export const PersonalJettonScreen: React.FC = () => {
                         <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
                         Manage Token
                       </Button>
+                    </div>
+
+                    {/* Section: Personal Wallet Full State Inspector & Search Box */}
+                    <div className="p-3.5 bg-secondary/30 rounded-2xl border border-border/50 space-y-3 mt-3 text-xs">
+                      <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/40 pb-2">
+                        <span className="flex items-center gap-1.5">
+                          <Wallet className="w-4 h-4 text-primary" />
+                          Personal Wallet State Inspector
+                        </span>
+                        {lookupWalletInput && (
+                          <button
+                            type="button"
+                            onClick={() => setLookupWalletInput('')}
+                            className="text-[11px] text-primary hover:underline font-normal cursor-pointer"
+                          >
+                            Reset to My Wallet
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Search Box */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground block">
+                          Inspect Any Personal Wallet Address
+                        </label>
+                        <div className="relative">
+                          <InputScan
+                            value={lookupWalletInput}
+                            onChange={setLookupWalletInput}
+                            enableUsernameResolution={false}
+                            placeholder={
+                              activePersonalWalletAddress
+                                ? formatContractAddress(
+                                    activePersonalWalletAddress,
+                                    false,
+                                  )
+                                : 'Enter Personal Wallet Address (EQ... / kQ...)'
+                            }
+                            data-testid="personal-wallet-lookup-input"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Inspected Target Header */}
+                      <div className="flex items-center justify-between text-[11px] bg-secondary/50 p-2 rounded-xl border border-border/40 flex-wrap gap-1">
+                        <span className="text-muted-foreground">
+                          Inspected Contract:
+                        </span>
+                        <div className="flex items-center gap-1 font-mono">
+                          <span className="font-semibold text-foreground">
+                            {inspectedPersonalWalletAddress
+                              ? formatContractAddress(
+                                  inspectedPersonalWalletAddress,
+                                )
+                              : 'Invalid / Unset Address'}
+                          </span>
+                          {inspectedPersonalWalletAddress && (
+                            <>
+                              <CopyButton
+                                address={inspectedPersonalWalletAddress}
+                                type="contract"
+                                size="xs"
+                              />
+                              <a
+                                href={getExplorerAddressUrl(
+                                  network,
+                                  inspectedPersonalWalletAddress.toString(),
+                                  explorer,
+                                  'jetton-wallet',
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 rounded text-muted-foreground hover:text-foreground"
+                                title="View on Explorer"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {inspectedWalletState.isLoading ? (
+                        <p className="text-muted-foreground text-xs py-3 text-center">
+                          Loading on-chain contract state…
+                        </p>
+                      ) : inspectedWalletState.data ? (
+                        <div className="space-y-2.5">
+                          {/* Wallet Balances & Identity */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                              <span className="text-muted-foreground block text-[11px]">
+                                Jetton Balance
+                              </span>
+                              <span className="font-semibold text-sm text-foreground">
+                                {(
+                                  Number(
+                                    inspectedWalletState.data.jettonBalance,
+                                  ) / 1e9
+                                ).toFixed(4)}
+                              </span>
+                            </div>
+                            <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                              <span className="text-muted-foreground block text-[11px]">
+                                Contract Version
+                              </span>
+                              <span className="font-semibold text-sm text-foreground">
+                                v{inspectedWalletState.data.version.toString()}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Linked Addresses in Wallet Store */}
+                          <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">
+                                Owner Address
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono text-foreground">
+                                  {formatWalletAddress(
+                                    inspectedWalletState.data.owner,
+                                    true,
+                                    4,
+                                  )}
+                                </span>
+                                <CopyButton
+                                  address={inspectedWalletState.data.owner}
+                                  type="wallet"
+                                  size="xs"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">
+                                Minter Address
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono text-foreground">
+                                  {formatContractAddress(
+                                    inspectedWalletState.data.minterAddress,
+                                    true,
+                                    4,
+                                  )}
+                                </span>
+                                <CopyButton
+                                  address={
+                                    inspectedWalletState.data.minterAddress
+                                  }
+                                  type="contract"
+                                  size="xs"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">
+                                Deployer Address
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono text-foreground">
+                                  {formatContractAddress(
+                                    inspectedWalletState.data.deployer,
+                                    true,
+                                    4,
+                                  )}
+                                </span>
+                                <CopyButton
+                                  address={inspectedWalletState.data.deployer}
+                                  type="contract"
+                                  size="xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Embedded Credit Info */}
+                          {inspectedWalletState.data.credit?.ref && (
+                            <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl space-y-1.5">
+                              <span className="font-semibold text-foreground block border-b border-border/30 pb-1">
+                                Embedded Credit & Terms
+                              </span>
+                              <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Credit Need
+                                  </span>
+                                  <span className="font-semibold text-foreground text-xs">
+                                    {(
+                                      Number(
+                                        inspectedWalletState.data.credit.ref
+                                          .creditNeed,
+                                      ) / 1e9
+                                    ).toFixed(4)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Multiplier
+                                  </span>
+                                  <span className="font-semibold text-foreground text-xs">
+                                    {Number(
+                                      inspectedWalletState.data.credit.ref
+                                        .multiplier,
+                                    ) / 1000}
+                                    x
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Credit Maturity
+                                  </span>
+                                  <span className="text-foreground text-xs">
+                                    {Number(
+                                      inspectedWalletState.data.credit.ref
+                                        .creditMaturity,
+                                    ) > 0
+                                      ? new Date(
+                                          Number(
+                                            inspectedWalletState.data.credit.ref
+                                              .creditMaturity,
+                                          ) * 1000,
+                                        ).toLocaleDateString()
+                                      : 'Never'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Credit Cutoff
+                                  </span>
+                                  <span className="text-foreground text-xs">
+                                    {Number(
+                                      inspectedWalletState.data.credit.ref
+                                        .creditCutoff,
+                                    ) > 0
+                                      ? new Date(
+                                          Number(
+                                            inspectedWalletState.data.credit.ref
+                                              .creditCutoff,
+                                          ) * 1000,
+                                        ).toLocaleDateString()
+                                      : 'Never'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Total Credit Received
+                                  </span>
+                                  <span className="font-medium text-foreground text-xs">
+                                    {(
+                                      Number(
+                                        inspectedWalletState.data.credit.ref
+                                          .totalCreditReceived,
+                                      ) / 1e9
+                                    ).toFixed(4)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Total Payback Settled
+                                  </span>
+                                  <span className="font-medium text-foreground text-xs">
+                                    {(
+                                      Number(
+                                        inspectedWalletState.data.credit.ref
+                                          .totalPaybackSettled,
+                                      ) / 1e9
+                                    ).toFixed(4)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block text-[10px]">
+                                    Payback Shortfall
+                                  </span>
+                                  <span className="font-medium text-rose-500 text-xs">
+                                    {(
+                                      Number(
+                                        inspectedWalletState.data.credit.ref
+                                          .totalPaybackShortfall,
+                                      ) / 1e9
+                                    ).toFixed(4)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Raw State JSON Inspector */}
+                          <div className="bg-secondary/40 border border-border/50 rounded-xl p-2.5 space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsRawStateOpen((prev) => !prev)}
+                              className="w-full flex items-center justify-between font-semibold text-foreground hover:text-primary transition-colors cursor-pointer text-left py-0.5"
+                              data-testid="personal-wallet-toggle-raw-json-btn"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                {isRawStateOpen ? (
+                                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                                ) : (
+                                  <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+                                )}
+                                Raw Personal Wallet State (JSON)
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                {isRawStateOpen
+                                  ? 'Collapse'
+                                  : 'Expand Inspector'}
+                              </span>
+                            </button>
+
+                            {isRawStateOpen && (
+                              <div className="pt-2 border-t border-border/30 space-y-2">
+                                <div className="flex justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-6 px-2 text-[10px] flex items-center gap-1"
+                                    onClick={() => {
+                                      const rawString = JSON.stringify(
+                                        inspectedWalletState.data,
+                                        (_k, v) =>
+                                          typeof v === 'bigint'
+                                            ? v.toString()
+                                            : v instanceof Address
+                                              ? v.toString()
+                                              : v,
+                                        2,
+                                      );
+                                      navigator.clipboard.writeText(rawString);
+                                      setCopiedRawJson(true);
+                                      setTimeout(
+                                        () => setCopiedRawJson(false),
+                                        2000,
+                                      );
+                                    }}
+                                  >
+                                    {copiedRawJson ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-emerald-500" />
+                                        Copied JSON
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3" />
+                                        Copy JSON
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                                <pre className="p-2.5 bg-background border border-border/50 rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed text-foreground max-h-56 overflow-y-auto">
+                                  {JSON.stringify(
+                                    inspectedWalletState.data,
+                                    (_k, v) =>
+                                      typeof v === 'bigint'
+                                        ? v.toString()
+                                        : v instanceof Address
+                                          ? v.toString()
+                                          : v,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-xs py-2 text-center">
+                          {inspectedPersonalWalletAddress
+                            ? 'No PersonalWallet state found on-chain for this address.'
+                            : 'Enter an address above to inspect its Personal Wallet state.'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

@@ -25,6 +25,12 @@ import {
   IdCard,
   Clock,
   Crown,
+  Coins,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  Copy,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
@@ -249,6 +255,10 @@ export const BrotherhoodScreen: React.FC = () => {
   // Push Upgrade to Any Address Tool
   const [isPushUpgradeOpen, setIsPushUpgradeOpen] = useState(false);
   const [pushUpgradeTarget, setPushUpgradeTarget] = useState('');
+
+  // Raw contract JSON inspector state
+  const [isRawStateOpen, setIsRawStateOpen] = useState(false);
+  const [copiedRawJson, setCopiedRawJson] = useState(false);
 
   // FiAccount hook
   const account = useFiAccount(address ?? null);
@@ -753,61 +763,224 @@ export const BrotherhoodScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Primary Stats Grid */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
-                      FI Balance
+                {/* Primary Stats Grid: Core Balances & Economy */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground px-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Coins className="w-3.5 h-3.5 text-primary" />
+                      Balances & Economy
                     </span>
-                    <span className="font-semibold text-sm text-foreground">
-                      {formatFi(account.data.jettonBalance)} FI
+                    {account.data.debt > 0n && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-5 px-1.5 text-[10px] text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 font-semibold"
+                        onClick={() => {
+                          setActiveTab('credit');
+                          setAmount(
+                            (Number(account.data?.debt ?? 0n) / 1e9).toString(),
+                          );
+                        }}
+                      >
+                        Repay Debt ↗
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        FI Balance
+                      </span>
+                      <span className="font-semibold text-sm text-foreground">
+                        {formatFi(account.data.jettonBalance)} FI
+                      </span>
+                    </div>
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Gold Coins
+                      </span>
+                      <span className="font-semibold text-sm text-foreground">
+                        🪙 {account.data.goldCoins}
+                      </span>
+                    </div>
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Outstanding Debt
+                      </span>
+                      <span
+                        className={`font-semibold text-sm ${
+                          account.data.debt > 0n
+                            ? 'text-rose-500'
+                            : 'text-foreground'
+                        }`}
+                      >
+                        {formatFi(account.data.debt)} FI
+                      </span>
+                    </div>
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Accumulated Fees
+                      </span>
+                      <span className="font-semibold text-sm text-foreground">
+                        {formatFi(account.data.accumulatedFees)} FI
+                      </span>
+                    </div>
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Transaction Count
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {account.data.txnCount} txns
+                      </span>
+                    </div>
+                    <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
+                      <span className="text-muted-foreground block text-[11px]">
+                        Mintable Status
+                      </span>
+                      <span
+                        className={`font-medium ${
+                          account.data.mintable
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {account.data.mintable
+                          ? '✓ Mintable'
+                          : '✕ Non-Mintable'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Borrowing & Credit Terms */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-primary" />
+                      Credit & Borrowing Terms
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 px-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/10"
+                      onClick={() => {
+                        setActiveTab('credit');
+                        setCreditSubTab('terms');
+                      }}
+                    >
+                      Manage Terms ↗
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Credit Need</span>
+                    <span className="font-medium text-foreground">
+                      {formatFi(account.data.creditNeed)} FI
                     </span>
                   </div>
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Gold Coins
-                    </span>
-                    <span className="font-semibold text-sm text-foreground">
-                      🪙 {account.data.goldCoins}
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Multiplier</span>
+                    <span className="font-medium text-foreground">
+                      {account.data.multiplier}x
                     </span>
                   </div>
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Available Votes
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Credit Maturity
+                    </span>
+                    <span className="text-foreground text-[11px]">
+                      {formatDate(account.data.creditMaturity)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Credit Cutoff</span>
+                    <span className="text-foreground text-[11px]">
+                      {formatDate(account.data.creditCutoff)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section 3: Governance & Network Power */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Vote className="w-3.5 h-3.5 text-primary" />
+                      Governance & Network Power
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 px-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/10"
+                      onClick={() => setActiveTab('vote')}
+                    >
+                      Vote Tab ↗
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Available Voting Power
                     </span>
                     <span className="font-medium text-foreground">
                       {account.data.votes} / 10 power
                     </span>
                   </div>
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
                       Received Votes
                     </span>
                     <span className="font-medium text-foreground">
                       {account.data.receivedVotes.toString()}
                     </span>
                   </div>
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
                       Invites Capacity
                     </span>
                     <span className="font-medium text-foreground">
                       {account.data.connections} / 10 used
                     </span>
                   </div>
-                  <div className="bg-secondary/40 border border-border/50 p-2.5 rounded-xl">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Social Trust
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Authority Account
                     </span>
-                    <span className="font-medium text-foreground">
-                      {account.data.followersCount} followers •{' '}
-                      {account.data.followingCount} following
+                    <span
+                      className={`font-semibold ${
+                        account.data.isAuthorityAccount
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {account.data.isAuthorityAccount
+                        ? '👑 Authority'
+                        : 'Standard Member'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Privileged Superuser
+                    </span>
+                    <span
+                      className={`font-semibold ${
+                        account.data.isPrevilegedAccount
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {account.data.isPrevilegedAccount
+                        ? '🛡️ Privileged'
+                        : 'Standard'}
                     </span>
                   </div>
                 </div>
 
-                {/* Spatial & Lineage Details */}
+                {/* Section 4: Spatial & Lineage Addresses */}
                 <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <IdCard className="w-3.5 h-3.5 text-primary" />
+                      Spatial & Linked Addresses
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">
                       H3 Spatial Cell
@@ -826,7 +999,37 @@ export const BrotherhoodScreen: React.FC = () => {
                     )}
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Invited By</span>
+                    <span className="text-muted-foreground">Owner Wallet</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-foreground">
+                        {formatShortWallet(address)}
+                      </span>
+                      {address && (
+                        <CopyButton address={address} type="wallet" size="xs" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Fi Minter Address
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-foreground">
+                        {formatShortContract(account.data.minterAddr)}
+                      </span>
+                      {account.data.minterAddr && (
+                        <CopyButton
+                          address={account.data.minterAddr}
+                          type="contract"
+                          size="xs"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Invited By (Circle)
+                    </span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-[11px] text-foreground">
                         {formatShortContract(account.data.invitor)}
@@ -834,6 +1037,23 @@ export const BrotherhoodScreen: React.FC = () => {
                       {account.data.invitor && (
                         <CopyButton
                           address={account.data.invitor}
+                          type="contract"
+                          size="xs"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Upstream Invitor (Ring)
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-foreground">
+                        {formatShortContract(account.data.invitor0)}
+                      </span>
+                      {account.data.invitor0 && (
+                        <CopyButton
+                          address={account.data.invitor0}
                           type="contract"
                           size="xs"
                         />
@@ -885,6 +1105,72 @@ export const BrotherhoodScreen: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">
+                      Personal Jetton Minter
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-foreground">
+                        {account.data.personalJettonMinter &&
+                        !isZeroAddress(account.data.personalJettonMinter)
+                          ? formatShortContract(
+                              account.data.personalJettonMinter,
+                            )
+                          : 'Not Registered'}
+                      </span>
+                      {account.data.personalJettonMinter &&
+                        !isZeroAddress(account.data.personalJettonMinter) && (
+                          <>
+                            <CopyButton
+                              address={account.data.personalJettonMinter}
+                              type="contract"
+                              size="xs"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => navigate('/personal-jetton')}
+                              className="p-1 hover:text-primary transition-colors text-muted-foreground"
+                              title="Manage Personal Jetton"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Personal Jetton Wallet
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-foreground">
+                        {account.data.personalJettonWallet &&
+                        !isZeroAddress(account.data.personalJettonWallet)
+                          ? formatShortContract(
+                              account.data.personalJettonWallet,
+                            )
+                          : 'Not Registered'}
+                      </span>
+                      {account.data.personalJettonWallet &&
+                        !isZeroAddress(account.data.personalJettonWallet) && (
+                          <CopyButton
+                            address={account.data.personalJettonWallet}
+                            type="contract"
+                            size="xs"
+                          />
+                        )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Lifecycle Timestamps */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      Lifecycle Timestamps
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
                       Account Initialized
                     </span>
                     <span className="text-foreground text-[11px]">
@@ -892,13 +1178,104 @@ export const BrotherhoodScreen: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Last Claim</span>
+                    <span className="text-foreground text-[11px]">
+                      {formatDate(account.data.lastClaim)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Last Invite</span>
+                    <span className="text-foreground text-[11px]">
+                      {formatDate(account.data.lastInvite)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Last Decay</span>
+                    <span className="text-foreground text-[11px]">
+                      {formatDate(account.data.lastDecay)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section 6: Social Trust & Moderation */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Crown className="w-3.5 h-3.5 text-primary" />
+                      Social Trust & Moderation
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">
-                      Contract Version
+                      Social Following
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {account.data.followersCount} followers •{' '}
+                      {account.data.followingCount} following
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Deferred Payments
+                    </span>
+                    <span
+                      className={`font-medium ${
+                        account.data.allowDeferred
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {account.data.allowDeferred ? '✓ Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Terms of Service
+                    </span>
+                    <span
+                      className={`font-semibold ${
+                        account.data.tosBreach
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {account.data.tosBreach
+                        ? '⚠ ToS Breach Detected'
+                        : '✓ Good Standing'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Reporters / Disputers
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {account.data.reporterCount} reporters •{' '}
+                      {account.data.disputerCount} disputers
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section 7: Contract Version & Upgrade */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-foreground border-b border-border/30 pb-1.5">
+                    <span>Contract Versions & Upgrades</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Store / Code Version
+                    </span>
+                    <span className="text-foreground text-[11px] font-mono">
+                      Store v{account.data.storeVersion} • Code v
+                      {account.data.version}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      Minter Target Version
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       <span className="text-foreground font-medium text-[11px]">
-                        v{account.data.version} (Minter: v
-                        {minterVersion ?? '...'})
+                        v{minterVersion ?? '...'}
                       </span>
                       {upgrade.hasUpgradeAvailable ? (
                         <button
@@ -926,6 +1303,79 @@ export const BrotherhoodScreen: React.FC = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Section 8: Collapsible Raw State JSON Inspector */}
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 text-xs space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRawStateOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between font-semibold text-foreground hover:text-primary transition-colors cursor-pointer text-left py-0.5"
+                    data-testid="brotherhood-toggle-raw-json-btn"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {isRawStateOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                      Raw Contract State (JSON)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      {isRawStateOpen ? 'Collapse' : 'Expand Inspector'}
+                    </span>
+                  </button>
+
+                  {isRawStateOpen && (
+                    <div className="pt-2 border-t border-border/30 space-y-2">
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-6 px-2 text-[10px] flex items-center gap-1"
+                          onClick={() => {
+                            const rawString = JSON.stringify(
+                              account.data,
+                              (_k, v) =>
+                                typeof v === 'bigint'
+                                  ? v.toString()
+                                  : v instanceof Address
+                                    ? v.toString()
+                                    : v,
+                              2,
+                            );
+                            navigator.clipboard.writeText(rawString);
+                            setCopiedRawJson(true);
+                            setTimeout(() => setCopiedRawJson(false), 2000);
+                          }}
+                        >
+                          {copiedRawJson ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-500" />
+                              Copied JSON
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              Copy JSON
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <pre className="p-2.5 bg-background border border-border/50 rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed text-foreground max-h-60 overflow-y-auto">
+                        {JSON.stringify(
+                          account.data,
+                          (_k, v) =>
+                            typeof v === 'bigint'
+                              ? v.toString()
+                              : v instanceof Address
+                                ? v.toString()
+                                : v,
+                          2,
+                        )}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
