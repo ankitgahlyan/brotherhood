@@ -497,9 +497,10 @@ fun onInternalMessage(in: InMessage) {
             }
             storage.credit = credit.toCell();
 
-            if (
-                msg.creditProxyAddress != null && msg.h3Cell != null && isNonEmptyString(msg.h3Cell)
-            ) {
+            val hasProxyForward = msg.creditProxyAddress != null && msg.h3Cell != null &&
+                isNonEmptyString(msg.h3Cell);
+            var isProxyDispatched = false;
+            if (hasProxyForward) {
                 val tokenInfo = CreditTokenInfo {
                     tokenMinter: storage.minterAddress,
                     deployer: storage.deployer,
@@ -507,12 +508,12 @@ fun onInternalMessage(in: InMessage) {
                 if (credit.creditNeed > 0) {
                     val proxyMsg = createMessage({
                         bounce: BounceMode.NoBounce,
-                        dest: msg.creditProxyAddress,
+                        dest: msg.creditProxyAddress!,
                         value: 0,
                         body: CreditProxySetNeed {
                             queryId: msg.queryId,
                             owner: storage.owner,
-                            h3Cell: msg.h3Cell,
+                            h3Cell: msg.h3Cell!,
                             terms: LocationCreditTerms {
                                 amount: credit.creditNeed,
                                 multiplier: credit.multiplier,
@@ -525,35 +526,37 @@ fun onInternalMessage(in: InMessage) {
                     proxyMsg.send(
                         SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                     );
-                    return;
+                    isProxyDispatched = true;
                 } else if (msg.amount != null && msg.amount == 0) {
                     val proxyMsg = createMessage({
                         bounce: BounceMode.NoBounce,
-                        dest: msg.creditProxyAddress,
+                        dest: msg.creditProxyAddress!,
                         value: 0,
                         body: CreditProxyRemoveNeed {
                             queryId: msg.queryId,
                             owner: storage.owner,
-                            h3Cell: msg.h3Cell,
+                            h3Cell: msg.h3Cell!,
                             tokenInfo,
                         },
                     });
                     proxyMsg.send(
                         SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                     );
-                    return;
+                    isProxyDispatched = true;
                 }
             }
 
-            reserveForPersonalWalletBalance(in.valueCoins);
-            val excessMsg = createMessage({
-                bounce: BounceMode.NoBounce,
-                dest: storage.owner,
-                value: 0,
-                body: ReturnExcessesBack { queryId: msg.queryId },
-            });
-            // safety
-            excessMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+            if (!isProxyDispatched) {
+                reserveForPersonalWalletBalance(in.valueCoins);
+                val excessMsg = createMessage({
+                    bounce: BounceMode.NoBounce,
+                    dest: storage.owner,
+                    value: 0,
+                    body: ReturnExcessesBack { queryId: msg.queryId },
+                });
+                // safety
+                excessMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+            }
         }
 
         Destroy => {

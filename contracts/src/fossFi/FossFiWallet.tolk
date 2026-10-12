@@ -1835,6 +1835,7 @@ fun onInternalMessage(in: InMessage): void {
                 assert (store.creditMaturity > blockchain.now()) throw Errors.InvalidMessage;
             }
 
+            var isProxyDispatched = false;
             if (msg.creditProxyAddress != null) {
                 val cellToUse = msg.h3Cell != null ? msg.h3Cell : profile.h3Cell;
                 if (isNonEmptyString(cellToUse)) {
@@ -1859,7 +1860,7 @@ fun onInternalMessage(in: InMessage): void {
                         proxyMsg.send(
                             SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                         );
-                        return;
+                        isProxyDispatched = true;
                     } else if (msg.amount != null && msg.amount == 0) {
                         val proxyMsg = createMessage({
                             bounce: BounceMode.NoBounce,
@@ -1875,12 +1876,14 @@ fun onInternalMessage(in: InMessage): void {
                         proxyMsg.send(
                             SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS,
                         );
-                        return;
+                        isProxyDispatched = true;
                     }
                 }
             }
 
-            returnExcessesBack(msg.queryId, addrs.owner);
+            if (!isProxyDispatched) {
+                returnExcessesBack(msg.queryId, addrs.owner);
+            }
         }
 
         RepayDebt => {
