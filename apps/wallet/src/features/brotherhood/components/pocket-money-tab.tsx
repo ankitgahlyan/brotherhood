@@ -465,6 +465,24 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
     accountData,
   });
 
+  const handleGrantPocketMoney = async () => {
+    await setAllowance.send();
+    setGrantee('');
+    setResolvedGrantee(null);
+    setAmount('');
+    setOneTimeAmount('');
+    setFixedLimit('');
+  };
+
+  const handleSpendPocketMoney = async () => {
+    await spendAllowance.send();
+    setRecipient('');
+    setResolvedSpendRecipient(null);
+    setAmount('');
+    setGranter('');
+    setResolvedGranter(null);
+  };
+
   const filteredAllowances = useMemo(() => {
     const list = allowances ?? [];
     const q = activeFilterQuery.trim().toLowerCase();
@@ -1389,7 +1407,7 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
               )}
 
               <TxButton
-                onAction={() => setAllowance.send()}
+                onAction={handleGrantPocketMoney}
                 disabled={setAllowance.isDisabled}
                 loading={setAllowance.isSending}
                 fullWidth
@@ -1510,7 +1528,7 @@ export const PocketMoneyTab: React.FC<PocketMoneyTabProps> = ({
               )}
 
               <TxButton
-                onAction={() => spendAllowance.send()}
+                onAction={handleSpendPocketMoney}
                 disabled={spendAllowance.isDisabled}
                 loading={spendAllowance.isSending}
                 fullWidth

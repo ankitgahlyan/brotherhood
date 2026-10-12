@@ -259,7 +259,10 @@ export const DaoScreen: React.FC = () => {
                 </label>
               </div>
               <Button
-                onClick={() => voter.vote()}
+                onClick={async () => {
+                  await voter.vote();
+                  setVoteProposalId('');
+                }}
                 disabled={!canOperate || voter.isDisabled}
                 loading={voter.isSending}
                 fullWidth

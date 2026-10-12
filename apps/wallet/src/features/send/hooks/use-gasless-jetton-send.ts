@@ -16,7 +16,7 @@ import type {
 } from '@ton/walletkit';
 import { useGasless } from '@demo/wallet-core';
 
-import { useJettonInfo } from '@/features/jettons';
+import { useJettonInfo, isFiJetton } from '@/features/jettons';
 import { formatUnits, parseUnits } from '@/core/utils/units';
 
 const QUOTE_DEBOUNCE_MS = 400;
@@ -67,7 +67,19 @@ export const useGaslessJettonSend = ({
     return features ? hasSignMessageSupport(features) : false;
   }, [wallet]);
 
-  const canUse = Boolean(jetton) && hasSignMessage;
+  const isEligibleJetton = useMemo(() => {
+    if (!jetton) return false;
+    if (isFiJetton(jetton)) return false;
+    if ((jetton as any).adminAddress) return false;
+    if (gasless.supportedAssets.length > 0) {
+      return gasless.supportedAssets.some(
+        (a) => a.address.toLowerCase() === jetton.address.toLowerCase(),
+      );
+    }
+    return true;
+  }, [jetton, gasless.supportedAssets]);
+
+  const canUse = Boolean(jetton) && isEligibleJetton && hasSignMessage;
   const effective = gasless.enabled && canUse;
 
   const feeAssetInfo = useJettonInfo(gasless.feeAsset ?? undefined);

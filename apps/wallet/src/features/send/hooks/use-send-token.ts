@@ -45,6 +45,7 @@ import {
 } from '@/lib/brotherhood/ton';
 import {
   getContractCacheSync,
+  getContractCache,
   getNormalizedContractCacheKey,
 } from '@/lib/brotherhood/contract-cache';
 import type { PersonalStore } from '@wrappers/Personal.gen';
@@ -195,14 +196,32 @@ export const useSendToken = ({
             ).toString();
           } else if (jetton.address && isValidAddress(jetton.address)) {
             const minterAddr = Address.parse(jetton.address);
-            const cachedMinter = getContractCacheSync<PersonalStore>(
-              getNormalizedContractCacheKey(net, minterAddr),
-            );
-            if (cachedMinter?.data?.adminAddress) {
+            let adminAddr: Address | null = null;
+            if (
+              (jetton as any).adminAddress &&
+              isValidAddress((jetton as any).adminAddress)
+            ) {
+              adminAddr = Address.parse((jetton as any).adminAddress);
+            } else {
+              const cachedMinter = getContractCacheSync<PersonalStore>(
+                getNormalizedContractCacheKey(net, minterAddr),
+              );
+              if (cachedMinter?.data?.adminAddress) {
+                adminAddr = cachedMinter.data.adminAddress;
+              } else {
+                const asyncMinter = await getContractCache<PersonalStore>(
+                  getNormalizedContractCacheKey(net, minterAddr),
+                );
+                if (asyncMinter?.data?.adminAddress) {
+                  adminAddr = asyncMinter.data.adminAddress;
+                }
+              }
+            }
+            if (adminAddr) {
               senderJettonWallet = computePersonalWalletAddress(
                 minterAddr,
                 senderOwner,
-                cachedMinter.data.adminAddress,
+                adminAddr,
               ).toString();
             }
           }

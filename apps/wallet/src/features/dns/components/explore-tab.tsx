@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Address, toNano } from '@ton/core';
 import { useWallet, useWalletKit } from '@demo/wallet-core';
 import { Button } from '@/core/components/ui/button';
@@ -83,6 +83,25 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
   const lookupNet = network;
   const lookup = useDomainLookup(submittedQuery, lookupNet as Network);
+
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+
+  useEffect(() => {
+    if (lookup.status !== 'in-auction' || !lookup.auctionEndTime) return;
+    const interval = setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lookup.status, lookup.auctionEndTime]);
+
+  const isAuctionExpired = Boolean(
+    lookup.auctionEndTime && nowSec >= lookup.auctionEndTime,
+  );
+  const effectiveStatus =
+    lookup.status === 'in-auction' && isAuctionExpired
+      ? 'auction-ended'
+      : lookup.status;
+  const effectiveWinner = lookup.winner || lookup.maxBidAddress;
 
   const contactsForNet = useContactBookStore(
     (s) => s.contactsByNetwork[lookupNet] || EMPTY_CONTACTS_MAP,
@@ -430,7 +449,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       );
     }
 
-    if (lookup.status === 'in-auction') {
+    if (effectiveStatus === 'in-auction') {
       const minBidNano = lookup.minNextBid ?? 0n;
       return (
         <div className="mt-3 p-4 bg-card border border-border rounded-2xl space-y-3">
@@ -514,13 +533,15 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
 
               <TxButton
                 fullWidth
-                disabled={!address || isSending}
+                disabled={!address || isSending || isAuctionExpired}
                 loading={isSending}
                 onAction={handlePlaceBid}
-                actionLabel="Place Outbid"
+                actionLabel={
+                  isAuctionExpired ? 'Auction Ended' : 'Place Outbid'
+                }
                 completeLabel="Bid Placed!"
               >
-                Place Bid
+                {isAuctionExpired ? 'Auction Ended' : 'Place Bid'}
               </TxButton>
             </>
           )}
@@ -529,7 +550,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
       );
     }
 
-    if (lookup.status === 'auction-ended') {
+    if (effectiveStatus === 'auction-ended') {
       return (
         <div className="mt-3 p-4 bg-card border border-border rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
@@ -547,14 +568,14 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ network }) => {
           </div>
 
           <div className="text-xs text-muted-foreground space-y-1.5 p-2.5 rounded-xl bg-muted/40 border border-border/50">
-            {lookup.winner && (
+            {effectiveWinner && (
               <div className="flex justify-between items-center">
                 <span>Auction winner</span>
                 <div className="flex items-center gap-1">
                   <span className="font-mono text-foreground">
-                    {formatWalletAddress(lookup.winner, true, 4)}
+                    {formatWalletAddress(effectiveWinner, true, 4)}
                   </span>
-                  <CopyButton address={lookup.winner} />
+                  <CopyButton address={effectiveWinner} />
                 </div>
               </div>
             )}

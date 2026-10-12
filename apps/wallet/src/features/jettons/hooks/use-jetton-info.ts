@@ -129,10 +129,13 @@ export function useJettonInfo(
         // ignore cache read failure
       }
 
-      const info = await walletKit?.jettons?.getJettonInfo(
-        rawAddressStr,
-        chainNetwork,
-      );
+      let info: any = null;
+      if (!onchainMeta?.name || !onchainMeta?.symbol) {
+        info = await walletKit?.jettons?.getJettonInfo(
+          rawAddressStr,
+          chainNetwork,
+        );
+      }
       if (!isCancelled) {
         const mergedName = onchainMeta?.name?.trim() || info?.name;
         const mergedSymbol = onchainMeta?.symbol?.trim() || info?.symbol;
@@ -147,6 +150,8 @@ export function useJettonInfo(
 
         if (mergedName || mergedSymbol || info) {
           setTokenInfo({
+            address: rawAddressStr,
+            decimals: info?.decimals ?? 9,
             ...info,
             name: mergedName,
             symbol: mergedSymbol,

@@ -229,8 +229,15 @@ export const SendTransaction: React.FC = () => {
     }
   }
 
+  const effectiveSenderTokenWallet =
+    selected.token.data?.walletAddress || derivedSenderTokenWallet;
+
   useEffect(() => {
-    if (!address || tokenContext.tokenType !== 'JETTON') {
+    if (
+      !address ||
+      tokenContext.tokenType !== 'JETTON' ||
+      selected.token.data?.walletAddress
+    ) {
       return;
     }
 
@@ -250,7 +257,7 @@ export const SendTransaction: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [address, tokenContext, network]);
+  }, [address, tokenContext, network, selected.token.data?.walletAddress]);
 
   const trimmedGranter = granterInput.trim();
   const isGranterDns = isTonChainDns(trimmedGranter);
@@ -461,13 +468,15 @@ export const SendTransaction: React.FC = () => {
         }
 
         if (tokenContext.tokenType === 'JETTON' && address) {
-          await deriveTokenWalletAddressOffchain({
-            minterAddress: tokenContext.minterAddress,
-            ownerAddress: address,
-            network: network === 'mainnet' ? 'mainnet' : 'testnet',
-            tokenSymbol: tokenContext.symbol,
-            adminAddress: tokenContext.adminAddress,
-          });
+          if (!selected.token.data?.walletAddress) {
+            await deriveTokenWalletAddressOffchain({
+              minterAddress: tokenContext.minterAddress,
+              ownerAddress: address,
+              network: network === 'mainnet' ? 'mainnet' : 'testnet',
+              tokenSymbol: tokenContext.symbol,
+              adminAddress: tokenContext.adminAddress,
+            });
+          }
           if (targetRecipient && isValidAddress(targetRecipient)) {
             await deriveTokenWalletAddressOffchain({
               minterAddress: tokenContext.minterAddress,
@@ -481,6 +490,11 @@ export const SendTransaction: React.FC = () => {
 
         const result = await sender.send(options);
         addRecentTransacted({ address: targetRecipient }, network);
+        setRecipient('');
+        setEffectiveRecipientAddress(null);
+        setAmount('');
+        setComment('');
+        setGranterInput('');
         if (result?.normalizedHash) {
           notifySent(result.normalizedHash);
           navigate('/wallet');
@@ -508,6 +522,11 @@ export const SendTransaction: React.FC = () => {
 
         await spendAllowance.send();
         addRecentTransacted({ address: targetRecipient }, network);
+        setRecipient('');
+        setEffectiveRecipientAddress(null);
+        setAmount('');
+        setComment('');
+        setGranterInput('');
         navigate('/wallet', {
           state: { message: `Spent ${amount} FI from allowance successfully!` },
         });
@@ -726,13 +745,13 @@ export const SendTransaction: React.FC = () => {
                       )}
                     </span>
                   </div>
-                  {derivedSenderTokenWallet && (
+                  {effectiveSenderTokenWallet && (
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">
                         Sender Token Wallet:
                       </span>
                       <span className="font-mono text-emerald-500">
-                        {formatWalletAddress(derivedSenderTokenWallet, false)}
+                        {formatWalletAddress(effectiveSenderTokenWallet, false)}
                       </span>
                     </div>
                   )}

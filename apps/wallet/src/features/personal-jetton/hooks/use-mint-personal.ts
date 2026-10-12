@@ -22,6 +22,7 @@ export interface UseMintPersonalParams {
   minterAddress: string;
   recipient: string;
   amount: string;
+  onSuccess?: () => void;
 }
 
 export interface UseMintPersonalResult {
@@ -37,6 +38,7 @@ export function useMintPersonal({
   minterAddress,
   recipient,
   amount,
+  onSuccess,
 }: UseMintPersonalParams): UseMintPersonalResult {
   const {
     send: sendTx,
@@ -78,7 +80,8 @@ export function useMintPersonal({
     await sendTx([{ toAddress: minterAddress, amount: GAS.MINT, payload }], {
       affectedContracts,
     });
-  }, [minterAddress, recipient, amount, wallet, sendTx]);
+    onSuccess?.();
+  }, [minterAddress, recipient, amount, wallet, sendTx, onSuccess]);
 
   const isDisabled =
     !wallet ||

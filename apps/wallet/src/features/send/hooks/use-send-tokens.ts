@@ -157,8 +157,18 @@ export const useSendTokens = (): TokenOption[] => {
         ...tokenImageUrls(jetton.info?.image),
       ];
 
+      const adminAddrStr = cachedPtStore?.adminAddress
+        ? cachedPtStore.adminAddress.toString()
+        : undefined;
+
       otherJettons.push({
-        token: { type: 'JETTON', data: jetton },
+        token: {
+          type: 'JETTON',
+          data: {
+            ...jetton,
+            adminAddress: adminAddrStr,
+          } as any,
+        },
         id: jetton.address,
         icon: imageSources(iconUrls, jetton.info?.image?.data),
         fallbackText: symbol.slice(0, 2).toUpperCase() || '??',
@@ -203,6 +213,9 @@ export const useSendTokens = (): TokenOption[] => {
       const name =
         ptOnchainMeta?.name?.trim() || pt.name?.trim() || 'Personal Token';
       const ptImage = ptOnchainMeta?.image?.trim() || pt.image?.trim() || '';
+      const ptAdminAddrStr = cachedPtStore?.adminAddress
+        ? cachedPtStore.adminAddress.toString()
+        : undefined;
 
       otherJettons.push({
         token: {
@@ -210,6 +223,7 @@ export const useSendTokens = (): TokenOption[] => {
           data: {
             address: pt.minterAddress,
             walletAddress: pt.walletAddress,
+            adminAddress: ptAdminAddrStr,
             balance: pt.balance,
             decimalsNumber: GRAM_DECIMALS,
             isVerified: true,
