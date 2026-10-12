@@ -38,8 +38,8 @@ import { serializeForStorage } from './contract-serialization';
 export const CONTRACT_CODE_HASHES = {
   fiWallet: 'JVQoiNoIA1J2h/jqD7B3GwbAzjDh6RrV5dfCcGV7eDg=',
   fiMinter: 'yocE383wCxoENVGNuIQcAwtcX0GTMw+w2l0NUU4hP8w=',
-  personalMinter: 'EzvGbHqtaRlRF7iIc7FCHrcdw90bP2cYfjXll/QciMA=',
-  personalWallet: 'OvIHYd4bYSQ7tP0raFlRW34t9QpUDzir69N38xo10iw=',
+  personalMinter: 'vA0BbT7UBk4WRURCy5KuE3C8UjucUgZNRPyRguApMYM=',
+  personalWallet: 'HQ2JY+Yz1UqnxMcY8lXGtD8N4aqt59knqiiOIuELpvw=',
   location: 'NbBSDLJ39Ue29f0vGvpfVPoxhchn24A4bx0XdltuCik=',
   lottery: 'gQLndLDREuz3pzWMoUn+7SHsEvCM5gSHBqfxIWv8ANw=',
   poll: 'jf1Y+Q9I6ORMnh7nYrVJL1ZDL+plTXOtuj8L8SJmWQQ=',

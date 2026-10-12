@@ -11,14 +11,19 @@ fun main() {
     val admin = promptJettonWallet("JETTON_ADMIN", "Select Jetton Admin ActonWallet");
     val minter = promptPersonalMinter("Enter Personal Minter address");
 
-    minter.sendUpgrade(
-        admin.address,
-        false,
-        0, // ignored by minter
-        admin.address,
-        null,
-        build("PersonalMinter"),
-        { value: grams("0.2") },
-    );
-    println("upgrade hash in Frontend for boc decoding");
+    val walletUpgrade = promptWalletUpgrade("WALLET_UPGRADE");
+    val newCode = walletUpgrade ? build("PersonalWallet") : build("PersonalMinter");
+
+    minter
+        .sendUpgrade(
+            admin.address,
+            walletUpgrade,
+            0, // ignored by minter
+            admin.address,
+            null,
+            newCode,
+            { value: grams("0.2") },
+        )
+        .waitForTrace();
+    println("Upgrade trace settled successfully.");
 }

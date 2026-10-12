@@ -62,7 +62,12 @@ import {
 import { useContractState } from '@/lib/brotherhood/contract-cache';
 import type { PersonalStore } from '@wrappers/Personal.gen';
 import type { PersonalWalletStore } from '@wrappers/PersonalWallet.gen';
-import type { Network } from '@/lib/brotherhood/config';
+import {
+  BRO_TREASURY_ADDRESS,
+  FI_ADDRESS,
+  type Network,
+} from '@/lib/brotherhood/config';
+import { computePersonalWalletAddress } from '@/lib/brotherhood/account-state-hydrator';
 
 import { isZeroAddress } from '@/lib/brotherhood/ton';
 import {
@@ -71,6 +76,8 @@ import {
 } from '@/lib/brotherhood/deploy';
 import { GAS, useBrotherhoodTransaction } from '@/features/brotherhood';
 import { Address } from '@ton/core';
+
+const EMPTY_ARRAY = Object.freeze([]);
 
 const DISMISSED_STORAGE_PREFIX = 'brotherhood-dismissed-notifications';
 
@@ -371,13 +378,175 @@ const WalletNotificationCollector: React.FC<
   return null;
 };
 
+interface SinglePersonalTokenUpgradeCheckerProps {
+  wallet: SavedWallet;
+  isActive: boolean;
+  minterAddress: Address;
+  personalWalletAddress?: Address | null;
+  tokenSymbol?: string;
+  onNotificationChange: (key: string, notifs: WalletNotificationItem[]) => void;
+}
+
+const SinglePersonalTokenUpgradeChecker: React.FC<
+  SinglePersonalTokenUpgradeCheckerProps
+> = ({
+  wallet,
+  isActive,
+  minterAddress,
+  personalWalletAddress,
+  tokenSymbol,
+  onNotificationChange,
+}) => {
+  const ownerAddress = useMemo(() => {
+    try {
+      return Address.parse(wallet.address);
+    } catch {
+      return null;
+    }
+  }, [wallet.address]);
+
+  const walletNet = (wallet.network ?? 'testnet') as Network;
+  const minterCachedState = useContractState<PersonalStore>(
+    minterAddress,
+    walletNet,
+  );
+
+  const resolvedWalletAddr = useMemo(() => {
+    if (personalWalletAddress) return personalWalletAddress;
+    const admin = minterCachedState.data?.adminAddress;
+    if (admin && ownerAddress) {
+      try {
+        return computePersonalWalletAddress(minterAddress, ownerAddress, admin);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [
+    personalWalletAddress,
+    minterCachedState.data?.adminAddress,
+    ownerAddress,
+    minterAddress,
+  ]);
+
+  const walletCachedState = useContractState<PersonalWalletStore>(
+    resolvedWalletAddr,
+    walletNet,
+  );
+
+  const notifKey = `personal-upgrade-${wallet.id}-${minterAddress.toRawString()}`;
+
+  // Derive outdated status and version directly from local contract-cache (zero network calls)
+  const outdatedState = useMemo(() => {
+    const minterStore = minterCachedState.data;
+
+    // Check if this is a personal token minter
+    const isPersonalMinter = Boolean(
+      (minterCachedState.codeHash &&
+        normalizeCodeHash(minterCachedState.codeHash) ===
+          normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter)) ||
+      (minterStore?.adminAddress &&
+        (('fiJettonAddress' in minterStore && minterStore.fiJettonAddress) ||
+          ('codes' in minterStore && minterStore.codes)) &&
+        !('others' in (minterStore as any))),
+    );
+
+    if (!isPersonalMinter && !minterCachedState.isLoading) {
+      return null;
+    }
+
+    const minterOutdated = Boolean(
+      minterCachedState.codeHash &&
+      normalizeCodeHash(minterCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
+    );
+    const walletOutdated = Boolean(
+      walletCachedState.codeHash &&
+      normalizeCodeHash(walletCachedState.codeHash) !==
+        normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
+    );
+    const isMinterAdmin = Boolean(
+      ownerAddress &&
+      minterStore?.adminAddress &&
+      minterStore.adminAddress.equals(ownerAddress),
+    );
+    const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
+
+    return {
+      minterOutdated,
+      walletOutdated,
+      isMinterAdmin,
+      nextVersion,
+    };
+  }, [
+    ownerAddress,
+    minterCachedState.codeHash,
+    minterCachedState.data,
+    minterCachedState.isLoading,
+    walletCachedState.codeHash,
+  ]);
+
+  useEffect(() => {
+    if (!outdatedState) {
+      onNotificationChange(notifKey, []);
+      return;
+    }
+    const { minterOutdated, walletOutdated, isMinterAdmin, nextVersion } =
+      outdatedState;
+    const isActionable = isMinterAdmin
+      ? minterOutdated || walletOutdated
+      : walletOutdated && Boolean(resolvedWalletAddr);
+
+    if (isActionable) {
+      onNotificationChange(notifKey, [
+        {
+          id: `personal-upgrade-${wallet.address}-${minterAddress.toRawString()}`,
+          type: 'personal_upgrade',
+          walletId: wallet.id,
+          walletName: wallet.name || 'Wallet',
+          walletAddress: wallet.address,
+          isActive,
+          data: {
+            personalMinterAddress: minterAddress.toString(),
+            personalWalletAddress: resolvedWalletAddr?.toString() ?? null,
+            minterOutdated,
+            walletOutdated,
+            isMinterAdmin,
+            nextVersion: nextVersion.toString(),
+            tokenSymbol,
+          },
+        },
+      ]);
+    } else {
+      onNotificationChange(notifKey, []);
+    }
+
+    return () => {
+      onNotificationChange(notifKey, []);
+    };
+  }, [
+    wallet.id,
+    wallet.name,
+    wallet.address,
+    isActive,
+    minterAddress,
+    resolvedWalletAddr,
+    outdatedState,
+    notifKey,
+    tokenSymbol,
+    onNotificationChange,
+  ]);
+
+  return null;
+};
+
 interface PersonalUpgradeCollectorProps {
   wallet: SavedWallet;
   isActive: boolean;
   onNotificationChange: (key: string, notifs: WalletNotificationItem[]) => void;
 }
 
-/** Checks if a wallet's PersonalMinter code is outdated via on-chain code_hash and emits a personal_upgrade notification */
+/** Checks if a wallet's own or held personal tokens/wallets are outdated and emits personal_upgrade notifications */
 const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
   wallet,
   isActive,
@@ -391,118 +560,132 @@ const PersonalUpgradeCollector: React.FC<PersonalUpgradeCollectorProps> = ({
     }
   }, [wallet.address]);
 
-  const fiWalletQuery = useFiWalletState(
-    ownerAddress,
-    wallet.network as Network,
-  );
+  const walletNet = (wallet.network ?? 'testnet') as Network;
 
-  const personalMinterAddr = useMemo(() => {
-    const minter =
-      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
-        ?.personalJettonMinter;
-    return minter && !isZeroAddress(minter) ? minter : null;
-  }, [fiWalletQuery.data]);
+  const fiWalletQuery = useFiWalletState(ownerAddress, walletNet);
+  const fiMinterState = useFiMinterState();
 
-  const personalWalletAddr = useMemo(() => {
-    const pw =
-      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
-        ?.personalJettonWallet;
-    return pw && !isZeroAddress(pw) ? pw : null;
-  }, [fiWalletQuery.data]);
-
-  const notifKey = `personal-upgrade-${wallet.id}`;
-  const walletNet = wallet.network ?? 'testnet';
-  const minterCachedState = useContractState<PersonalStore>(
-    personalMinterAddr,
-    walletNet,
-  );
-  const walletCachedState = useContractState<PersonalWalletStore>(
-    personalWalletAddr,
-    walletNet,
-  );
-
-  // Derive outdated status and version directly from local contract-cache (zero network calls)
-  const outdatedState = useMemo(() => {
-    if (!personalMinterAddr) {
+  const treasuryOwnerAddress = useMemo(() => {
+    const minterAdmin = fiMinterState.data?.adminAddress;
+    if (minterAdmin && !isZeroAddress(minterAdmin)) {
+      return typeof minterAdmin === 'string'
+        ? Address.parse(minterAdmin)
+        : minterAdmin;
+    }
+    try {
+      return Address.parse(BRO_TREASURY_ADDRESS);
+    } catch {
       return null;
     }
-    const minterOutdated = Boolean(
-      minterCachedState.codeHash &&
-      normalizeCodeHash(minterCachedState.codeHash) !==
-        normalizeCodeHash(CONTRACT_CODE_HASHES.personalMinter),
-    );
-    const walletOutdated = Boolean(
-      walletCachedState.codeHash &&
-      normalizeCodeHash(walletCachedState.codeHash) !==
-        normalizeCodeHash(CONTRACT_CODE_HASHES.personalWallet),
-    );
-    const minterStore = minterCachedState.data;
-    const isMinterAdmin = Boolean(
-      ownerAddress &&
-      minterStore?.adminAddress &&
-      minterStore.adminAddress.equals(ownerAddress),
-    );
-    const nextVersion = BigInt(Number(minterStore?.version ?? 1n) + 1);
-    return {
-      minterOutdated,
-      walletOutdated,
-      isMinterAdmin,
-      nextVersion,
+  }, [fiMinterState.data?.adminAddress]);
+
+  const treasuryFiState = useFiWalletState(treasuryOwnerAddress, walletNet);
+
+  const walletJettons = useWalletStore(
+    (s) => s.jettons.jettonsByAddress[wallet.address] ?? EMPTY_ARRAY,
+  );
+
+  const candidates = useMemo(() => {
+    const list: Array<{
+      minterAddress: Address;
+      personalWalletAddress?: Address | null;
+      tokenSymbol?: string;
+    }> = [];
+    const seen = new Set<string>();
+
+    const addCandidate = (
+      minter: Address | string | null | undefined,
+      pw?: Address | string | null,
+      symbol?: string,
+    ) => {
+      if (!minter) return;
+      try {
+        const parsedMinter =
+          typeof minter === 'string' ? Address.parse(minter) : minter;
+        if (isZeroAddress(parsedMinter)) return;
+        const fiAddr = Address.parse(FI_ADDRESS);
+        if (parsedMinter.equals(fiAddr)) return;
+
+        const raw = parsedMinter.toRawString();
+        if (seen.has(raw)) return;
+        seen.add(raw);
+
+        let parsedPw: Address | null = null;
+        if (pw) {
+          parsedPw = typeof pw === 'string' ? Address.parse(pw) : pw;
+          if (isZeroAddress(parsedPw)) parsedPw = null;
+        }
+
+        list.push({
+          minterAddress: parsedMinter,
+          personalWalletAddress: parsedPw,
+          tokenSymbol: symbol,
+        });
+      } catch {
+        /* ignore invalid address */
+      }
     };
+
+    // 1. Self personal token
+    const selfMinter =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonMinter;
+    const selfPw =
+      fiWalletQuery.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonWallet;
+    addCandidate(selfMinter, selfPw);
+
+    // 2. Reserve Personal Token
+    const treasuryMinter =
+      treasuryFiState.data?.addresses?.ref?.trustedJettonAddrs?.ref
+        ?.personalJettonMinter;
+    let treasuryPw: Address | null = null;
+    if (treasuryMinter && ownerAddress && treasuryOwnerAddress) {
+      try {
+        treasuryPw = computePersonalWalletAddress(
+          typeof treasuryMinter === 'string'
+            ? Address.parse(treasuryMinter)
+            : treasuryMinter,
+          ownerAddress,
+          treasuryOwnerAddress,
+        );
+      } catch {
+        treasuryPw = null;
+      }
+    }
+    addCandidate(treasuryMinter, treasuryPw, 'AnKoIN');
+
+    // 3. Other held jettons that may be personal tokens
+    for (const j of walletJettons) {
+      if (j.address) {
+        addCandidate(j.address, j.walletAddress, j.info?.symbol);
+      }
+    }
+
+    return list;
   }, [
-    personalMinterAddr,
+    fiWalletQuery.data,
+    treasuryFiState.data,
+    treasuryOwnerAddress,
     ownerAddress,
-    minterCachedState.codeHash,
-    minterCachedState.data,
-    walletCachedState.codeHash,
+    walletJettons,
   ]);
 
-  useEffect(() => {
-    if (!personalMinterAddr || !outdatedState) {
-      onNotificationChange(notifKey, []);
-      return;
-    }
-    const { minterOutdated, walletOutdated, isMinterAdmin, nextVersion } =
-      outdatedState;
-    const isActionable = isMinterAdmin
-      ? minterOutdated || walletOutdated
-      : walletOutdated && Boolean(personalWalletAddr);
-
-    if (isActionable) {
-      onNotificationChange(notifKey, [
-        {
-          id: `personal-upgrade-${wallet.address}`,
-          type: 'personal_upgrade',
-          walletId: wallet.id,
-          walletName: wallet.name || 'Wallet',
-          walletAddress: wallet.address,
-          isActive,
-          data: {
-            personalMinterAddress: personalMinterAddr.toString(),
-            personalWalletAddress: personalWalletAddr?.toString() ?? null,
-            minterOutdated,
-            walletOutdated,
-            isMinterAdmin,
-            nextVersion: nextVersion.toString(),
-          },
-        },
-      ]);
-    } else {
-      onNotificationChange(notifKey, []);
-    }
-  }, [
-    wallet.id,
-    wallet.name,
-    wallet.address,
-    isActive,
-    personalMinterAddr,
-    personalWalletAddr,
-    outdatedState,
-    notifKey,
-    onNotificationChange,
-  ]);
-
-  return null;
+  return (
+    <>
+      {candidates.map((c) => (
+        <SinglePersonalTokenUpgradeChecker
+          key={`${wallet.id}-${c.minterAddress.toRawString()}`}
+          wallet={wallet}
+          isActive={isActive}
+          minterAddress={c.minterAddress}
+          personalWalletAddress={c.personalWalletAddress}
+          tokenSymbol={c.tokenSymbol}
+          onNotificationChange={onNotificationChange}
+        />
+      ))}
+    </>
+  );
 };
 
 export const NotificationBell: React.FC = () => {
@@ -513,8 +696,14 @@ export const NotificationBell: React.FC = () => {
       getBrowserNotificationPermission(),
     );
 
-  const { currentWallet, address, balance, savedWallets, activeWalletId } =
-    useWallet();
+  const {
+    currentWallet,
+    address,
+    balance,
+    savedWallets,
+    activeWalletId,
+    switchWallet,
+  } = useWallet();
   const balancesByAddress = useWalletStore(
     (s) => s.walletManagement.balancesByAddress,
   );
@@ -749,6 +938,9 @@ export const NotificationBell: React.FC = () => {
   // Execute personal contract upgrade — Admin pushes Upgrade(walletUpgrade=false/true), Holder sends RequestUpgradeCode(personalWalletAddress)
   const handlePersonalUpgradeTarget = async (item: WalletNotificationItem) => {
     if (!address) return;
+    if (item.walletId && item.walletId !== activeWalletId) {
+      switchWallet(item.walletId);
+    }
     setActionInProgressId(item.id);
     try {
       const ownerAddr = Address.parse(address);
@@ -1093,6 +1285,7 @@ export const NotificationBell: React.FC = () => {
             }
 
             if (item.type === 'personal_upgrade') {
+              const displayName = item.data.tokenSymbol || 'Personal Token';
               return (
                 <SwipeableCard
                   key={item.id}
@@ -1108,7 +1301,7 @@ export const NotificationBell: React.FC = () => {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-foreground text-sm">
-                              Personal Token Upgrade
+                              {displayName} Upgrade
                             </span>
                             <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-secondary text-foreground border border-border/80">
                               {item.walletName}
@@ -1131,7 +1324,7 @@ export const NotificationBell: React.FC = () => {
                       {isProcessing
                         ? 'Upgrading…'
                         : item.data.isMinterAdmin
-                          ? 'Upgrade Personal Token'
+                          ? `Upgrade ${displayName}`
                           : 'Pull Upgrade'}
                     </Button>
                   </div>

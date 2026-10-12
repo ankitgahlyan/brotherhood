@@ -49,6 +49,7 @@ import {
   RESERVE_TOKEN_UPI_CONFIG,
   buildReserveUpiLinks,
 } from '@/lib/brotherhood/config';
+import { sameAddress } from '@/core/utils/formatters';
 import { cn } from '@/core/lib/utils';
 
 interface SwapInterfaceProps {
@@ -238,15 +239,28 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
   const filteredTokens = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
+    const cleanQ = q.replace(/^@/, '');
+    const resolvedAddr = resolvedCustomAddress;
+
     if (!q) return tokens;
-    return tokens.filter(
-      (t) =>
+    return tokens.filter((t) => {
+      if (
         t.symbol.toLowerCase().includes(q) ||
         t.name.toLowerCase().includes(q) ||
         t.ownerAddress.toLowerCase().includes(q) ||
-        t.fiWalletAddress.toLowerCase().includes(q),
-    );
-  }, [tokens, searchQuery]);
+        t.fiWalletAddress.toLowerCase().includes(q)
+      ) {
+        return true;
+      }
+      if (t.username && t.username.toLowerCase().includes(cleanQ)) {
+        return true;
+      }
+      if (resolvedAddr && sameAddress(t.ownerAddress, resolvedAddr)) {
+        return true;
+      }
+      return false;
+    });
+  }, [tokens, searchQuery, resolvedCustomAddress]);
 
   const handleSelectTokenFromModal = (tokenId: string) => {
     if (selectorSide === 'from') {
@@ -594,7 +608,9 @@ export const SwapInterface: FC<SwapInterfaceProps> = ({ className }) => {
 
           {/* Dynamic On-Chain Lookup Result (if not already in list) */}
           {resolvedCustomAddress &&
-            !tokens.some((t) => t.ownerAddress === resolvedCustomAddress) && (
+            !tokens.some((t) =>
+              sameAddress(t.ownerAddress, resolvedCustomAddress),
+            ) && (
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold text-foreground truncate">

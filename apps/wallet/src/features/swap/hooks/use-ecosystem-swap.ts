@@ -102,6 +102,7 @@ export interface EcosystemToken {
   reserveMultiplier?: number;
   degree: 'fi' | 'reserve' | 'circle' | 'ring' | 'voted' | 'custom';
   hasPersonalToken: boolean;
+  username?: string;
 }
 
 export type EcosystemSwapMode = 'buy-credit' | 'payback' | 'multi-hop';
@@ -493,6 +494,7 @@ export function useEcosystemSwap() {
       multiplier: treasuryMultiplier,
       degree: 'reserve',
       hasPersonalToken: Boolean(treasuryMinterStr),
+      username: treasuryUsername,
     });
 
     // Member Personal Tokens
@@ -684,6 +686,7 @@ export function useEcosystemSwap() {
         reserveMultiplier: reserveMultiplier,
         degree,
         hasPersonalToken: hasPt,
+        username: cleanUsername,
       });
     }
 
