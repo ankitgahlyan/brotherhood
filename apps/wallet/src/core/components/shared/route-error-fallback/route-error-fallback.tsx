@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { useRouter } from '@tanstack/react-router';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
+import { isChunkLoadError, triggerChunkReload } from '@/core/lib/chunk-reload';
 
 export const RouteErrorFallback: React.FC<ErrorComponentProps> = ({
   error,
   reset,
 }) => {
   const router = useRouter();
+  const isChunkError = isChunkLoadError(error);
+
+  useEffect(() => {
+    if (isChunkError) {
+      triggerChunkReload();
+    }
+  }, [isChunkError]);
+
   const errorMessage =
     error instanceof Error
       ? error.message
@@ -17,6 +26,10 @@ export const RouteErrorFallback: React.FC<ErrorComponentProps> = ({
         : 'An unexpected error occurred.';
 
   const handleReset = () => {
+    if (isChunkError) {
+      window.location.reload();
+      return;
+    }
     try {
       reset?.();
     } catch {
@@ -41,16 +54,18 @@ export const RouteErrorFallback: React.FC<ErrorComponentProps> = ({
         </div>
 
         <h2 className="text-xl font-bold text-foreground mb-2">
-          Something went wrong
+          {isChunkError ? 'New Version Available' : 'Something went wrong'}
         </h2>
         <p className="text-xs text-muted-foreground mb-4 line-clamp-3 font-mono bg-muted/40 p-2 rounded-lg border border-border/50 text-left overflow-x-auto">
-          {errorMessage}
+          {isChunkError
+            ? 'A new version of the app was deployed. Reloading to get the latest updates...'
+            : errorMessage}
         </p>
 
         <div className="flex flex-col gap-2">
           <Button onClick={handleReset} className="w-full gap-2 cursor-pointer">
             <RefreshCw className="w-4 h-4" />
-            <span>Try Again</span>
+            <span>{isChunkError ? 'Reload Page' : 'Try Again'}</span>
           </Button>
 
           <Button

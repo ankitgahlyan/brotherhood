@@ -19,21 +19,24 @@ import {
   registerRouterBack,
   notifyRouterNavigation,
 } from '@/core/lib/back-stack';
-import { preloadLazyRoutes } from '@/core/components/shared/route-fallback';
+import {
+  lazyRoute,
+  preloadLazyRoutes,
+} from '@/core/components/shared/route-fallback';
 
-const GlobalRequestModals = React.lazy(() =>
+const GlobalRequestModals = lazyRoute(() =>
   import('@/features/ton-connect').then((m) => ({
     default: m.GlobalRequestModals,
   })),
 );
 
-const PwaInstallBanner = React.lazy(() =>
+const PwaInstallBanner = lazyRoute(() =>
   import('@/core/components/pwa').then((m) => ({
     default: m.PwaInstallBanner,
   })),
 );
 
-const FloatingDevButton = React.lazy(() =>
+const FloatingDevButton = lazyRoute(() =>
   import('@/features/developer/components/floating-dev-button').then((m) => ({
     default: m.FloatingDevButton,
   })),

@@ -8,14 +8,40 @@
 
 import React, { lazy } from 'react';
 import { LoaderCircle } from '@/core/components/ui/loader-circle';
+import { isChunkLoadError, triggerChunkReload } from '@/core/lib/chunk-reload';
 
 const routePreloaders: Array<() => Promise<unknown>> = [];
 let hasScheduledPreload = false;
 
 /**
+ * Loads a module dynamically with a retry attempt for transient network failures.
+ * If the error is an unrecoverable chunk load error (e.g. stale deployed hash),
+ * triggers a guarded page reload to pull fresh assets.
+ */
+async function loadWithRetry<T>(
+  factory: () => Promise<T>,
+  retries = 1,
+): Promise<T> {
+  try {
+    return await factory();
+  } catch (error) {
+    if (retries > 0) {
+      // Short delay before retrying transient network glitch
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      return loadWithRetry(factory, retries - 1);
+    }
+    if (isChunkLoadError(error)) {
+      triggerChunkReload();
+    }
+    throw error;
+  }
+}
+
+/**
  * Wraps `React.lazy` and caches the resolved module on the Promise using React 19's
  * synchronous `status: 'fulfilled'` / `value` protocol. Once preloaded in idle time,
  * the route renders synchronously on first visit in 0ms without suspending or flashing `RouteFallback`.
+ * If loading fails, `cachedPromise` is cleared so subsequent navigation or retries can re-attempt.
  */
 export function lazyRoute<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
@@ -23,15 +49,21 @@ export function lazyRoute<T extends React.ComponentType<any>>(
   let cachedPromise: Promise<{ default: T }> | null = null;
   const load = () => {
     if (!cachedPromise) {
-      const p = factory().then((mod) => {
-        const fulfilled = p as unknown as {
-          status?: string;
-          value?: { default: T };
-        };
-        fulfilled.status = 'fulfilled';
-        fulfilled.value = mod;
-        return mod;
-      });
+      const p = loadWithRetry(factory)
+        .then((mod) => {
+          const fulfilled = p as unknown as {
+            status?: string;
+            value?: { default: T };
+          };
+          fulfilled.status = 'fulfilled';
+          fulfilled.value = mod;
+          return mod;
+        })
+        .catch((err) => {
+          // Never leave a rejected Promise cached — allow subsequent navigations to retry
+          cachedPromise = null;
+          throw err;
+        });
       cachedPromise = p;
     }
     return cachedPromise;

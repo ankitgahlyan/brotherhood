@@ -13,10 +13,12 @@ import { createRoot } from 'react-dom/client';
 
 import { initDevTelemetry } from '@/core/lib/dev-telemetry';
 import { initServiceWorker } from '@/core/lib/service-worker';
+import { initChunkReloadListener } from '@/core/lib/chunk-reload';
 import '@fontsource-variable/inter';
 import './index.css';
 import App from './App.tsx';
 
+initChunkReloadListener();
 initDevTelemetry();
 initServiceWorker();
 

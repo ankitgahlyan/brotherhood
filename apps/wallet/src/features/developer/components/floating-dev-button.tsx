@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { Terminal } from 'lucide-react';
 import { useDeveloperMode, useDeveloperModal } from '@/core/lib/developer-mode';
 import { devTelemetry, type TelemetryMetrics } from '@/core/lib/dev-telemetry';
+import { lazyRoute } from '@/core/components/shared/route-fallback';
 
-const DeveloperModal = React.lazy(() =>
+const DeveloperModal = lazyRoute(() =>
   import('./developer-modal').then((m) => ({ default: m.DeveloperModal })),
 );
 
